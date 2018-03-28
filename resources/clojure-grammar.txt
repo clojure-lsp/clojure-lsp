@@ -1,0 +1,82 @@
+<exprs> = (ws? expr ws?)+
+
+number = #"-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9])?"
+       | #"0x[0-9A-F]+"
+       | #"0[0-7]+"
+       | #"([1-9])|([1-2][0-9])|(3[0-6])n[0-9A-Z]+"
+
+<word> = #"[a-zA-Z0-9.*+!\-_?$%&=<>][a-zA-Z0-9.*+!\-_?$%&=<>:#]*"
+<nsword> = ((word <"/">)? word)
+<ws> = <#"[,\s]+">
+
+symbol = nsword
+keyword = ":" nsword | "::" nsword
+
+var = <"#'"> nsword
+string = #"\"[^\"\\]*(?:\\.[^\"\\]*)*\""
+regex =  #"#\"[^\"\\]*(?:\\.[^\"\\]*)*\""
+quoted = <"'"> expr
+ignored = "#_" ws* expr
+
+params = <"["> (ws? symbol ws?)* <"]">
+bindings = <"["> (ws? symbol ws expr ws?)+ <"]">
+for-bindings = <"["> (ws? symbol ws expr ws? )+ <"]">
+fnspec = <"("> ws? symbol ws params exprs? <")">
+fnspecs = <"["> ws? fnspec* ws? <"]">
+
+import = <"(" | "["> ws? ws? <"]" | ")">
+alias = ws <":as"> ws symbol
+require = <"(" | "["> ws? symbol alias? ws? <"]" | ")">
+<requires> = ws? <"("> ws? <":require"> ws? require? ws? <")"> ws?
+           | ws? <"("> ws? <":import"> ws? import? ws? <")"> ws?
+
+declare = <"("> ws? symbol ws symbol ws? <")">
+for = <"("> ws? symbol ws for-bindings exprs? ws? <")">
+let = <"("> ws? symbol ws bindings exprs? <")">
+letfn = <"("> ws? symbol ws fnspecs exprs? <")">
+defn = <"("> ws? symbol ws symbol ws params ws exprs? <")">
+def = <"("> ws? symbol ws symbol ws exprs? <")">
+ns = <"("> ws? <"ns"> ws symbol (ws? requires ws?)* <")">
+
+<op> = (ws? expr? ws?)
+
+<expr> = quoted
+       | ignored
+       | symbol
+       | number
+       | var
+       | keyword
+       | string
+       | regex
+       | vector
+       | map
+       | set
+       | list
+       | declare
+       | letfn
+       | for
+       | let
+       | def
+       | defn
+       | ns
+
+vector = <"["> exprs? <"]">
+map = <"{"> (ws? expr ws expr ws?)* <"}">
+set = <"#"> <"{"> ws? exprs? ws? <"}">
+list = <"("> ws? exprs? ws? <")">
+
+<form> = symbol
+        | number
+        | var
+        | keyword
+        | string
+        | regex
+        | vector
+        | map
+        | set
+        | list
+        | call
+
+<forms> = (ws? form ws?)*
+call = <"("> forms+ <")">
+file = (ws? call ws?)*

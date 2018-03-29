@@ -3,15 +3,10 @@
     [clojure.walk :as walk]
     [clojure.string :as string]
     [clojure.spec.alpha :as s]
-    [clojure.tools.reader :as reader]
-    [clojure.tools.reader.reader-types :as types]
-    [rewrite-clj.parser :as p]
     [rewrite-clj.zip :as z]
     [rewrite-clj.node :as n]
-    [clojure.core.specs.alpha :as specs.alpha]
     [clojure.pprint :as pp]
     [clojure.tools.logging :as log]))
-#_(ns-unalias *ns* 'z)
 
 (def default-env
   {:ns 'user
@@ -19,7 +14,7 @@
    :refers (->> #{'defn 'def 'ns 'let}
                 (mapv (juxt identity (constantly 'clojure.core)))
                 (into {}))
-   :aliases #{}
+   :aliases {}
    :publics #{}
    :scoped #{}})
 
@@ -93,7 +88,7 @@
                         (let [{:keys [as refer]} options]
                           (cond-> env
                             :always (update :requires conj lib)
-                            as (update :aliases conj as)
+                            as (update :aliases conj [as lib])
                             (and refer (= :syms (first refer))) (update :refers into (map vector (second refer) (repeat lib))))))))
     (vswap! new-env assoc :ns (:name conformed) :require-pos {:add-require? (not require-loc)
                                                               :line (:end-row require-node)
@@ -148,7 +143,7 @@
   "
   Is loc a let?
   find position relative to bindings
-  add indings before to scoped
+  add bindings before to scoped
    "
   [loc env line column]
   (let [form (z/child-sexprs loc)
@@ -224,8 +219,7 @@
                            "(def yyy :bsrg)"])]
     (find-publics code)
 
-    (parse code
-           12 2)
+    #_(parse code 12 2)
     #_(time
         (-> (z/of-string code)
             (find-position default-env 50 0)

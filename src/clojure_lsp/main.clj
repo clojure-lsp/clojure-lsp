@@ -5,10 +5,9 @@
             [clojure.string :as string]
             [clojure.core.async :as async])
   (:import (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService)
-           (org.eclipse.lsp4j InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams)
+           (org.eclipse.lsp4j InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions)
            (org.eclipse.lsp4j.launch LSPLauncher)
            (java.util.concurrent CompletableFuture)
-           (clojure.lang IFn)
            (java.util.function Supplier)))
 
 (defonce db (atom {:documents {}}))
@@ -29,8 +28,7 @@
     (let [textDocument (.getTextDocument params)
           version (.getVersion textDocument)
           changes (.getContentChanges params)
-          text (.getText (.get changes 0))
-          state-db @db]
+          text (.getText (.get changes 0))]
       (loop [state-db @db]
         (when (> version (get-in state-db [:documents (.getUri textDocument) :v] -1))
           (when-not (compare-and-set! db state-db (assoc-in state-db [:documents (.getUri textDocument)] {:v version :text text}))
@@ -58,22 +56,26 @@
                   syms (concat (:scoped env)
                                (:publics env)
                                (keys (:refers env))
-                               (:aliases env)
+                               (keys (:aliases env))
                                (:requires env))
-                  other-envs (:envs @db)
+                  file-envs (:file-envs @db)
                   {:keys [add-require? line column]} (:require-pos env)]
               (into
                 (set (mapv (fn [sym] (CompletionItem. (name sym))) syms))
-                (mapcat (fn [[ns-sym pubs]]
-                          (mapv #(doto (CompletionItem. (name %))
-                                   (.setAdditionalTextEdits
-                                     [(TextEdit. (Range. (Position. (dec line) (dec column))
-                                                         (Position. (dec line) (dec column)))
-                                                 (if add-require?
-                                                   (format "\n  (:require\n    [%s])" (name ns-sym))
-                                                   (format "\n    [%s]" (name ns-sym))))]))
-                                (conj pubs ns-sym)))
-                        other-envs)))
+                (mapcat (fn [[doc-id file-env]]
+                          (let [ns-sym (:ns file-env)
+                                alias (get-in @db [:aliases ns-sym])
+                                maybe-alias (cond-> ""
+                                              alias (str " :as " (name alias)))]
+                            (mapv #(doto (CompletionItem. (name %))
+                                     (.setAdditionalTextEdits
+                                       [(TextEdit. (Range. (Position. (dec line) (dec column))
+                                                           (Position. (dec line) (dec column)))
+                                                   (if add-require?
+                                                     (format "\n  (:require\n   [%s%s])" (name ns-sym) maybe-alias)
+                                                     (format "\n   [%s%s]" (name ns-sym) maybe-alias)))]))
+                                  (conj (:publics file-env) ns-sym))))
+                        file-envs)))
             (catch Exception e
               (log/error e))))))))
 
@@ -87,13 +89,11 @@
 
 (defn crawl-files [files]
   (let [xf (comp (filter #(.isFile %))
-                 (filter (fn [f]
-                           (let [path (.getAbsolutePath f)]
-                             (or (string/ends-with? path ".clj")
-                                 (string/ends-with? path ".cljc")))))
-                 (map slurp)
-                 (map parser/find-publics)
-                 (map (juxt :ns :publics)))
+                 (map #(.getAbsolutePath %))
+                 (filter (fn [path]
+                           (or (string/ends-with? path ".clj")
+                               (string/ends-with? path ".cljc"))))
+                 (map (juxt identity (comp parser/find-publics slurp))))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan files))
     (async/<!! (async/into {} output-chan))))
@@ -102,13 +102,22 @@
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (when-let [project-root (.getRootUri params)]
-      (let [root-file (io/file (string/replace-first (log/spy project-root) "file://" "") "src")
-            parsed-envs (->> (file-seq root-file)
-                             (crawl-files))]
-        (swap! db assoc :envs (log/spy parsed-envs))))
+      (let [root-file (io/file (string/replace-first project-root "file://" "") "src")
+            file-envs (->> (file-seq root-file)
+                           (crawl-files))]
+        (swap! db assoc
+               :file-envs file-envs
+               :aliases (into {}
+                              (for [[doc-id file-env] file-envs
+                                    :let [{:keys [aliases]} file-env]
+                                    [alias ns-sym] aliases]
+                                [ns-sym alias])))))
 
     (CompletableFuture/completedFuture
       (InitializeResult. (doto (ServerCapabilities.)
+                           (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                   (.setChange TextDocumentSyncKind/Full)
+                                                   (.setSave (SaveOptions. true))))
                            (.setCompletionProvider (CompletionOptions. false [\c]))))))
   (^void initialized [this ^InitializedParams params]
     (log/spy "HELLO"))
@@ -129,5 +138,3 @@
         launcher (LSPLauncher/createServerLauncher server System/in System/out)]
     (swap! db assoc :client (.getRemoteProxy launcher))
     (.startListening launcher)))
-
-

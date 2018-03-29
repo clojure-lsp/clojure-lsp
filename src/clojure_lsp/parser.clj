@@ -74,21 +74,19 @@
         require-loc (-> loc
                         (z/down)
                         (z/find z/right (fn [node]
-                                          (let [sexpr (log/spy (z/sexpr node))]
+                                          (let [sexpr (z/sexpr node)]
                                             (and (seq? sexpr) (= :require (first sexpr)))))))
         require-node (-> (or require-loc loc)
                          (z/down)
                          (z/rightmost)
                          (z/node)
-                         log/spy
-                         (meta)
-                         log/spy)]
+                         (meta))]
     (doseq [{:keys [lib options]} libspecs]
       (vswap! new-env (fn [env]
                         (let [{:keys [as refer]} options]
                           (cond-> env
                             :always (update :requires conj lib)
-                            as (update :aliases conj [as lib])
+                            as (update :aliases conj [lib as])
                             (and refer (= :syms (first refer))) (update :refers into (map vector (second refer) (repeat lib))))))))
     (vswap! new-env assoc :ns (:name conformed) :require-pos {:add-require? (not require-loc)
                                                               :line (:end-row require-node)
@@ -185,7 +183,6 @@
 
 (defn parse [code line column]
   (-> code
-      log/spy
       (z/of-string)
       (find-position default-env line column)))
 

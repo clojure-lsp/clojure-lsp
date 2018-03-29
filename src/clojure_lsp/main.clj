@@ -5,7 +5,7 @@
             [clojure.string :as string]
             [clojure.core.async :as async])
   (:import (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService)
-           (org.eclipse.lsp4j InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions)
+           (org.eclipse.lsp4j InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions CompletionItemKind)
            (org.eclipse.lsp4j.launch LSPLauncher)
            (java.util.concurrent CompletableFuture)
            (java.util.function Supplier)))
@@ -19,12 +19,12 @@
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [this ^DidOpenTextDocumentParams params]
-    (log/spy params)
+    (log/warn params)
     (let [document (.getTextDocument params)]
       (save-document (.getUri document) (.getText document))))
 
   (^void didChange [this ^DidChangeTextDocumentParams params]
-    (log/spy params)
+    (log/warn params)
     (let [textDocument (.getTextDocument params)
           version (.getVersion textDocument)
           changes (.getContentChanges params)
@@ -35,12 +35,12 @@
             (recur @db))))))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]
-    (log/spy params))
+    (log/warn params))
   (^void didClose [this ^DidCloseTextDocumentParams params]
-    (log/spy params))
+    (log/warn params))
 
   (^CompletableFuture completion [this ^TextDocumentPositionParams params]
-    (log/spy params)
+    (log/warn params)
     (CompletableFuture/supplyAsync
       (reify Supplier
         (get [this]
@@ -56,7 +56,7 @@
                   syms (concat (:scoped env)
                                (:publics env)
                                (keys (:refers env))
-                               (keys (:aliases env))
+                               (vals (:aliases env))
                                (:requires env))
                   file-envs (:file-envs @db)
                   {:keys [add-require? line column]} (:require-pos env)]
@@ -64,17 +64,21 @@
                 (set (mapv (fn [sym] (CompletionItem. (name sym))) syms))
                 (mapcat (fn [[doc-id file-env]]
                           (let [ns-sym (:ns file-env)
-                                alias (get-in @db [:aliases ns-sym])
-                                maybe-alias (cond-> ""
-                                              alias (str " :as " (name alias)))]
-                            (mapv #(doto (CompletionItem. (name %))
+                                file-alias (get-in env [:aliases ns-sym])
+                                alias (get-in @db [:project-aliases ns-sym])
+                                as-alias (cond-> ""
+                                           alias (str " :as " (name alias)))
+                                ref (or file-alias alias ns-sym)]
+                            (mapv #(doto (CompletionItem. (format "%s/%s" (name ref) (name %)))
                                      (.setAdditionalTextEdits
-                                       [(TextEdit. (Range. (Position. (dec line) (dec column))
-                                                           (Position. (dec line) (dec column)))
-                                                   (if add-require?
-                                                     (format "\n  (:require\n   [%s%s])" (name ns-sym) maybe-alias)
-                                                     (format "\n   [%s%s]" (name ns-sym) maybe-alias)))]))
-                                  (conj (:publics file-env) ns-sym))))
+                                       (cond-> []
+                                         (not (contains? (:requires env) ns-sym))
+                                         (conj (TextEdit. (Range. (Position. (dec line) (dec column))
+                                                                  (Position. (dec line) (dec column)))
+                                                          (if add-require?
+                                                            (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
+                                                            (format "\n   [%s%s]" (name ns-sym) as-alias)))))))
+                                  (:publics file-env))))
                         file-envs)))
             (catch Exception e
               (log/error e))))))))
@@ -83,9 +87,9 @@
 (deftype LSPWorkspaceService []
   WorkspaceService
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
-    (log/spy params))
+    (log/warn params))
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
-    (log/spy params)))
+    (log/warn params)))
 
 (defn crawl-files [files]
   (let [xf (comp (filter #(.isFile %))
@@ -107,11 +111,7 @@
                            (crawl-files))]
         (swap! db assoc
                :file-envs file-envs
-               :aliases (into {}
-                              (for [[doc-id file-env] file-envs
-                                    :let [{:keys [aliases]} file-env]
-                                    [alias ns-sym] aliases]
-                                [ns-sym alias])))))
+               :project-aliases (apply merge (map (comp :aliases val) file-envs)))))
 
     (CompletableFuture/completedFuture
       (InitializeResult. (doto (ServerCapabilities.)
@@ -120,10 +120,9 @@
                                                    (.setSave (SaveOptions. true))))
                            (.setCompletionProvider (CompletionOptions. false [\c]))))))
   (^void initialized [this ^InitializedParams params]
-    (log/spy "HELLO"))
+    (log/warn "HELLO"))
   (^CompletableFuture shutdown [this]
-
-    (log/spy "bye")
+    (log/warn "bye")
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [this]

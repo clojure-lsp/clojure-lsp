@@ -1,6 +1,6 @@
 A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive like approach of statically analyzing code rather than depending on a repl and runtime.
 
-This is a very early work in progress, contributions are very welcome.
+This is a very early work in progress, contributions are very welcome. It's currently written in Clojure but Lumo might be more appealing for startup time. 
 
 ## Clients
 
@@ -24,6 +24,10 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
 https://github.com/emacs-lsp looks promising but I haven't had a chance to try it (similar one client per server).
 
 ## TODO
+
+### Persistence
+- Project db file 
+  - store file and last modified and file environments
 
 ### Diagnostics 
 - crawl through parsed results and see if symbols exist where used

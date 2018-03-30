@@ -1,45 +1,49 @@
 (ns clojure-lsp.parser
   (:require
-    [clojure.walk :as walk]
-    [clojure.string :as string]
+    [clojure-lsp.clojure-core :as cc]
+    [clojure.set :as set]
     [clojure.spec.alpha :as s]
-    [rewrite-clj.zip :as z]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [clojure.walk :as walk]
     [rewrite-clj.node :as n]
-    [clojure.pprint :as pp]
-    [clojure.tools.logging :as log]))
+    [rewrite-clj.zip :as z]))
 
 (def default-env
   {:ns 'user
    :requires #{'clojure.core}
-   :refers (->> #{'defn 'def 'ns 'let}
+   :refers (->> cc/core-syms
                 (mapv (juxt identity (constantly 'clojure.core)))
                 (into {}))
    :aliases {}
    :publics #{}
-   :scoped #{}})
-
-(defmacro spy [v]
-  `(let [v# ~v]
-     (pp/pprint v#)
-     v#))
+   :scoped #{}
+   :usages []})
 
 (defn zspy [loc]
-  (spy (z/sexpr loc))
+  (log/spy (z/sexpr loc))
   loc)
 
 (defn qualify-symbol [sym {:keys [:aliases :scoped :publics :refers :requires :ns] :as env}]
   (when (symbol? sym)
-    (let [sym-ns (namespace sym)
+    (let [sym-ns (some-> (namespace sym) symbol)
           simple? (not sym-ns)
-          sym-name (name sym)]
+          sym-name (name sym)
+          alias->ns (set/map-invert aliases)]
       (if simple?
         (cond
           (contains? scoped sym) sym
           (contains? publics sym) (symbol (name ns) sym-name)
-          (contains? refers sym) (symbol (name (get refers sym)) sym-name))
+          (contains? refers sym) (symbol (name (get refers sym)) sym-name)
+          :else sym)
         (cond
-          (contains? aliases sym-ns) (symbol (name (get aliases sym-ns)) sym-name)
-          (contains? requires sym-ns) sym)))))
+          (contains? alias->ns sym-ns)
+          (symbol (name (alias->ns sym-ns)) sym-name)
+
+          (contains? requires sym-ns)
+          sym
+
+          :else sym)))))
 
 (defmulti add-vars*
   (fn [sym args new-env loc]
@@ -118,14 +122,32 @@
                     (qualify-symbol @new-env))]
     (add-vars* sym (rest form) new-env loc)))
 
+(defn add-usage [new-env loc]
+  (vswap! new-env (fn [env]
+                    (let [node (z/node loc)
+                          {:keys [row end-row col end-col] :as m} (meta node)]
+                      (update env :usages conj {:sym (qualify-symbol (n/sexpr node) env)
+                                                :line-start row
+                                                :line-end end-row
+                                                :column-start col
+                                                :column-end end-col})))))
+
 (defn update-vars [loc env]
   (let [new-env (volatile! env)]
-    (z/postwalk
+    (z/prewalk
       loc
-      (comp #{:list} z/tag)
+      identity
       (fn [loc]
-        (add-vars new-env loc)
-        loc))
+        (let [tag (z/tag loc)]
+          (cond
+            (#{:quote :uneval} tag)
+            (z/subedit-> loc (z/replace '()))
+
+            (= :list tag)
+            (do (add-vars new-env loc) loc)
+
+            (and (= :token tag) (symbol? (z/sexpr loc)))
+            (do (add-usage new-env loc) loc)))))
     @new-env))
 
 (defn check-bounds [node line column]
@@ -170,6 +192,7 @@
 
 (defn find-position [loc env line column]
   (let [node (z/node loc)
+        sexpr (n/sexpr node)
         bounds (check-bounds node line column)
         bindings (update-scoped loc env line column)
         env (if (= :after bounds)
@@ -178,7 +201,9 @@
     (cond
       (and (= :after bounds) (z/rightmost? loc)) [env nil]
       (= :after bounds) (recur (z/right loc) env line column)
-      (not (z/seq? loc)) [env node]
+      (not (z/seq? loc)) [env (if (symbol? sexpr)
+                                (qualify-symbol sexpr env)
+                                sexpr)]
       :else (recur (z/down loc) env line column))))
 
 (defn parse [code line column]
@@ -186,7 +211,7 @@
       (z/of-string)
       (find-position default-env line column)))
 
-(defn find-publics [code]
+(defn find-vars [code]
   (-> code
       (z/of-string)
       (z/up)
@@ -194,32 +219,28 @@
 
 (comment
   (let [code (string/join "\n"
-                          ["#_(ns omg.pop) 'foo"
-                           "(ns thinger.foo"
-                           "  (:refer-clojure :exclude [update])"
-                           "  (:require"
-                           "    thinger.bleep"
-                           "    [thinger.boo :as boo :refer [bang]]"
-                           "    [thinger [bun :as bun]"
-                           "             [bin :as bin :refer :all]"
-                           "             ben"
-                           "             [bung.bong :as bb :refer [bing byng]]]))"
-                           "(declare foo)"
-                           "(def x 1)"
-                           "(inc 1 (defn xxx [a b c] foo))"
-                           "(let [a b"
-                           "      c njnjjmmmd"
-                           "      {:keys [e f] {:keys [w v] :as x} :x :as g} h"
-                           "      [i j k :as m] n]"
-                           "  (inc a b c d))"
-                           "(println \"wat\") "
-                           "(def yyy :bsrg)"])]
-    (find-publics code)
+                          ["(ns thinger.foo"
+                             "  (:refer-clojure :exclude [update])"
+                             "  (:require"
+                             "    [thinger [my.bun :as bun]"
+                             "             [bung.bong :as bb :refer [bing byng]]]))"
+                             "(let [x 1] (inc x))"
+                             "(def x 1)"
+                             "(defn y [y] (y x))"
+                             "(inc x)"
+                             "(bun/foo)"
+                             "(bing)"])]
+    (find-vars code)
+    (parse code 16 2)
+#_
+    (-> (z/of-string code {:track-position? true})
 
-    #_(parse code 12 2)
-    #_(time
-        (-> (z/of-string code)
-            (find-position default-env 50 0)
-            (spy)))))
+        (z/down)
+        (z/replace 1)
+        (z/up)
+        (z/right)
+        ((juxt (comp meta z/node)
+               z/node
+               z/position)))))
 
 

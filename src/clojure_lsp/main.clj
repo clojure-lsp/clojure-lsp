@@ -5,7 +5,8 @@
             [clojure.string :as string]
             [clojure.core.async :as async])
   (:import (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService)
-           (org.eclipse.lsp4j InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions CompletionItemKind)
+           (org.eclipse.lsp4j
+             InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions CompletionItemKind ReferenceParams Location)
            (org.eclipse.lsp4j.launch LSPLauncher)
            (java.util.concurrent CompletableFuture)
            (java.util.function Supplier)))
@@ -13,7 +14,10 @@
 (defonce db (atom {:documents {}}))
 
 (defn- save-document [uri text]
-  (swap! db assoc-in [:documents uri] {:v 0 :text text})
+  (swap! db (fn [state-db]
+              (-> state-db
+                  (assoc-in [:documents uri] {:v 0 :text text})
+                  (assoc-in [:file-envs (string/replace uri #"^file:///" "/")] (parser/find-vars text)))))
   text)
 
 (deftype LSPTextDocumentService []
@@ -28,16 +32,45 @@
     (let [textDocument (.getTextDocument params)
           version (.getVersion textDocument)
           changes (.getContentChanges params)
-          text (.getText (.get changes 0))]
+          text (.getText (.get changes 0))
+          uri (.getUri textDocument)]
       (loop [state-db @db]
-        (when (> version (get-in state-db [:documents (.getUri textDocument) :v] -1))
-          (when-not (compare-and-set! db state-db (assoc-in state-db [:documents (.getUri textDocument)] {:v version :text text}))
+        (when (> version (get-in state-db [:documents uri :v] -1))
+          (when-not (compare-and-set! db state-db (-> state-db
+                                                      (assoc-in [:documents uri] {:v version :text text})
+                                                      (assoc-in [:file-envs (string/replace uri #"^file:///" "/")] (parser/find-vars text))))
             (recur @db))))))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]
     (log/warn params))
   (^void didClose [this ^DidCloseTextDocumentParams params]
     (log/warn params))
+
+  (^CompletableFuture references [this ^ReferenceParams params]
+    (log/warn params)
+    (CompletableFuture/supplyAsync
+      (reify Supplier
+        (get [this]
+          (try
+            (let [pos (.getPosition params)
+                  doc-id (.getUri (.getTextDocument params))
+                  text (or (get-in @db [:documents doc-id :text])
+                           (slurp doc-id))
+                  [env sexpr] (parser/parse text
+                                            (inc (.getLine pos))
+                                            (inc (.getCharacter pos)))]
+
+              (into []
+                    (for [[path {:keys [usages]}] (:file-envs @db)
+                          {:keys [sym line-start line-end column-start column-end]} usages
+                          :when (= sym sexpr)]
+                      (do
+                        (log/warn sym sexpr path)
+                        (Location. (str "file://" path)
+                                   (Range. (Position. (dec line-start) (dec column-start))
+                                           (Position. (dec line-end) (dec column-end))))))))
+            (catch Exception e
+              (log/error e)))))))
 
   (^CompletableFuture completion [this ^TextDocumentPositionParams params]
     (log/warn params)
@@ -97,7 +130,7 @@
                  (filter (fn [path]
                            (or (string/ends-with? path ".clj")
                                (string/ends-with? path ".cljc"))))
-                 (map (juxt identity (comp parser/find-publics slurp))))
+                 (map (juxt identity (comp parser/find-vars slurp))))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan files))
     (async/<!! (async/into {} output-chan))))
@@ -115,6 +148,7 @@
 
     (CompletableFuture/completedFuture
       (InitializeResult. (doto (ServerCapabilities.)
+                           (.setReferencesProvider true)
                            (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                    (.setChange TextDocumentSyncKind/Full)
                                                    (.setSave (SaveOptions. true))))

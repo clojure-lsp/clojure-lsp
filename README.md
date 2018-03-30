@@ -2,6 +2,17 @@ A [Language Server](https://microsoft.github.io/language-server-protocol/) for C
 
 This is a very early work in progress, contributions are very welcome. It's currently written in Clojure but Lumo might be more appealing for startup time. 
 
+## Capabilities
+
+| capability | done | partial? | notes |
+| ---------- | ---- | -------- | ----- |
+| textDocumentSync |  | YES | Only `Full` |
+| completionProvider | | YES | TODO: add function signatures, docstrings, crawl classpath jars? |
+| referencesProvider | | YES | TODO: scoped variables, keywords, crawl classpath jars |
+| renameProvider | | | important |
+| definitionProvider | | | important |
+
+
 ## Clients
 
 Tested in various language server clients. In general use stdio and a command like `['bash', '-c', 'cd ~/dev/lsp/ && clj -m clojure-lsp.main']` (I didn't want to figure out working dir/classpaths for `clj`, let me know a better command). You can get `clj` on macs with `brew install clojure`

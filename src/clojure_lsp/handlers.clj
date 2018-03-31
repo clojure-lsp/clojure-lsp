@@ -20,6 +20,9 @@
     (and (= end-row line) (>= end-col column)) :within
     :else :after))
 
+(defn find-reference-under-cursor [line column env]
+  (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
+
 (defn safe-find-references [text]
   (try
     (parser/find-references text)
@@ -89,9 +92,6 @@
                                  (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
                                  (format "\n   [%s%s]" (name ns-sym) as-alias)))))))))))
 
-(defn find-reference-under-cursor [line column env]
-  (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
-
 (defn references [doc-id line column]
   (let [path (uri->path doc-id)
         file-envs (:file-envs @db/db)
@@ -117,8 +117,7 @@
 
 (comment
   (do (did-change "foo" "foo" 1)
-      @db/db)
-  )
+      @db/db))
 
 (defn rename [doc-id line column new-name]
   (let [path (uri->path doc-id)
@@ -142,3 +141,16 @@
                           (doto (VersionedTextDocumentIdentifier. version)
                             (.setUri doc-id))
                           edits))))))
+
+(defn definition [doc-id line column]
+  (let [path (uri->path doc-id)
+        file-envs (:file-envs @db/db)
+        local-env (get file-envs path)
+        cursor-sym (:sym (find-reference-under-cursor line column local-env))]
+    (first
+      (for [[path {:keys [usages]}] file-envs
+            :let [doc-id (str "file://" path)]
+            {:keys [sym tags row end-row col end-col]} usages
+            :when (and (= sym cursor-sym) (:declare tags))]
+        (Location. doc-id (Range. (Position. (dec row) (dec col))
+                                  (Position. (dec end-row) (dec end-col))))))))

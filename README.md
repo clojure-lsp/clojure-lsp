@@ -8,9 +8,11 @@ This is a very early work in progress, contributions are very welcome. It's curr
 | ---------- | ---- | -------- | ----- |
 | textDocumentSync |  | YES | Only `Full` |
 | completionProvider | | YES | TODO: add function signatures, docstrings, crawl classpath jars? |
-| referencesProvider | | YES | TODO: scoped variables, keywords, crawl classpath jars |
-| renameProvider | | | important |
-| definitionProvider | | | important |
+| referencesProvider | | YES | TODO: keywords, crawl classpath jars, scoping for `fn`, `doseq`, `for` others |
+| renameProvider | | YES | more reference work; more tests - do bad references make bad renames? |
+| definitionProvider | | YES | more reference work |
+| diagnostics | | | maybe? joker is pretty great - should probably handle undeclared vars somehow |
+| hover | | | would be helpful and piggiebacks off  richer completion | 
 
 
 ## Clients

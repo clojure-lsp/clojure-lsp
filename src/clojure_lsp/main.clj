@@ -74,8 +74,16 @@
                   new-name (.getNewName params)]
               (handlers/rename doc-id line column new-name))
             (catch Exception e
-              (log/error e))))))
-    ))
+              (log/error e)))))))
+  (^CompletableFuture definition [this ^TextDocumentPositionParams params]
+    (CompletableFuture/supplyAsync
+      (reify Supplier
+        (get [this]
+          (try (let [doc-id (.getUri (.getTextDocument params))
+                     pos (.getPosition params)
+                     line (inc (.getLine pos))
+                     column (inc (.getCharacter pos))]
+                 (handlers/definition doc-id line column))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -92,6 +100,7 @@
       (InitializeResult. (doto (ServerCapabilities.)
                            (.setReferencesProvider true)
                            (.setRenameProvider true)
+                           (.setDefinitionProvider true)
                            (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                    (.setOpenClose true)
                                                    (.setChange TextDocumentSyncKind/Full)

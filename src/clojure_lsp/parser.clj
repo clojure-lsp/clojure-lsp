@@ -177,7 +177,9 @@
   [op-loc loc context scoped]
   (let [def-sym (z/node (z/right op-loc))]
     (vswap! context update :publics conj (n/sexpr def-sym))
-    (add-reference context scoped def-sym {:tags #{:declare :public}})))
+    (add-reference context scoped def-sym {:tags #{:declare :public}})
+    (handle-rest (z/right (z/right op-loc))
+                 context scoped)))
 
 (defmethod handle-sexpr* 'clojure.core/defn
   [op-loc loc context scoped]
@@ -220,7 +222,8 @@
       (handle-sexpr* op-loc loc context scoped))))
 
 (comment
-  (find-references "(defn x [x] (let [x x] (inc x))) (inc x)"))
+  (find-references "(def x (inc x))"))
+  
 
 (defn find-references* [loc context scoped]
   (loop [loc loc
@@ -231,7 +234,7 @@
       (let [tag (z/tag loc)]
         (cond
           (#{:quote :uneval} tag)
-          (recur (zm/right loc) scoped)
+          (recur (zm/next (zm/rightmost (zm/down loc))) scoped)
 
           (= :list tag)
           (do
@@ -269,5 +272,10 @@
     (find-references code)
     #_(find-position code 16 2))
 
-  (find-references (slurp "/Users/case/dev/lsp/src/clojure_lsp/handlers.clj"))
-  )
+  (dissoc (find-references
+
+            " {:requires #{'clojure.core}
+                      :refers cc/core-syms
+                      }")
+          :refers))
+

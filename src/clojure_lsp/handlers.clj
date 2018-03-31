@@ -7,7 +7,7 @@
     [clojure.string :as string]
     [clojure.tools.logging :as log])
   (:import
-    (org.eclipse.lsp4j CompletionItem Position Range TextEdit Location)))
+    (org.eclipse.lsp4j CompletionItem Position Range TextEdit Location WorkspaceEdit TextDocumentEdit VersionedTextDocumentIdentifier)))
 
 (defn- uri->path [uri]
   (string/replace uri #"^file:///" "/"))
@@ -89,11 +89,14 @@
                                  (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
                                  (format "\n   [%s%s]" (name ns-sym) as-alias)))))))))))
 
+(defn find-reference-under-cursor [line column env]
+  (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
+
 (defn references [doc-id line column]
   (let [path (uri->path doc-id)
         file-envs (:file-envs @db/db)
         local-env (get file-envs path)
-        cursor-sym (:sym (first (filter (comp #{:within} (partial check-bounds line column)) (:usages local-env))))]
+        cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (into []
           (for [[path {:keys [usages]}] (:file-envs @db/db)
                 {:keys [sym row end-row col end-col]} usages
@@ -116,3 +119,26 @@
   (do (did-change "foo" "foo" 1)
       @db/db)
   )
+
+(defn rename [doc-id line column new-name]
+  (let [path (uri->path doc-id)
+        file-envs (:file-envs @db/db)
+        local-env (get file-envs path)
+        cursor-sym (:sym (find-reference-under-cursor line column local-env))]
+    (WorkspaceEdit. (vec
+                      (for [[path {:keys [usages]}] file-envs
+                            :let [doc-id (str "file://" path)
+                                  version (get-in @db/db [:documents doc-id :v] 0)
+                                  edits (for [{:keys [sym sexpr row end-row col end-col]} usages
+                                              :when (= sym cursor-sym)
+                                              :let [sym-ns (namespace sexpr)]]
+                                          (TextEdit. (Range. (Position. (dec row) (dec col))
+                                                             (Position. (dec end-row) (dec end-col)))
+                                                     (if sym-ns
+                                                       (str sym-ns "/" new-name)
+                                                       new-name)))]
+                            :when (seq edits)]
+                        (TextDocumentEdit.
+                          (doto (VersionedTextDocumentIdentifier. version)
+                            (.setUri doc-id))
+                          edits))))))

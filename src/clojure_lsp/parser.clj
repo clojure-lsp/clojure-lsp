@@ -62,6 +62,7 @@
                             sexpr (n/sexpr node)
                             scope-bounds (get-in scoped [sexpr :bounds])]
                         (conj usages (cond-> {:sym (qualify-ident sexpr context scoped)
+                                              :sexpr sexpr
                                               :row row
                                               :end-row end-row
                                               :col col
@@ -163,7 +164,8 @@
                          (add-reference context new-scoped node {:tags #{:declare :param}
                                                                  :scope-bounds scope-bounds
                                                                  :sym (symbol (name scoped-ns)
-                                                                              (name sexpr))})
+                                                                              (name sexpr))
+                                                                 :sexpr sexpr})
                          (handle-rest (zsub/subzip right-side-loc) context scoped)
                          (recur (z/right right-side-loc) new-scoped))
                        :else
@@ -203,7 +205,8 @@
                     (add-reference context new-scoped node {:tags #{:declare :param}
                                                             :scope-bounds scope-bounds
                                                             :sym (symbol (name scoped-ns)
-                                                                         (name sexpr))})
+                                                                         (name sexpr))
+                                                            :sexpr sexpr})
                     (recur (z/right param-loc) new-scoped))
                   :else
                   (recur (z/right param-loc) scoped)))

@@ -47,15 +47,10 @@ https://github.com/emacs-lsp looks promising but I haven't had a chance to try i
 ### Others
 - Better completion item kinds
 - rename
-- find usages
 - formatting (clj-format?)
 - other lsp capabilities?
 - Cursive style "resolve macros as" def/defn/let etc.. to expose more vars
 - crawl classpath for exported vars 
-- crawl project.clj / build.boot src paths
+- crawl project.clj / build.boot src and test paths
 - keep separate cljs and clj environments
 - handle cljc reader-macros
-
-## Out of scope for now:
- - :import and deftypes, defrecord etc...
-

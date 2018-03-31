@@ -1,50 +1,37 @@
 (ns clojure-lsp.main
-  (:require [clojure-lsp.parser :as parser]
-            [clojure.tools.logging :as log]
-            [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.core.async :as async])
-  (:import (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService)
-           (org.eclipse.lsp4j
-             InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions CompletionItemKind ReferenceParams Location)
-           (org.eclipse.lsp4j.launch LSPLauncher)
-           (java.util.concurrent CompletableFuture)
-           (java.util.function Supplier)))
-
-(defonce db (atom {:documents {}}))
-
-(defn- save-document [uri text]
-  (swap! db (fn [state-db]
-              (-> state-db
-                  (assoc-in [:documents uri] {:v 0 :text text})
-                  (assoc-in [:file-envs (string/replace uri #"^file:///" "/")] (parser/find-vars text)))))
-  text)
+  (:require
+    [clojure-lsp.db :as db]
+    [clojure-lsp.handlers :as handlers]
+    [clojure.tools.logging :as log])
+  (:import
+    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService)
+    (org.eclipse.lsp4j
+      InitializedParams InitializeParams InitializeResult ServerCapabilities CompletionOptions DidOpenTextDocumentParams DidChangeTextDocumentParams DidSaveTextDocumentParams DidCloseTextDocumentParams TextDocumentPositionParams CompletionItem TextEdit Range Position DidChangeConfigurationParams DidChangeWatchedFilesParams TextDocumentSyncOptions TextDocumentSyncKind SaveOptions CompletionItemKind ReferenceParams Location TextDocumentContentChangeEvent)
+    (org.eclipse.lsp4j.launch LSPLauncher)
+    (java.util.concurrent CompletableFuture)
+    (java.util.function Supplier)))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [this ^DidOpenTextDocumentParams params]
     (log/warn params)
     (let [document (.getTextDocument params)]
-      (save-document (.getUri document) (.getText document))))
+      (handlers/did-open (.getUri document) (.getText document))))
 
   (^void didChange [this ^DidChangeTextDocumentParams params]
     (log/warn params)
     (let [textDocument (.getTextDocument params)
           version (.getVersion textDocument)
           changes (.getContentChanges params)
-          text (.getText (.get changes 0))
+          text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
           uri (.getUri textDocument)]
-      (loop [state-db @db]
-        (when (> version (get-in state-db [:documents uri :v] -1))
-          (when-not (compare-and-set! db state-db (-> state-db
-                                                      (assoc-in [:documents uri] {:v version :text text})
-                                                      (assoc-in [:file-envs (string/replace uri #"^file:///" "/")] (parser/find-vars text))))
-            (recur @db))))))
+      (handlers/did-change uri text version)))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]
     (log/warn params))
   (^void didClose [this ^DidCloseTextDocumentParams params]
-    (log/warn params))
+    (log/warn params)
+    (swap! db/db update :documents dissoc (.getUri (.getTextDocument params))))
 
   (^CompletableFuture references [this ^ReferenceParams params]
     (log/warn params)
@@ -52,23 +39,11 @@
       (reify Supplier
         (get [this]
           (try
-            (let [pos (.getPosition params)
-                  doc-id (.getUri (.getTextDocument params))
-                  text (or (get-in @db [:documents doc-id :text])
-                           (slurp doc-id))
-                  [env sexpr] (parser/parse text
-                                            (inc (.getLine pos))
-                                            (inc (.getCharacter pos)))]
-
-              (into []
-                    (for [[path {:keys [usages]}] (:file-envs @db)
-                          {:keys [sym line-start line-end column-start column-end]} usages
-                          :when (= sym sexpr)]
-                      (do
-                        (log/warn sym sexpr path)
-                        (Location. (str "file://" path)
-                                   (Range. (Position. (dec line-start) (dec column-start))
-                                           (Position. (dec line-end) (dec column-end))))))))
+            (let [doc-id (.getUri (.getTextDocument params))
+                  pos (.getPosition params)
+                  line (inc (.getLine pos))
+                  column (inc (.getCharacter pos))]
+              (handlers/references doc-id line column))
             (catch Exception e
               (log/error e)))))))
 
@@ -78,44 +53,13 @@
       (reify Supplier
         (get [this]
           (try
-            (let [pos (.getPosition params)
-                  doc-id (.getUri (.getTextDocument params))
-                  text (or (get-in @db [:documents doc-id :text])
-                           (slurp doc-id))
-                  parsed (parser/parse text
-                                       (inc (.getLine pos))
-                                       (inc (.getCharacter pos)))
-                  env (first parsed)
-                  syms (concat (:scoped env)
-                               (:publics env)
-                               (keys (:refers env))
-                               (vals (:aliases env))
-                               (:requires env))
-                  file-envs (:file-envs @db)
-                  {:keys [add-require? line column]} (:require-pos env)]
-              (into
-                (set (mapv (fn [sym] (CompletionItem. (name sym))) syms))
-                (mapcat (fn [[doc-id file-env]]
-                          (let [ns-sym (:ns file-env)
-                                file-alias (get-in env [:aliases ns-sym])
-                                alias (get-in @db [:project-aliases ns-sym])
-                                as-alias (cond-> ""
-                                           alias (str " :as " (name alias)))
-                                ref (or file-alias alias ns-sym)]
-                            (mapv #(doto (CompletionItem. (format "%s/%s" (name ref) (name %)))
-                                     (.setAdditionalTextEdits
-                                       (cond-> []
-                                         (not (contains? (:requires env) ns-sym))
-                                         (conj (TextEdit. (Range. (Position. (dec line) (dec column))
-                                                                  (Position. (dec line) (dec column)))
-                                                          (if add-require?
-                                                            (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
-                                                            (format "\n   [%s%s]" (name ns-sym) as-alias)))))))
-                                  (:publics file-env))))
-                        file-envs)))
+            (let [doc-id (.getUri (.getTextDocument params))
+                  pos (.getPosition params)
+                  line (inc (.getLine pos))
+                  column (inc (.getCharacter pos))]
+              (handlers/completion doc-id line column))
             (catch Exception e
               (log/error e))))))))
-
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -124,39 +68,23 @@
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
     (log/warn params)))
 
-(defn crawl-files [files]
-  (let [xf (comp (filter #(.isFile %))
-                 (map #(.getAbsolutePath %))
-                 (filter (fn [path]
-                           (or (string/ends-with? path ".clj")
-                               (string/ends-with? path ".cljc"))))
-                 (map (juxt identity (comp parser/find-vars slurp))))
-        output-chan (async/chan)]
-    (async/pipeline-blocking 5 output-chan xf (async/to-chan files))
-    (async/<!! (async/into {} output-chan))))
-
 (defrecord LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
-    (when-let [project-root (.getRootUri params)]
-      (let [root-file (io/file (string/replace-first project-root "file://" "") "src")
-            file-envs (->> (file-seq root-file)
-                           (crawl-files))]
-        (swap! db assoc
-               :file-envs file-envs
-               :project-aliases (apply merge (map (comp :aliases val) file-envs)))))
-
+    (handlers/initialize (.getRootUri params))
     (CompletableFuture/completedFuture
       (InitializeResult. (doto (ServerCapabilities.)
                            (.setReferencesProvider true)
                            (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                   (.setOpenClose true)
                                                    (.setChange TextDocumentSyncKind/Full)
                                                    (.setSave (SaveOptions. true))))
                            (.setCompletionProvider (CompletionOptions. false [\c]))))))
   (^void initialized [this ^InitializedParams params]
-    (log/warn "HELLO"))
+    (log/warn "HELLO" params))
   (^CompletableFuture shutdown [this]
     (log/warn "bye")
+    (reset! db/db {:documents {}}) ;; TODO confirm this is correct
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [this]
@@ -169,5 +97,5 @@
 (defn -main [& args]
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)]
-    (swap! db assoc :client (.getRemoteProxy launcher))
+    (swap! db/db assoc :client (.getRemoteProxy launcher))
     (.startListening launcher)))

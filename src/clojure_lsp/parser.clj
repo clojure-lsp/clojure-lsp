@@ -31,7 +31,7 @@
   (log/spy (z/sexpr loc))
   loc)
 
-(defn qualify-ident [ident {:keys [:aliases :publics :refers :requires :ns] :as context} scoped]
+(defn qualify-ident [ident {:keys [aliases publics refers requires ns] :as context} scoped]
   (when (ident? ident)
     (let [sym-ns (some-> (namespace ident) symbol)
           sym-name (name ident)
@@ -220,10 +220,6 @@
     (when (and op-loc (symbol? (z/sexpr op-loc)))
       (add-reference context scoped (z/node op-loc) {})
       (handle-sexpr* op-loc loc context scoped))))
-
-(comment
-  (find-references "(def x (inc x))"))
-  
 
 (defn find-references* [loc context scoped]
   (loop [loc loc

@@ -169,9 +169,9 @@
                                                    (.setSave (SaveOptions. true))))
                            (.setCompletionProvider (CompletionOptions. false [\c]))))))
   (^void initialized [this ^InitializedParams params]
-    (log/warn "HELLO" params))
+    (log/warn "Initialized" params))
   (^CompletableFuture shutdown [this]
-    (log/warn "bye")
+    (log/info "Shutting down")
     (reset! db/db {:documents {}}) ;; TODO confirm this is correct
     (CompletableFuture/completedFuture
       {:result nil}))
@@ -183,6 +183,7 @@
     (LSPWorkspaceService.)))
 
 (defn -main [& args]
+  (log/info "Server started")
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)]
     (swap! db/db assoc :client (.getRemoteProxy launcher))

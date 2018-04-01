@@ -5,12 +5,14 @@
     [clojure.core.async :as async]
     [clojure.java.io :as io]
     [clojure.string :as string]
-    [clojure.tools.logging :as log])
-  (:import
-    (org.eclipse.lsp4j CompletionItem Position Range TextEdit Location WorkspaceEdit TextDocumentEdit VersionedTextDocumentIdentifier)))
+    [clojure.tools.logging :as log]))
 
 (defn- uri->path [uri]
   (string/replace uri #"^file:///" "/"))
+
+(defn- ->range [{:keys [row end-row col end-col]}]
+  {:start {:line (dec row) :character (dec col)}
+   :end {:line (dec end-row) :character (dec end-col)}})
 
 (defn- check-bounds [line column {:keys [row end-row col end-col]}]
   (cond
@@ -72,7 +74,7 @@
                      (when-let [scope-bounds (:scope-bounds usage)]
                        (not= :within (check-bounds line column scope-bounds)))))
            (map :sym)
-           (mapv (fn [sym] (CompletionItem. (name sym))))
+           (mapv (fn [sym] {:label (name sym)}))
            (set))
       (for [[doc-id remote-env] remote-envs
             :let [ns-sym (:ns remote-env)
@@ -82,15 +84,13 @@
                              alias (str " :as " (name alias)))
                   ref (or local-alias alias ns-sym)]
             usage (filter (comp :public :tags) (:usages remote-env))]
-        (doto (CompletionItem. (format "%s/%s" (name ref) (name (:sym usage))))
-          (.setAdditionalTextEdits
-            (cond-> []
-              (not (contains? (:requires local-env) ns-sym))
-              (conj (TextEdit. (Range. (Position. (dec row) (dec col))
-                                       (Position. (dec row) (dec col)))
-                               (if add-require?
-                                 (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
-                                 (format "\n   [%s%s]" (name ns-sym) as-alias)))))))))))
+
+        (cond-> {:label (format "%s/%s" (name ref) (name (:sym usage)))}
+          (not (contains? (:requires local-env) ns-sym))
+          (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
+                                          :new-text (if add-require?
+                                                      (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
+                                                      (format "\n   [%s%s]" (name ns-sym) as-alias))}]))))))
 
 (defn references [doc-id line column]
   (let [path (uri->path doc-id)
@@ -99,11 +99,10 @@
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (into []
           (for [[path {:keys [usages]}] (:file-envs @db/db)
-                {:keys [sym row end-row col end-col]} usages
+                {:keys [sym] :as usage} usages
                 :when (= sym cursor-sym)]
-            (Location. (str "file://" path)
-                       (Range. (Position. (dec row) (dec col))
-                               (Position. (dec end-row) (dec end-col))))))))
+            {:uri (str "file://" path)
+             :range (->range usage)}))))
 
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
@@ -124,23 +123,23 @@
         file-envs (:file-envs @db/db)
         local-env (get file-envs path)
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
-    (WorkspaceEdit. (vec
-                      (for [[path {:keys [usages]}] file-envs
-                            :let [doc-id (str "file://" path)
-                                  version (get-in @db/db [:documents doc-id :v] 0)
-                                  edits (for [{:keys [sym sexpr row end-row col end-col]} usages
-                                              :when (= sym cursor-sym)
-                                              :let [sym-ns (namespace sexpr)]]
-                                          (TextEdit. (Range. (Position. (dec row) (dec col))
-                                                             (Position. (dec end-row) (dec end-col)))
-                                                     (if sym-ns
-                                                       (str sym-ns "/" new-name)
-                                                       new-name)))]
-                            :when (seq edits)]
-                        (TextDocumentEdit.
-                          (doto (VersionedTextDocumentIdentifier. version)
-                            (.setUri doc-id))
-                          edits))))))
+    {:document-changes
+     (->> (for [[path {:keys [usages]}] file-envs
+                :let [doc-id (str "file://" path)
+                      version (get-in @db/db [:documents doc-id :v] 0)]
+                {:keys [sym sexpr] :as usage} usages
+                :when (= sym cursor-sym)
+                :let [sym-ns (namespace sexpr)]]
+            {:range (->range usage)
+             :new-text (if sym-ns
+                         (str sym-ns "/" new-name)
+                         new-name)
+             :text-document {:version version :uri doc-id}})
+          (group-by :text-document)
+          (remove (comp empty? val))
+          (map (fn [[text-document edits]]
+                 {:text-document text-document
+                  :edits edits})))}))
 
 (defn definition [doc-id line column]
   (let [path (uri->path doc-id)
@@ -150,7 +149,6 @@
     (first
       (for [[path {:keys [usages]}] file-envs
             :let [doc-id (str "file://" path)]
-            {:keys [sym tags row end-row col end-col]} usages
+            {:keys [sym tags] :as usage} usages
             :when (and (= sym cursor-sym) (:declare tags))]
-        (Location. doc-id (Range. (Position. (dec row) (dec col))
-                                  (Position. (dec end-row) (dec end-col))))))))
+        {:uri doc-id :range (->range usage)}))))

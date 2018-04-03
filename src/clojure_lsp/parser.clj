@@ -44,25 +44,26 @@
 
 (defn qualify-ident [ident {:keys [aliases publics refers requires ns] :as context} scoped]
   (when (ident? ident)
-    (let [sym-ns (some-> (namespace ident) symbol)
-          sym-name (name ident)
+    (let [ident-ns (some-> (namespace ident) symbol)
+          ident-name (name ident)
           alias->ns (set/map-invert aliases)
           ctr (if (symbol? ident) symbol keyword)]
       (if (simple-ident? ident)
         (cond
-          (keyword? ident) ident
-          (contains? scoped ident) (ctr (name (get-in scoped [ident :ns])) sym-name)
-          (contains? publics ident) (ctr (name ns) sym-name)
-          (contains? refers ident) (ctr (name (get refers ident)) sym-name)
-          :else ident)
+          (keyword? ident) {:sym ident}
+          (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
+          (contains? publics ident) {:sym (ctr (name ns) ident-name)}
+          (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
+          :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
         (cond
-          (contains? alias->ns sym-ns)
-          (ctr (name (alias->ns sym-ns)) sym-name)
+          (contains? alias->ns ident-ns)
+          {:sym (ctr (name (alias->ns ident-ns)) ident-name)}
 
-          (contains? requires sym-ns)
-          ident
+          (contains? requires ident-ns)
+          {:sym ident}
 
-          :else ident)))))
+          :else
+          {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})))))
 
 (defn add-reference [context scoped node extra]
   (vswap! context
@@ -71,13 +72,14 @@
                     (fn [usages]
                       (let [{:keys [row end-row col end-col] :as m} (meta node)
                             sexpr (n/sexpr node)
-                            scope-bounds (get-in scoped [sexpr :bounds])]
-                        (conj usages (cond-> {:sym (qualify-ident sexpr context scoped)
-                                              :sexpr sexpr
+                            scope-bounds (get-in scoped [sexpr :bounds])
+                            ident-info (qualify-ident sexpr context scoped)]
+                        (conj usages (cond-> {:sexpr sexpr
                                               :row row
                                               :end-row end-row
                                               :col col
                                               :end-col end-col}
+                                       :always (merge ident-info)
                                        (seq extra) (merge extra)
                                        (seq scope-bounds) (assoc :scope-bounds scope-bounds)))))))))
 
@@ -197,7 +199,7 @@
   `op-loc` reference will have been added already, responsible for adding all sub references."
   (fn [op-loc loc context scoped]
     ;; TODO need to handle vars? #'defn
-    (qualify-ident (z/sexpr op-loc) @context scoped)))
+    (:sym (qualify-ident (z/sexpr op-loc) @context scoped))))
 
 (defmethod handle-sexpr* :default
   [op-loc loc context scoped]

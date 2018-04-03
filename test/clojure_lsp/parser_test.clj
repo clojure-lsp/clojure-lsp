@@ -11,8 +11,13 @@
        (set)))
 
 (deftest qualify-ident-test
-  (is (= 'foo.bar/qux (parser/qualify-ident 'qux {:ns 'foo.bar :publics #{'qux}} {})))
-  (is (= 'foo.bar/qux (parser/qualify-ident 'qux {:ns 'foo.bar :refers {'qux 'foo.bar}} {}))))
+  (is (= 'foo.bar/qux (:sym (parser/qualify-ident 'qux {:ns 'foo.bar :publics #{'qux}} {}))))
+  (is (= 'foo.bar/qux (:sym (parser/qualify-ident 'qux {:ns 'foo.bar :refers {'qux 'foo.bar}} {}))))
+  (testing "unknown identifiers"
+    (let [ident-info (parser/qualify-ident 'qux {:ns 'foo.bar} {})]
+      (is (= #{:unknown} (:tags ident-info)))
+      (is (= "qux" (name (:sym ident-info))))
+      (is (not= "user" (namespace (:sym ident-info)))))))
 
 (deftest find-references-test
   (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux}

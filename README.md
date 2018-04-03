@@ -17,12 +17,15 @@ This is a very early work in progress, contributions are very welcome. It's curr
 
 ## Clients
 
-Tested in various language server clients. In general use stdio and a command like `['bash', '-c', 'cd ~/dev/lsp/ && clj -m clojure-lsp.main']` (I didn't want to figure out working dir/classpaths for `clj`, let me know a better command). You can get `clj` on macs with `brew install clojure`
+Tested in various language server clients. In general use stdio and a command like `['bash', '-c', 'cd ~/dev/lsp/ && clj -m clojure-lsp.main']` (I didn't want to figure out working dir/classpaths for `clj`, let me know a better command). You can get `clj` on macos with `brew install clojure`
 
 Something that took me too long to realize about LSP is that, in general, the client is responsible for launching the server process. 
 
 ### Vim 
 Both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well. I think supporting completionItem `additionalTexts` is important for auto-imports and the former might be a bit closer (various PRs with omnicomplete)
+
+### Oni
+Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni
 
 ### Intellij / Cursive
 https://github.com/gtache/intellij-lsp tested only briefly. 

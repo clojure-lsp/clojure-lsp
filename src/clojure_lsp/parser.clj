@@ -16,6 +16,7 @@
     [rewrite-clj.zip.subedit :as zsub]))
 
 (declare find-references*)
+(declare parse-destructuring)
 
 (def default-env
   {:ns 'user
@@ -27,9 +28,19 @@
    :publics #{}
    :usages []})
 
-(defn zspy [loc]
-  (log/spy (z/sexpr loc))
-  loc)
+(defmacro zspy [loc]
+  `(do
+     (log/warn '~loc (pr-str (z/sexpr ~loc)))
+     ~loc))
+
+(defn skip-over [loc]
+  (if (z/seq? loc)
+    (->> loc
+         zm/down
+         zm/rightmost
+         (z/skip z/up z/rightmost?)
+         z/right)
+    (zm/next loc)))
 
 (defn qualify-ident [ident {:keys [aliases publics refers requires ns] :as context} scoped]
   (when (ident? ident)
@@ -70,6 +81,43 @@
                                        (seq extra) (merge extra)
                                        (seq scope-bounds) (assoc :scope-bounds scope-bounds)))))))))
 
+(defn destructure-map [map-loc scope-bounds context scoped]
+  (loop [key-loc (z/down (zsub/subzip map-loc))
+         scoped scoped]
+    (if (and key-loc (not (z/end? key-loc)))
+      (let [key-sexpr (z/sexpr key-loc)
+            val-loc (z/right key-loc)]
+        (cond
+          (= :keys key-sexpr)
+          (do
+            (z/map (fn [loc]
+                     (let [sexpr (z/sexpr loc)
+                           scoped-ns (gensym)]
+                       (add-reference context scoped (z/node loc) {:tags #{:declare :param}
+                                                                   :scope-bounds scope-bounds
+                                                                   :sym (symbol (name scoped-ns)
+                                                                                (name sexpr))
+                                                                   :sexpr sexpr})
+                       loc))
+                   val-loc)
+            (recur (skip-over val-loc) scoped))
+
+          (keyword? key-sexpr)
+          (recur (skip-over val-loc) scoped)
+
+          (not= '& key-sexpr)
+          (recur (z/right val-loc) (parse-destructuring key-loc scope-bounds context scoped))
+
+          :else
+          (recur (skip-over val-loc) scoped)))
+      scoped)))
+
+(comment
+  (let [context (volatile! {})]
+    #_(do (destructure-map (z/of-string "{:keys [a b]}") {} context {}) (map :sym (:usages @context)))
+    (map :sym (:usages (find-references
+                        "(let [a (b c d)])")))))
+
 (defn handle-rest
   "Crawl each form from `loc` to the end of the parent-form
   `(fn [x 1] | (a) (b) (c))`
@@ -79,6 +127,70 @@
     (when sub-loc
       (find-references* (zsub/subzip sub-loc) context scoped)
       (recur (zm/right sub-loc)))))
+
+(defn parse-destructuring [param-loc scope-bounds context scoped]
+  (loop [param-loc (zsub/subzip param-loc)
+         scoped scoped]
+    ;; MUTATION Updates scoped AND adds declared param references
+    (if (and param-loc (not (z/end? param-loc)))
+      (let [node (z/node param-loc)
+            sexpr (n/sexpr node)]
+        (cond
+          ;; TODO handle map and seq destructing
+          (symbol? sexpr)
+          (let [scoped-ns (gensym)
+                new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
+            (add-reference context new-scoped node {:tags #{:declare :param}
+                                                    :scope-bounds scope-bounds
+                                                    :sym (symbol (name scoped-ns)
+                                                                 (name sexpr))
+                                                    :sexpr sexpr})
+            (recur (z/next param-loc) new-scoped))
+
+          (vector? sexpr)
+          (recur (z/next param-loc) scoped)
+
+          (map? sexpr)
+          (recur (skip-over param-loc) (destructure-map param-loc scope-bounds context scoped))
+
+          :else
+          (recur (skip-over param-loc) scoped)))
+      scoped)))
+
+(defn parse-bindings [bindings-loc context scoped]
+  (try
+    (let [{:keys [end-row end-col]} (meta (z/node (z/up bindings-loc)))
+          end-scope-bounds {:end-row end-row :end-col end-col}]
+      (loop [binding-loc (zm/down (zsub/subzip bindings-loc))
+             scoped scoped]
+        ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals
+        (if (and binding-loc (not (z/end? binding-loc)))
+          (let [right-side-loc (z/right binding-loc)]
+            (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc) (z/up right-side-loc) bindings-loc)))
+                  scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
+                  new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
+              (handle-rest (zsub/subzip right-side-loc) context scoped)
+              (recur (skip-over right-side-loc) new-scoped)))
+          scoped)))
+    (catch Throwable e
+      (log/warn "bindings" (.getMessage e) (z/sexpr bindings-loc))
+      (throw e))))
+
+(defn parse-params [params-loc context scoped]
+  (try
+    (let [{:keys [row col]} (meta (z/node params-loc))
+          {:keys [end-row end-col]} (meta (z/node (z/up params-loc)))
+          scoped-ns (gensym)
+          scope-bounds {:row row :col col :end-row end-row :end-col end-col}]
+      (loop [param-loc (z/down params-loc)
+             scoped scoped]
+        (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
+          (if (z/rightmost? param-loc)
+            new-scoped
+            (recur (z/right param-loc) new-scoped)))))
+    (catch Exception e
+      (log/warn "params" (.getMessage e) (z/sexpr params-loc))
+      (throw e))))
 
 (defmulti handle-sexpr*
   "Crawl a sexpr with `op-loc` pointing at a starting symbol and `loc` pointing at the containing list.
@@ -141,36 +253,11 @@
                                                               :row (:end-row require-node)
                                                               :col (:end-col require-node)})))
 
+
 (defmethod handle-sexpr* 'clojure.core/let
   [op-loc loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
-        scoped-ns (gensym)
-        {:keys [end-row end-col]} (meta (z/node loc))
-        end-scope-bounds {:end-row end-row :end-col end-col}
-        scoped (loop [binding-loc (zm/down bindings-loc)
-                      scoped scoped]
-                 ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals
-                 (if binding-loc
-                   (let [node (z/node binding-loc)
-                         sexpr (n/sexpr node)
-                         right-side-loc (z/right binding-loc)]
-                     (cond
-                       ;; TODO handle map and seq destructing
-                       (symbol? sexpr)
-                       (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc)
-                                                                         (z/up right-side-loc))))
-                             scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
-                             new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
-                         (add-reference context new-scoped node {:tags #{:declare :param}
-                                                                 :scope-bounds scope-bounds
-                                                                 :sym (symbol (name scoped-ns)
-                                                                              (name sexpr))
-                                                                 :sexpr sexpr})
-                         (handle-rest (zsub/subzip right-side-loc) context scoped)
-                         (recur (z/right right-side-loc) new-scoped))
-                       :else
-                       (recur (z/right right-side-loc) scoped)))
-                   scoped))]
+        scoped (parse-bindings bindings-loc context scoped)]
     (handle-rest (z/right bindings-loc) context scoped)))
 
 (defmethod handle-sexpr* 'clojure.core/def
@@ -181,39 +268,23 @@
     (handle-rest (z/right (z/right op-loc))
                  context scoped)))
 
+(defmethod handle-sexpr* 'clojure.core/fn
+  [op-loc loc context scoped]
+  (let [params-loc (z/find-tag op-loc :vector)
+        body-loc (z/right params-loc)]
+    (->> (parse-params params-loc context scoped)
+         (handle-rest body-loc context))))
+
 (defmethod handle-sexpr* 'clojure.core/defn
   [op-loc loc context scoped]
   (let [defn-loc (z/right op-loc)
         defn-sym (z/node defn-loc)
         params-loc (z/find-tag defn-loc :vector)
-        body-loc (z/right params-loc)
-        {:keys [row col]} (meta (z/node body-loc))
-        {:keys [end-row end-col]} (meta (z/node loc))
-        scoped-ns (gensym)
-        scope-bounds {:row row :col col :end-row end-row :end-col end-col}]
+        body-loc (z/right params-loc)]
     (vswap! context update :publics conj (n/sexpr defn-sym))
     (add-reference context scoped defn-sym {:tags #{:declare :public}})
-    (let [scoped
-          (loop [param-loc (z/down params-loc)
-                 scoped scoped]
-            ;; MUTATION Updates scoped AND adds declared param references
-            (if param-loc
-              (let [node (z/node param-loc)
-                    sexpr (n/sexpr node)]
-                (cond
-                  ;; TODO handle map and seq destructing
-                  (symbol? sexpr)
-                  (let [new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
-                    (add-reference context new-scoped node {:tags #{:declare :param}
-                                                            :scope-bounds scope-bounds
-                                                            :sym (symbol (name scoped-ns)
-                                                                         (name sexpr))
-                                                            :sexpr sexpr})
-                    (recur (z/right param-loc) new-scoped))
-                  :else
-                  (recur (z/right param-loc) scoped)))
-              scoped))]
-      (handle-rest body-loc context scoped))))
+    (->> (parse-params params-loc context scoped)
+         (handle-rest body-loc context))))
 
 (defn handle-sexpr [loc context scoped]
   (let [op-loc (some-> loc (zm/down))]
@@ -230,7 +301,7 @@
       (let [tag (z/tag loc)]
         (cond
           (#{:quote :uneval} tag)
-          (recur (zm/next (zm/rightmost (zm/down loc))) scoped)
+          (recur (skip-over loc) scoped)
 
           (= :list tag)
           (do
@@ -265,8 +336,7 @@
                            "(inc x)"
                            "(bun/foo)"
                            "(bing)"])]
-    (find-references code)
-    #_(find-position code 16 2))
+    (find-references code))
 
   (dissoc (find-references
 
@@ -274,4 +344,3 @@
                       :refers cc/core-syms
                       }")
           :refers))
-

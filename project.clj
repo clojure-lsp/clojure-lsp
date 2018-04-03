@@ -8,4 +8,5 @@
                  [log4j/log4j "1.2.17"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.4.474"]]
-  :jvm-opts ^:replace ["-Xmx1g" "-server"])
+  :jvm-opts ^:replace ["-Xmx1g" "-server"]
+  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}})

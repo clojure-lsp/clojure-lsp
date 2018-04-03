@@ -16,16 +16,21 @@
       DidCloseTextDocumentParams
       DidOpenTextDocumentParams
       DidSaveTextDocumentParams
+      Hover
       InitializeParams
       InitializeResult
       InitializedParams
       Location
+      ParameterInformation
       Position
       Range
       ReferenceParams
       RenameParams
       SaveOptions
       ServerCapabilities
+      SignatureHelp
+      SignatureHelpOptions
+      SignatureInformation
       TextDocumentContentChangeEvent
       TextDocumentEdit
       TextDocumentPositionParams
@@ -36,7 +41,8 @@
       WorkspaceEdit)
     (org.eclipse.lsp4j.launch LSPLauncher)
     (java.util.concurrent CompletableFuture)
-    (java.util.function Supplier)))
+    (java.util.function Supplier)
+    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
 
 (s/def ::line integer?)
@@ -61,15 +67,16 @@
 (s/def ::completion-items (s/coll-of ::completion-item))
 (s/def ::version integer?)
 (s/def ::uri string?)
-(s/def ::text-edit ::text-edit)
+(s/def ::edits (s/coll-of ::text-edit))
 (s/def ::text-document (s/and (s/keys :req-un [::version ::uri])
                               (s/conformer #(doto (VersionedTextDocumentIdentifier. (:version %1))
                                               (.setUri (:uri %1))))))
 (s/def ::text-document-edit (s/and (s/keys :req-un [::text-document ::edits])
                                    (s/conformer #(TextDocumentEdit. (:text-document %1) (:edits %1)))))
+(s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
 (s/def ::document-changes (s/coll-of ::text-document-edit))
-(s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes])
-                               (s/conformer #(WorkspaceEdit. (:document-changes %1)))))
+(s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
+                               (s/conformer #(WorkspaceEdit. (:changes %1) (:document-changes %1)))))
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 
@@ -81,7 +88,6 @@
       (handlers/did-open (.getUri document) (.getText document))))
 
   (^void didChange [this ^DidChangeTextDocumentParams params]
-    (log/warn "DidChangeTextDocumentParams")
     (let [textDocument (.getTextDocument params)
           version (.getVersion textDocument)
           changes (.getContentChanges params)
@@ -137,15 +143,31 @@
               (s/conform ::workspace-edit (handlers/rename doc-id line column new-name)))
             (catch Exception e
               (log/error e)))))))
+
+  (^CompletableFuture hover [this ^TextDocumentPositionParams params]
+    (CompletableFuture/completedFuture
+      (doto (Hover.)
+        (.setContents [(Either/forLeft "")]))))
+
+  (^CompletableFuture signatureHelp [this ^TextDocumentPositionParams params]
+    (CompletableFuture/completedFuture
+      (SignatureHelp. [(doto (SignatureInformation. "sign-label")
+                         (.setDocumentation "docs")
+                         (.setParameters [(ParameterInformation. "param label" "param doc")]))]
+                      0 0)))
+
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
     (CompletableFuture/supplyAsync
       (reify Supplier
         (get [this]
-          (try (let [doc-id (.getUri (.getTextDocument params))
-                     pos (.getPosition params)
-                     line (inc (.getLine pos))
-                     column (inc (.getCharacter pos))]
-                 (s/conform ::location (handlers/definition doc-id line column)))))))))
+          (try
+            (let [doc-id (.getUri (.getTextDocument params))
+                  pos (.getPosition params)
+                  line (inc (.getLine pos))
+                  column (inc (.getCharacter pos))]
+              (s/conform ::location (handlers/definition doc-id line column)))
+            (catch Exception e
+              (log/error e))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -157,9 +179,18 @@
 (defrecord LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
-    (handlers/initialize (.getRootUri params))
+    (log/warn "Initialize" params)
+    (let [document-changes
+          (or (some-> params
+                      (.getCapabilities)
+                      (.getWorkspace)
+                      (.getWorkspaceEdit)
+                      (.getDocumentChanges))
+              true)]
+      (handlers/initialize (.getRootUri params) document-changes))
     (CompletableFuture/completedFuture
       (InitializeResult. (doto (ServerCapabilities.)
+                           (.setHoverProvider false)
                            (.setReferencesProvider true)
                            (.setRenameProvider true)
                            (.setDefinitionProvider true)
@@ -176,7 +207,8 @@
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [this]
-    (System/exit 1))
+    (log/info "Exit")
+    (System/exit 0))
   (getTextDocumentService [this]
     (LSPTextDocumentService.))
   (getWorkspaceService [this]

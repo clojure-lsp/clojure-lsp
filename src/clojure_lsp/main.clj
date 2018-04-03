@@ -79,6 +79,7 @@
                                (s/conformer #(WorkspaceEdit. (:changes %1) (:document-changes %1)))))
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
+(s/def ::references (s/coll-of ::location))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
@@ -111,7 +112,7 @@
                   pos (.getPosition params)
                   line (inc (.getLine pos))
                   column (inc (.getCharacter pos))]
-              (s/conform ::location (handlers/references doc-id line column)))
+              (s/conform ::references (handlers/references doc-id line column)))
             (catch Exception e
               (log/error e)))))))
 

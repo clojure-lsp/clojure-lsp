@@ -127,7 +127,10 @@
   (let [path (uri->path doc-id)
         file-envs (:file-envs @db/db)
         local-env (get file-envs path)
-        cursor-sym (:sym (find-reference-under-cursor line column local-env))
+        {cursor-sym :sym cursor-sexpr :sexpr} (find-reference-under-cursor line column local-env)
+        replacement (if-let [cursor-ns (namespace cursor-sexpr)]
+                      (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
+                      new-name)
         changes (->> (for [[path {:keys [usages]}] file-envs
                            :let [doc-id (str "file://" path)
                                  version (get-in @db/db [:documents doc-id :v] 0)]
@@ -136,8 +139,8 @@
                            :let [sym-ns (namespace sexpr)]]
                        {:range (->range usage)
                         :new-text (if sym-ns
-                                    (str sym-ns "/" new-name)
-                                    new-name)
+                                    (str sym-ns "/" replacement)
+                                    replacement)
                         :text-document {:version version :uri doc-id}})
                      (group-by :text-document)
                      (remove (comp empty? val))
@@ -146,10 +149,10 @@
                              :edits edits})))]
     (log/warn "rename" doc-id line column)
     (if (:supports-document-changes @db/db)
-        {:document-changes changes}
-        {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                                  [(:uri text-document) edits])
-                                changes))})))
+       {:document-changes changes}
+       {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                 [(:uri text-document) edits])
+                               changes))})))
 
 (defn definition [doc-id line column]
   (let [path (uri->path doc-id)

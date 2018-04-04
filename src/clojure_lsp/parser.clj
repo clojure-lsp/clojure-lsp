@@ -255,7 +255,6 @@
                                                               :row (:end-row require-node)
                                                               :col (:end-col require-node)})))
 
-
 (defmethod handle-sexpr* 'clojure.core/let
   [op-loc loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
@@ -341,7 +340,6 @@
     (find-references code))
 
   (dissoc (find-references
-
             " {:requires #{'clojure.core}
                       :refers cc/core-syms
                       }")

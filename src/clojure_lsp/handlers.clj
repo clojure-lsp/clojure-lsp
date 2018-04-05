@@ -5,7 +5,8 @@
     [clojure.core.async :as async]
     [clojure.java.io :as io]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]))
+    [clojure.tools.logging :as log]
+    [clojure-lsp.refactor.transform :as refactor]))
 
 (defn- uri->path [uri]
   (string/replace uri #"^file:///" "/"))
@@ -150,10 +151,10 @@
                              :edits edits})))]
     (log/warn "rename" doc-id line column)
     (if (:supports-document-changes @db/db)
-       {:document-changes changes}
-       {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                                 [(:uri text-document) edits])
-                               changes))})))
+      {:document-changes changes}
+      {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                [(:uri text-document) edits])
+                              changes))})))
 
 (defn definition [doc-id line column]
   (let [path (uri->path doc-id)
@@ -167,3 +168,24 @@
             {:keys [sym tags] :as usage} usages
             :when (and (= sym cursor-sym) (:declare tags))]
         {:uri doc-id :range (->range usage)}))))
+
+(def refactorings
+  {"cycle-coll" refactor/cycle-coll
+   "thread-first" refactor/thread-first
+   "thread-first-all" refactor/thread-first-all
+   "thread-last" refactor/thread-last
+   "thread-last-all" refactor/thread-last-all})
+
+(defn refactor [path line column refactoring args]
+  (let [doc-id (str "file://" path)
+        {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
+        result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
+        changes [{:text-document {:uri doc-id :version v}
+                  :edits (map (fn [edit]
+                                (update edit :range ->range))
+                              result)}]]
+    (if (:supports-document-changes @db/db)
+      {:document-changes changes}
+      {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                [(:uri text-document) edits])
+                              changes))})))

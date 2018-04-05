@@ -5,7 +5,7 @@
     [clojure.tools.logging :as log]
     [clojure.spec.alpha :as s])
   (:import
-    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService)
+    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
     (org.eclipse.lsp4j
       CompletionItem
       CompletionItemKind
@@ -38,7 +38,7 @@
       TextDocumentSyncOptions
       TextEdit
       VersionedTextDocumentIdentifier
-      WorkspaceEdit)
+      WorkspaceEdit ExecuteCommandParams ApplyWorkspaceEditParams)
     (org.eclipse.lsp4j.launch LSPLauncher)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
@@ -172,6 +172,18 @@
 
 (deftype LSPWorkspaceService []
   WorkspaceService
+  (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
+    (log/warn params)
+    (let [[doc-id line col & args] (.getArguments params)]
+      (future
+        (.get (.applyEdit (:client @db/db)
+                          (ApplyWorkspaceEditParams.
+                            (s/conform ::workspace-edit (handlers/refactor doc-id
+                                                                           (inc (int line))
+                                                                           (inc (int col))
+                                                                           (.getCommand params)
+                                                                           args)))))))
+    (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
     (log/warn params))
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
@@ -219,5 +231,5 @@
   (log/info "Server started")
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)]
-    (swap! db/db assoc :client (.getRemoteProxy launcher))
+    (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (.startListening launcher)))

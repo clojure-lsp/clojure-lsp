@@ -361,6 +361,33 @@
       (zm/up)
       (find-references* (volatile! default-env) {})))
 
+;; From rewrite-cljs
+(defn in-range? [{:keys [row col end-row end-col]} {r :row c :col}]
+  (and (>= r row)
+       (<= r end-row)
+       (if (= r row) (>= c col) true)
+       (if (= r end-row) (<= c end-col) true)))
+
+;; From rewrite-cljs
+(defn find-last-by-pos
+  "Find last node (if more than one node) that is in range of pos and
+  satisfying the given predicate depth first from initial zipper
+  location."
+  ([zloc pos] (find-last-by-pos zloc pos (constantly true)))
+  ([zloc pos p?]
+   (->> zloc
+        (iterate z/next)
+        (take-while identity)
+        (take-while (complement z/end?))
+        (filter #(and (p? %)
+                      (in-range? (-> % z/node meta) pos)))
+        last)))
+
+(defn loc-at-pos [code row col]
+  (-> code
+      (z/of-string)
+      (find-last-by-pos {:row row :col col :end-row row :end-col col})))
+
 (comment
   (let [code (string/join "\n"
                           ["(ns thinger.foo"
@@ -375,7 +402,12 @@
                            "(inc x)"
                            "(bun/foo)"
                            "(bing)"])]
-    (find-references code))
+    #_(find-references code)
+    (z/sexpr (loc-at-pos code 1 2))
+    )
+
+  (-> (find-references (pr-str '(defn a [x] x)))
+      (dissoc :refers))
 
   (dissoc (find-references
             " {:requires #{'clojure.core}

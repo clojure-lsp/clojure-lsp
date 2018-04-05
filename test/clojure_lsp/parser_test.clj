@@ -23,6 +23,8 @@
             usages (:usages (parser/find-references code))
             bound-ref (nth usages 2)
             usage-ref (nth usages 3)]
+        (is (= 'user/a (:sym (nth usages 1))))
+        (is (= #{:declare :public} (:tags (nth usages 1))))
         (is (not= "user" (namespace (:sym bound-ref))))
         (is (= "b" (name (:sym bound-ref))))
         (is (= #{:declare :param} (:tags bound-ref)))

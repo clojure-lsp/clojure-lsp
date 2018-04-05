@@ -14,6 +14,22 @@ This is a very early work in progress, contributions are very welcome. It's curr
 | diagnostics | | | maybe? joker is pretty great - should probably handle undeclared vars somehow |
 | hover | | | would be helpful and piggiebacks off  richer completion | 
 
+## Refactorings
+
+It should be possible to introduce most of the refactorings here: https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples
+Calling executeCommand with the following commands and additional args will notify the client with `applyEdit`. 
+All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
+
+| done | command | args | notes |
+| ---- | ------- | ---- | ----- |
+| [x]  | cycle-coll | | |
+| [x]  | thread-first | | |
+| [x]  | thread-first-all | | |
+| [x]  | thread-last | | |
+| [x]  | thread-last-all | | |
+| [ ]  | introduce-let | | |
+ 
+
 
 ## Clients
 

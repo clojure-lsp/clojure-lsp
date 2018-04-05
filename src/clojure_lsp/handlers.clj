@@ -27,6 +27,7 @@
 
 (defn safe-find-references [uri text]
   (try
+    #_(log/warn "trying" uri)
     (parser/find-references text)
     (catch Exception e
       (log/warn "Ignoring: " uri (.getMessage e))

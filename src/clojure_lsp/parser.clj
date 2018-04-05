@@ -34,7 +34,7 @@
      ~loc))
 
 (defn skip-over [loc]
-  (if (z/seq? loc)
+  (if (or (z/seq? loc) (= :uneval (z/tag loc)))
     (->> loc
          zm/down
          zm/rightmost
@@ -159,20 +159,38 @@
           (recur (skip-over param-loc) scoped)))
       scoped)))
 
-(defn parse-bindings [bindings-loc context scoped]
+(defn end-bounds [loc]
+  (select-keys (meta (z/node loc)) [:end-row :end-col]))
+
+(defn parse-bindings [bindings-loc context end-scope-bounds scoped]
   (try
-    (let [{:keys [end-row end-col]} (meta (z/node (z/up bindings-loc)))
-          end-scope-bounds {:end-row end-row :end-col end-col}]
-      (loop [binding-loc (zm/down (zsub/subzip bindings-loc))
-             scoped scoped]
-        ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals
-        (if (and binding-loc (not (z/end? binding-loc)))
-          (let [right-side-loc (z/right binding-loc)]
-            (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc) (z/up right-side-loc) bindings-loc)))
-                  scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
-                  new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
+    (loop [binding-loc (zm/down (zsub/subzip bindings-loc))
+           scoped scoped]
+      (let [not-done? (and binding-loc (not (z/end? binding-loc)))]
+        ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals)
+        (cond
+          (and not-done? (= :uneval (z/tag binding-loc)))
+          (recur (skip-over binding-loc) scoped)
+
+          not-done?
+          (let [right-side-loc (z/right binding-loc)
+                binding-sexpr (z/sexpr binding-loc)]
+            ;; Maybe for/doseq needs to use different bindings
+            (cond
+              (= :let binding-sexpr)
+              (parse-bindings right-side-loc context end-scope-bounds scoped)
+
+              (#{:when :while} binding-sexpr)
               (handle-rest (zsub/subzip right-side-loc) context scoped)
-              (recur (skip-over right-side-loc) new-scoped)))
+
+              :else
+              (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc) (z/up right-side-loc) bindings-loc)))
+                    scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
+                    new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
+                (handle-rest (zsub/subzip right-side-loc) context scoped)
+                (recur (skip-over right-side-loc) new-scoped))))
+
+          :else
           scoped)))
     (catch Throwable e
       (log/warn "bindings" (.getMessage e) (z/sexpr bindings-loc))
@@ -255,10 +273,22 @@
                                                               :row (:end-row require-node)
                                                               :col (:end-col require-node)})))
 
+(defmethod handle-sexpr* 'clojure.core/doseq
+  [op-loc loc context scoped]
+  (let [bindings-loc (zf/find-tag op-loc :vector)
+        scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
+    (handle-rest (z/right bindings-loc) context scoped)))
+
+(defmethod handle-sexpr* 'clojure.core/for
+  [op-loc loc context scoped]
+  (let [bindings-loc (zf/find-tag op-loc :vector)
+        scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
+    (handle-rest (z/right bindings-loc) context scoped)))
+
 (defmethod handle-sexpr* 'clojure.core/let
   [op-loc loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
-        scoped (parse-bindings bindings-loc context scoped)]
+        scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
     (handle-rest (z/right bindings-loc) context scoped)))
 
 (defmethod handle-sexpr* 'clojure.core/def
@@ -280,12 +310,20 @@
   [op-loc loc context scoped]
   (let [defn-loc (z/right op-loc)
         defn-sym (z/node defn-loc)
-        params-loc (z/find-tag defn-loc :vector)
-        body-loc (z/right params-loc)]
+        multi? (= :list (z/tag (z/find defn-loc (fn [loc]
+                                                  (#{:vector :list} (z/tag loc))))))]
+
     (vswap! context update :publics conj (n/sexpr defn-sym))
     (add-reference context scoped defn-sym {:tags #{:declare :public}})
-    (->> (parse-params params-loc context scoped)
-         (handle-rest body-loc context))))
+    (if multi?
+      (loop [params-loc (z/down (zsub/subzip (z/find-tag defn-loc :list)))
+             body-loc (z/right params-loc)]
+        (->> (parse-params params-loc context scoped)
+             (handle-rest body-loc context)))
+      (let [params-loc (z/find-tag defn-loc :vector)
+            body-loc (z/right params-loc)]
+        (->> (parse-params params-loc context scoped)
+             (handle-rest body-loc context))))))
 
 (defn handle-sexpr [loc context scoped]
   (let [op-loc (some-> loc (zm/down))]

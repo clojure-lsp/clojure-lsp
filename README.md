@@ -1,6 +1,6 @@
 A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive like approach of statically analyzing code rather than depending on a repl and runtime.
 
-This is a very early work in progress, contributions are very welcome. It's currently written in Clojure but Lumo might be more appealing for startup time. 
+This is an early work in progress, contributions are very welcome. It's currently written in Clojure but Lumo might be more appealing for startup time. 
 
 ## Capabilities
 
@@ -30,6 +30,21 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | [ ]  | introduce-let | | |
  
 
+
+Refactorings can be done with LanguageClient-neovim with:
+```
+function! s:Expand(exp) abort
+    let l:result = expand(a:exp)
+    return l:result ==# '' ? '' : l:result
+endfunction
+
+function! ExecuteCommand(refactoring) abort
+  call LanguageClient#Call("workspace/executeCommand", {'command': a:refactoring, 'arguments': [s:Expand('%:p'), line('.') - 1, col('.') - 1]}, v:null)
+endfunction
+```
+
+and then `:call ExecuteCommand('thread-first')` with the cursor in the appropriate place.
+Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
 
 ## Clients
 

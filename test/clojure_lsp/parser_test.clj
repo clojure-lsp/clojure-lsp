@@ -1,5 +1,6 @@
 (ns clojure-lsp.parser-test
   (:require [clojure.test :refer :all]
+            [rewrite-clj.zip :as z]
             [clojure-lsp.handlers :as handlers]
             [clojure-lsp.parser :as parser]
             [clojure.string :as string]))
@@ -14,9 +15,15 @@
 (defn scoped-str [code scope-bounds]
   (subs code (dec (:col scope-bounds)) (dec (:end-col scope-bounds))))
 
+(deftest parse-destructuring-test
+  (is (= 4 (count (parser/parse-destructuring (z/of-string "[a {:keys [aliases things]}b]") {} (volatile! {}) {})))))
+
 (deftest find-references-test
-  (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux}
-         (syms "(ns foo.bar) (def qux qux)")))
+  (testing "simple stuff"
+    (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux}
+           (syms "(ns foo.bar) (def qux qux)")))
+    (is (= 1 (count (syms "(:id user)"))))
+    (is (= 2 (count (syms "{:x id :y (:id user)}")))))
   (testing "clojure.core/defn"
     (testing "single-arity"
       (let [code "(defn a [b] b a)"
@@ -72,4 +79,25 @@
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))
       (is (= (get-in bound-ref [:scope-bounds :end-col]) (get-in b-bound [:scope-bounds :end-col])))
       (is (= (:sym b-bound) (:sym b-usage)))
-      (is (= (:scope-bounds b-bound) (:scope-bounds b-usage))))))
+      (is (= (:scope-bounds b-bound) (:scope-bounds b-usage)))))
+  (testing "destructuring"
+    (let [code "(let [{:keys [a] b :b} {}] a b)"
+          usages (:usages (parser/find-references code))
+          bound-ref (second usages)
+          usage-ref (nth usages 3)
+          b-bound (nth usages 2)
+          b-usage (nth usages 4)]
+      (is (= #{:declare :param} (:tags bound-ref)))
+      (is (= (namespace (:sym usage-ref)) (namespace (:sym bound-ref))))
+      (is (= #{:declare :param} (:tags b-bound)))
+      (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound)))))
+    (let [code "(fn [y {:keys [a] b :b}] a b)"
+          usages (:usages (parser/find-references code))
+          bound-ref (nth usages 2)
+          usage-ref (nth usages 4)
+          b-bound (nth usages 3)
+          b-usage (nth usages 5)]
+      (is (= #{:declare :param} (:tags bound-ref)))
+      (is (= (namespace (:sym usage-ref)) (namespace (:sym bound-ref))))
+      (is (= #{:declare :param} (:tags b-bound)))
+      (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound)))))))

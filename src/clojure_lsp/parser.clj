@@ -91,18 +91,20 @@
             val-loc (z/right key-loc)]
         (cond
           (= :keys key-sexpr)
-          (do
-            (z/map (fn [loc]
-                     (let [sexpr (z/sexpr loc)
-                           scoped-ns (gensym)]
-                       (add-reference context scoped (z/node loc) {:tags #{:declare :param}
-                                                                   :scope-bounds scope-bounds
-                                                                   :sym (symbol (name scoped-ns)
-                                                                                (name sexpr))
-                                                                   :sexpr sexpr})
-                       loc))
-                   val-loc)
-            (recur (skip-over val-loc) scoped))
+          (recur (skip-over val-loc)
+                 (loop [child-loc (z/down val-loc)
+                        scoped scoped]
+                   (let [sexpr (z/sexpr child-loc)
+                         scoped-ns (gensym)
+                         new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
+                     (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
+                                                                       :scope-bounds scope-bounds
+                                                                       :sym (symbol (name scoped-ns)
+                                                                                    (name sexpr))
+                                                                       :sexpr sexpr})
+                     (if (z/rightmost? child-loc)
+                       new-scoped
+                       (recur (z/right child-loc) new-scoped)))))
 
           (keyword? key-sexpr)
           (recur (skip-over val-loc) scoped)
@@ -113,7 +115,8 @@
           :else
           (recur (skip-over val-loc) scoped)))
       scoped)))
-
+(comment
+  )
 (comment
   (let [context (volatile! {})]
     #_(do (destructure-map (z/of-string "{:keys [a b]}") {} context {}) (map :sym (:usages @context)))
@@ -158,6 +161,7 @@
           :else
           (recur (skip-over param-loc) scoped)))
       scoped)))
+
 
 (defn end-bounds [loc]
   (select-keys (meta (z/node loc)) [:end-row :end-col]))
@@ -212,12 +216,29 @@
       (log/warn "params" (.getMessage e) (z/sexpr params-loc))
       (throw e))))
 
+
+
 (defmulti handle-sexpr*
   "Crawl a sexpr with `op-loc` pointing at a starting symbol and `loc` pointing at the containing list.
   `op-loc` reference will have been added already, responsible for adding all sub references."
   (fn [op-loc loc context scoped]
     ;; TODO need to handle vars? #'defn
     (:sym (qualify-ident (z/sexpr op-loc) @context scoped))))
+
+(comment
+  '[clojure.core/with-open
+    clojure.core/if-some
+    clojure.core/if-let
+    clojure.core/when-let
+    clojure.core/when-some
+    clojure.core/when-first
+    clojure.core/with-open
+    clojure.core/dotimes
+    clojure.core/letfn
+    clojure.core/loop
+    clojure.core/with-local-vars
+    clojure.core/as->
+    ])
 
 (defmethod handle-sexpr* :default
   [op-loc loc context scoped]
@@ -327,9 +348,14 @@
 
 (defn handle-sexpr [loc context scoped]
   (let [op-loc (some-> loc (zm/down))]
-    (when (and op-loc (symbol? (z/sexpr op-loc)))
-      (add-reference context scoped (z/node op-loc) {})
-      (handle-sexpr* op-loc loc context scoped))))
+    (cond
+      (and op-loc (symbol? (z/sexpr op-loc)))
+      (do
+        (add-reference context scoped (z/node op-loc) {})
+        (handle-sexpr* op-loc loc context scoped))
+
+      op-loc
+      (handle-rest (z/right op-loc) context scoped))))
 
 (defn find-references* [loc context scoped]
   (loop [loc loc
@@ -345,12 +371,12 @@
           (= :list tag)
           (do
             (handle-sexpr loc context scoped)
-            (recur (zm/right loc) scoped))
+            (recur (skip-over loc) scoped))
 
           (and (= :token tag) (symbol? (z/sexpr loc)))
           (do
             (add-reference context scoped (z/node loc) {})
-            (recur (zm/next loc) scoped))
+            (recur (skip-over loc) scoped))
 
           :else
           (recur (zm/next loc) scoped))))))
@@ -406,11 +432,12 @@
     (z/sexpr (loc-at-pos code 1 2))
     )
 
-  (-> (find-references (pr-str '(defn a [x] x)))
-      (dissoc :refers))
+  (as->
+    (find-references "(let [{:keys [a]} {}] a)") $
+      (dissoc $ :refers)
+      (:usages $)
+      (map (juxt :sym :tags) $))
 
   (dissoc (find-references
-            " {:requires #{'clojure.core}
-                      :refers cc/core-syms
-                      }")
+)
           :refers))

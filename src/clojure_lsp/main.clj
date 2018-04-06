@@ -275,6 +275,6 @@
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
       (loop [diagnostic (async/<! handlers/diagnostics-chan)]
-        (.publishDiagnostics (:client @db/db) (s/conform ::publish-diagnostics-params diagnostic))
+        (.publishDiagnostics (:client @db/db) (conform-or-log ::publish-diagnostics-params diagnostic))
         (recur (async/<! handlers/diagnostics-chan))))
     (.startListening launcher)))

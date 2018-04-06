@@ -16,16 +16,16 @@
 
 (deftest thread-test
   (let [zloc (z/of-string "(remove nil? (filter :id (map doit xs)))")]
-    (let [result (transform/thread-last zloc)]
-      (is (= '->> (z/sexpr (z/down result))))
-      (is (= "(->> (filter :id (map doit xs)) (remove nil?))" (z/root-string result))))
-    (let [result (transform/thread-last-all zloc)]
-      (is (= '->> (z/sexpr (z/down result))))
-      (is (= "(->> xs (map doit) (filter :id) (remove nil?))" (z/root-string result)))))
+    (let [[{:keys [loc]}] (transform/thread-last zloc)]
+      (is (= '->> (z/sexpr (z/down loc))))
+      (is (= "(->> (filter :id (map doit xs)) (remove nil?))" (z/root-string loc))))
+    (let [[{:keys [loc]}] (transform/thread-last-all zloc)]
+      (is (= '->> (z/sexpr (z/down loc))))
+      (is (= "(->> xs (map doit) (filter :id) (remove nil?))" (z/root-string loc)))))
   (let [zloc (z/of-string "(assoc (dissoc (update m :xs reverse) :bye) :hello :world)")]
-    (let [result (transform/thread-first zloc)]
-      (is (= '-> (z/sexpr (z/down result))))
-      (is (= "(-> (dissoc (update m :xs reverse) :bye) (assoc :hello :world))" (z/root-string result))))
-    (let [result (transform/thread-first-all zloc)]
-      (is (= '-> (z/sexpr (z/down result))))
-      (is (= "(-> m (update :xs reverse) (dissoc :bye) (assoc :hello :world))" (z/root-string result))))))
+    (let [[{:keys [loc]}] (transform/thread-first zloc)]
+      (is (= '-> (z/sexpr (z/down loc))))
+      (is (= "(-> (dissoc (update m :xs reverse) :bye) (assoc :hello :world))" (z/root-string loc))))
+    (let [[{:keys [loc]}] (transform/thread-first-all zloc)]
+      (is (= '-> (z/sexpr (z/down loc))))
+      (is (= "(-> m (update :xs reverse) (dissoc :bye) (assoc :hello :world))" (z/root-string loc))))))

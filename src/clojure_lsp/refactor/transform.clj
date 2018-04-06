@@ -6,6 +6,13 @@
     [rewrite-clj.custom-zipper.core :as cz]
     [clojure.tools.logging :as log]))
 
+(defn result [zip-edits]
+  (mapv (fn [zip-edit]
+          (let [loc (:loc zip-edit)]
+            (-> zip-edit
+                (assoc :new-text (z/string loc)))))
+        zip-edits))
+
 (defn cycle-coll
   "Cycles collection between vector, list, map and set"
   [zloc]
@@ -19,7 +26,7 @@
                                (set? sexpr) (n/list-node children)
                                (list? sexpr) (n/map-node children)))]
         [{:range (meta (z/node zloc))
-          :new-text (n/string (coerce-to-next sexpr (n/children node)))}])
+          :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
       [])))
 
 (defn raise [zloc]
@@ -52,39 +59,38 @@
   (let [movement (if (= '-> sym) z/right z/rightmost)]
     (if-let [first-loc (-> zloc (edit/find-op) movement)]
       (let [first-node (z/node first-loc)
-            parent-op (z/sexpr (z/leftmost zloc))
-            threaded? (= sym parent-op)]
-        (-> first-loc
-            (z/remove)
-            (z/up)
-            ((fn [loc] (cond-> loc
-                         (edit/single-child? loc) (-> z/down raise)
-                         threaded? (-> (z/insert-left first-node) z/up)
-                         (not threaded?) (-> (wrap-around :list)
-                                             (z/insert-child first-node)
-                                             (z/insert-child sym)))))))
-      zloc)))
+            parent-op (z/sexpr (z/left zloc))
+            threaded? (= sym parent-op)
+            meta-node (if threaded?
+                        (meta (z/up zloc))
+                        (meta zloc))
+            result-loc (-> first-loc
+                           (z/remove)
+                           (z/up)
+                           ((fn [loc] (cond-> loc
+                                        (edit/single-child? loc) (-> z/down raise)
+                                        threaded? (-> (z/insert-left first-node) z/up)
+                                        (not threaded?) (-> (wrap-around :list)
+                                                            (z/insert-child first-node)
+                                                            (z/insert-child sym))))))]
+        [{:range meta-node
+          :loc result-loc}])
+      [[nil zloc]])))
 
 (defn thread-first
   [zloc]
-  (let [[range loc] (thread-sym zloc '->)]
-    [{:range range
-      :new-text (z/string loc)}]))
+  (thread-sym zloc '->))
 
 (defn thread-last
   [zloc]
-  (let [[range loc] (thread-sym zloc '->>)]
-    [{:range range
-      :new-text (z/string loc)}]))
+  (thread-sym zloc '->>))
 
 (defn thread-all
   [zloc sym]
-  (loop [[range loc] (thread-sym zloc sym)]
-    (let [up-loc (z/up loc)]
-      (if (= :list (z/tag up-loc))
-        (recur (thread-sym loc sym))
-        [{:range range
-          :new-text (z/string loc)}]))))
+  (loop [[{:keys [loc]} :as result] (thread-sym zloc sym)]
+    (if (z/down (z/right (z/down loc)))
+      (recur (thread-sym (z/right (z/down loc)) sym))
+      result)))
 
 (defn thread-first-all
   [zloc]

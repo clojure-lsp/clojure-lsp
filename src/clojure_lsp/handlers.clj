@@ -33,8 +33,8 @@
                                    (:usages references)))]
     (async/>!! diagnostics-chan {:uri uri :diagnostics (for [unknown unknowns]
                                                          [{:range (->range unknown)
-                                                          :message "Unknown symbol"
-                                                          :severity 1}])})))
+                                                           :message "Unknown symbol"
+                                                           :severity 1}])})))
 
 (defn safe-find-references [uri text]
   (try
@@ -53,7 +53,7 @@
                  (filter (fn [path]
                            (or (string/ends-with? path ".clj")
                                (string/ends-with? path ".cljc"))))
-                 (map (juxt identity (fn [path] (safe-find-references path (slurp path)))))
+                 (map (juxt identity (fn [path] (safe-find-references (str "file://" path) (slurp path)))))
                  (remove (comp nil? second)))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan files))
@@ -193,9 +193,7 @@
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
         result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
         changes [{:text-document {:uri doc-id :version v}
-                  :edits (map (fn [edit]
-                                (update edit :range ->range))
-                              result)}]]
+                  :edits (refactor/result result)}]]
     (if (:supports-document-changes @db/db)
       {:document-changes changes}
       {:changes (into {} (map (fn [{:keys [text-document edits]}]

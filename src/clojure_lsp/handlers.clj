@@ -32,9 +32,9 @@
   (let [unknowns (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
                                    (:usages references)))]
     (async/>!! diagnostics-chan {:uri uri :diagnostics (for [unknown unknowns]
-                                                         [{:range (->range unknown)
-                                                           :message "Unknown symbol"
-                                                           :severity 1}])})))
+                                                         {:range (->range unknown)
+                                                          :message "Unknown symbol"
+                                                          :severity 1})})))
 
 (defn safe-find-references [uri text]
   (try

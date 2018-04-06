@@ -3,7 +3,8 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.handlers :as handlers]
     [clojure.tools.logging :as log]
-    [clojure.spec.alpha :as s])
+    [clojure.spec.alpha :as s]
+    [clojure.core.async :as async])
   (:import
     (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
     (org.eclipse.lsp4j
@@ -38,7 +39,12 @@
       TextDocumentSyncOptions
       TextEdit
       VersionedTextDocumentIdentifier
-      WorkspaceEdit ExecuteCommandParams ApplyWorkspaceEditParams)
+      WorkspaceEdit
+      ExecuteCommandParams
+      ApplyWorkspaceEditParams
+      PublishDiagnosticsParams
+      Diagnostic
+      DiagnosticSeverity MarkedString)
     (org.eclipse.lsp4j.launch LSPLauncher)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
@@ -81,6 +87,33 @@
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))
 
+(s/def ::severity (s/and integer?
+                         (s/conformer #(DiagnosticSeverity/forValue %1))))
+
+(s/def ::diagnostic (s/and (s/keys :req-un [::range ::message]
+                                   :opt-un [::severity ::code ::source ::message])
+                           (s/conformer #(Diagnostic. (:range %1) (:message %1) (:severity %1) (:source %1) (:code %1)))))
+(s/def ::diagnostics (s/coll-of ::diagnostic))
+(s/def ::publish-diagnostics-params (s/and (s/keys :req-un [::uri ::diagnostics])
+                                           (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))
+
+(s/def ::marked-string (s/and (s/or :string string?
+                                    :marked-string (s/and (s/keys :req-un [::language ::value])
+                                                          (s/conformer #(MarkedString. (:language %1) (:value %1)))))
+                              (s/conformer (fn [v]
+                                             (case (first v)
+                                               :string (Either/forLeft (second v))
+                                               :marked-string (Either/forRight (second v)))))))
+(s/def ::contents (s/coll-of ::marked-string))
+(s/def ::hover (s/and (s/keys :req-un [::range ::contents])
+                      (s/conformer #(Hover. (:contents %1) (:range %1)))))
+
+(defn conform-or-log [spec value]
+  (when value
+    (if-let [result (s/conform spec value)]
+      result
+      (log/error (s/explain-data spec value)))))
+
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [this ^DidOpenTextDocumentParams params]
@@ -112,12 +145,11 @@
                   pos (.getPosition params)
                   line (inc (.getLine pos))
                   column (inc (.getCharacter pos))]
-              (s/conform ::references (handlers/references doc-id line column)))
+              (conform-or-log ::references (handlers/references doc-id line column)))
             (catch Exception e
               (log/error e)))))))
 
   (^CompletableFuture completion [this ^TextDocumentPositionParams params]
-    (log/warn params)
     (CompletableFuture/supplyAsync
       (reify Supplier
         (get [this]
@@ -126,7 +158,7 @@
                   pos (.getPosition params)
                   line (inc (.getLine pos))
                   column (inc (.getCharacter pos))]
-              (s/conform ::completion-items (handlers/completion doc-id line column)))
+              (conform-or-log ::completion-items (handlers/completion doc-id line column)))
             (catch Exception e
               (log/error e)))))))
 
@@ -141,14 +173,22 @@
                   line (inc (.getLine pos))
                   column (inc (.getCharacter pos))
                   new-name (.getNewName params)]
-              (s/conform ::workspace-edit (handlers/rename doc-id line column new-name)))
+              (conform-or-log ::workspace-edit (handlers/rename doc-id line column new-name)))
             (catch Exception e
               (log/error e)))))))
 
   (^CompletableFuture hover [this ^TextDocumentPositionParams params]
-    (CompletableFuture/completedFuture
-      (doto (Hover.)
-        (.setContents [(Either/forLeft "")]))))
+    (CompletableFuture/supplyAsync
+      (reify Supplier
+        (get [this]
+          (try
+            (let [doc-id (.getUri (.getTextDocument params))
+                  pos (.getPosition params)
+                  line (inc (.getLine pos))
+                  column (inc (.getCharacter pos))]
+              (conform-or-log ::hover (handlers/hover doc-id line column)))
+            (catch Exception e
+              (log/error e)))))))
 
   (^CompletableFuture signatureHelp [this ^TextDocumentPositionParams params]
     (CompletableFuture/completedFuture
@@ -165,8 +205,8 @@
             (let [doc-id (.getUri (.getTextDocument params))
                   pos (.getPosition params)
                   line (inc (.getLine pos))
-                  column (inc (.getCharacter pos))]
-              (s/conform ::location (handlers/definition doc-id line column)))
+                  column (inc (.getCharacter pos)) ]
+              (conform-or-log ::location (handlers/definition doc-id line column)))
             (catch Exception e
               (log/error e))))))))
 
@@ -178,11 +218,11 @@
       (future
         (.get (.applyEdit (:client @db/db)
                           (ApplyWorkspaceEditParams.
-                            (s/conform ::workspace-edit (handlers/refactor doc-id
-                                                                           (inc (int line))
-                                                                           (inc (int col))
-                                                                           (.getCommand params)
-                                                                           args)))))))
+                           (conform-or-log ::workspace-edit (handlers/refactor doc-id
+                                                                               (inc (int line))
+                                                                               (inc (int col))
+                                                                               (.getCommand params)
+                                                                               args)))))))
     (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
     (log/warn params))
@@ -232,4 +272,8 @@
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)]
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
+    (async/go
+      (loop [diagnostic (async/<! handlers/diagnostics-chan)]
+        (.publishDiagnostics (:client @db/db) (s/conform ::publish-diagnostics-params diagnostic))
+        (recur (async/<! handlers/diagnostics-chan))))
     (.startListening launcher)))

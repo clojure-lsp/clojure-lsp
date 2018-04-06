@@ -34,7 +34,7 @@
      ~loc))
 
 (defn skip-over [loc]
-  (if (or (z/seq? loc) (= :uneval (z/tag loc)))
+  (if (zm/down loc)
     (->> loc
          zm/down
          zm/rightmost
@@ -106,6 +106,18 @@
                        new-scoped
                        (recur (z/right child-loc) new-scoped)))))
 
+          (= :as key-sexpr)
+          (let [val-node (z/node val-loc)
+                sexpr (n/sexpr val-node)
+                scoped-ns (gensym)
+                new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
+            (add-reference context scoped (z/node val-loc) {:tags #{:declare :param}
+                                                                     :scope-bounds scope-bounds
+                                                                     :sym (symbol (name scoped-ns)
+                                                                                  (name sexpr))
+                                                                     :sexpr sexpr})
+            (recur (z/right val-loc) new-scoped))
+
           (keyword? key-sexpr)
           (recur (skip-over val-loc) scoped)
 
@@ -115,8 +127,7 @@
           :else
           (recur (skip-over val-loc) scoped)))
       scoped)))
-(comment
-  )
+
 (comment
   (let [context (volatile! {})]
     #_(do (destructure-map (z/of-string "{:keys [a b]}") {} context {}) (map :sym (:usages @context)))
@@ -170,6 +181,7 @@
   (try
     (loop [binding-loc (zm/down (zsub/subzip bindings-loc))
            scoped scoped]
+
       (let [not-done? (and binding-loc (not (z/end? binding-loc)))]
         ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals)
         (cond
@@ -197,7 +209,7 @@
           :else
           scoped)))
     (catch Throwable e
-      (log/warn "bindings" (.getMessage e) (z/sexpr bindings-loc))
+      (log/warn "bindings" (.getMessage e) (z/sexpr bindings-loc) (z/sexpr (z/up bindings-loc)))
       (throw e))))
 
 (defn parse-params [params-loc context scoped]
@@ -217,39 +229,12 @@
       (throw e))))
 
 
-
-(defmulti handle-sexpr*
-  "Crawl a sexpr with `op-loc` pointing at a starting symbol and `loc` pointing at the containing list.
-  `op-loc` reference will have been added already, responsible for adding all sub references."
-  (fn [op-loc loc context scoped]
-    ;; TODO need to handle vars? #'defn
-    (:sym (qualify-ident (z/sexpr op-loc) @context scoped))))
-
-(comment
-  '[clojure.core/with-open
-    clojure.core/if-some
-    clojure.core/if-let
-    clojure.core/when-let
-    clojure.core/when-some
-    clojure.core/when-first
-    clojure.core/with-open
-    clojure.core/dotimes
-    clojure.core/letfn
-    clojure.core/loop
-    clojure.core/with-local-vars
-    clojure.core/as->
-    ])
-
-(defmethod handle-sexpr* :default
-  [op-loc loc context scoped]
-  (handle-rest (zm/right op-loc) context scoped))
-
-(defmethod handle-sexpr* 'clojure.core/comment
+(defn handle-comment
   [op-loc loc context scoped]
   ;; Ignore contents of comment
   nil)
 
-(defmethod handle-sexpr* 'clojure.core/ns
+(defn handle-ns
   [op-loc loc context scoped]
   ;; TODO add refers to usages and add full libs to usages
   (let [conformed (s/conform (:args (s/get-spec 'clojure.core/ns)) (rest (z/sexpr loc)))
@@ -294,25 +279,13 @@
                                                               :row (:end-row require-node)
                                                               :col (:end-col require-node)})))
 
-(defmethod handle-sexpr* 'clojure.core/doseq
+(defn handle-let
   [op-loc loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
     (handle-rest (z/right bindings-loc) context scoped)))
 
-(defmethod handle-sexpr* 'clojure.core/for
-  [op-loc loc context scoped]
-  (let [bindings-loc (zf/find-tag op-loc :vector)
-        scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
-    (handle-rest (z/right bindings-loc) context scoped)))
-
-(defmethod handle-sexpr* 'clojure.core/let
-  [op-loc loc context scoped]
-  (let [bindings-loc (zf/find-tag op-loc :vector)
-        scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
-    (handle-rest (z/right bindings-loc) context scoped)))
-
-(defmethod handle-sexpr* 'clojure.core/def
+(defn handle-def
   [op-loc loc context scoped]
   (let [def-sym (z/node (z/right op-loc))]
     (vswap! context update :publics conj (n/sexpr def-sym))
@@ -320,42 +293,103 @@
     (handle-rest (z/right (z/right op-loc))
                  context scoped)))
 
-(defmethod handle-sexpr* 'clojure.core/fn
+(defn handle-fn
   [op-loc loc context scoped]
   (let [params-loc (z/find-tag op-loc :vector)
         body-loc (z/right params-loc)]
     (->> (parse-params params-loc context scoped)
          (handle-rest body-loc context))))
 
-(defmethod handle-sexpr* 'clojure.core/defn
+(defn handle-defn
   [op-loc loc context scoped]
   (let [defn-loc (z/right op-loc)
         defn-sym (z/node defn-loc)
-        multi? (= :list (z/tag (z/find defn-loc (fn [loc]
-                                                  (#{:vector :list} (z/tag loc))))))]
-
+        multi? (= :list (z/tag (z/find defn-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
     (vswap! context update :publics conj (n/sexpr defn-sym))
-    (add-reference context scoped defn-sym {:tags #{:declare :public}})
+    ;; TODO handle multi signatures
+    (add-reference context scoped defn-sym {:tags #{:declare :public} :signature (z/string (z/find-tag defn-loc z/next :vector))})
     (if multi?
-      (loop [params-loc (z/down (zsub/subzip (z/find-tag defn-loc :list)))
-             body-loc (z/right params-loc)]
-        (->> (parse-params params-loc context scoped)
-             (handle-rest body-loc context)))
+      (loop [list-loc (z/find-tag defn-loc :list)]
+        (let [params-loc (z/down list-loc)
+              body-loc (z/right params-loc)]
+          (->> (parse-params params-loc context scoped)
+               (handle-rest body-loc context)))
+        (when-let [next-list (z/find-next-tag list-loc :list)]
+          (recur next-list)))
       (let [params-loc (z/find-tag defn-loc :vector)
             body-loc (z/right params-loc)]
         (->> (parse-params params-loc context scoped)
              (handle-rest body-loc context))))))
 
+(comment
+  (as->
+    (find-references "(defmacro x ([{:keys [a]} {}] `a) ([a b c] 'a))") $
+    (dissoc $ :refers)
+    (:usages $)
+    (map (juxt :sym :tags) $)))
+
+(defn handle-defmacro
+  [op-loc loc context scoped]
+  (let [defn-loc (z/right op-loc)
+        defn-sym (z/node defn-loc)
+        multi? (= :list (z/tag (z/find defn-loc (fn [loc]
+                                                  (#{:vector :list} (z/tag loc))))))]
+    (vswap! context update :publics conj (n/sexpr defn-sym))
+    (add-reference context scoped defn-sym {:tags #{:declare :public}})
+    (if multi?
+      (loop [list-loc (z/find-tag defn-loc :list)]
+        (let [params-loc (z/down list-loc)]
+          (parse-params params-loc context scoped))
+        (when-let [next-list (z/find-next-tag list-loc :list)]
+          (recur next-list)))
+      (let [params-loc (z/find-tag defn-loc :vector)]
+        (parse-params params-loc context scoped)))))
+
+(comment
+  '[clojure.core/with-open
+    clojure.core/if-some
+    clojure.core/if-let
+    clojure.core/when-let
+    clojure.core/when-some
+    clojure.core/when-first
+    clojure.core/with-open
+    clojure.core/dotimes
+    clojure.core/letfn
+    clojure.core/loop
+    clojure.core/with-local-vars
+    clojure.core/as->
+    ])
+
+(def ^:dynamic *sexpr-handlers*
+  {'clojure.core/ns handle-ns
+   'clojure.core/defn handle-defn
+   'clojure.core/defn- handle-defn
+   'clojure.core/fn handle-fn
+   'clojure.core/declare handle-def
+   'clojure.core/def handle-def
+   'clojure.core/defonce handle-def
+   'clojure.core/defmacro handle-defmacro
+   'clojure.core/let handle-let
+   'clojure.core/when-let handle-let
+   'clojure.core/when-some handle-let
+   'clojure.core/with-open handle-let
+   'clojure.core/loop handle-let
+   'clojure.core/for handle-let
+   'clojure.core/doseq handle-let
+   'clojure.core/comment handle-comment})
+
 (defn handle-sexpr [loc context scoped]
   (let [op-loc (some-> loc (zm/down))]
     (cond
       (and op-loc (symbol? (z/sexpr op-loc)))
-      (do
+      (let [qualified-op (:sym (qualify-ident (z/sexpr op-loc) @context scoped))
+            handler (get *sexpr-handlers* qualified-op)]
         (add-reference context scoped (z/node op-loc) {})
-        (handle-sexpr* op-loc loc context scoped))
-
+        (if handler
+          (handler op-loc loc context scoped)
+          (handle-rest (zm/right op-loc) context scoped)))
       op-loc
-      (handle-rest (z/right op-loc) context scoped))))
+      (handle-rest op-loc context scoped))))
 
 (defn find-references* [loc context scoped]
   (loop [loc loc
@@ -432,8 +466,7 @@
     (z/sexpr (loc-at-pos code 1 2))
     )
 
-  (as->
-    (find-references "(let [{:keys [a]} {}] a)") $
+  (as-> (find-references "(defn x ([{:keys [a]} {}] a))") $
       (dissoc $ :refers)
       (:usages $)
       (map (juxt :sym :tags) $))

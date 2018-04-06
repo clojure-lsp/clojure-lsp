@@ -8,6 +8,8 @@
     [clojure.tools.logging :as log]
     [clojure-lsp.refactor.transform :as refactor]))
 
+(defonce diagnostics-chan (async/chan 1))
+
 (defn- uri->path [uri]
   (string/replace uri #"^file:///" "/"))
 
@@ -26,10 +28,20 @@
 (defn find-reference-under-cursor [line column env]
   (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
 
+(defn send-diagnostics [uri references]
+  (when-let [unknowns (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
+                                   (:usages references)))]
+    (async/>!! diagnostics-chan {:uri uri :diagnostics (for [unknown unknowns]
+                                                         {:range (->range unknown)
+                                                          :message "Unknown symbol"
+                                                          :severity 1})})))
+
 (defn safe-find-references [uri text]
   (try
-    #_(log/warn "trying" uri)
-    (parser/find-references text)
+    (log/warn "trying" uri)
+    (let [references (parser/find-references text)]
+      (send-diagnostics uri references)
+      references)
     (catch Exception e
       (log/warn "Ignoring: " uri (.getMessage e))
       ;; On purpose
@@ -90,7 +102,6 @@
                              alias (str " :as " (name alias)))
                   ref (or local-alias alias ns-sym)]
             usage (filter (comp :public :tags) (:usages remote-env))]
-
         (cond-> {:label (format "%s/%s" (name ref) (name (:sym usage)))}
           (not (contains? (:requires local-env) ns-sym))
           (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
@@ -119,6 +130,7 @@
         (when-not (compare-and-set! db/db state-db (-> state-db
                                                        (assoc-in [:documents uri] {:v version :text text})
                                                        (assoc-in [:file-envs (string/replace uri #"^file:///" "/")] references)))
+
           (recur @db/db))))))
 
 (comment
@@ -149,7 +161,6 @@
                      (map (fn [[text-document edits]]
                             {:text-document text-document
                              :edits edits})))]
-    (log/warn "rename" doc-id line column)
     (if (:supports-document-changes @db/db)
       {:document-changes changes}
       {:changes (into {} (map (fn [{:keys [text-document edits]}]
@@ -163,11 +174,11 @@
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (log/warn "definition" doc-id line column)
     (first
-      (for [[path {:keys [usages]}] file-envs
-            :let [doc-id (str "file://" path)]
-            {:keys [sym tags] :as usage} usages
-            :when (and (= sym cursor-sym) (:declare tags))]
-        {:uri doc-id :range (->range usage)}))))
+     (for [[path {:keys [usages]}] file-envs
+           :let [doc-id (str "file://" path)]
+           {:keys [sym tags] :as usage} usages
+           :when (and (= sym cursor-sym) (:declare tags))]
+       {:uri doc-id :range (->range usage)}))))
 
 (def refactorings
   {"cycle-coll" refactor/cycle-coll
@@ -178,6 +189,7 @@
 
 (defn refactor [path line column refactoring args]
   (let [doc-id (str "file://" path)
+        ;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
         result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
         changes [{:text-document {:uri doc-id :version v}
@@ -189,3 +201,20 @@
       {:changes (into {} (map (fn [{:keys [text-document edits]}]
                                 [(:uri text-document) edits])
                               changes))})))
+
+(defn hover [doc-id line column]
+  (let [path (uri->path doc-id)
+        file-envs (:file-envs @db/db)
+        local-env (get file-envs path)
+        cursor (find-reference-under-cursor line column local-env)
+        signature (first
+                   (for [[_ {:keys [usages]}] file-envs
+                         {:keys [sym tags] :as usage} usages
+                         :when (and (= sym (:sym cursor)) (:declare tags))]
+                     (:signature usage)))]
+    (when cursor
+      {:range (->range cursor)
+       :contents [(-> cursor
+                      (select-keys [:sym :tags])
+                      (assoc :signature signature)
+                      (pr-str))]})))

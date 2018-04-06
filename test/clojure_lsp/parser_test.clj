@@ -16,7 +16,12 @@
   (subs code (dec (:col scope-bounds)) (dec (:end-col scope-bounds))))
 
 (deftest parse-destructuring-test
-  (is (= 4 (count (parser/parse-destructuring (z/of-string "[a {:keys [aliases things]}b]") {} (volatile! {}) {})))))
+  (is (= '(a b c d e) (keys (parser/parse-destructuring (z/of-string "[a {:keys [b c] :as d} e]") {} (volatile! {}) {})))))
+
+(deftest parse-bindings-test
+  (let [context (volatile! {})]
+    (is (= 1 (count (parser/parse-bindings (z/of-string "[a @db]") context {} {}))))
+    (is (= 2 (count (:usages @context))))))
 
 (deftest find-references-test
   (testing "simple stuff"

@@ -127,6 +127,7 @@
           changes (.getContentChanges params)
           text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
           uri (.getUri textDocument)]
+      (log/warn "changed" uri version)
       (handlers/did-change uri text version)))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]

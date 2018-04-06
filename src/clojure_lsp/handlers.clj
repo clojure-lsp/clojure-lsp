@@ -1,12 +1,12 @@
 (ns clojure-lsp.handlers
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.parser :as parser]
-    [clojure.core.async :as async]
-    [clojure.java.io :as io]
-    [clojure.string :as string]
-    [clojure.tools.logging :as log]
-    [clojure-lsp.refactor.transform :as refactor]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
+   [clojure.core.async :as async]
+   [clojure.java.io :as io]
+   [clojure.string :as string]
+   [clojure.tools.logging :as log]
+   [clojure-lsp.refactor.transform :as refactor]))
 
 (defonce diagnostics-chan (async/chan 1))
 
@@ -29,12 +29,12 @@
   (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
 
 (defn send-diagnostics [uri references]
-  (when-let [unknowns (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
+  (let [unknowns (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
                                    (:usages references)))]
     (async/>!! diagnostics-chan {:uri uri :diagnostics (for [unknown unknowns]
-                                                         {:range (->range unknown)
+                                                         [{:range (->range unknown)
                                                           :message "Unknown symbol"
-                                                          :severity 1})})))
+                                                          :severity 1}])})))
 
 (defn safe-find-references [uri text]
   (try

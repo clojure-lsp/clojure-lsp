@@ -4,7 +4,7 @@
 
 (defn find-op
   [zloc]
-  (if (z/seq? zloc)
+  (if (z/down zloc)
     (z/down zloc)
     (z/leftmost zloc)))
 

@@ -22,43 +22,48 @@
           :new-text (n/string (coerce-to-next sexpr (n/children node)))}])
       [])))
 
+(defn raise [zloc]
+  (if-let [ploc (z/up zloc)]
+    (z/replace ploc (z/node zloc))
+    zloc))
+
+(defn wrap-around [zloc tag]
+  (let [node (z/node zloc)]
+    (-> zloc
+        (z/replace (case tag
+                       :list (n/list-node [])
+                       :vector (n/vector-node [])
+                       :set (n/set-node [])
+                       :map (n/map-node [])))
+        (z/insert-child node))))
+
+(defmacro zspy [loc]
+  `(do
+     (log/warn '~loc (pr-str (z/sexpr ~loc)))
+     ~loc))
+
+(defmacro zass [loc sexpr]
+  `(do
+     (assert (= '~sexpr (z/sexpr ~loc)) (pr-str (z/sexpr ~loc)))
+     ~loc))
+
 (defn thread-sym
   [zloc sym]
-  (let [movement (if (= '-> sym) z/right z/rightmost)
-        first-loc (-> zloc z/leftmost movement)
-        up-loc (z/up first-loc)]
-    (if (and first-loc up-loc (= :list (z/tag up-loc)))
+  (let [movement (if (= '-> sym) z/right z/rightmost)]
+    (if-let [first-loc (-> zloc (edit/find-op) movement)]
       (let [first-node (z/node first-loc)
-            container (z/node up-loc)
-            child-op (and (z/seq? first-loc) (z/sexpr (z/down first-loc)))
-            threaded? (= sym child-op)
-            up-loc (-> first-loc
-                       z/remove
-                       z/up)
-            up-node (z/node up-loc)
-            outer-loc (cond
-                        threaded?
-                        (-> up-loc
-                            (z/replace first-node)
-                            (z/append-child up-node))
-
-                        (not threaded?)
-                        (-> up-loc
-                            (z/replace (n/list-node [sym (n/spaces 1) first-node (n/spaces 1) up-node]))))]
-        [(meta container) outer-loc])
-      [])))
-
-(comment
-  (z/sexpr (second (thread-sym
-                     (second
-                       (thread-sym
-                         (z/down (z/rightmost (z/down (z/of-string "(remove nil? (map :id xs))"))))
-                         '->>))
-                     '->>)))
-  (thread-last (z/down (z/rightmost (z/down (z/of-string "(remove nil? (map :id xs))")))))
-  #_(remove nil?)
-  (remove nil? (map :id (->> xs (map :ysages)))))
-
+            parent-op (z/sexpr (z/leftmost zloc))
+            threaded? (= sym parent-op)]
+        (-> first-loc
+            (z/remove)
+            (z/up)
+            ((fn [loc] (cond-> loc
+                         (edit/single-child? loc) (-> z/down raise)
+                         threaded? (-> (z/insert-left first-node) z/up)
+                         (not threaded?) (-> (wrap-around :list)
+                                             (z/insert-child first-node)
+                                             (z/insert-child sym)))))))
+      zloc)))
 
 (defn thread-first
   [zloc]
@@ -84,7 +89,6 @@
 (defn thread-first-all
   [zloc]
   (thread-all zloc '->))
-
 
 (defn thread-last-all
   [zloc]

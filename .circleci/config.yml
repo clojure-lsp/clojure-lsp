@@ -66,4 +66,5 @@ workflows:
           filters:
             tags:
               only: /^release.*/
-
+            branches:
+              ignore: /.*/

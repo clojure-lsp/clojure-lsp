@@ -1,18 +1,40 @@
-A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive like approach of statically analyzing code rather than depending on a repl and runtime.
+# clojure-lsp
 
-This is an early work in progress, contributions are very welcome. It's currently written in Clojure but Lumo might be more appealing for startup time. 
+A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive like approach of statically analyzing code.
+
+## What is this?
+
+The goal of this project is to bring great editing tools for Clojure to all editors. 
+It aims to work alongside you to help you navigate, identify and fix errors, and perform refactorings. 
+
+You will get:
+
+* - Autocomplete *
+* - Jump to definition *
+* - Find usages *
+* - Renaming *
+* - Errors *
+* - Automatic ns management *
+* - Refactorings *
+
+This is an early work in progress, contributions are very welcome.
+
+## Installation
+
+- Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
+- Place it in your $PATH with chmod 755
+- Follow the documentation for your editor's language client. See [Clients](#clients) below.
 
 ## Capabilities
 
 | capability | done | partial? | notes |
 | ---------- | ---- | -------- | ----- |
-| textDocumentSync |  | YES | Only `Full` |
-| completionProvider | | YES | TODO: add function signatures, docstrings, crawl classpath jars? |
-| referencesProvider | | YES | TODO: keywords, crawl classpath jars, scoping for `fn`, `doseq`, `for` others |
-| renameProvider | | YES | more reference work; more tests - do bad references make bad renames? |
-| definitionProvider | | YES | more reference work |
-| diagnostics | | | maybe? joker is pretty great - should probably handle undeclared vars somehow |
-| hover | | | would be helpful and piggiebacks off  richer completion | 
+| completionProvider | | √ | autocomplete as you type| TODO: add function signatures, docstrings, crawl classpath jars? |
+| referencesProvider | | √ | TODO: keywords, crawl classpath jars, scoping for `if-let` and some others |
+| renameProvider     | | √ | |
+| definitionProvider | | √ | TODO: keywords, jar links |
+| diagnostics        | | √ | very early - only shows unresolved symbols |
+| hover              | | √ | very early - shows fn params but mostly for debugging at the moment | 
 
 ## Refactorings
 
@@ -28,8 +50,6 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | [x]  | thread-last | | |
 | [x]  | thread-last-all | | |
 | [ ]  | introduce-let | | |
- 
-
 
 Refactorings can be done with LanguageClient-neovim with:
 ```vim
@@ -39,7 +59,7 @@ function! s:Expand(exp) abort
 endfunction
 
 function! ExecuteCommand(refactoring) abort
-  call LanguageClient#workspace_executeCommand(a:refactoring, [s:Expand('%:p'), line('.') - 1, col('.') - 1])
+  call LanguageClient#workspace_executeCommand(a:refactoring,  ['file://' + s:Expand('%:p'), line('.') - 1, col('.') - 1])
 endfunction
 ```
 
@@ -48,9 +68,10 @@ Other clients might provide a higher level interface to `workspace/executeComman
 
 ## Clients
 
-Tested in various language server clients. In general use stdio and a command like `['bash', '-c', 'cd ~/dev/lsp/ && clj -m clojure-lsp.main']` (I didn't want to figure out working dir/classpaths for `clj`, let me know a better command). You can get `clj` on macos with `brew install clojure`
+Clients are either editors with built in LSP support like Oni, or an appropriate plugin. 
+*Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.*
 
-Something that took me too long to realize about LSP is that, in general, the client is responsible for launching the server process. 
+In general, make sure to configure the client to use stdio and a server launch command like `['/usr/local/bin/clojure-lsp']`. 
 
 ### Vim 
 Both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well. I think supporting completionItem `additionalTexts` is important for auto-imports and the former might be a bit closer (various PRs with omnicomplete)
@@ -62,7 +83,7 @@ Seems to work reasonably well but couldn't get rename to work reliably https://g
 https://github.com/gtache/intellij-lsp tested only briefly. 
 
 ### vscode
-I was able to modify [lsp-sample](https://github.com/Microsoft/vscode-extension-samples/tree/master/lsp-sample) to run the server. I plan to package the client as part of this repo unless someone points me at a generic client that can launch different servers based on user settings. (One extension per language server feels weird to me, what's the reasoning behind it?).
+Proof of concept in the client-vscode directory in this repo.
 
 ### atom
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too. 
@@ -78,14 +99,13 @@ https://github.com/emacs-lsp looks promising but I haven't had a chance to try i
 
 ### Diagnostics 
 - crawl through parsed results and see if symbols exist where used
-- unused imports
+- unused imports, params, defs
 
 ### Others
 - Better completion item kinds
-- rename
 - formatting (clj-format?)
 - other lsp capabilities?
-- Cursive style "resolve macros as" def/defn/let etc.. to expose more vars
+- Cursive style "resolve macros as" def/defn/let etc.. to expose more vars (dynamic based on client configuration messages)
 - crawl classpath for exported vars 
 - crawl project.clj / build.boot src and test paths
 - keep separate cljs and clj environments

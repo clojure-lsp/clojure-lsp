@@ -42,8 +42,8 @@ jobs:
       - attach_workspace:
           at: ~/repo/target
       - run: go get github.com/tcnksm/ghr
-      - run: pwd
-      - run: ls -la target
+      - run: git pull --tags
+      - run: git tag --list
       - run: echo ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace $(git describe --tags) target/clojure-lsp
       - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace $(git describe --tags) target/clojure-lsp
 

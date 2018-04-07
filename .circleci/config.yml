@@ -20,8 +20,6 @@ jobs:
     steps:
       - checkout
 
-      - go get github.com/tcnksm/ghr
-
       # Download and cache dependencies
       - restore_cache:
           keys:
@@ -41,4 +39,8 @@ jobs:
 
       - run: lein bin
 
+      - store_artifacts:
+          path: target/clojure-lsp
+          destination: clojure-lsp
+      - run: go get github.com/tcnksm/ghr
       - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` target/clojure-lsp

@@ -42,5 +42,9 @@ jobs:
       - store_artifacts:
           path: target/clojure-lsp
           destination: clojure-lsp
+  release:
+    docker:
+      - image: circleci/golang:latest
+    steps:
       - run: go get github.com/tcnksm/ghr
       - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` target/clojure-lsp

@@ -10,7 +10,8 @@
   (mapv (fn [zip-edit]
           (let [loc (:loc zip-edit)]
             (-> zip-edit
-                (assoc :new-text (z/string loc)))))
+                (assoc :new-text (z/string loc))
+                (dissoc :loc))))
         zip-edits))
 
 (defn cycle-coll

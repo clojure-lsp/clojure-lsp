@@ -110,9 +110,10 @@
 
 (defn conform-or-log [spec value]
   (when value
-    (if-let [result (s/conform spec value)]
-      result
-      (log/error (s/explain-data spec value)))))
+    (let [result (s/conform spec value)]
+      (if (= :clojure.spec.alpha/invalid result)
+        (log/error (s/explain-data spec value))
+        result))))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
@@ -127,7 +128,6 @@
           changes (.getContentChanges params)
           text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
           uri (.getUri textDocument)]
-      (log/warn "changed" uri version)
       (handlers/did-change uri text version)))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]
@@ -273,6 +273,10 @@
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)]
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
+    (async/go
+     (loop [edit (async/<! handlers/edits-chan)]
+       (log/spy (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (conform-or-log ::workspace-edit edit)))))
+       (recur (async/<! handlers/edits-chan))))
     (async/go
       (loop [diagnostic (async/<! handlers/diagnostics-chan)]
         (.publishDiagnostics (:client @db/db) (conform-or-log ::publish-diagnostics-params diagnostic))

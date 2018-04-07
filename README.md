@@ -32,14 +32,14 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 
 
 Refactorings can be done with LanguageClient-neovim with:
-```
+```vim
 function! s:Expand(exp) abort
     let l:result = expand(a:exp)
     return l:result ==# '' ? '' : l:result
 endfunction
 
 function! ExecuteCommand(refactoring) abort
-  call LanguageClient#Call("workspace/executeCommand", {'command': a:refactoring, 'arguments': [s:Expand('%:p'), line('.') - 1, col('.') - 1]}, v:null)
+  call LanguageClient#workspace_executeCommand(a:refactoring, [s:Expand('%:p'), line('.') - 1, col('.') - 1])
 endfunction
 ```
 

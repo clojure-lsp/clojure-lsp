@@ -9,3 +9,5 @@ compile:
 deployment:
   release:
     tag: 201\d.*Z
+    commands:
+      - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` target/clojure-lsp

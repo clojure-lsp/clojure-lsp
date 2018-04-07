@@ -39,13 +39,30 @@ jobs:
 
       - run: lein bin
 
-      - store_artifacts:
-          path: target/clojure-lsp
-          destination: clojure-lsp
+      - persist_to_workspace:
+          root: target
+          paths:
+            - clojure-lsp
 
   release:
     docker:
       - image: circleci/golang:latest
+    working_directory: ~/repo
     steps:
+      - attach_workspace:
+          at: ~/repo/target
       - run: go get github.com/tcnksm/ghr
       - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` target/clojure-lsp
+
+workflows:
+  version: 2
+  build-and-release:
+    jobs:
+      - build
+      - release:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^release.*/
+

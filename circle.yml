@@ -1,0 +1,11 @@
+dependencies:
+  pre:
+    - go get github.com/tcnksm/ghr
+
+compile:
+  override:
+    - lein bin
+
+deployment:
+  release:
+    tag: 201\d.*Z

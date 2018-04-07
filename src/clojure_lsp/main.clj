@@ -48,7 +48,8 @@
     (org.eclipse.lsp4j.launch LSPLauncher)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
-    (org.eclipse.lsp4j.jsonrpc.messages Either)))
+    (org.eclipse.lsp4j.jsonrpc.messages Either))
+  (:gen-class))
 
 
 (s/def ::line integer?)

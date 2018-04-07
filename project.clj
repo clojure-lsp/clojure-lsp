@@ -9,4 +9,9 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.4.474"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
-  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}})
+  :main clojure-lsp.main
+  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]
+                             [lein-bin "0.3.4"]]
+                   :bin {:name "clojure-lsp"}}
+             :uberjar {:aot :all
+                       #_#_:uberjar-name "clojure-lsp.jar"}})

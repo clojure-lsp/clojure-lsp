@@ -9,13 +9,13 @@ It aims to work alongside you to help you navigate, identify and fix errors, and
 
 You will get:
 
-* - Autocomplete *
-* - Jump to definition *
-* - Find usages *
-* - Renaming *
-* - Errors *
-* - Automatic ns management *
-* - Refactorings *
+- **Autocomplete**
+- **Jump to definition**
+- **Find usages**
+- **Renaming**
+- **Errors**
+- **Automatic ns management**
+- **Refactorings**
 
 This is an early work in progress, contributions are very welcome.
 

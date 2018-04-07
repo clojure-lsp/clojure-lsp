@@ -42,6 +42,7 @@ jobs:
       - store_artifacts:
           path: target/clojure-lsp
           destination: clojure-lsp
+
   release:
     docker:
       - image: circleci/golang:latest

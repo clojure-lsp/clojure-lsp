@@ -44,11 +44,12 @@
       ApplyWorkspaceEditParams
       PublishDiagnosticsParams
       Diagnostic
-      DiagnosticSeverity MarkedString)
+      DiagnosticSeverity MarkedString CodeActionParams Command)
     (org.eclipse.lsp4j.launch LSPLauncher)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
-    (org.eclipse.lsp4j.jsonrpc.messages Either))
+    (org.eclipse.lsp4j.jsonrpc.messages Either)
+    (java.net URLClassLoader URL))
   (:gen-class))
 
 
@@ -199,6 +200,11 @@
                          (.setParameters [(ParameterInformation. "param label" "param doc")]))]
                       0 0)))
 
+  (^CompletableFuture codeAction [this ^CodeActionParams params]
+    (CompletableFuture/completedFuture
+      (let [start (.getStart (.getRange params))]
+        [#_(Command. "move-to-let" "move-to-let" [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))
+
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
     (CompletableFuture/supplyAsync
       (reify Supplier
@@ -207,7 +213,7 @@
             (let [doc-id (.getUri (.getTextDocument params))
                   pos (.getPosition params)
                   line (inc (.getLine pos))
-                  column (inc (.getCharacter pos)) ]
+                  column (inc (.getCharacter pos))]
               (conform-or-log ::location (handlers/definition doc-id line column)))
             (catch Exception e
               (log/error e))))))))
@@ -245,7 +251,8 @@
       (handlers/initialize (.getRootUri params) document-changes))
     (CompletableFuture/completedFuture
       (InitializeResult. (doto (ServerCapabilities.)
-                           (.setHoverProvider false)
+                           (.setHoverProvider true)
+                           (.setCodeActionProvider true)
                            (.setReferencesProvider true)
                            (.setRenameProvider true)
                            (.setDefinitionProvider true)
@@ -263,6 +270,7 @@
       {:result nil}))
   (exit [this]
     (log/info "Exit")
+    (shutdown-agents)
     (System/exit 0))
   (getTextDocumentService [this]
     (LSPTextDocumentService.))
@@ -283,3 +291,13 @@
         (.publishDiagnostics (:client @db/db) (conform-or-log ::publish-diagnostics-params diagnostic))
         (recur (async/<! handlers/diagnostics-chan))))
     (.startListening launcher)))
+
+(comment
+  (do
+    (require '[clojure.java.shell :as shell])
+    (require '[clojure.java.io :as io])
+    (require '[clojure.string :as string])
+    (let [cp (:out (shell/sh "sh" "-c" "cd /Users/case/dev/aclaimant/acl; lein classpath"))
+          paths (string/split cp #":")
+          cl (URLClassLoader/newInstance (log/spy (into-array URL (map #(URL. (str "file://" (.getAbsolutePath (io/file %)))) paths))) nil)]
+      (.getResource cl "clojure/core.clj" #_"org/eclipse/lsp4j/Range.java"))))

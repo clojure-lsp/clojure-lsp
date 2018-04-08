@@ -112,10 +112,10 @@
                 scoped-ns (gensym)
                 new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
             (add-reference context scoped (z/node val-loc) {:tags #{:declare :param}
-                                                                     :scope-bounds scope-bounds
-                                                                     :sym (symbol (name scoped-ns)
-                                                                                  (name sexpr))
-                                                                     :sexpr sexpr})
+                                                            :scope-bounds scope-bounds
+                                                            :sym (symbol (name scoped-ns)
+                                                                         (name sexpr))
+                                                            :sexpr sexpr})
             (recur (z/right val-loc) new-scoped))
 
           (keyword? key-sexpr)
@@ -285,6 +285,14 @@
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
     (handle-rest (z/right bindings-loc) context scoped)))
 
+(defn handle-if-let
+  [op-loc loc context scoped]
+  (let [bindings-loc (zf/find-tag op-loc :vector)
+        if-loc (z/right bindings-loc)
+        if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
+    (handle-rest if-loc context if-scoped)
+    (handle-rest (z/right if-loc) context scoped)))
+
 (defn handle-def
   [op-loc loc context scoped]
   (let [def-sym (z/node (z/right op-loc))]
@@ -357,8 +365,8 @@
     clojure.core/letfn
     clojure.core/loop
     clojure.core/with-local-vars
-    clojure.core/as->
-    ])
+    clojure.core/as->])
+
 
 (def ^:dynamic *sexpr-handlers*
   {'clojure.core/ns handle-ns
@@ -372,6 +380,7 @@
    'clojure.core/let handle-let
    'clojure.core/when-let handle-let
    'clojure.core/when-some handle-let
+   'clojure.core/if-let handle-if-let
    'clojure.core/with-open handle-let
    'clojure.core/loop handle-let
    'clojure.core/for handle-let
@@ -463,14 +472,13 @@
                            "(bun/foo)"
                            "(bing)"])]
     #_(find-references code)
-    (z/sexpr (loc-at-pos code 1 2))
-    )
+    (z/sexpr (loc-at-pos code 1 2)))
 
   (as-> (find-references "(defn x ([{:keys [a]} {}] a))") $
       (dissoc $ :refers)
       (:usages $)
       (map (juxt :sym :tags) $))
 
-  (dissoc (find-references
-)
+  (dissoc (find-references)
+
           :refers))

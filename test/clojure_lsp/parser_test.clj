@@ -85,6 +85,10 @@
       (is (= (get-in bound-ref [:scope-bounds :end-col]) (get-in b-bound [:scope-bounds :end-col])))
       (is (= (:sym b-bound) (:sym b-usage)))
       (is (= (:scope-bounds b-bound) (:scope-bounds b-usage)))))
+  (testing "#(dispatch-macro)"
+    (let [code "#(% %1 %2 %&)"
+          usages (:usages (parser/find-references code))]
+      (is (= [] (filter (fn [usage] (contains? (:tags usage) :unknown)) usages)))))
   (testing "destructuring"
     (let [code "(let [{:keys [a] b :b} {}] a b)"
           usages (:usages (parser/find-references code))

@@ -275,9 +275,11 @@
                             :always (update :requires conj lib)
                             as (update :aliases conj [lib as])
                             (and refer (= :syms (first refer))) (update :refers into (map vector (second refer) (repeat lib))))))))
-    (vswap! context assoc :ns (:name conformed) :require-pos {:add-require? (not require-loc)
-                                                              :row (:end-row require-node)
-                                                              :col (:end-col require-node)})))
+    (vswap! context assoc
+            :ns (:name conformed)
+            :require-pos {:add-require? (not require-loc)
+                          :row (:end-row require-node)
+                          :col (:end-col require-node)})))
 
 (defn handle-let
   [op-loc loc context scoped]
@@ -315,7 +317,8 @@
         multi? (= :list (z/tag (z/find defn-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
     (vswap! context update :publics conj (n/sexpr defn-sym))
     ;; TODO handle multi signatures
-    (add-reference context scoped defn-sym {:tags #{:declare :public} :signature (z/string (z/find-tag defn-loc z/next :vector))})
+    (add-reference context scoped defn-sym {:tags #{:declare :public}
+                                            :signature (z/string (z/find-tag defn-loc z/next :vector))})
     (if multi?
       (loop [list-loc (z/find-tag defn-loc :list)]
         (let [params-loc (z/down list-loc)
@@ -352,6 +355,20 @@
           (recur next-list)))
       (let [params-loc (z/find-tag defn-loc :vector)]
         (parse-params params-loc context scoped)))))
+
+(defn handle-dispatch-macro
+  [loc context scoped]
+  (->>
+    (loop [sub-loc (z/next (zsub/subzip loc))
+           scoped scoped]
+      (if (and sub-loc (not (z/end? sub-loc)))
+        (let [sexpr (z/sexpr sub-loc)]
+          (if (and (symbol? sexpr)
+                   (re-find #"^%(:?\d+|&)?$" (name sexpr)))
+            (recur (z/next sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
+            (recur (z/next sub-loc) scoped)))
+        scoped))
+    (handle-rest (z/down loc) context)))
 
 (comment
   '[clojure.core/with-open
@@ -414,6 +431,11 @@
           (= :list tag)
           (do
             (handle-sexpr loc context scoped)
+            (recur (skip-over loc) scoped))
+
+          (= :fn tag)
+          (do
+            (handle-dispatch-macro loc context scoped)
             (recur (skip-over loc) scoped))
 
           (and (= :token tag) (symbol? (z/sexpr loc)))

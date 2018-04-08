@@ -11,7 +11,6 @@
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]))
 
-
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
@@ -71,9 +70,9 @@
                          unknowns)
         requires-to-add (remove nil? (keys groups))
         other-unknowns (get groups nil)]
-    ;; todo alias should not be local-env
-    ;; needs to go off config
-    (when (seq requires-to-add)
+    ;; todo alias should be in local-env
+    ;; needs to go off config value maybe just a refactoring
+    (when false #_(seq requires-to-add)
       (async/>!! edits-chan (add-to-ns requires-to-add uri env)))
 
     (async/>!! diagnostics-chan {:uri uri :diagnostics (for [unknown other-unknowns]
@@ -229,15 +228,15 @@
         {:uri doc-id :range (->range usage)}))))
 
 (def refactorings
-  {"cycle-coll" refactor/cycle-coll
-   "thread-first" refactor/thread-first
-   "thread-first-all" refactor/thread-first-all
-   "thread-last" refactor/thread-last
-   "thread-last-all" refactor/thread-last-all})
+  {"cycle-coll" #'refactor/cycle-coll
+   "thread-first" #'refactor/thread-first
+   "thread-first-all" #'refactor/thread-first-all
+   "thread-last" #'refactor/thread-last
+   "thread-last-all" #'refactor/thread-last-all
+   "move-to-let" #'refactor/move-to-let})
 
-(defn refactor [path line column refactoring args]
-  (let [doc-id (str "file://" path)
-        ;; TODO Instead of v=0 should I send a change AND a document change
+(defn refactor [doc-id line column refactoring args]
+  (let [ ;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
         result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
         changes [{:text-document {:uri doc-id :version v}

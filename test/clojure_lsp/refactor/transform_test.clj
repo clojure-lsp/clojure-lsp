@@ -29,3 +29,18 @@
     (let [[{:keys [loc]}] (transform/thread-first-all zloc)]
       (is (= '-> (z/sexpr (z/down loc))))
       (is (= "(-> m (update :xs reverse) (dissoc :bye) (assoc :hello :world))" (z/root-string loc))))))
+
+(deftest move-to-let-test
+  (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] (inc a))") z/next 'inc))]
+    (let [[{:keys [loc]}] (transform/move-to-let zloc 'b)]
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= (str "(let [a 1" \newline
+                  "      b (inc a)] b)") (z/root-string loc)))))
+  (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] (thing (inc a)))") z/next 'inc))]
+    (let [[{:keys [loc]}] (transform/move-to-let zloc 'b)]
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= (str "(let [a 1" \newline
+                  "      b (inc a)] (thing b))") (z/root-string loc)))))
+  (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] a) (inc b)") z/next 'inc))]
+    (let [[{:keys [loc]}] (transform/move-to-let zloc 'b)]
+      (is (nil? loc)))))

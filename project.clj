@@ -11,7 +11,7 @@
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]
-                             [lein-bin "0.3.4"]]
+                             [lein-bin "0.3.4"]
+                             [lein-repl-run "0.1.0"]]
                    :bin {:name "clojure-lsp"}}
-             :uberjar {:aot :all
-                       #_#_:uberjar-name "clojure-lsp.jar"}})
+             :uberjar {:aot :all}})

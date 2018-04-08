@@ -2,11 +2,24 @@
   (:require
     [rewrite-clj.zip :as z]))
 
+(defn top? [loc]
+  (= :forms (z/tag (z/up loc))))
+
 (defn find-op
   [zloc]
   (if (z/down zloc)
     (z/down zloc)
     (z/leftmost zloc)))
+
+(defn find-ops-up
+  [zloc & op-syms]
+  (when-not (top? zloc)
+    (let [oploc (find-op zloc)]
+      (if (contains? (set op-syms) (z/sexpr oploc))
+        oploc
+        (let [next-op (z/leftmost (z/up oploc))]
+          (when-not (= next-op zloc)
+            (apply find-ops-up next-op op-syms)))))))
 
 (defn single-child?
   [zloc]
@@ -25,8 +38,6 @@
     zloc))
 
 (comment
-  (defn top? [loc]
-    (= nf/FormsNode (type (z/node loc))))
 
   (defn zdbg [loc msg]
     (if (exists? js/debug)
@@ -54,14 +65,7 @@
     (= 'let (-> zloc z/up z/leftmost z/sexpr)))
 
 
-  (defn find-ops-up
-    [zloc & op-syms]
-    (let [oploc (find-op zloc)]
-      (if (contains? (set op-syms) (z/sexpr oploc))
-        oploc
-        (let [next-op (z/leftmost (z/up oploc))]
-          (when-not (= next-op zloc)
-            (apply find-ops-up next-op op-syms))))))
+
 
 
   ;; TODO Is this safe?

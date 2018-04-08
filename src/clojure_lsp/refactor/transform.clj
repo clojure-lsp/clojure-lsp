@@ -62,9 +62,9 @@
       (let [first-node (z/node first-loc)
             parent-op (z/sexpr (z/left zloc))
             threaded? (= sym parent-op)
-            meta-node (if threaded?
-                        (meta (z/up zloc))
-                        (meta zloc))
+            meta-node (cond-> zloc
+                        threaded? z/up
+                        :always (-> z/node meta))
             result-loc (-> first-loc
                            (z/remove)
                            (z/up)
@@ -76,7 +76,7 @@
                                                             (z/insert-child sym))))))]
         [{:range meta-node
           :loc result-loc}])
-      [[nil zloc]])))
+      [])))
 
 (defn thread-first
   [zloc]
@@ -100,6 +100,27 @@
 (defn thread-last-all
   [zloc]
   (thread-all zloc '->>))
+
+(defn move-to-let
+    "Adds form and symbol to a let further up the tree"
+    [zloc binding-name]
+    (let [bound-node (z/node zloc)
+          binding-sym (symbol binding-name)]
+      (if-let [let-loc (edit/find-ops-up zloc 'let)] ; find first ancestor let
+        (let [{:keys [col]} (meta (z/node (z/right let-loc))) ;; indentation of bindings
+              new-let-loc (-> zloc
+                              (z/insert-right binding-sym) ; replace it with binding-symbol
+                              (z/remove) ; remove bound-node and newline
+                              (edit/find-ops-up zloc 'let) ; move to ancestor let
+                              (z/right) ; move to binding
+                              (cz/append-child (n/newlines 1))
+                              (cz/append-child (n/spaces col)) ; insert let and bindings backwards
+                              (z/append-child binding-sym) ; add binding symbol
+                              (z/append-child bound-node) ; read bound node into let bindings
+                              (z/up))]
+          [{:range (meta (z/node (z/up let-loc)))
+            :loc new-let-loc}])
+        [])))
 
 (comment
   (defn introduce-let
@@ -145,23 +166,6 @@
             (z/insert-child 'let)
             (z/leftmost) ; go to let
             (edit/join-let))))) ; join if let above
-
-  (defn move-to-let
-    "Adds form and symbol to a let further up the tree"
-    [zloc [binding-name]]
-    (let [bound-node (z/node zloc)
-          binding-sym (symbol binding-name)]
-      (if-let [let-loc (z/find-value zloc z/prev 'let)] ; find first ancestor let
-        (-> zloc
-            (z/insert-right binding-sym) ; replace it with binding-symbol
-            (z/remove) ; remove bound-node and newline
-            (z/find-value z/prev 'let) ; move to ancestor let
-            (z/next) ; move to binding
-            (zz/append-child (n/newlines 1)) ; insert let and bindings backwards
-            (z/append-child binding-sym) ; add binding symbol
-            (z/append-child bound-node) ; read bound node into let bindings
-            (z/up))
-        zloc)))
 
   (defn extract-def
     [zloc [def-name]]

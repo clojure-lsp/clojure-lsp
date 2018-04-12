@@ -48,7 +48,11 @@
                   "      b (inc a)] (thing b))") (z/root-string loc)))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] a) (inc b)") z/next 'inc))]
     (let [[{:keys [loc]}] (transform/move-to-let zloc 'b)]
-      (is (nil? loc)))))
+      (is (nil? loc))))
+  (let [zloc (z/of-string "(let [as [{:a :a}]] b)")]
+    (let [[{:keys [loc]}] (transform/move-to-let (z/rightmost (z/down zloc)) 'b)]
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= (str "(let [as [{:a :a}]\n      b b] b)") (z/root-string loc))))))
 
 (deftest introduce-let-test
   (let [zloc (z/of-string "(inc a)")]

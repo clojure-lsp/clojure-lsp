@@ -94,8 +94,7 @@
     (if-let [let-loc (edit/find-ops-up zloc 'let)] ; find first ancestor let
       (let [{:keys [col]} (meta (z/node (z/right let-loc))) ;; indentation of bindings
             new-let-loc (-> zloc
-                            (z/insert-right binding-sym) ; replace it with binding-symbol
-                            (z/remove) ; remove bound-node and newline
+                            (z/replace binding-sym) ; replace it with binding-symbol
                             (edit/find-ops-up zloc 'let) ; move to ancestor let
                             (z/right) ; move to binding
                             (cz/append-child (n/newlines 1))

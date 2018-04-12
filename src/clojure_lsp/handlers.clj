@@ -242,7 +242,7 @@
           {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
           result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
           changes [{:text-document {:uri doc-id :version v}
-                    :edits (mapv #(update (log/spy %) :range ->range) (refactor/result result))}]]
+                    :edits (mapv #(update % :range ->range) (refactor/result result))}]]
       (if (:supports-document-changes @db/db)
         {:document-changes changes}
         {:changes (into {} (map (fn [{:keys [text-document edits]}]

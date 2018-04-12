@@ -233,19 +233,23 @@
    "thread-first-all" #'refactor/thread-first-all
    "thread-last" #'refactor/thread-last
    "thread-last-all" #'refactor/thread-last-all
-   "move-to-let" #'refactor/move-to-let})
+   "move-to-let" #'refactor/move-to-let
+   "introduce-let" #'refactor/introduce-let})
 
 (defn refactor [doc-id line column refactoring args]
-  (let [ ;; TODO Instead of v=0 should I send a change AND a document change
-        {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
-        result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
-        changes [{:text-document {:uri doc-id :version v}
-                  :edits (mapv #(update % :range ->range) (refactor/result result))}]]
-    (if (:supports-document-changes @db/db)
-      {:document-changes changes}
-      {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                                [(:uri text-document) edits])
-                              changes))})))
+  (try
+    (let [ ;; TODO Instead of v=0 should I send a change AND a document change
+          {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
+          result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
+          changes [{:text-document {:uri doc-id :version v}
+                    :edits (mapv #(update (log/spy %) :range ->range) (refactor/result result))}]]
+      (if (:supports-document-changes @db/db)
+        {:document-changes changes}
+        {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                  [(:uri text-document) edits])
+                                changes))}))
+    (catch Exception e
+      (log/error e "could not refactor" (.getMessage e)))))
 
 (defn hover [doc-id line column]
   (let [path (uri->path doc-id)

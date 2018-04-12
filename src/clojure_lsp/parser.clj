@@ -332,12 +332,22 @@
         (->> (parse-params params-loc context scoped)
              (handle-rest body-loc context))))))
 
-(comment
-  (as->
-    (find-references "(defmacro x ([{:keys [a]} {}] `a) ([a b c] 'a))") $
-    (dissoc $ :refers)
-    (:usages $)
-    (map (juxt :sym :tags) $)))
+(defn handle-catch
+  [op-loc loc context scoped]
+  (let [type-loc (z/right op-loc)
+        e-loc (z/right type-loc)
+        scoped-ns (gensym)
+        e-node (z/node e-loc)
+        scope-bounds (merge (meta e-node) (end-bounds loc))
+        e-sexpr (z/sexpr e-loc)
+        new-scoped (assoc scoped e-sexpr {:ns scoped-ns :bounds scope-bounds})]
+    (add-reference context scoped (z/node type-loc) {})
+    (add-reference context scoped e-node {:tags #{:declare :params}
+                                          :scope-bounds scope-bounds
+                                          :sym (symbol (name scoped-ns)
+                                                       (name e-sexpr))
+                                          :sexpr e-sexpr})
+    (handle-rest (z/right e-loc) context new-scoped)))
 
 (defn handle-defmacro
   [op-loc loc context scoped]
@@ -372,15 +382,9 @@
 
 (comment
   '[clojure.core/with-open
-    clojure.core/if-some
-    clojure.core/if-let
-    clojure.core/when-let
-    clojure.core/when-some
-    clojure.core/when-first
     clojure.core/with-open
     clojure.core/dotimes
     clojure.core/letfn
-    clojure.core/loop
     clojure.core/with-local-vars
     clojure.core/as->])
 
@@ -395,9 +399,12 @@
    'clojure.core/defonce handle-def
    'clojure.core/defmacro handle-defmacro
    'clojure.core/let handle-let
+   'clojure.core/catch handle-catch
    'clojure.core/when-let handle-let
    'clojure.core/when-some handle-let
+   'clojure.core/when-first handle-let
    'clojure.core/if-let handle-if-let
+   'clojure.core/if-some handle-if-let
    'clojure.core/with-open handle-let
    'clojure.core/loop handle-let
    'clojure.core/for handle-let

@@ -1,55 +1,55 @@
 (ns clojure-lsp.main
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.handlers :as handlers]
-    [clojure.tools.logging :as log]
-    [clojure.spec.alpha :as s]
-    [clojure.core.async :as async])
+   [clojure-lsp.db :as db]
+   [clojure-lsp.handlers :as handlers]
+   [clojure.tools.logging :as log]
+   [clojure.spec.alpha :as s]
+   [clojure.core.async :as async])
   (:import
-    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
-    (org.eclipse.lsp4j
-      CompletionItem
-      CompletionItemKind
-      CompletionOptions
-      DidChangeConfigurationParams
-      DidChangeTextDocumentParams
-      DidChangeWatchedFilesParams
-      DidCloseTextDocumentParams
-      DidOpenTextDocumentParams
-      DidSaveTextDocumentParams
-      Hover
-      InitializeParams
-      InitializeResult
-      InitializedParams
-      Location
-      ParameterInformation
-      Position
-      Range
-      ReferenceParams
-      RenameParams
-      SaveOptions
-      ServerCapabilities
-      SignatureHelp
-      SignatureHelpOptions
-      SignatureInformation
-      TextDocumentContentChangeEvent
-      TextDocumentEdit
-      TextDocumentPositionParams
-      TextDocumentSyncKind
-      TextDocumentSyncOptions
-      TextEdit
-      VersionedTextDocumentIdentifier
-      WorkspaceEdit
-      ExecuteCommandParams
-      ApplyWorkspaceEditParams
-      PublishDiagnosticsParams
-      Diagnostic
-      DiagnosticSeverity MarkedString CodeActionParams Command)
-    (org.eclipse.lsp4j.launch LSPLauncher)
-    (java.util.concurrent CompletableFuture)
-    (java.util.function Supplier)
-    (org.eclipse.lsp4j.jsonrpc.messages Either)
-    (java.net URLClassLoader URL))
+   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
+   (org.eclipse.lsp4j
+    CompletionItem
+    CompletionItemKind
+    CompletionOptions
+    DidChangeConfigurationParams
+    DidChangeTextDocumentParams
+    DidChangeWatchedFilesParams
+    DidCloseTextDocumentParams
+    DidOpenTextDocumentParams
+    DidSaveTextDocumentParams
+    Hover
+    InitializeParams
+    InitializeResult
+    InitializedParams
+    Location
+    ParameterInformation
+    Position
+    Range
+    ReferenceParams
+    RenameParams
+    SaveOptions
+    ServerCapabilities
+    SignatureHelp
+    SignatureHelpOptions
+    SignatureInformation
+    TextDocumentContentChangeEvent
+    TextDocumentEdit
+    TextDocumentPositionParams
+    TextDocumentSyncKind
+    TextDocumentSyncOptions
+    TextEdit
+    VersionedTextDocumentIdentifier
+    WorkspaceEdit
+    ExecuteCommandParams
+    ApplyWorkspaceEditParams
+    PublishDiagnosticsParams
+    Diagnostic
+    DiagnosticSeverity MarkedString CodeActionParams Command)
+   (org.eclipse.lsp4j.launch LSPLauncher)
+   (java.util.concurrent CompletableFuture)
+   (java.util.function Supplier)
+   (org.eclipse.lsp4j.jsonrpc.messages Either)
+   (java.net URLClassLoader URL))
   (:gen-class))
 
 
@@ -120,162 +120,162 @@
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [this ^DidOpenTextDocumentParams params]
-    (log/warn "DidOpenTextDocumentParams")
-    (let [document (.getTextDocument params)]
-      (handlers/did-open (.getUri document) (.getText document))))
+         (log/warn "DidOpenTextDocumentParams")
+         (let [document (.getTextDocument params)]
+           (#'handlers/did-open (.getUri document) (.getText document))))
 
   (^void didChange [this ^DidChangeTextDocumentParams params]
-    (let [textDocument (.getTextDocument params)
-          version (.getVersion textDocument)
-          changes (.getContentChanges params)
-          text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
-          uri (.getUri textDocument)]
-      (handlers/did-change uri text version)))
+         (let [textDocument (.getTextDocument params)
+               version (.getVersion textDocument)
+               changes (.getContentChanges params)
+               text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
+               uri (.getUri textDocument)]
+           (#'handlers/did-change uri text version)))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]
-    (log/warn "DidSaveTextDocumentParams"))
+         (log/warn "DidSaveTextDocumentParams"))
   (^void didClose [this ^DidCloseTextDocumentParams params]
-    (log/warn "DidCloseTextDocumentParams")
-    (swap! db/db update :documents dissoc (.getUri (.getTextDocument params))))
+         (log/warn "DidCloseTextDocumentParams")
+         (swap! db/db update :documents dissoc (.getUri (.getTextDocument params))))
 
   (^CompletableFuture references [this ^ReferenceParams params]
-    (log/warn params)
-    (CompletableFuture/supplyAsync
-      (reify Supplier
-        (get [this]
-          (try
-            (let [doc-id (.getUri (.getTextDocument params))
-                  pos (.getPosition params)
-                  line (inc (.getLine pos))
-                  column (inc (.getCharacter pos))]
-              (conform-or-log ::references (handlers/references doc-id line column)))
-            (catch Exception e
-              (log/error e)))))))
+                      (log/warn params)
+                      (CompletableFuture/supplyAsync
+                       (reify Supplier
+                         (get [this]
+                              (try
+                                (let [doc-id (.getUri (.getTextDocument params))
+                                      pos (.getPosition params)
+                                      line (inc (.getLine pos))
+                                      column (inc (.getCharacter pos))]
+                                  (conform-or-log ::references (#'handlers/references doc-id line column)))
+                                (catch Exception e
+                                  (log/error e)))))))
 
   (^CompletableFuture completion [this ^TextDocumentPositionParams params]
-    (CompletableFuture/supplyAsync
-      (reify Supplier
-        (get [this]
-          (try
-            (let [doc-id (.getUri (.getTextDocument params))
-                  pos (.getPosition params)
-                  line (inc (.getLine pos))
-                  column (inc (.getCharacter pos))]
-              (conform-or-log ::completion-items (handlers/completion doc-id line column)))
-            (catch Exception e
-              (log/error e)))))))
+                      (CompletableFuture/supplyAsync
+                       (reify Supplier
+                         (get [this]
+                              (try
+                                (let [doc-id (.getUri (.getTextDocument params))
+                                      pos (.getPosition params)
+                                      line (inc (.getLine pos))
+                                      column (inc (.getCharacter pos))]
+                                  (conform-or-log ::completion-items (#'handlers/completion doc-id line column)))
+                                (catch Exception e
+                                  (log/error e)))))))
 
   (^CompletableFuture rename [this ^RenameParams params]
-    (log/warn params)
-    (CompletableFuture/supplyAsync
-      (reify Supplier
-        (get [this]
-          (try
-            (let [doc-id (.getUri (.getTextDocument params))
-                  pos (.getPosition params)
-                  line (inc (.getLine pos))
-                  column (inc (.getCharacter pos))
-                  new-name (.getNewName params)]
-              (conform-or-log ::workspace-edit (handlers/rename doc-id line column new-name)))
-            (catch Exception e
-              (log/error e)))))))
+                      (log/warn params)
+                      (CompletableFuture/supplyAsync
+                       (reify Supplier
+                         (get [this]
+                              (try
+                                (let [doc-id (.getUri (.getTextDocument params))
+                                      pos (.getPosition params)
+                                      line (inc (.getLine pos))
+                                      column (inc (.getCharacter pos))
+                                      new-name (.getNewName params)]
+                                  (conform-or-log ::workspace-edit (#'handlers/rename doc-id line column new-name)))
+                                (catch Exception e
+                                  (log/error e)))))))
 
   (^CompletableFuture hover [this ^TextDocumentPositionParams params]
-    (CompletableFuture/supplyAsync
-      (reify Supplier
-        (get [this]
-          (try
-            (let [doc-id (.getUri (.getTextDocument params))
-                  pos (.getPosition params)
-                  line (inc (.getLine pos))
-                  column (inc (.getCharacter pos))]
-              (conform-or-log ::hover (handlers/hover doc-id line column)))
-            (catch Exception e
-              (log/error e)))))))
+                      (CompletableFuture/supplyAsync
+                       (reify Supplier
+                         (get [this]
+                              (try
+                                (let [doc-id (.getUri (.getTextDocument params))
+                                      pos (.getPosition params)
+                                      line (inc (.getLine pos))
+                                      column (inc (.getCharacter pos))]
+                                  (conform-or-log ::hover (#'handlers/hover doc-id line column)))
+                                (catch Exception e
+                                  (log/error e)))))))
 
   (^CompletableFuture signatureHelp [this ^TextDocumentPositionParams params]
-    (CompletableFuture/completedFuture
-      (SignatureHelp. [(doto (SignatureInformation. "sign-label")
-                         (.setDocumentation "docs")
-                         (.setParameters [(ParameterInformation. "param label" "param doc")]))]
-                      0 0)))
+                      (CompletableFuture/completedFuture
+                       (SignatureHelp. [(doto (SignatureInformation. "sign-label")
+                                          (.setDocumentation "docs")
+                                          (.setParameters [(ParameterInformation. "param label" "param doc")]))]
+                                       0 0)))
 
   (^CompletableFuture codeAction [this ^CodeActionParams params]
-    (CompletableFuture/completedFuture
-      (let [start (.getStart (.getRange params))]
-        [#_(Command. "move-to-let" "move-to-let" [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))
+                      (CompletableFuture/completedFuture
+                       (let [start (.getStart (.getRange params))]
+                         [#_(Command. "move-to-let" "move-to-let" [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))
 
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
-    (CompletableFuture/supplyAsync
-      (reify Supplier
-        (get [this]
-          (try
-            (let [doc-id (.getUri (.getTextDocument params))
-                  pos (.getPosition params)
-                  line (inc (.getLine pos))
-                  column (inc (.getCharacter pos))]
-              (conform-or-log ::location (handlers/definition doc-id line column)))
-            (catch Exception e
-              (log/error e))))))))
+                      (CompletableFuture/supplyAsync
+                       (reify Supplier
+                         (get [this]
+                              (try
+                                (let [doc-id (.getUri (.getTextDocument params))
+                                      pos (.getPosition params)
+                                      line (inc (.getLine pos))
+                                      column (inc (.getCharacter pos))]
+                                  (conform-or-log ::location (#'handlers/definition doc-id line column)))
+                                (catch Exception e
+                                  (log/error e))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
   (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
-    (log/warn params)
-    (let [[doc-id line col & args] (.getArguments params)]
-      (future
-        (.get (.applyEdit (:client @db/db)
-                          (ApplyWorkspaceEditParams.
-                           (conform-or-log ::workspace-edit (handlers/refactor doc-id
-                                                                               (inc (int line))
-                                                                               (inc (int col))
-                                                                               (.getCommand params)
-                                                                               args)))))))
-    (CompletableFuture/completedFuture 0))
+                      (log/warn params)
+                      (let [[doc-id line col & args] (.getArguments params)]
+                        (future
+                         (.get (.applyEdit (:client @db/db)
+                                           (ApplyWorkspaceEditParams.
+                                            (conform-or-log ::workspace-edit (#'handlers/refactor doc-id
+                                                                                                  (inc (int line))
+                                                                                                  (inc (int col))
+                                                                                                  (.getCommand params)
+                                                                                                  args)))))))
+                      (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
-    (log/warn params))
+         (log/warn params))
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
-    (log/warn "DidChangeWatchedFilesParams")))
+         (log/warn "DidChangeWatchedFilesParams")))
 
 (defrecord LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
-    (log/warn "Initialize" params)
-    (let [document-changes
-          (or (some-> params
-                      (.getCapabilities)
-                      (.getWorkspace)
-                      (.getWorkspaceEdit)
-                      (.getDocumentChanges))
-              true)]
-      (handlers/initialize (.getRootUri params) document-changes))
-    (CompletableFuture/completedFuture
-      (InitializeResult. (doto (ServerCapabilities.)
-                           (.setHoverProvider true)
-                           (.setCodeActionProvider true)
-                           (.setReferencesProvider true)
-                           (.setRenameProvider true)
-                           (.setDefinitionProvider true)
-                           (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                   (.setOpenClose true)
-                                                   (.setChange TextDocumentSyncKind/Full)
-                                                   (.setSave (SaveOptions. true))))
-                           (.setCompletionProvider (CompletionOptions. false [\c]))))))
+                      (log/warn "Initialize" params)
+                      (let [document-changes
+                            (or (some-> params
+                                        (.getCapabilities)
+                                        (.getWorkspace)
+                                        (.getWorkspaceEdit)
+                                        (.getDocumentChanges))
+                                true)]
+                        (#'handlers/initialize (.getRootUri params) document-changes))
+                      (CompletableFuture/completedFuture
+                       (InitializeResult. (doto (ServerCapabilities.)
+                                            (.setHoverProvider true)
+                                            (.setCodeActionProvider true)
+                                            (.setReferencesProvider true)
+                                            (.setRenameProvider true)
+                                            (.setDefinitionProvider true)
+                                            (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                                    (.setOpenClose true)
+                                                                    (.setChange TextDocumentSyncKind/Full)
+                                                                    (.setSave (SaveOptions. true))))
+                                            (.setCompletionProvider (CompletionOptions. false [\c]))))))
   (^void initialized [this ^InitializedParams params]
-    (log/warn "Initialized" params))
+         (log/warn "Initialized" params))
   (^CompletableFuture shutdown [this]
-    (log/info "Shutting down")
-    (reset! db/db {:documents {}}) ;; TODO confirm this is correct
-    (CompletableFuture/completedFuture
-      {:result nil}))
+                      (log/info "Shutting down")
+                      (reset! db/db {:documents {}}) ;; TODO confirm this is correct
+                      (CompletableFuture/completedFuture
+                       {:result nil}))
   (exit [this]
-    (log/info "Exit")
-    (shutdown-agents)
-    (System/exit 0))
+        (log/info "Exit")
+        (shutdown-agents)
+        (System/exit 0))
   (getTextDocumentService [this]
-    (LSPTextDocumentService.))
+                          (LSPTextDocumentService.))
   (getWorkspaceService [this]
-    (LSPWorkspaceService.)))
+                       (LSPWorkspaceService.)))
 
 (defn -main [& args]
   (log/info "Server started")
@@ -284,12 +284,12 @@
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
      (loop [edit (async/<! handlers/edits-chan)]
-       (log/spy (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (conform-or-log ::workspace-edit edit)))))
+       (log/warn "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (conform-or-log ::workspace-edit edit)))))
        (recur (async/<! handlers/edits-chan))))
     (async/go
-      (loop [diagnostic (async/<! handlers/diagnostics-chan)]
-        (.publishDiagnostics (:client @db/db) (conform-or-log ::publish-diagnostics-params diagnostic))
-        (recur (async/<! handlers/diagnostics-chan))))
+     (loop [diagnostic (async/<! handlers/diagnostics-chan)]
+       (.publishDiagnostics (:client @db/db) (conform-or-log ::publish-diagnostics-params diagnostic))
+       (recur (async/<! handlers/diagnostics-chan))))
     (.startListening launcher)))
 
 (comment
@@ -299,5 +299,5 @@
     (require '[clojure.string :as string])
     (let [cp (:out (shell/sh "sh" "-c" "cd /Users/case/dev/aclaimant/acl; lein classpath"))
           paths (string/split cp #":")
-          cl (URLClassLoader/newInstance (log/spy (into-array URL (map #(URL. (str "file://" (.getAbsolutePath (io/file %)))) paths))) nil)]
+          cl (URLClassLoader/newInstance (into-array URL (map #(URL. (str "file://" (.getAbsolutePath (io/file %)))) paths)) nil)]
       (.getResource cl "clojure/core.clj" #_"org/eclipse/lsp4j/Range.java"))))

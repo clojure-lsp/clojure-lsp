@@ -1,6 +1,14 @@
 (ns clojure-lsp.refactor.edit
   (:require
-    [rewrite-clj.zip :as z]))
+    [rewrite-clj.node :as n]
+    [rewrite-clj.custom-zipper.core :as cz]
+    [rewrite-clj.zip :as z]
+    [clojure.tools.logging :as log]))
+
+(defmacro zspy [loc]
+  `(do
+     (log/warn '~loc (pr-str (z/sexpr ~loc)))
+     ~loc))
 
 (defn top? [loc]
   (= :forms (z/tag (z/up loc))))
@@ -24,7 +32,8 @@
 (defn single-child?
   [zloc]
   (let [child (z/down zloc)]
-    (and (z/leftmost? child)
+    (and child
+         (z/leftmost? child)
          (z/rightmost? child))))
 
 ;; from rewrite-cljs
@@ -36,6 +45,44 @@
     (-> containing
         (z/replace (z/node zloc)))
     zloc))
+
+(defn wrap-around [zloc tag]
+  (let [node (z/node zloc)
+        node-meta (meta node)]
+    (-> zloc
+        (z/replace (-> (case tag
+                         :list (n/list-node [])
+                         :vector (n/vector-node [])
+                         :set (n/set-node [])
+                         :map (n/map-node []))
+                       (with-meta node-meta)))
+        (z/insert-child node))))
+
+(defn parent-let? [zloc]
+    (= 'let (-> zloc z/up z/leftmost z/sexpr)))
+
+(defn join-let
+    "if a let is directly above a form, will join binding forms and remove the inner let"
+    [let-loc]
+    (let [bind-node (z/node (z/right let-loc))]
+      (if (parent-let? let-loc)
+        (do
+          (-> let-loc
+              (z/right) ; move to inner binding
+              (z/remove) ; remove inner binding
+              (z/remove) ; remove inner let moving to prev; the surrounding list
+              (z/splice) ; splice let body into outer let body
+              (z/leftmost) ; move to let
+              (z/right) ; move to parent binding
+              (z/append-child bind-node) ; place into binding
+              (z/down) ; move into binding
+              (z/rightmost) ; move to nested binding
+              (z/splice) ; remove nesting
+              z/left
+              (cz/insert-right (n/newlines 1))
+              (z/up) ; move to new binding
+              (z/leftmost))) ; move to let
+        let-loc)))
 
 (comment
 
@@ -60,36 +107,6 @@
     (-> loc
         (to-top)
         (z/leftmost)))
-
-  (defn parent-let? [zloc]
-    (= 'let (-> zloc z/up z/leftmost z/sexpr)))
-
-
-
-
-
-  ;; TODO Is this safe?
-  (defn join-let
-    "if a let is directly above a form, will join binding forms and remove the inner let"
-    [let-loc]
-    (let [bind-node (z/node (z/next let-loc))]
-      (if (parent-let? let-loc)
-        (do
-          (-> let-loc
-              (z/right) ; move to inner binding
-              (z/right) ; move to inner body
-              (p/splice-killing-backward) ; splice into parent let
-              (z/leftmost) ; move to let
-              (z/right) ; move to parent binding
-              (z/append-child bind-node) ; place into binding
-              (z/down) ; move into binding
-              (z/rightmost) ; move to nested binding
-              (z/splice) ; remove nesting
-              (z/left)
-              (ws/append-newline)
-              (z/up) ; move to new binding
-              (z/leftmost))) ; move to let
-        let-loc)))
 
 
 

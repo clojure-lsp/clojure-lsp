@@ -4,6 +4,7 @@
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
     [rewrite-clj.custom-zipper.core :as cz]
+    [rewrite-clj.zip.subedit :as zsub]
     [clojure.tools.logging :as log]))
 
 (defn result [zip-edits]
@@ -30,26 +31,6 @@
           :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
       [])))
 
-(defn raise [zloc]
-  (if-let [ploc (z/up zloc)]
-    (z/replace ploc (z/node zloc))
-    zloc))
-
-(defn wrap-around [zloc tag]
-  (let [node (z/node zloc)]
-    (-> zloc
-        (z/replace (case tag
-                       :list (n/list-node [])
-                       :vector (n/vector-node [])
-                       :set (n/set-node [])
-                       :map (n/map-node [])))
-        (z/insert-child node))))
-
-(defmacro zspy [loc]
-  `(do
-     (log/warn '~loc (pr-str (z/sexpr ~loc)))
-     ~loc))
-
 (defmacro zass [loc sexpr]
   `(do
      (assert (= '~sexpr (z/sexpr ~loc)) (pr-str (z/sexpr ~loc)))
@@ -57,8 +38,8 @@
 
 (defn thread-sym
   [zloc sym]
-  (let [movement (if (= '-> sym) z/right z/rightmost)]
-    (if-let [first-loc (-> zloc (edit/find-op) movement)]
+  (let [movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
+    (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)
             parent-op (z/sexpr (z/left zloc))
             threaded? (= sym parent-op)
@@ -66,12 +47,15 @@
                         threaded? z/up
                         :always (-> z/node meta))
             result-loc (-> first-loc
-                           (z/remove)
+                           (z/leftmost)
+                           (z/edit->
+                            (movement)
+                            (z/remove))
                            (z/up)
                            ((fn [loc] (cond-> loc
-                                        (edit/single-child? loc) (-> z/down raise)
+                                        (edit/single-child? loc) (-> z/down edit/raise)
                                         threaded? (-> (z/insert-left first-node) z/up)
-                                        (not threaded?) (-> (wrap-around :list)
+                                        (not threaded?) (-> (edit/wrap-around :list)
                                                             (z/insert-child first-node)
                                                             (z/insert-child sym))))))]
         [{:range meta-node
@@ -88,10 +72,11 @@
 
 (defn thread-all
   [zloc sym]
-  (loop [[{:keys [loc]} :as result] (thread-sym zloc sym)]
-    (if (z/down (z/right (z/down loc)))
-      (recur (thread-sym (z/right (z/down loc)) sym))
-      result)))
+  (let [[{top-range :range} :as result] (thread-sym zloc sym)]
+    (loop [[{:keys [loc]} :as result] result]
+      (if (z/right (z/down (z/right (z/down loc))))
+        (recur (thread-sym (z/right (z/down loc)) sym))
+        (assoc-in result [0 :range] top-range)))))
 
 (defn thread-first-all
   [zloc]
@@ -102,44 +87,49 @@
   (thread-all zloc '->>))
 
 (defn move-to-let
-    "Adds form and symbol to a let further up the tree"
+  "Adds form and symbol to a let further up the tree"
+  [zloc binding-name]
+  (let [bound-node (z/node zloc)
+        binding-sym (symbol binding-name)]
+    (if-let [let-loc (edit/find-ops-up zloc 'let)] ; find first ancestor let
+      (let [{:keys [col]} (meta (z/node (z/right let-loc))) ;; indentation of bindings
+            new-let-loc (-> zloc
+                            (z/insert-right binding-sym) ; replace it with binding-symbol
+                            (z/remove) ; remove bound-node and newline
+                            (edit/find-ops-up zloc 'let) ; move to ancestor let
+                            (z/right) ; move to binding
+                            (cz/append-child (n/newlines 1))
+                            (cz/append-child (n/spaces col)) ; insert let and bindings backwards
+                            (z/append-child binding-sym) ; add binding symbol
+                            (z/append-child bound-node) ; read bound node into let bindings
+                            (z/up))]
+        [{:range (meta (z/node (z/up let-loc)))
+          :loc new-let-loc}])
+      [])))
+
+(defn introduce-let
+    "Adds a let around the current form."
     [zloc binding-name]
-    (let [bound-node (z/node zloc)
-          binding-sym (symbol binding-name)]
-      (if-let [let-loc (edit/find-ops-up zloc 'let)] ; find first ancestor let
-        (let [{:keys [col]} (meta (z/node (z/right let-loc))) ;; indentation of bindings
-              new-let-loc (-> zloc
-                              (z/insert-right binding-sym) ; replace it with binding-symbol
-                              (z/remove) ; remove bound-node and newline
-                              (edit/find-ops-up zloc 'let) ; move to ancestor let
-                              (z/right) ; move to binding
-                              (cz/append-child (n/newlines 1))
-                              (cz/append-child (n/spaces col)) ; insert let and bindings backwards
-                              (z/append-child binding-sym) ; add binding symbol
-                              (z/append-child bound-node) ; read bound node into let bindings
-                              (z/up))]
-          [{:range (meta (z/node (z/up let-loc)))
-            :loc new-let-loc}])
-        [])))
+    (let [sym (symbol binding-name)
+          {:keys [col]} (meta (z/node zloc))
+          loc (-> zloc
+                  (edit/wrap-around :list) ; wrap with new let list
+                  (z/insert-child 'let) ; add let
+                  (cz/append-child (n/newlines 1))
+                  (cz/append-child (n/spaces col)) ; add new line after location
+                  (z/append-child sym) ; add new symbol to body of let
+                  (z/down) ; enter let list
+                  (z/right) ; skip 'let
+                  (edit/wrap-around :vector) ; wrap binding vec around form
+                  (z/insert-child sym) ; add new symbol as binding
+                  (z/leftmost)
+                  (edit/join-let)
+                  z/up)]
+      [{:range (meta (z/node (or loc zloc)))
+        :loc loc}]))
 
 (comment
-  (defn introduce-let
-    "Adds a let around the current form."
-    [zloc [binding-name]]
-    (let [sym (symbol binding-name)]
-      (-> zloc
-          (p/wrap-around :list) ; wrap with new let list
-          (z/up) ; move to new let list
-          (z/insert-child 'let) ; add let
-          (zz/append-child (n/newlines 1)) ; add new line after location
-          (z/append-child sym) ; add new symbol to body of let
-          (z/down) ; enter let list
-          (z/next) ; skip 'let
-          (p/wrap-around :vector) ; wrap binding vec around form
-          (z/up) ; go to vector
-          (z/insert-child sym) ; add new symbol as binding
-          (z/leftmost) ; back to let
-          (edit/join-let)))) ; join if let above
+   ; join if let above
 
   ;; TODO replace bound forms that are being expanded around
   (defn expand-let

@@ -7,7 +7,9 @@
                  [com.google.guava/guava "19.0"]
                  [log4j/log4j "1.2.17"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.4.474"]]
+                 [org.clojure/core.async "0.4.474"]
+                 [org.xerial/sqlite-jdbc "3.21.0.1"]
+                 [funcool/clojure.jdbc "0.9.0"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]

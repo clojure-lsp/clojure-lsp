@@ -5,6 +5,7 @@
     [clojure-lsp.refactor.transform :as refactor]
     [clojure.core.async :as async]
     [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
@@ -111,16 +112,40 @@
                        (assoc-in [:file-envs (uri->path uri)] references)))))
   text)
 
+
+(defn lookup-classpath [project-root]
+  (try
+    (let [root-path (uri->path project-root)
+          sep (re-pattern (System/getProperty "path.separator"))]
+      (-> (shell/sh "lein" "classpath" :dir root-path)
+          (:out)
+          (string/trim-newline)
+          (string/split sep)))
+    (catch Exception e
+      (log/warn "Could not run lein in" project-root (.getMessage e)))))
+
+(comment
+  (lookup-classpath "/Users/case/dev/lsp"))
+
 (defn initialize [project-root supports-document-changes]
   (when project-root
-    (let [root-file (io/file (uri->path project-root) "src")
-          file-envs (->> (file-seq root-file)
-                         (crawl-files))]
-      (swap! db/db assoc
-             :supports-document-changes supports-document-changes
-             :project-root project-root
-             :file-envs file-envs
-             :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
+    (log/warn "hi")
+    (let [root-path (uri->path project-root)
+          loaded (db/load-db! root-path)
+          classpath (or (:classpath loaded) (lookup-classpath project-root))]
+    (log/warn "cp")
+      (let [root-file (io/file (uri->path project-root) "src")
+            file-envs (->> (file-seq root-file)
+                           (crawl-files))]
+        (swap! db/db assoc
+               :classpath classpath
+               :supports-document-changes supports-document-changes
+               :project-root project-root
+               :file-envs file-envs
+               :project-aliases (apply merge (map (comp :aliases val) file-envs)))
+
+        (log/warn "save")
+        (db/save-db! root-path)))))
 
 (defn completion [doc-id line column]
   (let [path (uri->path doc-id)

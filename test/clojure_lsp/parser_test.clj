@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [rewrite-clj.zip :as z]
             [clojure-lsp.handlers :as handlers]
+            [clojure.tools.logging :as log]
             [clojure-lsp.parser :as parser]
             [clojure.string :as string]))
 
@@ -20,8 +21,13 @@
 
 (deftest parse-bindings-test
   (let [context (volatile! {})]
+    (is (= 0 (count (parser/parse-bindings (z/of-string "[]") context {} {}))))
     (is (= 1 (count (parser/parse-bindings (z/of-string "[a @db]") context {} {}))))
     (is (= 2 (count (:usages @context))))))
+
+(deftest parse-params-test
+  (let [context (volatile! {})]
+    (is (= 0 (count (parser/parse-params (z/of-string "[]") context {}))))))
 
 (deftest find-references-test
   (testing "simple stuff"
@@ -106,7 +112,22 @@
           usage-ref (nth usages 4)
           b-bound (nth usages 3)
           b-usage (nth usages 5)]
+      (is (= 6 (count usages)))
       (is (= #{:declare :param} (:tags bound-ref)))
       (is (= (namespace (:sym usage-ref)) (namespace (:sym bound-ref))))
       (is (= #{:declare :param} (:tags b-bound)))
-      (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound)))))))
+      (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound)))))
+    (let [code "(fn myname [y {:keys [a] b :b}] a b)"
+          usages (:usages (parser/find-references code))
+          name-ref (nth usages 1)
+          bound-ref (nth usages 3)
+          usage-ref (nth usages 5)
+          b-bound (nth usages 4)
+          b-usage (nth usages 6)]
+      (is (= 7 (count usages)))
+      (is (not= "user" (namespace (:sym name-ref))))
+      (is (= #{:declare} (:tags name-ref)))
+      (is (= #{:declare :param} (:tags bound-ref)))
+      (is (= (namespace (:sym usage-ref)) (namespace (:sym bound-ref))))
+      (is (= #{:declare :param} (:tags b-bound)))
+      (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound))))) ))

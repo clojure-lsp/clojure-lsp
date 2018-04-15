@@ -181,7 +181,6 @@
   (try
     (loop [binding-loc (zm/down (zsub/subzip bindings-loc))
            scoped scoped]
-
       (let [not-done? (and binding-loc (not (z/end? binding-loc)))]
         ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals)
         (cond
@@ -220,10 +219,12 @@
           scope-bounds {:row row :col col :end-row end-row :end-col end-col}]
       (loop [param-loc (z/down params-loc)
              scoped scoped]
-        (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
-          (if (z/rightmost? param-loc)
-            new-scoped
-            (recur (z/right param-loc) new-scoped)))))
+        (if param-loc
+          (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
+            (if (z/rightmost? param-loc)
+              new-scoped
+              (recur (z/right param-loc) new-scoped)))
+          scoped)))
     (catch Exception e
       (log/warn "params" (.getMessage e) (z/sexpr params-loc))
       (throw e))))
@@ -303,34 +304,37 @@
     (handle-rest (z/right (z/right op-loc))
                  context scoped)))
 
-(defn handle-fn
-  [op-loc loc context scoped]
-  (let [params-loc (z/find-tag op-loc :vector)
-        body-loc (z/right params-loc)]
-    (->> (parse-params params-loc context scoped)
-         (handle-rest body-loc context))))
-
-(defn handle-defn
-  [op-loc loc context scoped]
-  (let [defn-loc (z/right op-loc)
-        defn-sym (z/node defn-loc)
-        multi? (= :list (z/tag (z/find defn-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
-    (vswap! context update :publics conj (n/sexpr defn-sym))
+(defn handle-function
+  [op-loc loc context scoped name-tags]
+  (let [name-loc (z/right op-loc)
+        multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
+    (if (:public name-tags)
+      (vswap! context update :publics conj (z/sexpr name-loc)))
     ;; TODO handle multi signatures
-    (add-reference context scoped defn-sym {:tags #{:declare :public}
-                                            :signature (z/string (z/find-tag defn-loc z/next :vector))})
+    (if (symbol? (z/sexpr name-loc))
+      (add-reference context scoped (z/node name-loc)
+                     {:tags name-tags
+                      :signature (z/string (z/find-tag name-loc z/next :vector))}))
     (if multi?
-      (loop [list-loc (z/find-tag defn-loc :list)]
+      (loop [list-loc (z/find-tag op-loc :list)]
         (let [params-loc (z/down list-loc)
               body-loc (z/right params-loc)]
           (->> (parse-params params-loc context scoped)
                (handle-rest body-loc context)))
         (when-let [next-list (z/find-next-tag list-loc :list)]
           (recur next-list)))
-      (let [params-loc (z/find-tag defn-loc :vector)
+      (let [params-loc (z/find-tag op-loc :vector)
             body-loc (z/right params-loc)]
         (->> (parse-params params-loc context scoped)
              (handle-rest body-loc context))))))
+
+(defn handle-fn
+  [op-loc loc context scoped]
+  (handle-function op-loc loc context scoped #{:declare}))
+
+(defn handle-defn
+  [op-loc loc context scoped]
+  (handle-function op-loc loc context scoped #{:declare :public}))
 
 (defn handle-catch
   [op-loc loc context scoped]
@@ -432,7 +436,7 @@
 
       (let [tag (z/tag loc)]
         (cond
-          (#{:quote :uneval} tag)
+          (#{:quote :uneval :syntax-quote} tag)
           (recur (skip-over loc) scoped)
 
           (= :list tag)
@@ -502,6 +506,10 @@
                            "(bing)"])]
     #_(find-references code)
     (z/sexpr (loc-at-pos code 1 2)))
+
+  (z/of-string "`(foo)")
+  (find-references (slurp "/tmp/core.clj"))
+  (find-references "(fn conj ([] []) ([coll] coll) ([coll x] (clojure.lang.RT/conj coll x)) ([coll x & xs] (if xs (recur (clojure.lang.RT/conj coll x) (first xs) (next xs)) (clojure.lang.RT/conj coll x))))")
 
   (as-> (find-references "(defn x ([{:keys [a]} {}] a))") $
       (dissoc $ :refers)

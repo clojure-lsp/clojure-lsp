@@ -9,8 +9,11 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [digest :as digest]
     [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]))
+    [rewrite-clj.zip :as z])
+  (:import
+   [java.util.jar JarFile JarFile$JarFileEntry]))
 
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
@@ -74,43 +77,74 @@
     ;; todo alias should be in local-env
     ;; needs to go off config value maybe just a refactoring
     (when false #_(seq requires-to-add)
-      (async/>!! edits-chan (add-to-ns requires-to-add uri env)))
+      (async/put! edits-chan (add-to-ns requires-to-add uri env)))
 
-    (async/>!! diagnostics-chan {:uri uri :diagnostics (for [unknown other-unknowns]
+    (async/put! diagnostics-chan {:uri uri :diagnostics (for [unknown other-unknowns]
                                                          {:range (->range unknown)
                                                           :message "Unknown symbol"
                                                           :severity 1})})))
 
-(defn safe-find-references [uri text]
-  (try
-    (log/warn "trying" uri (get-in @db/db [:documents uri :v]))
-    (let [references (parser/find-references text)]
-      (send-notifications uri references)
-      references)
-    (catch Exception e
-      (log/warn "Ignoring: " uri (.getMessage e))
-      ;; On purpose
-      nil)))
-
-(defn crawl-files [files]
-  (let [xf (comp (filter #(.isFile %))
-                 (map #(.getAbsolutePath %))
-                 (filter (fn [path]
-                           (or (string/ends-with? path ".clj")
-                               (string/ends-with? path ".cljc"))))
-                 (map (juxt identity (fn [path] (safe-find-references (str "file://" path) (slurp path)))))
-                 (remove (comp nil? second)))
-        output-chan (async/chan)]
-    (async/pipeline-blocking 5 output-chan xf (async/to-chan files))
-    (async/<!! (async/into {} output-chan))))
+(defn safe-find-references
+  ([uri text]
+   (safe-find-references uri text true))
+  ([uri text diagnose?]
+   (try
+     (log/warn "trying" uri (get-in @db/db [:documents uri :v]))
+     (let [references (parser/find-references text)]
+       (when diagnose?
+         (send-notifications uri references))
+       references)
+     (catch Throwable e
+       (log/warn "Ignoring: " uri (.getMessage e))
+       ;; On purpose
+       nil))))
 
 (defn did-open [uri text]
   (when-let [references (safe-find-references uri text)]
     (swap! db/db (fn [state-db]
                    (-> state-db
                        (assoc-in [:documents uri] {:v 0 :text text})
-                       (assoc-in [:file-envs (uri->path uri)] references)))))
+                       (assoc-in [:file-envs uri] references)))))
   text)
+
+(defn crawl-jars [jars]
+  (let [xf (comp
+            (mapcat (fn [jar-file]
+                      (let [jar (JarFile. jar-file)]
+                        (->> jar
+                             (.entries)
+                             (enumeration-seq)
+                             (remove #(.isDirectory %))
+                             (map (fn [entry]
+                                    [(str "zipfile://" jar-file "::" (.getName entry))
+                                     entry
+                                     jar]))))))
+            (filter (fn [[uri _ _]]
+                      (or (string/ends-with? uri ".clj")
+                          (string/ends-with? uri ".cljc")
+                          (string/ends-with? uri ".cljs"))))
+            (map (fn [[uri entry jar]]
+                   (let [text (with-open [stream (.getInputStream jar entry)]
+                                (slurp stream))]
+                     [uri (safe-find-references uri text false)])))
+            (remove (comp nil? second)))
+        output-chan (async/chan)]
+    (async/pipeline-blocking 5 output-chan xf (async/to-chan jars) true (fn [e] (log/warn e "hello")))
+    (async/<!! (async/into {} output-chan))))
+
+(defn crawl-source-dirs [dirs]
+  (let [xf (comp
+            (mapcat file-seq)
+            (filter #(.isFile %))
+            (map #(str "file://" (.getAbsolutePath %)))
+            (filter (fn [uri]
+                      (or (string/ends-with? uri ".clj")
+                          (string/ends-with? uri ".cljc"))))
+            (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri)))))
+            (remove (comp nil? second)))
+        output-chan (async/chan)]
+    (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
+    (async/<!! (async/into {} output-chan))))
 
 
 (defn lookup-classpath [project-root]
@@ -125,33 +159,54 @@
       (log/warn "Could not run lein in" project-root (.getMessage e)))))
 
 (comment
-  (lookup-classpath "/Users/case/dev/lsp"))
+  (keys (crawl-jars ["/Users/case/.m2/repository/org/clojure/clojure/1.9.0/clojure-1.9.0.jar"]))
+  (initialize "file:///Users/case/dev/lsp" true)
+  (filter #(and (string/includes? % "1.9.0")
+                (string/includes? % "core")
+                )
+          (keys (:file-envs @db/db)))
+  (spit "/tmp/core.clj" tmpcore)
+  (with-out-str
+    (clojure.pprint/pprint
+     (map
+      (fn [usage]
+        (select-keys usage [:sym :tags]))
+      (:usages (get-in @db/db [:file-envs])))))
+
+  )
+
+(defn determine-dependencies [project-root]
+  (let [root-path (uri->path project-root)
+        project-file (io/file root-path "project.clj")]
+    (if (.exists project-file)
+      (let [project-hash (digest/md5 project-file)
+            loaded (db/read-deps root-path)
+            use-cp-cache (= (:project-hash loaded) project-hash)
+            classpath (if use-cp-cache
+                        (:classpath loaded)
+                        (lookup-classpath project-root))
+            {jars true dirs false} (group-by #(.isFile %) (map io/file classpath))
+            jar-envs (if use-cp-cache
+                       (:jar-envs loaded)
+                       (crawl-jars jars))
+            file-envs (crawl-source-dirs dirs)]
+        (db/save-deps project-root project-hash classpath jar-envs)
+        (merge file-envs jar-envs))
+      (crawl-source-dirs [(io/file root-path "src")]))))
 
 (defn initialize [project-root supports-document-changes]
   (when project-root
-    (log/warn "hi")
-    (let [root-path (uri->path project-root)
-          loaded (db/load-db! root-path)
-          classpath (or (:classpath loaded) (lookup-classpath project-root))]
-    (log/warn "cp")
-      (let [root-file (io/file (uri->path project-root) "src")
-            file-envs (->> (file-seq root-file)
-                           (crawl-files))]
-        (swap! db/db assoc
-               :classpath classpath
-               :supports-document-changes supports-document-changes
-               :project-root project-root
-               :file-envs file-envs
-               :project-aliases (apply merge (map (comp :aliases val) file-envs)))
-
-        (log/warn "save")
-        (db/save-db! root-path)))))
+    (let [file-envs (determine-dependencies project-root)]
+      (swap! db/db assoc
+             :supports-document-changes supports-document-changes
+             :project-root project-root
+             :file-envs file-envs
+             :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
 
 (defn completion [doc-id line column]
-  (let [path (uri->path doc-id)
-        file-envs (:file-envs @db/db)
-        local-env (get file-envs path)
-        remote-envs (dissoc file-envs path)
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
+        remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
         cursor-value (some-> (find-reference-under-cursor line column local-env) :sexpr name)]
     (into
@@ -182,16 +237,15 @@
                                                       (format "\n   [%s%s]" (name ns-sym) as-alias))}]))))))
 
 (defn references [doc-id line column]
-  (let [path (uri->path doc-id)
-        file-envs (:file-envs @db/db)
-        local-env (get file-envs path)
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (log/warn "references" doc-id line column)
     (into []
-          (for [[path {:keys [usages]}] (:file-envs @db/db)
+          (for [[uri {:keys [usages]}] (:file-envs @db/db)
                 {:keys [sym] :as usage} usages
                 :when (= sym cursor-sym)]
-            {:uri (str "file://" path)
+            {:uri uri
              :range (->range usage)}))))
 
 (defn did-change [uri text version]
@@ -201,7 +255,7 @@
       (when-let [references (safe-find-references uri text)]
         (if-not (compare-and-set! db/db state-db (-> state-db
                                                        (assoc-in [:documents uri] {:v version :text text})
-                                                       (assoc-in [:file-envs (string/replace uri #"^file:///" "/")] references)))
+                                                       (assoc-in [:file-envs uri] references)))
           (recur @db/db)
           (log/warn "setting" uri "and" version))))))
 
@@ -210,16 +264,14 @@
       @db/db))
 
 (defn rename [doc-id line column new-name]
-  (let [path (uri->path doc-id)
-        file-envs (:file-envs @db/db)
-        local-env (get file-envs path)
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
         {cursor-sym :sym cursor-sexpr :sexpr} (find-reference-under-cursor line column local-env)
         replacement (if-let [cursor-ns (namespace cursor-sexpr)]
                       (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
                       new-name)
-        changes (->> (for [[path {:keys [usages]}] file-envs
-                           :let [doc-id (str "file://" path)
-                                 version (get-in @db/db [:documents doc-id :v] 0)]
+        changes (->> (for [[doc-id {:keys [usages]}] file-envs
+                           :let [version (get-in @db/db [:documents doc-id :v] 0)]
                            {:keys [sym sexpr] :as usage} usages
                            :when (= sym cursor-sym)
                            :let [sym-ns (namespace sexpr)]]
@@ -240,17 +292,17 @@
                               changes))})))
 
 (defn definition [doc-id line column]
-  (let [path (uri->path doc-id)
-        file-envs (:file-envs @db/db)
-        local-env (get file-envs path)
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (log/warn "definition" doc-id line column)
     (first
-      (for [[path {:keys [usages]}] file-envs
-            :let [doc-id (str "file://" path)]
+      (for [[doc-id {:keys [usages]}] file-envs
             {:keys [sym tags] :as usage} usages
             :when (and (= sym cursor-sym) (:declare tags))]
-        {:uri doc-id :range (->range usage)}))))
+        (do
+          (log/warn "found def " doc-id usage)
+          {:uri doc-id :range (->range usage)})))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
@@ -277,18 +329,18 @@
       (log/error e "could not refactor" (.getMessage e)))))
 
 (defn hover [doc-id line column]
-  (let [path (uri->path doc-id)
-        file-envs (:file-envs @db/db)
-        local-env (get file-envs path)
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
         cursor (find-reference-under-cursor line column local-env)
         signature (first
                     (for [[_ {:keys [usages]}] file-envs
                           {:keys [sym tags] :as usage} usages
                           :when (and (= sym (:sym cursor)) (:declare tags))]
                       (:signature usage)))]
-    (when cursor
+    (if cursor
       {:range (->range cursor)
        :contents [(-> cursor
                       (select-keys [:sym :tags])
                       (assoc :signature signature)
-                      (pr-str))]})))
+                      (pr-str))]}
+      {:contents []})))

@@ -107,7 +107,8 @@
                                                :string (Either/forLeft (second v))
                                                :marked-string (Either/forRight (second v)))))))
 (s/def ::contents (s/coll-of ::marked-string))
-(s/def ::hover (s/and (s/keys :req-un [::range ::contents])
+(s/def ::hover (s/and (s/keys :req-un [::contents]
+                              :opt-un [::range])
                       (s/conformer #(Hover. (:contents %1) (:range %1)))))
 
 (defn conform-or-log [spec value]
@@ -299,5 +300,11 @@
     (require '[clojure.string :as string])
     (let [cp (:out (shell/sh "sh" "-c" "cd /Users/case/dev/aclaimant/acl; lein classpath"))
           paths (string/split cp #":")
-          cl (URLClassLoader/newInstance (into-array URL (map #(URL. (str "file://" (.getAbsolutePath (io/file %)))) paths)) nil)]
-      (.getResource cl "clojure/core.clj" #_"org/eclipse/lsp4j/Range.java"))))
+          cl (URLClassLoader/newInstance (into-array URL (map #(URL. (str "file://" (.getAbsolutePath (io/file %)))) paths)) nil)
+
+          ]
+
+      #_
+      (.listFiles (io/file (.getPath )))
+      #_
+          (.getResource cl "clojure/core.clj" #_"org/eclipse/lsp4j/Range.java"))))

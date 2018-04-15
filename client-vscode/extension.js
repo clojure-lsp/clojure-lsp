@@ -7,7 +7,7 @@ function activate(context) {
 
 	let serverOptions =  {
 		run : { command: "/usr/local/bin/clojure-lsp" },
-		debug: { command: "/usr/local/bin/clojure-lsp" }
+		debug: { command: 'bash', args: ['-c', 'cd /Users/case/dev/lsp/ && lein run'] }
 	};
 	
 	// Options to control the language client

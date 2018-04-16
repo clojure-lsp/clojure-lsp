@@ -29,8 +29,8 @@ This is an early work in progress, contributions are very welcome.
 
 | capability | done | partial? | notes |
 | ---------- | ---- | -------- | ----- |
-| completionProvider | | √ | autocomplete as you type| TODO: add function signatures, docstrings, crawl classpath jars? |
-| referencesProvider | | √ | TODO: keywords, crawl classpath jars, scoping for `if-let` and some others |
+| completionProvider | | √ | TODO: add multi-arity function signatures, docstrings, return much less |
+| referencesProvider | | √ | TODO: keywords |
 | renameProvider     | | √ | |
 | definitionProvider | | √ | TODO: keywords, jar links |
 | diagnostics        | | √ | very early - only shows unresolved symbols |
@@ -42,14 +42,17 @@ It should be possible to introduce most of the refactorings here: https://github
 Calling executeCommand with the following commands and additional args will notify the client with `applyEdit`. 
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
-| done | command | args | notes |
-| ---- | ------- | ---- | ----- |
-| [x]  | cycle-coll | | |
-| [x]  | thread-first | | |
+| done | command          | args | notes |
+| ---- | ---------------- | ---- | ----- |
+| [x]  | cycle-coll       | | |
+| [x]  | thread-first     | | |
 | [x]  | thread-first-all | | |
-| [x]  | thread-last | | |
-| [x]  | thread-last-all | | |
-| [ ]  | introduce-let | | |
+| [x]  | thread-last      | | |
+| [x]  | thread-last-all  | | |
+| [x]  | introduce-let    | `[document-uri, line, column, binding-name]` | |
+| [x]  | move-to-let      | `[document-uri, line, column, binding-name]` | |
+| [ ]  | expand-let       | | |
+| [ ]  | clean-ns         | | |
 
 Refactorings can be done with LanguageClient-neovim with:
 ```vim
@@ -93,12 +96,7 @@ https://github.com/emacs-lsp looks promising but I haven't had a chance to try i
 
 ## TODO
 
-### Persistence
-- Project db file 
-  - store file and last modified and file environments
-
 ### Diagnostics 
-- crawl through parsed results and see if symbols exist where used
 - unused imports, params, defs
 
 ### Others
@@ -106,7 +104,6 @@ https://github.com/emacs-lsp looks promising but I haven't had a chance to try i
 - formatting (clj-format?)
 - other lsp capabilities?
 - Cursive style "resolve macros as" def/defn/let etc.. to expose more vars (dynamic based on client configuration messages)
-- crawl classpath for exported vars 
-- crawl project.clj / build.boot src and test paths
+- build.boot src and test paths
 - keep separate cljs and clj environments
 - handle cljc reader-macros

@@ -23,9 +23,15 @@
                 (mapv (juxt identity (constantly 'clojure.core)))
                 (into {})))
 
+(def lang-imports
+  (->> cc/java-lang-syms
+       (mapv (juxt identity #(symbol (str "java.lang." (name %)))))
+       (into {})))
+
 (def default-env
   {:ns 'user
    :requires #{'clojure.core}
+   :imports {}
    :aliases {}
    :publics #{}
    :usages []})
@@ -44,10 +50,13 @@
          z/right)
     (zm/next loc)))
 
-(defn qualify-ident [ident {:keys [aliases publics refers requires ns] :as context} scoped]
+(defn qualify-ident [ident {:keys [aliases publics refers imports requires ns] :as context} scoped]
   (when (ident? ident)
     (let [ident-ns (some-> (namespace ident) symbol)
           ident-name (name ident)
+          constructor (when-let [sym (symbol (string/replace ident-name #"\.$" ""))]
+                        (or (get lang-imports sym)
+                            (get imports sym)))
           alias->ns (set/map-invert aliases)
           ctr (if (symbol? ident) symbol keyword)]
       (if (simple-ident? ident)
@@ -56,7 +65,11 @@
           (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
           (contains? publics ident) {:sym (ctr (name ns) ident-name)}
           (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
-          (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name)}
+          (contains? imports ident) {:sym (get imports ident) :tags #{:norename}}
+          (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
+          (contains? lang-imports ident) {:sym (get lang-imports ident) :tags #{:norename}}
+          (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
+          constructor {:sym constructor :tags #{:norename}}
           :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
         (cond
           (contains? alias->ns ident-ns)
@@ -64,6 +77,12 @@
 
           (contains? requires ident-ns)
           {:sym ident}
+
+          (contains? imports ident-ns)
+          {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:method :norename}}
+
+          (contains? lang-imports ident-ns)
+          {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:method :norename}}
 
           :else
           {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})))))
@@ -241,6 +260,17 @@
   ;; Ignore contents of comment
   nil)
 
+(defn add-imports [conformed context]
+  (when-first [import-clause (filter (comp #{:import} first) (:clauses conformed))]
+    (let [all-imports (:classes (second import-clause))
+          {classes :class packages :package-list} (group-by first all-imports)
+          simple-classes (map second classes)]
+      (vswap! context assoc :imports
+              (into (zipmap simple-classes simple-classes)
+                     (for [[_ {:keys [package classes]}] packages
+                           cls classes]
+                       [cls (symbol (str (name package) "." (name cls)))]))))))
+
 (defn handle-ns
   [op-loc loc context scoped]
   ;; TODO add refers to usages and add full libs to usages
@@ -275,6 +305,7 @@
                          (z/rightmost)
                          (z/node)
                          (meta))]
+    (add-imports conformed context)
     (doseq [{:keys [lib options]} libspecs]
       (vswap! context (fn [env]
                         (let [{:keys [as refer]} options]

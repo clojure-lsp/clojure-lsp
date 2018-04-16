@@ -13,7 +13,7 @@
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
-   [java.util.jar JarFile JarFile$JarFileEntry]))
+   [java.util.jar JarFile]))
 
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
@@ -89,7 +89,7 @@
    (safe-find-references uri text true))
   ([uri text diagnose?]
    (try
-     (log/warn "trying" uri (get-in @db/db [:documents uri :v]))
+     #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [references (parser/find-references text)]
        (when diagnose?
          (send-notifications uri references))
@@ -235,43 +235,39 @@
   (loop [state-db @db/db]
     (when (> version (get-in state-db [:documents uri :v] -1))
       (when-let [references (safe-find-references uri text)]
-        (if-not (compare-and-set! db/db state-db (-> state-db
+        (when-not (compare-and-set! db/db state-db (-> state-db
                                                        (assoc-in [:documents uri] {:v version :text text})
                                                        (assoc-in [:file-envs uri] references)))
-          (recur @db/db)
-          (log/warn "setting" uri "and" version))))))
-
-(comment
-  (do (did-change "foo" "foo" 1)
-      @db/db))
+          (recur @db/db))))))
 
 (defn rename [doc-id line column new-name]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        {cursor-sym :sym cursor-sexpr :sexpr} (find-reference-under-cursor line column local-env)
-        replacement (if-let [cursor-ns (namespace cursor-sexpr)]
-                      (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
-                      new-name)
-        changes (->> (for [[doc-id {:keys [usages]}] file-envs
-                           :let [version (get-in @db/db [:documents doc-id :v] 0)]
-                           {:keys [sym sexpr] :as usage} usages
-                           :when (= sym cursor-sym)
-                           :let [sym-ns (namespace sexpr)]]
-                       {:range (->range usage)
-                        :new-text (if sym-ns
-                                    (str sym-ns "/" replacement)
-                                    replacement)
-                        :text-document {:version version :uri doc-id}})
-                     (group-by :text-document)
-                     (remove (comp empty? val))
-                     (map (fn [[text-document edits]]
-                            {:text-document text-document
-                             :edits edits})))]
-    (if (:supports-document-changes @db/db)
-      {:document-changes changes}
-      {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                                [(:uri text-document) edits])
-                              changes))})))
+        {cursor-sym :sym cursor-sexpr :sexpr tags :tags} (find-reference-under-cursor line column local-env)]
+    (when-not (contains? tags :norename)
+      (let [replacement (if-let [cursor-ns (namespace cursor-sexpr)]
+                          (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
+                          new-name)
+            changes (->> (for [[doc-id {:keys [usages]}] file-envs
+                               :let [version (get-in @db/db [:documents doc-id :v] 0)]
+                               {:keys [sym sexpr] :as usage} usages
+                               :when (= sym cursor-sym)
+                               :let [sym-ns (namespace sexpr)]]
+                           {:range (->range usage)
+                            :new-text (if sym-ns
+                                        (str sym-ns "/" replacement)
+                                        replacement)
+                            :text-document {:version version :uri doc-id}})
+                         (group-by :text-document)
+                         (remove (comp empty? val))
+                         (map (fn [[text-document edits]]
+                                {:text-document text-document
+                                 :edits edits})))]
+        (if (:supports-document-changes @db/db)
+          {:document-changes changes}
+          {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                    [(:uri text-document) edits])
+                                  changes))})))))
 
 (defn definition [doc-id line column]
   (let [file-envs (:file-envs @db/db)

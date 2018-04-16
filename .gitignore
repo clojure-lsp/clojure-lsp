@@ -1,9 +1,11 @@
 /.idea
 /.lein-repl-history
 /.nrepl-port
+/.lsp
 /out
 /target
 /.DS_Store
 /.cpcache
 /node_modules
 /test.clj
+

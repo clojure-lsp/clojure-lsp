@@ -48,8 +48,7 @@
    (org.eclipse.lsp4j.launch LSPLauncher)
    (java.util.concurrent CompletableFuture)
    (java.util.function Supplier)
-   (org.eclipse.lsp4j.jsonrpc.messages Either)
-   (java.net URLClassLoader URL))
+   (org.eclipse.lsp4j.jsonrpc.messages Either))
   (:gen-class))
 
 
@@ -292,19 +291,3 @@
        (.publishDiagnostics (:client @db/db) (conform-or-log ::publish-diagnostics-params diagnostic))
        (recur (async/<! handlers/diagnostics-chan))))
     (.startListening launcher)))
-
-(comment
-  (do
-    (require '[clojure.java.shell :as shell])
-    (require '[clojure.java.io :as io])
-    (require '[clojure.string :as string])
-    (let [cp (:out (shell/sh "sh" "-c" "cd /Users/case/dev/aclaimant/acl; lein classpath"))
-          paths (string/split cp #":")
-          cl (URLClassLoader/newInstance (into-array URL (map #(URL. (str "file://" (.getAbsolutePath (io/file %)))) paths)) nil)
-
-          ]
-
-      #_
-      (.listFiles (io/file (.getPath )))
-      #_
-          (.getResource cl "clojure/core.clj" #_"org/eclipse/lsp4j/Range.java"))))

@@ -18,12 +18,14 @@
 (declare find-references*)
 (declare parse-destructuring)
 
+(def core-refers
+  (->> cc/core-syms
+                (mapv (juxt identity (constantly 'clojure.core)))
+                (into {})))
+
 (def default-env
   {:ns 'user
    :requires #{'clojure.core}
-   :refers (->> cc/core-syms
-                (mapv (juxt identity (constantly 'clojure.core)))
-                (into {}))
    :aliases {}
    :publics #{}
    :usages []})
@@ -54,6 +56,7 @@
           (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
           (contains? publics ident) {:sym (ctr (name ns) ident-name)}
           (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
+          (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name)}
           :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
         (cond
           (contains? alias->ns ident-ns)
@@ -193,10 +196,13 @@
             ;; Maybe for/doseq needs to use different bindings
             (cond
               (= :let binding-sexpr)
-              (parse-bindings right-side-loc context end-scope-bounds scoped)
+              (let [new-scoped (parse-bindings right-side-loc context end-scope-bounds scoped)]
+                (recur (skip-over right-side-loc) new-scoped))
 
               (#{:when :while} binding-sexpr)
-              (handle-rest (zsub/subzip right-side-loc) context scoped)
+              (do
+                (handle-rest (zsub/subzip right-side-loc) context scoped)
+                (recur (skip-over right-side-loc) scoped))
 
               :else
               (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc) (z/up right-side-loc) bindings-loc)))
@@ -275,7 +281,9 @@
                           (cond-> env
                             :always (update :requires conj lib)
                             as (update :aliases conj [lib as])
-                            (and refer (= :syms (first refer))) (update :refers into (map vector (second refer) (repeat lib))))))))
+
+                            (and refer (= :syms (first refer)))
+                            (update :refers into (map vector (second refer) (repeat lib))))))))
     (vswap! context assoc
             :ns (:name conformed)
             :require-pos {:add-require? (not require-loc)

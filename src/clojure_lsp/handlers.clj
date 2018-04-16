@@ -140,12 +140,11 @@
             (filter (fn [uri]
                       (or (string/ends-with? uri ".clj")
                           (string/ends-with? uri ".cljc"))))
-            (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri)))))
+            (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri) false))))
             (remove (comp nil? second)))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
-
 
 (defn lookup-classpath [project-root]
   (try
@@ -157,23 +156,6 @@
           (string/split sep)))
     (catch Exception e
       (log/warn "Could not run lein in" project-root (.getMessage e)))))
-
-(comment
-  (keys (crawl-jars ["/Users/case/.m2/repository/org/clojure/clojure/1.9.0/clojure-1.9.0.jar"]))
-  (initialize "file:///Users/case/dev/lsp" true)
-  (filter #(and (string/includes? % "1.9.0")
-                (string/includes? % "core")
-                )
-          (keys (:file-envs @db/db)))
-  (spit "/tmp/core.clj" tmpcore)
-  (with-out-str
-    (clojure.pprint/pprint
-     (map
-      (fn [usage]
-        (select-keys usage [:sym :tags]))
-      (:usages (get-in @db/db [:file-envs])))))
-
-  )
 
 (defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
@@ -190,7 +172,7 @@
                        (:jar-envs loaded)
                        (crawl-jars jars))
             file-envs (crawl-source-dirs dirs)]
-        (db/save-deps project-root project-hash classpath jar-envs)
+        (db/save-deps root-path project-hash classpath jar-envs)
         (merge file-envs jar-envs))
       (crawl-source-dirs [(io/file root-path "src")]))))
 
@@ -300,9 +282,7 @@
       (for [[doc-id {:keys [usages]}] file-envs
             {:keys [sym tags] :as usage} usages
             :when (and (= sym cursor-sym) (:declare tags))]
-        (do
-          (log/warn "found def " doc-id usage)
-          {:uri doc-id :range (->range usage)})))))
+        {:uri doc-id :range (->range usage)}))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll

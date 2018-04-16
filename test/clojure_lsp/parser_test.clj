@@ -90,7 +90,25 @@
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))
       (is (= (get-in bound-ref [:scope-bounds :end-col]) (get-in b-bound [:scope-bounds :end-col])))
       (is (= (:sym b-bound) (:sym b-usage)))
-      (is (= (:scope-bounds b-bound) (:scope-bounds b-usage)))))
+      (is (= (:scope-bounds b-bound) (:scope-bounds b-usage))))
+    (let [code "(for [:when true :let [a 0] b [] :let [c 0] :when true] a b c)"
+          usages (:usages (parser/find-references code))
+          a-bound (nth usages 1)
+          a-usage (nth usages 4)
+          b-bound (nth usages 2)
+          b-usage (nth usages 5)
+          c-bound (nth usages 3)
+          c-usage (nth usages 6)]
+      (is (not= "user" (namespace (:sym a-bound))))
+      (is (= "a" (name (:sym a-bound))))
+      (is (= #{:declare :param} (:tags a-bound)))
+      (is (= " :when true] a b c)" (scoped-str code (:scope-bounds c-bound))))
+      (is (= (:sym a-bound) (:sym a-usage)))
+      (is (= (:scope-bounds a-bound) (:scope-bounds a-usage)))
+      (is (= (:sym b-bound) (:sym b-usage)))
+      (is (= (:scope-bounds b-bound) (:scope-bounds b-usage)))
+      (is (= (:sym c-bound) (:sym c-usage)))
+      (is (= (:scope-bounds c-bound) (:scope-bounds c-usage)))))
   (testing "#(dispatch-macro)"
     (let [code "#(% %1 %2 %&)"
           usages (:usages (parser/find-references code))]

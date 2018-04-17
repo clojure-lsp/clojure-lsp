@@ -167,7 +167,7 @@
             classpath (if use-cp-cache
                         (:classpath loaded)
                         (lookup-classpath project-root))
-            {jars true dirs false} (group-by #(.isFile %) (map io/file classpath))
+            {jars true dirs false} (group-by #(.isFile %) (map io/file (reverse classpath)))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars))

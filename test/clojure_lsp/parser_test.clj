@@ -4,7 +4,8 @@
             [clojure-lsp.handlers :as handlers]
             [clojure.tools.logging :as log]
             [clojure-lsp.parser :as parser]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure-lsp.db :as db]))
 
 (defn syms [code]
   (->> code
@@ -163,6 +164,21 @@
     (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound))))))
 
 (deftest find-references-ns-test
+  (testing "refer all"
+    (reset! db/db {:file-envs {"a.clj" {:ns 'clojure.test :usages [{:sym 'clojure.test/deftest :tags #{:declare :public}}]}}})
+    (let [code "(ns foo.bar (:require [clojure.test :refer :all])) (deftest hi)"
+          {:keys [usages imports]} (parser/find-references code)
+          deftest-ref (nth usages 1)
+          hi-ref (nth usages 2)]
+      (is (= 'clojure.test/deftest (:sym deftest-ref)))))
+  (testing "refers"
+    (let [code "(ns foo.bar (:require [clojure.test :refer [deftest]])) (deftest hi)"
+          {:keys [usages imports]} (parser/find-references code)
+          deftest-ref (nth usages 1)
+          hi-ref (nth usages 2)]
+      (is (= 'clojure.test/deftest (:sym deftest-ref)))
+      #_
+      (is (not= #{:unknown} (:tags hi-ref)))))
   (testing "import"
     (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static :a) (JarFile.)"
           {:keys [usages imports]} (parser/find-references code)

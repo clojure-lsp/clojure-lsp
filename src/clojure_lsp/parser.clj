@@ -1,6 +1,7 @@
 (ns clojure-lsp.parser
   (:require
     [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.db :as db]
     [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
@@ -31,6 +32,7 @@
 (def default-env
   {:ns 'user
    :requires #{'clojure.core}
+   :refers {}
    :imports {}
    :aliases {}
    :publics #{}
@@ -273,7 +275,6 @@
 
 (defn handle-ns
   [op-loc loc context scoped]
-  ;; TODO add refers to usages and add full libs to usages
   (let [conformed (s/conform (:args (s/get-spec 'clojure.core/ns)) (rest (z/sexpr loc)))
         libs (:body (second (first (filter (comp #{:require} first) (:clauses conformed)))))
         prefix-symbol (fn [prefix sym]
@@ -295,6 +296,11 @@
                                      (= :prefix-list tag) (expand-prefix-list arg)))))
                          []
                          libs)
+        lib-publics (fn [lib]
+                      (for [[_ {:keys [ns usages]}] (:file-envs @db/db)
+                            {:keys [sym tags]} usages
+                            :when (and (= ns lib) (:declare tags) (:public tags))]
+                        [(symbol (name sym)) lib]))
         require-loc (-> loc
                         (z/down)
                         (z/find z/right (fn [node]
@@ -312,6 +318,9 @@
                           (cond-> env
                             :always (update :requires conj lib)
                             as (update :aliases conj [lib as])
+
+                            (and refer (= :all (first refer)))
+                            (update :refers into (lib-publics lib))
 
                             (and refer (= :syms (first refer)))
                             (update :refers into (map vector (second refer) (repeat lib))))))))

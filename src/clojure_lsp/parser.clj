@@ -155,8 +155,7 @@
 (comment
   (let [context (volatile! {})]
     #_(do (destructure-map (z/of-string "{:keys [a b]}") {} context {}) (map :sym (:usages @context)))
-    (map :sym (:usages (find-references
-                        "(let [a (b c d)])")))))
+    (map :sym (:usages (find-references "(let [a (b c d)])")))))
 
 (defn handle-rest
   "Crawl each form from `loc` to the end of the parent-form
@@ -275,7 +274,19 @@
 
 (defn handle-ns
   [op-loc loc context scoped]
-  (let [conformed (s/conform (:args (s/get-spec 'clojure.core/ns)) (rest (z/sexpr loc)))
+  (let [args (-> loc
+                 (z/subedit->
+                  ((fn [loc]
+                     ;; TODO should be able to put these in :require
+                     (if-let [require-macros (z/find-value loc z/next :require-macros)]
+                       (-> require-macros z/up z/remove)
+                       loc))))
+                 (z/sexpr)
+                 (rest))
+        ns-arg-spec (:args (s/get-spec 'clojure.core/ns))
+        conformed (s/conform ns-arg-spec args)
+        _ (when (= :clojure.spec.alpha/invalid conformed)
+            (throw (ex-info "Could not parse ns" (s/explain-data ns-arg-spec args))))
         libs (:body (second (first (filter (comp #{:require} first) (:clauses conformed)))))
         prefix-symbol (fn [prefix sym]
                         (if prefix
@@ -287,7 +298,6 @@
                             (update arg :lib #(prefix-symbol prefix %))))
         expand-prefix-list (fn [{:keys [prefix libspecs]}]
                              (mapv (partial expand-lib-spec prefix) libspecs))
-
         libspecs (reduce (fn [libspecs libspec-or-prefix-list]
                            (let [[tag arg] libspec-or-prefix-list]
                              (into libspecs
@@ -554,16 +564,4 @@
                            "(bing)"])]
     #_(find-references code)
     (z/sexpr (loc-at-pos code 1 2)))
-
-  (z/of-string "`(foo)")
-  (find-references (slurp "/tmp/core.clj"))
-  (find-references "(fn conj ([] []) ([coll] coll) ([coll x] (clojure.lang.RT/conj coll x)) ([coll x & xs] (if xs (recur (clojure.lang.RT/conj coll x) (first xs) (next xs)) (clojure.lang.RT/conj coll x))))")
-
-  (as-> (find-references "(defn x ([{:keys [a]} {}] a))") $
-      (dissoc $ :refers)
-      (:usages $)
-      (map (juxt :sym :tags) $))
-
-  (dissoc (find-references)
-
-          :refers))
+  )

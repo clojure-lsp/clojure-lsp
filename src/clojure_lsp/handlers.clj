@@ -139,7 +139,8 @@
             (map #(str "file://" (.getAbsolutePath %)))
             (filter (fn [uri]
                       (or (string/ends-with? uri ".clj")
-                          (string/ends-with? uri ".cljc"))))
+                          (string/ends-with? uri ".cljc")
+                          (string/ends-with? uri ".cljs"))))
             (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri) false))))
             (remove (comp nil? second)))
         output-chan (async/chan)]
@@ -275,9 +276,10 @@
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (log/warn "definition" doc-id line column)
     (first
-      (for [[doc-id {:keys [usages]}] file-envs
+     (for [[doc-id {:keys [usages]}] file-envs
             {:keys [sym tags] :as usage} usages
-            :when (and (= sym cursor-sym) (:declare tags))]
+            :when (= sym cursor-sym)
+            :when (and (:public tags) (:declare tags))]
         {:uri doc-id :range (->range usage)}))))
 
 (def refactorings

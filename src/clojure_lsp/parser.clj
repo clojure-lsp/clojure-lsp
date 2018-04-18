@@ -2,6 +2,7 @@
   (:require
     [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.db :as db]
+    [clojure-lsp.refactor.edit :as edit]
     [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
@@ -42,15 +43,6 @@
   `(do
      (log/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
-
-(defn skip-over [loc]
-  (if (zm/down loc)
-    (->> loc
-         zm/down
-         zm/rightmost
-         (z/skip z/up z/rightmost?)
-         z/right)
-    (zm/next loc)))
 
 (defn qualify-ident [ident {:keys [aliases publics refers imports requires ns] :as context} scoped]
   (when (ident? ident)
@@ -115,7 +107,7 @@
             val-loc (z/right key-loc)]
         (cond
           (= :keys key-sexpr)
-          (recur (skip-over val-loc)
+          (recur (edit/skip-over val-loc)
                  (loop [child-loc (z/down val-loc)
                         scoped scoped]
                    (let [sexpr (z/sexpr child-loc)
@@ -143,13 +135,13 @@
             (recur (z/right val-loc) new-scoped))
 
           (keyword? key-sexpr)
-          (recur (skip-over val-loc) scoped)
+          (recur (edit/skip-over val-loc) scoped)
 
           (not= '& key-sexpr)
           (recur (z/right val-loc) (parse-destructuring key-loc scope-bounds context scoped))
 
           :else
-          (recur (skip-over val-loc) scoped)))
+          (recur (edit/skip-over val-loc) scoped)))
       scoped)))
 
 (comment
@@ -190,10 +182,10 @@
           (recur (z/next param-loc) scoped)
 
           (map? sexpr)
-          (recur (skip-over param-loc) (destructure-map param-loc scope-bounds context scoped))
+          (recur (edit/skip-over param-loc) (destructure-map param-loc scope-bounds context scoped))
 
           :else
-          (recur (skip-over param-loc) scoped)))
+          (recur (edit/skip-over param-loc) scoped)))
       scoped)))
 
 
@@ -208,7 +200,7 @@
         ;; MUTATION Updates scoped AND adds declared param references AND adds references in binding vals)
         (cond
           (and not-done? (= :uneval (z/tag binding-loc)))
-          (recur (skip-over binding-loc) scoped)
+          (recur (edit/skip-over binding-loc) scoped)
 
           not-done?
           (let [right-side-loc (z/right binding-loc)
@@ -217,19 +209,19 @@
             (cond
               (= :let binding-sexpr)
               (let [new-scoped (parse-bindings right-side-loc context end-scope-bounds scoped)]
-                (recur (skip-over right-side-loc) new-scoped))
+                (recur (edit/skip-over right-side-loc) new-scoped))
 
               (#{:when :while} binding-sexpr)
               (do
                 (handle-rest (zsub/subzip right-side-loc) context scoped)
-                (recur (skip-over right-side-loc) scoped))
+                (recur (edit/skip-over right-side-loc) scoped))
 
               :else
               (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc) (z/up right-side-loc) bindings-loc)))
                     scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
                     new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
                 (handle-rest (zsub/subzip right-side-loc) context scoped)
-                (recur (skip-over right-side-loc) new-scoped))))
+                (recur (edit/skip-over right-side-loc) new-scoped))))
 
           :else
           scoped)))
@@ -495,22 +487,22 @@
       (let [tag (z/tag loc)]
         (cond
           (#{:quote :uneval :syntax-quote} tag)
-          (recur (skip-over loc) scoped)
+          (recur (edit/skip-over loc) scoped)
 
           (= :list tag)
           (do
             (handle-sexpr loc context scoped)
-            (recur (skip-over loc) scoped))
+            (recur (edit/skip-over loc) scoped))
 
           (= :fn tag)
           (do
             (handle-dispatch-macro loc context scoped)
-            (recur (skip-over loc) scoped))
+            (recur (edit/skip-over loc) scoped))
 
           (and (= :token tag) (symbol? (z/sexpr loc)))
           (do
             (add-reference context scoped (z/node loc) {})
-            (recur (skip-over loc) scoped))
+            (recur (edit/skip-over loc) scoped))
 
           :else
           (recur (zm/next loc) scoped))))))

@@ -89,22 +89,38 @@
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
   [zloc binding-name]
-  (let [bound-node (z/node zloc)
-        binding-sym (symbol binding-name)]
-    (if-let [let-loc (edit/find-ops-up zloc 'let)] ; find first ancestor let
-      (let [{:keys [col]} (meta (z/node (z/right let-loc))) ;; indentation of bindings
-            new-let-loc (-> zloc
-                            (z/replace binding-sym) ; replace it with binding-symbol
-                            (edit/find-ops-up zloc 'let) ; move to ancestor let
-                            (z/right) ; move to binding
-                            (cz/append-child (n/newlines 1))
-                            (cz/append-child (n/spaces col)) ; insert let and bindings backwards
-                            (z/append-child binding-sym) ; add binding symbol
-                            (z/append-child bound-node) ; read bound node into let bindings
-                            (z/up))]
-        [{:range (meta (z/node (z/up let-loc)))
-          :loc new-let-loc}])
-      [])))
+  (if-let [let-top-loc (some-> zloc
+                               (edit/find-ops-up 'let)
+                               z/up)]
+    (let [let-loc (z/down (zsub/subzip let-top-loc))
+          bound-node (z/sexpr zloc)
+          binding-sym (symbol binding-name)
+          bindings-loc (z/right let-loc)
+          {:keys [col]} (meta (z/node bindings-loc)) ;; indentation of bindings
+          first-match (z/find let-loc z/next (fn [loc]
+                                               (= (z/sexpr loc) bound-node)))
+          with-binding (if-let [bindings-pos (edit/inside? first-match bindings-loc)]
+                         (-> bindings-pos
+                             (z/left)
+                             (z/insert-left binding-sym)
+                             (cz/insert-left bound-node)
+                             (cz/insert-left (n/newlines 1))
+                             (cz/insert-left (n/spaces col)))
+                         (-> bindings-loc
+                             (cz/append-child (n/newlines 1))
+                             (cz/append-child (n/spaces col)) ; insert let and binding backwards
+                             (z/append-child binding-sym) ; add binding symbol
+                             (z/append-child bound-node)
+                             (z/down)
+                             (z/rightmost)))
+          new-let-loc (loop [loc (z/next with-binding)]
+                        (cond
+                          (z/end? loc) (z/replace let-top-loc (z/root loc))
+                          (= (z/sexpr loc) bound-node) (recur (z/next (z/replace loc binding-sym)))
+                          :else (recur (z/next loc))))]
+      [{:range (meta (z/node (z/up let-loc)))
+        :loc new-let-loc}])
+    []))
 
 (defn introduce-let
     "Adds a let around the current form."

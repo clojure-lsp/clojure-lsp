@@ -84,6 +84,19 @@
               (z/leftmost))) ; move to let
         let-loc)))
 
+(defn inside? [zloc possible-parent]
+  (z/find zloc z/up (fn [loc]
+                      (= possible-parent (z/up loc)))))
+
+(defn skip-over [loc]
+  (if (z/down loc)
+    (->> loc
+         z/down
+         z/rightmost
+         (z/skip z/up z/rightmost?)
+         z/right)
+    (z/next loc)))
+
 (comment
 
   (defn zdbg [loc msg]

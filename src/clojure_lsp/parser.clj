@@ -378,6 +378,10 @@
         (->> (parse-params params-loc context scoped)
              (handle-rest body-loc context))))))
 
+(defn handle-defmethod
+  [op-loc loc context scoped]
+  (handle-function op-loc loc context scoped #{}))
+
 (defn handle-fn
   [op-loc loc context scoped]
   (handle-function op-loc loc context scoped #{:declare}))
@@ -449,6 +453,8 @@
    'clojure.core/defn- handle-defn
    'clojure.core/fn handle-fn
    'clojure.core/declare handle-def
+   'clojure.core/defmulti handle-def
+   'clojure.core/defmethod handle-defmethod
    'clojure.core/def handle-def
    'clojure.core/defonce handle-def
    'clojure.core/defmacro handle-defmacro

@@ -1,5 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
+    [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.transform :as refactor]
@@ -186,38 +187,80 @@
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
 
+(defn namespaces-and-aliases [local-aliases project-aliases remote-envs]
+  (map (fn [[doc-id remote-env]]
+         (let [ns-sym (:ns remote-env)
+               project-alias (get project-aliases ns-sym)
+               as-alias (cond-> ""
+                          project-alias (str " :as " (name project-alias)))
+               local-alias (get local-aliases ns-sym) ]
+           {:ns ns-sym
+            :local-alias local-alias
+            :project-alias project-alias
+            :as-alias as-alias
+            :ref (or local-alias project-alias ns-sym)
+            :usages (:usages remote-env)}))
+       remote-envs))
+
 (defn completion [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
-        cursor-value (some-> (find-reference-under-cursor line column local-env) :sexpr name)]
-    (into
-      (->> (:usages local-env)
-           (filter (comp :declare :tags))
-           #_(filter (comp #(string/starts-with? % (str cursor-value)) name :sexpr))
-           (remove (fn [usage]
-                     (when-let [scope-bounds (:scope-bounds usage)]
-                       (not= :within (check-bounds line column scope-bounds)))))
-           (map :sym)
-           (mapv (fn [sym] {:label (name sym)}))
-           (set))
-      (for [[doc-id remote-env] remote-envs
-            :let [ns-sym (:ns remote-env)
-                  local-alias (get-in local-env [:aliases ns-sym])
-                  alias (get-in @db/db [:project-aliases ns-sym])
-                  as-alias (cond-> ""
-                             alias (str " :as " (name alias)))
-                  ref (or local-alias alias ns-sym)]
-            usage (->> (:usages remote-env)
-                       (filter (comp :public :tags))
-                       #_(filter (comp #(string/starts-with? % (str cursor-value)) name :sexpr)))]
-        (cond-> {:label (format "%s/%s" (name ref) (name (:sym usage)))}
-          (not (contains? (:requires local-env) ns-sym))
+        cursor-value (some-> (find-reference-under-cursor line column local-env) :sexpr str)
+        matches-cursor? #(some-> % (string/starts-with? cursor-value))
+        matches-ns? (fn [ns-sym]
+                      (and (or (= cursor-value (str ns-sym))
+                               (string/starts-with? cursor-value (str ns-sym "/")))
+                           ns-sym))
+        remotes (group-by
+                 (fn [remote]
+                   (or (matches-ns? (:local-alias remote))
+                       (matches-ns? (:project-alias remote))
+                       (matches-ns? (:ns remote))))
+                 (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs))
+        unmatched-remotes (get remotes false)
+        matched-remotes (dissoc remotes false)]
+    (concat
+     (->> (:usages local-env)
+          (filter (comp :declare :tags))
+          (filter (comp matches-cursor? str :sexpr))
+          (remove (fn [usage]
+                    (when-let [scope-bounds (:scope-bounds usage)]
+                      (not= :within (check-bounds line column scope-bounds)))))
+          (map (fn [{:keys [sym]}] {:label (name sym)}))
+          (sort-by :label))
+     (->> (get remotes false)
+          (filter (fn [remote]
+                    (->> [:project-alias :ns :local-alias]
+                         (select-keys remote)
+                         (vals)
+                         (some matches-cursor?))))
+          (map (fn [match]
+                 {:label (str (:ref match))}))
+          (sort-by :label))
+     (->>
+      (for [[matched-ns remotes] matched-remotes
+            remote remotes
+            usage (:usages remote)
+            :let [label (format "%s/%s" (name (:ref remote)) (name (:sym usage)))]
+            :when (contains? (:tags usage) :public)
+            :when (matches-cursor? (format "%s/%s" (name matched-ns) (name (:sym usage))))]
+        (cond-> {:label label}
+          (not (contains? (:requires local-env) (:ns remote)))
           (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
                                           :new-text (if add-require?
-                                                      (format "\n  (:require\n   [%s%s])" (name ns-sym) as-alias)
-                                                      (format "\n   [%s%s]" (name ns-sym) as-alias))}]))))))
+                                                      (format "\n  (:require\n   [%s%s])" (name (:ns remote)) (:as-alias remote))
+                                                      (format "\n   [%s%s]" (name (:ns remote)) (:as-alias remote)))}])))
+      (sort-by :label))
+     (->> cc/core-syms
+          (filter (comp matches-cursor? str))
+          (map (fn [sym] {:label (str sym)}))
+          (sort-by :label))
+     (->> cc/java-lang-syms
+          (filter (comp matches-cursor? str))
+          (map (fn [sym] {:label (str sym)}))
+          (sort-by :label)))))
 
 (defn references [doc-id line column]
   (let [file-envs (:file-envs @db/db)

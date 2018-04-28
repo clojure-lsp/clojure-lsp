@@ -59,30 +59,32 @@
         (z/insert-child node))))
 
 (defn parent-let? [zloc]
-    (= 'let (-> zloc z/up z/leftmost z/sexpr)))
+  (let [parent-op (-> zloc z/leftmost zspy)]
+    (when (= 'let (-> parent-op z/sexpr))
+      (z/up parent-op))))
 
 (defn join-let
     "if a let is directly above a form, will join binding forms and remove the inner let"
     [let-loc]
-    (let [bind-node (z/node (z/right let-loc))]
-      (if (parent-let? let-loc)
-        (do
-          (-> let-loc
-              (z/right) ; move to inner binding
-              (z/remove) ; remove inner binding
-              (z/remove) ; remove inner let moving to prev; the surrounding list
-              (z/splice) ; splice let body into outer let body
-              (z/leftmost) ; move to let
-              (z/right) ; move to parent binding
-              (z/append-child bind-node) ; place into binding
-              (z/down) ; move into binding
-              (z/rightmost) ; move to nested binding
-              (z/splice) ; remove nesting
-              z/left
-              (cz/insert-right (n/newlines 1))
-              (z/up) ; move to new binding
-              (z/leftmost))) ; move to let
-        let-loc)))
+    (if (parent-let? let-loc)
+      (let [bind-node (z/node (z/right (z/down let-loc)))]
+        (-> let-loc
+            (z/down)
+            (z/right) ; move to inner binding
+            (z/remove) ; remove inner binding
+            (z/remove) ; remove inner let moving to prev; the surrounding list
+            (z/splice) ; splice let body into outer let body
+            (z/leftmost) ; move to let
+            (z/right) ; move to parent binding
+            (z/append-child bind-node) ; place into binding
+            (z/down) ; move into binding
+            (z/rightmost) ; move to nested binding
+            (z/splice) ; remove nesting
+            z/left
+            (cz/insert-right (n/newlines 1))
+            (z/up) ; move to new binding
+            (z/up))) ; move to let-form
+      let-loc))
 
 (defn inside? [zloc possible-parent]
   (z/find zloc z/up (fn [loc]

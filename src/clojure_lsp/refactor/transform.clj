@@ -137,40 +137,40 @@
                   (z/right) ; skip 'let
                   (edit/wrap-around :vector) ; wrap binding vec around form
                   (z/insert-child sym) ; add new symbol as binding
-                  (z/leftmost)
-                  (edit/join-let)
-                  z/up)]
+                  z/up
+                  (edit/zspy)
+                  (edit/join-let))]
       [{:range (meta (z/node (or loc zloc)))
         :loc loc}]))
+
+(defn expand-let
+    "Expand the scope of the next let up the tree."
+    [zloc]
+    (let [let-loc zloc
+          bind-node (-> let-loc edit/zspy z/down z/right z/node)]
+      (if-let [parent-loc (edit/parent-let? let-loc)]
+        [{:range (meta (z/node parent-loc))
+          :loc (edit/join-let let-loc)}]
+        (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))]
+          [{:range parent-meta
+            :loc (-> let-loc
+                     (z/splice) ; splice in let
+                     (z/remove) ; remove let
+                     (z/next)
+                     (z/remove) ; remove binding
+                     (z/up) ; go to form container
+                     (edit/wrap-around :list) ; wrap with new let list
+                     (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
+                     (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
+                     (z/insert-child bind-node)
+                     (z/insert-child 'let)
+                     (edit/join-let))}]))))
 
 (comment
    ; join if let above
 
   ;; TODO replace bound forms that are being expanded around
-  (defn expand-let
-    "Expand the scope of the next let up the tree."
-    [zloc _]
-    ;; TODO check that let is also leftmost?
-    (let [let-loc (z/find-value zloc z/prev 'let)
-          bind-node (z/node (z/next let-loc))]
-      (if (edit/parent-let? let-loc)
-        (edit/join-let let-loc)
-        (-> let-loc
-            (z/up) ; move to form above
-            (z/splice) ; splice in let
-            (z/right)
-            (z/right)
-            (edit/remove-left) ; remove let
-            (edit/remove-left) ; remove binding
-            (z/leftmost) ; go to front of form above
-            (z/up) ; go to form container
-            (p/wrap-around :list) ; wrap with new let list
-            (z/up) ; move to new let list
-            (zz/insert-child (n/newlines 1)) ; insert let and bindings backwards
-            (z/insert-child bind-node)
-            (z/insert-child 'let)
-            (z/leftmost) ; go to let
-            (edit/join-let))))) ; join if let above
+   ; join if let above
 
   (defn extract-def
     [zloc [def-name]]

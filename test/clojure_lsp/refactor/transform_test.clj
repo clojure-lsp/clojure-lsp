@@ -74,3 +74,10 @@
         (is (some? range))
         (is (= 'let (z/sexpr (z/down loc))))
         (is (= (str "(let [b (inc a)\n c b]\n c)") (z/root-string loc)))))))
+
+(deftest expand-let-test
+  (let [zloc (-> (z/of-string "(+ 1 (let [a 1] a) 2)") z/down z/right z/right)]
+    (let [[{:keys [loc range]}] (transform/expand-let zloc)]
+      (is (some? range))
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= (str "(let [a 1]\n (+ 1 a 2))") (z/root-string loc))))))

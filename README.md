@@ -51,22 +51,27 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | [x]  | thread-last-all  | | |
 | [x]  | introduce-let    | `[document-uri, line, column, binding-name]` | |
 | [x]  | move-to-let      | `[document-uri, line, column, binding-name]` | |
-| [ ]  | expand-let       | | |
+| [x]  | expand-let       | | |
 | [ ]  | clean-ns         | | |
 
 Refactorings can be done with LanguageClient-neovim with:
 ```vim
+
 function! s:Expand(exp) abort
     let l:result = expand(a:exp)
-    return l:result ==# '' ? '' : l:result
+    return l:result ==# '' ? '' : "file://" . l:result
 endfunction
 
-function! ExecuteCommand(refactoring) abort
-  call LanguageClient#workspace_executeCommand(a:refactoring,  ['file://' + s:Expand('%:p'), line('.') - 1, col('.') - 1])
-endfunction
+nnoremap <silent> crcc :call LanguageClient#workspace_executeCommand('cycle-coll', [s:Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
+nnoremap <silent> crth :call LanguageClient#workspace_executeCommand('thread-first', [s:Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
+nnoremap <silent> crtt :call LanguageClient#workspace_executeCommand('thread-last', [s:Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
+nnoremap <silent> crtf :call LanguageClient#workspace_executeCommand('thread-first-all', [s:Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
+nnoremap <silent> crtl :call LanguageClient#workspace_executeCommand('thread-last-all', [s:Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
+nnoremap <silent> crml :call LanguageClient#workspace_executeCommand('move-to-let', [s:Expand('%:p'), line('.') - 1, col('.') - 1, input('Binding name: ')])<CR>
+nnoremap <silent> cril :call LanguageClient#workspace_executeCommand('introduce-let', [s:Expand('%:p'), line('.') - 1, col('.') - 1, input('Binding name: ')])<CR>
+nnoremap <silent> crel :call LanguageClient#workspace_executeCommand('expand-let', [s:Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
 ```
 
-and then `:call ExecuteCommand('thread-first')` with the cursor in the appropriate place.
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
 
 ## Clients

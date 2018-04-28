@@ -332,7 +332,8 @@
    "thread-last" #'refactor/thread-last
    "thread-last-all" #'refactor/thread-last-all
    "move-to-let" #'refactor/move-to-let
-   "introduce-let" #'refactor/introduce-let})
+   "introduce-let" #'refactor/introduce-let
+   "expand-let" #'refactor/expand-let})
 
 (defn refactor [doc-id line column refactoring args]
   (try

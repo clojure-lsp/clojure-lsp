@@ -1,18 +1,19 @@
 (ns clojure-lsp.handlers
   (:require
-    [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.transform :as refactor]
-    [clojure.core.async :as async]
-    [clojure.java.io :as io]
-    [clojure.java.shell :as shell]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [clojure.tools.logging :as log]
-    [digest :as digest]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z])
+   [clojure-lsp.clojure-core :as cc]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.refactor.transform :as refactor]
+   [clojure.core.async :as async]
+   [clojure.java.io :as io]
+   [clojure.java.shell :as shell]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [clojure.tools.logging :as log]
+   [digest :as digest]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [cljfmt.core :as cljfmt])
   (:import
    [java.util.jar JarFile]))
 
@@ -81,9 +82,9 @@
       (async/put! edits-chan (add-to-ns requires-to-add uri env)))
 
     (async/put! diagnostics-chan {:uri uri :diagnostics (for [unknown other-unknowns]
-                                                         {:range (->range unknown)
-                                                          :message "Unknown symbol"
-                                                          :severity 1})})))
+                                                          {:range (->range unknown)
+                                                           :message "Unknown symbol"
+                                                           :severity 1})})))
 
 (defn safe-find-references
   ([uri text]
@@ -193,7 +194,7 @@
                project-alias (get project-aliases ns-sym)
                as-alias (cond-> ""
                           project-alias (str " :as " (name project-alias)))
-               local-alias (get local-aliases ns-sym) ]
+               local-alias (get local-aliases ns-sym)]
            {:ns ns-sym
             :local-alias local-alias
             :project-alias project-alias
@@ -320,10 +321,10 @@
     (log/warn "definition" doc-id line column)
     (first
      (for [[doc-id {:keys [usages]}] file-envs
-            {:keys [sym tags] :as usage} usages
-            :when (= sym cursor-sym)
-            :when (and (:public tags) (:declare tags))]
-        {:uri doc-id :range (->range usage)}))))
+           {:keys [sym tags] :as usage} usages
+           :when (= sym cursor-sym)
+           :when (and (:public tags) (:declare tags))]
+       {:uri doc-id :range (->range usage)}))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
@@ -337,7 +338,7 @@
 
 (defn refactor [doc-id line column refactoring args]
   (try
-    (let [ ;; TODO Instead of v=0 should I send a change AND a document change
+    (let [;; TODO Instead of v=0 should I send a change AND a document change
           {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
           result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
           changes [{:text-document {:uri doc-id :version v}
@@ -355,10 +356,10 @@
         local-env (get file-envs doc-id)
         cursor (find-reference-under-cursor line column local-env)
         signature (first
-                    (for [[_ {:keys [usages]}] file-envs
-                          {:keys [sym tags] :as usage} usages
-                          :when (and (= sym (:sym cursor)) (:declare tags))]
-                      (:signature usage)))]
+                   (for [[_ {:keys [usages]}] file-envs
+                         {:keys [sym tags] :as usage} usages
+                         :when (and (= sym (:sym cursor)) (:declare tags))]
+                     (:signature usage)))]
     (if cursor
       {:range (->range cursor)
        :contents [(-> cursor
@@ -366,3 +367,18 @@
                       (assoc :signature signature)
                       (pr-str))]}
       {:contents []})))
+
+(defn formatting [doc-id]
+  (let [{:keys [text]} (get-in @db/db [:documents doc-id])
+        new-text (cljfmt/reformat-string text)]
+    (when-not (= new-text text)
+      [{:range (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
+        :new-text new-text}])))
+
+(defn range-formatting [doc-id format-pos]
+  (let [{:keys [text]} (get-in @db/db [:documents doc-id])
+        forms (parser/find-top-forms-in-range (z/of-string text) format-pos)]
+    (mapv (fn [form-loc]
+            {:range (->range (-> form-loc z/node meta))
+             :new-text (n/string (cljfmt/reformat-form (z/node form-loc)))})
+          forms)))

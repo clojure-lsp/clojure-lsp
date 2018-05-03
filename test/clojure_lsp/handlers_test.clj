@@ -59,3 +59,10 @@
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" :usages 1] merge {:sym 'Sys :sexpr 'Sys}))
       (is (= [{:label "System"}]
              (handlers/completion "file://b.clj" 2 2))))))
+
+(deftest test-range-formatting
+  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (is (= [{:range {:start {:line 0 :character 0}
+                   :end {:line 0 :character 5}}
+           :new-text "(a)"}]
+         (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 3}))))

@@ -1,11 +1,11 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure-lsp.refactor.edit :as edit]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.custom-zipper.core :as cz]
-    [rewrite-clj.zip.subedit :as zsub]
-    [clojure.tools.logging :as log]))
+   [clojure-lsp.refactor.edit :as edit]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [rewrite-clj.custom-zipper.core :as cz]
+   [rewrite-clj.zip.subedit :as zsub]
+   [clojure.tools.logging :as log]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -123,48 +123,48 @@
     []))
 
 (defn introduce-let
-    "Adds a let around the current form."
-    [zloc binding-name]
-    (let [sym (symbol binding-name)
-          {:keys [col]} (meta (z/node zloc))
-          loc (-> zloc
-                  (edit/wrap-around :list) ; wrap with new let list
-                  (z/insert-child 'let) ; add let
-                  (cz/append-child (n/newlines 1))
-                  (cz/append-child (n/spaces col)) ; add new line after location
-                  (z/append-child sym) ; add new symbol to body of let
-                  (z/down) ; enter let list
-                  (z/right) ; skip 'let
-                  (edit/wrap-around :vector) ; wrap binding vec around form
-                  (z/insert-child sym) ; add new symbol as binding
-                  z/up
-                  (edit/zspy)
-                  (edit/join-let))]
-      [{:range (meta (z/node (or loc zloc)))
-        :loc loc}]))
+  "Adds a let around the current form."
+  [zloc binding-name]
+  (let [sym (symbol binding-name)
+        {:keys [col]} (meta (z/node zloc))
+        loc (-> zloc
+                (edit/wrap-around :list) ; wrap with new let list
+                (z/insert-child 'let) ; add let
+                (cz/append-child (n/newlines 1))
+                (cz/append-child (n/spaces col)) ; add new line after location
+                (z/append-child sym) ; add new symbol to body of let
+                (z/down) ; enter let list
+                (z/right) ; skip 'let
+                (edit/wrap-around :vector) ; wrap binding vec around form
+                (z/insert-child sym) ; add new symbol as binding
+                z/up
+                (edit/zspy)
+                (edit/join-let))]
+    [{:range (meta (z/node (or loc zloc)))
+      :loc loc}]))
 
 (defn expand-let
-    "Expand the scope of the next let up the tree."
-    [zloc]
-    (let [let-loc zloc
-          bind-node (-> let-loc edit/zspy z/down z/right z/node)]
-      (if-let [parent-loc (edit/parent-let? let-loc)]
-        [{:range (meta (z/node parent-loc))
-          :loc (edit/join-let let-loc)}]
-        (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))]
-          [{:range parent-meta
-            :loc (-> let-loc
-                     (z/splice) ; splice in let
-                     (z/remove) ; remove let
-                     (z/next)
-                     (z/remove) ; remove binding
-                     (z/up) ; go to form container
-                     (edit/wrap-around :list) ; wrap with new let list
-                     (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
-                     (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
-                     (z/insert-child bind-node)
-                     (z/insert-child 'let)
-                     (edit/join-let))}]))))
+  "Expand the scope of the next let up the tree."
+  [zloc]
+  (let [let-loc zloc
+        bind-node (-> let-loc edit/zspy z/down z/right z/node)]
+    (if-let [parent-loc (edit/parent-let? let-loc)]
+      [{:range (meta (z/node parent-loc))
+        :loc (edit/join-let let-loc)}]
+      (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))]
+        [{:range parent-meta
+          :loc (-> let-loc
+                   (z/splice) ; splice in let
+                   (z/remove) ; remove let
+                   (z/next)
+                   (z/remove) ; remove binding
+                   (z/up) ; go to form container
+                   (edit/wrap-around :list) ; wrap with new let list
+                   (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
+                   (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
+                   (z/insert-child bind-node)
+                   (z/insert-child 'let)
+                   (edit/join-let))}]))))
 
 (comment
    ; join if let above
@@ -199,7 +199,6 @@
             (zz/insert-left (n/newlines 2)) ; add new line after location
             (z/left))
         zloc)))
-
 
   (defn cycle-if
     "Cycles between if and if-not form"
@@ -260,23 +259,23 @@
         (edit/find-namespace)
         (edit/mark-position :reformat)
         (cond->
-          (= missing-type :class)
+         (= missing-type :class)
           (->
-            (edit/find-or-create-libspec :import) ; go to import
-            (zz/insert-right (n/newlines 1))
-            (z/insert-right (symbol missing))) ; add class
+           (edit/find-or-create-libspec :import) ; go to import
+           (zz/insert-right (n/newlines 1))
+           (z/insert-right (symbol missing))) ; add class
 
           (= missing-type :ns)
           (->
-            (edit/find-or-create-libspec :require) ; go to require
-            (zz/insert-right (n/newlines 1))
-            (z/insert-right [(symbol missing)]) ; add require vec and ns
-            (z/right))
+           (edit/find-or-create-libspec :require) ; go to require
+           (zz/insert-right (n/newlines 1))
+           (z/insert-right [(symbol missing)]) ; add require vec and ns
+           (z/right))
 
           (and sym-ns (= missing-type :ns)) ; if there was a requested ns `str/trim`
           (->
-            (z/append-child :as) ; add :as
-            (z/append-child (symbol sym-ns)))))) ; as prefix
+           (z/append-child :as) ; add :as
+           (z/append-child (symbol sym-ns)))))) ; as prefix
 
   (defn replace-ns
     [zloc [new-ns]]

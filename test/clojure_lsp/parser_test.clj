@@ -191,3 +191,7 @@
       (is (= 'java.io.File/static (:sym file-static-ref)))
       (is (not= 'java.util.jar.JarFile (:sym unknown-ref)))
       (is (= #{:unknown} (:tags unknown-ref))))))
+
+(deftest find-top-forms-test
+  (let [code "(a) (b c d)"]
+    (is (= '[(a) (b c d)] (map z/sexpr (parser/find-top-forms-in-range (z/of-string code) {:row 1 :col 2 :end-row 1 :end-col (count code)}))))))

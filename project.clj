@@ -10,7 +10,8 @@
                  [org.clojure/core.async "0.4.474"]
                  [org.xerial/sqlite-jdbc "3.21.0.1"]
                  [funcool/clojure.jdbc "0.9.0"]
-                 [digest "1.4.8"]]
+                 [digest "1.4.8"]
+                 [cljfmt "0.5.7"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]

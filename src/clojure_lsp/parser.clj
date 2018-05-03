@@ -1,29 +1,29 @@
 (ns clojure-lsp.parser
   (:require
-    [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure.set :as set]
-    [clojure.spec.alpha :as s]
-    [clojure.string :as string]
-    [clojure.tools.logging :as log]
-    [clojure.walk :as walk]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.custom-zipper.core :as cz]
-    [rewrite-clj.zip.edit :as ze]
-    [rewrite-clj.zip.find :as zf]
-    [rewrite-clj.zip.move :as zm]
-    [rewrite-clj.zip.walk :as zw]
-    [rewrite-clj.zip.subedit :as zsub]))
+   [clojure-lsp.clojure-core :as cc]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure.set :as set]
+   [clojure.spec.alpha :as s]
+   [clojure.string :as string]
+   [clojure.tools.logging :as log]
+   [clojure.walk :as walk]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [rewrite-clj.custom-zipper.core :as cz]
+   [rewrite-clj.zip.edit :as ze]
+   [rewrite-clj.zip.find :as zf]
+   [rewrite-clj.zip.move :as zm]
+   [rewrite-clj.zip.walk :as zw]
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (declare find-references*)
 (declare parse-destructuring)
 
 (def core-refers
   (->> cc/core-syms
-                (mapv (juxt identity (constantly 'clojure.core)))
-                (into {})))
+       (mapv (juxt identity (constantly 'clojure.core)))
+       (into {})))
 
 (def lang-imports
   (->> cc/java-lang-syms
@@ -188,7 +188,6 @@
           (recur (edit/skip-over param-loc) scoped)))
       scoped)))
 
-
 (defn end-bounds [loc]
   (select-keys (meta (z/node loc)) [:end-row :end-col]))
 
@@ -247,7 +246,6 @@
       (log/warn "params" (.getMessage e) (z/sexpr params-loc))
       (throw e))))
 
-
 (defn handle-comment
   [op-loc loc context scoped]
   ;; Ignore contents of comment
@@ -260,9 +258,9 @@
           simple-classes (map second classes)]
       (vswap! context assoc :imports
               (into (zipmap simple-classes simple-classes)
-                     (for [[_ {:keys [package classes]}] packages
-                           cls classes]
-                       [cls (symbol (str (name package) "." (name cls)))]))))))
+                    (for [[_ {:keys [package classes]}] packages
+                          cls classes]
+                      [cls (symbol (str (name package) "." (name cls)))]))))))
 
 (defn handle-ns
   [op-loc loc context scoped]
@@ -427,25 +425,23 @@
 (defn handle-dispatch-macro
   [loc context scoped]
   (->>
-    (loop [sub-loc (z/next (zsub/subzip loc))
-           scoped scoped]
-      (if (and sub-loc (not (z/end? sub-loc)))
-        (let [sexpr (z/sexpr sub-loc)]
-          (if (and (symbol? sexpr)
-                   (re-find #"^%(:?\d+|&)?$" (name sexpr)))
-            (recur (z/next sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
-            (recur (z/next sub-loc) scoped)))
-        scoped))
-    (handle-rest (z/down loc) context)))
+   (loop [sub-loc (z/next (zsub/subzip loc))
+          scoped scoped]
+     (if (and sub-loc (not (z/end? sub-loc)))
+       (let [sexpr (z/sexpr sub-loc)]
+         (if (and (symbol? sexpr)
+                  (re-find #"^%(:?\d+|&)?$" (name sexpr)))
+           (recur (z/next sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
+           (recur (z/next sub-loc) scoped)))
+       scoped))
+   (handle-rest (z/down loc) context)))
 
 (comment
   '[clojure.core/with-open
-    clojure.core/with-open
     clojure.core/dotimes
     clojure.core/letfn
     clojure.core/with-local-vars
     clojure.core/as->])
-
 
 (def ^:dynamic *sexpr-handlers*
   {'clojure.core/ns handle-ns
@@ -520,26 +516,35 @@
       (find-references* (volatile! default-env) {})))
 
 ;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col]} {r :row c :col}]
+(defn in-range? [{:keys [row col end-row end-col]} {r :row c :col er :end-row ec :end-col}]
   (and (>= r row)
-       (<= r end-row)
-       (if (= r row) (>= c col) true)
-       (if (= r end-row) (<= c end-col) true)))
+       (<= er end-row)
+       (if (= r row) (>= col c) true)
+       (if (= er end-row) (<= end-col ec) true)))
 
 ;; From rewrite-cljs
-(defn find-last-by-pos
+(defn find-forms-in-range
   "Find last node (if more than one node) that is in range of pos and
   satisfying the given predicate depth first from initial zipper
   location."
-  ([zloc pos] (find-last-by-pos zloc pos (constantly true)))
+  ([zloc pos] (find-forms-in-range zloc pos (constantly true)))
   ([zloc pos p?]
    (->> zloc
         (iterate z/next)
         (take-while identity)
         (take-while (complement z/end?))
         (filter #(and (p? %)
-                      (in-range? (-> % z/node meta) pos)))
-        last)))
+                      (in-range? (-> % z/node meta) pos))))))
+
+(defn find-last-by-pos
+  [zloc pos]
+  (last (find-forms-in-range zloc pos)))
+
+(defn find-top-forms-in-range
+  [zloc pos]
+  (->> (find-forms-in-range zloc pos)
+       (mapv (fn [loc] (z/find loc z/up edit/top?)))
+       (distinct)))
 
 (defn loc-at-pos [code row col]
   (-> code
@@ -561,5 +566,4 @@
                            "(bun/foo)"
                            "(bing)"])]
     #_(find-references code)
-    (z/sexpr (loc-at-pos code 1 2)))
-  )
+    (z/sexpr (loc-at-pos code 1 2))))

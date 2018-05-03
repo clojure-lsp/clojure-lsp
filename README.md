@@ -42,17 +42,18 @@ It should be possible to introduce most of the refactorings here: https://github
 Calling executeCommand with the following commands and additional args will notify the client with `applyEdit`. 
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
-| done | command          | args | notes |
-| ---- | ---------------- | ---- | ----- |
-| [x]  | cycle-coll       | | |
-| [x]  | thread-first     | | |
-| [x]  | thread-first-all | | |
-| [x]  | thread-last      | | |
-| [x]  | thread-last-all  | | |
-| [x]  | introduce-let    | `[document-uri, line, column, binding-name]` | |
-| [x]  | move-to-let      | `[document-uri, line, column, binding-name]` | |
-| [x]  | expand-let       | | |
-| [ ]  | clean-ns         | | |
+| done | command             | args | notes |
+| ---- | ------------------- | ---- | ----- |
+| [x]  | cycle-coll          | | |
+| [x]  | thread-first        | | |
+| [x]  | thread-first-all    | | |
+| [x]  | thread-last         | | |
+| [x]  | thread-last-all     | | |
+| [x]  | introduce-let       | `[document-uri, line, column, binding-name]` | |
+| [x]  | move-to-let         | `[document-uri, line, column, binding-name]` | |
+| [x]  | expand-let          | | |
+| [x]  | add-missing-libspec | | |
+| [ ]  | clean-ns            | | |
 
 Refactorings can be done with LanguageClient-neovim with:
 ```vim
@@ -70,6 +71,7 @@ nnoremap <silent> crtl :call LanguageClient#workspace_executeCommand('thread-las
 nnoremap <silent> crml :call LanguageClient#workspace_executeCommand('move-to-let', [Expand('%:p'), line('.') - 1, col('.') - 1, input('Binding name: ')])<CR>
 nnoremap <silent> cril :call LanguageClient#workspace_executeCommand('introduce-let', [Expand('%:p'), line('.') - 1, col('.') - 1, input('Binding name: ')])<CR>
 nnoremap <silent> crel :call LanguageClient#workspace_executeCommand('expand-let', [Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
+nnoremap <silent> cram :call LanguageClient#workspace_executeCommand('create-missing-libspec', [Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
 ```
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.

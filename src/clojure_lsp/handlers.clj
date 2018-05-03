@@ -13,7 +13,8 @@
    [digest :as digest]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [cljfmt.core :as cljfmt])
+   [cljfmt.core :as cljfmt]
+   [clojure-lsp.refactor.edit :as edit])
   (:import
    [java.util.jar JarFile]))
 
@@ -38,53 +39,26 @@
 (defn find-reference-under-cursor [line column env]
   (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
 
-(defn add-to-ns [requires-to-add uri env]
-  (let [ns->alias (:project-aliases @db/db)
-        version (get-in @db/db [:documents uri :v] 0)
-        {:keys [add-require? row col]} (:require-pos env)
-        loc (parser/loc-at-pos (get-in @db/db [:documents uri :text]) row col)
-        requires-node (z/node (z/up (reduce
-                                     (fn [loc ns-to-add]
-                                       (-> loc (z/insert-right [ns-to-add :as (ns->alias ns-to-add)])))
-                                     (if add-require?
-                                       (-> loc (z/insert-right '(:require)) (z/right) (z/down))
-                                       loc)
-                                     requires-to-add)))
-        require-sexprs (n/list-node (interpose (n/spaces 4)
-                                               (interpose (n/newlines 1)
-                                                          (cons :require (sort-by pr-str (rest (n/child-sexprs requires-node)))))))
-        requires (n/string require-sexprs)
-        changes [{:text-document {:uri uri :version version}
-                  :edits [{:range (->range (meta requires-node))
-                           :new-text requires}]}]]
-    (log/warn "applyEdit" uri " and " version)
-    (if (:supports-document-changes @db/db)
-      {:document-changes changes}
-      {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                                [(:uri text-document) edits])
-                              changes))})))
-
 (defn send-notifications [uri env]
-  (let [unknowns (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
-                              (:usages env)))
-        aliases (set/map-invert (:project-aliases @db/db))
-        groups (group-by (fn [usage]
-                           usage
-                           (if-let [usage-ns (some-> (:sexpr usage) namespace symbol aliases)]
-                             usage-ns
-                             nil))
-                         unknowns)
-        requires-to-add (remove nil? (keys groups))
-        other-unknowns (get groups nil)]
-    ;; todo alias should be in local-env
-    ;; needs to go off config value maybe just a refactoring
-    (when false #_(seq requires-to-add)
-      (async/put! edits-chan (add-to-ns requires-to-add uri env)))
-
-    (async/put! diagnostics-chan {:uri uri :diagnostics (for [unknown other-unknowns]
-                                                          {:range (->range unknown)
-                                                           :message "Unknown symbol"
-                                                           :severity 1})})))
+  (let [unknown-usages (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
+                                    (:usages env)))
+        aliases (set/map-invert (:project-aliases @db/db))]
+    (async/put! diagnostics-chan {:uri uri
+                                  :diagnostics
+                                  (for [usage unknown-usages
+                                        :let [known-alias? (some-> (:sexpr usage)
+                                                                   namespace
+                                                                   symbol
+                                                                   aliases)
+                                              problem (if known-alias?
+                                                        :require
+                                                        :unknown)]]
+                                    {:range (->range usage)
+                                     :code problem
+                                     :message (case problem
+                                                :unknown "Unknown symbol"
+                                                :require "Needs Require")
+                                     :severity 1})})))
 
 (defn safe-find-references
   ([uri text]
@@ -334,7 +308,8 @@
    "thread-last-all" #'refactor/thread-last-all
    "move-to-let" #'refactor/move-to-let
    "introduce-let" #'refactor/introduce-let
-   "expand-let" #'refactor/expand-let})
+   "expand-let" #'refactor/expand-let
+   "add-missing-libspec" #'refactor/add-missing-libspec})
 
 (defn refactor [doc-id line column refactoring args]
   (try

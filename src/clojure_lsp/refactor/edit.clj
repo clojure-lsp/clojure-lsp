@@ -59,7 +59,7 @@
         (z/insert-child node))))
 
 (defn parent-let? [zloc]
-  (let [parent-op (-> zloc z/leftmost zspy)]
+  (let [parent-op (-> zloc z/leftmost)]
     (when (= 'let (-> parent-op z/sexpr))
       (z/up parent-op))))
 
@@ -99,29 +99,29 @@
          z/right)
     (z/next loc)))
 
+(defn exec-while [loc f p?]
+  (->> loc
+       (iterate f)
+       (take-while p?)
+       last))
+
+(defn to-top [loc]
+  (if (top? loc)
+    loc
+    (exec-while loc z/up (complement top?))))
+
+(defn to-first-top [loc]
+  (-> loc
+      (to-top)
+      (z/leftmost)))
+
+
+(defn find-namespace [zloc]
+  (-> zloc
+      (to-first-top) ; go to top form
+      (z/find-next-value z/next 'ns) ; go to ns
+      (z/up))) ; ns form
 (comment
-
-  (defn zdbg [loc msg]
-    (if (exists? js/debug)
-      (js/debug (pr-str (z/string loc)) msg)
-      (doto (z/string loc) (prn msg)))
-    loc)
-
-  (defn exec-while [loc f p?]
-    (->> loc
-         (iterate f)
-         (take-while p?)
-         last))
-
-  (defn to-top [loc]
-    (if (top? loc)
-      loc
-      (exec-while loc z/up (complement top?))))
-
-  (defn to-first-top [loc]
-    (-> loc
-        (to-top)
-        (z/leftmost)))
 
   (defn remove-left [zloc]
     (-> zloc
@@ -146,11 +146,6 @@
             (z/left)
             (transpose-with-right)))))
 
-  (defn find-namespace [zloc]
-    (-> zloc
-        (to-first-top) ; go to top form
-        (z/find-next-value z/next 'ns) ; go to ns
-        (z/up))) ; ns form
 
   ;; TODO this can probably escape the ns form - need to root the search it somehow (z/.... (z/node zloc))
   (defn find-or-create-libspec [zloc v]

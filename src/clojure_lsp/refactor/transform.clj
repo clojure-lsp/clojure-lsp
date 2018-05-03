@@ -1,5 +1,7 @@
 (ns clojure-lsp.refactor.transform
   (:require
+    [clojure.set :as set]
+    [clojure-lsp.db :as db]
    [clojure-lsp.refactor.edit :as edit]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -138,7 +140,6 @@
                 (edit/wrap-around :vector) ; wrap binding vec around form
                 (z/insert-child sym) ; add new symbol as binding
                 z/up
-                (edit/zspy)
                 (edit/join-let))]
     [{:range (meta (z/node (or loc zloc)))
       :loc loc}]))
@@ -147,7 +148,7 @@
   "Expand the scope of the next let up the tree."
   [zloc]
   (let [let-loc zloc
-        bind-node (-> let-loc edit/zspy z/down z/right z/node)]
+        bind-node (-> let-loc z/down z/right z/node)]
     (if-let [parent-loc (edit/parent-let? let-loc)]
       [{:range (meta (z/node parent-loc))
         :loc (edit/join-let let-loc)}]
@@ -165,6 +166,23 @@
                    (z/insert-child bind-node)
                    (z/insert-child 'let)
                    (edit/join-let))}]))))
+
+(defn add-missing-libspec
+  [zloc]
+  (let [ns-to-add (symbol (namespace (z/sexpr zloc)))
+        ns->alias (:project-aliases @db/db)
+        alias->ns (set/map-invert ns->alias)
+        ns-loc (edit/find-namespace zloc)
+        add-require? (not (z/find-value (zsub/subzip ns-loc) z/next :require))
+        result-loc (z/subedit-> ns-loc
+                                (cond->
+                                  add-require? (z/append-child '(:require)))
+                                (z/find-value z/next :require)
+                                (z/up)
+                                (cz/append-child (n/newlines 1))
+                                (z/append-child [(alias->ns ns-to-add) :as ns-to-add]))]
+    [{:range (meta (z/node result-loc))
+      :loc result-loc}]))
 
 (comment
    ; join if let above

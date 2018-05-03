@@ -519,8 +519,8 @@
 (defn in-range? [{:keys [row col end-row end-col]} {r :row c :col er :end-row ec :end-col}]
   (and (>= r row)
        (<= er end-row)
-       (if (= r row) (>= col c) true)
-       (if (= er end-row) (<= end-col ec) true)))
+       (if (= r row) (>= c col) true)
+       (if (= er end-row) (<= ec end-col) true)))
 
 ;; From rewrite-cljs
 (defn find-forms-in-range
@@ -533,8 +533,10 @@
         (iterate z/next)
         (take-while identity)
         (take-while (complement z/end?))
-        (filter #(and (p? %)
-                      (in-range? (-> % z/node meta) pos))))))
+        (filter (fn [loc]
+                  (and (p? loc)
+                       (in-range?
+                         (-> loc z/node meta) pos)))))))
 
 (defn find-last-by-pos
   [zloc pos]
@@ -552,6 +554,8 @@
       (find-last-by-pos {:row row :col col :end-row row :end-col col})))
 
 (comment
+  (loc-at-pos  "foo" 1 5)
+  (in-range? {:row 23, :col 1, :end-row 23, :end-col 9} {:row 23, :col 7, :end-row 23, :end-col 7} )
   (let [code (string/join "\n"
                           ["(ns thinger.foo"
                            "  (:refer-clojure :exclude [update])"

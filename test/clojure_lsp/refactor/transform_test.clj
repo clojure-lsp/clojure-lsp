@@ -1,6 +1,7 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
    [clojure.test :refer :all]
+   [clojure-lsp.db :as db]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as transform]
    [rewrite-clj.zip :as z]))
@@ -81,3 +82,10 @@
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= (str "(let [a 1]\n (+ 1 a 2))") (z/root-string loc))))))
+
+(deftest add-missing-libspec
+  (reset! db/db {:project-aliases '{foo.s s}})
+  (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
+        [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+    (is (some? range))
+    (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))

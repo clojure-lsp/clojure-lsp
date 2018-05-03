@@ -92,6 +92,8 @@
 (s/def ::severity (s/and integer?
                          (s/conformer #(DiagnosticSeverity/forValue %1))))
 
+(s/def ::code (s/conformer name))
+
 (s/def ::diagnostic (s/and (s/keys :req-un [::range ::message]
                                    :opt-un [::severity ::code ::source ::message])
                            (s/conformer #(Diagnostic. (:range %1) (:message %1) (:severity %1) (:source %1) (:code %1)))))
@@ -228,9 +230,11 @@
          (log/error e)))))
 
   (^CompletableFuture codeAction [this ^CodeActionParams params]
+    (log/warn params)
     (CompletableFuture/completedFuture
      (let [start (.getStart (.getRange params))]
-       [#_(Command. "move-to-let" "move-to-let" [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))
+       [(Command. "add-missing-libspec" "add-missing-libspec"
+                  [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))
 
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
     (CompletableFuture/supplyAsync

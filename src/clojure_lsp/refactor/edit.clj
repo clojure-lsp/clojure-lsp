@@ -99,29 +99,15 @@
          z/right)
     (z/next loc)))
 
-(defn exec-while [loc f p?]
-  (->> loc
-       (iterate f)
-       (take-while p?)
-       last))
-
-(defn to-top [loc]
-  (if (top? loc)
-    loc
-    (exec-while loc z/up (complement top?))))
-
-(defn to-first-top [loc]
-  (-> loc
-      (to-top)
-      (z/leftmost)))
-
-
 (defn find-namespace [zloc]
   (-> zloc
-      (to-first-top) ; go to top form
-      (z/find-next-value z/next 'ns) ; go to ns
+      (z/find z/up top?)
+      (z/leftmost)
+      (z/find-value z/next 'ns) ; go to ns
       (z/up))) ; ns form
+
 (comment
+(z/sexpr (find-namespace (z/rightmost (z/of-string "(ns foo) (a)"))))
 
   (defn remove-left [zloc]
     (-> zloc

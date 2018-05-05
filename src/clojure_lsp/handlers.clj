@@ -13,9 +13,9 @@
    [digest :as digest]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [cljfmt.core :as cljfmt]
-   [clojure-lsp.refactor.edit :as edit])
+   [cljfmt.core :as cljfmt])
   (:import
+   [com.google.gson JsonObject]
    [java.util.jar JarFile]))
 
 (defonce diagnostics-chan (async/chan 1))
@@ -134,8 +134,12 @@
     (catch Exception e
       (log/warn "Could not run lein in" project-root (.getMessage e)))))
 
-(defn determine-dependencies [project-root]
+(defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
+        source-paths (if client-settings
+                       (mapv #(io/file (str root-path "/" (.getAsString %)))
+                             (.getAsJsonArray (.get ^JsonObject client-settings "source-paths")))
+                       ["src"])
         project-file (io/file root-path "project.clj")]
     (if (.exists project-file)
       (let [project-hash (digest/md5 project-file)
@@ -144,20 +148,21 @@
             classpath (if use-cp-cache
                         (:classpath loaded)
                         (lookup-classpath project-root))
-            {jars true dirs false} (group-by #(.isFile %) (map io/file (reverse classpath)))
+            jars (filter #(.isFile %) (map io/file (reverse classpath)))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars))
-            file-envs (crawl-source-dirs dirs)]
+            file-envs (crawl-source-dirs source-paths)]
         (db/save-deps root-path project-hash classpath jar-envs)
         (merge file-envs jar-envs))
-      (crawl-source-dirs [(io/file root-path "src")]))))
+      (crawl-source-dirs source-paths))))
 
-(defn initialize [project-root supports-document-changes]
+(defn initialize [project-root supports-document-changes client-settings]
   (when project-root
-    (let [file-envs (determine-dependencies project-root)]
+    (let [file-envs (determine-dependencies project-root client-settings)]
       (swap! db/db assoc
              :supports-document-changes supports-document-changes
+             :client-settings client-settings
              :project-root project-root
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
@@ -351,8 +356,9 @@
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos]
+  (log/warn "range-formatting" format-pos)
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
-        forms (parser/find-top-forms-in-range (z/of-string text) format-pos)]
+        forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]
             {:range (->range (-> form-loc z/node meta))
              :new-text (n/string (cljfmt/reformat-form (z/node form-loc)))})

@@ -8,45 +8,47 @@
   (:import
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
    (org.eclipse.lsp4j
-    CompletionItem
-    CompletionItemKind
-    CompletionOptions
-    DidChangeConfigurationParams
-    DidChangeTextDocumentParams
-    DidChangeWatchedFilesParams
-    DidCloseTextDocumentParams
-    DidOpenTextDocumentParams
-    DidSaveTextDocumentParams
-    DocumentFormattingParams
-    DocumentRangeFormattingParams
-    Hover
-    InitializeParams
-    InitializeResult
-    InitializedParams
-    Location
-    ParameterInformation
-    Position
-    Range
-    ReferenceParams
-    RenameParams
-    SaveOptions
-    ServerCapabilities
-    SignatureHelp
-    SignatureHelpOptions
-    SignatureInformation
-    TextDocumentContentChangeEvent
-    TextDocumentEdit
-    TextDocumentPositionParams
-    TextDocumentSyncKind
-    TextDocumentSyncOptions
-    TextEdit
-    VersionedTextDocumentIdentifier
-    WorkspaceEdit
-    ExecuteCommandParams
-    ApplyWorkspaceEditParams
-    PublishDiagnosticsParams
-    Diagnostic
-    DiagnosticSeverity MarkedString CodeActionParams Command)
+     CompletionItem
+     CompletionItemKind
+     CompletionOptions
+     CompletionParams
+     ConfigurationParams
+     DidChangeConfigurationParams
+     DidChangeTextDocumentParams
+     DidChangeWatchedFilesParams
+     DidCloseTextDocumentParams
+     DidOpenTextDocumentParams
+     DidSaveTextDocumentParams
+     DocumentFormattingParams
+     DocumentRangeFormattingParams
+     Hover
+     InitializeParams
+     InitializeResult
+     InitializedParams
+     Location
+     ParameterInformation
+     Position
+     Range
+     ReferenceParams
+     RenameParams
+     SaveOptions
+     ServerCapabilities
+     SignatureHelp
+     SignatureHelpOptions
+     SignatureInformation
+     TextDocumentContentChangeEvent
+     TextDocumentEdit
+     TextDocumentPositionParams
+     TextDocumentSyncKind
+     TextDocumentSyncOptions
+     TextEdit
+     VersionedTextDocumentIdentifier
+     WorkspaceEdit
+     ExecuteCommandParams
+     ApplyWorkspaceEditParams
+     PublishDiagnosticsParams
+     Diagnostic
+     DiagnosticSeverity MarkedString CodeActionParams Command ConfigurationItem)
    (org.eclipse.lsp4j.launch LSPLauncher)
    (java.util.concurrent CompletableFuture)
    (java.util.function Supplier)
@@ -120,6 +122,8 @@
         (log/error (s/explain-data spec value))
         result))))
 
+(defonce formatting (atom false))
+
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [this ^DidOpenTextDocumentParams params]
@@ -155,7 +159,7 @@
            (catch Exception e
              (log/error e)))))))
 
-  (^CompletableFuture completion [this ^TextDocumentPositionParams params]
+  (^CompletableFuture completion [this ^CompletionParams params]
     (CompletableFuture/supplyAsync
      (reify Supplier
        (get [this]
@@ -214,20 +218,24 @@
              (log/error e)))))))
 
   (^CompletableFuture rangeFormatting [this ^DocumentRangeFormattingParams params]
-    (CompletableFuture/completedFuture
-     (try
-       (let [doc-id (.getUri (.getTextDocument params))
-             range (.getRange params)
-             start (.getStart range)
-             end (.getEnd range)]
-         (conform-or-log ::edits (#'handlers/range-formatting
-                                   doc-id
-                                   {:row (inc (.getLine start))
-                                    :col (inc (.getCharacter start))
-                                    :end-row (inc (.getLine end))
-                                    :end-col (inc (.getCharacter end))})))
-       (catch Exception e
-         (log/error e)))))
+    (let [result (when (compare-and-set! formatting false true)
+                   (try
+                     (let [doc-id (.getUri (.getTextDocument params))
+                           range (.getRange params)
+                           start (.getStart range)
+                           end (.getEnd range)]
+                       (conform-or-log ::edits (#'handlers/range-formatting
+                                                 doc-id
+                                                 {:row (inc (.getLine start))
+                                                  :col (inc (.getCharacter start))
+                                                  :end-row (inc (.getLine end))
+                                                  :end-col (inc (.getCharacter end))})))
+                     (catch Exception e
+                       (log/error e))
+                     (finally
+                       (reset! formatting false))))]
+      (CompletableFuture/completedFuture
+       result)))
 
   (^CompletableFuture codeAction [this ^CodeActionParams params]
     (log/warn params)
@@ -255,13 +263,18 @@
     (log/warn params)
     (let [[doc-id line col & args] (.getArguments params)]
       (future
-        (.get (.applyEdit (:client @db/db)
-                          (ApplyWorkspaceEditParams.
-                           (conform-or-log ::workspace-edit (#'handlers/refactor doc-id
-                                                                                 (inc (int line))
-                                                                                 (inc (int col))
-                                                                                 (.getCommand params)
-                                                                                 args)))))))
+
+        (try
+          (let [result (#'handlers/refactor doc-id
+                                            (inc (int line))
+                                            (inc (int col))
+                                            (.getCommand params)
+                                            args)]
+            (.get (.applyEdit (:client @db/db)
+                              (ApplyWorkspaceEditParams.
+                               (conform-or-log ::workspace-edit result)))))
+          (catch Exception e
+            (log/error e)))))
     (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
     (log/warn params))
@@ -279,7 +292,7 @@
                       (.getWorkspaceEdit)
                       (.getDocumentChanges))
               true)]
-      (#'handlers/initialize (.getRootUri params) document-changes))
+      (#'handlers/initialize (.getRootUri params) document-changes (.getInitializationOptions params)))
     (CompletableFuture/completedFuture
      (InitializeResult. (doto (ServerCapabilities.)
                           (.setHoverProvider true)

@@ -192,7 +192,15 @@
       (is (not= 'java.util.jar.JarFile (:sym unknown-ref)))
       (is (= #{:unknown} (:tags unknown-ref))))))
 
-#_
+(deftest find-loc-at-pos-test
+  (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 1))))
+  (is (= 'foo (z/sexpr (parser/loc-at-pos "  foo  " 1 3))))
+  (is (= 'foo (z/sexpr (parser/loc-at-pos "  foo  " 1 5))))
+  (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 6)))))
+
 (deftest find-top-forms-test
   (let [code "(a) (b c d)"]
-    (is (= '[(a) (b c d)] (map z/sexpr (parser/find-top-forms-in-range (z/of-string code) {:row 1 :col 2 :end-row 1 :end-col (count code)}))))))
+    (is (= '[(a) (b c d)]
+           (->> {:row 1 :col 2 :end-row 1 :end-col (count code)}
+                (parser/find-top-forms-in-range code)
+                (map z/sexpr))))))

@@ -516,35 +516,34 @@
       (find-references* (volatile! default-env) {})))
 
 ;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col]} {r :row c :col er :end-row ec :end-col}]
+(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
+                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
   (and (>= r row)
        (<= er end-row)
        (if (= r row) (>= c col) true)
-       (if (= er end-row) (<= ec end-col) true)))
+       (if (= er end-row) (< ec end-col) true)))
 
 ;; From rewrite-cljs
-(defn find-forms-in-range
+(defn find-forms
   "Find last node (if more than one node) that is in range of pos and
   satisfying the given predicate depth first from initial zipper
   location."
-  ([zloc pos] (find-forms-in-range zloc pos (constantly true)))
-  ([zloc pos p?]
-   (->> zloc
-        (iterate z/next)
-        (take-while identity)
-        (take-while (complement z/end?))
-        (filter (fn [loc]
-                  (and (p? loc)
-                       (in-range?
-                         (-> loc z/node meta) pos)))))))
+  [zloc p?]
+  (->> zloc
+       (iterate z/next)
+       (take-while identity)
+       (take-while (complement z/end?))
+       (filter p?)))
 
 (defn find-last-by-pos
   [zloc pos]
-  (last (find-forms-in-range zloc pos)))
+  (last (find-forms zloc #(in-range?
+                            (-> % z/node meta) pos))))
 
 (defn find-top-forms-in-range
-  [zloc pos]
-  (->> (find-forms-in-range zloc pos)
+  [code pos]
+  (->> (find-forms (z/of-string code) #(in-range?
+                                         pos (-> % z/node meta)))
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 
@@ -555,7 +554,7 @@
 
 (comment
   (loc-at-pos  "foo" 1 5)
-  (in-range? {:row 23, :col 1, :end-row 23, :end-col 9} {:row 23, :col 7, :end-row 23, :end-col 7} )
+  (in-range? {:row 23, :col 1, :end-row 23, :end-col 9} {:row 23, :col 7, :end-row 23, :end-col 7})
   (let [code (string/join "\n"
                           ["(ns thinger.foo"
                            "  (:refer-clojure :exclude [update])"

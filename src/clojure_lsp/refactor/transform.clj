@@ -2,12 +2,12 @@
   (:require
     [clojure.set :as set]
     [clojure-lsp.db :as db]
-   [clojure-lsp.refactor.edit :as edit]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [rewrite-clj.custom-zipper.core :as cz]
-   [rewrite-clj.zip.subedit :as zsub]
-   [clojure.tools.logging :as log]))
+    [clojure-lsp.refactor.edit :as edit]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z]
+    [rewrite-clj.custom-zipper.core :as cz]
+    [rewrite-clj.zip.subedit :as zsub]
+    [clojure.tools.logging :as log]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]

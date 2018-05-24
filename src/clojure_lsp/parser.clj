@@ -106,7 +106,7 @@
       (let [key-sexpr (z/sexpr key-loc)
             val-loc (z/right key-loc)]
         (cond
-          (= :keys key-sexpr)
+          (#{:keys :strs :syms} key-sexpr)
           (recur (edit/skip-over val-loc)
                  (loop [child-loc (z/down val-loc)
                         scoped scoped]

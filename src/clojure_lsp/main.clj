@@ -4,6 +4,7 @@
    [clojure-lsp.handlers :as handlers]
    [clojure.tools.logging :as log]
    [clojure.spec.alpha :as s]
+   [clojure.string :as string]
    [clojure.core.async :as async])
   (:import
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
@@ -260,15 +261,26 @@
            (catch Exception e
              (log/error e))))))))
 
+(defn json->clj [json-primitive]
+  (cond
+    (.isString json-primitive) (.getAsString json-primitive)
+    (.isNumber json-primitive) (.getAsLong json-primitive)
+    (.isBoolean json-primitive) (.getAsBoolean json-primitive)
+    :else json-primitive))
+
+(defn- path->uri [path]
+  (if (string/starts-with? path "/")
+    (str "file://" path)
+    path))
+
 (deftype LSPWorkspaceService []
   WorkspaceService
   (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
     (log/warn params)
-    (let [[doc-id line col & args] (.getArguments params)]
+    (let [[doc-id line col & args] (map json->clj (.getArguments params))]
       (future
-
         (try
-          (let [result (#'handlers/refactor doc-id
+          (let [result (#'handlers/refactor (path->uri doc-id)
                                             (inc (int line))
                                             (inc (int col))
                                             (.getCommand params)

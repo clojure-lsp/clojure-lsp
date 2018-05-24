@@ -139,7 +139,7 @@
         source-paths (if client-settings
                        (mapv #(io/file (str root-path "/" (.getAsString %)))
                              (.getAsJsonArray (.get ^JsonObject client-settings "source-paths")))
-                       ["src"])
+                       [(io/file (str root-path "/src"))])
         project-file (io/file root-path "project.clj")]
     (if (.exists project-file)
       (let [project-hash (digest/md5 project-file)

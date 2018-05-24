@@ -55,8 +55,8 @@
    (org.eclipse.lsp4j.jsonrpc.messages Either))
   (:gen-class))
 
-(s/def ::line integer?)
-(s/def ::character integer?)
+(s/def ::line (s/and integer? (s/conformer int)))
+(s/def ::character (s/and integer? (s/conformer int)))
 (s/def ::position (s/and (s/keys :req-un [::line ::character])
                          (s/conformer #(Position. (:line %1) (:character %1)))))
 (s/def ::start ::position)
@@ -75,7 +75,7 @@
                                                    (.setAdditionalTextEdits item additional-text-edits))
                                                  item)))))
 (s/def ::completion-items (s/coll-of ::completion-item))
-(s/def ::version integer?)
+(s/def ::version (s/and integer? (s/conformer int)))
 (s/def ::uri string?)
 (s/def ::edits (s/coll-of ::text-edit))
 (s/def ::text-document (s/and (s/keys :req-un [::version ::uri])
@@ -117,10 +117,13 @@
 
 (defn conform-or-log [spec value]
   (when value
-    (let [result (s/conform spec value)]
-      (if (= :clojure.spec.alpha/invalid result)
-        (log/error (s/explain-data spec value))
-        result))))
+    (try
+      (let [result (s/conform spec value)]
+        (if (= :clojure.spec.alpha/invalid result)
+          (log/error (s/explain-data spec value))
+          result))
+      (catch Exception ex
+        (log/error ex spec value)))))
 
 (defonce formatting (atom false))
 

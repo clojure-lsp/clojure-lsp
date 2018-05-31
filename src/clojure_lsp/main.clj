@@ -261,18 +261,31 @@
            (catch Exception e
              (log/error e))))))))
 
-(defn ^:private json->clj [json-element]
+(defn- json->clj [json-element]
   (cond
-    (.isJsonNull json-element) nil
-    (.isJsonArray json-element) (mapv json->clj (iterator-seq (.iterator (.getAsJsonArray json-element))))
-    (.isJsonObject json-element) (into {} (map (juxt key (comp json->clj val)) (.entrySet (.getAsJsonObject json-element))))
-    (.isJsonPrimitive json-element) (let [json-primitive (.getAsJsonPrimitive json-element)]
-                                      (cond
-                                        (.isString json-primitive) (.getAsString json-primitive)
-                                        (.isNumber json-primitive) (.getAsLong json-primitive)
-                                        (.isBoolean json-primitive) (.getAsBoolean json-primitive)
-                                        :else json-primitive))
-    :else json-element))
+    (.isJsonNull json-element)
+    nil
+
+    (.isJsonArray json-element)
+    (mapv json->clj (iterator-seq (.iterator (.getAsJsonArray json-element))))
+
+    (.isJsonObject json-element)
+    (->> json-element
+         (.getAsJsonObject)
+         (.entrySet)
+         (map (juxt key (comp json->clj val)))
+         (into {}))
+
+    (.isJsonPrimitive json-element)
+    (let [json-primitive (.getAsJsonPrimitive json-element)]
+      (cond
+        (.isString json-primitive) (.getAsString json-primitive)
+        (.isNumber json-primitive) (.getAsLong json-primitive)
+        (.isBoolean json-primitive) (.getAsBoolean json-primitive)
+        :else json-primitive))
+
+    :else
+    json-element))
 
 (defn- path->uri [path]
   (if (string/starts-with? path "/")

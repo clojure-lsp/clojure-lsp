@@ -37,6 +37,7 @@
    :imports {}
    :aliases {}
    :publics #{}
+   :locals #{}
    :usages []})
 
 (defmacro zspy [loc]
@@ -44,7 +45,7 @@
      (log/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
-(defn qualify-ident [ident {:keys [aliases publics refers imports requires ns] :as context} scoped]
+(defn qualify-ident [ident {:keys [aliases locals publics refers imports requires ns] :as context} scoped]
   (when (ident? ident)
     (let [ident-ns (some-> (namespace ident) symbol)
           ident-name (name ident)
@@ -57,6 +58,7 @@
         (cond
           (keyword? ident) {:sym ident}
           (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
+          (contains? locals ident) {:sym (ctr (name ns) ident-name)}
           (contains? publics ident) {:sym (ctr (name ns) ident-name)}
           (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
           (contains? imports ident) {:sym (get imports ident) :tags #{:norename}}
@@ -344,24 +346,41 @@
     (handle-rest if-loc context if-scoped)
     (handle-rest (z/right if-loc) context scoped)))
 
+(defn- local? [op-loc]
+  (let [op (z/sexpr op-loc)
+        op-name (name op)
+        name-sexpr (z/sexpr (z/right op-loc))]
+    (or (and (symbol? name-sexpr) (:private (meta name-sexpr)))
+        (not (string/starts-with? op-name "def"))
+        (string/ends-with? op-name "-"))))
+
 (defn handle-def
   [op-loc loc context scoped]
-  (let [def-sym (z/node (z/right op-loc))]
-    (vswap! context update :publics conj (n/sexpr def-sym))
-    (add-reference context scoped def-sym {:tags #{:declare :public}})
+  (let [def-sym (z/node (z/right op-loc))
+        op-local? (local? op-loc)]
+    (if op-local?
+      (vswap! context update :locals conj (n/sexpr def-sym))
+      (vswap! context update :publics conj (n/sexpr def-sym)))
+    (add-reference context scoped def-sym {:tags (if op-local?
+                                                   #{:declare :local}
+                                                   #{:declare :public})})
     (handle-rest (z/right (z/right op-loc))
                  context scoped)))
 
 (defn handle-function
   [op-loc loc context scoped name-tags]
-  (let [name-loc (z/right op-loc)
+  (let [op-local? (local? op-loc)
+        name-loc (z/right op-loc)
         multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
-    (if (:public name-tags)
-      (vswap! context update :publics conj (z/sexpr name-loc)))
     ;; TODO handle multi signatures
-    (if (symbol? (z/sexpr name-loc))
+    (when (symbol? (z/sexpr name-loc))
+      (if op-local?
+        (vswap! context update :locals conj (z/sexpr name-loc))
+        (vswap! context update :publics conj (z/sexpr name-loc)))
       (add-reference context scoped (z/node name-loc)
-                     {:tags name-tags
+                     {:tags (if op-local?
+                              (conj name-tags :local)
+                              (conj name-tags :public))
                       :signature (z/string (z/find-tag name-loc z/next :vector))}))
     (if multi?
       (loop [list-loc (z/find-tag op-loc :list)]
@@ -386,7 +405,7 @@
 
 (defn handle-defn
   [op-loc loc context scoped]
-  (handle-function op-loc loc context scoped #{:declare :public}))
+  (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-catch
   [op-loc loc context scoped]

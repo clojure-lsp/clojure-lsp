@@ -261,12 +261,18 @@
            (catch Exception e
              (log/error e))))))))
 
-(defn json->clj [json-primitive]
+(defn ^:private json->clj [json-element]
   (cond
-    (.isString json-primitive) (.getAsString json-primitive)
-    (.isNumber json-primitive) (.getAsLong json-primitive)
-    (.isBoolean json-primitive) (.getAsBoolean json-primitive)
-    :else json-primitive))
+    (.isJsonNull json-element) nil
+    (.isJsonArray json-element) (mapv json->clj (iterator-seq (.iterator (.getAsJsonArray json-element))))
+    (.isJsonObject json-element) (into {} (map (juxt key (comp json->clj val)) (.entrySet (.getAsJsonObject json-element))))
+    (.isJsonPrimitive json-element) (let [json-primitive (.getAsJsonPrimitive json-element)]
+                                      (cond
+                                        (.isString json-primitive) (.getAsString json-primitive)
+                                        (.isNumber json-primitive) (.getAsLong json-primitive)
+                                        (.isBoolean json-primitive) (.getAsBoolean json-primitive)
+                                        :else json-primitive))
+    :else json-element))
 
 (defn- path->uri [path]
   (if (string/starts-with? path "/")
@@ -307,7 +313,7 @@
                       (.getWorkspaceEdit)
                       (.getDocumentChanges))
               true)]
-      (#'handlers/initialize (.getRootUri params) document-changes (.getInitializationOptions params)))
+      (#'handlers/initialize (.getRootUri params) document-changes (json->clj (.getInitializationOptions params))))
     (CompletableFuture/completedFuture
      (InitializeResult. (doto (ServerCapabilities.)
                           (.setHoverProvider true)

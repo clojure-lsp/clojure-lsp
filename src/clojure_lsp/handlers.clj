@@ -15,7 +15,6 @@
    [rewrite-clj.zip :as z]
    [cljfmt.core :as cljfmt])
   (:import
-   [com.google.gson JsonObject]
    [java.util.jar JarFile]))
 
 (defonce diagnostics-chan (async/chan 1))
@@ -137,8 +136,8 @@
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
         source-paths (if client-settings
-                       (mapv #(io/file (str root-path "/" (.getAsString %)))
-                             (.getAsJsonArray (.get ^JsonObject client-settings "source-paths")))
+                       (mapv #(io/file (str root-path "/" %))
+                             (get client-settings "source-paths"))
                        [(io/file (str root-path "/src"))])
         project-file (io/file root-path "project.clj")]
     (if (.exists project-file)
@@ -297,13 +296,14 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
-    (log/warn "definition" doc-id line column)
+    (log/warn "definition" doc-id line column cursor-sym)
     (first
-     (for [[doc-id {:keys [usages]}] file-envs
-           {:keys [sym tags] :as usage} usages
-           :when (= sym cursor-sym)
-           :when (and (:public tags) (:declare tags))]
-       {:uri doc-id :range (->range usage)}))))
+      (for [[env-doc-id {:keys [usages]}] file-envs
+            {:keys [sym tags] :as usage} usages
+            :when (= sym cursor-sym)
+            :when (and (or (= doc-id env-doc-id) (:public tags))
+                       (:declare tags))]
+        {:uri env-doc-id :range (->range usage)}))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll

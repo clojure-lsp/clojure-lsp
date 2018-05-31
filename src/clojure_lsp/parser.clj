@@ -370,17 +370,20 @@
 (defn handle-function
   [op-loc loc context scoped name-tags]
   (let [op-local? (local? op-loc)
+        op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z/right op-loc)
         multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
-    ;; TODO handle multi signatures
     (when (symbol? (z/sexpr name-loc))
-      (if op-local?
-        (vswap! context update :locals conj (z/sexpr name-loc))
-        (vswap! context update :publics conj (z/sexpr name-loc)))
+      (cond
+        op-fn? nil
+        op-local? (vswap! context update :locals conj (z/sexpr name-loc))
+        :else (vswap! context update :publics conj (z/sexpr name-loc)))
       (add-reference context scoped (z/node name-loc)
-                     {:tags (if op-local?
-                              (conj name-tags :local)
-                              (conj name-tags :public))
+                     {:tags (cond
+                              op-fn? name-tags
+                              op-local? (conj name-tags :local)
+                              :else (conj name-tags :public))
+                      ;; TODO handle multi signatures
                       :signature (z/string (z/find-tag name-loc z/next :vector))}))
     (if multi?
       (loop [list-loc (z/find-tag op-loc :list)]

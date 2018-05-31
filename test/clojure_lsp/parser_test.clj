@@ -63,6 +63,32 @@
       (is (= "[b] b a)" (scoped-str code (:scope-bounds bound-ref))))
       (is (= (:sym bound-ref) (:sym usage-ref)))
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
+  (testing "private"
+    (let [code "(defn- a [b] b a)"
+          usages (:usages (parser/find-references code))
+          bound-ref (nth usages 2)
+          usage-ref (nth usages 3)]
+      (is (= 'user/a (:sym (nth usages 1))))
+      (is (= #{:declare :local} (:tags (nth usages 1))))
+      (is (not= "user" (namespace (:sym bound-ref))))
+      (is (= "b" (name (:sym bound-ref))))
+      (is (= #{:declare :param} (:tags bound-ref)))
+      (is (= "[b] b a)" (scoped-str code (:scope-bounds bound-ref))))
+      (is (= (:sym bound-ref) (:sym usage-ref)))
+      (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
+  (testing "private meta"
+    (let [code "(defn ^:private a [b] b a)"
+          usages (:usages (parser/find-references code))
+          bound-ref (nth usages 2)
+          usage-ref (nth usages 3)]
+      (is (= 'user/a (:sym (nth usages 1))))
+      (is (= #{:declare :local} (:tags (nth usages 1))))
+      (is (not= "user" (namespace (:sym bound-ref))))
+      (is (= "b" (name (:sym bound-ref))))
+      (is (= #{:declare :param} (:tags bound-ref)))
+      (is (= "[b] b a)" (scoped-str code (:scope-bounds bound-ref))))
+      (is (= (:sym bound-ref) (:sym usage-ref)))
+      (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
   (testing "multi-arity"
     (let [code "(defn a ([b] b) ([b c] b))"
           usages (:usages (parser/find-references code))

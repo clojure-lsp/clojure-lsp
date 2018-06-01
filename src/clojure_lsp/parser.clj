@@ -367,6 +367,21 @@
     (handle-rest (z/right (z/right op-loc))
                  context scoped)))
 
+(defn- function-signatures [name-loc multi?]
+  (if multi?
+    (loop [list-loc (z/find-tag name-loc :list)
+           params []]
+      (let [params (conj params (z/string (z/down list-loc)))]
+        (if-let [next-list (z/find-next-tag list-loc :list)]
+          (recur next-list params)
+          params)))
+    [(z/string (z/find-tag name-loc z/next :vector))]))
+
+(defn- function-params-and-body [params-loc context scoped]
+  (let [body-loc (z/right params-loc)]
+    (->> (parse-params params-loc context scoped)
+         (handle-rest body-loc context))))
+
 (defn handle-function
   [op-loc loc context scoped name-tags]
   (let [op-local? (local? op-loc)
@@ -383,20 +398,13 @@
                               op-fn? name-tags
                               op-local? (conj name-tags :local)
                               :else (conj name-tags :public))
-                      ;; TODO handle multi signatures
-                      :signature (z/string (z/find-tag name-loc z/next :vector))}))
+                      :signatures (function-signatures name-loc multi?)}))
     (if multi?
       (loop [list-loc (z/find-tag op-loc :list)]
-        (let [params-loc (z/down list-loc)
-              body-loc (z/right params-loc)]
-          (->> (parse-params params-loc context scoped)
-               (handle-rest body-loc context)))
+        (function-params-and-body (z/down list-loc) context scoped)
         (when-let [next-list (z/find-next-tag list-loc :list)]
           (recur next-list)))
-      (let [params-loc (z/find-tag op-loc :vector)
-            body-loc (z/right params-loc)]
-        (->> (parse-params params-loc context scoped)
-             (handle-rest body-loc context))))))
+      (function-params-and-body (z/find-tag op-loc :vector) context scoped))))
 
 (defn handle-defmethod
   [op-loc loc context scoped]

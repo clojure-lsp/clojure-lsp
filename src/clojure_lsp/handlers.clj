@@ -335,17 +335,16 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor (find-reference-under-cursor line column local-env)
-        signature (first
-                   (for [[_ {:keys [usages]}] file-envs
-                         {:keys [sym tags] :as usage} usages
-                         :when (and (= sym (:sym cursor)) (:declare tags))]
-                     (:signature usage)))]
+        signatures (first
+                     (for [[_ {:keys [usages]}] file-envs
+                           {:keys [sym tags] :as usage} usages
+                           :when (and (= sym (:sym cursor)) (:declare tags))]
+                       (:signatures usage)))]
     (if cursor
       {:range (->range cursor)
-       :contents [(-> cursor
-                      (select-keys [:sym :tags])
-                      (assoc :signature signature)
-                      (pr-str))]}
+       :contents [(cond-> (select-keys cursor [:sym :tags])
+                    (seq signatures) (assoc :signatures signatures)
+                    :always (pr-str))]}
       {:contents []})))
 
 (defn formatting [doc-id]

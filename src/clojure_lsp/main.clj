@@ -263,6 +263,9 @@
 
 (defn- json->clj [json-element]
   (cond
+    (nil? json-element)
+    nil
+
     (.isJsonNull json-element)
     nil
 

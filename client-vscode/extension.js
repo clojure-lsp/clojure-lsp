@@ -6,10 +6,10 @@ const lsp = require('vscode-languageclient');
 function activate(context) {
 
 	let serverOptions =  {
-		run : { command: "/usr/local/bin/clojure-lsp" },
+		run : { command: "clojure-lsp" },
 		debug: { command: 'bash', args: ['-c', 'cd /Users/case/dev/lsp/ && lein run'] }
 	};
-	
+
 	// Options to control the language client
 	let clientOptions = {
 		// Register the server for plain text documents

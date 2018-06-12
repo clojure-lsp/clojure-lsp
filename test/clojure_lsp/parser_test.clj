@@ -32,18 +32,19 @@
 
 (deftest qualify-ident-test
   (let [context (volatile! {})]
-    (is (= {:sym 'clojure.core/for :tags #{:norename}} (parser/qualify-ident 'for context {})))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename}} (parser/qualify-ident 'Exception context {})))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename}} (parser/qualify-ident 'Exception. context {})))
-    (is (= {:sym '.getMessage :tags #{:method :norename}} (parser/qualify-ident '.getMessage context {})))
-    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename}} (parser/qualify-ident 'Thread/sleep context {})))))
+    (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {})))
+    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {})))
+    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {})))
+    (is (= {:sym '.getMessage :tags #{:method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {})))
+    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {})))
+    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {})))))
 
 (deftest find-references-simple-test
   (testing "simple stuff"
     (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux}
            (syms "(ns foo.bar) (def qux qux)")))
-    (is (= 1 (count (syms "(:id user)"))))
-    (is (= 2 (count (syms "{:x id :y (:id user)}")))))
+    (is (= 2 (count (syms "(:id user)"))))
+    (is (= 5 (count (syms "{:x id :y (:id user)}")))))
   (testing "#(dispatch-macro)"
     (let [code "#(% %1 %2 %&)"
           usages (:usages (parser/find-references code))]
@@ -206,7 +207,7 @@
       #_
       (is (not= #{:unknown} (:tags hi-ref)))))
   (testing "import"
-    (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static :a) (JarFile.)"
+    (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static 1) (JarFile.)"
           {:keys [usages imports]} (parser/find-references code)
           jar-file-ref (nth usages 1)
           file-ref (nth usages 2)
@@ -217,6 +218,24 @@
       (is (= 'java.io.File/static (:sym file-static-ref)))
       (is (not= 'java.util.jar.JarFile (:sym unknown-ref)))
       (is (= #{:unknown} (:tags unknown-ref))))))
+
+(deftest find-references-keyword-test
+  (testing "simple"
+    (let [code "(ns bar (:require [qux :as q])) :foo/foo :foo ::foo ::q/foo ::x/foo"
+          usages (drop 1 (:usages (parser/find-references code)))]
+      (is (= [":foo/foo" ":foo" "::foo" "::q/foo" "::x/foo"] (mapv :str usages)))
+      (is (= [:foo/foo :foo :bar/foo :qux/foo] (butlast (mapv :sym usages))))
+      (is (nil? (seq (remove nil? (mapv :tags (butlast usages))))))
+      (is (not= 'x (namespace (:sym (last usages)))))
+      (is (not= 'user (namespace (:sym (last usages)))))
+      (is (= #{:unknown} (:tags (last usages)))))))
+
+(deftest find-references-symbols-test
+  (testing "simple"
+    (let [code "(ns bar (:require [qux :as q])) (def foo 1) qux/foo q/foo"
+          usages (drop 2 (:usages (parser/find-references code)))]
+      (is (= ["foo" "qux/foo" "q/foo"] (mapv :str usages)))
+      (is (= '[bar/foo qux/foo qux/foo] (mapv :sym usages))))))
 
 (deftest find-loc-at-pos-test
   (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 1))))

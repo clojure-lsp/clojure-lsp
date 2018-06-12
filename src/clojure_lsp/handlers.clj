@@ -45,9 +45,7 @@
     (async/put! diagnostics-chan {:uri uri
                                   :diagnostics
                                   (for [usage unknown-usages
-                                        :let [known-alias? (some-> (:sexpr usage)
-                                                                   namespace
-                                                                   symbol
+                                        :let [known-alias? (some-> (:unkown-ns usage)
                                                                    aliases)
                                               problem (if known-alias?
                                                         :require
@@ -186,7 +184,7 @@
         local-env (get file-envs doc-id)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
-        cursor-value (some-> (find-reference-under-cursor line column local-env) :sexpr str)
+        cursor-value (some-> (find-reference-under-cursor line column local-env) :str)
         matches-cursor? #(some-> % (string/starts-with? cursor-value))
         matches-ns? (fn [ns-sym]
                       (and (or (= cursor-value (str ns-sym))
@@ -203,7 +201,7 @@
     (concat
      (->> (:usages local-env)
           (filter (comp :declare :tags))
-          (filter (comp matches-cursor? str :sexpr))
+          (filter (comp matches-cursor? :str))
           (remove (fn [usage]
                     (when-let [scope-bounds (:scope-bounds usage)]
                       (not= :within (check-bounds line column scope-bounds)))))
@@ -266,20 +264,19 @@
 (defn rename [doc-id line column new-name]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        {cursor-sym :sym cursor-sexpr :sexpr tags :tags} (find-reference-under-cursor line column local-env)]
+        {cursor-sym :sym cursor-str :str tags :tags} (find-reference-under-cursor line column local-env)]
     (when-not (contains? tags :norename)
-      (let [replacement (if-let [cursor-ns (namespace cursor-sexpr)]
+      (let [[_ cursor-ns _] (parser/ident-split cursor-str)
+            replacement (if cursor-ns
                           (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
                           new-name)
             changes (->> (for [[doc-id {:keys [usages]}] file-envs
                                :let [version (get-in @db/db [:documents doc-id :v] 0)]
-                               {:keys [sym sexpr] :as usage} usages
-                               :when (= sym cursor-sym)
-                               :let [sym-ns (namespace sexpr)]]
+                               {u-sym :sym u-str :str :as usage} usages
+                               :when (= u-sym cursor-sym)
+                               :let [[u-prefix u-ns _] (parser/ident-split u-str)]]
                            {:range (->range usage)
-                            :new-text (if sym-ns
-                                        (str sym-ns "/" replacement)
-                                        replacement)
+                            :new-text (str u-prefix u-ns (when u-ns "/") replacement)
                             :text-document {:version version :uri doc-id}})
                          (group-by :text-document)
                          (remove (comp empty? val))

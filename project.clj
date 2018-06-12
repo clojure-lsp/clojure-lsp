@@ -18,4 +18,5 @@
                              [lein-bin "0.3.4"]
                              [lein-repl-run "0.1.0"]]
                    :bin {:name "clojure-lsp"}}
+             :test {:test-selectors {:focused :focused}}
              :uberjar {:aot :all}})

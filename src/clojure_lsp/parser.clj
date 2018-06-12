@@ -15,7 +15,9 @@
    [rewrite-clj.zip.find :as zf]
    [rewrite-clj.zip.move :as zm]
    [rewrite-clj.zip.walk :as zw]
-   [rewrite-clj.zip.subedit :as zsub]))
+   [rewrite-clj.zip.subedit :as zsub])
+  (:import
+    (rewrite_clj.node.meta MetaNode)))
 
 (declare find-references*)
 (declare parse-destructuring)
@@ -45,61 +47,83 @@
      (log/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
-(defn qualify-ident [ident {:keys [aliases locals publics refers imports requires ns] :as context} scoped]
-  (when (ident? ident)
-    (let [ident-ns (some-> (namespace ident) symbol)
-          ident-name (name ident)
+(defn ident-split [ident-str]
+  (let [ident-conformed (some-> ident-str (string/replace ":" ""))
+        prefix (string/replace ident-str #"^(::?)?.*" "$1")]
+    (if (string/index-of ident-conformed "/")
+      (into [prefix] (string/split ident-conformed #"/" 2))
+      [prefix nil ident-conformed])))
+
+(defn qualify-ident [ident-node {:keys [aliases locals publics refers imports requires ns] :as context} scoped]
+  (when (ident? (n/sexpr ident-node))
+    (let [ident (n/sexpr ident-node)
+          ident-str (if (instance? MetaNode ident-node)
+                      (n/string (nth (n/children ident-node) 2))
+                      (n/string ident-node))
+          [prefix ident-ns-str ident-name] (ident-split ident-str)
+          ident-ns (some-> ident-ns-str symbol)
           constructor (when-let [sym (symbol (string/replace ident-name #"\.$" ""))]
                         (or (get lang-imports sym)
                             (get imports sym)))
           alias->ns (set/map-invert aliases)
           ctr (if (symbol? ident) symbol keyword)]
-      (if (simple-ident? ident)
-        (cond
-          (keyword? ident) {:sym ident}
-          (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
-          (contains? locals ident) {:sym (ctr (name ns) ident-name)}
-          (contains? publics ident) {:sym (ctr (name ns) ident-name)}
-          (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
-          (contains? imports ident) {:sym (get imports ident) :tags #{:norename}}
-          (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
-          (contains? lang-imports ident) {:sym (get lang-imports ident) :tags #{:norename}}
-          (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
-          constructor {:sym constructor :tags #{:norename}}
-          :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
-        (cond
-          (contains? alias->ns ident-ns)
-          {:sym (ctr (name (alias->ns ident-ns)) ident-name)}
+      (assoc
+        (if-not ident-ns
+          (cond
+            (and (keyword? ident) (= prefix "::"))
+            {:sym (ctr (name ns) ident-name)}
 
-          (contains? requires ident-ns)
-          {:sym ident}
+            (keyword? ident) {:sym ident}
+            (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
+            (contains? locals ident) {:sym (ctr (name ns) ident-name)}
+            (contains? publics ident) {:sym (ctr (name ns) ident-name)}
+            (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
+            (contains? imports ident) {:sym (get imports ident) :tags #{:norename}}
+            (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
+            (contains? lang-imports ident) {:sym (get lang-imports ident) :tags #{:norename}}
+            (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
+            constructor {:sym constructor :tags #{:norename}}
+            :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
+          (cond
+            (and (contains? alias->ns ident-ns)
+                 (or
+                   (and (keyword? ident) (= prefix "::"))
+                   (symbol? ident)))
+            {:sym (ctr (name (alias->ns ident-ns)) ident-name)}
 
-          (contains? imports ident-ns)
-          {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:method :norename}}
+            (and (keyword? ident) (= prefix "::"))
+            {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown} :unknown-ns ident-ns}
 
-          (contains? lang-imports ident-ns)
-          {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:method :norename}}
+            (keyword? ident)
+            {:sym ident}
 
-          :else
-          {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})))))
+            (contains? requires ident-ns)
+            {:sym ident}
+
+            (contains? imports ident-ns)
+            {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:method :norename}}
+
+            (contains? lang-imports ident-ns)
+            {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:method :norename}}
+
+            :else
+            {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown} :unknown-ns ident-ns}))
+        :str ident-str))))
 
 (defn add-reference [context scoped node extra]
-  (vswap! context
-          (fn [context]
-            (update context :usages
-                    (fn [usages]
-                      (let [{:keys [row end-row col end-col] :as m} (meta node)
-                            sexpr (n/sexpr node)
-                            scope-bounds (get-in scoped [sexpr :bounds])
-                            ident-info (qualify-ident sexpr context scoped)]
-                        (conj usages (cond-> {:sexpr sexpr
-                                              :row row
-                                              :end-row end-row
-                                              :col col
-                                              :end-col end-col}
-                                       :always (merge ident-info)
-                                       (seq extra) (merge extra)
-                                       (seq scope-bounds) (assoc :scope-bounds scope-bounds)))))))))
+  (let [{:keys [row end-row col end-col] :as m} (meta node)
+        sexpr (n/sexpr node)
+        scope-bounds (get-in scoped [sexpr :bounds])
+        ident-info (qualify-ident node @context scoped)
+        new-usage (cond-> {:row row
+                           :end-row end-row
+                           :col col
+                           :end-col end-col}
+                    :always (merge ident-info)
+                    (seq extra) (merge extra)
+                    (seq scope-bounds) (assoc :scope-bounds scope-bounds))]
+    (vswap! context update :usages conj new-usage)
+    new-usage))
 
 (defn destructure-map [map-loc scope-bounds context scoped]
   (loop [key-loc (z/down (zsub/subzip map-loc))
@@ -118,8 +142,7 @@
                      (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
                                                                        :scope-bounds scope-bounds
                                                                        :sym (symbol (name scoped-ns)
-                                                                                    (name sexpr))
-                                                                       :sexpr sexpr})
+                                                                                    (name sexpr))})
                      (if (z/rightmost? child-loc)
                        new-scoped
                        (recur (z/right child-loc) new-scoped)))))
@@ -132,8 +155,7 @@
             (add-reference context scoped (z/node val-loc) {:tags #{:declare :param}
                                                             :scope-bounds scope-bounds
                                                             :sym (symbol (name scoped-ns)
-                                                                         (name sexpr))
-                                                            :sexpr sexpr})
+                                                                         (name sexpr))})
             (recur (z/right val-loc) new-scoped))
 
           (keyword? key-sexpr)
@@ -176,8 +198,7 @@
             (add-reference context new-scoped node {:tags #{:declare :param}
                                                     :scope-bounds scope-bounds
                                                     :sym (symbol (name scoped-ns)
-                                                                 (name sexpr))
-                                                    :sexpr sexpr})
+                                                                 (name sexpr))})
             (recur (z/next param-loc) new-scoped))
 
           (vector? sexpr)
@@ -431,8 +452,7 @@
     (add-reference context scoped e-node {:tags #{:declare :params}
                                           :scope-bounds scope-bounds
                                           :sym (symbol (name scoped-ns)
-                                                       (name e-sexpr))
-                                          :sexpr e-sexpr})
+                                                       (name e-sexpr))})
     (handle-rest (z/right e-loc) context new-scoped)))
 
 (defn handle-defmacro
@@ -501,9 +521,8 @@
   (let [op-loc (some-> loc (zm/down))]
     (cond
       (and op-loc (symbol? (z/sexpr op-loc)))
-      (let [qualified-op (:sym (qualify-ident (z/sexpr op-loc) @context scoped))
-            handler (get *sexpr-handlers* qualified-op)]
-        (add-reference context scoped (z/node op-loc) {})
+      (let [usage (add-reference context scoped (z/node op-loc) {})
+            handler (get *sexpr-handlers* (:sym usage))]
         (if handler
           (handler op-loc loc context scoped)
           (handle-rest (zm/right op-loc) context scoped)))
@@ -531,7 +550,7 @@
             (handle-dispatch-macro loc context scoped)
             (recur (edit/skip-over loc) scoped))
 
-          (and (= :token tag) (symbol? (z/sexpr loc)))
+          (and (= :token tag) (ident? (z/sexpr loc)))
           (do
             (add-reference context scoped (z/node loc) {})
             (recur (edit/skip-over loc) scoped))
@@ -598,5 +617,6 @@
                            "(inc x)"
                            "(bun/foo)"
                            "(bing)"])]
+    (n/string (z/node (z/of-string "::foo")))
     #_(find-references code)
     (z/sexpr (loc-at-pos code 1 2))))

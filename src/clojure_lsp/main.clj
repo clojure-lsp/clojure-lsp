@@ -4,6 +4,7 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure.tools.logging :as log]
+   [clojure.tools.nrepl.server :as nrepl.server]
    [clojure.string :as string]
    [clojure.core.async :as async])
   (:import
@@ -212,8 +213,8 @@
 (defrecord LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
-    (log/warn "Initialize" params)
     (let [client-capabilities (some->> params (.getCapabilities) (interop/conform-or-log ::interop/client-capabilities))]
+      (log/warn "Initialize" client-capabilities)
       (#'handlers/initialize (.getRootUri params) client-capabilities (interop/json->clj (.getInitializationOptions params))))
     (CompletableFuture/completedFuture
      (InitializeResult. (doto (ServerCapabilities.)
@@ -248,7 +249,9 @@
 (defn -main [& args]
   (log/info "Server started")
   (let [server (LSPServer.)
-        launcher (LSPLauncher/createServerLauncher server System/in System/out)]
+        launcher (LSPLauncher/createServerLauncher server System/in System/out)
+        repl-server (nrepl.server/start-server)]
+    (log/info "nrepl server started on port" (:port repl-server))
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
       (loop [edit (async/<! handlers/edits-chan)]

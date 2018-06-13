@@ -5,7 +5,8 @@
    [clojure.tools.logging :as log]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
-   [clojure.core.async :as async])
+   [clojure.core.async :as async]
+   [medley.core :as medley])
   (:import
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
    (org.eclipse.lsp4j
@@ -27,6 +28,7 @@
      InitializeResult
      InitializedParams
      Location
+     MarkupContent
      ParameterInformation
      Position
      Range
@@ -111,10 +113,105 @@
                                              (case (first v)
                                                :string (Either/forLeft (second v))
                                                :marked-string (Either/forRight (second v)))))))
-(s/def ::contents (s/coll-of ::marked-string))
+
+(s/def :markup/kind #{"plaintext" "markdown"})
+(s/def :markup/value string?)
+(s/def ::markup-content (s/and (s/keys :req-un [:markup/kind :markup/value])
+                               (s/conformer #(doto (MarkupContent.)
+                                              (.setKind (:kind %1))
+                                              (.setValue (:value %1))))))
+
+(s/def ::contents (s/and (s/or :marked-strings (s/coll-of ::marked-string)
+                               :markup-content ::markup-content)
+                         (s/conformer second)))
+
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
                       (s/conformer #(Hover. (:contents %1) (:range %1)))))
+
+(defn debeaner [inst]
+  (when inst
+    (->> (dissoc (bean inst) :class)
+         (into {})
+         (medley/remove-vals nil?)
+         (medley/map-keys #(as-> % map-key
+                             (name map-key)
+                             (string/split map-key #"(?=[A-Z])")
+                             (string/join "-" map-key)
+                             (string/lower-case map-key)
+                             (keyword map-key))))))
+
+(s/def ::debean (s/conformer debeaner))
+(s/def ::value-set (s/conformer (fn [value-set]
+                                  (set (map #(.getValue %) value-set)))))
+(s/def :capabilities/code-action ::debean)
+(s/def :capabilities/code-lens ::debean)
+(s/def :capabilities/color-provider ::debean)
+(s/def :capabilities/completion-item ::debean)
+(s/def :capabilities/definition ::debean)
+(s/def :capabilities/document-highlight ::debean)
+(s/def :capabilities/document-link ::debean)
+(s/def :capabilities/formatting ::debean)
+(s/def :capabilities/implementation ::debean)
+(s/def :capabilities/on-type-formatting ::debean)
+(s/def :capabilities/publish-diagnostics ::debean)
+(s/def :capabilities/range-formatting ::debean)
+(s/def :capabilities/references ::debean)
+(s/def :capabilities/rename ::debean)
+(s/def :capabilities/signature-information ::debean)
+(s/def :capabilities/synchronization ::debean)
+(s/def :capabilities/type-definition ::debean)
+
+(s/def :capabilities/symbol-kind (s/and ::debean
+                                        (s/keys :opt-un [::value-set])))
+(s/def :capabilities/document-symbol (s/and ::debean
+                                            (s/keys :opt-un [:capabilities/symbol-kind])))
+(s/def :capabilities/signature-help (s/and ::debean
+                                           (s/keys :opt-un [:capabilities/signature-information])))
+
+(s/def :capabilities/completion-item-kind (s/and ::debean
+                                                 (s/keys :opt-un [::value-set])))
+(s/def :capabilities/completion (s/and ::debean
+                                       (s/keys :opt-un [:capabilities/completion-item
+                                                        :capabilities/completion-item-kind])))
+(s/def :capabilities/hover (s/and ::debean
+                                  (s/keys :opt-un [:capabilities/content-format])))
+(s/def :capabilities/text-document (s/and ::debean
+                                          (s/keys :opt-un [:capabilities/hover
+                                                           :capabilities/completion
+                                                           :capabilities/definition
+                                                           :capabilities/formatting
+                                                           :capabilities/publish-diagnostics
+                                                           :capabilities/code-action
+                                                           :capabilities/document-symbol
+                                                           :capabilities/code-lens
+                                                           :capabilities/document-highlight
+                                                           :capabilities/color-provider
+                                                           :capabilities/type-definition
+                                                           :capabilities/rename
+                                                           :capabilities/references
+                                                           :capabilities/document-link
+                                                           :capabilities/synchronization
+                                                           :capabilities/range-formatting
+                                                           :capabilities/on-type-formatting
+                                                           :capabilities/signature-help
+                                                           :capabilities/implementation])))
+
+(s/def :capabilities/workspace-edit ::debean)
+(s/def :capabilities/workspace-edit ::debean)
+(s/def :capabilities/did-change-configuration ::debean)
+(s/def :capabilities/did-change-watched-files ::debean)
+(s/def :capabilities/execute-command ::debean)
+(s/def :capabilities/symbol (s/and ::debean
+                                  (s/keys :opt-un [:capabilities/symbol-kind])))
+(s/def :capabilities/workspace (s/and ::debean
+                                      (s/keys :opt-un [:capabilities/workspace-edit
+                                                       :capabilities/did-change-configuration
+                                                       :capabilities/did-change-watched-files
+                                                       :capabilities/execute-command
+                                                       :capabilities/symbol])))
+(s/def ::client-capabilities (s/and ::debean
+                                    (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
 (defn conform-or-log [spec value]
   (when value
@@ -318,18 +415,19 @@
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
     (log/warn "DidChangeWatchedFilesParams")))
 
+(comment
+  (s/conform ::client-capabilities (doto (ClientCapabilities.)
+                                     (.setTextDocument (doto (TextDocumentClientCapabilities.)
+                                                         (.setHover (HoverCapabilities. ["plaintext" "markdown"] false))))
+                                     (.setWorkspace (doto (WorkspaceClientCapabilities.)
+                                                      (.setWorkspaceEdit (WorkspaceEditCapabilities. true)))))))
+
 (defrecord LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (log/warn "Initialize" params)
-    (let [document-changes
-          (or (some-> params
-                      (.getCapabilities)
-                      (.getWorkspace)
-                      (.getWorkspaceEdit)
-                      (.getDocumentChanges))
-              true)]
-      (#'handlers/initialize (.getRootUri params) document-changes (json->clj (.getInitializationOptions params))))
+    (let [client-capabilities (some->> params (.getCapabilities) (conform-or-log ::client-capabilities))]
+      (#'handlers/initialize (.getRootUri params) client-capabilities (json->clj (.getInitializationOptions params))))
     (CompletableFuture/completedFuture
      (InitializeResult. (doto (ServerCapabilities.)
                           (.setHoverProvider true)

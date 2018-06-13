@@ -154,11 +154,11 @@
         (merge file-envs jar-envs))
       (crawl-source-dirs source-paths))))
 
-(defn initialize [project-root supports-document-changes client-settings]
+(defn initialize [project-root client-capabilities client-settings]
   (when project-root
     (let [file-envs (determine-dependencies project-root client-settings)]
       (swap! db/db assoc
-             :supports-document-changes supports-document-changes
+             :client-capabilities client-capabilities
              :client-settings client-settings
              :project-root project-root
              :file-envs file-envs
@@ -283,7 +283,7 @@
                          (map (fn [[text-document edits]]
                                 {:text-document text-document
                                  :edits edits})))]
-        (if (:supports-document-changes @db/db)
+        (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
           {:document-changes changes}
           {:changes (into {} (map (fn [{:keys [text-document edits]}]
                                     [(:uri text-document) edits])
@@ -320,7 +320,7 @@
           result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
           changes [{:text-document {:uri doc-id :version v}
                     :edits (mapv #(update % :range ->range) (refactor/result result))}]]
-      (if (:supports-document-changes @db/db)
+      (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
         {:document-changes changes}
         {:changes (into {} (map (fn [{:keys [text-document edits]}]
                                   [(:uri text-document) edits])

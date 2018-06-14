@@ -295,12 +295,12 @@
         cursor-sym (:sym (find-reference-under-cursor line column local-env))]
     (log/warn "definition" doc-id line column cursor-sym)
     (first
-      (for [[env-doc-id {:keys [usages]}] file-envs
-            {:keys [sym tags] :as usage} usages
-            :when (= sym cursor-sym)
-            :when (and (or (= doc-id env-doc-id) (:public tags))
-                       (:declare tags))]
-        {:uri env-doc-id :range (->range usage)}))))
+     (for [[env-doc-id {:keys [usages]}] file-envs
+           {:keys [sym tags] :as usage} usages
+           :when (= sym cursor-sym)
+           :when (and (or (= doc-id env-doc-id) (:public tags))
+                      (:declare tags))]
+       {:uri env-doc-id :range (->range usage)}))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
@@ -333,15 +333,23 @@
         local-env (get file-envs doc-id)
         cursor (find-reference-under-cursor line column local-env)
         signatures (first
-                     (for [[_ {:keys [usages]}] file-envs
-                           {:keys [sym tags] :as usage} usages
-                           :when (and (= sym (:sym cursor)) (:declare tags))]
-                       (:signatures usage)))]
+                    (for [[_ {:keys [usages]}] file-envs
+                          {:keys [sym tags] :as usage} usages
+                          :when (and (= sym (:sym cursor)) (:declare tags))]
+                      (:signatures usage)))
+        [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])]
     (if cursor
       {:range (->range cursor)
-       :contents [(cond-> (select-keys cursor [:sym :tags])
-                    (seq signatures) (assoc :signatures signatures)
-                    :always (pr-str))]}
+       :contents (case content-format
+                   "markdown" (let [{:keys [sym]} cursor
+                                    signatures (string/join "\n" signatures)]
+                                {:kind "markdown"
+                                 :value (str "```clojure\n" sym "\n" signatures "```")})
+
+                     ;; default to plaintext
+                   [(cond-> (select-keys cursor [:sym :tags])
+                      (seq signatures) (assoc :signatures signatures)
+                      :always (pr-str))])}
       {:contents []})))
 
 (defn formatting [doc-id]

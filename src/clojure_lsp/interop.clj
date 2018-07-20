@@ -35,12 +35,14 @@
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
 (s/def ::additional-text-edits (s/coll-of ::text-edit))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                        :opt-un [::additional-text-edits])
-                                (s/conformer (fn [{:keys [label additional-text-edits]}]
+                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit])
+                                (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit]}]
                                                (let [item (CompletionItem. label)]
-                                                 (when additional-text-edits
-                                                   (.setAdditionalTextEdits item additional-text-edits))
-                                                 item)))))
+                                                 (cond-> item
+                                                   filter-text (doto (.setFilterText filter-text))
+                                                   additional-text-edits (doto (.setAdditionalTextEdits additional-text-edits))
+                                                   detail (doto (.setDetail detail))
+                                                   text-edit (doto (.setTextEdit text-edit))))))))
 (s/def ::completion-items (s/coll-of ::completion-item))
 (s/def ::version (s/and integer? (s/conformer int)))
 (s/def ::uri string?)

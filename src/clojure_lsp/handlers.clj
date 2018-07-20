@@ -133,10 +133,8 @@
 
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
-        source-paths (if client-settings
-                       (mapv #(io/file (str root-path "/" %))
-                             (get client-settings "source-paths"))
-                       [(io/file (str root-path "/src"))])
+        source-paths (mapv #(io/file (str root-path "/" %))
+                           (get client-settings "source-paths" ["src"]))
         project-file (io/file root-path "project.clj")]
     (if (.exists project-file)
       (let [project-hash (digest/md5 project-file)
@@ -184,20 +182,11 @@
         local-env (get file-envs doc-id)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
-        cursor-value (some-> (find-reference-under-cursor line column local-env) :str)
-        matches-cursor? #(some-> % (string/starts-with? cursor-value))
-        matches-ns? (fn [ns-sym]
-                      (and (or (= cursor-value (str ns-sym))
-                               (string/starts-with? cursor-value (str ns-sym "/")))
-                           ns-sym))
-        remotes (group-by
-                 (fn [remote]
-                   (or (matches-ns? (:local-alias remote))
-                       (matches-ns? (:project-alias remote))
-                       (matches-ns? (:ns remote))))
-                 (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs))
-        unmatched-remotes (get remotes false)
-        matched-remotes (dissoc remotes false)]
+        cursor-usage (find-reference-under-cursor line column local-env)
+        cursor-value (some-> cursor-usage :str)
+        matches-cursor? #(when (and % (string/starts-with? % cursor-value))
+                           %)
+        remotes (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs)]
     (concat
      (->> (:usages local-env)
           (filter (comp :declare :tags))
@@ -207,23 +196,22 @@
                       (not= :within (check-bounds line column scope-bounds)))))
           (map (fn [{:keys [sym]}] {:label (name sym)}))
           (sort-by :label))
-     (->> (get remotes false)
-          (filter (fn [remote]
-                    (->> [:project-alias :ns :local-alias]
-                         (select-keys remote)
-                         (vals)
-                         (some matches-cursor?))))
-          (map (fn [match]
-                 {:label (str (:ref match))}))
-          (sort-by :label))
      (->>
-      (for [[matched-ns remotes] matched-remotes
-            remote remotes
-            usage (:usages remote)
-            :let [label (format "%s/%s" (name (:ref remote)) (name (:sym usage)))]
-            :when (contains? (:tags usage) :public)
-            :when (matches-cursor? (format "%s/%s" (name matched-ns) (name (:sym usage))))]
-        (cond-> {:label label}
+       (for [remote remotes
+             usage (:usages remote)
+             :when (contains? (:tags usage) :public)
+             :let [match-ns-str (or (matches-cursor? (str (:local-alias remote)))
+                                    (matches-cursor? (str (:project-alias remote)))
+                                    (matches-cursor? (str (:ns remote))))
+                   match-sym-str (matches-cursor? (some-> (:sym usage) name))]
+             :when (or match-ns-str match-sym-str)
+             :let [label (if match-ns-str
+                           (format "%s/%s" match-ns-str (name (:sym usage)))
+                           match-sym-str)
+                   insert-text (format "%s/%s" (name (:ref remote)) (name (:sym usage)))]]
+        (cond-> {:label label :detail (str (:ns remote))}
+          match-sym-str (assoc :text-edit {:range (->range cursor-usage)
+                                           :new-text insert-text})
           (not (contains? (:requires local-env) (:ns remote)))
           (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
                                           :new-text (if add-require?

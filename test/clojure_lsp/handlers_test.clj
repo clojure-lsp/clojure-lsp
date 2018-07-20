@@ -39,18 +39,28 @@
                                    :usages [{:sym 'user/alpha :str "alpha" :tags #{:declare}
                                              :row 1 :col 1 :end-row 1 :end-col 2}
                                             {:sym 'user/alp :str "alp"
-                                             :row 2 :col 1 :end-row 2 :end-col 2}]}}}]
+                                             :row 2 :col 1 :end-row 2 :end-col 2}
+                                            {:sym 'user/ba :str "ba"
+                                             :row 3 :col 1 :end-row 3 :end-col 2}]}}}]
     (testing "complete-a"
       (reset! db/db db-state)
-      (is (= [{:label "alpha"} {:label "alpaca"}]
+      (is (= [{:label "alpha"} {:label "alpaca/barr" :detail "alpaca.ns"} {:label "alpaca/bazz" :detail "alpaca.ns"}]
              (handlers/completion "file://b.clj" 2 2))))
+    (testing "complete-ba"
+      (reset! db/db db-state)
+			(is (= [{:label "barr" :detail "alpaca.ns"
+							 :text-edit {:range {:start {:line 2, :character 0}, :end {:line 2, :character 1}}, :new-text "alpaca/barr"}}
+							{:label "bazz" :detail "alpaca.ns"
+							 :text-edit {:range {:start {:line 2, :character 0}, :end {:line 2, :character 1}}, :new-text "alpaca/bazz"}}
+              {:label "bases"}]
+             (handlers/completion "file://b.clj" 3 2))))
     (testing "complete-alph"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" :usages 1] merge {:sym 'user/alph :str "alph"}))
       (is (= [{:label "alpha"}]
              (handlers/completion "file://b.clj" 2 2))))
     (testing "complete-alpaca"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" :usages 1] merge {:sym 'alpa :str "alpaca"}))
-      (is (= [{:label "alpaca/barr"} {:label "alpaca/bazz"}]
+      (is (= [{:label "alpaca/barr" :detail "alpaca.ns"} {:label "alpaca/bazz" :detail "alpaca.ns"}]
              (handlers/completion "file://b.clj" 2 2))))
     (testing "complete-core-stuff"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" :usages 1] merge {:sym 'freq :str "freq"}))

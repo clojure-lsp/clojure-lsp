@@ -317,19 +317,17 @@
    "add-missing-libspec" #'refactor/add-missing-libspec})
 
 (defn refactor [doc-id line column refactoring args]
-  (try
-    (let [;; TODO Instead of v=0 should I send a change AND a document change
-          {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
-          result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)
-          changes [{:text-document {:uri doc-id :version v}
-                    :edits (mapv #(update % :range ->range) (refactor/result result))}]]
-      (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
-        {:document-changes changes}
-        {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                                  [(:uri text-document) edits])
-                                changes))}))
-    (catch Exception e
-      (log/error e "could not refactor" (.getMessage e)))))
+  (let [;; TODO Instead of v=0 should I send a change AND a document change
+        {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
+        result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)]
+    (when result
+      (let [changes [{:text-document {:uri doc-id :version v}
+                      :edits (mapv #(update % :range ->range) (refactor/result result))}]]
+        (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
+          {:document-changes changes}
+          {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                    [(:uri text-document) edits])
+                                  changes))})))))
 
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)

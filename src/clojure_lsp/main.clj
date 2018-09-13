@@ -236,11 +236,11 @@
             (future
               (end
                 (try
-                  (let [result (#'handlers/refactor (path->uri doc-id)
-                                                    (inc (int line))
-                                                    (inc (int col))
-                                                    command
-                                                    args)]
+                  (when-let [result (#'handlers/refactor (path->uri doc-id)
+                                                         (inc (int line))
+                                                         (inc (int col))
+                                                         command
+                                                         args)]
                     (.get (.applyEdit (:client @db/db)
                                       (ApplyWorkspaceEditParams.
                                         (interop/conform-or-log ::interop/workspace-edit result)))))

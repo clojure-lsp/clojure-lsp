@@ -169,20 +169,25 @@
 
 (defn add-missing-libspec
   [zloc]
-  (let [ns-to-add (symbol (namespace (z/sexpr zloc)))
+  (let [ns-to-add (some-> zloc z/sexpr namespace symbol)
         ns->alias (:project-aliases @db/db)
-        alias->ns (set/map-invert ns->alias)
+        alias->ns (group-by val ns->alias)
+        qualified-ns-to-add (some-> ns-to-add alias->ns first key)
         ns-loc (edit/find-namespace zloc)
-        add-require? (not (z/find-value (zsub/subzip ns-loc) z/next :require))
-        result-loc (z/subedit-> ns-loc
-                                (cond->
-                                  add-require? (z/append-child '(:require)))
-                                (z/find-value z/next :require)
-                                (z/up)
-                                (cz/append-child (n/newlines 1))
-                                (z/append-child [(alias->ns ns-to-add) :as ns-to-add]))]
-    [{:range (meta (z/node result-loc))
-      :loc result-loc}]))
+        ns-zip (zsub/subzip ns-loc)
+        need-to-add? (and (not (z/find-value ns-zip z/next qualified-ns-to-add))
+                          (not (z/find-value ns-zip z/next ns-to-add)))]
+    (when (and ns-to-add qualified-ns-to-add need-to-add?)
+      (let [add-require? (not (z/find-value ns-zip z/next :require))
+            result-loc (z/subedit-> ns-loc
+                                    (cond->
+                                      add-require? (z/append-child '(:require)))
+                                    (z/find-value z/next :require)
+                                    (z/up)
+                                    (cz/append-child (n/newlines 1))
+                                    (z/append-child [qualified-ns-to-add :as ns-to-add]))]
+        [{:range (meta (z/node result-loc))
+          :loc result-loc}]))))
 
 (comment
    ; join if let above

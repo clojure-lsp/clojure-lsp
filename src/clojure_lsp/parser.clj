@@ -558,11 +558,13 @@
           :else
           (recur (zm/next loc) scoped))))))
 
-(defn find-references [code]
+(defn find-references [code file-type]
   (-> code
       (z/of-string)
       (zm/up)
-      (find-references* (volatile! default-env) {})))
+      (find-references*
+        (volatile! (assoc default-env :file-type file-type))
+        {})))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as form-pos}

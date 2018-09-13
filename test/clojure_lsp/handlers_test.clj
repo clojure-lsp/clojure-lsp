@@ -6,9 +6,11 @@
 
 (deftest test-rename
   (reset! db/db {:file-envs
-                 {"file://a.clj" {:usages [{:sym 'a/bar :str "bar"
+                 {"file://a.clj" {:file-type :clj
+                                  :usages [{:sym 'a/bar :str "bar"
                                             :row 1 :col 1 :end-row 1 :end-col 4}]}
-                  "file://b.clj" {:usages [{:sym 'a/bar :str "a/bar"
+                  "file://b.clj" {:file-type :clj
+                                  :usages [{:sym 'a/bar :str "a/bar"
                                             :row 1 :col 1 :end-row 1 :end-col 6}]}}})
   (testing "rename on symbol without namespace"
     (is (= "foo" (get-in (handlers/rename "file://a.clj" 1 1 "foo")
@@ -29,19 +31,27 @@
 (deftest test-completion
   (let [db-state {:project-aliases {'alpaca.ns 'alpaca}
                   :file-envs
-                  {"file://a.clj" {:ns 'alpaca.ns
-                                   :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public}
-                                             :row 1 :col 1 :end-row 1 :end-col 5}
-                                            {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public}
-                                             :row 2 :col 1 :end-row 2 :end-col 5}]}
+                  {"file://a.cljc" {:ns 'alpaca.ns
+                                    :file-type :cljc
+                                    :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public}
+                                              :row 1 :col 1 :end-row 1 :end-col 5}
+                                             {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public}
+                                              :row 2 :col 1 :end-row 2 :end-col 5}]}
                    "file://b.clj" {:ns 'b
+                                   :file-type :clj
                                    :requires #{'alpaca.ns}
                                    :usages [{:sym 'user/alpha :str "alpha" :tags #{:declare}
                                              :row 1 :col 1 :end-row 1 :end-col 2}
                                             {:sym 'user/alp :str "alp"
                                              :row 2 :col 1 :end-row 2 :end-col 2}
                                             {:sym 'user/ba :str "ba"
-                                             :row 3 :col 1 :end-row 3 :end-col 2}]}}}]
+                                             :row 3 :col 1 :end-row 3 :end-col 2}]}
+                   "file://c.cljs" {:ns 'alpaca.ns
+                                    :file-type :cljs
+                                    :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public}
+                                              :row 1 :col 1 :end-row 1 :end-col 5}
+                                             {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public}
+                                              :row 2 :col 1 :end-row 2 :end-col 5}]}}}]
     (testing "complete-a"
       (reset! db/db db-state)
       (is (= [{:label "alpha"} {:label "alpaca/barr" :detail "alpaca.ns"} {:label "alpaca/bazz" :detail "alpaca.ns"}]

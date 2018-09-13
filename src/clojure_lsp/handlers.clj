@@ -23,6 +23,13 @@
 (defn- uri->path [uri]
   (string/replace uri #"^file:///" "/"))
 
+(defn- uri->file-type [uri]
+  (cond
+    (string/ends-with? uri "cljs") :cljs
+    (string/ends-with? uri "cljc") :cljc
+    (string/ends-with? uri "clj") :clj
+    :else :unknown))
+
 (defn- ->range [{:keys [row end-row col end-col]}]
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
@@ -63,7 +70,8 @@
   ([uri text diagnose?]
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
-     (let [references (parser/find-references text)]
+     (let [file-type (uri->file-type uri)
+           references (parser/find-references text file-type)]
        (when diagnose?
          (send-notifications uri references))
        references)
@@ -170,6 +178,7 @@
                           project-alias (str " :as " (name project-alias)))
                local-alias (get local-aliases ns-sym)]
            {:ns ns-sym
+            :file-type (:file-type remote-env)
             :local-alias local-alias
             :project-alias project-alias
             :as-alias as-alias
@@ -180,10 +189,14 @@
 (defn completion [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
+        local-file-type (:file-type local-env)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
-        cursor-usage (find-reference-under-cursor line column local-env)
-        cursor-value (some-> cursor-usage :str)
+        [cursor-usage cursor-value] (loop [try-column column]
+                                      (if-let [usage (find-reference-under-cursor line try-column local-env)]
+                                        [usage (:str usage)]
+                                        (when (pos? try-column)
+                                          (recur (dec try-column)))))
         matches-cursor? #(when (and % (string/starts-with? % cursor-value))
                            %)
         remotes (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs)]
@@ -194,10 +207,11 @@
           (remove (fn [usage]
                     (when-let [scope-bounds (:scope-bounds usage)]
                       (not= :within (check-bounds line column scope-bounds)))))
-          (map (fn [{:keys [sym]}] {:label (name sym)}))
+          (mapv (fn [{:keys [sym]}] {:label (name sym)}))
           (sort-by :label))
      (->>
        (for [remote remotes
+             :when (get (set [:cljc local-file-type]) (:file-type remote))
              usage (:usages remote)
              :when (contains? (:tags usage) :public)
              :let [match-ns-str (or (matches-cursor? (str (:local-alias remote)))
@@ -209,23 +223,24 @@
                            (format "%s/%s" match-ns-str (name (:sym usage)))
                            match-sym-str)
                    insert-text (format "%s/%s" (name (:ref remote)) (name (:sym usage)))]]
-        (cond-> {:label label :detail (str (:ns remote))}
-          match-sym-str (assoc :text-edit {:range (->range cursor-usage)
-                                           :new-text insert-text})
-          (not (contains? (:requires local-env) (:ns remote)))
-          (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
-                                          :new-text (if add-require?
-                                                      (format "\n  (:require\n   [%s%s])" (name (:ns remote)) (:as-alias remote))
-                                                      (format "\n   [%s%s]" (name (:ns remote)) (:as-alias remote)))}])))
+         (cond-> {:label label :detail (str (:ns remote))}
+           match-sym-str (assoc :text-edit {:range (->range cursor-usage)
+                                            :new-text insert-text})
+           (not (contains? (:requires local-env) (:ns remote)))
+           (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
+                                           :new-text (if add-require?
+                                                       (format "\n  (:require\n   [%s%s])" (name (:ns remote)) (:as-alias remote))
+                                                       (format "\n   [%s%s]" (name (:ns remote)) (:as-alias remote)))}])))
       (sort-by :label))
      (->> cc/core-syms
           (filter (comp matches-cursor? str))
           (map (fn [sym] {:label (str sym)}))
           (sort-by :label))
-     (->> cc/java-lang-syms
-          (filter (comp matches-cursor? str))
-          (map (fn [sym] {:label (str sym)}))
-          (sort-by :label)))))
+     (when (#{:cljs :clj} local-file-type)
+       (->> cc/java-lang-syms
+            (filter (comp matches-cursor? str))
+            (map (fn [sym] {:label (str sym)}))
+            (sort-by :label))))))
 
 (defn references [doc-id line column]
   (let [file-envs (:file-envs @db/db)

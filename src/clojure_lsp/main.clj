@@ -49,138 +49,178 @@
 
 (defonce formatting (atom false))
 
+(defonce status (atom {}))
+
+(defmacro go [id & body]
+  `(let [~'_start-time (System/nanoTime)
+         ~'_id ~id]
+     (swap! status update ~id (fnil conj #{}) ~'_start-time)
+     (do ~@body)))
+
+(defmacro end [expr]
+  `(try
+     ~expr
+     (catch Throwable ex#
+       (log/error ex#))
+     (finally
+       (try
+         (swap! status update ~'_id disj ~'_start-time)
+         (log/info ~'_id (quot (- (System/nanoTime) ~'_start-time) 1000000) (filter (comp seq val) @status))
+         (catch Throwable ex#
+           (log/error ex#))))))
+
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [this ^DidOpenTextDocumentParams params]
-    (log/warn "DidOpenTextDocumentParams")
-    (let [document (.getTextDocument params)]
-      (#'handlers/did-open (.getUri document) (.getText document))))
+    (go :didOpen
+        (end
+          (let [document (.getTextDocument params)]
+            (#'handlers/did-open (.getUri document) (.getText document))))))
 
   (^void didChange [this ^DidChangeTextDocumentParams params]
-    (let [textDocument (.getTextDocument params)
-          version (.getVersion textDocument)
-          changes (.getContentChanges params)
-          text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
-          uri (.getUri textDocument)]
-      (#'handlers/did-change uri text version)))
+    (go :didChange
+        (end
+          (let [textDocument (.getTextDocument params)
+                version (.getVersion textDocument)
+                changes (.getContentChanges params)
+                text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
+                uri (.getUri textDocument)]
+            (#'handlers/did-change uri text version)))))
 
   (^void didSave [this ^DidSaveTextDocumentParams params]
-    (log/warn "DidSaveTextDocumentParams"))
+    (go :didSave
+        (end nil)))
   (^void didClose [this ^DidCloseTextDocumentParams params]
     (log/warn "DidCloseTextDocumentParams")
-    (swap! db/db update :documents dissoc (.getUri (.getTextDocument params))))
+    (go :didClose
+        (end (swap! db/db update :documents dissoc (.getUri (.getTextDocument params))))))
 
   (^CompletableFuture references [this ^ReferenceParams params]
-    (log/warn params)
-    (CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (try
-           (let [doc-id (.getUri (.getTextDocument params))
-                 pos (.getPosition params)
-                 line (inc (.getLine pos))
-                 column (inc (.getCharacter pos))]
-             (interop/conform-or-log ::interop/references (#'handlers/references doc-id line column)))
-           (catch Exception e
-             (log/error e)))))))
+    (go :references
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (.getUri (.getTextDocument params))
+                        pos (.getPosition params)
+                        line (inc (.getLine pos))
+                        column (inc (.getCharacter pos))]
+                    (interop/conform-or-log ::interop/references (#'handlers/references doc-id line column)))
+                  (catch Exception e
+                    (log/error e)))))))))
 
   (^CompletableFuture completion [this ^CompletionParams params]
-    (CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (try
-           (let [doc-id (.getUri (.getTextDocument params))
-                 pos (.getPosition params)
-                 line (inc (.getLine pos))
-                 column (inc (.getCharacter pos))]
-             (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))
-           (catch Exception e
-             (log/error e)))))))
+    (go :completion
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (.getUri (.getTextDocument params))
+                        pos (.getPosition params)
+                        line (inc (.getLine pos))
+                        column (inc (.getCharacter pos))]
+                    (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))
+                  (catch Exception e
+                    (log/error e)))))))))
 
   (^CompletableFuture rename [this ^RenameParams params]
-    (log/warn params)
-    (CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (try
-           (let [doc-id (.getUri (.getTextDocument params))
-                 pos (.getPosition params)
-                 line (inc (.getLine pos))
-                 column (inc (.getCharacter pos))
-                 new-name (.getNewName params)]
-             (interop/conform-or-log ::interop/workspace-edit (#'handlers/rename doc-id line column new-name)))
-           (catch Exception e
-             (log/error e)))))))
+    (go :rename
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (.getUri (.getTextDocument params))
+                        pos (.getPosition params)
+                        line (inc (.getLine pos))
+                        column (inc (.getCharacter pos))
+                        new-name (.getNewName params)]
+                    (interop/conform-or-log ::interop/workspace-edit (#'handlers/rename doc-id line column new-name)))
+                  (catch Exception e
+                    (log/error e)))))))))
 
   (^CompletableFuture hover [this ^TextDocumentPositionParams params]
-    (CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (try
-           (let [doc-id (.getUri (.getTextDocument params))
-                 pos (.getPosition params)
-                 line (inc (.getLine pos))
-                 column (inc (.getCharacter pos))]
-             (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))
-           (catch Exception e
-             (log/error e)))))))
+    (go :hover
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (.getUri (.getTextDocument params))
+                        pos (.getPosition params)
+                        line (inc (.getLine pos))
+                        column (inc (.getCharacter pos))]
+                    (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))
+                  (catch Exception e
+                    (log/error e)))))))))
 
   (^CompletableFuture signatureHelp [this ^TextDocumentPositionParams params]
-    (CompletableFuture/completedFuture
-     (SignatureHelp. [(doto (SignatureInformation. "sign-label")
-                        (.setDocumentation "docs")
-                        (.setParameters [(ParameterInformation. "param label" "param doc")]))]
-                     0 0)))
+    (go :signatureHelp
+        (CompletableFuture/completedFuture
+          (end
+            (SignatureHelp. [(doto (SignatureInformation. "sign-label")
+                               (.setDocumentation "docs")
+                               (.setParameters [(ParameterInformation. "param label" "param doc")]))]
+                            0 0)))))
 
   (^CompletableFuture formatting [this ^DocumentFormattingParams params]
-    (CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (try
-           (let [doc-id (.getUri (.getTextDocument params))]
-             (interop/conform-or-log ::interop/edits (#'handlers/formatting doc-id)))
-           (catch Exception e
-             (log/error e)))))))
+    (go :formatting
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (.getUri (.getTextDocument params))]
+                    (interop/conform-or-log ::interop/edits (#'handlers/formatting doc-id)))
+                  (catch Exception e
+                    (log/error e)))))))))
 
   (^CompletableFuture rangeFormatting [this ^DocumentRangeFormattingParams params]
-    (let [result (when (compare-and-set! formatting false true)
-                   (try
-                     (let [doc-id (.getUri (.getTextDocument params))
-                           range (.getRange params)
-                           start (.getStart range)
-                           end (.getEnd range)]
-                       (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
-                                                 doc-id
-                                                 {:row (inc (.getLine start))
-                                                  :col (inc (.getCharacter start))
-                                                  :end-row (inc (.getLine end))
-                                                  :end-col (inc (.getCharacter end))})))
-                     (catch Exception e
-                       (log/error e))
-                     (finally
-                       (reset! formatting false))))]
-      (CompletableFuture/completedFuture
-       result)))
+    (go :rangeFormatting
+        (end
+          (let [result (when (compare-and-set! formatting false true)
+                         (try
+                           (let [doc-id (.getUri (.getTextDocument params))
+                                 range (.getRange params)
+                                 start (.getStart range)
+                                 end (.getEnd range)]
+                             (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
+                                                                       doc-id
+                                                                       {:row (inc (.getLine start))
+                                                                        :col (inc (.getCharacter start))
+                                                                        :end-row (inc (.getLine end))
+                                                                        :end-col (inc (.getCharacter end))})))
+                           (catch Exception e
+                             (log/error e))
+                           (finally
+                             (reset! formatting false))))]
+            (CompletableFuture/completedFuture
+              result)))))
 
   (^CompletableFuture codeAction [this ^CodeActionParams params]
-    (log/warn params)
-    (CompletableFuture/completedFuture
-     (let [start (.getStart (.getRange params))]
-       [(Command. "add-missing-libspec" "add-missing-libspec"
-                  [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))
+    (go :codeAction
+        (end
+          (CompletableFuture/completedFuture
+            (let [start (.getStart (.getRange params))]
+              [(Command. "add-missing-libspec" "add-missing-libspec"
+                         [(.getUri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))))
 
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
-    (CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (try
-           (let [doc-id (.getUri (.getTextDocument params))
-                 pos (.getPosition params)
-                 line (inc (.getLine pos))
-                 column (inc (.getCharacter pos))]
-             (interop/conform-or-log ::interop/location (#'handlers/definition doc-id line column)))
-           (catch Exception e
-             (log/error e))))))))
+    (go :definition
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (.getUri (.getTextDocument params))
+                        pos (.getPosition params)
+                        line (inc (.getLine pos))
+                        column (inc (.getCharacter pos))]
+                    (interop/conform-or-log ::interop/location (#'handlers/definition doc-id line column)))
+                  (catch Exception e
+                    (log/error e))))))))))
 
 (defn- path->uri [path]
   (if (string/starts-with? path "/")
@@ -190,20 +230,22 @@
 (deftype LSPWorkspaceService []
   WorkspaceService
   (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
-    (log/warn params)
-    (let [[doc-id line col & args] (map interop/json->clj (.getArguments params))]
-      (future
-        (try
-          (let [result (#'handlers/refactor (path->uri doc-id)
-                                            (inc (int line))
-                                            (inc (int col))
-                                            (.getCommand params)
-                                            args)]
-            (.get (.applyEdit (:client @db/db)
-                              (ApplyWorkspaceEditParams.
-                               (interop/conform-or-log ::interop/workspace-edit result)))))
-          (catch Exception e
-            (log/error e)))))
+    (go :executeCommand
+        (let [[doc-id line col & args] (map interop/json->clj (.getArguments params))
+                command (.getCommand params)]
+            (future
+              (end
+                (try
+                  (let [result (#'handlers/refactor (path->uri doc-id)
+                                                    (inc (int line))
+                                                    (inc (int col))
+                                                    command
+                                                    args)]
+                    (.get (.applyEdit (:client @db/db)
+                                      (ApplyWorkspaceEditParams.
+                                        (interop/conform-or-log ::interop/workspace-edit result)))))
+                  (catch Exception e
+                    (log/error e)))))))
     (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
     (log/warn params))
@@ -252,6 +294,7 @@
         launcher (LSPLauncher/createServerLauncher server System/in System/out)
         repl-server (nrepl.server/start-server)]
     (log/info "nrepl server started on port" (:port repl-server))
+    (spit ".nrepl-port" (:port repl-server))
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
       (loop [edit (async/<! handlers/edits-chan)]

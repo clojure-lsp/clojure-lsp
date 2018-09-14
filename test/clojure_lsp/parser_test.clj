@@ -40,8 +40,8 @@
 
 (deftest find-references-simple-test
   (testing "simple stuff"
-    (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux}
-           (syms "(ns foo.bar) (def qux qux)")))
+    (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux foo.bar// :a}
+           (syms "(ns foo.bar) (def qux qux) (def / :a)")))
     (is (= 2 (count (syms "(:id user)"))))
     (is (= 5 (count (syms "{:x id :y (:id user)}")))))
   (testing "#(dispatch-macro)"
@@ -89,6 +89,12 @@
       (is (= "[b] b a)" (scoped-str code (:scope-bounds bound-ref))))
       (is (= (:sym bound-ref) (:sym usage-ref)))
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
+  (testing "private map meta"
+    (let [code "(defmacro ^{:private true} ^:focus \n thing [])"
+          usages (:usages (parser/find-references code :clj))]
+      (is (= 'user/thing (:sym (nth usages 1))))
+      (is (= "thing" (:str (nth usages 1))))
+      (is (= #{:declare :local} (:tags (nth usages 1))))))
   (testing "multi-arity"
     (let [code "(defn a ([b] b) ([b c] b))"
           usages (:usages (parser/find-references code :clj))

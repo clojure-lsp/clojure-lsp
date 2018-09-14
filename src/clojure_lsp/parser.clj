@@ -49,17 +49,23 @@
 
 (defn ident-split [ident-str]
   (let [ident-conformed (some-> ident-str (string/replace ":" ""))
-        prefix (string/replace ident-str #"^(::?)?.*" "$1")]
-    (if (string/index-of ident-conformed "/")
+        prefix (string/replace ident-str #"^(::?)?.*" "$1")
+        idx (string/index-of ident-conformed "/")]
+    (if (and idx (not= idx (dec (count ident-conformed))))
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
 (defn qualify-ident [ident-node {:keys [aliases locals publics refers imports requires ns] :as context} scoped]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
-          ident-str (if (instance? MetaNode ident-node)
-                      (n/string (nth (n/children ident-node) 2))
-                      (n/string ident-node))
+          ident-str (loop [result ident-node]
+                      (if (instance? MetaNode result)
+                        (->> result
+                             (n/children)
+                             (remove n/printable-only?)
+                             (second)
+                             recur)
+                        (n/string result)))
           [prefix ident-ns-str ident-name] (ident-split ident-str)
           ident-ns (some-> ident-ns-str symbol)
           constructor (when-let [sym (symbol (string/replace ident-name #"\.$" ""))]
@@ -457,12 +463,16 @@
 
 (defn handle-defmacro
   [op-loc loc context scoped]
-  (let [defn-loc (z/right op-loc)
+  (let [op-local? (local? op-loc)
+        defn-loc (z/right op-loc)
         defn-sym (z/node defn-loc)
         multi? (= :list (z/tag (z/find defn-loc (fn [loc]
                                                   (#{:vector :list} (z/tag loc))))))]
-    (vswap! context update :publics conj (n/sexpr defn-sym))
-    (add-reference context scoped defn-sym {:tags #{:declare :public}})
+
+    (if op-local?
+      (vswap! context update :locals conj (n/sexpr defn-sym))
+      (vswap! context update :publics conj (n/sexpr defn-sym)))
+    (add-reference context scoped defn-sym {:tags #{:declare (if op-local? :local :public)}})
     (if multi?
       (loop [list-loc (z/find-tag defn-loc :list)]
         (let [params-loc (z/down list-loc)]
@@ -620,5 +630,13 @@
                            "(bun/foo)"
                            "(bing)"])]
     (n/string (z/node (z/of-string "::foo")))
-    #_(find-references code)
+
+    (let [code "^:private ^clojure.lang.IChunk chunk"]
+      (n/children (z/node (z/of-string code)))
+      (find-references code :clj))
+    (let [code "(def #?@(:clj a :cljs b) 1)"]
+      (n/children (z/node (z/of-string code)))
+      (find-references code :clj))
+
+    #_(find-references code :clj)
     (z/sexpr (loc-at-pos code 1 2))))

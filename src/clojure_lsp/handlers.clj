@@ -66,12 +66,15 @@
 
 (defn safe-find-references
   ([uri text]
-   (safe-find-references uri text true))
-  ([uri text diagnose?]
+   (safe-find-references uri text true false))
+  ([uri text diagnose? remove-private?]
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (uri->file-type uri)
-           references (parser/find-references text file-type)]
+           references (cond-> (parser/find-references text file-type)
+                        remove-private? (update :usages #(filter (fn [{:keys [tags]}]
+                                                                   (and (:public tags) (:declare tags)))
+                                                                 %)))]
        (when diagnose?
          (send-notifications uri references))
        references)
@@ -107,7 +110,7 @@
             (map (fn [[uri entry jar]]
                    (let [text (with-open [stream (.getInputStream jar entry)]
                                 (slurp stream))]
-                     [uri (safe-find-references uri text false)])))
+                     [uri (safe-find-references uri text false true)])))
             (remove (comp nil? second)))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan jars) true (fn [e] (log/warn e "hello")))
@@ -122,7 +125,7 @@
                       (or (string/ends-with? uri ".clj")
                           (string/ends-with? uri ".cljc")
                           (string/ends-with? uri ".cljs"))))
-            (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri) false))))
+            (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri) false false))))
             (remove (comp nil? second)))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))

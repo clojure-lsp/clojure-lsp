@@ -55,7 +55,7 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
-(defn qualify-ident [ident-node {:keys [aliases locals publics refers imports requires ns] :as context} scoped]
+(defn qualify-ident [ident-node {:keys [aliases locals publics refers imports requires ns file-type] :as context} scoped]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
           ident-str (loop [result ident-node]
@@ -112,6 +112,9 @@
             (contains? lang-imports ident-ns)
             {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:method :norename}}
 
+            (and (= :cljs file-type) (= 'js ident-ns))
+            {:sym ident :tags #{:method :norename}}
+
             :else
             {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown} :unknown-ns ident-ns}))
         :str ident-str))))
@@ -124,7 +127,8 @@
         new-usage (cond-> {:row row
                            :end-row end-row
                            :col col
-                           :end-col end-col}
+                           :end-col end-col
+                           :file-type (:file-type @context)}
                     :always (merge ident-info)
                     (seq extra) (merge extra)
                     (seq scope-bounds) (assoc :scope-bounds scope-bounds))]
@@ -539,6 +543,20 @@
       op-loc
       (handle-rest op-loc context scoped))))
 
+(defn handle-reader-macro [loc context scoped]
+  (let [macro-loc (z/down loc)
+        macro (z/string macro-loc)
+        curr-file-type (:file-type @context)]
+    (if (contains? #{"?@" "?"} macro)
+      (let [splice? (= "?@" macro)
+            file-type-loc (z/down (z/right macro-loc))]
+        (loop [file-type-loc file-type-loc]
+          (when file-type-loc
+            (vswap! context assoc :file-type (z/sexpr file-type-loc))
+            (find-references* (zsub/subzip (z/right file-type-loc)) context scoped)
+            (vswap! context assoc :file-type curr-file-type)
+            (-> file-type-loc z/right z/right)))))))
+
 (defn find-references* [loc context scoped]
   (loop [loc loc
          scoped scoped]
@@ -549,6 +567,11 @@
         (cond
           (#{:quote :uneval :syntax-quote} tag)
           (recur (edit/skip-over loc) scoped)
+
+          (= :reader-macro tag)
+          (do
+            (handle-reader-macro loc context scoped)
+            (recur (edit/skip-over loc) scoped))
 
           (= :list tag)
           (do
@@ -568,13 +591,21 @@
           :else
           (recur (zm/next loc) scoped))))))
 
+(comment
+  (ns-unmap *ns* '/)
+  ( z/sexpr (z/right (z/right (z/right (z/down (z/of-string "[a [b] c] 56"))))))
+  (apply hash-map '(:clj :bar :cljs :foo))
+  (convert-reader-macros (z/of-string "#?(:clj :bar) 3 #?@(:clj [foo bar] :cljs [qux quaz])") :clj))
+
 (defn find-references [code file-type]
   (-> code
+      (string/replace #"(\w)/(\W|$)" "$1 $2")
       (z/of-string)
       (zm/up)
       (find-references*
         (volatile! (assoc default-env :file-type file-type))
-        {})))
+        {})
+      (dissoc :file-type)))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as form-pos}

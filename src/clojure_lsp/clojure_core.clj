@@ -773,3 +773,11 @@
      zero?
      zipmap})
 
+(def cljs-syms
+  '#{array?
+     clj->js
+     js->clj
+     js-delete
+     js-object
+     object?})
+

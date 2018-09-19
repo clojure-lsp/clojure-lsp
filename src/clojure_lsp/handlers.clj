@@ -93,26 +93,26 @@
 
 (defn crawl-jars [jars]
   (let [xf (comp
-            (mapcat (fn [jar-file]
-                      (let [jar (JarFile. jar-file)]
-                        (->> jar
-                             (.entries)
-                             (enumeration-seq)
-                             (remove #(.isDirectory %))
-                             (map (fn [entry]
-                                    [(str "zipfile://" jar-file "::" (.getName entry))
-                                     entry
-                                     jar]))))))
-            (filter (fn [[uri _ _]]
-                      (or (string/ends-with? uri ".clj")
-                          (string/ends-with? uri ".cljc")
-                          (string/ends-with? uri ".cljs"))))
-            (map (fn [[uri entry jar]]
-                   (let [text (with-open [stream (.getInputStream jar entry)]
-                                (slurp stream))]
-                     [uri (safe-find-references uri text false true)])))
-            (remove (comp nil? second)))
-        output-chan (async/chan)]
+             (mapcat (fn [jar-file]
+                       (let [jar (JarFile. jar-file)]
+                         (->> jar
+                              (.entries)
+                              (enumeration-seq)
+                              (remove #(.isDirectory %))
+                              (map (fn [entry]
+                                     [(str "zipfile://" jar-file "::" (.getName entry))
+                                      entry
+                                      jar]))))))
+             (filter (fn [[uri _ _]]
+                       (or (string/ends-with? uri ".clj")
+                           (string/ends-with? uri ".cljc")
+                           (string/ends-with? uri ".cljs"))))
+             (map (fn [[uri entry jar]]
+                    (let [text (with-open [stream (.getInputStream jar entry)]
+                                 (slurp stream))]
+                      [uri (safe-find-references uri text false true)])))
+             (remove (comp nil? second)))
+        output-chan (async/chan 5)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan jars) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
 
@@ -125,7 +125,8 @@
                       (or (string/ends-with? uri ".clj")
                           (string/ends-with? uri ".cljc")
                           (string/ends-with? uri ".cljs"))))
-            (map (juxt identity (fn [uri] (safe-find-references uri (slurp uri) false false))))
+            (map (juxt identity (fn [uri]
+                                  (safe-find-references uri (slurp uri) false false))))
             (remove (comp nil? second)))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
@@ -181,7 +182,6 @@
                           project-alias (str " :as " (name project-alias)))
                local-alias (get local-aliases ns-sym)]
            {:ns ns-sym
-            :file-type (:file-type remote-env)
             :local-alias local-alias
             :project-alias project-alias
             :as-alias as-alias
@@ -192,14 +192,14 @@
 (defn completion [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        local-file-type (:file-type local-env)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
-        [cursor-usage cursor-value] (loop [try-column column]
-                                      (if-let [usage (find-reference-under-cursor line try-column local-env)]
-                                        [usage (:str usage)]
-                                        (when (pos? try-column)
-                                          (recur (dec try-column)))))
+        cursor-usage (loop [try-column column]
+                       (if-let [usage (find-reference-under-cursor line try-column local-env)]
+                         usage
+                         (when (pos? try-column)
+                           (recur (dec try-column)))))
+        {cursor-value :str cursor-file-type :file-type} cursor-usage
         matches-cursor? #(when (and % (string/starts-with? % cursor-value))
                            %)
         remotes (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs)]
@@ -214,9 +214,9 @@
           (sort-by :label))
      (->>
        (for [remote remotes
-             :when (get (set [:cljc local-file-type]) (:file-type remote))
              usage (:usages remote)
              :when (contains? (:tags usage) :public)
+             :when (contains? (set [:cljc cursor-file-type]) (:file-type usage))
              :let [match-ns-str (or (matches-cursor? (str (:local-alias remote)))
                                     (matches-cursor? (str (:project-alias remote)))
                                     (matches-cursor? (str (:ns remote))))
@@ -239,7 +239,12 @@
           (filter (comp matches-cursor? str))
           (map (fn [sym] {:label (str sym)}))
           (sort-by :label))
-     (when (#{:cljs :clj} local-file-type)
+     (when (contains? #{:cljc :cljs} cursor-file-type)
+       (->> cc/cljs-syms
+            (filter (comp matches-cursor? str))
+            (map (fn [sym] {:label (str sym)}))
+            (sort-by :label)))
+     (when (contains? #{:cljc :clj} cursor-file-type)
        (->> cc/java-lang-syms
             (filter (comp matches-cursor? str))
             (map (fn [sym] {:label (str sym)}))
@@ -364,7 +369,6 @@
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos]
-  (log/warn "range-formatting" format-pos)
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
         forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]

@@ -32,25 +32,22 @@
   (let [db-state {:project-aliases {'alpaca.ns 'alpaca}
                   :file-envs
                   {"file://a.cljc" {:ns 'alpaca.ns
-                                    :file-type :cljc
-                                    :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public}
+                                    :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public} :file-type :cljc
                                               :row 1 :col 1 :end-row 1 :end-col 5}
-                                             {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public}
+                                             {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public} :file-type :cljc
                                               :row 2 :col 1 :end-row 2 :end-col 5}]}
                    "file://b.clj" {:ns 'b
-                                   :file-type :clj
                                    :requires #{'alpaca.ns}
-                                   :usages [{:sym 'user/alpha :str "alpha" :tags #{:declare}
+                                   :usages [{:sym 'user/alpha :str "alpha" :tags #{:declare} :file-type :clj
                                              :row 1 :col 1 :end-row 1 :end-col 2}
-                                            {:sym 'user/alp :str "alp"
+                                            {:sym 'user/alp :str "alp" :file-type :clj
                                              :row 2 :col 1 :end-row 2 :end-col 2}
-                                            {:sym 'user/ba :str "ba"
+                                            {:sym 'user/ba :str "ba" :file-type :clj
                                              :row 3 :col 1 :end-row 3 :end-col 2}]}
                    "file://c.cljs" {:ns 'alpaca.ns
-                                    :file-type :cljs
-                                    :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public}
+                                    :usages [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public} :file-type :cljs
                                               :row 1 :col 1 :end-row 1 :end-col 5}
-                                             {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public}
+                                             {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public} :file-type :cljs
                                               :row 2 :col 1 :end-row 2 :end-col 5}]}}}]
     (testing "complete-a"
       (reset! db/db db-state)

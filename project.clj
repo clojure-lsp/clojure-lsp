@@ -16,7 +16,7 @@
                  [medley "1.0.0"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
-  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]
+  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
                              [lein-bin "0.3.4"]]
                    :bin {:name "clojure-lsp"}}
              :test {:test-selectors {:focused :focused}}

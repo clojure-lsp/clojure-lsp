@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.clojure-core :as cc]
    [clojure-lsp.db :as db]
+   [clojure-lsp.queries :as queries]
    [clojure-lsp.refactor.edit :as edit]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
@@ -55,7 +56,7 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
-(defn qualify-ident [ident-node {:keys [aliases locals publics refers imports requires ns file-type] :as context} scoped]
+(defn qualify-ident [ident-node {:keys [usages file-type] :as context} scoped declaration?]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
           ident-str (loop [result ident-node]
@@ -68,34 +69,67 @@
                         (n/string result)))
           [prefix ident-ns-str ident-name] (ident-split ident-str)
           ident-ns (some-> ident-ns-str symbol)
-          constructor (when-let [sym (symbol (string/replace ident-name #"\.$" ""))]
-                        (or (get lang-imports sym)
-                            (get imports sym)))
-          alias->ns (set/map-invert aliases)
+          java-sym (symbol (string/replace ident-name #"\.$" ""))
+          class-sym (->> usages
+                         (filter (comp :import :tags))
+                         (some (comp #{java-sym} :sym)))
+          alias-usage (->> usages
+                           (filter (comp :alias :tags))
+                           (filter (comp #{ident-ns-str} :str))
+                           (first))
+          ns-sym (queries/find-ns usages)
+          declared (when ns-sym
+                     (->> usages
+                          (filter (comp #(and (:declare %) (or (:local %) (:public %))) :tags))
+                          (some (comp #{(symbol (name ns-sym) ident-name)} :sym))))
+          refered-ns (->> usages
+                          (filter (comp :refer :tags))
+                          (filter (comp #{ident-name} name :sym))
+                          (some (comp namespace :sym)))
+          refer-all-namespaces (->> usages
+                                    (filter :refer-all?)
+                                    (map :sym)
+                                    (set))
+          refer-all-syms (->> (for [[_ usages] (:file-envs @db/db)
+                                  :when (->> usages
+                                             (filter (comp #(set/subset? #{:ns :public} %) :tags))
+                                             (filter (comp refer-all-namespaces :sym))
+                                             (seq))
+                                  {:keys [sym tags]} usages
+                                  :when (set/subset? #{:public :declare} tags)]
+                              [(symbol (name sym)) sym])
+                            (into {}))
+          required-ns (->> usages
+                           (filter (comp :require :tags))
+                           (filter (comp #{ident-ns} :sym))
+                           (some :sym))
+          imports (->> usages
+                       (filter (comp :import :tags))
+                       (map (juxt :class-sym :sym))
+                       (into {}))
           ctr (if (symbol? ident) symbol keyword)]
       (assoc
         (if-not ident-ns
           (cond
-            (and (keyword? ident) (= prefix "::"))
-            {:sym (ctr (name ns) ident-name)}
-
+            declaration? {:sym (ctr (name (or ns-sym 'user)) ident-name)}
+            (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns-sym) ident-name)}
             (keyword? ident) {:sym ident}
             (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
-            (contains? locals ident) {:sym (ctr (name ns) ident-name)}
-            (contains? publics ident) {:sym (ctr (name ns) ident-name)}
-            (contains? refers ident) {:sym (ctr (name (get refers ident)) ident-name)}
-            (contains? imports ident) {:sym (get imports ident) :tags #{:norename}}
+            declared {:sym declared}
+            refered-ns {:sym (ctr (name refered-ns) ident-name)}
+            (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
+            (contains? imports java-sym) {:sym (get imports java-sym) :tags #{:norename}}
             (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
-            (contains? lang-imports ident) {:sym (get lang-imports ident) :tags #{:norename}}
+            (contains? lang-imports java-sym) {:sym (get lang-imports java-sym) :tags #{:norename}}
             (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
-            constructor {:sym constructor :tags #{:norename}}
+            class-sym {:sym class-sym :tags #{:norename}}
             :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
           (cond
-            (and (contains? alias->ns ident-ns)
-                 (or
-                   (and (keyword? ident) (= prefix "::"))
-                   (symbol? ident)))
-            {:sym (ctr (name (alias->ns ident-ns)) ident-name)}
+            (and alias-usage
+              (or
+                (and (keyword? ident) (= prefix "::"))
+                (symbol? ident)))
+            {:sym (ctr (name (:ns alias-usage)) ident-name)}
 
             (and (keyword? ident) (= prefix "::"))
             {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown} :unknown-ns ident-ns}
@@ -103,7 +137,7 @@
             (keyword? ident)
             {:sym ident}
 
-            (contains? requires ident-ns)
+            required-ns
             {:sym ident}
 
             (contains? imports ident-ns)
@@ -123,7 +157,9 @@
   (let [{:keys [row end-row col end-col] :as m} (meta node)
         sexpr (n/sexpr node)
         scope-bounds (get-in scoped [sexpr :bounds])
-        ident-info (qualify-ident node @context scoped)
+        ident-info (qualify-ident node @context scoped (and (get-in extra [:tags :declare])
+                                                            (or (get-in extra [:tags :local])
+                                                                (get-in extra [:tags :public]))))
         new-usage (cond-> {:row row
                            :end-row end-row
                            :col col
@@ -177,11 +213,6 @@
           :else
           (recur (edit/skip-over val-loc) scoped)))
       scoped)))
-
-(comment
-  (let [context (volatile! {})]
-    #_(do (destructure-map (z/of-string "{:keys [a b]}") {} context {}) (map :sym (:usages @context)))
-    (map :sym (:usages (find-references "(let [a (b c d)])")))))
 
 (defn handle-rest
   "Crawl each form from `loc` to the end of the parent-form
@@ -295,73 +326,64 @@
                           cls classes]
                       [cls (symbol (str (name package) "." (name cls)))]))))))
 
+(defn add-libspec [libtype context scoped entry-loc prefix-ns]
+  (let [entry-ns-loc (z/down entry-loc)
+        required-ns (z/sexpr entry-ns-loc)
+        full-ns (if prefix-ns
+                  (symbol (str (name prefix-ns) "." (name required-ns)))
+                  required-ns)
+        alias-loc (some-> entry-ns-loc (z/find-value :as) (z/right))
+        refer-loc (some-> entry-ns-loc (z/find-value :refer) (z/right))
+        refer-all? (when refer-loc (= (z/sexpr refer-loc) :all))]
+    (add-reference context scoped (z/node entry-ns-loc)
+                   (cond-> {:tags #{libtype} :sym full-ns}
+                     alias-loc (assoc :alias (z/sexpr alias-loc))
+                     refer-all? (assoc :refer-all? true)))
+    (when alias-loc
+      (add-reference context scoped (z/node alias-loc)
+                     {:tags #{:alias :declare}
+                      :ns full-ns
+                      :sym (z/sexpr alias-loc)}))
+    (when (and refer-loc (not refer-all?))
+      (doseq [refer-node (remove n/printable-only? (n/children (z/node refer-loc)))]
+        (add-reference context scoped refer-node
+                       {:tags #{:refer :declare}
+                        :sym (symbol (name full-ns) (n/string refer-node))})))))
+
+(defn add-libspecs [libtype context scoped entry-loc prefix-ns]
+  (let [libspec? (fn [sexpr] (or (vector? sexpr) (list? sexpr)))
+        prefix? (fn [sexpr] (or (symbol? (second sexpr)) (libspec? (second sexpr))))]
+    (loop [entry-loc entry-loc]
+      (when entry-loc
+        (let [sexpr (z/sexpr entry-loc)]
+          (cond
+            (symbol? sexpr)
+            (let [full-ns (if prefix-ns
+                            (symbol (str (name prefix-ns) "." (name sexpr)))
+                            sexpr)]
+              (add-reference context scoped (z/node entry-loc)
+                             (cond-> {:tags #{libtype} :sym full-ns}
+                               (= libtype :import) (assoc :class-sym (-> full-ns
+                                                                         name
+                                                                         (string/split #"\.")
+                                                                         last
+                                                                         symbol)))))
+            (and (libspec? sexpr) (prefix? sexpr))
+            (add-libspecs libtype context scoped (z/right (z/down entry-loc)) (z/sexpr (z/down entry-loc)))
+
+            (libspec? sexpr)
+            (add-libspec libtype context scoped entry-loc prefix-ns)))
+        (recur (z/right entry-loc))))))
+
 (defn handle-ns
   [op-loc loc context scoped]
-  (let [args (-> loc
-                 (z/subedit->
-                  ((fn [loc]
-                     ;; TODO should be able to put these in :require
-                     (if-let [require-macros (z/find-value loc z/next :require-macros)]
-                       (-> require-macros z/up z/remove)
-                       loc))))
-                 (z/sexpr)
-                 (rest))
-        ns-arg-spec (:args (s/get-spec 'clojure.core/ns))
-        conformed (s/conform ns-arg-spec args)
-        _ (when (= :clojure.spec.alpha/invalid conformed)
-            (throw (ex-info "Could not parse ns" (s/explain-data ns-arg-spec args))))
-        libs (:body (second (first (filter (comp #{:require} first) (:clauses conformed)))))
-        prefix-symbol (fn [prefix sym]
-                        (if prefix
-                          (symbol (str (name prefix) "." (name sym)))
-                          sym))
-        expand-lib-spec (fn [prefix [tag arg]]
-                          (if (= :lib tag)
-                            {:lib (prefix-symbol prefix arg)}
-                            (update arg :lib #(prefix-symbol prefix %))))
-        expand-prefix-list (fn [{:keys [prefix libspecs]}]
-                             (mapv (partial expand-lib-spec prefix) libspecs))
-        libspecs (reduce (fn [libspecs libspec-or-prefix-list]
-                           (let [[tag arg] libspec-or-prefix-list]
-                             (into libspecs
-                                   (cond
-                                     (= :libspec tag) [(expand-lib-spec nil arg)]
-                                     (= :prefix-list tag) (expand-prefix-list arg)))))
-                         []
-                         libs)
-        lib-publics (fn [lib]
-                      (for [[_ {:keys [ns usages]}] (:file-envs @db/db)
-                            {:keys [sym tags]} usages
-                            :when (and (= ns lib) (:declare tags) (:public tags))]
-                        [(symbol (name sym)) lib]))
-        require-loc (-> loc
-                        (z/down)
-                        (z/find z/right (fn [node]
-                                          (let [sexpr (z/sexpr node)]
-                                            (and (seq? sexpr) (= :require (first sexpr)))))))
-        require-node (-> (or require-loc loc)
-                         (z/down)
-                         (z/rightmost)
-                         (z/node)
-                         (meta))]
-    (add-imports conformed context)
-    (doseq [{:keys [lib options]} libspecs]
-      (vswap! context (fn [env]
-                        (let [{:keys [as refer]} options]
-                          (cond-> env
-                            :always (update :requires conj lib)
-                            as (update :aliases conj [lib as])
-
-                            (and refer (= :all (first refer)))
-                            (update :refers into (lib-publics lib))
-
-                            (and refer (= :syms (first refer)))
-                            (update :refers into (map vector (second refer) (repeat lib))))))))
-    (vswap! context assoc
-            :ns (:name conformed)
-            :require-pos {:add-require? (not require-loc)
-                          :row (:end-row require-node)
-                          :col (:end-col require-node)})))
+  (let [name-loc (z/right (z/down (zsub/subzip loc)))
+        first-list-loc (z/find-tag name-loc z/right :list)
+        require-loc (z/find first-list-loc z/right (comp #{:require} z/sexpr z/down))
+        import-loc (z/find first-list-loc z/right (comp #{:import} z/sexpr z/down))]
+    (add-reference context scoped (z/node name-loc) {:tags #{:declare :public :ns} :kind :module :sym (z/sexpr name-loc)})
+    (add-libspecs :require context scoped (some-> require-loc z/down z/right) nil)
+    (add-libspecs :import context scoped (some-> import-loc z/down z/right) nil)))
 
 (defn handle-let
   [op-loc loc context scoped]
@@ -388,7 +410,10 @@
 (defn handle-def
   [op-loc loc context scoped]
   (let [def-sym (z/node (z/right op-loc))
-        op-local? (local? op-loc)]
+        op-local? (local? op-loc)
+        current-ns (->> (:usages @context)
+                        (filter (comp :ns :tags))
+                        (some :sym))]
     (if op-local?
       (vswap! context update :locals conj (n/sexpr def-sym))
       (vswap! context update :publics conj (n/sexpr def-sym)))
@@ -418,7 +443,10 @@
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z/right op-loc)
-        multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
+        multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))
+        current-ns (->> (:usages @context)
+                        (filter (comp :ns :tags))
+                        (some :sym))]
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil
@@ -429,6 +457,7 @@
                               op-fn? name-tags
                               op-local? (conj name-tags :local)
                               :else (conj name-tags :public))
+                      :kind :function
                       :signatures (function-signatures name-loc multi?)}))
     (if multi?
       (loop [list-loc (z/find-tag op-loc :list)]
@@ -543,35 +572,16 @@
       op-loc
       (handle-rest op-loc context scoped))))
 
-(defn handle-reader-macro [loc context scoped]
-  (let [macro-loc (z/down loc)
-        macro (z/string macro-loc)
-        curr-file-type (:file-type @context)]
-    (if (contains? #{"?@" "?"} macro)
-      (let [splice? (= "?@" macro)
-            file-type-loc (z/down (z/right macro-loc))]
-        (loop [file-type-loc file-type-loc]
-          (when file-type-loc
-            (vswap! context assoc :file-type (z/sexpr file-type-loc))
-            (find-references* (zsub/subzip (z/right file-type-loc)) context scoped)
-            (vswap! context assoc :file-type curr-file-type)
-            (-> file-type-loc z/right z/right)))))))
-
 (defn find-references* [loc context scoped]
   (loop [loc loc
          scoped scoped]
     (if (or (not loc) (zm/end? loc))
-      @context
+      (:usages @context)
 
       (let [tag (z/tag loc)]
         (cond
           (#{:quote :uneval :syntax-quote} tag)
           (recur (edit/skip-over loc) scoped)
-
-          (= :reader-macro tag)
-          (do
-            (handle-reader-macro loc context scoped)
-            (recur (edit/skip-over loc) scoped))
 
           (= :list tag)
           (do
@@ -591,21 +601,34 @@
           :else
           (recur (zm/next loc) scoped))))))
 
-(comment
-  (ns-unmap *ns* '/)
-  ( z/sexpr (z/right (z/right (z/right (z/down (z/of-string "[a [b] c] 56"))))))
-  (apply hash-map '(:clj :bar :cljs :foo))
-  (convert-reader-macros (z/of-string "#?(:clj :bar) 3 #?@(:clj [foo bar] :cljs [qux quaz])") :clj))
+(defn process-reader-macro [file-type loc]
+  (if-let [file-type-loc (and (= :reader-macro (z/tag loc))
+                              (contains? #{"?@" "?"} (z/string (z/down loc)))
+                              (-> loc
+                                  z/down
+                                  z/right
+                                  z/down
+                                  (z/find-value z/right file-type)))]
+    (let [file-type-expr (z/node (z/right file-type-loc))
+          splice? (= "?@" (z/string (z/down loc)))]
+        (cond-> (z/replace loc file-type-expr)
+          splice? (z/splice)))
+    loc))
 
 (defn find-references [code file-type]
-  (-> code
-      (string/replace #"(\w)/(\W|$)" "$1 $2")
-      (z/of-string)
-      (zm/up)
-      (find-references*
-        (volatile! (assoc default-env :file-type file-type))
-        {})
-      (dissoc :file-type)))
+  (let [code-loc (-> code
+                     (string/replace #"(\w)/(\W|$)" "$1 $2")
+                     (z/of-string)
+                     (zm/up))]
+    (if (= :cljc file-type)
+      (into (-> code-loc
+                (z/postwalk (partial process-reader-macro :clj))
+                (find-references* (volatile! (assoc default-env :file-type :clj)) {}))
+            (-> code-loc
+                 (z/postwalk (partial process-reader-macro :cljs))
+                 (find-references* (volatile! (assoc default-env :file-type :cljs)) {})))
+      (-> code-loc
+          (find-references* (volatile! (assoc default-env :file-type file-type)) {})))))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as form-pos}
@@ -661,13 +684,13 @@
                            "(bun/foo)"
                            "(bing)"])]
     (n/string (z/node (z/of-string "::foo")))
+    (find-references code :clj))
 
-    (let [code "^:private ^clojure.lang.IChunk chunk"]
-      (n/children (z/node (z/of-string code)))
-      (find-references code :clj))
-    (let [code "(def #?@(:clj a :cljs b) 1)"]
-      (n/children (z/node (z/of-string code)))
-      (find-references code :clj))
+  (let [code "(ns foob) (defn ^:private chunk [] :a)"]
+    (find-references code :clj))
+  (let [code "(def #?@(:clj a :cljs b) 1)"]
+    (n/children (z/node (z/of-string code)))
+    (find-references code :cljc))
 
-    #_(find-references code :clj)
-    (z/sexpr (loc-at-pos code 1 2))))
+  #_(find-references code :clj)
+  (z/sexpr (loc-at-pos code 1 2)))

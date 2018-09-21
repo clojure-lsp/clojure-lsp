@@ -7,6 +7,7 @@
   (:import
     (org.eclipse.lsp4j
       CompletionItem
+      CompletionItemKind
       Diagnostic
       DiagnosticSeverity
       Hover
@@ -20,7 +21,7 @@
       TextEdit
       VersionedTextDocumentIdentifier
       WorkspaceEdit)
-   (org.eclipse.lsp4j.jsonrpc.messages Either)))
+    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -30,16 +31,26 @@
 (s/def ::end ::position)
 (s/def ::range (s/and (s/keys :req-un [::start ::end])
                       (s/conformer #(Range. (:start %1) (:end %1)))))
+
+(def kind-enum
+  {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
+   :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
+   :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
+
+(s/def ::kind (s/and keyword?
+                     kind-enum
+                     (s/conformer (fn [v] (CompletionItemKind/forValue (get kind-enum v))))))
 (s/def ::new-text string?)
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
 (s/def ::additional-text-edits (s/coll-of ::text-edit))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit])
-                                (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit]}]
+                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit ::kind])
+                                (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind]}]
                                                (let [item (CompletionItem. label)]
                                                  (cond-> item
                                                    filter-text (doto (.setFilterText filter-text))
+                                                   kind (doto (.setKind kind))
                                                    additional-text-edits (doto (.setAdditionalTextEdits additional-text-edits))
                                                    detail (doto (.setDetail detail))
                                                    text-edit (doto (.setTextEdit text-edit))))))))
@@ -84,8 +95,8 @@
 (s/def :markup/value string?)
 (s/def ::markup-content (s/and (s/keys :req-un [:markup/kind :markup/value])
                                (s/conformer #(doto (MarkupContent.)
-                                              (.setKind (:kind %1))
-                                              (.setValue (:value %1))))))
+                                               (.setKind (:kind %1))
+                                               (.setValue (:value %1))))))
 
 (s/def ::contents (s/and (s/or :marked-strings (s/coll-of ::marked-string)
                                :markup-content ::markup-content)
@@ -169,7 +180,7 @@
 (s/def :capabilities/did-change-watched-files ::debean)
 (s/def :capabilities/execute-command ::debean)
 (s/def :capabilities/symbol (s/and ::debean
-                                  (s/keys :opt-un [:capabilities/symbol-kind])))
+                                   (s/keys :opt-un [:capabilities/symbol-kind])))
 (s/def :capabilities/workspace (s/and ::debean
                                       (s/keys :opt-un [:capabilities/workspace-edit
                                                        :capabilities/did-change-configuration

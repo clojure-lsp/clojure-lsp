@@ -9,7 +9,6 @@
 
 (defn syms [code]
   (->> (parser/find-references code :clj)
-       (:usages)
        (map :sym)
        (set)))
 
@@ -31,28 +30,28 @@
 
 (deftest qualify-ident-test
   (let [context (volatile! {})]
-    (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {})))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {})))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {})))
-    (is (= {:sym '.getMessage :tags #{:method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {})))
-    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {})))
-    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {})))))
+    (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
+    (is (= {:sym '.getMessage :tags #{:method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
+    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
+    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {} false)))))
 
 (deftest find-references-simple-test
   (testing "simple stuff"
-    (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux foo.bar// :a}
+    (is (= '#{clojure.core/ns clojure.core/def foo.bar/qux foo.bar// :a foo.bar}
            (syms "(ns foo.bar) (def qux qux) (def / :a)")))
     (is (= 2 (count (syms "(:id user)"))))
     (is (= 5 (count (syms "{:x id :y (:id user)}")))))
   (testing "#(dispatch-macro)"
     (let [code "#(% %1 %2 %&)"
-          usages (:usages (parser/find-references code :clj))]
+          usages (parser/find-references code :clj)]
       (is (= [] (filter (fn [usage] (contains? (:tags usage) :unknown)) usages))))))
 
 (deftest find-references-defn-test
   (testing "single-arity"
     (let [code "(defn a [b] b a)"
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           bound-ref (nth usages 2)
           usage-ref (nth usages 3)]
       (is (= 'user/a (:sym (nth usages 1))))
@@ -65,7 +64,7 @@
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
   (testing "private"
     (let [code "(defn- a [b] b a)"
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           bound-ref (nth usages 2)
           usage-ref (nth usages 3)]
       (is (= 'user/a (:sym (nth usages 1))))
@@ -78,7 +77,7 @@
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
   (testing "private meta"
     (let [code "(defn ^:private a [b] b a)"
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           bound-ref (nth usages 2)
           usage-ref (nth usages 3)]
       (is (= 'user/a (:sym (nth usages 1))))
@@ -91,13 +90,13 @@
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
   (testing "private map meta"
     (let [code "(defmacro ^{:private true} ^:focus \n thing [])"
-          usages (:usages (parser/find-references code :clj))]
+          usages (parser/find-references code :clj)]
       (is (= 'user/thing (:sym (nth usages 1))))
       (is (= "thing" (:str (nth usages 1))))
       (is (= #{:declare :local} (:tags (nth usages 1))))))
   (testing "multi-arity"
     (let [code "(defn a ([b] b) ([b c] b))"
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           def-ref (second usages)
           bound-ref (nth usages 2)
           usage-ref (nth usages 3)]
@@ -114,7 +113,7 @@
     (let [code "(let [#_#_x 1 a 2 b 3] a)"
           a-valid (string/index-of code "3")
           end-scope (inc (count code))
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           bound-ref (second usages)
           usage-ref (nth usages 3)]
       (is (not= "user" (namespace (:sym bound-ref))))
@@ -125,7 +124,7 @@
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
   (testing "clojure.core/for"
     (let [code "(for [a 1 :let [b 2]] [a b])"
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           bound-ref (second usages)
           usage-ref (nth usages 3)
           b-bound (nth usages 2)
@@ -140,7 +139,7 @@
       (is (= (:sym b-bound) (:sym b-usage)))
       (is (= (:scope-bounds b-bound) (:scope-bounds b-usage))))
     (let [code "(for [:when true :let [a 0] b [] :let [c 0] :when true] a b c)"
-          usages (:usages (parser/find-references code :clj))
+          usages (parser/find-references code :clj)
           a-bound (nth usages 1)
           a-usage (nth usages 4)
           b-bound (nth usages 2)
@@ -160,7 +159,7 @@
 
 (deftest find-references-destructuring-test
   (let [code "(let [{:keys [a] b :b} {}] a b)"
-        usages (:usages (parser/find-references code :clj))
+        usages (parser/find-references code :clj)
         bound-ref (second usages)
         usage-ref (nth usages 3)
         b-bound (nth usages 2)
@@ -170,7 +169,7 @@
     (is (= #{:declare :param} (:tags b-bound)))
     (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound)))))
   (let [code "(fn [y {:keys [a] b :b}] a b)"
-        usages (:usages (parser/find-references code :clj))
+        usages (parser/find-references code :clj)
         bound-ref (nth usages 2)
         usage-ref (nth usages 4)
         b-bound (nth usages 3)
@@ -181,7 +180,7 @@
     (is (= #{:declare :param} (:tags b-bound)))
     (is (= (namespace (:sym b-usage)) (namespace (:sym b-bound)))))
   (let [code "(fn myname [y {:keys [a] b :b}] a b)"
-        usages (:usages (parser/find-references code :clj))
+        usages (parser/find-references code :clj)
         name-ref (nth usages 1)
         bound-ref (nth usages 3)
         usage-ref (nth usages 5)
@@ -197,37 +196,38 @@
 
 (deftest find-references-ns-test
   (testing "refer all"
-    (reset! db/db {:file-envs {"a.clj" {:ns 'clojure.test :usages [{:sym 'clojure.test/deftest :tags #{:declare :public}}]}}})
+    (reset! db/db {:file-envs {"a.clj" [{:sym 'clojure.test :tags #{:public :ns}}
+                                        {:sym 'clojure.test/deftest :tags #{:declare :public}}]}})
     (let [code "(ns foo.bar (:require [clojure.test :refer :all])) (deftest hi)"
-          {:keys [usages imports]} (parser/find-references code :clj)
-          deftest-ref (nth usages 1)
-          hi-ref (nth usages 2)]
+          usages (parser/find-references code :clj)
+          deftest-ref (nth usages 3)
+          hi-ref (nth usages 4)]
       (is (= 'clojure.test/deftest (:sym deftest-ref)))))
   (testing "refers"
     (let [code "(ns foo.bar (:require [clojure.test :refer [deftest]])) (deftest hi)"
-          {:keys [usages imports]} (parser/find-references code :clj)
-          deftest-ref (nth usages 1)
-          hi-ref (nth usages 2)]
+          usages (parser/find-references code :clj)
+          deftest-ref (nth usages 4)
+          hi-ref (nth usages 5)]
       (is (= 'clojure.test/deftest (:sym deftest-ref)))
       #_
       (is (not= #{:unknown} (:tags hi-ref)))))
   (testing "import"
     (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static 1) (JarFile.)"
-          {:keys [usages imports]} (parser/find-references code :clj)
-          jar-file-ref (nth usages 1)
-          file-ref (nth usages 2)
-          file-static-ref (nth usages 3)
-          unknown-ref (nth usages 4)]
+          usages (drop 4 (parser/find-references code :clj))
+          jar-file-ref (nth usages 0)
+          file-ref (nth usages 1)
+          file-static-ref (nth usages 2)
+          fq-ref (nth usages 3)]
       (is (= 'java.util.jar.JarFile (:sym jar-file-ref)))
       (is (= 'java.io.File (:sym file-ref)))
       (is (= 'java.io.File/static (:sym file-static-ref)))
-      (is (not= 'java.util.jar.JarFile (:sym unknown-ref)))
-      (is (= #{:unknown} (:tags unknown-ref))))))
+      (is (= 'java.util.jar.JarFile (:sym fq-ref)))
+      (is (= #{:norename :method} (set (mapcat :tags usages)))))))
 
 (deftest find-references-keyword-test
   (testing "simple"
     (let [code "(ns bar (:require [qux :as q])) :foo/foo :foo ::foo ::q/foo ::x/foo"
-          usages (drop 1 (:usages (parser/find-references code :clj)))]
+          usages (drop 4 (parser/find-references code :clj))]
       (is (= [":foo/foo" ":foo" "::foo" "::q/foo" "::x/foo"] (mapv :str usages)))
       (is (= [:foo/foo :foo :bar/foo :qux/foo] (butlast (mapv :sym usages))))
       (is (nil? (seq (remove nil? (mapv :tags (butlast usages))))))
@@ -238,9 +238,10 @@
 (deftest find-references-symbols-test
   (testing "simple"
     (let [code "(ns bar (:require [qux :as q])) (def foo 1) qux/foo q/foo"
-          usages (drop 2 (:usages (parser/find-references code :clj)))]
-      (is (= ["foo" "qux/foo" "q/foo"] (mapv :str usages)))
-      (is (= '[bar/foo qux/foo qux/foo] (mapv :sym usages))))))
+          usages (parser/find-references code :clj)]
+      (is (= ["ns" "bar" "qux" "q" "def" "foo" "qux/foo" "q/foo"] (mapv :str usages)))
+      (is (= '[clojure.core/ns bar qux q clojure.core/def bar/foo qux/foo qux/foo]
+             (mapv :sym usages))))))
 
 (deftest find-loc-at-pos-test
   (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 1))))

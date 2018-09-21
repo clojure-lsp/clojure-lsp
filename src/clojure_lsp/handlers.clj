@@ -42,8 +42,14 @@
     (and (= end-row line) (>= end-col column)) :within
     :else :after))
 
-(defn find-reference-under-cursor [line column env]
-  (first (filter (comp #{:within} (partial check-bounds line column)) (:usages env))))
+(defn find-reference-under-cursor [line column env file-type]
+  (let [file-types (if (= :cljc file-type)
+                     #{:clj :cljs}
+                     #{file-type})]
+    (->> env
+         (filter (comp file-types :file-type))
+         (filter (comp #{:within} (partial check-bounds line column)))
+         first)))
 
 (defn send-notifications [uri env]
   (let [unknown-usages (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
@@ -189,30 +195,49 @@
             :usages (:usages remote-env)}))
        remote-envs))
 
+(defn- matches-cursor? [cursor-value s]
+  (when (and s (string/starts-with? s cursor-value))
+    s))
+
 (defn completion [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
         cursor-usage (loop [try-column column]
-                       (if-let [usage (find-reference-under-cursor line try-column local-env)]
+                       (if-let [usage (find-reference-under-cursor line try-column local-env (uri->file-type doc-id))]
                          usage
                          (when (pos? try-column)
                            (recur (dec try-column)))))
         {cursor-value :str cursor-file-type :file-type} cursor-usage
-        matches-cursor? #(when (and % (string/starts-with? % cursor-value))
-                           %)
-        remotes (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs)]
+        remotes (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs)
+        matches? (partial matches-cursor? cursor-value)]
+
     (concat
-     (->> (:usages local-env)
+     (->> local-env
           (filter (comp :declare :tags))
-          (filter (comp matches-cursor? :str))
+          (filter (comp matches? :str))
           (remove (fn [usage]
                     (when-let [scope-bounds (:scope-bounds usage)]
                       (not= :within (check-bounds line column scope-bounds)))))
-          (mapv (fn [{:keys [sym]}] {:label (name sym)}))
+          (mapv (fn [{:keys [sym kind]}] (cond-> {:label (name sym)}
+                                           kind (assoc :kind kind))))
+          (sort-by :label))
+     (->> file-envs
+          (mapcat val)
+          (filter (comp :alias :tags))
+          (filter (comp matches? :str))
+          (mapv (fn [{:keys [sym] alias-ns :ns}] {:label (name sym) :detail (str alias-ns)}))
           (sort-by :label))
      (->>
+       remote-envs
+       (mapcat val)
+       (filter (comp :public :tags))
+       (filter (fn [usage]
+                 (some-> usage :sym name matches?)))
+       (mapv (fn [usage]
+               {:label (str (:sym usage))}))
+      #_
        (for [remote remotes
              usage (:usages remote)
              :when (contains? (:tags usage) :public)
@@ -236,27 +261,27 @@
                                                        (format "\n   [%s%s]" (name (:ns remote)) (:as-alias remote)))}])))
       (sort-by :label))
      (->> cc/core-syms
-          (filter (comp matches-cursor? str))
+          (filter (comp matches? str))
           (map (fn [sym] {:label (str sym)}))
           (sort-by :label))
      (when (contains? #{:cljc :cljs} cursor-file-type)
        (->> cc/cljs-syms
-            (filter (comp matches-cursor? str))
+            (filter (comp matches? str))
             (map (fn [sym] {:label (str sym)}))
             (sort-by :label)))
      (when (contains? #{:cljc :clj} cursor-file-type)
        (->> cc/java-lang-syms
-            (filter (comp matches-cursor? str))
+            (filter (comp matches? str))
             (map (fn [sym] {:label (str sym)}))
             (sort-by :label))))))
 
 (defn references [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor-sym (:sym (find-reference-under-cursor line column local-env))]
+        cursor-sym (:sym (find-reference-under-cursor line column local-env (uri->file-type doc-id)))]
     (log/warn "references" doc-id line column)
     (into []
-          (for [[uri {:keys [usages]}] (:file-envs @db/db)
+          (for [[uri usages] (:file-envs @db/db)
                 {:keys [sym] :as usage} usages
                 :when (= sym cursor-sym)]
             {:uri uri
@@ -275,13 +300,13 @@
 (defn rename [doc-id line column new-name]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        {cursor-sym :sym cursor-str :str tags :tags} (find-reference-under-cursor line column local-env)]
+        {cursor-sym :sym cursor-str :str tags :tags} (find-reference-under-cursor line column local-env (uri->file-type doc-id))]
     (when-not (contains? tags :norename)
       (let [[_ cursor-ns _] (parser/ident-split cursor-str)
             replacement (if cursor-ns
                           (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
                           new-name)
-            changes (->> (for [[doc-id {:keys [usages]}] file-envs
+            changes (->> (for [[doc-id usages] file-envs
                                :let [version (get-in @db/db [:documents doc-id :v] 0)]
                                {u-sym :sym u-str :str :as usage} usages
                                :when (= u-sym cursor-sym)
@@ -303,10 +328,10 @@
 (defn definition [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor-sym (:sym (find-reference-under-cursor line column local-env))]
+        cursor-sym (:sym (find-reference-under-cursor line column local-env (uri->file-type doc-id)))]
     (log/warn "definition" doc-id line column cursor-sym)
     (first
-     (for [[env-doc-id {:keys [usages]}] file-envs
+     (for [[env-doc-id usages] file-envs
            {:keys [sym tags] :as usage} usages
            :when (= sym cursor-sym)
            :when (and (or (= doc-id env-doc-id) (:public tags))
@@ -340,9 +365,9 @@
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor (find-reference-under-cursor line column local-env)
+        cursor (find-reference-under-cursor line column local-env (uri->file-type doc-id))
         signatures (first
-                    (for [[_ {:keys [usages]}] file-envs
+                    (for [[_ usages] file-envs
                           {:keys [sym tags] :as usage} usages
                           :when (and (= sym (:sym cursor)) (:declare tags))]
                       (:signatures usage)))

@@ -180,21 +180,6 @@
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
 
-(defn namespaces-and-aliases [local-aliases project-aliases remote-envs]
-  (map (fn [[doc-id remote-env]]
-         (let [ns-sym (:ns remote-env)
-               project-alias (get project-aliases ns-sym)
-               as-alias (cond-> ""
-                          project-alias (str " :as " (name project-alias)))
-               local-alias (get local-aliases ns-sym)]
-           {:ns ns-sym
-            :local-alias local-alias
-            :project-alias project-alias
-            :as-alias as-alias
-            :ref (or local-alias project-alias ns-sym)
-            :usages (:usages remote-env)}))
-       remote-envs))
-
 (defn- matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))
     s))
@@ -210,70 +195,67 @@
                          (when (pos? try-column)
                            (recur (dec try-column)))))
         {cursor-value :str cursor-file-type :file-type} cursor-usage
-        remotes (namespaces-and-aliases (:aliases local-env) (:project-aliases @db/db) remote-envs)
-        matches? (partial matches-cursor? cursor-value)]
-
-    (concat
-     (->> local-env
-          (filter (comp :declare :tags))
-          (filter (comp matches? :str))
-          (remove (fn [usage]
-                    (when-let [scope-bounds (:scope-bounds usage)]
-                      (not= :within (check-bounds line column scope-bounds)))))
-          (mapv (fn [{:keys [sym kind]}] (cond-> {:label (name sym)}
-                                           kind (assoc :kind kind))))
-          (sort-by :label))
-     (->> file-envs
-          (mapcat val)
-          (filter (comp :alias :tags))
-          (filter (comp matches? :str))
-          (mapv (fn [{:keys [sym] alias-ns :ns}] {:label (name sym) :detail (str alias-ns)}))
-          (sort-by :label))
-     (->>
-       remote-envs
-       (mapcat val)
-       (filter (comp :public :tags))
-       (filter (fn [usage]
-                 (some-> usage :sym name matches?)))
-       (mapv (fn [usage]
-               {:label (str (:sym usage))}))
-      #_
-       (for [remote remotes
-             usage (:usages remote)
-             :when (contains? (:tags usage) :public)
-             :when (contains? (set [:cljc cursor-file-type]) (:file-type usage))
-             :let [match-ns-str (or (matches-cursor? (str (:local-alias remote)))
-                                    (matches-cursor? (str (:project-alias remote)))
-                                    (matches-cursor? (str (:ns remote))))
-                   match-sym-str (matches-cursor? (some-> (:sym usage) name))]
-             :when (or match-ns-str match-sym-str)
-             :let [label (if match-ns-str
-                           (format "%s/%s" match-ns-str (name (:sym usage)))
-                           match-sym-str)
-                   insert-text (format "%s/%s" (name (:ref remote)) (name (:sym usage)))]]
-         (cond-> {:label label :detail (str (:ns remote))}
-           match-sym-str (assoc :text-edit {:range (->range cursor-usage)
-                                            :new-text insert-text})
-           (not (contains? (:requires local-env) (:ns remote)))
-           (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
-                                           :new-text (if add-require?
-                                                       (format "\n  (:require\n   [%s%s])" (name (:ns remote)) (:as-alias remote))
-                                                       (format "\n   [%s%s]" (name (:ns remote)) (:as-alias remote)))}])))
-      (sort-by :label))
-     (->> cc/core-syms
-          (filter (comp matches? str))
-          (map (fn [sym] {:label (str sym)}))
-          (sort-by :label))
-     (when (contains? #{:cljc :cljs} cursor-file-type)
-       (->> cc/cljs-syms
-            (filter (comp matches? str))
-            (map (fn [sym] {:label (str sym)}))
-            (sort-by :label)))
-     (when (contains? #{:cljc :clj} cursor-file-type)
-       (->> cc/java-lang-syms
-            (filter (comp matches? str))
-            (map (fn [sym] {:label (str sym)}))
-            (sort-by :label))))))
+        matches? (partial matches-cursor? cursor-value)
+        namespaces-and-aliases (->> file-envs
+                                    (mapcat val)
+                                    (filter (fn [usage]
+                                              (or
+                                                (set/subset? #{:public :ns} (:tags usage))
+                                                (get-in usage [:tags :alias]))))
+                                    (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
+                                            [alias-str {:label (name sym)
+                                                        :detail (if alias-ns
+                                                                  (str alias-ns)
+                                                                  (name sym))
+                                                        :alias-ns alias-ns}]))
+                                    (reduce (fn [m [k v]]
+                                              (update m k (fnil conj []) v))
+                                            {}))
+        remotes-by-ns (->> (for [[_ usages] remote-envs
+                                 usage usages
+                                 :when (and (set/subset? #{:ns :public} (:tags usage)))]
+                             [(:sym usage) usages])
+                           (into {}))]
+    (when cursor-value
+      (concat
+        (->> local-env
+             (filter (comp :declare :tags))
+             (filter (comp matches? :str))
+             (remove (fn [usage]
+                       (when-let [scope-bounds (:scope-bounds usage)]
+                         (not= :within (check-bounds line column scope-bounds)))))
+             (mapv (fn [{:keys [sym kind]}] (cond-> {:label (name sym)}
+                                              kind (assoc :kind kind))))
+             (sort-by :label))
+        (->> namespaces-and-aliases
+             (filter (comp matches? key))
+             (mapcat val)
+             (mapv #(dissoc % :alias-ns))
+             (sort-by :label))
+        (->> (for [[alias-str matches] namespaces-and-aliases
+                   :when (= alias-str cursor-value)
+                   {:keys [alias-ns]} matches
+                   :let [usages (get remotes-by-ns alias-ns)]
+                   usage usages
+                   :when (and (get-in usage [:tags :public])
+                              (not (get-in usage [:tags :ns])))]
+               {:label (str alias-str "/" (name (:sym usage)))
+                :detail (name alias-ns)})
+             (sort-by :label))
+        (->> cc/core-syms
+             (filter (comp matches? str))
+             (map (fn [sym] {:label (str sym)}))
+             (sort-by :label))
+        (when (contains? #{:cljc :cljs} cursor-file-type)
+          (->> cc/cljs-syms
+               (filter (comp matches? str))
+               (map (fn [sym] {:label (str sym)}))
+               (sort-by :label)))
+        (when (contains? #{:cljc :clj} cursor-file-type)
+          (->> cc/java-lang-syms
+               (filter (comp matches? str))
+               (map (fn [sym] {:label (str sym)}))
+               (sort-by :label)))))))
 
 (defn references [doc-id line column]
   (let [file-envs (:file-envs @db/db)

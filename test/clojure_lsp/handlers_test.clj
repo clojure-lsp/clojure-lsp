@@ -34,7 +34,8 @@
                                      :row 1 :col 1 :end-row 1 :end-col 5}
                                     {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public} :file-type :clj
                                      :row 2 :col 1 :end-row 2 :end-col 5}]
-                   "file://b.clj" [{:sym 'alpaca.ns :str "alpaca.ns" :tags #{:require}}
+                   "file://b.clj" [{:sym 'user :str "user" :tags #{:public :ns}}
+                                   {:sym 'alpaca.ns :str "alpaca.ns" :tags #{:require}}
                                    {:sym 'alpaca :str "alpaca" :tags #{:alias} :ns 'alpaca.ns}
                                    {:sym 'user/alpha :str "alpha" :tags #{:declare} :file-type :clj
                                     :row 1 :col 1 :end-row 1 :end-col 2}
@@ -45,32 +46,36 @@
                    "file://c.cljs" [{:sym 'alpaca.ns/barr :str "barr" :tags #{:declare :public} :file-type :cljs
                                      :row 1 :col 1 :end-row 1 :end-col 5}
                                     {:sym 'alpaca.ns/bazz :str "bazz"  :tags #{:declare :public} :file-type :cljs
-                                     :row 2 :col 1 :end-row 2 :end-col 5}]}}]
+                                     :row 2 :col 1 :end-row 2 :end-col 5}]
+                   "file://d.clj" [{:sym 'alpaca :str "alpaca" :tags #{:alias} :ns 'user}]}}]
     (testing "complete-a"
       (reset! db/db db-state)
-      (is (= [{:label "alpha"} {:label "alpaca" :detail "alpaca.ns"} {:label "alpaca.ns"}]
+      (is (= [{:label "alpha"}
+              {:label "alpaca" :detail "alpaca.ns"}
+              {:label "alpaca" :detail "user"}
+              {:label "alpaca.ns" :detail "alpaca.ns"}]
              (handlers/completion "file://b.clj" 2 2))))
     (testing "complete-ba"
       (reset! db/db db-state)
-			(is (= [{:label "barr" :detail "alpaca.ns"
-							 :text-edit {:range {:start {:line 2, :character 0}, :end {:line 2, :character 1}}, :new-text "alpaca/barr"}}
-							{:label "bazz" :detail "alpaca.ns"
-							 :text-edit {:range {:start {:line 2, :character 0}, :end {:line 2, :character 1}}, :new-text "alpaca/bazz"}}
-              {:label "bases"}]
+			(is (= [{:label "bases"}]
              (handlers/completion "file://b.clj" 3 2))))
     (testing "complete-alph"
-      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 3] merge {:sym 'user/alph :str "alph"}))
+      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'user/alph :str "alph"}))
       (is (= [{:label "alpha"}]
              (handlers/completion "file://b.clj" 2 2))))
     (testing "complete-alpaca"
-      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 3] merge {:sym 'alpa :str "alpaca"}))
-      (is (= [{:label "alpaca/barr" :detail "alpaca.ns"} {:label "alpaca/bazz" :detail "alpaca.ns"}]
+      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'alpaca :str "alpaca"}))
+      (is (= [{:label "alpaca" :detail "alpaca.ns"}
+              {:label "alpaca" :detail "user"}
+              {:label "alpaca.ns" :detail "alpaca.ns"}
+              {:label "alpaca/barr" :detail "alpaca.ns"}
+              {:label "alpaca/bazz" :detail "alpaca.ns"}]
              (handlers/completion "file://b.clj" 2 2))))
     (testing "complete-core-stuff"
-      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 3] merge {:sym 'freq :str "freq"}))
+      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
       (is (= [{:label "frequencies"}]
              (handlers/completion "file://b.clj" 2 2)))
-      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 3] merge {:sym 'Sys :str "Sys"}))
+      (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'Sys :str "Sys"}))
       (is (= [{:label "System"}]
              (handlers/completion "file://b.clj" 2 2))))))
 

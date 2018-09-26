@@ -77,15 +77,13 @@
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (uri->file-type uri)
-           references (cond-> (parser/find-references text file-type)
-                        remove-private? (update :usages #(filter (fn [{:keys [tags]}]
-                                                                   (and (:public tags) (:declare tags)))
-                                                                 %)))]
+           references (cond->> (parser/find-references text file-type)
+                        remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
          (send-notifications uri references))
        references)
      (catch Throwable e
-       (log/warn "Ignoring: " uri (.getMessage e))
+       (log/warn e "Ignoring: " uri (.getMessage e))
        ;; On purpose
        nil))))
 
@@ -232,6 +230,14 @@
              (mapcat val)
              (mapv #(dissoc % :alias-ns))
              (sort-by :label))
+        #_
+        ;; TODO
+        (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
+                                        :new-text (if add-require?
+                                                    (format "\n  (:require\n   [%s%s])"
+                                                            (name (:ns remote)) (:as-alias remote))
+                                                    (format "\n   [%s%s]"
+                                                            (name (:ns remote)) (:as-alias remote)))}])
         (->> (for [[alias-str matches] namespaces-and-aliases
                    :when (= alias-str cursor-value)
                    {:keys [alias-ns]} matches

@@ -16,7 +16,8 @@
   (subs code (dec (:col scope-bounds)) (dec (:end-col scope-bounds))))
 
 (deftest parse-destructuring-test
-  (is (= '(a b c d e) (keys (parser/parse-destructuring (z/of-string "[a {:keys [b c] :as d} e]") {} (volatile! {}) {})))))
+  (is (= '(a b c d e) (keys (parser/parse-destructuring (z/of-string "[a {:keys [b c] :as d} e]") {} (volatile! {}) {}))))
+  (is (= '(a c) (keys (parser/destructure-map (z/of-string "{a :b :keys [] c :d}") {} (volatile! {}) {})))) )
 
 (deftest parse-bindings-test
   (let [context (volatile! {})]
@@ -255,3 +256,19 @@
            (->> {:row 1 :col 2 :end-row 1 :end-col (count code)}
                 (parser/find-top-forms-in-range code)
                 (map z/sexpr))))))
+
+(defn gensym-counter []
+  (let [cnt (atom -1)]
+    (fn []
+      (symbol (str "gensym" (swap! cnt inc))))))
+
+(deftest find-references-deftype-test
+  (with-redefs [gensym (gensym-counter)]
+    (let [code "(deftype FooBar [fn] IBar (-x []) IQux (toString [_] (fn str)) (tooBad [a] fn) IFn)"
+          usages (drop 1 (parser/find-references code :cljs))]
+      (is (= ['user/FooBar 'gensym1/fn
+              'gensym2/IBar 'gensym3/-x 'gensym5/IQux
+              'gensym6/toString 'gensym8/_ 'gensym1/fn 'clojure.core/str
+              'gensym9/tooBad 'gensym11/a 'gensym1/fn
+              'gensym12/IFn]
+             (mapv :sym usages))))))

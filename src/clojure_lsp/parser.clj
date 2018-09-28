@@ -49,6 +49,12 @@
      (log/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
+(defn z-next-sexpr [loc]
+  (z/find-next loc z/next #(not (n/printable-only? (z/node %)))))
+
+(defn z-right-sexpr [loc]
+  (z/find-next loc z/right #(not (n/printable-only? (z/node %)))))
+
 (defn ident-split [ident-str]
   (let [ident-conformed (some-> ident-str (string/replace ":" ""))
         prefix (string/replace ident-str #"^(::?)?.*" "$1")
@@ -157,22 +163,24 @@
          scoped scoped]
     (if (and key-loc (not (z/end? key-loc)))
       (let [key-sexpr (z/sexpr key-loc)
-            val-loc (z/right key-loc)]
+            val-loc (z-right-sexpr key-loc)]
         (cond
           (#{:keys :strs :syms} key-sexpr)
           (recur (edit/skip-over val-loc)
                  (loop [child-loc (z/down val-loc)
                         scoped scoped]
-                   (let [sexpr (z/sexpr child-loc)
-                         scoped-ns (gensym)
-                         new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
-                     (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
-                                                                       :scope-bounds scope-bounds
-                                                                       :sym (symbol (name scoped-ns)
-                                                                                    (name sexpr))})
-                     (if (z/rightmost? child-loc)
-                       new-scoped
-                       (recur (z/right child-loc) new-scoped)))))
+                   (if child-loc
+                     (let [sexpr (z/sexpr child-loc)
+                           scoped-ns (gensym)
+                           new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
+                       (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
+                                                                         :scope-bounds scope-bounds
+                                                                         :sym (symbol (name scoped-ns)
+                                                                                      (name sexpr))})
+                       (if (nil? (z-right-sexpr child-loc))
+                         new-scoped
+                         (recur (z-right-sexpr child-loc) new-scoped)))
+                     scoped)))
 
           (= :as key-sexpr)
           (let [val-node (z/node val-loc)
@@ -183,13 +191,13 @@
                                                             :scope-bounds scope-bounds
                                                             :sym (symbol (name scoped-ns)
                                                                          (name sexpr))})
-            (recur (z/right val-loc) new-scoped))
+            (recur (z-right-sexpr val-loc) new-scoped))
 
           (keyword? key-sexpr)
           (recur (edit/skip-over val-loc) scoped)
 
           (not= '& key-sexpr)
-          (recur (z/right val-loc) (parse-destructuring key-loc scope-bounds context scoped))
+          (recur (z-right-sexpr val-loc) (parse-destructuring key-loc scope-bounds context scoped))
 
           :else
           (recur (edit/skip-over val-loc) scoped)))
@@ -221,10 +229,10 @@
                                                     :scope-bounds scope-bounds
                                                     :sym (symbol (name scoped-ns)
                                                                  (name sexpr))})
-            (recur (z/next param-loc) new-scoped))
+            (recur (z-next-sexpr param-loc) new-scoped))
 
           (vector? sexpr)
-          (recur (z/next param-loc) scoped)
+          (recur (z-next-sexpr param-loc) scoped)
 
           (map? sexpr)
           (recur (edit/skip-over param-loc) (destructure-map param-loc scope-bounds context scoped))
@@ -247,7 +255,7 @@
           (recur (edit/skip-over binding-loc) scoped)
 
           not-done?
-          (let [right-side-loc (z/right binding-loc)
+          (let [right-side-loc (z-right-sexpr binding-loc)
                 binding-sexpr (z/sexpr binding-loc)]
             ;; Maybe for/doseq needs to use different bindings
             (cond
@@ -261,7 +269,7 @@
                 (recur (edit/skip-over right-side-loc) scoped))
 
               :else
-              (let [{:keys [end-row end-col]} (meta (z/node (or (z/right right-side-loc) (z/up right-side-loc) bindings-loc)))
+              (let [{:keys [end-row end-col]} (meta (z/node (or (z-right-sexpr right-side-loc) (z/up right-side-loc) bindings-loc)))
                     scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
                     new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
                 (handle-rest (zsub/subzip right-side-loc) context scoped)
@@ -283,9 +291,9 @@
              scoped scoped]
         (if param-loc
           (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
-            (if (z/rightmost? param-loc)
+            (if (nil? (z-right-sexpr param-loc))
               new-scoped
-              (recur (z/right param-loc) new-scoped)))
+              (recur (z-right-sexpr param-loc) new-scoped)))
           scoped)))
     (catch Exception e
       (log/warn "params" (.getMessage e) (z/sexpr params-loc))
@@ -313,8 +321,8 @@
         full-ns (if prefix-ns
                   (symbol (str (name prefix-ns) "." (name required-ns)))
                   required-ns)
-        alias-loc (some-> entry-ns-loc (z/find-value :as) (z/right))
-        refer-loc (some-> entry-ns-loc (z/find-value :refer) (z/right))
+        alias-loc (some-> entry-ns-loc (z/find-value :as) (z-right-sexpr))
+        refer-loc (some-> entry-ns-loc (z/find-value :refer) (z-right-sexpr))
         refer-all? (when refer-loc (= (z/sexpr refer-loc) :all))]
     (when (= libtype :require)
       (vswap! context update :requires conj full-ns)
@@ -342,7 +350,7 @@
   (let [libspec? (fn [sexpr] (or (vector? sexpr) (list? sexpr)))
         prefix? (fn [sexpr] (or (symbol? (second sexpr)) (libspec? (second sexpr))))]
     (loop [entry-loc entry-loc]
-      (when entry-loc
+      (when (and entry-loc (not (-> entry-loc z/node n/printable-only?)))
         (let [sexpr (z/sexpr entry-loc)]
           (cond
             (symbol? sexpr)
@@ -363,48 +371,48 @@
               (add-reference context scoped (z/node entry-loc)
                              {:tags #{libtype} :sym full-ns}))
             (and (libspec? sexpr) (prefix? sexpr))
-            (add-libspecs libtype context scoped (z/right (z/down entry-loc)) (z/sexpr (z/down entry-loc)))
+            (add-libspecs libtype context scoped (z-right-sexpr (z/down entry-loc)) (z/sexpr (z/down entry-loc)))
 
             (libspec? sexpr)
             (add-libspec libtype context scoped entry-loc prefix-ns)))
-        (recur (z/right entry-loc))))))
+        (recur (z-right-sexpr entry-loc))))))
 
 (defn handle-ns
   [op-loc loc context scoped]
-  (let [name-loc (z/right (z/down (zsub/subzip loc)))
-        first-list-loc (z/find-tag name-loc z/right :list)
-        require-loc (z/find first-list-loc z/right (comp #{:require} z/sexpr z/down))
-        import-loc (z/find first-list-loc z/right (comp #{:import} z/sexpr z/down))]
+  (let [name-loc (z-right-sexpr (z/down (zsub/subzip loc)))
+        first-list-loc (z/find-tag name-loc z-right-sexpr :list)
+        require-loc (z/find first-list-loc z-right-sexpr (comp #{:require} z/sexpr z/down))
+        import-loc (z/find first-list-loc z-right-sexpr (comp #{:import} z/sexpr z/down))]
     (vswap! context assoc :ns (z/sexpr name-loc))
     (add-reference context scoped (z/node name-loc) {:tags #{:declare :public :ns} :kind :module :sym (z/sexpr name-loc)})
-    (add-libspecs :require context scoped (some-> require-loc z/down z/right) nil)
-    (add-libspecs :import context scoped (some-> import-loc z/down z/right) nil)))
+    (add-libspecs :require context scoped (some-> require-loc z/down z-right-sexpr) nil)
+    (add-libspecs :import context scoped (some-> import-loc z/down z-right-sexpr) nil)))
 
 (defn handle-let
   [op-loc loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
-    (handle-rest (z/right bindings-loc) context scoped)))
+    (handle-rest (z-right-sexpr bindings-loc) context scoped)))
 
 (defn handle-if-let
   [op-loc loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
-        if-loc (z/right bindings-loc)
+        if-loc (z-right-sexpr bindings-loc)
         if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
     (handle-rest if-loc context if-scoped)
-    (handle-rest (z/right if-loc) context scoped)))
+    (handle-rest (z-right-sexpr if-loc) context scoped)))
 
 (defn- local? [op-loc]
   (let [op (z/sexpr op-loc)
         op-name (name op)
-        name-sexpr (z/sexpr (z/right op-loc))]
+        name-sexpr (z/sexpr (z-right-sexpr op-loc))]
     (or (and (symbol? name-sexpr) (:private (meta name-sexpr)))
         (not (string/starts-with? op-name "def"))
         (string/ends-with? op-name "-"))))
 
 (defn handle-def
   [op-loc loc context scoped]
-  (let [def-sym (z/node (z/right op-loc))
+  (let [def-sym (z/node (z-right-sexpr op-loc))
         op-local? (local? op-loc)
         current-ns (->> (:usages @context)
                         (filter (comp :ns :tags))
@@ -415,7 +423,7 @@
     (add-reference context scoped def-sym {:tags (if op-local?
                                                    #{:declare :local}
                                                    #{:declare :public})})
-    (handle-rest (z/right (z/right op-loc))
+    (handle-rest (z-right-sexpr (z-right-sexpr op-loc))
                  context scoped)))
 
 (defn- function-signatures [name-loc multi?]
@@ -426,10 +434,10 @@
         (if-let [next-list (z/find-next-tag list-loc :list)]
           (recur next-list params)
           params)))
-    [(z/string (z/find-tag name-loc z/next :vector))]))
+    [(z/string (z/find-tag name-loc z-next-sexpr :vector))]))
 
 (defn- function-params-and-body [params-loc context scoped]
-  (let [body-loc (z/right params-loc)]
+  (let [body-loc (z-right-sexpr params-loc)]
     (->> (parse-params params-loc context scoped)
          (handle-rest body-loc context))))
 
@@ -437,7 +445,7 @@
   [op-loc loc context scoped name-tags]
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
-        name-loc (z/right op-loc)
+        name-loc (z-right-sexpr op-loc)
         multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))
         current-ns (->> (:usages @context)
                         (filter (comp :ns :tags))
@@ -475,8 +483,8 @@
 
 (defn handle-catch
   [op-loc loc context scoped]
-  (let [type-loc (z/right op-loc)
-        e-loc (z/right type-loc)
+  (let [type-loc (z-right-sexpr op-loc)
+        e-loc (z-right-sexpr type-loc)
         scoped-ns (gensym)
         e-node (z/node e-loc)
         scope-bounds (merge (meta e-node) (end-bounds loc))
@@ -487,12 +495,46 @@
                                           :scope-bounds scope-bounds
                                           :sym (symbol (name scoped-ns)
                                                        (name e-sexpr))})
-    (handle-rest (z/right e-loc) context new-scoped)))
+    (handle-rest (z-right-sexpr e-loc) context new-scoped)))
+
+(defn handle-type-methods
+  [proto-loc context scoped]
+  (loop [prev-loc proto-loc
+         method-loc (z-right-sexpr proto-loc)]
+    (if (and method-loc (= :list (z/tag method-loc)))
+      (let [name-loc (z/down method-loc)
+            params-loc (z-right-sexpr name-loc)]
+        (add-reference context scoped (z/node name-loc) {:tags #{:method :norename}})
+        (let [new-scoped (parse-params params-loc context scoped)]
+          (handle-rest (z-right-sexpr params-loc) context new-scoped))
+        (recur method-loc (z-right-sexpr method-loc)))
+      prev-loc)))
+
+(defn handle-deftype
+  [op-loc loc context scoped]
+  (let [type-loc (z-right-sexpr op-loc)
+        fields-loc (z-right-sexpr type-loc)]
+      (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
+                                                       :kind :class})
+      (let [field-scope (parse-params fields-loc context scoped)]
+        (loop [proto-loc (z-right-sexpr fields-loc)]
+          (when proto-loc
+            (add-reference context field-scope (z/node proto-loc) {})
+            (let [next-loc (z-right-sexpr proto-loc)]
+              (cond
+                (= (z/tag next-loc) :token)
+                (recur next-loc)
+
+                (= (z/tag next-loc) :list)
+                (some-> proto-loc
+                        (handle-type-methods context field-scope)
+                        (z-right-sexpr)
+                        (recur)))))))))
 
 (defn handle-defmacro
   [op-loc loc context scoped]
   (let [op-local? (local? op-loc)
-        defn-loc (z/right op-loc)
+        defn-loc (z-right-sexpr op-loc)
         defn-sym (z/node defn-loc)
         multi? (= :list (z/tag (z/find defn-loc (fn [loc]
                                                   (#{:vector :list} (z/tag loc))))))]
@@ -513,14 +555,14 @@
 (defn handle-dispatch-macro
   [loc context scoped]
   (->>
-   (loop [sub-loc (z/next (zsub/subzip loc))
+    (loop [sub-loc (z-next-sexpr (zsub/subzip loc))
           scoped scoped]
      (if (and sub-loc (not (z/end? sub-loc)))
        (let [sexpr (z/sexpr sub-loc)]
          (if (and (symbol? sexpr)
                   (re-find #"^%(:?\d+|&)?$" (name sexpr)))
-           (recur (z/next sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
-           (recur (z/next sub-loc) scoped)))
+           (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
+           (recur (z-next-sexpr sub-loc) scoped)))
        scoped))
    (handle-rest (z/down loc) context)))
 
@@ -539,6 +581,7 @@
    'clojure.core/declare handle-def
    'clojure.core/defmulti handle-def
    'clojure.core/defmethod handle-defmethod
+   'clojure.core/deftype handle-deftype
    'clojure.core/def handle-def
    'clojure.core/defonce handle-def
    'clojure.core/defmacro handle-defmacro
@@ -640,7 +683,7 @@
   location."
   [zloc p?]
   (->> zloc
-       (iterate z/next)
+       (iterate z-next-sexpr)
        (take-while identity)
        (take-while (complement z/end?))
        (filter p?)))
@@ -681,14 +724,10 @@
     (n/string (z/node (z/of-string "::foo")))
     (find-references code :clj))
 
-  (let [code (slurp "cheshire.clj")
-          [res prof] (tufte/profiled
-                    {}
-                    (tufte/p
-                      ::find-references
-                     (find-references code :clj))
-                    )]
-      (println (tufte/format-pstats prof)))
+  (let [code (slurp "bad.clj")]
+    (find-references code :clj)
+    #_
+    (println (tufte/format-pstats prof)))
 
   (let [code "(ns foob) (defn ^:private chunk [] :a)"]
     (find-references code :clj))
@@ -696,5 +735,7 @@
     (n/children (z/node (z/of-string code)))
     (find-references code :cljc))
 
-  #_(find-references code :clj)
+  (z/of-string "##NaN")
+
+  (find-references "(deftype JSValue [val])" :clj)
   (z/sexpr (loc-at-pos code 1 2)))

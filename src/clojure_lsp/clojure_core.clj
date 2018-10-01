@@ -779,5 +779,6 @@
      js->clj
      js-delete
      js-object
-     object?})
+     object?
+     Object})
 

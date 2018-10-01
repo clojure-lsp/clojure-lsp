@@ -639,31 +639,34 @@
           :else
           (recur (zm/next loc) scoped))))))
 
-(defn process-reader-macro [file-type loc]
-  (if-let [file-type-loc (and (= :reader-macro (z/tag loc))
-                              (contains? #{"?@" "?"} (z/string (z/down loc)))
-                              (-> loc
-                                  z/down
-                                  z/right
-                                  z/down
-                                  (z/find-value z/right file-type)))]
-    (let [file-type-expr (z/node (z/right file-type-loc))
-          splice? (= "?@" (z/string (z/down loc)))]
-        (cond-> (z/replace loc file-type-expr)
-          splice? (z/splice)))
-    loc))
+(defn process-reader-macro [loc file-type]
+  (loop [loc loc]
+    (if-let [file-type-loc (and (= :reader-macro (z/tag loc))
+                                (contains? #{"?@" "?"} (z/string (z/down loc)))
+                                (-> loc
+                                    z/down
+                                    z/right
+                                    z/down
+                                    (z/find-value z/right file-type)))]
+      (let [file-type-expr (z/node (z/right file-type-loc))
+            splice? (= "?@" (z/string (z/down loc)))]
+        (recur (cond-> (z/replace loc file-type-expr)
+                 splice? (z/splice))))
+      (if (and loc (z/next loc) (not (zm/end? loc)))
+        (recur (z/next loc))
+        (z/skip z/up #(z/up %) loc)))))
 
 (defn find-references [code file-type]
   (let [code-loc (-> code
-                     (string/replace #"(\w)/(\W|$)" "$1 $2")
+                     (string/replace #"(\w)/(\s|$)" "$1 $2")
                      (z/of-string)
                      (zm/up))]
     (if (= :cljc file-type)
       (into (-> code-loc
-                (z/postwalk (partial process-reader-macro :clj))
+                (process-reader-macro :clj)
                 (find-references* (volatile! (assoc default-env :file-type :clj)) {}))
             (-> code-loc
-                 (z/postwalk (partial process-reader-macro :cljs))
+                 (process-reader-macro :cljs)
                  (find-references* (volatile! (assoc default-env :file-type :cljs)) {})))
       (-> code-loc
           (find-references* (volatile! (assoc default-env :file-type file-type)) {})))))

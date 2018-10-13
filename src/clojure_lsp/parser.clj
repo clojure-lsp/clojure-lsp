@@ -693,8 +693,9 @@
 
 (defn find-last-by-pos
   [zloc pos]
-  (last (find-forms zloc #(in-range?
-                            (-> % z/node meta) pos))))
+  (last (find-forms zloc (fn [loc]
+                           (in-range?
+                            (-> loc z/node meta) pos)))))
 
 (defn find-top-forms-in-range
   [code pos]

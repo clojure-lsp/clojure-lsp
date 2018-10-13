@@ -183,10 +183,15 @@
     s))
 
 (defn completion [doc-id line column]
-  (let [file-envs (:file-envs @db/db)
+  (let [{:keys [text]} (get-in @db/db [:documents doc-id])
+        file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         remote-envs (dissoc file-envs doc-id)
         {:keys [add-require? row col]} (:require-pos local-env)
+        cursor-loc (try
+                     (parser/loc-at-pos text line (dec column))
+                     (catch Exception e
+                       (log/error (.getMessage e))))
         cursor-usage (loop [try-column column]
                        (if-let [usage (find-reference-under-cursor line try-column local-env (uri->file-type doc-id))]
                          usage
@@ -196,16 +201,20 @@
         matches? (partial matches-cursor? cursor-value)
         namespaces-and-aliases (->> file-envs
                                     (mapcat val)
-                                    (filter (fn [usage]
-                                              (or
-                                                (set/subset? #{:public :ns} (:tags usage))
-                                                (get-in usage [:tags :alias]))))
+                                    (filter (fn [{:keys [file-type tags] :as usage}]
+                                              (and
+                                                (or (= :cljc file-type) (= cursor-file-type file-type))
+                                                (or
+                                                  (set/subset? #{:public :ns} tags)
+                                                  (:alias tags)))))
                                     (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
                                             [alias-str {:label (name sym)
                                                         :detail (if alias-ns
                                                                   (str alias-ns)
                                                                   (name sym))
+                                                        :alias-str alias-str
                                                         :alias-ns alias-ns}]))
+                                    (distinct)
                                     (reduce (fn [m [k v]]
                                               (update m k (fnil conj []) v))
                                             {}))
@@ -228,25 +237,27 @@
         (->> namespaces-and-aliases
              (filter (comp matches? key))
              (mapcat val)
-             (mapv #(dissoc % :alias-ns))
+             (mapv (fn [{:keys [alias-str alias-ns] :as info}]
+                     (let [require-edit (some-> cursor-loc
+                                                (refactor/add-known-libspec (symbol alias-str) alias-ns)
+                                                (refactor/result))]
+                       (cond-> (dissoc info :alias-ns)
+                         require-edit (assoc :additional-text-edits (mapv #(update % :range ->range) require-edit))))))
              (sort-by :label))
-        #_
-        ;; TODO
-        (assoc :additional-text-edits [{:range (->range {:row row :col col :end-row row :end-col col})
-                                        :new-text (if add-require?
-                                                    (format "\n  (:require\n   [%s%s])"
-                                                            (name (:ns remote)) (:as-alias remote))
-                                                    (format "\n   [%s%s]"
-                                                            (name (:ns remote)) (:as-alias remote)))}])
         (->> (for [[alias-str matches] namespaces-and-aliases
                    :when (= alias-str cursor-value)
                    {:keys [alias-ns]} matches
                    :let [usages (get remotes-by-ns alias-ns)]
                    usage usages
                    :when (and (get-in usage [:tags :public])
-                              (not (get-in usage [:tags :ns])))]
-               {:label (str alias-str "/" (name (:sym usage)))
-                :detail (name alias-ns)})
+                              (not (get-in usage [:tags :ns])))
+                   :let [require-edit (some-> cursor-loc
+                                              (refactor/add-known-libspec (symbol alias-str) alias-ns)
+                                              (refactor/result))]]
+               (cond->
+                 {:label (str alias-str "/" (name (:sym usage)))
+                  :detail (name alias-ns)}
+                 require-edit (assoc :additional-text-edits (mapv #(update % :range ->range) require-edit))))
              (sort-by :label))
         (->> cc/core-syms
              (filter (comp matches? str))

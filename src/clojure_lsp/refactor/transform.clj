@@ -167,27 +167,57 @@
                    (z/insert-child 'let)
                    (edit/join-let))}]))))
 
-(defn add-missing-libspec
-  [zloc]
-  (let [ns-to-add (some-> zloc z/sexpr namespace symbol)
-        ns->alias (:project-aliases @db/db)
-        alias->ns (group-by val ns->alias)
-        qualified-ns-to-add (some-> ns-to-add alias->ns first key)
-        ns-loc (edit/find-namespace zloc)
+(defn add-known-libspec
+  [zloc ns-to-add qualified-ns-to-add]
+  (let [ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
         need-to-add? (and (not (z/find-value ns-zip z/next qualified-ns-to-add))
                           (not (z/find-value ns-zip z/next ns-to-add)))]
     (when (and ns-to-add qualified-ns-to-add need-to-add?)
       (let [add-require? (not (z/find-value ns-zip z/next :require))
+            require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+            col (if require-loc
+                  (:col (meta (z/node (z/rightmost require-loc))))
+                  5)
             result-loc (z/subedit-> ns-loc
                                     (cond->
-                                      add-require? (z/append-child '(:require)))
+                                      add-require? (z/append-child (n/newlines 1))
+                                      add-require? (z/append-child (n/spaces 2))
+                                      add-require? (z/append-child (list :require)))
                                     (z/find-value z/next :require)
                                     (z/up)
                                     (cz/append-child (n/newlines 1))
+                                    (cz/append-child (n/spaces (dec col)))
                                     (z/append-child [qualified-ns-to-add :as ns-to-add]))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
+
+(defn add-missing-libspec
+  [zloc]
+  (let [ns-str-to-add (some-> zloc z/sexpr namespace)
+        ns-to-add (some-> ns-str-to-add symbol)
+        alias->info (->> (:file-envs @db/db)
+                       (mapcat val)
+                       (filter (fn [usage]
+                                 (or
+                                   (set/subset? #{:public :ns} (:tags usage))
+                                   (get-in usage [:tags :alias]))))
+                       (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
+                               {:alias-str alias-str
+                                :label (name sym)
+                                :detail (if alias-ns
+                                          (str alias-ns)
+                                          (name sym))
+                                :alias-ns (if alias-ns
+                                            alias-ns
+                                            sym)}))
+                       (distinct)
+                       (group-by :alias-str))
+        posibilities (get alias->info ns-str-to-add)
+        qualified-ns-to-add (cond
+                              (= 1 (count posibilities))
+                              (-> posibilities first :alias-ns))]
+    (add-known-libspec zloc ns-to-add qualified-ns-to-add)))
 
 (comment
    ; join if let above

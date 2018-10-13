@@ -119,8 +119,8 @@
                 (try
                   (let [doc-id (.getUri (.getTextDocument params))
                         pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))]
+                        line (inc (int (.getLine pos)))
+                        column (inc (int (.getCharacter pos)))]
                     (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))
                   (catch Exception e
                     (log/error e)))))))))

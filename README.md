@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/snoe/clojure-lsp/tree/master.svg?style=svg)](https://circleci.com/gh/snoe/clojure-lsp/tree/master)
+
 # clojure-lsp
 
 A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive like approach of statically analyzing code.

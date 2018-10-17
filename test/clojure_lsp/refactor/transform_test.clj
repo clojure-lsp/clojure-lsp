@@ -2,6 +2,7 @@
   (:require
    [clojure.test :refer :all]
    [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as transform]
    [rewrite-clj.zip :as z]))
@@ -84,7 +85,8 @@
       (is (= (str "(let [a 1]\n (+ 1 a 2))") (z/root-string loc))))))
 
 (deftest add-missing-libspec
-  (reset! db/db {:project-aliases '{foo.s s}})
+  (reset! db/db {:file-envs
+                 {"file://a.clj" (parser/find-references "(ns a (:require [foo.s :as s]))" :clj)}})
   (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
         [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
     (is (some? range))

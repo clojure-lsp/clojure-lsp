@@ -203,7 +203,7 @@
                                     (mapcat val)
                                     (filter (fn [{:keys [file-type tags] :as usage}]
                                               (and
-                                                (or (= :cljc file-type) (= cursor-file-type file-type))
+                                                (= cursor-file-type file-type)
                                                 (or
                                                   (set/subset? #{:public :ns} tags)
                                                   (:alias tags)))))
@@ -220,7 +220,8 @@
                                             {}))
         remotes-by-ns (->> (for [[_ usages] remote-envs
                                  usage usages
-                                 :when (and (set/subset? #{:ns :public} (:tags usage)))]
+                                 :when (and (set/subset? #{:ns :public} (:tags usage))
+                                            (= cursor-file-type (:file-type usage)))]
                              [(:sym usage) usages])
                            (into {}))]
     (when cursor-value
@@ -231,8 +232,9 @@
              (remove (fn [usage]
                        (when-let [scope-bounds (:scope-bounds usage)]
                          (not= :within (check-bounds line column scope-bounds)))))
-             (mapv (fn [{:keys [sym kind]}] (cond-> {:label (name sym)}
-                                              kind (assoc :kind kind))))
+             (mapv (fn [{:keys [sym kind]}]
+                     (cond-> {:label (name sym)}
+                       kind (assoc :kind kind))))
              (sort-by :label))
         (->> namespaces-and-aliases
              (filter (comp matches? key))
@@ -241,7 +243,7 @@
                      (let [require-edit (some-> cursor-loc
                                                 (refactor/add-known-libspec (symbol alias-str) alias-ns)
                                                 (refactor/result))]
-                       (cond-> (dissoc info :alias-ns)
+                       (cond-> (dissoc info :alias-ns :alias-str)
                          require-edit (assoc :additional-text-edits (mapv #(update % :range ->range) require-edit))))))
              (sort-by :label))
         (->> (for [[alias-str matches] namespaces-and-aliases
@@ -250,7 +252,8 @@
                    :let [usages (get remotes-by-ns alias-ns)]
                    usage usages
                    :when (and (get-in usage [:tags :public])
-                              (not (get-in usage [:tags :ns])))
+                              (not (get-in usage [:tags :ns]))
+                              (= cursor-file-type (:file-type usage)))
                    :let [require-edit (some-> cursor-loc
                                               (refactor/add-known-libspec (symbol alias-str) alias-ns)
                                               (refactor/result))]]

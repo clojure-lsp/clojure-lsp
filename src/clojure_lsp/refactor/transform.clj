@@ -197,22 +197,22 @@
   (let [ns-str-to-add (some-> zloc z/sexpr namespace)
         ns-to-add (some-> ns-str-to-add symbol)
         alias->info (->> (:file-envs @db/db)
-                       (mapcat val)
-                       (filter (fn [usage]
-                                 (or
-                                   (set/subset? #{:public :ns} (:tags usage))
-                                   (get-in usage [:tags :alias]))))
-                       (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
-                               {:alias-str alias-str
-                                :label (name sym)
-                                :detail (if alias-ns
-                                          (str alias-ns)
-                                          (name sym))
-                                :alias-ns (if alias-ns
-                                            alias-ns
-                                            sym)}))
-                       (distinct)
-                       (group-by :alias-str))
+                         (mapcat val)
+                         (filter (fn [usage]
+                                   (or
+                                     (set/subset? #{:public :ns} (:tags usage))
+                                     (get-in usage [:tags :alias]))))
+                         (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
+                                 {:alias-str alias-str
+                                  :label (name sym)
+                                  :detail (if alias-ns
+                                            (str alias-ns)
+                                            (name sym))
+                                  :alias-ns (if alias-ns
+                                              alias-ns
+                                              sym)}))
+                         (distinct)
+                         (group-by :alias-str))
         posibilities (get alias->info ns-str-to-add)
         qualified-ns-to-add (cond
                               (= 1 (count posibilities))

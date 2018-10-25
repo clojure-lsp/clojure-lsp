@@ -198,6 +198,9 @@
                          (when (pos? try-column)
                            (recur (dec try-column)))))
         {cursor-value :str cursor-file-type :file-type} cursor-usage
+        [cursor-ns cursor-name] (if-let [idx (string/index-of cursor-value "/")]
+                                  [(subs cursor-value 0 idx) (subs cursor-value (inc idx))]
+                                  [cursor-value nil])
         matches? (partial matches-cursor? cursor-value)
         namespaces-and-aliases (->> file-envs
                                     (mapcat val)
@@ -247,7 +250,7 @@
                          require-edit (assoc :additional-text-edits (mapv #(update % :range ->range) require-edit))))))
              (sort-by :label))
         (->> (for [[alias-str matches] namespaces-and-aliases
-                   :when (= alias-str cursor-value)
+                   :when (= alias-str cursor-ns)
                    {:keys [alias-ns]} matches
                    :let [usages (get remotes-by-ns alias-ns)]
                    usage usages

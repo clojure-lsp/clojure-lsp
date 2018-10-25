@@ -654,7 +654,7 @@
                  splice? (z/splice))))
       (if (and loc (z/next loc) (not (zm/end? loc)))
         (recur (z/next loc))
-        (z/skip z/up #(z/up %) loc)))))
+        (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
 (defn find-references [code file-type]
   (let [code-loc (-> code

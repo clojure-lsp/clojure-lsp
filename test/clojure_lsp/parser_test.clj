@@ -272,3 +272,10 @@
               'gensym9/tooBad 'gensym11/a 'gensym1/fn
               'gensym12/IFn]
              (mapv :sym usages))))))
+
+(deftest find-referenes-cljc-test
+  (let [code "(ns hi)"
+        usages (parser/find-references code :cljc)]
+    (is (= 4 (count usages)))
+    (is (= 'clojure.core/ns (:sym (nth usages 0)) (:sym (nth usages 2))))
+    (is (= "hi" (:str (nth usages 1)) (:str (nth usages 3))))))

@@ -114,5 +114,3 @@ https://github.com/emacs-lsp looks promising but I haven't had a chance to try i
 - other lsp capabilities?
 - Cursive style "resolve macros as" def/defn/let etc.. to expose more vars (dynamic based on client configuration messages)
 - build.boot src and test paths
-- keep separate cljs and clj environments
-- handle cljc reader-macros

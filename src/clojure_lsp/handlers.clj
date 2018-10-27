@@ -34,7 +34,7 @@
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
 
-(defn check-bounds [line column {:keys [row end-row col end-col]}]
+(defn check-bounds [line column {:keys [row end-row col end-col] :as usage}]
   (cond
     (< line row) :before
     (and (= line row) (< column col)) :before
@@ -198,7 +198,7 @@
                          (when (pos? try-column)
                            (recur (dec try-column)))))
         {cursor-value :str cursor-file-type :file-type} cursor-usage
-        [cursor-ns cursor-name] (if-let [idx (string/index-of cursor-value "/")]
+        [cursor-ns cursor-name] (if-let [idx (some-> cursor-value (string/index-of "/"))]
                                   [(subs cursor-value 0 idx) (subs cursor-value (inc idx))]
                                   [cursor-value nil])
         matches? (partial matches-cursor? cursor-value)

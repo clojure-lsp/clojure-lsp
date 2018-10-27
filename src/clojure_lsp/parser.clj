@@ -36,7 +36,7 @@
 (def default-env
   {:ns 'user
    :requires #{'clojure.core}
-   :refer-all-namespaces #{}
+   :refer-all-syms {}
    :refers {}
    :imports {}
    :aliases {}
@@ -63,7 +63,7 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
-(defn qualify-ident [ident-node {:keys [usages aliases imports locals publics refers requires refer-all-namespaces file-type] :as context} scoped declaration?]
+(defn qualify-ident [ident-node {:keys [usages aliases imports locals publics refers requires refer-all-syms file-type] :as context} scoped declaration?]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
           ident-str (loop [result ident-node]
@@ -83,16 +83,6 @@
           declared (when (and ns-sym (or (get locals ident-name) (get publics ident-name)))
                               (symbol (name ns-sym) ident-name))
           refered (get refers ident-name)
-          refer-all-syms (when (seq refer-all-namespaces)
-                           (->> (for [[_ usages] (:file-envs @db/db)
-                                      :when (->> usages
-                                                 (filter (comp #(set/subset? #{:ns :public} %) :tags))
-                                                 (filter (comp refer-all-namespaces :sym))
-                                                 (seq))
-                                      {:keys [sym tags]} usages
-                                      :when (set/subset? #{:public :declare} tags)]
-                                  [(symbol (name sym)) sym])
-                                (into {})))
           required-ns (get requires ident-ns)
           ctr (if (symbol? ident) symbol keyword)]
       (assoc
@@ -113,9 +103,9 @@
             :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
           (cond
             (and alias-ns
-              (or
-                (and (keyword? ident) (= prefix "::"))
-                (symbol? ident)))
+                 (or
+                   (and (keyword? ident) (= prefix "::"))
+                   (symbol? ident)))
             {:sym (ctr (name alias-ns) ident-name)}
 
             (and (keyword? ident) (= prefix "::"))
@@ -327,7 +317,16 @@
     (when (= libtype :require)
       (vswap! context update :requires conj full-ns)
       (when refer-all?
-        (vswap! context update :refer-all-namespaces conj full-ns)))
+        (vswap! context update :refer-all-syms merge
+                (->> (for [[_ usages] (:file-envs @db/db)
+                           :when (->> usages
+                                      (filter (comp #(set/subset? #{:ns :public} %) :tags))
+                                      (filter (comp #{full-ns} :sym))
+                                      (seq))
+                           {:keys [sym tags]} usages
+                           :when (set/subset? #{:public :declare} tags)]
+                       [(symbol (name sym)) sym])
+                     (into {})))))
     (add-reference context scoped (z/node entry-ns-loc)
                    (cond-> {:tags #{libtype} :sym full-ns}
                      alias-loc (assoc :alias (z/sexpr alias-loc))))
@@ -641,17 +640,18 @@
 
 (defn process-reader-macro [loc file-type]
   (loop [loc loc]
-    (if-let [file-type-loc (and (= :reader-macro (z/tag loc))
-                                (contains? #{"?@" "?"} (z/string (z/down loc)))
-                                (-> loc
-                                    z/down
-                                    z/right
-                                    z/down
-                                    (z/find-value z/right file-type)))]
-      (let [file-type-expr (z/node (z/right file-type-loc))
-            splice? (= "?@" (z/string (z/down loc)))]
-        (recur (cond-> (z/replace loc file-type-expr)
-                 splice? (z/splice))))
+    (if-let [reader-macro-loc (and (= :reader-macro (z/tag loc))
+                                   (contains? #{"?@" "?"} (z/string (z/down loc))))]
+      (if-let [file-type-loc (-> loc
+                                 z/down
+                                 z/right
+                                 z/down
+                                 (z/find-value z/right file-type))]
+        (let [file-type-expr (z/node (z/right file-type-loc))
+              splice? (= "?@" (z/string (z/down loc)))]
+          (recur (cond-> (z/replace loc file-type-expr)
+                   splice? (z/splice))))
+        (recur (z/next (z/remove loc))))
       (if (and loc (z/next loc) (not (zm/end? loc)))
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
@@ -666,8 +666,8 @@
                 (process-reader-macro :clj)
                 (find-references* (volatile! (assoc default-env :file-type :clj)) {}))
             (-> code-loc
-                 (process-reader-macro :cljs)
-                 (find-references* (volatile! (assoc default-env :file-type :cljs)) {})))
+                (process-reader-macro :cljs)
+                (find-references* (volatile! (assoc default-env :file-type :cljs)) {})))
       (-> code-loc
           (find-references* (volatile! (assoc default-env :file-type file-type)) {})))))
 
@@ -727,6 +727,21 @@
                            "(bing)"])]
     (n/string (z/node (z/of-string "::foo")))
     (find-references code :clj))
+
+
+  (do
+    (require '[taoensso.tufte :as tufte :refer (defnp p profiled profile)])
+
+    (->>
+      (find-references (slurp "test/clojure_lsp/parser_test.clj") :clj)
+      (tufte/profiled {})
+      (second)
+      deref
+      :stats
+      (map (juxt key (comp #(int (quot % 1000000)) :max val) (comp :n val) (comp #(int (quot % 1000000)) :sum val)))
+      clojure.pprint/pprint
+      with-out-str
+      (spit "x.edn")))
 
   (let [code (slurp "bad.clj")]
     (find-references code :clj)

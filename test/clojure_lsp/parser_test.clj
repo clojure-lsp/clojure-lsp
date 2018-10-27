@@ -278,4 +278,13 @@
         usages (parser/find-references code :cljc)]
     (is (= 4 (count usages)))
     (is (= 'clojure.core/ns (:sym (nth usages 0)) (:sym (nth usages 2))))
-    (is (= "hi" (:str (nth usages 1)) (:str (nth usages 3))))))
+    (is (= "hi" (:str (nth usages 1)) (:str (nth usages 3)))))
+  (let [code "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
+        usages (parser/find-references code :cljc)
+        clj-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :clj))
+        cljs-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :cljs))]
+    (is (= '(do y a b) clj-sexpr))
+    (is (= '(do x c d) cljs-sexpr))
+    (is (= 6 (count usages)))
+    (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
+    (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))

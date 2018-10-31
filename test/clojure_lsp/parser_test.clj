@@ -273,7 +273,7 @@
               'gensym12/IFn]
              (mapv :sym usages))))))
 
-(deftest find-referenes-cljc-test
+(deftest find-references-cljc-test
   (let [code "(ns hi)"
         usages (parser/find-references code :cljc)]
     (is (= 4 (count usages)))
@@ -288,3 +288,13 @@
     (is (= 6 (count usages)))
     (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
     (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
+
+(deftest find-references-ignored-test
+  (let [code "(def x 1) (comment x (def y 2) y) #_x"
+        usages (parser/find-references code :clj)
+        def-usage (nth usages 5)]
+   (is (= 8 (count usages)))
+   (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
+   (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
+   (is (not= 'user (namespace (:sym def-usage))))
+   (is (= #{:declare} (:tags def-usage)))))

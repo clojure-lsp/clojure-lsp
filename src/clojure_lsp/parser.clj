@@ -42,7 +42,8 @@
    :aliases {}
    :publics #{}
    :locals #{}
-   :usages []})
+   :usages []
+   :ignored? false})
 
 (defmacro zspy [loc]
   `(do
@@ -134,9 +135,11 @@
   (let [{:keys [row end-row col end-col] :as m} (meta node)
         sexpr (n/sexpr node)
         scope-bounds (get-in scoped [sexpr :bounds])
-        ident-info (qualify-ident node @context scoped (and (get-in extra [:tags :declare])
-                                                            (or (get-in extra [:tags :local])
-                                                                (get-in extra [:tags :public]))))
+        ctx @context
+        declaration? (and (get-in extra [:tags :declare])
+                          (or (get-in extra [:tags :local])
+                              (get-in extra [:tags :public])))
+        ident-info (qualify-ident node ctx scoped declaration?)
         new-usage (cond-> {:row row
                            :end-row end-row
                            :col col
@@ -144,6 +147,8 @@
                            :file-type (:file-type @context)}
                     :always (merge ident-info)
                     (seq extra) (merge extra)
+                    (and (:ignored? ctx) declaration?) (-> (update :sym (fn [s] (symbol (str "__lsp_comment_" (gensym)) (name s))))
+                                                           (update :tags disj :local :public))
                     (seq scope-bounds) (assoc :scope-bounds scope-bounds))]
     (vswap! context update :usages conj new-usage)
     new-usage))
@@ -289,10 +294,16 @@
       (log/warn "params" (.getMessage e) (z/sexpr params-loc))
       (throw e))))
 
+(defn handle-ignored
+  [rest-loc context scoped]
+  (let [curr-ignored? (:ignored? @context false)]
+    (vswap! context assoc :ignored? true)
+    (handle-rest rest-loc context scoped)
+    (vswap! context assoc :ignored? curr-ignored?)))
+
 (defn handle-comment
   [op-loc loc context scoped]
-  ;; Ignore contents of comment
-  nil)
+  (handle-ignored (z-right-sexpr op-loc) context scoped))
 
 (defn add-imports [conformed context]
   (when-first [import-clause (filter (comp #{:import} first) (:clauses conformed))]
@@ -617,8 +628,13 @@
 
       (let [tag (z/tag loc)]
         (cond
-          (#{:quote :uneval :syntax-quote} tag)
+          (#{:quote :syntax-quote} tag)
           (recur (edit/skip-over loc) scoped)
+
+          (= :uneval tag)
+          (do
+            (handle-ignored (z/next loc) context scoped)
+            (recur (edit/skip-over loc) scoped))
 
           (= :list tag)
           (do
@@ -754,7 +770,12 @@
     (n/children (z/node (z/of-string code)))
     (find-references code :cljc))
 
+  (do (defmacro x [] (let [y 2] `(let [z# ~y] [z# ~'y]))) (let [y 3]  (x)))
+  (do (defmacro x [] 'y)
+      (let [y 3] (y)))
+
   (z/of-string "##NaN")
+  (z/sexpr (z/next (z/of-string "#_1")))
 
   (find-references "(deftype JSValue [val])" :clj)
   (z/sexpr (loc-at-pos code 1 2)))

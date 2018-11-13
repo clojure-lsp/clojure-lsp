@@ -293,8 +293,7 @@
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)
         repl-server (nrepl.server/start-server)]
-    (log/info "nrepl server started on port" (:port repl-server))
-    (spit ".nrepl-port" (:port repl-server))
+    (log/info "====== LSP nrepl server started on port" (:port repl-server))
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
       (loop [edit (async/<! handlers/edits-chan)]

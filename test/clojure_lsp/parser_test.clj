@@ -17,6 +17,7 @@
 
 (deftest parse-destructuring-test
   (is (= '(a b c d e) (keys (parser/parse-destructuring (z/of-string "[a {:keys [b c] :as d} e]") {} (volatile! {}) {}))))
+  (is (= '(a) (keys (parser/parse-destructuring (z/of-string "[& a]") {} (volatile! {}) {}))))
   (is (= '(a c) (keys (parser/destructure-map (z/of-string "{a :b :keys [] c :d}") {} (volatile! {}) {})))) )
 
 (deftest parse-bindings-test
@@ -44,6 +45,7 @@
            (syms "(ns foo.bar) (def qux qux) (def / :a)")))
     (is (= 2 (count (syms "(:id user)"))))
     (is (= 5 (count (syms "{:x id :y (:id user)}")))))
+
   (testing "#(dispatch-macro)"
     (let [code "#(% %1 %2 %&)"
           usages (parser/find-references code :clj)]
@@ -64,10 +66,11 @@
       (is (= (:sym bound-ref) (:sym usage-ref)))
       (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
   (testing "private"
-    (let [code "(defn- a [b] b a)"
+    (let [code "(defn- a [b] b a) a"
           usages (parser/find-references code :clj)
           bound-ref (nth usages 2)
-          usage-ref (nth usages 3)]
+          usage-ref (nth usages 3)
+          outside-scope-ref (nth usages 5)]
       (is (= 'user/a (:sym (nth usages 1))))
       (is (= #{:declare :local} (:tags (nth usages 1))))
       (is (not= "user" (namespace (:sym bound-ref))))
@@ -75,12 +78,15 @@
       (is (= #{:declare :param} (:tags bound-ref)))
       (is (= "[b] b a)" (scoped-str code (:scope-bounds bound-ref))))
       (is (= (:sym bound-ref) (:sym usage-ref)))
-      (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
+      (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))
+      (is (= "user" (namespace (:sym outside-scope-ref))))
+      (is (= "a" (name (:sym outside-scope-ref))))))
   (testing "private meta"
-    (let [code "(defn ^:private a [b] b a)"
+    (let [code "(defn ^:private a [b] b a) a"
           usages (parser/find-references code :clj)
           bound-ref (nth usages 2)
-          usage-ref (nth usages 3)]
+          usage-ref (nth usages 3)
+          outside-scope-ref (nth usages 5)]
       (is (= 'user/a (:sym (nth usages 1))))
       (is (= #{:declare :local} (:tags (nth usages 1))))
       (is (not= "user" (namespace (:sym bound-ref))))
@@ -88,7 +94,9 @@
       (is (= #{:declare :param} (:tags bound-ref)))
       (is (= "[b] b a)" (scoped-str code (:scope-bounds bound-ref))))
       (is (= (:sym bound-ref) (:sym usage-ref)))
-      (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))))
+      (is (= (:scope-bounds bound-ref) (:scope-bounds usage-ref)))
+      (is (= "user" (namespace (:sym outside-scope-ref))))
+      (is (= "a" (name (:sym outside-scope-ref))))))
   (testing "private map meta"
     (let [code "(defmacro ^{:private true} ^:focus \n thing [])"
           usages (parser/find-references code :clj)]
@@ -298,3 +306,19 @@
    (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
    (is (not= 'user (namespace (:sym def-usage))))
    (is (= #{:declare} (:tags def-usage)))))
+
+(deftest find-references-syntax-quote
+  (let [code "(defmacro x [a & body] `(def ~'a ~a ~@body))"
+        usages (parser/find-references code :clj)]
+    (is (= 7 (count usages)))
+    (is (= 'clojure.core/def (:sym (nth usages 4))))
+    (is (= (:sym (nth usages 5)) (:sym (nth usages 2))))
+    (is (= (:sym (nth usages 6)) (:sym (nth usages 3))))
+    (is (nil? (:tags (nth usages 5))))
+    (is (nil? (:tags (nth usages 6)))))
+
+  (let [code "(quote (def a)) (quote a)"
+        usages (parser/find-references code :clj)]
+    (is (= 5 (count usages)))
+    (is (= 'clojure.core/def (:sym (nth usages 1))))
+    (is (not= (:sym (nth usages 2)) (:sym (nth usages 4))))))

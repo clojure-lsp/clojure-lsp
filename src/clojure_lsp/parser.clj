@@ -216,8 +216,7 @@
       (let [node (z/node param-loc)
             sexpr (n/sexpr node)]
         (cond
-          ;; TODO handle map and seq destructing
-          (symbol? sexpr)
+          (and (symbol? sexpr) (not= '& sexpr))
           (let [scoped-ns (gensym)
                 new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
             (add-reference context new-scoped node {:tags #{:declare :param}
@@ -304,6 +303,13 @@
 (defn handle-comment
   [op-loc loc context scoped]
   (handle-ignored (z-right-sexpr op-loc) context scoped))
+
+(defn handle-quote
+  [op-loc loc context scoped]
+  (let [current-quoted (:quoting? @context)]
+    (vswap! context assoc :quoting? true)
+    (handle-rest (z-right-sexpr op-loc) context scoped)
+    (vswap! context assoc :quoting? current-quoted)))
 
 (defn add-imports [conformed context]
   (when-first [import-clause (filter (comp #{:import} first) (:clauses conformed))]
@@ -428,8 +434,8 @@
                         (filter (comp :ns :tags))
                         (some :sym))]
     (if op-local?
-      (vswap! context update :locals conj (n/string def-sym))
-      (vswap! context update :publics conj (n/string def-sym)))
+      (vswap! context update :locals conj (name (n/sexpr def-sym)))
+      (vswap! context update :publics conj (name (n/sexpr def-sym))))
     (add-reference context scoped def-sym {:tags (if op-local?
                                                    #{:declare :local}
                                                    #{:declare :public})})
@@ -463,8 +469,8 @@
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil
-        op-local? (vswap! context update :locals conj (z/string name-loc))
-        :else (vswap! context update :publics conj (z/string name-loc)))
+        op-local? (vswap! context update :locals conj (name (z/sexpr name-loc)))
+        :else (vswap! context update :publics conj (name (z/sexpr name-loc))))
       (add-reference context scoped (z/node name-loc)
                      {:tags (cond
                               op-fn? name-tags
@@ -488,6 +494,10 @@
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-defn
+  [op-loc loc context scoped]
+  (handle-function op-loc loc context scoped #{:declare}))
+
+(defn handle-defmacro
   [op-loc loc context scoped]
   (handle-function op-loc loc context scoped #{:declare}))
 
@@ -541,27 +551,6 @@
                         (z-right-sexpr)
                         (recur)))))))))
 
-(defn handle-defmacro
-  [op-loc loc context scoped]
-  (let [op-local? (local? op-loc)
-        defn-loc (z-right-sexpr op-loc)
-        defn-sym (z/node defn-loc)
-        multi? (= :list (z/tag (z/find defn-loc (fn [loc]
-                                                  (#{:vector :list} (z/tag loc))))))]
-
-    (if op-local?
-      (vswap! context update :locals conj (n/string defn-sym))
-      (vswap! context update :publics conj (n/string defn-sym)))
-    (add-reference context scoped defn-sym {:tags #{:declare (if op-local? :local :public)}})
-    (if multi?
-      (loop [list-loc (z/find-tag defn-loc :list)]
-        (let [params-loc (z/down list-loc)]
-          (parse-params params-loc context scoped))
-        (when-let [next-list (z/find-next-tag list-loc :list)]
-          (recur next-list)))
-      (let [params-loc (z/find-tag defn-loc :vector)]
-        (parse-params params-loc context scoped)))))
-
 (defn handle-dispatch-macro
   [loc context scoped]
   (->>
@@ -606,7 +595,8 @@
    'clojure.core/loop handle-let
    'clojure.core/for handle-let
    'clojure.core/doseq handle-let
-   'clojure.core/comment handle-comment})
+   'clojure.core/comment handle-comment
+   'clojure.core/quote handle-quote})
 
 (defn handle-sexpr [loc context scoped]
   (let [op-loc (some-> loc (zm/down))]
@@ -614,7 +604,7 @@
       (and op-loc (symbol? (z/sexpr op-loc)))
       (let [usage (add-reference context scoped (z/node op-loc) {})
             handler (get *sexpr-handlers* (:sym usage))]
-        (if handler
+        (if (and handler (not (:quoting? @context)))
           (handler op-loc loc context scoped)
           (handle-rest (zm/right op-loc) context scoped)))
       op-loc
@@ -628,8 +618,12 @@
 
       (let [tag (z/tag loc)]
         (cond
-          (#{:quote :syntax-quote} tag)
-          (recur (edit/skip-over loc) scoped)
+          (#{:syntax-quote :quote} tag)
+          (let [current-quoted (:quoting? @context)]
+            (vswap! context assoc :quoting? true)
+            (handle-sexpr (z/next loc) context scoped)
+            (vswap! context assoc :quoting? current-quoted)
+            (recur (edit/skip-over loc) scoped))
 
           (= :uneval tag)
           (do

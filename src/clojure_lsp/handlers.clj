@@ -136,29 +136,47 @@
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
 
-(defn lookup-classpath [project-root]
-  (try
-    (let [root-path (uri->path project-root)
-          sep (re-pattern (System/getProperty "path.separator"))]
-      (-> (shell/sh "lein" "classpath" :dir root-path)
-          (:out)
-          (string/trim-newline)
-          (string/split sep)))
-    (catch Exception e
-      (log/warn "Could not run lein in" project-root (.getMessage e)))))
+(defprotocol Project
+  "Protocol defining common methods for projectc"
+  (calculate-hash [project] "calulate a hash for the project definition")
+  (lookup-classpath [project] "generates a list of all dependencies from the classpath"))
+
+(defrecord LeinProject [root-path project-file]
+  Project
+
+  (calculate-hash [project] 
+    (digest/md5 (:project-file project)))
+
+  (lookup-classpath [project]
+    (try
+      (let [ sep (re-pattern (System/getProperty "path.separator"))]
+        (-> (shell/sh "lein" "classpath" :dir (:root-path project))
+            (:out)
+            (string/trim-newline)
+            (string/split sep)))
+      (catch Exception e
+        (log/warn "Could not run lein in" (:root-path project) (.getMessage e))))))
+
+(defn is-lein-project? [project-root]
+  (let [lein-project-file (io/file project-root "project.clj")]
+    (.exists lein-project-file)))
+
+(defn get-project-from [root-path]
+  (cond (is-lein-project? root-path) 
+          (->LeinProject root-path (io/file root-path "project.clj"))))
 
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
         source-paths (mapv #(io/file (str root-path "/" %))
                            (get client-settings "source-paths" ["src"]))
-        project-file (io/file root-path "project.clj")]
-    (if (.exists project-file)
-      (let [project-hash (digest/md5 project-file)
+        project (get-project-from root-path)]
+    (if (some? project)
+      (let [project-hash (calculate-hash project)
             loaded (db/read-deps root-path)
             use-cp-cache (= (:project-hash loaded) project-hash)
             classpath (if use-cp-cache
                         (:classpath loaded)
-                        (lookup-classpath project-root))
+                        (lookup-classpath project))
             jars (filter #(.isFile %) (map io/file (reverse classpath)))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)

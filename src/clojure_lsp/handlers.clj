@@ -161,9 +161,32 @@
   (let [lein-project-file (io/file project-root "project.clj")]
     (.exists lein-project-file)))
 
+
+(defrecord BootProject [root-path project-file]
+  Project
+  
+  (calculate-hash [project]
+    (digest/md5 (:project-file project)))
+  
+  (lookup-classpath [project]
+    (try
+      (let [ sep (re-pattern (System/getProperty "path.separator"))]
+        (-> (shell/sh "boot" "show" "--fake-classpath" :dir (:root-path project))
+            (:out)
+            (string/trim-newline)
+            (string/split sep)))
+      (catch Exception e
+        (log/warn "Could not run boot in" (:root-path project) (.getMessage e)))) ))
+
+(defn is-boot-project? [project-root]
+  (let [boot-project-file (io/file project-root "build.boot")]
+    (.exists boot-project-file)))
+
 (defn get-project-from [root-path]
   (cond (is-lein-project? root-path) 
-          (->LeinProject root-path (io/file root-path "project.clj"))))
+          (->LeinProject root-path (io/file root-path "project.clj"))
+        (is-boot-project? root-path)
+          (->BootProject root-path (io/file root-path "build.boot"))))
 
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)

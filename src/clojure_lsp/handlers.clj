@@ -309,8 +309,8 @@
     (when-not (contains? tags :norename)
       (let [[_ cursor-ns _] (parser/ident-split cursor-str)
             replacement (if cursor-ns
-                          (string/replace new-name (re-pattern (str "^" cursor-ns "/")) "")
-                          new-name)
+                          (string/replace new-name (re-pattern (str "^:{0,2}" cursor-ns "/")) "")
+                          (string/replace new-name #"^:{0,2}" ""))
             changes (->> (for [[doc-id usages] file-envs
                                :let [version (get-in @db/db [:documents doc-id :v] 0)]
                                {u-sym :sym u-str :str :as usage} usages

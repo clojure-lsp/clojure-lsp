@@ -7,12 +7,16 @@
 
 (deftest test-rename
   (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-references "(ns a) (def bar)" :clj)
-                  "file://b.clj" (parser/find-references "(ns b (:require a)) (def x a/bar)" :clj)}})
+                 {"file://a.clj" (parser/find-references "(ns a) (def bar ::bar)" :clj)
+                  "file://b.clj" (parser/find-references "(ns b (:require a)) (def x a/bar) :a/bar" :clj) }})
   (testing "rename on symbol without namespace"
     (is (= "foo" (get-in (handlers/rename "file://a.clj" 1 13 "foo")
                          [:changes "file://a.clj" 0 :new-text])))
     (is (= "a/foo" (get-in (handlers/rename "file://a.clj" 1 13 "foo")
+                           [:changes "file://b.clj" 0 :new-text])))
+    (is (= "::foo" (get-in (handlers/rename "file://a.clj" 1 17 ":foo")
+                         [:changes "file://a.clj" 0 :new-text])))
+    (is (= ":a/foo" (get-in (handlers/rename "file://a.clj" 1 17 ":foo")
                            [:changes "file://b.clj" 0 :new-text]))))
   (testing "rename on symbol with namespace adds existing namespace"
     (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 30 "foo")

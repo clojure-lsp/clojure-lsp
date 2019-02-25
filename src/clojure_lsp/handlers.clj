@@ -136,57 +136,45 @@
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
 
-(defprotocol Project
-  "Protocol defining common methods for projectc"
-  (calculate-hash [project] "calulate a hash for the project definition")
-  (lookup-classpath [project] "generates a list of all dependencies from the classpath"))
-
-(defrecord LeinProject [root-path project-file]
-  Project
-
-  (calculate-hash [project] 
-    (digest/md5 (:project-file project)))
-
-  (lookup-classpath [project]
-    (try
-      (let [ sep (re-pattern (System/getProperty "path.separator"))]
-        (-> (shell/sh "lein" "classpath" :dir (:root-path project))
-            (:out)
-            (string/trim-newline)
-            (string/split sep)))
-      (catch Exception e
-        (log/warn "Could not run lein in" (:root-path project) (.getMessage e))))))
-
 (defn is-lein-project? [project-root]
-  (let [lein-project-file (io/file project-root "project.clj")]
-    (.exists lein-project-file)))
-
-
-(defrecord BootProject [root-path project-file]
-  Project
-  
-  (calculate-hash [project]
-    (digest/md5 (:project-file project)))
-  
-  (lookup-classpath [project]
-    (try
-      (let [ sep (re-pattern (System/getProperty "path.separator"))]
-        (-> (shell/sh "boot" "show" "--fake-classpath" :dir (:root-path project))
-            (:out)
-            (string/trim-newline)
-            (string/split sep)))
-      (catch Exception e
-        (log/warn "Could not run boot in" (:root-path project) (.getMessage e)))) ))
+  (.exists (io/file project-root "project.clj")))
 
 (defn is-boot-project? [project-root]
-  (let [boot-project-file (io/file project-root "build.boot")]
-    (.exists boot-project-file)))
+  (.exists (io/file project-root "build.boot")))
+
+(defn hash-project-file [project-file]
+  (digest/md5 project-file))
+
+(defn lookup-classpath [command root-path]
+  (try
+    (let [sep (re-pattern (System/getProperty "path.separator"))]
+      (-> (command)
+          (:out)
+          (string/trim-newline)
+          (string/split sep)))
+    (catch Exception e
+      (log/warn "Error while looking up classpath info in" root-path (.getMessage e))
+      '[])))
+
+(defn lein-lookup-classpath [root-path]
+  (lookup-classpath #(shell/sh "lein" "classpath" :dir root-path) root-path))
+
+(defn boot-lookup-classpath [root-path]
+  (lookup-classpath #(shell/sh "boot" "show" "--fake-classpath" :dir root-path) root-path))
+
+(defn build-lein-project [root-path]
+  (let [file-hash (hash-project-file (io/file root-path "project.clj"))
+        classpath (lein-lookup-classpath root-path)]
+    {:project-hash file-hash :classpath classpath}))
+
+(defn build-boot-project [root-path]
+  (let [file-hash (hash-project-file (io/file root-path "build.boot"))
+        classpath (lein-lookup-classpath root-path)]
+    {:project-hash file-hash :classpath classpath}))
 
 (defn get-project-from [root-path]
-  (cond (is-lein-project? root-path) 
-          (->LeinProject root-path (io/file root-path "project.clj"))
-        (is-boot-project? root-path)
-          (->BootProject root-path (io/file root-path "build.boot"))))
+  (cond (is-lein-project? root-path) (build-lein-project root-path)
+        (is-boot-project? root-path) (build-boot-project root-path)))
 
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
@@ -194,12 +182,12 @@
                            (get client-settings "source-paths" ["src"]))
         project (get-project-from root-path)]
     (if (some? project)
-      (let [project-hash (calculate-hash project)
+      (let [project-hash (:project-hash project)
             loaded (db/read-deps root-path)
             use-cp-cache (= (:project-hash loaded) project-hash)
             classpath (if use-cp-cache
                         (:classpath loaded)
-                        (lookup-classpath project))
+                        (:classpath project))
             jars (filter #(.isFile %) (map io/file (reverse classpath)))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)

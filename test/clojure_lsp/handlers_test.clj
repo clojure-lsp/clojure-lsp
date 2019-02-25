@@ -3,8 +3,7 @@
    [clojure.test :refer :all]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.parser :as parser]
-   [clojure.java.io :as io]))
+   [clojure-lsp.parser :as parser]))
 
 (deftest test-rename
   (reset! db/db {:file-envs
@@ -87,10 +86,3 @@
                    :end {:line 0 :character 5}}
            :new-text "(a)"}]
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
-
- (deftest test-lein-project
-   (testing "create lein project"
-     (let [root-path (io/file ".")
-           project-file (io/file root-path "project.clj")]
-     (with-redefs [handlers/is-lein-project? (fn [root-path] true)]
-       (is (= (handlers/->LeinProject root-path project-file) (handlers/get-project-from root-path)))))))

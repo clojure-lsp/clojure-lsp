@@ -154,7 +154,7 @@
           (string/split sep)))
     (catch Exception e
       (log/warn "Error while looking up classpath info in" root-path (.getMessage e))
-      '[])))
+      [])))
 
 (defn lein-lookup-classpath [root-path]
   (lookup-classpath #(shell/sh "lein" "classpath" :dir root-path) root-path))

@@ -169,7 +169,7 @@
 
 (defn build-boot-project [root-path]
   (let [file-hash (hash-project-file (io/file root-path "build.boot"))
-        classpath (lein-lookup-classpath root-path)]
+        classpath (boot-lookup-classpath root-path)]
     {:project-hash file-hash :classpath classpath}))
 
 (defn get-project-from [root-path]

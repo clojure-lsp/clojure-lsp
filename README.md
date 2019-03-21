@@ -101,7 +101,19 @@ Proof of concept in the client-vscode directory in this repo.
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too. 
 
 ### emacs
-https://github.com/emacs-lsp looks promising but I haven't had a chance to try it (similar one client per server).
+Using https://github.com/emacs-lsp the following works for registering clojure-lsp:
+
+```
+(require 'lsp-mode)
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-stdio-connection '("clojure-lsp"))
+                  :major-modes '(clojure-mode clojurec-mode clojurescript-mode)
+                  :server-id 'clojure-lsp))
+(add-to-list 'lsp-language-id-configuration '(clojure-mode . "clojure-mode"))
+(add-hook 'clojure-mode-hook #'lsp)
+(add-hook 'clojurec-mode-hook #'lsp)
+(add-hook 'clojurescript-mode-hook #'lsp)
+```
 
 ## TODO
 

@@ -274,11 +274,11 @@
   (with-redefs [gensym (gensym-counter)]
     (let [code "(deftype FooBar [fn] IBar (-x []) IQux (toString [_] (fn str)) (tooBad [a] fn) IFn)"
           usages (drop 1 (parser/find-usages code :cljs))]
-      (is (= ['user/FooBar 'gensym1/fn
-              'gensym2/IBar 'gensym3/-x 'gensym5/IQux
-              'gensym6/toString 'gensym8/_ 'gensym1/fn 'clojure.core/str
-              'gensym9/tooBad 'gensym11/a 'gensym1/fn
-              'gensym12/IFn]
+      (is (= ['user/FooBar 'gensym0/fn
+              'gensym1/IBar 'gensym2/-x 'gensym3/IQux
+              'gensym4/toString 'gensym5/_ 'gensym0/fn 'clojure.core/str
+              'gensym6/tooBad 'gensym7/a 'gensym0/fn
+              'gensym8/IFn]
              (mapv :sym usages))))))
 
 (deftest find-references-cljc-test

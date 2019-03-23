@@ -1,17 +1,16 @@
 (ns clojure-lsp.parser
   (:require
-   [clojure-lsp.clojure-core :as cc]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.queries :as queries]
-   [clojure-lsp.refactor.edit :as edit]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [clojure.tools.logging :as log]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.find :as zf]
-   [rewrite-clj.zip.move :as zm]
-   [rewrite-clj.zip.subedit :as zsub])
+    [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.refactor.edit :as edit]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z]
+    [rewrite-clj.zip.find :as zf]
+    [rewrite-clj.zip.move :as zm]
+    [rewrite-clj.zip.subedit :as zsub])
   (:import
     (rewrite_clj.node.meta MetaNode)))
 
@@ -59,7 +58,7 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
-(defn qualify-ident [ident-node {:keys [usages aliases imports locals publics refers requires refer-all-syms file-type] :as context} scoped declaration?]
+(defn qualify-ident [ident-node {:keys [aliases imports locals publics refers requires refer-all-syms file-type] :as context} scoped declaration?]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
           ident-str (loop [result ident-node]
@@ -127,7 +126,7 @@
         :str ident-str))))
 
 (defn add-reference [context scoped node extra]
-  (let [{:keys [row end-row col end-col] :as m} (meta node)
+  (let [{:keys [row end-row col end-col]} (meta node)
         sexpr (n/sexpr node)
         scope-bounds (get-in scoped [sexpr :bounds])
         ctx @context
@@ -274,7 +273,6 @@
   (try
     (let [{:keys [row col]} (meta (z/node params-loc))
           {:keys [end-row end-col]} (meta (z/node (z/up params-loc)))
-          scoped-ns (gensym)
           scope-bounds {:row row :col col :end-row end-row :end-col end-col}]
       (loop [param-loc (z/down params-loc)
              scoped scoped]
@@ -296,26 +294,15 @@
     (vswap! context assoc :ignored? curr-ignored?)))
 
 (defn handle-comment
-  [op-loc loc context scoped]
+  [op-loc _loc context scoped]
   (handle-ignored (z-right-sexpr op-loc) context scoped))
 
 (defn handle-quote
-  [op-loc loc context scoped]
+  [op-loc _loc context scoped]
   (let [current-quoted (:quoting? @context)]
     (vswap! context assoc :quoting? true)
     (handle-rest (z-right-sexpr op-loc) context scoped)
     (vswap! context assoc :quoting? current-quoted)))
-
-(defn add-imports [conformed context]
-  (when-first [import-clause (filter (comp #{:import} first) (:clauses conformed))]
-    (let [all-imports (:classes (second import-clause))
-          {classes :class packages :package-list} (group-by first all-imports)
-          simple-classes (map second classes)]
-      (vswap! context assoc :imports
-              (into (zipmap simple-classes simple-classes)
-                    (for [[_ {:keys [package classes]}] packages
-                          cls classes]
-                      [cls (symbol (str (name package) "." (name cls)))]))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)
@@ -389,7 +376,7 @@
         (recur (z-right-sexpr entry-loc))))))
 
 (defn handle-ns
-  [op-loc loc context scoped]
+  [_op-loc loc context scoped]
   (let [name-loc (z-right-sexpr (z/down (zsub/subzip loc)))
         first-list-loc (z/find-tag name-loc z-right-sexpr :list)
         require-loc (z/find first-list-loc z-right-sexpr (comp #{:require} z/sexpr z/down))
@@ -406,7 +393,7 @@
     (handle-rest (z-right-sexpr bindings-loc) context scoped)))
 
 (defn handle-if-let
-  [op-loc loc context scoped]
+  [op-loc _loc context scoped]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         if-loc (z-right-sexpr bindings-loc)
         if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
@@ -422,7 +409,7 @@
         (string/ends-with? op-name "-"))))
 
 (defn handle-def
-  [op-loc loc context scoped]
+  [op-loc _loc context scoped]
   (let [def-sym (z/node (z-right-sexpr op-loc))
         op-local? (local? op-loc)]
     (if op-local?
@@ -450,7 +437,7 @@
          (handle-rest body-loc context))))
 
 (defn handle-function
-  [op-loc loc context scoped name-tags]
+  [op-loc _loc context scoped name-tags]
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
@@ -520,7 +507,7 @@
       prev-loc)))
 
 (defn handle-deftype
-  [op-loc loc context scoped]
+  [op-loc _loc context scoped]
   (let [type-loc (z-right-sexpr op-loc)
         fields-loc (z-right-sexpr type-loc)]
       (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
@@ -639,8 +626,8 @@
 
 (defn process-reader-macro [loc file-type]
   (loop [loc loc]
-    (if-let [reader-macro-loc (and (= :reader-macro (z/tag loc))
-                                   (contains? #{"?@" "?"} (z/string (z/down loc))))]
+    (if (and (= :reader-macro (z/tag loc))
+             (contains? #{"?@" "?"} (z/string (z/down loc))))
       (if-let [file-type-loc (-> loc
                                  z/down
                                  z/right
@@ -671,8 +658,8 @@
           (find-usages* (volatile! (assoc default-env :file-type file-type)) {})))))
 
 ;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
-                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
+(defn in-range? [{:keys [row col end-row end-col] :as _form-pos}
+                 {r :row c :col er :end-row ec :end-col :as _selection-pos}]
   (and (>= r row)
        (<= er end-row)
        (if (= r row) (>= c col) true)

@@ -382,7 +382,7 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor-sym (:sym (find-reference-under-cursor line column local-env (uri->file-type doc-id)))]
-    (log/warn "references" doc-id line column)
+    (log/warn "references" doc-id line column cursor-sym)
     (into []
           (for [[uri usages] (:file-envs @db/db)
                 {:keys [sym] :as usage} usages

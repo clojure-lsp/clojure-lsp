@@ -1,14 +1,15 @@
 (ns clojure-lsp.handlers-test
   (:require
-   [clojure.test :refer :all]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.parser :as parser]))
+   [clojure-lsp.parser :as parser]
+   [clojure.test :refer :all]
+   [clojure.tools.logging :as log]))
 
 (deftest test-rename
   (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-references "(ns a) (def bar ::bar)" :clj)
-                  "file://b.clj" (parser/find-references "(ns b (:require a)) (def x a/bar) :a/bar" :clj) }})
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj)
+                  "file://b.clj" (parser/find-usages "(ns b (:require a)) (def x a/bar) :a/bar" :clj)}})
   (testing "rename on symbol without namespace"
     (is (= "foo" (get-in (handlers/rename "file://a.clj" 1 13 "foo")
                          [:changes "file://a.clj" 0 :new-text])))
@@ -29,24 +30,32 @@
     (is (= "a/foo" (get-in (handlers/rename "file://b.clj" 1 30 "a/foo")
                            [:changes "file://b.clj" 0 :new-text])))))
 
+(deftest test-find-diagnostics
+  (reset! db/db {:file-envs
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj)
+                  "file://b.clj" (parser/find-usages "(ns b (:require [a :as a] [c :as c])) (def x a/bar) :a/bar" :clj)}})
+  (testing "unused symbols"
+    (is (= ["Unused alias: c" "Unused declaration: b" "Unused declaration: x"]
+           (map :message (handlers/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"])))))))
+
 (deftest test-completion
   (let [db-state {:file-envs
-                  {"file://a.cljc" (parser/find-references
+                  {"file://a.cljc" (parser/find-usages
                                      (str "(ns alpaca.ns (:require [user :as alpaca]))\n"
                                           "(def barr)\n"
                                           "(def bazz)")
                                      :clj)
-                   "file://b.clj" (parser/find-references
+                   "file://b.clj" (parser/find-usages
                                     (str "(ns user)\n"
                                          "(def alpha)\n"
                                          "alp\n"
                                          "ba")
                                     :clj)
-                   "file://c.cljs" (parser/find-references
+                   "file://c.cljs" (parser/find-usages
                                     (str "(ns alpaca.ns)\n"
                                          "(def baff)\n")
                                     :cljs)
-                   "file://d.clj" (parser/find-references
+                   "file://d.clj" (parser/find-usages
                                     (str "(ns d (:require [alpaca.ns :as alpaca]))")
                                     :clj)}}]
     (testing "complete-a"

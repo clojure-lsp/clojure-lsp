@@ -51,9 +51,9 @@
          (filter (comp #{:within} (partial check-bounds line column)))
          first)))
 
-(defn find-diagnostics [project-aliases env]
-  (let [unknown-usages (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
-                                    (:usages env)))
+(defn ^:private diagnose-unknown [project-aliases usages]
+  (let [unknown-usages (seq (filter (fn [usage] (contains? (:tags usage) :unknown))
+                                    usages))
         aliases (set/map-invert project-aliases)]
     (for [usage unknown-usages
           :let [known-alias? (some-> (:unkown-ns usage)
@@ -68,6 +68,47 @@
                   :require "Needs Require")
        :severity 1})))
 
+(defn ^:private diagnose-unused-references [declared-references all-envs]
+  (let [references (->> all-envs
+                        (mapcat (comp val))
+                        (remove (comp #(contains? % :declare) :tags))
+                        (map :sym)
+                        set)
+        unused-syms (set/difference (set (map :sym declared-references)) references)]
+    (for [usage (filter (comp unused-syms :sym) declared-references)]
+      {:range (->range usage)
+       :code :unused
+       :message (str "Unused declaration: " (:str usage))
+       :severity 1})))
+
+(defn ^:private diagnose-unused-aliases [declared-aliases usages]
+  (let [references (->> usages
+                       (remove (comp #(contains? % :declare) :tags))
+                       (map #(some-> % :sym namespace symbol))
+                       set)
+        unused-aliases (set/difference (set (map :ns declared-aliases)) references)]
+  (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
+    {:range (->range usage)
+     :code :unused
+     :message (str "Unused alias: " (:str usage))
+     :severity 1})))
+
+(defn ^:private diagnose-unused [uri usages]
+  (let [all-envs (assoc (:file-envs @db/db) uri usages)
+        declarations (->> usages
+                          (filter (comp #(contains? % :declare) :tags))
+                          (remove (comp #(string/starts-with? % "_") name :sym)))
+        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
+        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
+    (concat (diagnose-unused-aliases declared-aliases usages)
+            (diagnose-unused-references declared-references all-envs))))
+
+(defn find-diagnostics [project-aliases uri usages]
+  (let [unknown (diagnose-unknown project-aliases usages)
+        unused (diagnose-unused uri usages)
+        result (concat unknown unused)]
+    result))
+
 (defn safe-find-references
   ([uri text]
    (safe-find-references uri text true false))
@@ -75,12 +116,12 @@
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (uri->file-type uri)
-           references (cond->> (parser/find-references text file-type)
+           references (cond->> (parser/find-usages text file-type)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
          (async/put! diagnostics-chan
                      {:uri uri
-                      :diagnostics (find-diagnostics (:project-aliases @db/db) references)}))
+                      :diagnostics (find-diagnostics (:project-aliases @db/db) uri references)}))
        references)
      (catch Throwable e
        (log/warn e "Ignoring: " uri (.getMessage e))
@@ -245,7 +286,6 @@
         file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         remote-envs (dissoc file-envs doc-id)
-        {:keys [add-require? row col]} (:require-pos local-env)
         cursor-loc (try
                      (parser/loc-at-pos text line (dec column))
                      (catch Exception e

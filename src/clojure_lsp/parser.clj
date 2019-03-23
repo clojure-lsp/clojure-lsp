@@ -15,7 +15,7 @@
   (:import
     (rewrite_clj.node.meta MetaNode)))
 
-(declare find-references*)
+(declare find-usages*)
 (declare parse-destructuring)
 
 (def core-refers
@@ -200,7 +200,7 @@
   [loc context scoped]
   (loop [sub-loc loc]
     (when sub-loc
-      (find-references* (zsub/subzip sub-loc) context scoped)
+      (find-usages* (zsub/subzip sub-loc) context scoped)
       (recur (zm/right sub-loc)))))
 
 (defn parse-destructuring [param-loc scope-bounds context scoped]
@@ -605,7 +605,7 @@
       op-loc
       (handle-rest op-loc context scoped))))
 
-(defn find-references* [loc context scoped]
+(defn- find-usages* [loc context scoped]
   (loop [loc loc
          scoped scoped]
     (if (or (not loc) (zm/end? loc))
@@ -661,7 +661,7 @@
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
-(defn find-references [code file-type]
+(defn find-usages [code file-type]
   (let [code-loc (-> code
                      (string/replace #"(\w)/(\s|$)" "$1 $2")
                      (z/of-string)
@@ -669,12 +669,12 @@
     (if (= :cljc file-type)
       (into (-> code-loc
                 (process-reader-macro :clj)
-                (find-references* (volatile! (assoc default-env :file-type :clj)) {}))
+                (find-usages* (volatile! (assoc default-env :file-type :clj)) {}))
             (-> code-loc
                 (process-reader-macro :cljs)
-                (find-references* (volatile! (assoc default-env :file-type :cljs)) {})))
+                (find-usages* (volatile! (assoc default-env :file-type :cljs)) {})))
       (-> code-loc
-          (find-references* (volatile! (assoc default-env :file-type file-type)) {})))))
+          (find-usages* (volatile! (assoc default-env :file-type file-type)) {})))))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as form-pos}
@@ -731,14 +731,14 @@
                            "(bun/foo)"
                            "(bing)"])]
     (n/string (z/node (z/of-string "::foo")))
-    (find-references code :clj))
+    (find-usages code :clj))
 
 
   (do
     (require '[taoensso.tufte :as tufte :refer (defnp p profiled profile)])
 
     (->>
-      (find-references (slurp "test/clojure_lsp/parser_test.clj") :clj)
+      (find-usages (slurp "test/clojure_lsp/parser_test.clj") :clj)
       (tufte/profiled {})
       (second)
       deref
@@ -749,15 +749,15 @@
       (spit "x.edn")))
 
   (let [code (slurp "bad.clj")]
-    (find-references code :clj)
+    (find-usages code :clj)
     #_
     (println (tufte/format-pstats prof)))
 
   (let [code "(ns foob) (defn ^:private chunk [] :a)"]
-    (find-references code :clj))
+    (find-usages code :clj))
   (let [code "(def #?@(:clj a :cljs b) 1)"]
     (n/children (z/node (z/of-string code)))
-    (find-references code :cljc))
+    (find-usages code :cljc))
 
   (do (defmacro x [] (let [y 2] `(let [z# ~y] [z# ~'y]))) (let [y 3]  (x)))
   (do (defmacro x [] 'y)
@@ -766,5 +766,5 @@
   (z/of-string "##NaN")
   (z/sexpr (z/next (z/of-string "#_1")))
 
-  (find-references "(deftype JSValue [val])" :clj)
+  (find-usages "(deftype JSValue [val])" :clj)
   (z/sexpr (loc-at-pos code 1 2)))

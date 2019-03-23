@@ -25,16 +25,16 @@
 
 (defn- uri->file-type [uri]
   (cond
-    (string/ends-with? uri "cljs") :cljs
-    (string/ends-with? uri "cljc") :cljc
-    (string/ends-with? uri "clj") :clj
+    (string/ends-with? uri ".cljs") :cljs
+    (string/ends-with? uri ".cljc") :cljc
+    (string/ends-with? uri ".clj") :clj
     :else :unknown))
 
 (defn- ->range [{:keys [row end-row col end-col]}]
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
 
-(defn check-bounds [line column {:keys [row end-row col end-col] :as usage}]
+(defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
     (< line row) :before
     (and (= line row) (< column col)) :before
@@ -51,24 +51,22 @@
          (filter (comp #{:within} (partial check-bounds line column)))
          first)))
 
-(defn send-notifications [uri env]
+(defn find-diagnostics [project-aliases env]
   (let [unknown-usages (seq (filter (fn [reference] (contains? (:tags reference) :unknown))
                                     (:usages env)))
-        aliases (set/map-invert (:project-aliases @db/db))]
-    (async/put! diagnostics-chan {:uri uri
-                                  :diagnostics
-                                  (for [usage unknown-usages
-                                        :let [known-alias? (some-> (:unkown-ns usage)
-                                                                   aliases)
-                                              problem (if known-alias?
-                                                        :require
-                                                        :unknown)]]
-                                    {:range (->range usage)
-                                     :code problem
-                                     :message (case problem
-                                                :unknown "Unknown symbol"
-                                                :require "Needs Require")
-                                     :severity 1})})))
+        aliases (set/map-invert project-aliases)]
+    (for [usage unknown-usages
+          :let [known-alias? (some-> (:unkown-ns usage)
+                                     aliases)
+                problem (if known-alias?
+                          :require
+                          :unknown)]]
+      {:range (->range usage)
+       :code problem
+       :message (case problem
+                  :unknown "Unknown symbol"
+                  :require "Needs Require")
+       :severity 1})))
 
 (defn safe-find-references
   ([uri text]
@@ -80,14 +78,45 @@
            references (cond->> (parser/find-references text file-type)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
-         (send-notifications uri references))
+         (async/put! diagnostics-chan
+                     {:uri uri
+                      :diagnostics (find-diagnostics (:project-aliases @db/db) references)}))
        references)
      (catch Throwable e
        (log/warn e "Ignoring: " uri (.getMessage e))
        ;; On purpose
        nil))))
 
+(defn ^:private uri->namespace [uri]
+  (let [project-root (:project-root @db/db)
+        source-paths (set (get-in @db/db [:client-settings "source-paths"] ["src" "test"]))
+        in-project? (string/starts-with? uri project-root)
+        file-type (uri->file-type uri)]
+    (when (and in-project? (not= :unknown file-type))
+      (->> source-paths
+           (map #(str project-root "/" % "/"))
+           (some (fn [source-path]
+                   (when (string/starts-with? uri source-path)
+                     (some-> uri
+                             (subs 0 (dec (- (count uri) (count (name file-type)))))
+                             (subs (count source-path))
+                             (string/replace #"/" ".")
+                             (string/replace #"_" "-")))))))))
+
 (defn did-open [uri text]
+  (when-let [new-ns (uri->namespace uri)]
+    (let [new-text (format "(ns %s)" new-ns)
+          changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
+                    :edits [{:range (->range {:row 1 :end-row 2 :col 1 :end-col (count new-text)})
+                             :new-text new-text}]}]]
+      (async/put!
+        edits-chan
+        (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
+          {:document-changes changes}
+          {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                    [(:uri text-document) edits])
+                                  changes))}))))
+
   (when-let [references (safe-find-references uri text)]
     (swap! db/db (fn [state-db]
                    (-> state-db
@@ -179,7 +208,7 @@
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
         source-paths (mapv #(io/file (str root-path "/" %))
-                           (get client-settings "source-paths" ["src"]))
+                           (get client-settings "source-paths" ["src" "test"]))
         project (get-project-from root-path)]
     (if (some? project)
       (let [project-hash (:project-hash project)

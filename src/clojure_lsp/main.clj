@@ -90,6 +90,7 @@
   (^void didSave [this ^DidSaveTextDocumentParams params]
     (go :didSave
         (end nil)))
+
   (^void didClose [this ^DidCloseTextDocumentParams params]
     (log/warn "DidCloseTextDocumentParams")
     (go :didClose

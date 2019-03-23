@@ -5,17 +5,12 @@
    [clojure-lsp.queries :as queries]
    [clojure-lsp.refactor.edit :as edit]
    [clojure.set :as set]
-   [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [clojure.tools.logging :as log]
-   [clojure.walk :as walk]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.custom-zipper.core :as cz]
-   [rewrite-clj.zip.edit :as ze]
    [rewrite-clj.zip.find :as zf]
    [rewrite-clj.zip.move :as zm]
-   [rewrite-clj.zip.walk :as zw]
    [rewrite-clj.zip.subedit :as zsub])
   (:import
     (rewrite_clj.node.meta MetaNode)))

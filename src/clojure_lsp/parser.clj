@@ -424,10 +424,7 @@
 (defn handle-def
   [op-loc loc context scoped]
   (let [def-sym (z/node (z-right-sexpr op-loc))
-        op-local? (local? op-loc)
-        current-ns (->> (:usages @context)
-                        (filter (comp :ns :tags))
-                        (some :sym))]
+        op-local? (local? op-loc)]
     (if op-local?
       (vswap! context update :locals conj (name (n/sexpr def-sym)))
       (vswap! context update :publics conj (name (n/sexpr def-sym))))
@@ -457,10 +454,7 @@
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
-        multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))
-        current-ns (->> (:usages @context)
-                        (filter (comp :ns :tags))
-                        (some :sym))]
+        multi? (= :list (z/tag (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))))]
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil

@@ -1,13 +1,13 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure.set :as set]
     [clojure-lsp.db :as db]
     [clojure-lsp.refactor.edit :as edit]
+    [clojure.set :as set]
+    [clojure.tools.logging :as log]
+    [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [rewrite-clj.custom-zipper.core :as cz]
-    [rewrite-clj.zip.subedit :as zsub]
-    [clojure.tools.logging :as log]))
+    [rewrite-clj.zip.subedit :as zsub]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -19,7 +19,7 @@
 
 (defn cycle-coll
   "Cycles collection between vector, list, map and set"
-  [zloc]
+  [zloc _uri]
   (let [sexpr (z/sexpr zloc)]
     (if (coll? sexpr)
       (let [node (z/node zloc)
@@ -65,11 +65,11 @@
       [])))
 
 (defn thread-first
-  [zloc]
+  [zloc _uri]
   (thread-sym zloc '->))
 
 (defn thread-last
-  [zloc]
+  [zloc _uri]
   (thread-sym zloc '->>))
 
 (defn thread-all
@@ -81,16 +81,16 @@
         (assoc-in result [0 :range] top-range)))))
 
 (defn thread-first-all
-  [zloc]
+  [zloc _uri]
   (thread-all zloc '->))
 
 (defn thread-last-all
-  [zloc]
+  [zloc _uri]
   (thread-all zloc '->>))
 
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
-  [zloc binding-name]
+  [zloc _uri binding-name]
   (if-let [let-top-loc (some-> zloc
                                (edit/find-ops-up 'let)
                                z/up)]
@@ -126,7 +126,7 @@
 
 (defn introduce-let
   "Adds a let around the current form."
-  [zloc binding-name]
+  [zloc _uri binding-name]
   (let [sym (symbol binding-name)
         {:keys [col]} (meta (z/node zloc))
         loc (-> zloc
@@ -146,7 +146,7 @@
 
 (defn expand-let
   "Expand the scope of the next let up the tree."
-  [zloc]
+  [zloc _uri]
   (let [let-loc zloc
         bind-node (-> let-loc z/down z/right z/node)]
     (if-let [parent-loc (edit/parent-let? let-loc)]
@@ -166,6 +166,30 @@
                    (z/insert-child bind-node)
                    (z/insert-child 'let)
                    (edit/join-let))}]))))
+
+(defn clean-ns
+  [zloc _uri]
+  (let [ns-loc (edit/find-namespace zloc)
+        require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+        col (if require-loc
+              (dec (:col (meta (z/node (z/right require-loc)))))
+              4)
+        sep (n/whitespace-node (apply str (repeat col " ")))
+        requires (->> require-loc
+                      z/remove
+                      z/node
+                      n/children
+                      (remove n/printable-only?)
+                      (sort-by (comp str n/sexpr))
+                      (mapcat (fn [node]
+                                [(n/newlines 1) sep node]))
+                      (cons (n/keyword-node :require)))
+        result-loc (z/subedit-> ns-loc
+                                (z/find-value z/next :require)
+                                (z/up)
+                                (z/replace (n/list-node requires)))]
+    [{:range (meta (z/node result-loc))
+      :loc result-loc}]))
 
 (defn add-known-libspec
   [zloc ns-to-add qualified-ns-to-add]
@@ -193,7 +217,7 @@
           :loc result-loc}]))))
 
 (defn add-missing-libspec
-  [zloc]
+  [zloc _uri]
   (let [ns-str-to-add (some-> zloc z/sexpr namespace)
         ns-to-add (some-> ns-str-to-add symbol)
         alias->info (->> (:file-envs @db/db)

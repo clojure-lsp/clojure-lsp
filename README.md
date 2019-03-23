@@ -55,7 +55,7 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | [x]  | move-to-let         | `[document-uri, line, column, binding-name]` | |
 | [x]  | expand-let          | | |
 | [x]  | add-missing-libspec | | |
-| [ ]  | clean-ns            | | |
+| [-]  | clean-ns            | | | sort only
 
 Refactorings can be done with LanguageClient-neovim with:
 ```vim

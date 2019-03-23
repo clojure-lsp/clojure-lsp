@@ -1,21 +1,21 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.clojure-core :as cc]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.parser :as parser]
-   [clojure-lsp.refactor.transform :as refactor]
-   [clojure.core.async :as async]
-   [clojure.java.io :as io]
-   [clojure.java.shell :as shell]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [clojure.tools.logging :as log]
-   [digest :as digest]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [cljfmt.core :as cljfmt])
+    [cljfmt.core :as cljfmt]
+    [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.refactor.transform :as refactor]
+    [clojure.core.async :as async]
+    [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [digest :as digest]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z])
   (:import
-   [java.util.jar JarFile]))
+    [java.util.jar JarFile]))
 
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
@@ -104,10 +104,10 @@
                              (string/replace #"_" "-")))))))))
 
 (defn did-open [uri text]
-  (when-let [new-ns (uri->namespace uri)]
+  (when-let [new-ns (and (empty? text) (uri->namespace uri))]
     (let [new-text (format "(ns %s)" new-ns)
           changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
-                    :edits [{:range (->range {:row 1 :end-row 2 :col 1 :end-col (count new-text)})
+                    :edits [{:range (->range {:row 1 :end-row 1 :col 1 :end-col 1})
                              :new-text new-text}]}]]
       (async/put!
         edits-chan
@@ -410,12 +410,13 @@
    "move-to-let" #'refactor/move-to-let
    "introduce-let" #'refactor/introduce-let
    "expand-let" #'refactor/expand-let
+   "clean-ns" #'refactor/clean-ns
    "add-missing-libspec" #'refactor/add-missing-libspec})
 
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
-        result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) args)]
+        result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) doc-id args)]
     (when result
       (let [changes [{:text-document {:uri doc-id :version v}
                       :edits (mapv #(update % :range ->range) (refactor/result result))}]]

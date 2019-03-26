@@ -110,6 +110,7 @@ Using https://github.com/emacs-lsp the following works for registering clojure-l
                   :major-modes '(clojure-mode clojurec-mode clojurescript-mode)
                   :server-id 'clojure-lsp))
 (add-to-list 'lsp-language-id-configuration '(clojure-mode . "clojure-mode"))
+(setq lsp-enable-indentation nil)
 (add-hook 'clojure-mode-hook #'lsp)
 (add-hook 'clojurec-mode-hook #'lsp)
 (add-hook 'clojurescript-mode-hook #'lsp)

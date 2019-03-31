@@ -8,8 +8,8 @@
 
 (deftest test-rename
   (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj)
-                  "file://b.clj" (parser/find-usages "(ns b (:require a)) (def x a/bar) :a/bar" :clj)}})
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
+                  "file://b.clj" (parser/find-usages "(ns b (:require a)) (def x a/bar) :a/bar" :clj {})}})
   (testing "rename on symbol without namespace"
     (is (= "foo" (get-in (handlers/rename "file://a.clj" 1 13 "foo")
                          [:changes "file://a.clj" 0 :new-text])))
@@ -32,8 +32,8 @@
 
 (deftest test-find-diagnostics
   (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj)
-                  "file://b.clj" (parser/find-usages "(ns b (:require [a :as a] [c :as c])) (def x a/bar) :a/bar" :clj)}})
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
+                  "file://b.clj" (parser/find-usages "(ns b (:require [a :as a] [c :as c])) (def x a/bar) :a/bar" :clj {})}})
   (testing "unused symbols"
     (is (= ["Unused alias: c" "Unused declaration: b" "Unused declaration: x"]
            (map :message (handlers/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"])))))))
@@ -44,20 +44,24 @@
                                      (str "(ns alpaca.ns (:require [user :as alpaca]))\n"
                                           "(def barr)\n"
                                           "(def bazz)")
-                                     :clj)
+                                     :clj
+                                     {})
                    "file://b.clj" (parser/find-usages
                                     (str "(ns user)\n"
                                          "(def alpha)\n"
                                          "alp\n"
                                          "ba")
-                                    :clj)
+                                    :clj
+                                    {})
                    "file://c.cljs" (parser/find-usages
                                     (str "(ns alpaca.ns)\n"
                                          "(def baff)\n")
-                                    :cljs)
+                                    :cljs
+                                    {})
                    "file://d.clj" (parser/find-usages
                                     (str "(ns d (:require [alpaca.ns :as alpaca]))")
-                                    :clj)}}]
+                                    :clj
+                                    {})}}]
     (testing "complete-a"
       (reset! db/db db-state)
       (is (= [{:label "alpha"}

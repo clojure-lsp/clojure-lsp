@@ -11,7 +11,9 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [clojure.walk :as walk]
     [digest :as digest]
+    [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
@@ -96,7 +98,7 @@
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
         declarations (->> usages
-                          (filter (comp #(contains? % :declare) :tags))
+                          (filter (comp #(and (contains? % :declare) (not (contains? % :unused))) :tags))
                           (remove (comp #(string/starts-with? % "_") name :sym)))
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)
         declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
@@ -116,7 +118,13 @@
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (uri->file-type uri)
-           references (cond->> (parser/find-usages text file-type)
+           macro-defs (merge {'clojure.test/deftest [{:element :declaration
+                                                      :tags #{:unused}}
+                                                     :body]}
+                             (->> (get-in @db/db [:client-settings "macro-defs"] {})
+                                  (medley/map-keys symbol)
+                                  (medley/map-vals (partial walk/postwalk (fn [n] (if (string? n) (keyword n) n))))))
+           references (cond->> (parser/find-usages text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
          (async/put! diagnostics-chan

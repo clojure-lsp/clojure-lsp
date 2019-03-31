@@ -3,10 +3,10 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
-   [clojure.tools.logging :as log]
-   [clojure.tools.nrepl.server :as nrepl.server]
+   [clojure.core.async :as async]
    [clojure.string :as string]
-   [clojure.core.async :as async])
+   [clojure.tools.logging :as log]
+   [clojure.tools.nrepl.server :as nrepl.server])
   (:import
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
    (org.eclipse.lsp4j

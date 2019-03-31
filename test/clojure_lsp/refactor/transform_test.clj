@@ -97,7 +97,7 @@
 
 (deftest add-missing-libspec
   (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj)}})
+                 {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj {})}})
   (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
         [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
     (is (some? range))

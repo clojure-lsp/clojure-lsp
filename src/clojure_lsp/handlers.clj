@@ -120,7 +120,7 @@
      (let [file-type (uri->file-type uri)
            macro-defs (merge {'clojure.test/deftest [{:element :declaration
                                                       :tags #{:unused}}
-                                                     :body]}
+                                                     :elements]}
                              (->> (get-in @db/db [:client-settings "macro-defs"] {})
                                   (medley/map-keys symbol)
                                   (medley/map-vals (partial walk/postwalk (fn [n] (if (string? n) (keyword n) n))))))
@@ -277,11 +277,12 @@
 
 (defn initialize [project-root client-capabilities client-settings]
   (when project-root
+    (swap! db/db assoc
+           :project-root project-root
+           :client-settings client-settings
+           :client-capabilities client-capabilities)
     (let [file-envs (determine-dependencies project-root client-settings)]
       (swap! db/db assoc
-             :client-capabilities client-capabilities
-             :client-settings client-settings
-             :project-root project-root
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
 
@@ -490,7 +491,7 @@
                    "markdown" (let [{:keys [sym]} cursor
                                     signatures (string/join "\n" signatures)]
                                 {:kind "markdown"
-                                 :value (str "```clojure\n" sym "\n" signatures "```")})
+                                 :value (str "```clojure\n" sym "\n" signatures "\n```")})
 
                      ;; default to plaintext
                    [(cond-> (select-keys cursor [:sym :tags])

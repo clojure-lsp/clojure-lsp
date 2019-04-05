@@ -584,6 +584,8 @@
            [dir & dirs] signature-dirs]
       (let [next-loc (case dir
                        :next (z-next-sexpr curr-loc)
+                       :right (z-right-sexpr curr-loc)
+                       :rightmost (z/rightmost curr-loc)
                        curr-loc)]
         (if (seq dirs)
           (recur next-loc dirs)

@@ -30,9 +30,6 @@
 (defn- uri->path [uri]
   (Paths/get (URI. uri)))
 
-(comment
-  (type (uri->path (URI. "file:///c:/foo/bar"))))
-
 (defn- uri->file-type [uri]
   (cond
     (string/ends-with? uri ".cljs") :cljs
@@ -482,11 +479,12 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor (find-reference-under-cursor line column local-env (uri->file-type doc-id))
-        signatures (first
-                    (for [[_ usages] file-envs
-                          {:keys [sym tags] :as usage} usages
-                          :when (and (= sym (:sym cursor)) (:declare tags))]
-                      (:signatures usage)))
+        {:keys [signatures doc]} (first
+                                   (for [[_ usages] file-envs
+                                         {:keys [sym tags] :as usage} usages
+                                         :when (and (= sym (:sym cursor))
+                                                    (:declare tags))]
+                                     usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])]
     (if cursor
       {:range (->range cursor)
@@ -494,7 +492,9 @@
                    "markdown" (let [{:keys [sym]} cursor
                                     signatures (string/join "\n" signatures)]
                                 {:kind "markdown"
-                                 :value (str "```clojure\n" sym "\n" signatures "\n```")})
+                                 :value (str "```\n" sym "\n"
+                                             doc
+                                             "\n" signatures "\n```")})
 
                      ;; default to plaintext
                    [(cond-> (select-keys cursor [:sym :tags])

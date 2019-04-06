@@ -411,15 +411,19 @@
 
 (defn handle-def
   [op-loc _loc context scoped]
-  (let [def-sym (z/node (z-right-sexpr op-loc))
+  (let [name-loc (z-right-sexpr op-loc)
+        def-sym (z/node name-loc)
+        def-meta  (meta (z/sexpr name-loc))
         op-local? (local? op-loc)]
     (if op-local?
       (vswap! context update :locals conj (name (n/sexpr def-sym)))
       (vswap! context update :publics conj (name (n/sexpr def-sym))))
     (add-reference context scoped def-sym {:tags (if op-local?
                                                    #{:declare :local}
-                                                   #{:declare :public})})
-    (handle-rest (z-right-sexpr (z-right-sexpr op-loc))
+                                                   #{:declare :public})
+                                           :doc (:doc def-meta)
+                                           :signatures (:arglists def-meta)})
+    (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 
 (defn- function-signatures [params-loc]
@@ -450,18 +454,21 @@
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
-        params-loc (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))]
+        params-loc (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))
+        check (fn [pred x] (when (pred x) x))]
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil
         op-local? (vswap! context update :locals conj (name (z/sexpr name-loc)))
         :else (vswap! context update :publics conj (name (z/sexpr name-loc))))
+
       (add-reference context scoped (z/node name-loc)
                      {:tags (cond
                               op-fn? name-tags
                               op-local? (conj name-tags :local)
                               :else (conj name-tags :public))
                       :kind :function
+                      :doc (check string? (z/sexpr (z-right-sexpr name-loc)))
                       :signatures (function-signatures params-loc)}))
     (function-params-and-bodies params-loc context scoped)))
 

@@ -17,13 +17,21 @@
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
-    [java.util.jar JarFile]))
+    [java.net URI]
+    [java.util.jar JarFile]
+    [java.nio.file Paths]))
 
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
+(defn- to-file [path child]
+  (.toFile (.resolve path child)))
+
 (defn- uri->path [uri]
-  (string/replace uri #"^file:///" "/"))
+  (Paths/get (URI. uri)))
+
+(comment
+  (type (uri->path (URI. "file:///c:/foo/bar"))))
 
 (defn- uri->file-type [uri]
   (cond
@@ -214,49 +222,44 @@
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
 
-(defn is-lein-project? [project-root]
-  (.exists (io/file project-root "project.clj")))
-
-(defn is-boot-project? [project-root]
-  (.exists (io/file project-root "build.boot")))
-
-(defn hash-project-file [project-file]
-  (digest/md5 project-file))
-
-(defn lookup-classpath [command root-path]
+(defn lookup-classpath [root-path command-args]
   (try
     (let [sep (re-pattern (System/getProperty "path.separator"))]
-      (-> (command)
+      (-> (apply shell/sh (into command-args [:dir (str root-path)]))
           (:out)
           (string/trim-newline)
           (string/split sep)))
     (catch Exception e
-      (log/warn "Error while looking up classpath info in" root-path (.getMessage e))
+      (log/warn e "Error while looking up classpath info in" (str root-path) (.getMessage e))
       [])))
 
-(defn lein-lookup-classpath [root-path]
-  (lookup-classpath #(shell/sh "lein" "classpath" :dir root-path) root-path))
+(defn try-project [root-path project-path command-args]
+  (let [project-file (to-file root-path project-path)]
+    (when (.exists project-file)
+      (let [file-hash (digest/md5 project-file)
+            classpath (lookup-classpath root-path command-args)]
+        {:project-hash file-hash :classpath classpath}))))
 
-(defn boot-lookup-classpath [root-path]
-  (lookup-classpath #(shell/sh "boot" "show" "--fake-classpath" :dir root-path) root-path))
-
-(defn build-lein-project [root-path]
-  (let [file-hash (hash-project-file (io/file root-path "project.clj"))
-        classpath (lein-lookup-classpath root-path)]
-    {:project-hash file-hash :classpath classpath}))
-
-(defn build-boot-project [root-path]
-  (let [file-hash (hash-project-file (io/file root-path "build.boot"))
-        classpath (boot-lookup-classpath root-path)]
-    {:project-hash file-hash :classpath classpath}))
+(def project-specs
+  [{:project-path "project.clj"
+    :classpath-cmd ["lein" "classpath"]}
+   {:project-path "build.boot"
+    :classpath-cmd ["boot" "show" "--fake-classpath"]}])
 
 (defn get-project-from [root-path]
-  (cond (is-lein-project? root-path) (build-lein-project root-path)
-        (is-boot-project? root-path) (build-boot-project root-path)))
+  (reduce
+    (fn [project {:keys [project-path classpath-cmd]}]
+      (if-let [subproject (try-project root-path project-path classpath-cmd)]
+        (-> project
+            (update :project-hash (fnil str "") (:project-hash subproject))
+            (update :classpath (fnil into []) (:classpath subproject)))
+        project))
+    {}
+    project-specs))
 
 (defn determine-dependencies [project-root client-settings]
   (let [root-path (uri->path project-root)
-        source-paths (mapv #(io/file (str root-path "/" %))
+        source-paths (mapv #(to-file root-path %)
                            (get client-settings "source-paths" ["src" "test"]))
         project (get-project-from root-path)]
     (if (some? project)

@@ -10,7 +10,7 @@
 (def version 1)
 
 (defn make-spec [project-root]
-  (let [lsp-db (io/file project-root ".lsp" "sqlite.1.db")]
+  (let [lsp-db (io/file (str project-root) ".lsp" "sqlite.1.db")]
     {:subprotocol "sqlite"
      :subname (.getAbsolutePath lsp-db)}))
 
@@ -22,13 +22,13 @@
       (jdbc/execute conn "create table project (version text, root text unique, hash text, classpath text, jar_envs text);")
       (jdbc/execute conn ["insert or replace into project
                           (version, root, hash, classpath, jar_envs)
-                          values (?,?,?,?,?);" (str version) project-root project-hash (pr-str classpath) (pr-str jar-envs)]))))
+                          values (?,?,?,?,?);" (str version) (str project-root) project-hash (pr-str classpath) (pr-str jar-envs)]))))
 
 (defn read-deps [project-root]
   (try
     (with-open [conn (jdbc/connection (make-spec project-root))]
       (let [project-row
-            (->> (jdbc/fetch conn ["select root, hash, classpath, jar_envs from project where root = ? and version = ?" project-root (str version)])
+            (->> (jdbc/fetch conn ["select root, hash, classpath, jar_envs from project where root = ? and version = ?" (str project-root) (str version)])
                  (first))]
         {:jar-envs (edn/read-string (:jar_envs project-row))
          :classpath (edn/read-string (:classpath project-row))

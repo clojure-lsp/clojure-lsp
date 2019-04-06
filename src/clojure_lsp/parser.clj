@@ -699,6 +699,9 @@
             (add-reference context scoped (z/node loc) {})
             (recur (edit/skip-over loc) scoped))
 
+          (= :reader-macro tag)
+          (recur (edit/skip-over loc) scoped)
+
           :else
           (recur (zm/next loc) scoped))))))
 
@@ -822,7 +825,7 @@
   (do (defmacro x [] 'y)
       (let [y 3] (y)))
 
-  (z/of-string "##NaN")
+  (find-usages "(do #inst \"2019-04-04\")" :clj {})
   (z/sexpr (z/next (z/of-string "#_1")))
 
   (find-usages "(deftype JSValue [val])" :clj)

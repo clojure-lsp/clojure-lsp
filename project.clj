@@ -14,7 +14,8 @@
                  [digest "1.4.8"]
                  [cljfmt "0.5.7"]
                  [medley "1.0.0"]
-                 [com.taoensso/tufte "2.0.1"]]
+                 [com.taoensso/tufte "2.0.1"]
+                 [trptcolin/versioneer "0.2.0"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]

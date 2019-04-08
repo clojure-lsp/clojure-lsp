@@ -6,7 +6,8 @@
    [clojure.core.async :as async]
    [clojure.string :as string]
    [clojure.tools.logging :as log]
-   [clojure.tools.nrepl.server :as nrepl.server])
+   [clojure.tools.nrepl.server :as nrepl.server]
+   [trptcolin.versioneer.core :as version])
   (:import
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
    (org.eclipse.lsp4j
@@ -284,7 +285,8 @@
   (getWorkspaceService [this]
     (LSPWorkspaceService.)))
 
-(defn -main [& args]
+
+(defn- run []
   (log/info "Server started")
   (let [server (LSPServer.)
         launcher (LSPLauncher/createServerLauncher server System/in System/out)
@@ -300,3 +302,8 @@
         (.publishDiagnostics (:client @db/db) (interop/conform-or-log ::interop/publish-diagnostics-params diagnostic))
         (recur (async/<! handlers/diagnostics-chan))))
     (.startListening launcher)))
+
+(defn -main [& args]
+  (if (empty? args)
+    (run)
+    (println "clojure-lsp" (version/get-version "clojure-lsp" "clojure-lsp"))))

@@ -24,6 +24,9 @@
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
+(defn- file->uri [file]
+  (str (.toUri (.toPath file))))
+
 (defn- to-file [path child]
   (.toFile (.resolve path child)))
 
@@ -207,7 +210,7 @@
   (let [xf (comp
             (mapcat file-seq)
             (filter #(.isFile %))
-            (map #(str "file://" (.getAbsolutePath %)))
+            (map file->uri)
             (filter (fn [uri]
                       (or (string/ends-with? uri ".clj")
                           (string/ends-with? uri ".cljc")

@@ -223,11 +223,6 @@
                   (catch Exception e
                     (log/error e))))))))))
 
-(defn- path->uri [path]
-  (if (string/starts-with? path "/")
-    (str "file://" path)
-    path))
-
 (deftype LSPWorkspaceService []
   WorkspaceService
   (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
@@ -237,7 +232,7 @@
             (future
               (end
                 (try
-                  (when-let [result (#'handlers/refactor (path->uri doc-id)
+                  (when-let [result (#'handlers/refactor doc-id
                                                          (inc (int line))
                                                          (inc (int col))
                                                          command

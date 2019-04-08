@@ -126,12 +126,9 @@
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (uri->file-type uri)
-           macro-defs (merge {'clojure.test/deftest [{:element :declaration
-                                                      :tags #{:unused}}
-                                                     :elements]}
-                             (->> (get-in @db/db [:client-settings "macro-defs"] {})
-                                  (medley/map-keys symbol)
-                                  (medley/map-vals (partial walk/postwalk (fn [n] (if (string? n) (keyword n) n))))))
+           macro-defs (->> (get-in @db/db [:client-settings "macro-defs"] {})
+                           (medley/map-keys symbol)
+                           (medley/map-vals (partial walk/postwalk (fn [n] (if (string? n) (keyword n) n)))))
            references (cond->> (parser/find-usages text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
@@ -445,13 +442,14 @@
         local-env (get file-envs doc-id)
         cursor-sym (:sym (find-reference-under-cursor line column local-env (uri->file-type doc-id)))]
     (log/warn "definition" doc-id line column cursor-sym)
-    (first
-     (for [[env-doc-id usages] file-envs
-           {:keys [sym tags] :as usage} usages
-           :when (= sym cursor-sym)
-           :when (and (or (= doc-id env-doc-id) (:public tags))
-                      (:declare tags))]
-       {:uri env-doc-id :range (->range usage)}))))
+    (when cursor-sym
+      (first
+        (for [[env-doc-id usages] file-envs
+              {:keys [sym tags] :as usage} usages
+              :when (= sym cursor-sym)
+              :when (and (or (= doc-id env-doc-id) (:public tags))
+                         (:declare tags))]
+          {:uri env-doc-id :range (->range usage)})))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
@@ -496,8 +494,8 @@
                                     signatures (string/join "\n" signatures)]
                                 {:kind "markdown"
                                  :value (str "```\n" sym "\n"
-                                             doc
-                                             "\n" signatures "\n```")})
+                                             signatures "\n```\n"
+                                             doc)})
 
                      ;; default to plaintext
                    [(cond-> (select-keys cursor [:sym :tags])

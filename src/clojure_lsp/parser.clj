@@ -472,10 +472,6 @@
                       :signatures (function-signatures params-loc)}))
     (function-params-and-bodies params-loc context scoped)))
 
-(defn handle-defmethod
-  [op-loc loc context scoped]
-  (handle-function op-loc loc context scoped #{}))
-
 (defn handle-fn
   [op-loc loc context scoped]
   (handle-function op-loc loc context scoped #{:declare}))
@@ -553,11 +549,11 @@
    (handle-rest (z/down loc) context)))
 
 (comment
-  '[clojure.core/with-open
+  '[
     clojure.core/dotimes
     clojure.core/letfn
     clojure.core/with-local-vars
-    clojure.core/as->])
+    ])
 
 (def ^:dynamic *sexpr-handlers*
   {'clojure.core/ns handle-ns
@@ -566,7 +562,6 @@
    'clojure.core/fn handle-fn
    'clojure.core/declare handle-def
    'clojure.core/defmulti handle-def
-   'clojure.core/defmethod handle-defmethod
    'clojure.core/deftype handle-deftype
    'clojure.core/def handle-def
    'clojure.core/defonce handle-def
@@ -584,6 +579,13 @@
    'clojure.core/doseq handle-let
    'clojure.core/comment handle-comment
    'clojure.core/quote handle-quote})
+
+(def default-macro-defs
+  {'clojure.test/deftest [{:element :declaration
+                           :tags #{:unused}}
+                          :elements]
+   'clojure.core/as-> [:element :param :bound-elements]
+   'clojure.core/defmethod [:element :element :function-params-and-bodies]})
 
 (defn- macro-signature-loc [signature-dirs element-loc]
   (when signature-dirs
@@ -730,11 +732,12 @@
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
-(defn find-usages [code file-type macro-defs]
+(defn find-usages [code file-type client-macro-defs]
   (let [code-loc (-> code
                      (string/replace #"(\w)/(\s|$)" "$1 $2")
                      (z/of-string)
-                     (zm/up))]
+                     (zm/up))
+        macro-defs (merge default-macro-defs client-macro-defs)]
     (if (= :cljc file-type)
       (into (-> code-loc
                 (process-reader-macro :clj)

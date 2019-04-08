@@ -581,11 +581,20 @@
    'clojure.core/quote handle-quote})
 
 (def default-macro-defs
-  {'clojure.test/deftest [{:element :declaration
-                           :tags #{:unused}}
-                          :elements]
+  {'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'clojure.core/as-> [:element :param :bound-elements]
-   'clojure.core/defmethod [:element :element :function-params-and-bodies]})
+   'clojure.core/defmethod [:element :element :function-params-and-bodies]
+   'compojure.core/defroutes [{:element :declaration} :elements]
+   'compojure.core/context [:element :param :bound-elements]
+   'compojure.core/ANY [:element :param :bound-elements]
+   'compojure.core/GET [:element :param :bound-elements]
+   'compojure.core/PUT [:element :param :bound-elements]
+   'compojure.core/POST [:element :param :bound-elements]
+   'compojure.core/PATCH [:element :param :bound-elements]
+   'compojure.core/DELETE [:element :param :bound-elements]
+   'outpace.config/defconfig [{:element :declaration} :element]
+   'outpace.config/defconfig! [{:element :declaration} :element]
+   'net.cgrand.enlive-html/deftemplate [{:element :declaration} :element :params :bound-elements]})
 
 (defn- macro-signature-loc [signature-dirs element-loc]
   (when signature-dirs
@@ -636,9 +645,9 @@
       (function-params-and-bodies element-loc context scoped))
     (when (and (map? element) (= (:element element) :declaration))
       (macro-declaration element element-loc context scoped))
-    (when (seq elements)
+    (when-let [next-element-loc (and (seq elements) (z-right-sexpr element-loc))]
       (recur elements
-             (z-right-sexpr element-loc)
+             next-element-loc
              (cond
                (and (= :bindings element) (= :vector (z/tag element-loc)))
                (parse-bindings element-loc context (end-bounds loc) scoped)

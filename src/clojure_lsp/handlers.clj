@@ -1,7 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
     [cljfmt.core :as cljfmt]
-    [cljfmt.main :as cljfmt.main]
     [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
@@ -254,7 +253,7 @@
 (defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
         source-paths (mapv #(to-file root-path %)
-                           (get @db/db [:client-settings "source-paths"]))
+                           (get-in @db/db [:client-settings "source-paths"]))
         project (get-project-from root-path)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -503,8 +502,7 @@
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
         new-text (cljfmt/reformat-string
                    text
-                   (cljfmt.main/merge-default-options
-                     (get-in @db/db [:client-settings "cljfmt"])))]
+                   (get-in @db/db [:client-settings "cljfmt"]))]
     (when-not (= new-text text)
       [{:range (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
         :new-text new-text}])))
@@ -517,6 +515,5 @@
              :new-text (n/string
                          (cljfmt/reformat-form
                            (z/node form-loc)
-                           (cljfmt.main/merge-default-options
-                             (get-in (deref db/db) [:client-settings "cljfmt"]))))})
+                           (get-in @db/db [:client-settings "cljfmt"])))})
           forms)))

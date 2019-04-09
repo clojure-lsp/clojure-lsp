@@ -7,7 +7,7 @@
 
 (defmacro zspy [loc]
   `(do
-     (log/warn '~loc (pr-str (z/sexpr ~loc)))
+     (log/warn '~loc (pr-str (z/string ~loc)))
      ~loc))
 
 (defn top? [loc]

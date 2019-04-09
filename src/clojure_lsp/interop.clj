@@ -1,5 +1,6 @@
 (ns clojure-lsp.interop
   (:require
+    [cljfmt.main :as cljfmt.main]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
@@ -246,7 +247,8 @@
 
 (defn clean-client-settings [client-settings]
   (-> client-settings
-      (update "source-paths" #(set (or % ["src" "test"])))
+      (update "source-paths" #(if (seq %) (set %) #{"src" "test"}))
       (update "macro-defs" clean-symbol-map)
       (update "cljfmt" #(medley/map-keys keyword %))
-      (update-in ["cljfmt" :indents] clean-symbol-map)))
+      (update-in ["cljfmt" :indents] clean-symbol-map)
+      (update "cljfmt" cljfmt.main/merge-default-options)))

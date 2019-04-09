@@ -39,7 +39,7 @@
      ~loc))
 
 (defn thread-sym
-  [zloc sym]
+  [zloc sym top-meta]
   (let [movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
     (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)
@@ -48,37 +48,61 @@
             meta-node (cond-> zloc
                         threaded? z/up
                         :always (-> z/node meta))
+            first-col (+ (count (str sym)) (:col top-meta))
             result-loc (-> first-loc
                            (z/leftmost)
                            (z/edit->
-                            (movement)
-                            (z/remove))
+                             (movement)
+                             (z/remove))
                            (z/up)
                            ((fn [loc] (cond-> loc
                                         (edit/single-child? loc) (-> z/down edit/raise)
-                                        threaded? (-> (z/insert-left first-node) z/up)
+
+                                        threaded? (-> (z/insert-left first-node)
+                                                      (z/left)
+                                                      (cz/insert-right (n/spaces first-col))
+                                                      (cz/insert-right (n/newlines 1))
+                                                      z/up)
                                         (not threaded?) (-> (edit/wrap-around :list)
+                                                            (z/insert-child (n/spaces first-col))
+                                                            (z/insert-child (n/newlines 1))
                                                             (z/insert-child first-node)
                                                             (z/insert-child sym))))))]
         [{:range meta-node
           :loc result-loc}])
       [])))
 
+(comment
+  [:a :b]
+  (foo (-> (quux (qux x w))
+           (bar y)) z)
+  (->> (bar w (qux y x))
+       (foo z))
+  )
+
+(defn- can-thread? [zloc]
+  (= (z/tag zloc) :list))
+
 (defn thread-first
   [zloc _uri]
-  (thread-sym zloc '->))
+  (when (can-thread? zloc)
+    (thread-sym zloc '-> (meta (z/node zloc)))))
 
 (defn thread-last
   [zloc _uri]
-  (thread-sym zloc '->>))
+  (when (can-thread? zloc)
+    (thread-sym zloc '->> (meta (z/node zloc)))))
 
 (defn thread-all
   [zloc sym]
-  (let [[{top-range :range} :as result] (thread-sym zloc sym)]
-    (loop [[{:keys [loc]} :as result] result]
-      (if (z/right (z/down (z/right (z/down loc))))
-        (recur (thread-sym (z/right (z/down loc)) sym))
-        (assoc-in result [0 :range] top-range)))))
+  (when (can-thread? zloc)
+    (let [top-meta (meta (z/node zloc))
+          [{top-range :range} :as result] (thread-sym zloc sym top-meta)]
+      (loop [[{:keys [loc]} :as result] result]
+        (let [next-loc (z/right (z/down loc))]
+          (if (and (can-thread? next-loc) (z/right (z/down next-loc)))
+            (recur (thread-sym next-loc sym top-meta))
+            (assoc-in result [0 :range] top-range)))))))
 
 (defn thread-first-all
   [zloc _uri]

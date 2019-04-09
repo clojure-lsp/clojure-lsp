@@ -4,6 +4,7 @@
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure-lsp.refactor.transform :as transform]
+    [clojure.string :as string]
     [clojure.test :refer :all]
     [rewrite-clj.zip :as z]))
 
@@ -12,7 +13,7 @@
     (is (= 'b (z/sexpr zloc)))
     (is (= '(a b) (z/sexpr (z/up zloc))))
     (is (= "b" (-> zloc edit/raise z/root-string))))
- (let [zloc (edit/wrap-around (z/find-value (z/of-string "(a (b))") z/next 'a) :list)]
+  (let [zloc (edit/wrap-around (z/find-value (z/of-string "(a (b))") z/next 'a) :list)]
     (is (= '(a) (z/sexpr zloc)))
     (is (= '((a) (b)) (z/sexpr (z/up zloc))))
     (is (= "((a) (b))" (z/root-string zloc)))))
@@ -21,21 +22,40 @@
   (let [zloc (z/of-string "(remove nil? (filter :id (map (comp now doit) xs)))")]
     (let [[{:keys [loc]}] (transform/thread-last zloc nil)]
       (is (= '->> (z/sexpr (z/down loc))))
-      (is (= "(->> (filter :id (map (comp now doit) xs)) (remove nil?))" (z/root-string loc))))
+      (is (= (string/join "\n" ["(->> (filter :id (map (comp now doit) xs))"
+                                "     (remove nil?))"])
+             (z/root-string loc))))
     (let [[{:keys [loc]}] (transform/thread-last-all zloc nil)]
       (is (= '->> (z/sexpr (z/down loc))))
-      (is (= "(->> xs (map (comp now doit)) (filter :id) (remove nil?))" (z/root-string loc)))))
+      (is (= (string/join "\n" ["(->> xs"
+                                "     (map (comp now doit))"
+                                "     (filter :id)"
+                                "     (remove nil?))"])
+             (z/root-string loc)))))
   (let [zloc (z/of-string "(assoc (dissoc (update m :xs reverse) :bye) :hello :world)")]
     (let [[{:keys [loc]}] (transform/thread-first zloc nil)]
       (is (= '-> (z/sexpr (z/down loc))))
-      (is (= "(-> (dissoc (update m :xs reverse) :bye) (assoc :hello :world))" (z/root-string loc))))
+      (is (= (string/join "\n" ["(-> (dissoc (update m :xs reverse) :bye)"
+                                "    (assoc :hello :world))"])
+             (z/root-string loc))))
     (let [[{:keys [loc]}] (transform/thread-first-all zloc nil)]
       (is (= '-> (z/sexpr (z/down loc))))
-      (is (= "(-> m (update :xs reverse) (dissoc :bye) (assoc :hello :world))" (z/root-string loc)))))
+      (is (= (string/join "\n" ["(-> m"
+                                "    (update :xs reverse)"
+                                "    (dissoc :bye)"
+                                "    (assoc :hello :world))"])
+             (z/root-string loc)))))
   (let [zloc (z/of-string "(interpose (spaces) (foo))")
         [{:keys [loc]} :as _result] (transform/thread-last-all zloc nil)]
     (is (= '->> (z/sexpr (z/down loc))))
-    (is (= "(->> (foo) (interpose (spaces)))" (z/root-string loc)))))
+    (is (= "(->> (foo)\n     (interpose (spaces)))" (z/root-string loc))))
+  (let [zloc (z/of-string "[:a :b]")
+        result (transform/thread-last-all zloc nil)]
+    (is (nil? result)))
+  (let [zloc (z/of-string "(get-in foo [:a :b])")
+        [{:keys [loc]} :as _result] (transform/thread-last-all zloc nil)]
+    (is (= '->> (z/sexpr (z/down loc))))
+    (is (= "(->> [:a :b]\n     (get-in foo))" (z/root-string loc)))))
 
 (deftest move-to-let-test
   (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] (inc a))") z/next 'inc))
@@ -58,12 +78,12 @@
   (let [zloc (z/find-value (z/of-string "(let [a (inc 1)] a (inc 1))") z/next 1)
         [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
-    (is (= (str "(let [b 1"\newline
+    (is (= (str "(let [b 1" \newline
                 "      a (inc b)] a (inc b))") (z/root-string loc))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a (inc 1)] a (inc 1))") z/next 1))
         [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
-    (is (= (str "(let [b (inc 1)"\newline
+    (is (= (str "(let [b (inc 1)" \newline
                 "      a b] a b)") (z/root-string loc)))))
 
 (deftest introduce-let-test

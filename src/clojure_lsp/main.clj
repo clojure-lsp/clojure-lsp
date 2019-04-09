@@ -1,15 +1,15 @@
 (ns clojure-lsp.main
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.interop :as interop]
-   [clojure.core.async :as async]
-   [clojure.tools.logging :as log]
-   [clojure.tools.nrepl.server :as nrepl.server]
-   [trptcolin.versioneer.core :as version])
+    [clojure-lsp.db :as db]
+    [clojure-lsp.handlers :as handlers]
+    [clojure-lsp.interop :as interop]
+    [clojure.core.async :as async]
+    [clojure.tools.logging :as log]
+    [clojure.tools.nrepl.server :as nrepl.server]
+    [trptcolin.versioneer.core :as version])
   (:import
-   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
-   (org.eclipse.lsp4j
+    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
+    (org.eclipse.lsp4j
       ApplyWorkspaceEditParams
       CodeActionParams
       Command
@@ -42,9 +42,9 @@
       TextDocumentPositionParams
       TextDocumentSyncKind
       TextDocumentSyncOptions)
-   (org.eclipse.lsp4j.launch LSPLauncher)
-   (java.util.concurrent CompletableFuture)
-   (java.util.function Supplier))
+    (org.eclipse.lsp4j.launch LSPLauncher)
+    (java.util.concurrent CompletableFuture)
+    (java.util.function Supplier))
   (:gen-class))
 
 (defonce formatting (atom false))
@@ -231,20 +231,20 @@
   (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
     (go :executeCommand
         (let [[doc-id line col & args] (map interop/json->clj (.getArguments params))
-                command (.getCommand params)]
-            (future
-              (end
-                (try
-                  (when-let [result (#'handlers/refactor doc-id
-                                                         (inc (int line))
-                                                         (inc (int col))
-                                                         command
-                                                         args)]
-                    (.get (.applyEdit (:client @db/db)
-                                      (ApplyWorkspaceEditParams.
-                                        (interop/conform-or-log ::interop/workspace-edit result)))))
-                  (catch Exception e
-                    (log/error e)))))))
+              command (.getCommand params)]
+          (future
+            (end
+              (try
+                (when-let [result (#'handlers/refactor doc-id
+                                                       (inc (int line))
+                                                       (inc (int col))
+                                                       command
+                                                       args)]
+                  (.get (.applyEdit (:client @db/db)
+                                    (ApplyWorkspaceEditParams.
+                                      (interop/conform-or-log ::interop/workspace-edit result)))))
+                (catch Exception e
+                  (log/error e)))))))
     (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
     (log/warn params))
@@ -285,7 +285,7 @@
     (log/info "Shutting down")
     (reset! db/db {:documents {}}) ;; TODO confirm this is correct
     (CompletableFuture/completedFuture
-     {:result nil}))
+      {:result nil}))
   (exit [this]
     (log/info "Exit")
     (shutdown-agents)
@@ -294,7 +294,6 @@
     (LSPTextDocumentService.))
   (getWorkspaceService [this]
     (LSPWorkspaceService.)))
-
 
 (defn- run []
   (log/info "Server started")

@@ -1,6 +1,7 @@
 (ns clojure-lsp.handlers
   (:require
     [cljfmt.core :as cljfmt]
+    [cljfmt.main :as cljfmt.main]
     [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
@@ -11,9 +12,7 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
-    [clojure.walk :as walk]
     [digest :as digest]
-    [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
@@ -93,15 +92,15 @@
 
 (defn ^:private diagnose-unused-aliases [declared-aliases usages]
   (let [references (->> usages
-                       (remove (comp #(contains? % :declare) :tags))
-                       (map #(some-> % :sym namespace symbol))
-                       set)
+                        (remove (comp #(contains? % :declare) :tags))
+                        (map #(some-> % :sym namespace symbol))
+                        set)
         unused-aliases (set/difference (set (map :ns declared-aliases)) references)]
-  (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
-    {:range (->range usage)
-     :code :unused
-     :message (str "Unused alias: " (:str usage))
-     :severity 1})))
+    (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
+      {:range (->range usage)
+       :code :unused
+       :message (str "Unused alias: " (:str usage))
+       :severity 1})))
 
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
@@ -126,9 +125,7 @@
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (uri->file-type uri)
-           macro-defs (->> (get-in @db/db [:client-settings "macro-defs"] {})
-                           (medley/map-keys symbol)
-                           (medley/map-vals (partial walk/postwalk (fn [n] (if (string? n) (keyword n) n)))))
+           macro-defs (get-in @db/db [:client-settings "macro-defs"])
            references (cond->> (parser/find-usages text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
@@ -143,7 +140,7 @@
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
-        source-paths (set (get-in @db/db [:client-settings "source-paths"] ["src" "test"]))
+        source-paths (get-in @db/db [:client-settings "source-paths"])
         in-project? (string/starts-with? uri project-root)
         file-type (uri->file-type uri)]
     (when (and in-project? (not= :unknown file-type))
@@ -254,10 +251,10 @@
     {}
     project-specs))
 
-(defn determine-dependencies [project-root client-settings]
+(defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
         source-paths (mapv #(to-file root-path %)
-                           (get client-settings "source-paths" ["src" "test"]))
+                           (get @db/db [:client-settings "source-paths"]))
         project (get-project-from root-path)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -281,7 +278,7 @@
            :project-root project-root
            :client-settings client-settings
            :client-capabilities client-capabilities)
-    (let [file-envs (determine-dependencies project-root client-settings)]
+    (let [file-envs (determine-dependencies project-root)]
       (swap! db/db assoc
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
@@ -367,9 +364,8 @@
                    :let [require-edit (some-> cursor-loc
                                               (refactor/add-known-libspec (symbol alias-str) alias-ns)
                                               (refactor/result))]]
-               (cond->
-                 {:label (str alias-str "/" (name (:sym usage)))
-                  :detail (name alias-ns)}
+               (cond-> {:label (str alias-str "/" (name (:sym usage)))
+                        :detail (name alias-ns)}
                  require-edit (assoc :additional-text-edits (mapv #(update % :range ->range) require-edit))))
              (sort-by :label))
         (->> cc/core-syms
@@ -497,7 +493,7 @@
                                              signatures "\n```\n"
                                              doc)})
 
-                     ;; default to plaintext
+                   ;; default to plaintext
                    [(cond-> (select-keys cursor [:sym :tags])
                       (seq signatures) (assoc :signatures signatures)
                       :always (pr-str))])}
@@ -505,7 +501,10 @@
 
 (defn formatting [doc-id]
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
-        new-text (cljfmt/reformat-string text)]
+        new-text (cljfmt/reformat-string
+                   text
+                   (cljfmt.main/merge-default-options
+                     (get-in @db/db [:client-settings "cljfmt"])))]
     (when-not (= new-text text)
       [{:range (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
         :new-text new-text}])))
@@ -515,5 +514,9 @@
         forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]
             {:range (->range (-> form-loc z/node meta))
-             :new-text (n/string (cljfmt/reformat-form (z/node form-loc)))})
+             :new-text (n/string
+                         (cljfmt/reformat-form
+                           (z/node form-loc)
+                           (cljfmt.main/merge-default-options
+                             (get-in (deref db/db) [:client-settings "cljfmt"]))))})
           forms)))

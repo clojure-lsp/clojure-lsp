@@ -3,6 +3,7 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [clojure.walk :as walk]
     [medley.core :as medley])
   (:import
     (org.eclipse.lsp4j
@@ -228,3 +229,24 @@
 
     :else
     json-element))
+
+(defn- typify-json [root]
+  (walk/postwalk (fn [n]
+                   (if (string? n)
+                     (keyword n)
+                     n))
+                 root))
+
+(defn- clean-symbol-map [m]
+  (->> (or m {})
+       (medley/map-keys #(if (string/starts-with? % "#")
+                           (re-pattern (subs % 1))
+                           %))
+       (medley/map-vals typify-json)))
+
+(defn clean-client-settings [client-settings]
+  (-> client-settings
+      (update "source-paths" #(set (or % ["src" "test"])))
+      (update "macro-defs" clean-symbol-map)
+      (update "cljfmt" #(medley/map-keys keyword %))
+      (update-in ["cljfmt" :indents] clean-symbol-map)))

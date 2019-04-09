@@ -4,7 +4,6 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure.core.async :as async]
-   [clojure.string :as string]
    [clojure.tools.logging :as log]
    [clojure.tools.nrepl.server :as nrepl.server]
    [trptcolin.versioneer.core :as version])
@@ -66,7 +65,10 @@
      (finally
        (try
          (swap! status update ~'_id disj ~'_start-time)
-         (log/info ~'_id (quot (- (System/nanoTime) ~'_start-time) 1000000) (filter (comp seq val) @status))
+         (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)
+               running# (filter (comp seq val) @status)]
+           (when (or (> duration# 100) (seq running#))
+             (log/info ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
 
@@ -252,23 +254,31 @@
 (defrecord LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
-    (let [client-capabilities (some->> params (.getCapabilities) (interop/conform-or-log ::interop/client-capabilities))]
-      (log/warn "Initialize" client-capabilities)
-      (#'handlers/initialize (.getRootUri params) client-capabilities (interop/json->clj (.getInitializationOptions params))))
-    (CompletableFuture/completedFuture
-     (InitializeResult. (doto (ServerCapabilities.)
-                          (.setHoverProvider true)
-                          (.setCodeActionProvider true)
-                          (.setReferencesProvider true)
-                          (.setRenameProvider true)
-                          (.setDefinitionProvider true)
-                          (.setDocumentFormattingProvider true)
-                          (.setDocumentRangeFormattingProvider true)
-                          (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                  (.setOpenClose true)
-                                                  (.setChange TextDocumentSyncKind/Full)
-                                                  (.setSave (SaveOptions. true))))
-                          (.setCompletionProvider (CompletionOptions. false [\c]))))))
+    (go :initialize
+        (end
+          (let [client-capabilities (some->> params
+                                             (.getCapabilities)
+                                             (interop/conform-or-log ::interop/client-capabilities))
+                client-settings (some->> params
+                                         (.getInitializationOptions)
+                                         (interop/json->clj)
+                                         (interop/clean-client-settings))]
+            (log/warn "Initialize")
+            (#'handlers/initialize (.getRootUri params) client-capabilities client-settings)
+            (CompletableFuture/completedFuture
+              (InitializeResult. (doto (ServerCapabilities.)
+                                   (.setHoverProvider true)
+                                   (.setCodeActionProvider true)
+                                   (.setReferencesProvider true)
+                                   (.setRenameProvider true)
+                                   (.setDefinitionProvider true)
+                                   (.setDocumentFormattingProvider true)
+                                   (.setDocumentRangeFormattingProvider true)
+                                   (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                           (.setOpenClose true)
+                                                           (.setChange TextDocumentSyncKind/Full)
+                                                           (.setSave (SaveOptions. true))))
+                                   (.setCompletionProvider (CompletionOptions. false [\c])))))))))
   (^void initialized [this ^InitializedParams params]
     (log/warn "Initialized" params))
   (^CompletableFuture shutdown [this]

@@ -251,7 +251,7 @@
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
     (log/warn "DidChangeWatchedFilesParams")))
 
-(defrecord LSPServer []
+(deftype LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (go :initialize
@@ -303,13 +303,13 @@
     (log/info "====== LSP nrepl server started on port" (:port repl-server))
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
-      (loop [edit (async/<! handlers/edits-chan)]
+      (loop [edit (async/<! db/edits-chan)]
         (log/warn "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))
-        (recur (async/<! handlers/edits-chan))))
+        (recur (async/<! db/edits-chan))))
     (async/go
-      (loop [diagnostic (async/<! handlers/diagnostics-chan)]
+      (loop [diagnostic (async/<! db/diagnostics-chan)]
         (.publishDiagnostics (:client @db/db) (interop/conform-or-log ::interop/publish-diagnostics-params diagnostic))
-        (recur (async/<! handlers/diagnostics-chan))))
+        (recur (async/<! db/diagnostics-chan))))
     (.startListening launcher)))
 
 (defn -main [& args]

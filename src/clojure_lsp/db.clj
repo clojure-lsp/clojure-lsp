@@ -3,9 +3,12 @@
    [clojure.edn :as edn]
    [clojure.tools.logging :as log]
    [clojure.java.io :as io]
-   [jdbc.core :as jdbc]))
+   [jdbc.core :as jdbc]
+   [clojure.core.async :as async]))
 
 (defonce db (atom {:documents {}}))
+(defonce diagnostics-chan (async/chan 1))
+(defonce edits-chan (async/chan 1))
 
 (def version 1)
 

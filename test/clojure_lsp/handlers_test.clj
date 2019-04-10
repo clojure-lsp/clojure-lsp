@@ -4,7 +4,8 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
    [clojure.test :refer :all]
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [clojure-lsp.crawler :as crawler]))
 
 (deftest test-rename
   (reset! db/db {:file-envs
@@ -47,7 +48,7 @@
                   "file://b.clj" (parser/find-usages "(ns b (:require [a :as a] [c :as c])) (def x a/bar) :a/bar" :clj {})}})
   (testing "unused symbols"
     (is (= ["Unused alias: c" "Unused declaration: b" "Unused declaration: x"]
-           (map :message (handlers/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"])))))))
+           (map :message (crawler/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"])))))))
 
 (deftest test-completion
   (let [db-state {:file-envs

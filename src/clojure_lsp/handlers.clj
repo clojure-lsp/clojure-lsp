@@ -407,30 +407,41 @@
 (defn rename [doc-id line column new-name]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        {cursor-sym :sym cursor-str :str tags :tags} (find-reference-under-cursor line column local-env (uri->file-type doc-id))]
+        {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (find-reference-under-cursor line column local-env (uri->file-type doc-id))]
     (when-not (contains? tags :norename)
-      (let [[_ cursor-ns _] (parser/ident-split cursor-str)
+      (let [[_ cursor-ns cursor-name] (parser/ident-split cursor-str)
             replacement (if cursor-ns
                           (string/replace new-name (re-pattern (str "^:{0,2}" cursor-ns "/")) "")
                           (string/replace new-name #"^:{0,2}" ""))
-            changes (->> (for [[doc-id usages] file-envs
-                               :let [version (get-in @db/db [:documents doc-id :v] 0)]
-                               {u-sym :sym u-str :str :as usage} usages
-                               :when (= u-sym cursor-sym)
-                               :let [[u-prefix u-ns _] (parser/ident-split u-str)]]
-                           {:range (->range usage)
-                            :new-text (str u-prefix u-ns (when u-ns "/") replacement)
-                            :text-document {:version version :uri doc-id}})
-                         (group-by :text-document)
-                         (remove (comp empty? val))
-                         (map (fn [[text-document edits]]
-                                {:text-document text-document
-                                 :edits edits})))]
+            changes (if (contains? tags :alias)
+                      (for [{u-str :str :as usage} local-env
+                            :let [version (get-in @db/db [:documents doc-id :v] 0)
+                                  [u-prefix u-ns u-name] (parser/ident-split u-str)
+                                  alias? (= usage cursor-usage)]
+                            :when (and (#{"::" ""} u-prefix)
+                                       (or (= u-ns cursor-name) alias?))]
+                        {:range (->range usage)
+                         :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
+                         :text-document {:version version :uri doc-id}})
+                      (for [[doc-id usages] file-envs
+                            :let [version (get-in @db/db [:documents doc-id :v] 0)]
+                            {u-sym :sym u-str :str :as usage} usages
+                            :when (= u-sym cursor-sym)
+                            :let [[u-prefix u-ns _] (parser/ident-split u-str)]]
+                        {:range (->range usage)
+                         :new-text (str u-prefix u-ns (when u-ns "/") replacement)
+                         :text-document {:version version :uri doc-id}}))
+            doc-changes (->> changes
+                             (group-by :text-document)
+                             (remove (comp empty? val))
+                             (map (fn [[text-document edits]]
+                                    {:text-document text-document
+                                     :edits edits})))]
         (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
-          {:document-changes changes}
+          {:document-changes doc-changes}
           {:changes (into {} (map (fn [{:keys [text-document edits]}]
                                     [(:uri text-document) edits])
-                                  changes))})))))
+                                  doc-changes))})))))
 
 (defn definition [doc-id line column]
   (let [file-envs (:file-envs @db/db)

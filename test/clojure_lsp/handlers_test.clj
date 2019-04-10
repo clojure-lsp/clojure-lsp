@@ -9,26 +9,37 @@
 (deftest test-rename
   (reset! db/db {:file-envs
                  {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
-                  "file://b.clj" (parser/find-usages "(ns b (:require a)) (def x a/bar) :a/bar" :clj {})}})
-  (testing "rename on symbol without namespace"
-    (is (= "foo" (get-in (handlers/rename "file://a.clj" 1 13 "foo")
+                  "file://b.clj" (parser/find-usages "(ns b (:require [a :as aa])) (def x aa/bar) ::aa/bar :aa/bar" :clj {})
+                  "file://c.clj" (parser/find-usages "(ns c (:require [a :as aa])) (def x aa/bar)" :clj {})}})
+  (testing "on symbol without namespace"
+    (let [changes (:changes (handlers/rename "file://a.clj" 1 13 "foo"))]
+      (is (= 1 (count (get changes "file://a.clj"))))
+      (is (= 1 (count (get changes "file://b.clj"))))
+      (is (= "foo" (get-in changes ["file://a.clj" 0 :new-text])))
+      (is (= "aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
+  (testing "on ::keyword"
+    (let [changes (:changes (handlers/rename "file://a.clj" 1 17 "foo"))]
+      (is (= 1 (count (get changes "file://a.clj"))))
+      (is (= 1 (count (get changes "file://b.clj"))))
+      (is (= "::foo" (get-in changes ["file://a.clj" 0 :new-text])))
+      (is (= "::aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
+  (testing "on symbol with namespace adds existing namespace"
+    (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 38 "foo")
                          [:changes "file://a.clj" 0 :new-text])))
-    (is (= "a/foo" (get-in (handlers/rename "file://a.clj" 1 13 "foo")
-                           [:changes "file://b.clj" 0 :new-text])))
-    (is (= "::foo" (get-in (handlers/rename "file://a.clj" 1 17 ":foo")
+    (is (= "aa/foo" (get-in (handlers/rename "file://b.clj" 1 38 "foo")
+                            [:changes "file://b.clj" 0 :new-text]))))
+  (testing "on symbol with namespace removes passed-in namespace"
+    (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 38 "aa/foo")
                          [:changes "file://a.clj" 0 :new-text])))
-    (is (= ":a/foo" (get-in (handlers/rename "file://a.clj" 1 17 ":foo")
-                           [:changes "file://b.clj" 0 :new-text]))))
-  (testing "rename on symbol with namespace adds existing namespace"
-    (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 30 "foo")
-                         [:changes "file://a.clj" 0 :new-text])))
-    (is (= "a/foo" (get-in (handlers/rename "file://b.clj" 1 30 "foo")
-                           [:changes "file://b.clj" 0 :new-text]))))
-  (testing "rename on symbol with namespace removes passed-in namespace"
-    (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 30 "a/foo")
-                         [:changes "file://a.clj" 0 :new-text])))
-    (is (= "a/foo" (get-in (handlers/rename "file://b.clj" 1 30 "a/foo")
-                           [:changes "file://b.clj" 0 :new-text])))))
+    (is (= "aa/foo" (get-in (handlers/rename "file://b.clj" 1 38 "aa/foo")
+                            [:changes "file://b.clj" 0 :new-text]))))
+  (testing "on alias changes namespaces inside file"
+    (let [changes (:changes (handlers/rename "file://b.clj" 1 25 "xx"))]
+      (is (= 0 (count (get changes "file://a.clj"))))
+      (is (= 0 (count (get changes "file://c.clj"))))
+      (is (= 3 (count (get changes "file://b.clj"))))
+      (is (= "xx" (get-in changes ["file://b.clj" 0 :new-text])))
+      (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text]))))))
 
 (deftest test-find-diagnostics
   (reset! db/db {:file-envs

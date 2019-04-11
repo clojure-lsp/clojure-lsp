@@ -274,12 +274,14 @@
   (try
     (let [{:keys [row col]} (meta (z/node params-loc))
           {:keys [end-row end-col]} (meta (z/node (z/up params-loc)))
-          scope-bounds {:row row :col col :end-row end-row :end-col end-col}]
-      (loop [param-loc (z/down params-loc)
+          scope-bounds {:row row :col col :end-row end-row :end-col end-col}
+          single? (not= :vector (z/tag params-loc))]
+      (loop [param-loc (cond-> params-loc
+                         (not single?) (z/down))
              scoped scoped]
         (if param-loc
           (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
-            (if (nil? (z-right-sexpr param-loc))
+            (if (or single? (nil? (z-right-sexpr param-loc)))
               new-scoped
               (recur (z-right-sexpr param-loc) new-scoped)))
           scoped)))
@@ -449,13 +451,14 @@
         (recur next-list)))
     (single-params-and-body params-loc context scoped)))
 
+(def check (fn [pred x] (when (pred x) x)))
+
 (defn handle-function
   [op-loc _loc context scoped name-tags]
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
-        params-loc (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))
-        check (fn [pred x] (when (pred x) x))]
+        params-loc (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))]
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil
@@ -536,17 +539,19 @@
 
 (defn handle-dispatch-macro
   [loc context scoped]
+  (vswap! context assoc :in-fn-literal? true)
   (->>
     (loop [sub-loc (z-next-sexpr (zsub/subzip loc))
-          scoped scoped]
-     (if (and sub-loc (not (z/end? sub-loc)))
-       (let [sexpr (z/sexpr sub-loc)]
-         (if (and (symbol? sexpr)
-                  (re-find #"^%(:?\d+|&)?$" (name sexpr)))
-           (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
-           (recur (z-next-sexpr sub-loc) scoped)))
-       scoped))
-   (handle-rest (z/down loc) context)))
+           scoped scoped]
+      (if (and sub-loc (not (z/end? sub-loc)))
+        (let [sexpr (z/sexpr sub-loc)]
+          (if (and (symbol? sexpr)
+                   (re-find #"^%(:?\d+|&)?$" (name sexpr)))
+            (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
+            (recur (z-next-sexpr sub-loc) scoped)))
+        scoped))
+    (handle-rest loc context))
+  (vswap! context dissoc :in-fn-literal?))
 
 (comment
   '[
@@ -560,7 +565,6 @@
    'clojure.core/defn handle-defn
    'clojure.core/defn- handle-defn
    'clojure.core/fn handle-fn
-   'clojure.core/declare handle-def
    'clojure.core/defmulti handle-def
    'clojure.core/deftype handle-deftype
    'clojure.core/def handle-def
@@ -581,7 +585,9 @@
    'clojure.core/quote handle-quote})
 
 (def default-macro-defs
-  {'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
+  {'clojure.core/declare [{:element :declaration :repeat :symbol}]
+   'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
+   'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'clojure.core/as-> [:element :param :bound-elements]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
    'compojure.core/defroutes [{:element :declaration} :elements]
@@ -609,59 +615,100 @@
           (recur next-loc dirs)
           next-loc)))))
 
-(defn- macro-declaration [{:keys [signature kind tags]} element-loc context scoped]
-  (let [signature-loc (macro-signature-loc signature element-loc)
-        name-sexpr (z/sexpr element-loc)
-        tags' (set tags)
-        op-local? (contains? tags' :local)]
+(defn- macro-declaration [{:keys [signature kind tags doc? attr-map?]} element-loc context scoped]
+  (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
-      (cond
-        op-local? (vswap! context update :locals conj (name name-sexpr))
-        :else (vswap! context update :publics conj (name name-sexpr)))
-      (add-reference context scoped (z/node element-loc)
-                     (cond->
-                       {:tags (set/union
-                                (if op-local?
-                                  #{:declare :local}
-                                  #{:declare :public})
-                                tags')}
-                       signature-loc (assoc :signatures (function-signatures signature-loc))
-                       kind (assoc :kind kind))))))
+      (let [signature-loc (macro-signature-loc signature element-loc)
+            signatures (when signature-loc (function-signatures signature-loc))
+            doc (when-let [doc-loc (and doc? (z/find-next element-loc z/right (comp #{:token :vector} z/tag)))]
+                  (when (= :token (z/tag doc-loc))
+                    (z/sexpr doc-loc)))
+            attr-map (when-let [attr-map-loc (and attr-map? (z/find-next element-loc z/right (comp #{:map :vector} z/tag)))]
+                  (when (= :map (z/tag attr-map-loc))
+                    (z/sexpr attr-map-loc)))
+            name-meta (merge (meta (z/sexpr element-loc)) attr-map)
+            dec-meta (cond-> name-meta
+                       doc (assoc :doc doc)
+                       (seq signatures) (assoc :arglists signatures))
+            tags' (set tags)
+            op-local? (contains? tags' :local)]
+        (cond
+          op-local? (vswap! context update :locals conj (name name-sexpr))
+          :else (vswap! context update :publics conj (name name-sexpr)))
+        (add-reference context scoped (z/node element-loc)
+                       (cond->
+                         {:tags (set/union
+                                  (if op-local?
+                                    #{:declare :local}
+                                    #{:declare :public})
+                                  tags')}
+                         (:doc dec-meta) (assoc :doc (:doc dec-meta))
+                         (:arglists dec-meta) (assoc :signatures (:arglists dec-meta))
+                         kind (assoc :kind kind)))))))
 
 (defn parse-macro-def
   [op-loc loc context scoped macro-def]
-  (loop [[element & elements] macro-def
+  (loop [[element' & elements] macro-def
+         repeat-idx' 0
          element-loc (z-right-sexpr op-loc)
          bound-scope scoped]
-    (when (= :bound-elements element)
-      (handle-rest element-loc context bound-scope))
-    (when (= :elements element)
-      (handle-rest element-loc context scoped))
-    (when (= :bound-element element)
-      (handle-rest element-loc context bound-scope))
-    (when (= :element element)
-      (find-usages* (zsub/subzip element-loc) context scoped))
-    (when (= :function-params-and-bodies element)
-      (function-params-and-bodies element-loc context scoped))
-    (when (and (map? element) (= (:element element) :declaration))
-      (macro-declaration element element-loc context scoped))
-    (when-let [next-element-loc (and (seq elements) (z-right-sexpr element-loc))]
-      (recur elements
-             next-element-loc
-             (cond
-               (and (= :bindings element) (= :vector (z/tag element-loc)))
-               (parse-bindings element-loc context (end-bounds loc) scoped)
+    (let [map-element (and (map? element') (:element element'))
+          repeat-idx (cond-> repeat-idx'
+                       (vector? map-element) (rem (count map-element)))
+          element (cond
+                    (vector? map-element)
+                    (nth map-element repeat-idx)
 
-               (= :params element)
-               (parse-params element-loc context scoped)
+                    (map? element')
+                    (:element element')
 
-               (= :param element)
-               (parse-destructuring element-loc
-                                    (merge (meta (z/node element-loc)) (end-bounds loc))
-                                    context scoped)
+                    :else
+                    element')
+          element-info (when (map? element')
+                         element')
+          sexpr (z/sexpr element-loc)
+          repeat? (case (:repeat element-info)
+                    :symbol (symbol? sexpr)
+                    true true
+                    nil)
+          process? (case (:pred element-info)
+                     :string (string? sexpr)
+                     :map (map? sexpr)
+                     nil true)]
+      (when process?
+        (case element
+          :bound-elements
+          (handle-rest element-loc context bound-scope)
+          :elements
+          (handle-rest element-loc context scoped)
+          :bound-element
+          (find-usages* (zsub/subzip element-loc) context bound-scope)
+          :element
+          (find-usages* (zsub/subzip element-loc) context scoped)
+          :function-params-and-bodies
+          (function-params-and-bodies element-loc context scoped)
+          :declaration
+          (macro-declaration element-info element-loc context scoped)
+          nil))
+      (when-let [next-element-loc (and (or repeat? (seq elements)) (z-right-sexpr element-loc))]
+        (recur (cond-> elements
+                 repeat? (conj element'))
+               (if repeat? (inc repeat-idx) 0)
+               (if process? next-element-loc element-loc)
+               (cond
+                 (and (= :bindings element) (= :vector (z/tag element-loc)))
+                 (parse-bindings element-loc context (end-bounds loc) scoped)
 
-               :else
-               scoped)))))
+                 (= :params element)
+                 (parse-params element-loc context scoped)
+
+                 (= :param element)
+                 (parse-destructuring element-loc
+                                      (merge (meta (z/node element-loc)) (end-bounds loc))
+                                      context scoped)
+
+                 :else
+                 scoped))))))
 
 (defn handle-sexpr [loc context scoped]
   (let [op-loc (some-> loc (zm/down))]
@@ -702,12 +749,13 @@
             (handle-ignored (z/next loc) context scoped)
             (recur (edit/skip-over loc) scoped))
 
-          (= :list tag)
+          (or (= :list tag)
+              (and (= :fn tag) (:in-fn-literal? @context)))
           (do
             (handle-sexpr loc context scoped)
             (recur (edit/skip-over loc) scoped))
 
-          (= :fn tag)
+          (and (= :fn tag) (not (:in-fn-literal? @context)))
           (do
             (handle-dispatch-macro loc context scoped)
             (recur (edit/skip-over loc) scoped))
@@ -845,7 +893,7 @@
       (let [y 3] (y)))
 
   (find-usages "(do #inst \"2019-04-04\")" :clj {})
-  (z/sexpr (z/next (z/of-string "#_1")))
+  (z/sexpr (z/right (z/of-string "#(:a 1)")))
 
   (find-usages "(deftype JSValue [val])" :clj)
   (z/sexpr (loc-at-pos code 1 2)))

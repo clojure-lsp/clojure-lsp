@@ -242,7 +242,7 @@
   (->> (or m {})
        (medley/map-keys #(if (string/starts-with? % "#")
                            (re-pattern (subs % 1))
-                           %))
+                           (symbol %)))
        (medley/map-vals typify-json)))
 
 (defn clean-client-settings [client-settings]

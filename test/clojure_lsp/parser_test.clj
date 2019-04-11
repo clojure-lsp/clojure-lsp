@@ -328,33 +328,76 @@
     (is (= 'clojure.core/def (:sym (nth usages 1))))
     (is (not= (:sym (nth usages 2)) (:sym (nth usages 4))))))
 
-(deftest find-references-macro-def-test
+(deftest ^:test-refresh/focus find-references-macro-def-test
   (testing "GET-like"
-    (let [code "(defmacro GET [& body]) (GET \"/my-route\" [a] a)"
+    (let [code "(def GET) (GET \"/my-route\" [a] a)"
           usages (parser/find-usages code :clj {'user/GET [:_ :function-params-and-bodies]})]
-      (is (= 6 (count usages)))
-      (is (= (:sym (nth usages 4)) (:sym (nth usages 5)))))
-    (let [code "(defmacro GET [& body]) (GET \"/my-route/:id\" {{:keys [id]} :params} id)"
+      (is (= 5 (count usages)))
+      (is (= (:sym (nth usages 3)) (:sym (nth usages 4)))))
+    (let [code "(def GET) (GET \"/my-route/:id\" {{:keys [id]} :params} id)"
           usages (parser/find-usages code :clj {'user/GET [:_ :params :bound-elements]})]
-      (is (= 6 (count usages)))
-      (is (= (:sym (nth usages 4)) (:sym (nth usages 5))))))
-  (testing "let-like"
-    (let [code "(defmacro dofor [& body] `(for ~@body)) (dofor [a [1 2 3] :let [b a]] b)"
+      (is (= 5 (count usages)))
+      (is (= (:sym (nth usages 3)) (:sym (nth usages 4))))))
+  (testing "for-like"
+    (let [code "(def dofor) (dofor [a [1 2 3] :let [b a]] b)"
           usages (parser/find-usages code :clj {'user/dofor [:bindings :bound-elements]})]
-      (is (= 10 (count usages)))
-      (is (= (:sym (nth usages 6)) (:sym (nth usages 8))))
-      (is (= (:sym (nth usages 7)) (:sym (nth usages 9))))))
+      (is (= 7 (count usages)))
+      (is (= (:sym (nth usages 3)) (:sym (nth usages 5))))
+      (is (= (:sym (nth usages 4)) (:sym (nth usages 6))))))
+  (testing "optional args"
+    (let [optional-def {'user/mydefn [{:element :declaration
+                                       :doc? true
+                                       :attr-map? true}
+                                      {:pred :string}
+                                      {:pred :map}
+                                      :function-params-and-bodies]}
+          code "(def mydefn) (mydefn y \"docstring\" {:arglists [[a] [a b]]} [a] a)"
+          code-noopt "(def mydefn) (mydefn y [a] a)"
+          usages (drop 2 (parser/find-usages code :clj optional-def))
+          usages-noopt (drop 2 (parser/find-usages code-noopt :clj optional-def))]
+      (is (= 4 (count usages) (count usages-noopt)))
+      (is (= (:sym (nth usages 2)) (:sym (nth usages 3))))
+      (is (= (:sym (nth usages-noopt 2)) (:sym (nth usages-noopt 3))))
+      (is (= "docstring" (:doc (nth usages 1))))
+      (is (= '[[a] [a b]] (:signatures (nth usages 1))))))
   (testing "deftest"
     (let [code "(ns user (:require clojure.test)) (clojure.test/deftest my-test)"
-          usages (parser/find-usages code :clj {'clojure.test/deftest [{:element :declaration
-                                                                        :tags [:unused]}
-                                                                       :elements]})]
+          usages (parser/find-usages code :clj {})]
       (is (= 5 (count usages)))
       (is (= '{:file-type :clj
                :sym user/my-test
                :str "my-test"
                :tags #{:declare :public :unused}}
              (dissoc (nth usages 4) :col :row :end-row :end-col)))))
+  (testing "as->"
+    (let [code "(as-> x y (identity y))"
+          usages (parser/find-usages code :clj {})]
+      (is (= 5 (count usages)))
+      (is (= (:sym (nth usages 2)) (:sym (nth usages 4))))
+      (is (= {:str "y" :tags #{:declare :param}}
+             (select-keys (nth usages 2) [:str :tags])))))
+  (testing "inside fn literal"
+    (let [code "#(as-> % y (identity y))"
+          usages (parser/find-usages code :clj {})]
+      (is (= 5 (count usages)))
+      (is (= (:sym (nth usages 2)) (:sym (nth usages 4))))
+      (is (= {:str "y" :tags #{:declare :param}}
+             (select-keys (nth usages 2) [:str :tags])))))
+  (testing "declare"
+    (let [code "(declare a b c)"
+          usages (parser/find-usages code :clj {})]
+      (is (= '[clojure.core/declare user/a user/b user/c]
+             (mapv :sym usages)))))
+  (testing "match"
+    (let [code "(ns user (:require clojure.core.match)) (clojure.core.match/match a [b] b c [c b])"
+          usages (drop 5 (parser/find-usages code :clj {}))
+          [s1 s2 s3 s4 s5] (map :sym usages)
+          decs (map (comp boolean :declare :tags) usages)]
+      (is (= [true false true false false] decs))
+      (is (= s1 s2))
+      (is (= s3 s4))
+      (is (not= s1 s3))
+      (is (not= s1 s5))))
   (testing "re-frame/reg-event-fx"
     (let [code "(defmacro reg-event-fx [& body]) (reg-event-fx :foo/name (fn [a [_ b]] b))"
           usages (parser/find-usages code :clj {'user/reg-event-fx [{:element :declaration
@@ -366,5 +409,5 @@
               :str ":foo/name"
               :file-type :clj
               :signatures ["[_ b]"]}
-            (dissoc (nth usages 4) :col :row :end-row :end-col)))
+             (dissoc (nth usages 4) :col :row :end-row :end-col)))
       (is (= (:sym (nth usages 8)) (:sym (nth usages 9)))))))

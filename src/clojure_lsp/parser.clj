@@ -588,6 +588,7 @@
   {'clojure.core/declare [{:element :declaration :repeat :symbol}]
    'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
    'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
+   'clojure.test/are [:params :bound-element :elements]
    'clojure.core/as-> [:element :param :bound-elements]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
    'compojure.core/defroutes [{:element :declaration} :elements]

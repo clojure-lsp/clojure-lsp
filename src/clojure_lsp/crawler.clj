@@ -41,20 +41,26 @@
                   :require "Needs Require")
        :severity 1})))
 
-(defn ^:private diagnose-unused-references [declared-references all-envs]
+(defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
                         (mapcat (comp val))
                         (remove (comp #(contains? % :declare) :tags))
                         (map :sym)
                         set)
         unused-syms (set/difference (set (map :sym declared-references)) references)]
-    (for [usage (filter (comp unused-syms :sym) declared-references)]
+    (for [usage (filter (comp unused-syms :sym) declared-references)
+          :let [code (condp set/subset? (:tags usage)
+                       #{:param} :unused-param
+                       #{:ns} :unused-ns
+                       #{:public} :unused-public
+                       :unused)]
+          :when (or (not= :unused-ns code) (not (string/index-of uri "test/")))]
       {:range (shared/->range usage)
-       :code :unused
+       :code code
        :message (str "Unused declaration: " (:str usage))
        :severity 1})))
 
-(defn ^:private diagnose-unused-aliases [declared-aliases usages]
+(defn ^:private diagnose-unused-aliases [_uri declared-aliases usages]
   (let [references (->> usages
                         (remove (comp #(contains? % :declare) :tags))
                         (map #(some-> % :sym namespace symbol))
@@ -62,7 +68,7 @@
         unused-aliases (set/difference (set (map :ns declared-aliases)) references)]
     (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
       {:range (shared/->range usage)
-       :code :unused
+       :code :unused-alias
        :message (str "Unused alias: " (:str usage))
        :severity 1})))
 
@@ -73,8 +79,8 @@
                           (remove (comp #(string/starts-with? % "_") name :sym)))
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)
         declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
-    (concat (diagnose-unused-aliases declared-aliases usages)
-            (diagnose-unused-references declared-references all-envs))))
+    (concat (diagnose-unused-aliases uri declared-aliases usages)
+            (diagnose-unused-references uri declared-references all-envs))))
 
 (defn find-diagnostics [project-aliases uri usages]
   (let [unknown (diagnose-unknown project-aliases usages)

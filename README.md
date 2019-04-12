@@ -144,7 +144,7 @@ Using https://github.com/emacs-lsp the following works for registering clojure-l
 ```
 (require 'lsp-mode)
 (lsp-register-client
- (make-lsp-client :new-connection (lsp-stdio-connection '("clojure-lsp"))
+ (make-lsp-client :new-connection (lsp-stdio-connection '("bash" "-c" "clojure-lsp"))
                   :major-modes '(clojure-mode clojurec-mode clojurescript-mode)
                   :server-id 'clojure-lsp))
 (add-to-list 'lsp-language-id-configuration '(clojure-mode . "clojure-mode"))

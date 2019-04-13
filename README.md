@@ -2,7 +2,7 @@
 
 # clojure-lsp
 
-A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive like approach of statically analyzing code.
+A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive-like approach of statically analyzing code.
 
 ## What is this?
 
@@ -26,6 +26,10 @@ This is an early work in progress, contributions are very welcome.
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
 - Place it in your $PATH with chmod 755
 - Follow the documentation for your editor's language client. See [Clients](#clients) below.
+
+## Troubleshooting
+
+See [troubleshooting.md](docs/troubleshooting.md).
 
 ## Capabilities
 

@@ -251,34 +251,42 @@
   (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
     (log/warn "DidChangeWatchedFilesParams")))
 
+(defn client-settings [^InitializeParams params]
+  (-> params
+      (.getInitializationOptions)
+      (interop/json->clj)
+      (or {})
+      (interop/clean-client-settings)))
+
+(defn client-capabilities [^InitializeParams params]
+  (some->> params
+           (.getCapabilities)
+           (interop/conform-or-log ::interop/client-capabilities)))
+
 (deftype LSPServer []
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (go :initialize
         (end
-          (let [client-capabilities (some->> params
-                                             (.getCapabilities)
-                                             (interop/conform-or-log ::interop/client-capabilities))
-                client-settings (some->> params
-                                         (.getInitializationOptions)
-                                         (interop/json->clj)
-                                         (interop/clean-client-settings))]
-            (log/warn "Initialize")
-            (#'handlers/initialize (.getRootUri params) client-capabilities client-settings)
-            (CompletableFuture/completedFuture
-              (InitializeResult. (doto (ServerCapabilities.)
-                                   (.setHoverProvider true)
-                                   (.setCodeActionProvider true)
-                                   (.setReferencesProvider true)
-                                   (.setRenameProvider true)
-                                   (.setDefinitionProvider true)
-                                   (.setDocumentFormattingProvider true)
-                                   (.setDocumentRangeFormattingProvider true)
-                                   (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                           (.setOpenClose true)
-                                                           (.setChange TextDocumentSyncKind/Full)
-                                                           (.setSave (SaveOptions. true))))
-                                   (.setCompletionProvider (CompletionOptions. false [\c])))))))))
+         (do
+           (log/warn "Initialize")
+           (#'handlers/initialize (.getRootUri params)
+                                  (client-capabilities params)
+                                  (client-settings params))
+           (CompletableFuture/completedFuture
+             (InitializeResult. (doto (ServerCapabilities.)
+                                  (.setHoverProvider true)
+                                  (.setCodeActionProvider true)
+                                  (.setReferencesProvider true)
+                                  (.setRenameProvider true)
+                                  (.setDefinitionProvider true)
+                                  (.setDocumentFormattingProvider true)
+                                  (.setDocumentRangeFormattingProvider true)
+                                  (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                          (.setOpenClose true)
+                                                          (.setChange TextDocumentSyncKind/Full)
+                                                          (.setSave (SaveOptions. true))))
+                                  (.setCompletionProvider (CompletionOptions. false [\c])))))))))
   (^void initialized [this ^InitializedParams params]
     (log/warn "Initialized" params))
   (^CompletableFuture shutdown [this]

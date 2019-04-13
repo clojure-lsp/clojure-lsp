@@ -26,6 +26,16 @@
     (and (= end-row line) (>= end-col column)) :within
     :else :after))
 
+(defn- find-references-after-cursor [line column env file-type]
+  (let [file-types (if (= :cljc file-type)
+                     #{:clj :cljs}
+                     #{file-type})]
+    (->> env
+         (filter (comp file-types :file-type))
+         (partition-all 3 1)
+         (filter (comp #{:within :before} (partial check-bounds line column) first))
+         first)))
+
 (defn find-reference-under-cursor [line column env file-type]
   (let [file-types (if (= :cljc file-type)
                      #{:clj :cljs}
@@ -249,16 +259,23 @@
 (defn definition [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor-sym (:sym (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id)))]
-    (log/warn "definition" doc-id line column cursor-sym)
-    (when cursor-sym
-      (first
-        (for [[env-doc-id usages] file-envs
-              {:keys [sym tags] :as usage} usages
-              :when (= sym cursor-sym)
-              :when (and (or (= doc-id env-doc-id) (:public tags))
-                         (:declare tags))]
-          {:uri env-doc-id :range (shared/->range usage)})))))
+        file-type (shared/uri->file-type doc-id)
+        cursor (find-reference-under-cursor line column local-env file-type)
+        cursor-sym (:sym cursor)]
+    (log/warn "Finding definition" doc-id "row" line "col" column "cursor" cursor-sym)
+    (if cursor-sym
+      (if-let [result (first
+                        (for [[env-doc-id usages] file-envs
+                              {:keys [sym tags] :as usage} usages
+                              :when (= sym cursor-sym)
+                              :when (and (or (= doc-id env-doc-id) (:public tags))
+                                      (:declare tags))]
+                          {:uri env-doc-id :range (shared/->range usage)}))]
+        result
+        (log/warn "Could not find definition for element under cursor, I think your cursor is:" (pr-str (:str cursor)) "qualified as:" (pr-str cursor-sym)))
+      (if-let [next-stuff (find-references-after-cursor line column local-env file-type)]
+        (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
+        (log/warn "Could not find element under cursor, there are no known elements after this position.")))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
@@ -295,12 +312,14 @@
     (if cursor
       {:range (shared/->range cursor)
        :contents (case content-format
-                   "markdown" (let [{:keys [sym]} cursor
-                                    signatures (string/join "\n" signatures)]
+                   "markdown" (let [{:keys [sym tags]} cursor
+                                    signatures (some->> signatures (string/join "\n"))
+                                    tags (string/join " " tags)]
                                 {:kind "markdown"
-                                 :value (str "```\n" sym "\n"
-                                             signatures "\n```\n"
-                                             doc)})
+                                 :value (cond-> (str "```\n" sym "\n```\n")
+                                          signatures (str "```\n" signatures "\n```\n")
+                                          (seq doc) (str doc "\n")
+                                          (seq tags) (str "\n----\n" "lsp: " tags))})
 
                    ;; default to plaintext
                    [(cond-> (select-keys cursor [:sym :tags])

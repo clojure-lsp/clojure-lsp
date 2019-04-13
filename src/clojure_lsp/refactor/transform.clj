@@ -142,13 +142,14 @@
                                z/up)]
     (let [let-loc (z/down (zsub/subzip let-top-loc))
           bound-sexpr (z/sexpr zloc)
+          bound-string (z/string zloc)
           bound-node (z/node zloc)
           binding-sym (symbol binding-name)
           bindings-loc (z/right let-loc)
           {:keys [col]} (meta (z/node bindings-loc)) ;; indentation of bindings
           bindings-pos (replace-in-bind-values
                          (z/down bindings-loc)
-                         #(= bound-sexpr (z/sexpr %))
+                         #(= bound-string (z/string %))
                          binding-sym)
           with-binding (if bindings-pos
                          (-> bindings-pos
@@ -166,7 +167,7 @@
           new-let-loc (loop [loc (z/next with-binding)]
                         (cond
                           (z/end? loc) (z/replace let-top-loc (z/root loc))
-                          (= (z/sexpr loc) bound-sexpr) (recur (z/next (z/replace loc binding-sym)))
+                          (= (z/string loc) bound-string) (recur (z/next (z/replace loc binding-sym)))
                           :else (recur (z/next loc))))]
       [{:range (meta (z/node (z/up let-loc)))
         :loc new-let-loc}])

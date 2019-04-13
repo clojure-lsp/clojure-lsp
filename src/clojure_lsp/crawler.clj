@@ -75,7 +75,9 @@
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
         declarations (->> usages
-                          (filter (comp #(and (contains? % :declare) (not (contains? % :unused))) :tags))
+                          (filter (comp #(and (contains? % :declare)
+                                              (not (contains? % :factory))
+                                              (not (contains? % :unused))) :tags))
                           (remove (comp #(string/starts-with? % "_") name :sym)))
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)
         declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]

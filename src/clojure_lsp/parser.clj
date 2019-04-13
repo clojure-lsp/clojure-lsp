@@ -520,22 +520,41 @@
   [op-loc _loc context scoped]
   (let [type-loc (z-right-sexpr op-loc)
         fields-loc (z-right-sexpr type-loc)]
-      (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
-                                                       :kind :class})
-      (let [field-scope (parse-params fields-loc context scoped)]
-        (loop [proto-loc (z-right-sexpr fields-loc)]
-          (when proto-loc
-            (add-reference context field-scope (z/node proto-loc) {})
-            (let [next-loc (z-right-sexpr proto-loc)]
-              (cond
-                (= (z/tag next-loc) :token)
-                (recur next-loc)
+    (vswap! context update :publics conj (name (z/sexpr type-loc)))
+    (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
+                                                     :kind :class
+                                                     :signatures [(z/sexpr fields-loc)]})
 
-                (= (z/tag next-loc) :list)
-                (some-> proto-loc
-                        (handle-type-methods context field-scope)
-                        (z-right-sexpr)
-                        (recur)))))))))
+    (when (= "defrecord" (name (z/sexpr op-loc)))
+      (let [type-name (name (z/sexpr type-loc))
+            mapper-name (str "map->" type-name)
+            mapper (with-meta
+                     (z/node (z/replace type-loc (symbol mapper-name)))
+                     (meta (z/node type-loc)))
+            construct-name (str "->" type-name)
+            constructor (with-meta
+                          (z/node (z/replace type-loc (symbol construct-name)))
+                          (meta (z/node type-loc)))]
+        (vswap! context update :publics conj mapper-name)
+        (add-reference context scoped mapper {:tags #{:declare :public :factory :norename}
+                                              :kind :function})
+        (vswap! context update :publics conj construct-name)
+        (add-reference context scoped constructor {:tags #{:declare :public :factory :norename}
+                                                   :kind :function})))
+    (let [field-scope (parse-params fields-loc context scoped)]
+      (loop [proto-loc (z-right-sexpr fields-loc)]
+        (when proto-loc
+          (add-reference context field-scope (z/node proto-loc) {})
+          (let [next-loc (z-right-sexpr proto-loc)]
+            (cond
+              (= (z/tag next-loc) :token)
+              (recur next-loc)
+
+              (= (z/tag next-loc) :list)
+              (some-> proto-loc
+                      (handle-type-methods context field-scope)
+                      (z-right-sexpr)
+                      (recur)))))))))
 
 (defn handle-dispatch-macro
   [loc context scoped]
@@ -567,6 +586,7 @@
    'clojure.core/fn handle-fn
    'clojure.core/defmulti handle-def
    'clojure.core/deftype handle-deftype
+   'clojure.core/defrecord handle-deftype
    'clojure.core/def handle-def
    'clojure.core/defonce handle-def
    'clojure.core/defmacro handle-defmacro

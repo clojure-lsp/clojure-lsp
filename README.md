@@ -23,8 +23,9 @@ This is an early work in progress, contributions are very welcome.
 
 ## Installation
 
+- You need `java` on your $PATH.
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
-- Place it in your $PATH with chmod 755
+- Place it in your $PATH with a chmod 755
 - Follow the documentation for your editor's language client. See [Clients](#clients) below.
 
 ## Troubleshooting
@@ -33,14 +34,15 @@ See [troubleshooting.md](docs/troubleshooting.md).
 
 ## Capabilities
 
-| capability | done | partial? | notes |
-| ---------- | ---- | -------- | ----- |
-| completionProvider | | √ | TODO: add multi-arity function signatures, docstrings, return much less |
-| referencesProvider | | √ | TODO: keywords |
-| renameProvider     | | √ | |
-| definitionProvider | | √ | TODO: keywords, jar links |
-| diagnostics        | | √ | very early - only shows unresolved symbols |
-| hover              | | √ | very early - shows fn params but mostly for debugging at the moment |
+| capability | done | notes |
+| ---------- | ---- | ----- |
+| completionProvider | √ | |
+| referencesProvider | √ | |
+| renameProvider     | √ | |
+| definitionProvider |   | TODO: java classes |
+| diagnostics        |   | TODO: wrong arity, others? |
+| hover              | √ | |
+| formatting         | √ | |
 
 ## Refactorings
 
@@ -50,16 +52,16 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 
 | done | command             | args | notes |
 | ---- | ------------------- | ---- | ----- |
-| [x]  | cycle-coll          | | |
-| [x]  | thread-first        | | |
-| [x]  | thread-first-all    | | |
-| [x]  | thread-last         | | |
-| [x]  | thread-last-all     | | |
-| [x]  | introduce-let       | `[document-uri, line, column, binding-name]` | |
-| [x]  | move-to-let         | `[document-uri, line, column, binding-name]` | |
-| [x]  | expand-let          | | |
-| [x]  | add-missing-libspec | | |
-| [-]  | clean-ns            | | | sort only
+|   √  | cycle-coll          | | |
+|   √  | thread-first        | | |
+|   √  | thread-first-all    | | |
+|   √  | thread-last         | | |
+|   √  | thread-last-all     | | |
+|   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
+|   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
+|   √  | expand-let          | | |
+|   √  | add-missing-libspec | | |
+|   -  | clean-ns            | | | sort only
 
 See Vim client section for an example.
 
@@ -71,7 +73,21 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 
 `source-paths` value is a vector of project-local directories to look for clj/cljc/cljs files. Default is `["src","test"]`.
 
+`cljfmt` json encoded configuration for https://github.com/weavejester/cljfmt
+
+```json
+"cljfmt": {
+  "indents": {
+    "#.*": [["block", 0]],
+    "ns": [["inner", 0], ["inner", 1]],
+    "and": [["inner", 0]],
+    "or": [["inner", 0]],
+    "are": [["inner", 0]]
+}},
+```
+
 `macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
+
 
 Valid element definitions are:
   - `{"element": "declaration", "tags", ["unused", "local"], "signature": ["next"]}` This marks a symbol or keyword as a definition. `tags` are optional. The `unused` tag supresses the "unused declaration" diagnostic, useful for `deftest` vars. The `local` tag marks the var as private. `signature` is optional - if the macro has `defn`-like bindings this vector of movements should point to the parameter vector or the first var arg list form (only `next` is supported right now).
@@ -97,11 +113,17 @@ Clients are either editors with built in LSP support like Oni, or an appropriate
 *Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.*
 
 In general, make sure to configure the client to use stdio and a server launch command like `['/usr/local/bin/clojure-lsp']`.
+If that fails, you may need to have your client launch inside a shell, so use someting like `['bash', '-c', '/usr/local/bin/clojure-lsp']`.
+In windows you probably need to rename to `clojure-lsp.bat`.
 
 ### Vim
-Both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well. I think supporting completionItem `additionalTexts` is important for auto-imports and the former might be a bit closer (various PRs with omnicomplete).
+I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well.
 
-Refactorings can be done with LanguageClient-neovim with:
+See my [nvim/init.vim](https://github.com/snoe/dotfiles/blob/master/home/.vimrc) and [coc-settings.json](https://github.com/snoe/dotfiles/blob/master/home/.vim/coc-settings.json)
+
+LanguageClient-neovim can be configure with:
+
+Refactorings:
 ```vim
 
 function! Expand(exp) abort
@@ -164,6 +186,5 @@ Using https://github.com/emacs-lsp the following works for registering clojure-l
 - configuration (see joker lint options)
 
 ### Others
-- Better completion item kinds
-- formatting (clj-format?)
+- Better completion item kinds and auto require
 - other lsp capabilities?

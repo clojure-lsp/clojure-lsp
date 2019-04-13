@@ -292,11 +292,21 @@
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
-        result (apply (get refactorings refactoring) (parser/loc-at-pos text line column) doc-id args)]
-    (when result
-      (let [changes [{:text-document {:uri doc-id :version v}
-                      :edits (mapv #(update % :range shared/->range) (refactor/result result))}]]
-        (client-changes changes)))))
+        loc (parser/loc-at-pos text line column)
+        result (apply (get refactorings refactoring) loc doc-id args)]
+    (if loc
+      (cond
+        (seq result)
+        (let [changes [{:text-document {:uri doc-id :version v}
+                        :edits (mapv #(update % :range shared/->range) (refactor/result result))}]]
+          (client-changes changes))
+
+        (empty? result)
+        (log/warn refactoring "made no changes" (z/string loc))
+
+        :else
+        (log/warn "Could not apply" refactoring "to form: " (z/string loc)))
+      (log/warn "Could not find a form at this location. row" line "col" column "file" doc-id))))
 
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)

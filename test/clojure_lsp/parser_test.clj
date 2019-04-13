@@ -328,7 +328,7 @@
     (is (= 'clojure.core/def (:sym (nth usages 1))))
     (is (not= (:sym (nth usages 2)) (:sym (nth usages 4))))))
 
-(deftest ^:test-refresh/focus find-references-macro-def-test
+(deftest find-references-macro-def-test
   (testing "GET-like"
     (let [code "(def GET) (GET \"/my-route\" [a] a)"
           usages (parser/find-usages code :clj {'user/GET [:_ :function-params-and-bodies]})]

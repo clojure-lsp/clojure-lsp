@@ -58,6 +58,12 @@
     (is (= "(->> [:a :b]\n     (get-in foo))" (z/root-string loc)))))
 
 (deftest move-to-let-test
+  (let [zloc (z/rightmost (z/down (z/of-string "(let [a 1] a)")))
+        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+    (is (= 'let (z/sexpr (z/down loc))))
+    (is (= (str "(let [a 1" \newline
+                "      b a] b)")
+           (z/root-string loc))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] (inc a))") z/next 'inc))
         [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
@@ -84,7 +90,19 @@
         [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [b (inc 1)" \newline
-                "      a b] a b)") (z/root-string loc)))))
+                "      a b] a b)") (z/root-string loc))))
+  (let [zloc (z/find-value (z/of-string "(let [x 1] y)") z/next 'y)
+        [{:keys [loc]}] (transform/move-to-let zloc nil 'x)]
+    (is (= 'let (z/sexpr (z/down loc))))
+    (is (= (str "(let [x 1" \newline
+                "      x y] x)")
+           (z/root-string loc))))
+  (let [zloc (z/find-value (z/of-string "(let [[_] 1 a (x)] a)") z/next 'x)
+        [{:keys [loc]}] (transform/move-to-let zloc nil 'x)]
+    (is (= 'let (z/sexpr (z/down loc))))
+    (is (= (str "(let [[_] 1 x x" \newline
+                "      a (x)] a)")
+           (z/root-string loc)))) )
 
 (deftest introduce-let-test
   (let [zloc (z/of-string "(inc a)")

@@ -112,6 +112,28 @@
   [zloc _uri]
   (thread-all zloc '->>))
 
+(defn find-within [zloc p?]
+  (when (z/find (zsub/subzip zloc) z/next p?)
+    (z/find zloc z/next p?)))
+
+(defn replace-in-bind-values [first-bind p? replacement]
+  (loop [bind first-bind
+         marked? false]
+    (let [exists? (-> bind
+                      (z/right)
+                      (find-within p?))
+          bind' (if exists?
+                  (-> bind
+                      (edit/mark-position-when :first-occurrence (not marked?))
+                      (z/edit->
+                        (z/right)
+                        (find-within p?)
+                        (z/replace replacement)))
+                  bind)]
+      (if-let [next-loc (z/right (z/right bind'))]
+        (recur next-loc (or marked? exists?))
+        (edit/back-to-mark-or-nil bind' :first-occurrence)))))
+
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
   [zloc _uri binding-name]
@@ -119,15 +141,17 @@
                                (edit/find-ops-up 'let)
                                z/up)]
     (let [let-loc (z/down (zsub/subzip let-top-loc))
-          bound-node (z/sexpr zloc)
+          bound-sexpr (z/sexpr zloc)
+          bound-node (z/node zloc)
           binding-sym (symbol binding-name)
           bindings-loc (z/right let-loc)
           {:keys [col]} (meta (z/node bindings-loc)) ;; indentation of bindings
-          first-match (z/find let-loc z/next (fn [loc]
-                                               (= (z/sexpr loc) bound-node)))
-          with-binding (if-let [bindings-pos (edit/inside? first-match bindings-loc)]
+          bindings-pos (replace-in-bind-values
+                         (z/down bindings-loc)
+                         #(= bound-sexpr (z/sexpr %))
+                         binding-sym)
+          with-binding (if bindings-pos
                          (-> bindings-pos
-                             (z/left)
                              (z/insert-left binding-sym)
                              (cz/insert-left bound-node)
                              (cz/insert-left (n/newlines 1))
@@ -142,7 +166,7 @@
           new-let-loc (loop [loc (z/next with-binding)]
                         (cond
                           (z/end? loc) (z/replace let-top-loc (z/root loc))
-                          (= (z/sexpr loc) bound-node) (recur (z/next (z/replace loc binding-sym)))
+                          (= (z/sexpr loc) bound-sexpr) (recur (z/next (z/replace loc binding-sym)))
                           :else (recur (z/next loc))))]
       [{:range (meta (z/node (z/up let-loc)))
         :loc new-let-loc}])

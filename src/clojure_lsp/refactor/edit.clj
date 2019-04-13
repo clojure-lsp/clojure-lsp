@@ -22,12 +22,15 @@
 (defn find-ops-up
   [zloc & op-syms]
   (when-not (top? zloc)
-    (let [oploc (find-op zloc)]
+    (let [oploc (z/leftmost zloc)]
       (if (contains? (set op-syms) (z/sexpr oploc))
         oploc
         (let [next-op (z/leftmost (z/up oploc))]
           (when-not (= next-op zloc)
             (apply find-ops-up next-op op-syms)))))))
+
+(comment
+  (find-ops-up (z/find-next-value (z/of-string "(foo ((x) [a]))") z/next 'a) 'x))
 
 (defn single-child?
   [zloc]
@@ -105,6 +108,27 @@
       (z/leftmost)
       (z/find-value z/next 'ns) ; go to ns
       (z/up))) ; ns form
+
+
+(defn back-to-mark-or-nil
+  [zloc marker]
+  (z/find zloc z/prev (fn [loc] (contains? (get (z/node loc) ::markers) marker))))
+
+(defn back-to-mark
+  [zloc marker]
+  (if-let [mloc (back-to-mark-or-nil zloc marker)]
+    mloc
+    zloc))
+
+(defn mark-position
+  [zloc marker]
+  (z/replace zloc (update (z/node zloc) ::markers (fnil conj #{}) marker)))
+
+(defn mark-position-when
+  [zloc marker p?]
+  (if p?
+    (mark-position zloc marker)
+    zloc))
 
 (comment
 (z/sexpr (find-namespace (z/rightmost (z/of-string "(ns foo) (a)"))))

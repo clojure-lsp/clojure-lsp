@@ -192,7 +192,7 @@
   (let [root-path (uri->path project-root)
         client-settings (:client-settings @db/db)
         source-paths (mapv #(to-file root-path %) (get client-settings "source-paths"))
-        dependency-scheme (get "dependency-scheme" client-settings)
+        dependency-scheme (get client-settings "dependency-scheme")
         project (get-project-from root-path)]
     (if (some? project)
       (let [project-hash (:project-hash project)

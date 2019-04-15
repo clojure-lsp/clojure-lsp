@@ -247,6 +247,7 @@
 
 (defn clean-client-settings [client-settings]
   (-> client-settings
+      (update "dependency-scheme" #(or % "zipfile"))
       (update "source-paths" #(if (seq %) (set %) #{"src" "test"}))
       (update "macro-defs" clean-symbol-map)
       (update "cljfmt" #(medley/map-keys keyword %))

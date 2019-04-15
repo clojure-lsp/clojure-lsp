@@ -110,7 +110,7 @@
        ;; On purpose
        nil))))
 
-(defn crawl-jars [jars]
+(defn crawl-jars [jars dependency-scheme]
   (let [xf (comp
              (mapcat (fn [jar-file]
                        (let [jar (JarFile. jar-file)]
@@ -119,7 +119,9 @@
                               (enumeration-seq)
                               (remove #(.isDirectory %))
                               (map (fn [entry]
-                                     [(str "zipfile://" jar-file "::" (.getName entry))
+                                     [(if (= "jar" dependency-scheme)
+                                        (str "jar:file://" jar-file "!/" (.getName entry))
+                                        (str "zipfile://" jar-file "::" (.getName entry)))
                                       entry
                                       jar]))))))
              (filter (fn [[uri _ _]]
@@ -188,8 +190,9 @@
 
 (defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
-        source-paths (mapv #(to-file root-path %)
-                           (get-in @db/db [:client-settings "source-paths"]))
+        client-settings (:client-settings @db/db)
+        source-paths (mapv #(to-file root-path %) (get client-settings "source-paths"))
+        dependency-scheme (get "dependency-scheme" client-settings)
         project (get-project-from root-path)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -201,7 +204,7 @@
             jars (filter #(.isFile %) (map io/file (reverse classpath)))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
-                       (crawl-jars jars))
+                       (crawl-jars jars dependency-scheme))
             file-envs (crawl-source-dirs source-paths)]
         (db/save-deps root-path project-hash classpath jar-envs)
         (merge file-envs jar-envs))

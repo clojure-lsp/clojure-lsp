@@ -15,6 +15,7 @@
   :dependencies ~dependencies
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
+  :java-source-paths ["src-java"]
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
                              [lein-binplus "0.6.5"]]
                    :bin {:name "clojure-lsp"}}

@@ -8,6 +8,7 @@
     [clojure.tools.nrepl.server :as nrepl.server]
     [trptcolin.versioneer.core :as version])
   (:import
+    (clojure_lsp ClojureExtensions)
     (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
     (org.eclipse.lsp4j
       ApplyWorkspaceEditParams
@@ -43,6 +44,7 @@
       TextDocumentSyncKind
       TextDocumentSyncOptions)
     (org.eclipse.lsp4j.launch LSPLauncher)
+    (org.eclipse.lsp4j.jsonrpc.services JsonSegment JsonRequest)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier))
   (:gen-class))
@@ -263,50 +265,55 @@
            (.getCapabilities)
            (interop/conform-or-log ::interop/client-capabilities)))
 
-(deftype LSPServer []
-  LanguageServer
-  (^CompletableFuture initialize [this ^InitializeParams params]
-    (go :initialize
+(defn extension [method & args]
+  (go :extension
+      (CompletableFuture/completedFuture
         (end
-         (do
-           (log/warn "Initialize")
-           (#'handlers/initialize (.getRootUri params)
-                                  (client-capabilities params)
-                                  (client-settings params))
-           (CompletableFuture/completedFuture
-             (InitializeResult. (doto (ServerCapabilities.)
-                                  (.setHoverProvider true)
-                                  (.setCodeActionProvider true)
-                                  (.setReferencesProvider true)
-                                  (.setRenameProvider true)
-                                  (.setDefinitionProvider true)
-                                  (.setDocumentFormattingProvider true)
-                                  (.setDocumentRangeFormattingProvider true)
-                                  (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                          (.setOpenClose true)
-                                                          (.setChange TextDocumentSyncKind/Full)
-                                                          (.setSave (SaveOptions. true))))
-                                  (.setCompletionProvider (CompletionOptions. false [\c])))))))))
-  (^void initialized [this ^InitializedParams params]
-    (log/warn "Initialized" params))
-  (^CompletableFuture shutdown [this]
-    (log/info "Shutting down")
-    (reset! db/db {:documents {}}) ;; TODO confirm this is correct
-    (CompletableFuture/completedFuture
-      {:result nil}))
-  (exit [this]
-    (log/info "Exit")
-    (shutdown-agents)
-    (System/exit 0))
-  (getTextDocumentService [this]
-    (LSPTextDocumentService.))
-  (getWorkspaceService [this]
-    (LSPWorkspaceService.)))
+          (apply #'handlers/extension method args)))))
+
+(def server
+  (proxy [ClojureExtensions LanguageServer] []
+    (^CompletableFuture initialize [^InitializeParams params]
+      (go :initialize
+          (end
+            (do
+              (log/warn "Initialize")
+              (#'handlers/initialize (.getRootUri params)
+                                     (client-capabilities params)
+                                     (client-settings params))
+              (CompletableFuture/completedFuture
+                (InitializeResult. (doto (ServerCapabilities.)
+                                     (.setHoverProvider true)
+                                     (.setCodeActionProvider true)
+                                     (.setReferencesProvider true)
+                                     (.setRenameProvider true)
+                                     (.setDefinitionProvider true)
+                                     (.setDocumentFormattingProvider true)
+                                     (.setDocumentRangeFormattingProvider true)
+                                     (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                             (.setOpenClose true)
+                                                             (.setChange TextDocumentSyncKind/Full)
+                                                             (.setSave (SaveOptions. true))))
+                                     (.setCompletionProvider (CompletionOptions. false [\c])))))))))
+    (^void initialized [^InitializedParams params]
+      (log/warn "Initialized" params))
+    (^CompletableFuture shutdown []
+      (log/info "Shutting down")
+      (reset! db/db {:documents {}}) ;; TODO confirm this is correct
+      (CompletableFuture/completedFuture
+        {:result nil}))
+    (exit []
+      (log/info "Exit")
+      (shutdown-agents)
+      (System/exit 0))
+    (getTextDocumentService []
+      (LSPTextDocumentService.))
+    (getWorkspaceService []
+      (LSPWorkspaceService.))))
 
 (defn- run []
   (log/info "Server started")
-  (let [server (LSPServer.)
-        launcher (LSPLauncher/createServerLauncher server System/in System/out)
+  (let [launcher (LSPLauncher/createServerLauncher server System/in System/out)
         repl-server (nrepl.server/start-server)]
     (log/info "====== LSP nrepl server started on port" (:port repl-server))
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))

@@ -4,6 +4,7 @@
     [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
+    [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.transform :as refactor]
     [clojure-lsp.shared :as shared]
@@ -14,7 +15,7 @@
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
-    [java.net URI]
+    [java.net URI URL JarURLConnection]
     [java.util.jar JarFile]
     [java.nio.file Paths]))
 
@@ -356,3 +357,15 @@
                            (z/node form-loc)
                            (get-in @db/db [:client-settings "cljfmt"])))})
           forms)))
+
+(defmulti extension (fn [method _] method))
+
+(defmethod extension "dependencyContents"
+  [_ doc]
+  (let [{doc-id :uri} (interop/debeaner doc)
+        url (URL. doc-id)
+        connection ^JarURLConnection (.openConnection url)
+        jar (.getJarFile connection)
+        entry (.getJarEntry connection)]
+    (with-open [stream (.getInputStream jar entry)]
+      (slurp stream))))

@@ -98,7 +98,7 @@
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (shared/uri->file-type uri)
            macro-defs (get-in @db/db [:client-settings "macro-defs"])
-           references (cond->> (parser/find-usages text file-type macro-defs)
+           references (cond->> (parser/find-usages uri text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
          (async/put! db/diagnostics-chan
@@ -106,7 +106,7 @@
                       :diagnostics (find-diagnostics (:project-aliases @db/db) uri references)}))
        references)
      (catch Throwable e
-       (log/warn "Cannot parse: " uri (.getMessage e))
+       (log/warn e "Cannot parse: " uri (.getMessage e))
        ;; On purpose
        nil))))
 

@@ -411,3 +411,22 @@
               :signatures ["[_ b]"]}
              (dissoc (nth usages 4) :col :row :end-row :end-col)))
       (is (= (:sym (nth usages 8)) (:sym (nth usages 9)))))))
+
+(deftest macro-defs-subforms
+  (let [code "(ns user (:require slingshot.slingshot)) (slingshot.slingshot/try+ (catch [] x x) (else foo))"
+        [_ catch+ x1 x2 else :as usages] (drop 3 (parser/find-usages code :clj {}))]
+    (is (= 6 (count usages)))
+    (is (= 'clojure.core/catch (:sym catch+)))
+    (is (= (:sym x1) (:sym x2)))
+    (is (= nil (:tags else)))))
+
+(deftest parse-bad-reader
+  (let [code "(do) ("
+        usages (parser/find-usages code :clj {})]
+    (is (= 0 (count usages)))))
+
+(deftest parse-let-sexpr
+  (let [code "(let [noparams] noparams)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 3 (count usages)))
+    (is (not= (:sym (last (butlast usages))) (:sym (last usages))))))

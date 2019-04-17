@@ -10,7 +10,8 @@
     [rewrite-clj.zip :as z]
     [rewrite-clj.zip.find :as zf]
     [rewrite-clj.zip.move :as zm]
-    [rewrite-clj.zip.subedit :as zsub])
+    [rewrite-clj.zip.subedit :as zsub]
+    [medley.core :as medley])
   (:import
     (rewrite_clj.node.meta MetaNode)))
 
@@ -203,32 +204,34 @@
       (recur (zm/right sub-loc)))))
 
 (defn parse-destructuring [param-loc scope-bounds context scoped]
-  (loop [param-loc (zsub/subzip param-loc)
-         scoped scoped]
-    ;; MUTATION Updates scoped AND adds declared param references
-    (if (and param-loc (not (z/end? param-loc)))
-      (let [node (z/node param-loc)
-            sexpr (n/sexpr node)]
-        (cond
-          (and (symbol? sexpr) (not= '& sexpr))
-          (let [scoped-ns (gensym)
-                new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
-            (add-reference context new-scoped node
-                           {:tags #{:declare :param}
-                            :scope-bounds scope-bounds
-                            :sym (symbol (name scoped-ns)
-                                         (name sexpr))})
-            (recur (z-next-sexpr param-loc) new-scoped))
+  (if param-loc
+    (loop [param-loc (zsub/subzip param-loc)
+           scoped scoped]
+      ;; MUTATION Updates scoped AND adds declared param references
+      (if (and param-loc (not (z/end? param-loc)))
+        (let [node (z/node param-loc)
+              sexpr (n/sexpr node)]
+          (cond
+            (and (symbol? sexpr) (not= '& sexpr))
+            (let [scoped-ns (gensym)
+                  new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
+              (add-reference context new-scoped node
+                             {:tags #{:declare :param}
+                              :scope-bounds scope-bounds
+                              :sym (symbol (name scoped-ns)
+                                           (name sexpr))})
+              (recur (z-next-sexpr param-loc) new-scoped))
 
-          (vector? sexpr)
-          (recur (z-next-sexpr param-loc) scoped)
+            (vector? sexpr)
+            (recur (z-next-sexpr param-loc) scoped)
 
-          (map? sexpr)
-          (recur (edit/skip-over param-loc) (destructure-map param-loc scope-bounds context scoped))
+            (map? sexpr)
+            (recur (edit/skip-over param-loc) (destructure-map param-loc scope-bounds context scoped))
 
-          :else
-          (recur (edit/skip-over param-loc) scoped)))
-      scoped)))
+            :else
+            (recur (edit/skip-over param-loc) scoped)))
+        scoped))
+    scoped))
 
 (defn end-bounds [loc]
   (select-keys (meta (z/node loc)) [:end-row :end-col]))
@@ -259,10 +262,10 @@
 
               :else
               (let [{:keys [end-row end-col]} (meta (z/node (or (z-right-sexpr right-side-loc) (z/up right-side-loc) bindings-loc)))
-                    scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
-                    new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
-                (handle-rest (zsub/subzip right-side-loc) context scoped)
-                (recur (edit/skip-over right-side-loc) new-scoped))))
+                      scope-bounds (assoc end-scope-bounds :row end-row :col end-col)
+                      new-scoped (parse-destructuring binding-loc scope-bounds context scoped)]
+                  (when right-side-loc (handle-rest (zsub/subzip right-side-loc) context scoped))
+                  (recur (edit/skip-over right-side-loc) (if right-side-loc new-scoped scoped)))))
 
           :else
           scoped)))
@@ -383,9 +386,11 @@
   (let [name-loc (z-right-sexpr (z/down (zsub/subzip loc)))
         first-list-loc (z/find-tag name-loc z-right-sexpr :list)
         require-loc (z/find first-list-loc z-right-sexpr (comp #{:require} z/sexpr z/down))
+        require-macros-loc (z/find first-list-loc z-right-sexpr (comp #{:require-macros} z/sexpr z/down))
         import-loc (z/find first-list-loc z-right-sexpr (comp #{:import} z/sexpr z/down))]
     (vswap! context assoc :ns (z/sexpr name-loc))
     (add-reference context scoped (z/node name-loc) {:tags #{:declare :public :ns} :kind :module :sym (z/sexpr name-loc)})
+    (add-libspecs :require context scoped (some-> require-macros-loc z/down z-right-sexpr) nil)
     (add-libspecs :require context scoped (some-> require-loc z/down z-right-sexpr) nil)
     (add-libspecs :import context scoped (some-> import-loc z/down z-right-sexpr) nil)))
 
@@ -487,22 +492,6 @@
   [op-loc loc context scoped]
   (handle-function op-loc loc context scoped #{:declare}))
 
-(defn handle-catch
-  [op-loc loc context scoped]
-  (let [type-loc (z-right-sexpr op-loc)
-        e-loc (z-right-sexpr type-loc)
-        scoped-ns (gensym)
-        e-node (z/node e-loc)
-        scope-bounds (merge (meta e-node) (end-bounds loc))
-        e-sexpr (z/sexpr e-loc)
-        new-scoped (assoc scoped e-sexpr {:ns scoped-ns :bounds scope-bounds})]
-    (add-reference context scoped (z/node type-loc) {})
-    (add-reference context scoped e-node {:tags #{:declare :params}
-                                          :scope-bounds scope-bounds
-                                          :sym (symbol (name scoped-ns)
-                                                       (name e-sexpr))})
-    (handle-rest (z-right-sexpr e-loc) context new-scoped)))
-
 (defn handle-type-methods
   [proto-loc context scoped]
   (loop [prev-loc proto-loc
@@ -591,7 +580,6 @@
    'clojure.core/defonce handle-def
    'clojure.core/defmacro handle-defmacro
    'clojure.core/let handle-let
-   'clojure.core/catch handle-catch
    'clojure.core/when-let handle-let
    'clojure.core/when-some handle-let
    'clojure.core/when-first handle-let
@@ -605,23 +593,26 @@
    'clojure.core/quote handle-quote})
 
 (def default-macro-defs
-  {'clojure.core/declare [{:element :declaration :repeat :symbol}]
-   'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
-   'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
-   'clojure.test/are [:params :bound-element :elements]
+  {'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
    'clojure.core/as-> [:element :param :bound-elements]
+   'clojure.core/catch [:element :param :bound-elements]
+   'clojure.core/declare [{:element :declaration :repeat :symbol}]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
-   'compojure.core/defroutes [{:element :declaration} :elements]
-   'compojure.core/context [:element :param :bound-elements]
+   'clojure.test/are [:params :bound-element :elements]
+   'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'compojure.core/ANY [:element :param :bound-elements]
-   'compojure.core/GET [:element :param :bound-elements]
-   'compojure.core/PUT [:element :param :bound-elements]
-   'compojure.core/POST [:element :param :bound-elements]
-   'compojure.core/PATCH [:element :param :bound-elements]
    'compojure.core/DELETE [:element :param :bound-elements]
-   'outpace.config/defconfig [{:element :declaration} :element]
-   'outpace.config/defconfig! [{:element :declaration} :element]
-   'net.cgrand.enlive-html/deftemplate [{:element :declaration} :element :params :bound-elements]})
+   'compojure.core/GET [:element :param :bound-elements]
+   'compojure.core/PATCH [:element :param :bound-elements]
+   'compojure.core/POST [:element :param :bound-elements]
+   'compojure.core/PUT [:element :param :bound-elements]
+   'compojure.core/context [:element :param :bound-elements]
+   'compojure.core/defroutes [:declaration :elements]
+   'net.cgrand.enlive-html/deftemplate [:declaration :element :params :bound-elements]
+   'outpace.config/defconfig [:declaration :element]
+   'outpace.config/defconfig! [:declaration :element]
+   'schema.macros/try-catchall [{:element :bound-elements :sub-forms {'catch [:param :bound-elements]}}]
+   'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]})
 
 (defn- macro-signature-loc [signature-dirs element-loc]
   (when signature-dirs
@@ -667,12 +658,24 @@
                          (:arglists dec-meta) (assoc :signatures (:arglists dec-meta))
                          kind (assoc :kind kind)))))))
 
+(defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]
+  (let [k->qualified (into {} (map (comp (juxt identity #(symbol (str (gensym)) (name %))) key) sub-forms))
+        new-scope (reduce (fn [accum qualified-k]
+                            (assoc accum (symbol (name qualified-k)) {:ns (symbol (namespace qualified-k))
+                                                      :bounds scope-bounds}))
+                          bound-scope
+                          (vals k->qualified))]
+    (doseq [[k macro-def] sub-forms
+            :let [qualified-k (k->qualified k)]]
+      (vswap! context assoc-in [:macro-defs qualified-k] macro-def))
+    [new-scope (vals k->qualified)]))
+
 (defn parse-macro-def
   [op-loc loc context scoped macro-def]
   (loop [[element' & elements] macro-def
          repeat-idx' 0
          element-loc (z-right-sexpr op-loc)
-         bound-scope scoped]
+         bound-scope' scoped]
     (let [map-element (and (map? element') (:element element'))
           repeat-idx (cond-> repeat-idx'
                        (vector? map-element) (rem (count map-element)))
@@ -695,7 +698,11 @@
           process? (case (:pred element-info)
                      :string (string? sexpr)
                      :map (map? sexpr)
-                     nil true)]
+                     nil true)
+          scope-bounds (merge (meta (z/node element-loc)) (end-bounds loc))
+          [bound-scope macro-sub-forms] (if (not-empty (:sub-forms element-info))
+                                           (add-macro-sub-forms element-loc context scope-bounds bound-scope' (:sub-forms element-info))
+                                           [bound-scope' nil])]
       (when process?
         (case element
           :bound-elements
@@ -711,6 +718,8 @@
           :declaration
           (macro-declaration element-info element-loc context scoped)
           nil))
+      (when macro-sub-forms
+        (vswap! context update :macro-defs #(apply dissoc % macro-sub-forms)))
       (when-let [next-element-loc (and (or repeat? (seq elements)) (z-right-sexpr element-loc))]
         (recur (cond-> elements
                  repeat? (conj element'))
@@ -725,30 +734,33 @@
 
                  (= :param element)
                  (parse-destructuring element-loc
-                                      (merge (meta (z/node element-loc)) (end-bounds loc))
+                                      scope-bounds
                                       context scoped)
 
                  :else
                  scoped))))))
 
 (defn handle-sexpr [loc context scoped]
-  (let [op-loc (some-> loc (zm/down))]
-    (cond
-      (and op-loc (symbol? (z/sexpr op-loc)))
-      (let [usage (add-reference context scoped (z/node op-loc) {})
-            handler (get *sexpr-handlers* (:sym usage))
-            macro-def (get (:macro-defs @context) (:sym usage))]
-        (cond
-          (and macro-def (not (:quoting? @context)))
-          (parse-macro-def op-loc loc context scoped macro-def)
+  (try
+    (let [op-loc (some-> loc (zm/down))]
+      (cond
+        (and op-loc (symbol? (z/sexpr op-loc)))
+        (let [usage (add-reference context scoped (z/node op-loc) {})
+              handler (get *sexpr-handlers* (:sym usage))
+              macro-def (get (:macro-defs @context) (:sym usage))]
+          (cond
+            (and macro-def (not (:quoting? @context)))
+            (parse-macro-def op-loc loc context scoped macro-def)
 
-          (and handler (not (:quoting? @context)))
-          (handler op-loc loc context scoped)
+            (and handler (not (:quoting? @context)))
+            (handler op-loc loc context scoped)
 
-          :else
-          (handle-rest (zm/right op-loc) context scoped)))
-      op-loc
-      (handle-rest op-loc context scoped))))
+            :else
+            (handle-rest (zm/right op-loc) context scoped)))
+        op-loc
+        (handle-rest op-loc context scoped)))
+    (catch Throwable e
+      (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc)))))
 
 (defn- find-usages* [loc context scoped]
   (loop [loc loc
@@ -796,11 +808,16 @@
   (loop [loc loc]
     (if (and (= :reader-macro (z/tag loc))
              (contains? #{"?@" "?"} (z/string (z/down loc))))
-      (if-let [file-type-loc (-> loc
-                                 z/down
-                                 z/right
-                                 z/down
-                                 (z/find-value z/right file-type))]
+      (if-let [file-type-loc (or (-> loc
+                                     z/down
+                                     z/right
+                                     z/down
+                                     (z/find-value z/right file-type))
+                                 (-> loc
+                                     z/down
+                                     z/right
+                                     z/down
+                                     (z/find-value z/right :default)))]
         (let [file-type-expr (z/node (z/right file-type-loc))
               splice? (= "?@" (z/string (z/down loc)))]
           (recur (cond-> (z/replace loc file-type-expr)
@@ -810,21 +827,26 @@
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
-(defn find-usages [code file-type client-macro-defs]
-  (let [code-loc (-> code
-                     (string/replace #"(\w)/(\s|$)" "$1 $2")
-                     (z/of-string)
-                     (zm/up))
-        macro-defs (merge default-macro-defs client-macro-defs)]
-    (if (= :cljc file-type)
-      (into (-> code-loc
-                (process-reader-macro :clj)
-                (find-usages* (volatile! (assoc default-env :file-type :clj :macro-defs macro-defs)) {}))
-            (-> code-loc
-                (process-reader-macro :cljs)
-                (find-usages* (volatile! (assoc default-env :file-type :cljs :macro-defs macro-defs)) {})))
-      (-> code-loc
-          (find-usages* (volatile! (assoc default-env :file-type file-type :macro-defs macro-defs)) {})))))
+(defn find-usages
+  ([code file-type client-macro-defs]
+   (find-usages nil code file-type client-macro-defs))
+  ([uri code file-type client-macro-defs]
+   (when-let [code-loc (try (-> code
+                                (string/replace #"(\w)/(\s|$)" "$1 $2")
+                                (z/of-string)
+                                (zm/up))
+                            (catch Throwable e
+                              (log/warn "Cannot read" uri (.getMessage e))))]
+     (let [macro-defs (merge default-macro-defs client-macro-defs)]
+       (if (= :cljc file-type)
+         (into (-> code-loc
+                   (process-reader-macro :clj)
+                   (find-usages* (volatile! (assoc default-env :file-type :clj :macro-defs macro-defs :uri uri)) {}))
+               (-> code-loc
+                   (process-reader-macro :cljs)
+                   (find-usages* (volatile! (assoc default-env :file-type :cljs :macro-defs macro-defs :uri uri)) {})))
+         (-> code-loc
+             (find-usages* (volatile! (assoc default-env :file-type file-type :macro-defs macro-defs :uri uri)) {})))))))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as _form-pos}

@@ -27,6 +27,7 @@
       DidSaveTextDocumentParams
       DocumentFormattingParams
       DocumentRangeFormattingParams
+      ExecuteCommandOptions
       ExecuteCommandParams
       InitializeParams
       InitializeResult
@@ -291,6 +292,8 @@
                                      (.setDefinitionProvider true)
                                      (.setDocumentFormattingProvider true)
                                      (.setDocumentRangeFormattingProvider true)
+                                     (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
+                                                                   (.setCommands (keys handlers/refactorings))))
                                      (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                              (.setOpenClose true)
                                                              (.setChange TextDocumentSyncKind/Full)

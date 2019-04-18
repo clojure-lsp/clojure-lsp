@@ -88,8 +88,14 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 }},
 ```
 
-`macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
 
+`project-specs` value is a vector of maps with keys, each project-spec will add to the list of dependencies for lsp to crawl:
+  - `project-file` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
+  - `classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
+  - `env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE": "x.boot"}`)
+
+
+`macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
 
 Valid element definitions are:
   - `{"element": "declaration", "tags", ["unused", "local"], "signature": ["next"]}` This marks a symbol or keyword as a definition. `tags` are optional. The `unused` tag supresses the "unused declaration" diagnostic, useful for `deftest` vars. The `local` tag marks the var as private. `signature` is optional - if the macro has `defn`-like bindings this vector of movements should point to the parameter vector or the first var arg list form (only `next` is supported right now).
@@ -108,6 +114,15 @@ Valid element definitions are:
   - `bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
 
 See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.
+
+## Project Settings
+
+LSP will also look for project specific settings in a file called '.lsp/config.edn'. It will search from your root folder up the directory structure so you can have multiple projects share the settings.
+
+```clojure
+{"macro-defs" {korma.core/defentity [:declaration :elements]}
+ "cljfmt" {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}}
+ ```
 
 ## Clients
 

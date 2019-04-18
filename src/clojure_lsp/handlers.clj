@@ -103,7 +103,7 @@
   ;; Reinitialize
   (let [{:keys [project-root client-capabilities client-settings]} @db/db]
     (initialize project-root client-capabilities client-settings)
-    (:client-settings @db/db)))
+    (:project-settings @db/db)))
 
 (defn- matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))

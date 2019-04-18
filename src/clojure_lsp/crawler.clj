@@ -154,10 +154,13 @@
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
 
-(defn lookup-classpath [root-path command-args]
+(defn lookup-classpath [root-path command-args env]
   (try
-    (let [sep (re-pattern (System/getProperty "path.separator"))]
-      (-> (apply shell/sh (into command-args [:dir (str root-path)]))
+    (let [sep (re-pattern (System/getProperty "path.separator"))
+          response (apply shell/sh (into command-args
+                                         (cond-> [:dir (str root-path)]
+                                           env (conj :env (merge {} (System/getenv) env)))))]
+      (-> response
           (:out)
           (string/trim-newline)
           (string/split sep)))
@@ -165,23 +168,23 @@
       (log/warn e "Error while looking up classpath info in" (str root-path) (.getMessage e))
       [])))
 
-(defn try-project [root-path project-path command-args]
+(defn try-project [root-path project-path command-args env]
   (let [project-file (to-file root-path project-path)]
     (when (.exists project-file)
       (let [file-hash (digest/md5 project-file)
-            classpath (lookup-classpath root-path command-args)]
+            classpath (lookup-classpath root-path command-args env)]
         {:project-hash file-hash :classpath classpath}))))
 
-(def project-specs
+(def ^:private default-project-specs
   [{:project-path "project.clj"
     :classpath-cmd ["lein" "classpath"]}
    {:project-path "build.boot"
     :classpath-cmd ["boot" "show" "--fake-classpath"]}])
 
-(defn get-project-from [root-path]
+(defn get-project-from [root-path project-specs]
   (reduce
-    (fn [project {:keys [project-path classpath-cmd]}]
-      (if-let [subproject (try-project root-path project-path classpath-cmd)]
+    (fn [project {:keys [project-path classpath-cmd env]}]
+      (if-let [subproject (try-project root-path project-path classpath-cmd env)]
         (-> project
             (update :project-hash (fnil str "") (:project-hash subproject))
             (update :classpath (fnil into []) (:classpath subproject)))
@@ -194,7 +197,8 @@
         settings (:settings @db/db)
         source-paths (mapv #(to-file root-path %) (get settings "source-paths"))
         dependency-scheme (get settings "dependency-scheme")
-        project (get-project-from root-path)]
+        project-specs (or (get settings "project-specs") default-project-specs)
+        project (get-project-from root-path project-specs)]
     (if (some? project)
       (let [project-hash (:project-hash project)
             loaded (db/read-deps root-path)

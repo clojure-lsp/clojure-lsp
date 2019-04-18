@@ -245,9 +245,11 @@
        (medley/map-vals typify-json)))
 
 (defn clean-client-settings [client-settings]
-  (-> client-settings
-      (update "dependency-scheme" #(or % "zipfile"))
-      (update "source-paths" #(if (seq %) (set %) #{"src" "test"}))
-      (update "macro-defs" clean-symbol-map)
-      (update "cljfmt" #(medley/map-keys keyword %))
-      (update-in ["cljfmt" :indents] clean-symbol-map)))
+  (let [kwd-keys #(medley/map-keys keyword %)]
+    (-> client-settings
+        (update "dependency-scheme" #(or % "zipfile"))
+        (update "source-paths" #(if (seq %) (set %) #{"src" "test"}))
+        (update "macro-defs" clean-symbol-map)
+        (update "project-specs" #(->> % (mapv kwd-keys) not-empty))
+        (update "cljfmt" kwd-keys)
+        (update-in ["cljfmt" :indents] clean-symbol-map))))

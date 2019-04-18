@@ -1,0 +1,5 @@
+{"cljfmt" {:indents {#re ".*" [[:block 0]]
+                     ns [[:inner 0] [:inner 1]]
+                     and [[:inner 0]]
+                     or [[:inner 0]]
+                     are [[:inner 0]]}}}

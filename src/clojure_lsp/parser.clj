@@ -10,8 +10,7 @@
     [rewrite-clj.zip :as z]
     [rewrite-clj.zip.find :as zf]
     [rewrite-clj.zip.move :as zm]
-    [rewrite-clj.zip.subedit :as zsub]
-    [medley.core :as medley])
+    [rewrite-clj.zip.subedit :as zsub])
   (:import
     (rewrite_clj.node.meta MetaNode)))
 
@@ -608,9 +607,13 @@
    'compojure.core/PUT [:element :param :bound-elements]
    'compojure.core/context [:element :param :bound-elements]
    'compojure.core/defroutes [:declaration :elements]
+   'korma.core/defentity [:declaration :elements]
    'net.cgrand.enlive-html/deftemplate [:declaration :element :params :bound-elements]
    'outpace.config/defconfig [:declaration :element]
    'outpace.config/defconfig! [:declaration :element]
+   're-frame.core/reg-event-db [{:element :declaration :signature [:next :next :next :right]} :element]
+   're-frame.core/reg-event-fx [{:element :declaration :signature [:next :next :next :right]} :element]
+   're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element]
    'schema.macros/try-catchall [{:element :bound-elements :sub-forms {'catch [:param :bound-elements]}}]
    'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]})
 

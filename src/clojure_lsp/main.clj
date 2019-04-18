@@ -265,6 +265,7 @@
            (.getCapabilities)
            (interop/conform-or-log ::interop/client-capabilities)))
 
+;; Called from java
 (defn extension [method & args]
   (go :extension
       (CompletableFuture/completedFuture

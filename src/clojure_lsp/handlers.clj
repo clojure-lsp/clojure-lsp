@@ -1,6 +1,7 @@
 (ns clojure-lsp.handlers
   (:require
     [cljfmt.core :as cljfmt]
+    [cljfmt.main :as cljfmt.main]
     [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
@@ -48,7 +49,7 @@
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
-        source-paths (get-in @db/db [:client-settings "source-paths"])
+        source-paths (get-in @db/db [:settings "source-paths"])
         in-project? (string/starts-with? uri project-root)
         file-type (shared/uri->file-type uri)]
     (when (and in-project? (not= :unknown file-type))
@@ -85,14 +86,24 @@
 
 (defn initialize [project-root client-capabilities client-settings]
   (when project-root
-    (swap! db/db assoc
-           :project-root project-root
-           :client-settings client-settings
-           :client-capabilities client-capabilities)
+    (let [project-settings (crawler/find-project-settings project-root)]
+      (swap! db/db assoc
+             :project-root project-root
+             :project-settings project-settings
+             :client-settings client-settings
+             :settings (-> (merge client-settings project-settings)
+                           (update "cljfmt" cljfmt.main/merge-default-options))
+             :client-capabilities client-capabilities))
     (let [file-envs (crawler/determine-dependencies project-root)]
       (swap! db/db assoc
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
+
+(comment
+  ;; Reinitialize
+  (let [{:keys [project-root client-capabilities client-settings]} @db/db]
+    (initialize project-root client-capabilities client-settings)
+    (:client-settings @db/db)))
 
 (defn- matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))
@@ -342,7 +353,7 @@
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
         new-text (cljfmt/reformat-string
                    text
-                   (get-in @db/db [:client-settings "cljfmt"]))]
+                   (get-in @db/db [:settings "cljfmt"]))]
     (when-not (= new-text text)
       [{:range (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
         :new-text new-text}])))
@@ -355,7 +366,7 @@
              :new-text (n/string
                          (cljfmt/reformat-form
                            (z/node form-loc)
-                           (get-in @db/db [:client-settings "cljfmt"])))})
+                           (get-in @db/db [:settings "cljfmt"])))})
           forms)))
 
 (defmulti extension (fn [method _] method))

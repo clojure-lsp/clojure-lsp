@@ -1,15 +1,16 @@
 (ns clojure-lsp.crawler
   (:require
-    [clojure.string :as string]
-    [clojure.core.async :as async]
-    [clojure.tools.logging :as log]
-    [clojure.java.shell :as shell]
-    [digest :as digest]
     [clojure-lsp.db :as db]
-    [clojure.java.io :as io]
-    [clojure.set :as set]
     [clojure-lsp.parser :as parser]
-    [clojure-lsp.shared :as shared])
+    [clojure-lsp.shared :as shared]
+    [clojure.core.async :as async]
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [digest :as digest])
   (:import
     [java.net URI]
     [java.util.jar JarFile]
@@ -97,7 +98,7 @@
    (try
      #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (shared/uri->file-type uri)
-           macro-defs (get-in @db/db [:client-settings "macro-defs"])
+           macro-defs (get-in @db/db [:settings "macro-defs"])
            references (cond->> (parser/find-usages uri text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
@@ -190,9 +191,9 @@
 
 (defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
-        client-settings (:client-settings @db/db)
-        source-paths (mapv #(to-file root-path %) (get client-settings "source-paths"))
-        dependency-scheme (get client-settings "dependency-scheme")
+        settings (:settings @db/db)
+        source-paths (mapv #(to-file root-path %) (get settings "source-paths"))
+        dependency-scheme (get settings "dependency-scheme")
         project (get-project-from root-path)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -210,3 +211,18 @@
         (merge file-envs jar-envs))
       (crawl-source-dirs source-paths))))
 
+(defn find-project-settings [project-root]
+  (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]
+    (loop [dir (uri->path project-root)]
+      (let [full-config-path (.resolve dir config-path)
+            file (.toFile full-config-path)
+            parent-dir (.getParent dir)]
+        (cond
+          (.exists file)
+          (edn/read-string {:readers {'re re-pattern}} (slurp file))
+
+          parent-dir
+          (recur parent-dir)
+
+          :else
+          {})))))

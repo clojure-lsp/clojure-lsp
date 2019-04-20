@@ -22,7 +22,13 @@
   (is (= '(a) (keys (parser/parse-destructuring (z/of-string "{{:keys [a]} :a}") {} (volatile! {}) {}))))
   (is (= '(a b c d e) (keys (parser/parse-destructuring (z/of-string "[a {:keys [b c] :as d} e]") {} (volatile! {}) {}))))
   (is (= '(a) (keys (parser/parse-destructuring (z/of-string "[& a]") {} (volatile! {}) {}))))
-  (is (= '(a c) (keys (parser/destructure-map (z/of-string "{a :b :keys [] c :d}") {} (volatile! {}) {})))) )
+  (is (= '(a c) (keys (parser/destructure-map (z/of-string "{a :b :keys [] c :d}") {} (volatile! {}) {}))))
+  (is (= '(a) (keys (parser/parse-destructuring (z/of-string "{:keys [:a]}") {} (volatile! {}) {}))))
+  (is (= '(a b) (keys (parser/parse-destructuring (z/of-string "{:keys [:a :b]}") {} (volatile! {}) {}))))
+  (is (= '(x y) (keys (parser/parse-destructuring (z/of-string "{:keys [:a/x :b/y]}") {} (volatile! {}) {}))))
+  (is (= '(x y) (keys (parser/parse-destructuring (z/of-string "{:keys [a/x b/y]}") {} (volatile! {}) {}))))
+  (is (= '(x y) (keys (parser/parse-destructuring (z/of-string "{:syms [x y]}") {} (volatile! {}) {}))))
+  (is (= '(x y) (keys (parser/parse-destructuring (z/of-string "{:strs [x y]}") {} (volatile! {}) {})))))
 
 (deftest parse-bindings-test
   (let [context (volatile! {})]

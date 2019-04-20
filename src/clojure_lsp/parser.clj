@@ -161,7 +161,7 @@
                    (if child-loc
                      (let [sexpr (z/sexpr child-loc)
                            scoped-ns (gensym)
-                           new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
+                           new-scoped (assoc scoped (symbol (name sexpr)) {:ns scoped-ns :bounds scope-bounds})]
                        (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
                                                                          :scope-bounds scope-bounds
                                                                          :sym (symbol (name scoped-ns)

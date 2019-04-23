@@ -181,8 +181,8 @@
         loc (-> zloc
                 (edit/wrap-around :list) ; wrap with new let list
                 (z/insert-child 'let) ; add let
-                (cz/append-child (n/newlines 1))
-                (cz/append-child (n/spaces col)) ; add new line after location
+                (cz/append-child (n/newlines 1)) ; add new line after location
+                (cz/append-child (n/spaces (inc col)))  ; indent body
                 (z/append-child sym) ; add new symbol to body of let
                 (z/down) ; enter let list
                 (z/right) ; skip 'let

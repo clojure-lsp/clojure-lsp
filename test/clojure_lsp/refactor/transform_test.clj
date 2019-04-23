@@ -109,11 +109,11 @@
         [{:keys [loc range]}] (transform/introduce-let zloc nil 'b)]
     (is (some? range))
     (is (= 'let (z/sexpr (z/down loc))))
-    (is (= (str "(let [b (inc a)]\n b)") (z/root-string loc)))
+    (is (= (str "(let [b (inc a)]\n  b)") (z/root-string loc)))
     (let [[{:keys [loc range]}] (transform/introduce-let (z/rightmost (z/down  (z/of-string (z/root-string loc)))) nil 'c)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
-      (is (= (str "(let [b (inc a)\n c b]\n c)") (z/root-string loc))))))
+      (is (= (str "(let [b (inc a)\n c b]\n  c)") (z/root-string loc))))))
 
 (deftest expand-let-test
   (let [zloc (-> (z/of-string "(+ 1 (let [a 1] a) 2)") z/down z/right z/right)]

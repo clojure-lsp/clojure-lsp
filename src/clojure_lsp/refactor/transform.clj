@@ -3,6 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.refactor.edit :as edit]
     [clojure.set :as set]
+    [clojure.string :as string]
     [clojure.tools.logging :as log]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
@@ -56,18 +57,22 @@
                              (z/remove))
                            (z/up)
                            ((fn [loc] (cond-> loc
-                                        (edit/single-child? loc) (-> z/down edit/raise)
+                                        (edit/single-child? loc)
+                                        (-> z/down edit/raise)
 
-                                        threaded? (-> (z/insert-left first-node)
-                                                      (z/left)
-                                                      (cz/insert-right (n/spaces first-col))
-                                                      (cz/insert-right (n/newlines 1))
-                                                      z/up)
-                                        (not threaded?) (-> (edit/wrap-around :list)
-                                                            (z/insert-child (n/spaces first-col))
-                                                            (z/insert-child (n/newlines 1))
-                                                            (z/insert-child first-node)
-                                                            (z/insert-child sym))))))]
+                                        threaded?
+                                        (-> (z/insert-left first-node)
+                                            (z/left)
+                                            (cz/insert-right (n/spaces first-col))
+                                            (cz/insert-right (n/newlines 1))
+                                            z/up)
+
+                                        (not threaded?)
+                                        (-> (edit/wrap-around :list)
+                                            (z/insert-child (n/spaces first-col))
+                                            (z/insert-child (n/newlines 1))
+                                            (z/insert-child first-node)
+                                            (z/insert-child sym))))))]
         [{:range meta-node
           :loc result-loc}])
       [])))
@@ -112,6 +117,45 @@
   [zloc _uri]
   (thread-all zloc '->>))
 
+(defn unwind-thread
+  [zloc _uri]
+  (let [thread-loc (if (= (z/tag zloc) :list)
+                     (z/next zloc)
+                     zloc)
+        thread-sym (#{'-> '->> 'some-> 'some->>} (z/sexpr thread-loc))]
+    (when thread-sym
+      (let [val-loc (z/right thread-loc)
+            target-loc (z/right val-loc)
+            extra? (z/right target-loc)
+            insert-fn (if (string/ends-with? (name thread-sym) "->")
+                        z/insert-right
+                        (fn [loc node] (-> loc
+                                           (z/rightmost)
+                                           (z/insert-right node))))]
+        (when (and val-loc target-loc)
+          (let [result-loc (-> thread-loc
+                               z/up
+                               (z/subedit->
+                                 z/down
+                                 z/right
+                                 z/remove
+                                 z/right
+                                 (cond-> (not= :list (z/tag target-loc)) (edit/wrap-around :list))
+                                 (z/down)
+                                 (insert-fn (z/node val-loc))
+                                 (z/up)
+                                 (cond-> (not extra?) (edit/raise))))]
+            [{:range (meta (z/node (z/up thread-loc)))
+              :loc result-loc}]))))))
+
+(defn unwind-all
+  [zloc uri]
+  (loop [current (unwind-thread zloc uri)
+         result nil]
+    (if current
+      (recur (unwind-thread (:loc (first current)) uri) current)
+      result)))
+
 (defn find-within [zloc p?]
   (when (z/find (zsub/subzip zloc) z/next p?)
     (z/find zloc z/next p?)))
@@ -141,7 +185,6 @@
                                (edit/find-ops-up 'let)
                                z/up)]
     (let [let-loc (z/down (zsub/subzip let-top-loc))
-          bound-sexpr (z/sexpr zloc)
           bound-string (z/string zloc)
           bound-node (z/node zloc)
           binding-sym (symbol binding-name)
@@ -336,45 +379,6 @@
           (z/rightmost) ; Go to last child (else form)
           (edit/transpose-with-left)) ; Swap children
       zloc))
-
-  (defn ensure-list
-    [zloc]
-    (if (z/seq? zloc)
-      (z/down zloc)
-      (p/wrap-around zloc :list)))
-
-  (defn unwind-thread
-    [zloc _]
-    (let [oploc (edit/find-op zloc)
-          thread-type (z/sexpr oploc)]
-      (if (contains? #{'-> '->>} thread-type)
-        (let [first-loc (z/right oploc)
-              first-node (z/node first-loc)
-              move-to-insert-pos (if (= '-> thread-type)
-                                   z/leftmost
-                                   z/rightmost)]
-          (-> first-loc
-              (z/right) ; move to form to unwind into
-              (edit/remove-left) ; remove threaded form
-              (ensure-list) ; make sure we're dealing with a wrapped fn
-              (move-to-insert-pos) ; move to pos based on thread type
-              (z/insert-right first-node)
-              (z/up)
-              ((fn [loc]
-                 (if (z/rightmost? loc)
-                   (p/raise loc)
-                   loc)))
-              (z/up)))
-        zloc)))
-
-  (defn unwind-all
-    [zloc _]
-    (loop [loc (unwind-thread zloc nil)]
-      (let [oploc (edit/find-op loc)
-            thread-type (z/sexpr oploc)]
-        (if (contains? #{'-> '->>} thread-type)
-          (recur (unwind-thread loc nil))
-          loc))))
 
   ;; TODO will insert duplicates
   ;; TODO handle :type and :macro

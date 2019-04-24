@@ -295,6 +295,8 @@
    "thread-first-all" #'refactor/thread-first-all
    "thread-last" #'refactor/thread-last
    "thread-last-all" #'refactor/thread-last-all
+   "unwind-thread" #'refactor/unwind-thread
+   "unwind-all" #'refactor/unwind-all
    "move-to-let" #'refactor/move-to-let
    "introduce-let" #'refactor/introduce-let
    "expand-let" #'refactor/expand-let

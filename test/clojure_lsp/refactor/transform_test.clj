@@ -6,6 +6,7 @@
     [clojure-lsp.refactor.transform :as transform]
     [clojure.string :as string]
     [clojure.test :refer :all]
+    [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
 
 (deftest paredit-test
@@ -140,3 +141,19 @@
         [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
     (is (some? range))
     (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
+
+(deftest unwind-thread-test
+  (let [zloc (z/of-string "(-> a b (c) d)")
+        [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc nil)
+        [{loc2 :loc}] (transform/unwind-thread loc1 nil)
+        [{loc3 :loc}] (transform/unwind-thread loc2 nil)]
+    (is (some? range))
+    (is (= "(-> (b a) (c) d)" (z/string loc1)))
+    (is (= "(-> (c (b a)) d)" (z/string loc2)))
+    (is (= "(d (c (b a)))" (z/string loc3)))))
+
+(deftest unwind-all-test
+  (let [zloc (z/of-string "(->> (a) b (c x y) d)")
+        [{:keys [loc range]}] (transform/unwind-all zloc nil)]
+    (is (some? range))
+    (is (= "(d (c x y (b (a))))" (z/string loc)))))

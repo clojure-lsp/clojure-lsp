@@ -57,6 +57,8 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 |   √  | thread-first-all    | | |
 |   √  | thread-last         | | |
 |   √  | thread-last-all     | | |
+|   √  | unwind-thread       | | |
+|   √  | unwind-all          | | |
 |   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
 |   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
 |   √  | expand-let          | | |

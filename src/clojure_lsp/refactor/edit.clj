@@ -13,6 +13,11 @@
 (defn top? [loc]
   (= :forms (z/tag (z/up loc))))
 
+(defn to-top [loc]
+  (if (top? loc)
+    loc
+    (recur (z/up loc))))
+
 (defn find-op
   [zloc]
   (if (z/down zloc)

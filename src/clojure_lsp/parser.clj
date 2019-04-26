@@ -86,7 +86,7 @@
             declaration? {:sym (ctr (name (or ns-sym 'user)) ident-name)}
             (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns-sym) ident-name)}
             (keyword? ident) {:sym ident}
-            (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name)}
+            (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name) :tags #{:scoped}}
             declared {:sym declared}
             refered {:sym refered}
             (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
@@ -888,6 +888,13 @@
   (-> code
       (z/of-string)
       (find-last-by-pos {:row row :col col :end-row row :end-col col})))
+
+(defn usages-in-form [loc usages]
+  (let [form-loc (if (not= :token (z/tag loc))
+                   loc
+                   (z/up loc))
+        form-pos (-> form-loc z/node meta)]
+    (filter #(in-range? form-pos %) usages)))
 
 (comment
   (loc-at-pos  "foo" 1 5)

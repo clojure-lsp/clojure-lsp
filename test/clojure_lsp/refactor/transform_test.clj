@@ -157,3 +157,9 @@
         [{:keys [loc range]}] (transform/unwind-all zloc nil)]
     (is (some? range))
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
+
+(deftest extract-function-test
+  (let [zloc (z/find-value (z/of-string "(defn a [b] (inc b))") z/next 'inc)
+        results (transform/extract-function zloc nil "foo" [{:sym (symbol (str (gensym)) "b") :tags #{:scoped}}])]
+    (is (= (z/string (:loc (first results))) "(defn foo [b]\n  (inc b))"))
+    (is (= (z/string (:loc (last results))) "(foo b)"))))

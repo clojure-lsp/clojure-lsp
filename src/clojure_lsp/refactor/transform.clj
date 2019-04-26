@@ -335,6 +335,38 @@
                               (-> posibilities first :alias-ns))]
     (add-known-libspec zloc ns-to-add qualified-ns-to-add)))
 
+(defn extract-function
+  [zloc _uri fn-name usages]
+  (let [expr-loc (if (not= :token (z/tag zloc))
+                   zloc
+                   (z/up (edit/find-op zloc)))
+        expr-node (z/node expr-loc)
+        form-loc (edit/to-top expr-loc)
+        form-pos (meta (z/node form-loc))
+        fn-sym (symbol fn-name)
+        used-syms (into []
+                        (comp
+                          (filter #(contains? (:tags %) :scoped))
+                          (map (comp symbol name :sym))
+                          (distinct))
+                        usages)
+        expr-edit (-> (z/of-string "")
+                      (z/replace `(~fn-sym ~@used-syms)))
+        defn-edit (-> (z/of-string "(defn)\n\n")
+                      (z/append-child fn-sym)
+                      (z/append-child used-syms)
+                      (cz/append-child (n/newlines 1))
+                      (cz/append-child (n/spaces 2))
+                      (z/append-child expr-node))]
+    [{:loc defn-edit
+      :range (assoc form-pos :end-row (:row form-pos)
+                    :end-col (:col form-pos))}
+     {:loc (z/of-string "\n\n")
+      :range (assoc form-pos :end-row (:row form-pos)
+                    :end-col (:col form-pos))}
+     {:loc expr-edit
+      :range (meta expr-node)}]))
+
 (comment
    ; join if let above
 
@@ -448,23 +480,7 @@
           (zz/insert-left (n/coerce `(~'defn ~fn-name [~@args]))) ; add declare
           (zz/insert-left (n/newlines 2))))) ; add new line after location
 
-  (defn extract-function
-    [zloc [fn-name used-locals]]
-    (let [expr-loc (z/up (edit/find-op zloc))
-          expr-node (z/node expr-loc)
-          expr (z/sexpr expr-loc)
-          fn-sym (symbol fn-name)
-          used-syms (mapv symbol used-locals)]
-      (-> expr-loc
-          (z/replace `(~fn-sym ~@used-syms))
-          (edit/mark-position :reformat)
-          (edit/mark-position :new-cursor)
-          (edit/to-top)
-          (zz/insert-left (n/coerce (list 'defn fn-sym used-syms)))
-          (zz/insert-left (n/newlines 2))
-          (z/left)
-          (zz/append-child (n/newlines 1))
-          (z/append-child expr-node))))
+
 
   (defn format-form
     [zloc _]

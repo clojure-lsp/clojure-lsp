@@ -325,8 +325,8 @@
     (is (= 'clojure.core/def (:sym (nth usages 4))))
     (is (= (:sym (nth usages 5)) (:sym (nth usages 2))))
     (is (= (:sym (nth usages 6)) (:sym (nth usages 3))))
-    (is (nil? (:tags (nth usages 5))))
-    (is (nil? (:tags (nth usages 6)))))
+    (is (= #{:scoped} (:tags (nth usages 5))))
+    (is (= #{:scoped} (:tags (nth usages 6)))))
 
   (let [code "(quote (def a)) (quote a)"
         usages (parser/find-usages code :clj {})]
@@ -424,7 +424,7 @@
     (is (= 6 (count usages)))
     (is (= 'clojure.core/catch (:sym catch+)))
     (is (= (:sym x1) (:sym x2)))
-    (is (= nil (:tags else)))))
+    (is (= #{:scoped} (:tags else)))))
 
 (deftest parse-bad-reader
   (let [code "(do) ("

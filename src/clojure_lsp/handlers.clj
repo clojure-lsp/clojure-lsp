@@ -301,13 +301,17 @@
    "introduce-let" #'refactor/introduce-let
    "expand-let" #'refactor/expand-let
    "clean-ns" #'refactor/clean-ns
-   "add-missing-libspec" #'refactor/add-missing-libspec})
+   "add-missing-libspec" #'refactor/add-missing-libspec
+   "extract-function" #'refactor/extract-function})
 
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
         loc (parser/loc-at-pos text line column)
-        result (apply (get refactorings refactoring) loc doc-id args)]
+        usages (get-in @db/db [:file-envs doc-id])
+        result (apply (get refactorings refactoring) loc doc-id
+                      (cond-> (vec args)
+                        (= "extract-function" refactoring) (conj (parser/usages-in-form loc usages))))]
     (if loc
       (cond
         (seq result)

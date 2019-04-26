@@ -61,6 +61,7 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 |   √  | unwind-all          | | |
 |   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
 |   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
+|   √  | extract-function    | `[document-uri, line, column, function-name]` | |
 |   √  | expand-let          | | |
 |   √  | add-missing-libspec | | |
 |   -  | clean-ns            | | | sort only

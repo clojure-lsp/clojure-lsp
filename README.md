@@ -185,20 +185,40 @@ Proof of concept in the client-vscode directory in this repo.
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.
 
 ### emacs
-Using https://github.com/emacs-lsp the following works for registering clojure-lsp:
+[lsp-mode](https://github.com/emacs-lsp/lsp-mode) has built in support for `clojure-lsp` since `lsp-mode-20190416.1936`. With `use-package` add the following to your emacs config:
 
 ```
-(require 'lsp-mode)
-(lsp-register-client
- (make-lsp-client :new-connection (lsp-stdio-connection '("bash" "-c" "clojure-lsp"))
-                  :major-modes '(clojure-mode clojurec-mode clojurescript-mode)
-                  :server-id 'clojure-lsp))
-(add-to-list 'lsp-language-id-configuration '(clojure-mode . "clojure-mode"))
-(setq lsp-enable-indentation nil)
-(add-hook 'clojure-mode-hook #'lsp)
-(add-hook 'clojurec-mode-hook #'lsp)
-(add-hook 'clojurescript-mode-hook #'lsp)
+(use-package lsp-mode
+  :ensure t
+  :commands lsp
+  :config
+  (add-to-list 'lsp-language-id-configuration '(clojure-mode . "clojure-mode"))
+  :init
+  (setq lsp-enable-indentation nil)
+  (add-hook 'clojure-mode-hook #'lsp)
+  (add-hook 'clojurec-mode-hook #'lsp)
+  (add-hook 'clojurescript-mode-hook #'lsp))
 ```
+
+Optionally you can add `lsp-ui` and `company-lsp` too:
+
+```
+(use-package lsp-ui
+  :ensure t
+  :commands lsp-ui-mode)
+
+(use-package company-lsp
+  :ensure t
+  :commands company-lsp)
+```
+
+In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
+
+```
+{"dependency-scheme" "jar"}
+```
+
+In `lsp-mode` `lsp-clojure-server-command` defcustom is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
 
 ## TODO
 

@@ -302,7 +302,8 @@
    "expand-let" #'refactor/expand-let
    "clean-ns" #'refactor/clean-ns
    "add-missing-libspec" #'refactor/add-missing-libspec
-   "extract-function" #'refactor/extract-function})
+   "extract-function" #'refactor/extract-function
+   "cycle-privacy" #'refactor/cycle-privacy})
 
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change

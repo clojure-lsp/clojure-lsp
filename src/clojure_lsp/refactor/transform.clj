@@ -5,6 +5,7 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
@@ -344,12 +345,13 @@
         form-loc (edit/to-top expr-loc)
         form-pos (meta (z/node form-loc))
         fn-sym (symbol fn-name)
-        used-syms (into []
-                        (comp
-                          (filter #(contains? (:tags %) :scoped))
-                          (map (comp symbol name :sym))
-                          (distinct))
-                        usages)
+        {:keys [declared scoped]} (->> usages
+                                       (group-by #(condp set/subset? (:tags %)
+                                               #{:declare} :declared
+                                               #{:scoped} :scoped
+                                               nil))
+                                       (medley/map-vals #(set (map :sym %))))
+        used-syms (mapv (comp symbol name) (set/difference scoped declared))
         expr-edit (-> (z/of-string "")
                       (z/replace `(~fn-sym ~@used-syms)))
         defn-edit (-> (z/of-string "(defn)\n\n")
@@ -366,6 +368,27 @@
                     :end-col (:col form-pos))}
      {:loc expr-edit
       :range (meta expr-node)}]))
+
+(defn cycle-privacy
+  [zloc _]
+  (when-let [oploc (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti)]
+    (let [op (z/sexpr oploc)
+          switch-defn-? (and (= 'defn op)
+                             (not (get-in @db/db [:settings "use-metadata-for-privacy?"])))
+          switch-defn? (= 'defn- op)
+          name-loc (z/right oploc)
+          private? (or switch-defn?
+                       (-> name-loc z/sexpr meta :private))
+          switch (cond
+                   switch-defn? 'defn
+                   switch-defn-? 'defn-
+                   private? (vary-meta (z/sexpr name-loc) dissoc :private)
+                   (not private?) (n/meta-node :private (z/node name-loc)))
+          source (if (or switch-defn? switch-defn-?)
+                   oploc
+                   name-loc)]
+      [{:loc (z/replace source switch)
+        :range (meta (z/node source))}])))
 
 (comment
    ; join if let above

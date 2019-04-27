@@ -52,19 +52,20 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 
 | done | command             | args | notes |
 | ---- | ------------------- | ---- | ----- |
+|   √  | add-missing-libspec | | |
+|   -  | clean-ns            | | | sort only
 |   √  | cycle-coll          | | |
+|   √  | cycle-privacy       | | |
+|   √  | expand-let          | | |
+|   √  | extract-function    | `[document-uri, line, column, function-name]` | |
+|   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
+|   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
 |   √  | thread-first        | | |
 |   √  | thread-first-all    | | |
 |   √  | thread-last         | | |
 |   √  | thread-last-all     | | |
-|   √  | unwind-thread       | | |
 |   √  | unwind-all          | | |
-|   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
-|   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
-|   √  | extract-function    | `[document-uri, line, column, function-name]` | |
-|   √  | expand-let          | | |
-|   √  | add-missing-libspec | | |
-|   -  | clean-ns            | | | sort only
+|   √  | unwind-thread       | | |
 
 See Vim client section for an example.
 

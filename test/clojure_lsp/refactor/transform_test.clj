@@ -159,7 +159,37 @@
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
 
 (deftest extract-function-test
-  (let [zloc (z/find-value (z/of-string "(defn a [b] (inc b))") z/next 'inc)
-        results (transform/extract-function zloc nil "foo" [{:sym (symbol (str (gensym)) "b") :tags #{:scoped}}])]
-    (is (= (z/string (:loc (first results))) "(defn foo [b]\n  (inc b))"))
+  (let [code "(defn a [b] (let [c 1] (b c)))"
+        usages (parser/find-usages code :clojure {})
+        zloc (z/find-value (z/of-string code) z/next 'let)
+        results (transform/extract-function
+                  zloc
+                  nil
+                  "foo"
+                  (parser/usages-in-form zloc usages))]
+    (is (= (z/string (:loc (first results))) "(defn foo [b]\n  (let [c 1] (b c)))"))
     (is (= (z/string (:loc (last results))) "(foo b)"))))
+
+(deftest cycle-privacy-test
+  (testing "without-setting"
+    (reset! db/db {:settings {}})
+    (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
+                              (transform/cycle-privacy nil))]
+      (is (= (z/string loc) "defn-")))
+    (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn- a [])") z/next 'a)
+                              (transform/cycle-privacy nil))]
+      (is (= (z/string loc) "defn")))
+    (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(def a [])") z/next 'a)
+                              (transform/cycle-privacy nil))]
+      (is (= (z/string loc) "^:private a")))
+    (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(def ^:private a [])") z/next 'a)
+                              (transform/cycle-privacy nil))]
+      (is (= (z/string loc) "a"))))
+  (testing "with-setting"
+    (reset! db/db {:settings {"use-metadata-for-privacy?" true}})
+    (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
+                              (transform/cycle-privacy nil))]
+      (is (= (z/string loc) "^:private a")))
+    (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn ^:private a [])") z/next 'a)
+                              (transform/cycle-privacy nil))]
+      (is (= (z/string loc) "a")))))

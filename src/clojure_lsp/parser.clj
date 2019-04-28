@@ -34,6 +34,7 @@
    :refers {}
    :imports {}
    :aliases {}
+   :local-classes #{}
    :publics #{}
    :locals #{}
    :usages []
@@ -58,31 +59,38 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
-(defn qualify-ident [ident-node {:keys [aliases imports locals publics refers requires refer-all-syms file-type] :as context} scoped declaration?]
+(defn skip-meta [ident-node]
+  (loop [result ident-node]
+    (if (instance? MetaNode result)
+      (->> result
+           (n/children)
+           (remove n/printable-only?)
+           (second)
+           recur)
+      result)))
+
+(defn qualify-ident [ident-node {:keys [aliases local-classes imports locals publics refers requires refer-all-syms file-type] :as context} scoped declaration?]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
-          ident-str (loop [result ident-node]
-                      (if (instance? MetaNode result)
-                        (->> result
-                             (n/children)
-                             (remove n/printable-only?)
-                             (second)
-                             recur)
-                        (n/string result)))
+          ident-str (n/string (skip-meta ident-node))
           [prefix ident-ns-str ident-name] (ident-split ident-str)
           ident-ns (some-> ident-ns-str symbol)
-          java-sym (symbol (string/replace ident-name #"\.$" ""))
-          class-sym (get imports java-sym)
           alias-ns (get aliases ident-ns-str)
           ns-sym (:ns context)
           declared (when (and ns-sym (or (get locals ident-name) (get publics ident-name)))
                               (symbol (name ns-sym) ident-name))
+          local-classes' (->> local-classes
+                              (map (juxt identity #(symbol (str (name ns-sym) "." %))))
+                              (into {}))
+          java-classes (merge local-classes' imports lang-imports)
+          java-sym (get java-classes (symbol (string/replace ident-name #"\.$" "")))
           refered (get refers ident-name)
           required-ns (get requires ident-ns)
           ctr (if (symbol? ident) symbol keyword)]
       (assoc
         (if-not ident-ns
           (cond
+            java-sym {:sym java-sym :tags #{:norename}}
             declaration? {:sym (ctr (name (or ns-sym 'user)) ident-name)}
             (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns-sym) ident-name)}
             (keyword? ident) {:sym ident}
@@ -90,11 +98,8 @@
             declared {:sym declared}
             refered {:sym refered}
             (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
-            (contains? imports java-sym) {:sym (get imports java-sym) :tags #{:norename}}
             (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
-            (contains? lang-imports java-sym) {:sym (get lang-imports java-sym) :tags #{:norename}}
             (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
-            class-sym {:sym class-sym :tags #{:norename}}
             :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
           (cond
             (and alias-ns
@@ -211,6 +216,11 @@
         (let [node (z/node param-loc)
               sexpr (n/sexpr node)]
           (cond
+            (= :meta (z/tag param-loc))
+            (let [meta-loc (z-next-sexpr param-loc)]
+              (handle-rest (zsub/subzip meta-loc) context scoped)
+              (recur (z-right-sexpr meta-loc) scoped))
+
             (and (symbol? sexpr) (not= '& sexpr))
             (let [scoped-ns (gensym)
                   new-scoped (assoc scoped sexpr {:ns scoped-ns :bounds scope-bounds})]
@@ -508,7 +518,7 @@
   [op-loc _loc context scoped]
   (let [type-loc (z-right-sexpr op-loc)
         fields-loc (z-right-sexpr type-loc)]
-    (vswap! context update :publics conj (name (z/sexpr type-loc)))
+    (vswap! context update :local-classes conj (z/sexpr type-loc))
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
                                                      :signatures [(z/sexpr fields-loc)]})

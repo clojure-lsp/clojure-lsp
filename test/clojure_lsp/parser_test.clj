@@ -41,6 +41,14 @@
   (let [context (volatile! {})]
     (is (= 0 (count (parser/parse-params (z/of-string "[]") context {}))))))
 
+(deftest handle-fn-test
+  (let [zloc (z/of-string "(fn [^String b])")
+        context (volatile! {})]
+    (parser/handle-fn (z/next zloc) zloc context {})
+    (is (= '{"java.lang.String" #{:norename}
+             "b" #{:declare :param}}
+           (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
+
 (deftest qualify-ident-test
   (let [context (volatile! {})]
     (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
@@ -285,7 +293,7 @@
   (with-redefs [gensym (gensym-counter)]
     (let [code "(deftype FooBar [fn] IBar (-x []) IQux (toString [_] (fn str)) (tooBad [a] fn) IFn)"
           usages (drop 1 (parser/find-usages code :cljs {}))]
-      (is (= ['user/FooBar 'gensym0/fn
+      (is (= ['user.FooBar 'gensym0/fn
               'gensym1/IBar 'gensym2/-x 'gensym3/IQux
               'gensym4/toString 'gensym5/_ 'gensym0/fn 'clojure.core/str
               'gensym6/tooBad 'gensym7/a 'gensym0/fn

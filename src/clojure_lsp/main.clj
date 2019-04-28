@@ -77,13 +77,13 @@
 
 (deftype LSPTextDocumentService []
   TextDocumentService
-  (^void didOpen [this ^DidOpenTextDocumentParams params]
+  (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (go :didOpen
         (end
           (let [document (.getTextDocument params)]
             (#'handlers/did-open (.getUri document) (.getText document))))))
 
-  (^void didChange [this ^DidChangeTextDocumentParams params]
+  (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
         (end
           (let [textDocument (.getTextDocument params)
@@ -93,11 +93,11 @@
                 uri (.getUri textDocument)]
             (#'handlers/did-change uri text version)))))
 
-  (^void didSave [this ^DidSaveTextDocumentParams params]
+  (^void didSave [_ ^DidSaveTextDocumentParams _params]
     (go :didSave
         (end nil)))
 
-  (^void didClose [this ^DidCloseTextDocumentParams params]
+  (^void didClose [_ ^DidCloseTextDocumentParams params]
     (log/warn "DidCloseTextDocumentParams")
     (go :didClose
         (end (swap! db/db update :documents dissoc (.getUri (.getTextDocument params))))))
@@ -163,7 +163,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-  (^CompletableFuture signatureHelp [this ^TextDocumentPositionParams params]
+  (^CompletableFuture signatureHelp [_ ^TextDocumentPositionParams _params]
     (go :signatureHelp
         (CompletableFuture/completedFuture
           (end
@@ -184,7 +184,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-  (^CompletableFuture rangeFormatting [this ^DocumentRangeFormattingParams params]
+  (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting
         (end
           (let [result (when (compare-and-set! formatting false true)
@@ -206,7 +206,7 @@
             (CompletableFuture/completedFuture
               result)))))
 
-  (^CompletableFuture codeAction [this ^CodeActionParams params]
+  (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (go :codeAction
         (end
           (CompletableFuture/completedFuture
@@ -231,7 +231,7 @@
 
 (deftype LSPWorkspaceService []
   WorkspaceService
-  (^CompletableFuture executeCommand [this ^ExecuteCommandParams params]
+  (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (go :executeCommand
         (let [[doc-id line col & args] (map interop/json->clj (.getArguments params))
               command (.getCommand params)]
@@ -249,9 +249,9 @@
                 (catch Exception e
                   (log/error e)))))))
     (CompletableFuture/completedFuture 0))
-  (^void didChangeConfiguration [this ^DidChangeConfigurationParams params]
+  (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
-  (^void didChangeWatchedFiles [this ^DidChangeWatchedFilesParams params]
+  (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams _params]
     (log/warn "DidChangeWatchedFilesParams")))
 
 (defn client-settings [^InitializeParams params]

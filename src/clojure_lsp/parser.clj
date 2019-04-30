@@ -501,16 +501,20 @@
   [op-loc loc context scoped]
   (handle-function op-loc loc context scoped #{:declare}))
 
+(defn handle-fn-spec [method-loc context scoped tags]
+  (let [name-loc (z/down method-loc)
+        params-loc (z-right-sexpr name-loc)]
+    (add-reference context scoped (z/node name-loc) {:tags tags})
+    (let [new-scoped (parse-params params-loc context scoped)]
+      (handle-rest (z-right-sexpr params-loc) context new-scoped))))
+
 (defn handle-type-methods
   [proto-loc context scoped]
   (loop [prev-loc proto-loc
          method-loc (z-right-sexpr proto-loc)]
     (if (and method-loc (= :list (z/tag method-loc)))
-      (let [name-loc (z/down method-loc)
-            params-loc (z-right-sexpr name-loc)]
-        (add-reference context scoped (z/node name-loc) {:tags #{:method :norename}})
-        (let [new-scoped (parse-params params-loc context scoped)]
-          (handle-rest (z-right-sexpr params-loc) context new-scoped))
+      (do
+        (handle-fn-spec method-loc context scoped #{:method :norename})
         (recur method-loc (z-right-sexpr method-loc)))
       prev-loc)))
 
@@ -605,8 +609,9 @@
   {'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
    'clojure.core/as-> [:element :param :bound-elements]
    'clojure.core/catch [:element :param :bound-elements]
-   'clojure.core/declare [{:element :declaration :repeat :symbol}]
+   'clojure.core/declare [{:element :declaration :repeat true}]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
+   'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.test/are [:params :bound-element :elements]
    'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'compojure.core/ANY [:element :param :bound-elements]
@@ -706,6 +711,7 @@
           sexpr (z/sexpr element-loc)
           repeat? (case (:repeat element-info)
                     :symbol (symbol? sexpr)
+                    :list (list? sexpr)
                     true true
                     nil)
           process? (case (:pred element-info)
@@ -730,6 +736,8 @@
           (function-params-and-bodies element-loc context scoped)
           :declaration
           (macro-declaration element-info element-loc context scoped)
+          :fn-spec
+          (handle-fn-spec element-loc context scoped (:tags element-info))
           nil))
       (when macro-sub-forms
         (vswap! context update :macro-defs #(apply dissoc % macro-sub-forms)))

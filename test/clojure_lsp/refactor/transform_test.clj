@@ -103,7 +103,12 @@
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [[_] 1 x x" \newline
                 "      a (x)] a)")
-           (z/root-string loc)))) )
+           (z/root-string loc))))
+  (let [zloc (z/find-value (z/of-string "(let [] a)") z/next 'a)
+        [{:keys [loc]}] (transform/move-to-let zloc nil 'x)]
+    (is (= 'let (z/sexpr (z/down loc))))
+    (is (= (str "(let [x a] x)")
+           (z/root-string loc)))))
 
 (deftest introduce-let-test
   (let [zloc (z/of-string "(inc a)")

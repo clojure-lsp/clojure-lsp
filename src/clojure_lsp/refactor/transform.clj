@@ -164,9 +164,9 @@
 (defn replace-in-bind-values [first-bind p? replacement]
   (loop [bind first-bind
          marked? false]
-    (let [exists? (-> bind
-                      (z/right)
-                      (find-within p?))
+    (let [exists? (some-> bind
+                          (z/right)
+                          (find-within p?))
           bind' (if exists?
                   (-> bind
                       (edit/mark-position-when :first-occurrence (not marked?))
@@ -191,8 +191,9 @@
           binding-sym (symbol binding-name)
           bindings-loc (z/right let-loc)
           {:keys [col]} (meta (z/node bindings-loc)) ;; indentation of bindings
+          first-bind (z/down bindings-loc)
           bindings-pos (replace-in-bind-values
-                         (z/down bindings-loc)
+                         first-bind
                          #(= bound-string (z/string %))
                          binding-sym)
           with-binding (if bindings-pos
@@ -202,8 +203,9 @@
                              (cz/insert-left (n/newlines 1))
                              (cz/insert-left (n/spaces col)))
                          (-> bindings-loc
-                             (cz/append-child (n/newlines 1))
-                             (cz/append-child (n/spaces col)) ; insert let and binding backwards
+                             (cond->
+                               first-bind (cz/append-child (n/newlines 1))
+                               first-bind (cz/append-child (n/spaces col))) ; insert let and binding backwards
                              (z/append-child binding-sym) ; add binding symbol
                              (z/append-child bound-node)
                              (z/down)

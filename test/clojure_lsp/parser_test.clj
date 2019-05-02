@@ -455,3 +455,15 @@
     (is (= (:sym c-param) (:sym c-use)))
     (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
     (is (= #{:scoped} (:tags a-use) (:tags c-use)))))
+
+(deftest macro-def-reify
+  (let [code "(reify String (bar [a] a) (foo []) (qux [c] c))"
+        usages (parser/find-usages code :clj {})
+        [_ string-class bar a-param a-use foo qux c-param c-use] usages]
+    (is (= 9 (count usages)))
+    (is (= 'java.lang.String (:sym string-class)))
+    (is (= #{:method :norename} (:tags bar) (:tags foo) (:tags qux)))
+    (is (= (:sym a-param) (:sym a-use)))
+    (is (= (:sym c-param) (:sym c-use)))
+    (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
+    (is (= #{:scoped} (:tags a-use) (:tags c-use)))))

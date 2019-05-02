@@ -518,6 +518,21 @@
         (recur method-loc (z-right-sexpr method-loc)))
       prev-loc)))
 
+(defn handle-class-and-methods [class-loc context scoped]
+  (loop [proto-loc class-loc]
+        (when proto-loc
+          (add-reference context scoped (z/node proto-loc) {})
+          (let [next-loc (z-right-sexpr proto-loc)]
+            (cond
+              (= (z/tag next-loc) :token)
+              (recur next-loc)
+
+              (= (z/tag next-loc) :list)
+              (some-> proto-loc
+                      (handle-type-methods context scoped)
+                      (z-right-sexpr)
+                      (recur)))))))
+
 (defn handle-deftype
   [op-loc _loc context scoped]
   (let [type-loc (z-right-sexpr op-loc)
@@ -526,7 +541,6 @@
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
                                                      :signatures [(z/sexpr fields-loc)]})
-
     (when (= "defrecord" (name (z/sexpr op-loc)))
       (let [type-name (name (z/sexpr type-loc))
             mapper-name (str "map->" type-name)
@@ -543,20 +557,8 @@
         (vswap! context update :publics conj construct-name)
         (add-reference context scoped constructor {:tags #{:declare :public :factory :norename}
                                                    :kind :function})))
-    (let [field-scope (parse-params fields-loc context scoped)]
-      (loop [proto-loc (z-right-sexpr fields-loc)]
-        (when proto-loc
-          (add-reference context field-scope (z/node proto-loc) {})
-          (let [next-loc (z-right-sexpr proto-loc)]
-            (cond
-              (= (z/tag next-loc) :token)
-              (recur next-loc)
-
-              (= (z/tag next-loc) :list)
-              (some-> proto-loc
-                      (handle-type-methods context field-scope)
-                      (z-right-sexpr)
-                      (recur)))))))))
+    (let [field-scoped (parse-params fields-loc context scoped)]
+      (handle-class-and-methods (z-right-sexpr fields-loc) context field-scoped))))
 
 (defn handle-dispatch-macro
   [loc context scoped]
@@ -612,6 +614,7 @@
    'clojure.core/declare [{:element :declaration :repeat true}]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
    'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
+   'clojure.core/reify [:element {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.test/are [:params :bound-element :elements]
    'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'compojure.core/ANY [:element :param :bound-elements]
@@ -738,6 +741,8 @@
           (macro-declaration element-info element-loc context scoped)
           :fn-spec
           (handle-fn-spec element-loc context scoped (:tags element-info))
+          :class-and-methods
+          (handle-class-and-methods element-loc context scoped)
           nil))
       (when macro-sub-forms
         (vswap! context update :macro-defs #(apply dissoc % macro-sub-forms)))

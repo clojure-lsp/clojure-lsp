@@ -609,10 +609,12 @@
 
 (def default-macro-defs
   {'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
+   'clojure.core.async/go-loop [:params :bound-elements]
    'clojure.core/as-> [:element :param :bound-elements]
    'clojure.core/catch [:element :param :bound-elements]
    'clojure.core/declare [{:element :declaration :repeat true}]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
+   'clojure.core/defprotocol [{:element :declaration :declare-class? true} {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.core/reify [:element {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.test/are [:params :bound-element :elements]
@@ -648,7 +650,7 @@
           (recur next-loc dirs)
           next-loc)))))
 
-(defn- macro-declaration [{:keys [signature kind tags doc? attr-map?]} element-loc context scoped]
+(defn- macro-declaration [{:keys [signature kind tags doc? attr-map? declare-class?]} element-loc context scoped]
   (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
       (let [signature-loc (macro-signature-loc signature element-loc)
@@ -664,8 +666,12 @@
                        doc (assoc :doc doc)
                        (seq signatures) (assoc :arglists signatures))
             tags' (set tags)
-            op-local? (contains? tags' :local)]
+            op-local? (contains? tags' :local)
+            context-ns (:ns @context)
+            [class-sym full-sym] (when declare-class?
+                                   [(symbol (name name-sexpr)) (symbol (str context-ns "." (name name-sexpr)))])]
         (cond
+          declare-class? (vswap! context update :imports assoc class-sym full-sym full-sym full-sym)
           op-local? (vswap! context update :locals conj (name name-sexpr))
           :else (vswap! context update :publics conj (name name-sexpr)))
         (add-reference context scoped (z/node element-loc)

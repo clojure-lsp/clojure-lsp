@@ -467,3 +467,15 @@
     (is (= (:sym c-param) (:sym c-use)))
     (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
     (is (= #{:scoped} (:tags a-use) (:tags c-use)))))
+
+(deftest macro-def-defprotocol
+  (let [code "(defprotocol Foo (bar [a] a) (foo []) (qux [c] c))"
+        usages (parser/find-usages code :clj {})
+        [_ class-dec bar a-param a-use foo qux c-param c-use] usages]
+    (is (= 9 (count usages)))
+    (is (= 'user.Foo (:sym class-dec)))
+    (is (= #{:method :norename} (:tags bar) (:tags foo) (:tags qux)))
+    (is (= (:sym a-param) (:sym a-use)))
+    (is (= (:sym c-param) (:sym c-use)))
+    (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
+    (is (= #{:scoped} (:tags a-use) (:tags c-use)))))

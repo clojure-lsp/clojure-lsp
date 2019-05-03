@@ -6,6 +6,7 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
     [rewrite-clj.zip.find :as zf]
@@ -22,6 +23,12 @@
        (mapv (juxt identity (constantly 'clojure.core)))
        (into {})))
 
+(def cljs-refers
+  (->> cc/core-syms
+       (concat cc/cljs-syms)
+       (mapv (juxt identity (constantly 'cljs.core)))
+       (into {})))
+
 (def lang-imports
   (->> cc/java-lang-syms
        (mapv (juxt identity #(symbol (str "java.lang." (name %)))))
@@ -29,7 +36,6 @@
 
 (def default-env
   {:ns 'user
-   :requires #{'clojure.core}
    :refer-all-syms {}
    :refers {}
    :imports {}
@@ -98,7 +104,8 @@
             declared {:sym declared}
             refered {:sym refered}
             (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
-            (contains? core-refers ident) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
+            (and (= :clj file-type) (contains? core-refers ident)) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
+            (and (= :cljs file-type) (contains? cljs-refers ident)) {:sym (ctr (name (get cljs-refers ident)) ident-name) :tags #{:norename}}
             (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
             :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
           (cond
@@ -504,6 +511,8 @@
 (defn handle-fn-spec [method-loc context scoped tags]
   (let [name-loc (z/down method-loc)
         params-loc (z-right-sexpr name-loc)]
+    (when (contains? tags :declare)
+      (vswap! context update :publics conj (name (z/sexpr name-loc))))
     (add-reference context scoped (z/node name-loc) {:tags tags})
     (let [new-scoped (parse-params params-loc context scoped)]
       (handle-rest (z-right-sexpr params-loc) context new-scoped))))
@@ -584,28 +593,29 @@
     ])
 
 (def ^:dynamic *sexpr-handlers*
-  {'clojure.core/ns handle-ns
-   'clojure.core/defn handle-defn
-   'clojure.core/defn- handle-defn
-   'clojure.core/fn handle-fn
-   'clojure.core/defmulti handle-def
-   'clojure.core/deftype handle-deftype
-   'clojure.core/defrecord handle-deftype
-   'clojure.core/def handle-def
-   'clojure.core/defonce handle-def
-   'clojure.core/defmacro handle-defmacro
-   'clojure.core/let handle-let
-   'clojure.core/when-let handle-let
-   'clojure.core/when-some handle-let
-   'clojure.core/when-first handle-let
-   'clojure.core/if-let handle-if-let
-   'clojure.core/if-some handle-if-let
-   'clojure.core/with-open handle-let
-   'clojure.core/loop handle-let
-   'clojure.core/for handle-let
-   'clojure.core/doseq handle-let
-   'clojure.core/comment handle-comment
-   'clojure.core/quote handle-quote})
+  (let [handlers {'clojure.core/ns handle-ns
+                  'clojure.core/defn handle-defn
+                  'clojure.core/defn- handle-defn
+                  'clojure.core/fn handle-fn
+                  'clojure.core/defmulti handle-def
+                  'clojure.core/deftype handle-deftype
+                  'clojure.core/defrecord handle-deftype
+                  'clojure.core/def handle-def
+                  'clojure.core/defonce handle-def
+                  'clojure.core/defmacro handle-defmacro
+                  'clojure.core/let handle-let
+                  'clojure.core/when-let handle-let
+                  'clojure.core/when-some handle-let
+                  'clojure.core/when-first handle-let
+                  'clojure.core/if-let handle-if-let
+                  'clojure.core/if-some handle-if-let
+                  'clojure.core/with-open handle-let
+                  'clojure.core/loop handle-let
+                  'clojure.core/for handle-let
+                  'clojure.core/doseq handle-let
+                  'clojure.core/comment handle-comment
+                  'clojure.core/quote handle-quote}]
+    (merge handlers (medley/map-keys #(symbol "cljs.core" (name %)) handlers))))
 
 (def default-macro-defs
   {'clojure.core.match/match [:element {:element [:params :bound-element] :repeat true}]
@@ -614,11 +624,22 @@
    'clojure.core/catch [:element :param :bound-elements]
    'clojure.core/declare [{:element :declaration :repeat true}]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
-   'clojure.core/defprotocol [{:element :declaration :declare-class? true} {:element :fn-spec :repeat true :tags #{:method :norename}}]
+   'clojure.core/defprotocol [{:element :declaration :declare-class? true :doc? true} {:element :element :pred :string} {:element :fn-spec :repeat true :tags #{:method :declare}}]
    'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
-   'clojure.core/reify [:element {:element :fn-spec :repeat true :tags #{:method :norename}}]
+   'clojure.core/reify [{:element :class-and-methods}]
    'clojure.test/are [:params :bound-element :elements]
    'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
+   'cljs.core.match/match [:element {:element [:params :bound-element] :repeat true}]
+   'cljs.core.async/go-loop [:params :bound-elements]
+   'cljs.core/as-> [:element :param :bound-elements]
+   'cljs.core/catch [:element :param :bound-elements]
+   'cljs.core/declare [{:element :declaration :repeat true}]
+   'cljs.core/defmethod [:element :element :function-params-and-bodies]
+   'cljs.core/defprotocol [{:element :declaration :declare-class? true :doc? true} {:element :element :pred :string} {:element :fn-spec :repeat true :tags #{:method :declare}}]
+   'cljs.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
+   'cljs.core/reify [{:element :class-and-methods}]
+   'cljs.test/are [:params :bound-element :elements]
+   'cljs.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'compojure.core/ANY [:element :param :bound-elements]
    'compojure.core/DELETE [:element :param :bound-elements]
    'compojure.core/GET [:element :param :bound-elements]
@@ -861,24 +882,26 @@
 
 (defn find-usages
   ([code file-type client-macro-defs]
-   (find-usages nil code file-type client-macro-defs))
+    (find-usages nil code file-type client-macro-defs))
   ([uri code file-type client-macro-defs]
-   (when-let [code-loc (try (-> code
-                                (string/replace #"(\w)/(\s|$)" "$1 $2")
-                                (z/of-string)
-                                (zm/up))
-                            (catch Throwable e
-                              (log/warn "Cannot read" uri (.getMessage e))))]
-     (let [macro-defs (merge default-macro-defs client-macro-defs)]
-       (if (= :cljc file-type)
-         (into (-> code-loc
-                   (process-reader-macro :clj)
-                   (find-usages* (volatile! (assoc default-env :file-type :clj :macro-defs macro-defs :uri uri)) {}))
-               (-> code-loc
-                   (process-reader-macro :cljs)
-                   (find-usages* (volatile! (assoc default-env :file-type :cljs :macro-defs macro-defs :uri uri)) {})))
-         (-> code-loc
-             (find-usages* (volatile! (assoc default-env :file-type file-type :macro-defs macro-defs :uri uri)) {})))))))
+    (when-let [code-loc (try (-> code
+                                 (string/replace #"(\w)/(\s|$)" "$1 $2")
+                                 (z/of-string)
+                                 (zm/up))
+                             (catch Throwable e
+                               (log/warn "Cannot read" uri (.getMessage e))))]
+      (let [macro-defs (merge default-macro-defs client-macro-defs)
+            requires {:clj #{'clojure.core}
+                      :cljs #{'cljs.core}}]
+        (if (= :cljc file-type)
+          (into (-> code-loc
+                    (process-reader-macro :clj)
+                    (find-usages* (volatile! (assoc default-env :requires (get requires :clj) :file-type :clj :macro-defs macro-defs :uri uri)) {}))
+                (-> code-loc
+                    (process-reader-macro :cljs)
+                    (find-usages* (volatile! (assoc default-env :requires (get requires :cljs) :file-type :cljs :macro-defs macro-defs :uri uri)) {})))
+          (-> code-loc
+              (find-usages* (volatile! (assoc default-env :requires (get requires file-type) :file-type file-type :macro-defs macro-defs :uri uri)) {})))))))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as _form-pos}

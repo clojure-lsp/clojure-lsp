@@ -50,7 +50,7 @@
            (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
 
 (deftest qualify-ident-test
-  (let [context (volatile! {})]
+  (let [context {:file-type :clj}]
     (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
     (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
     (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
@@ -295,7 +295,7 @@
           usages (drop 1 (parser/find-usages code :cljs {}))]
       (is (= ['user.FooBar 'gensym0/fn
               'gensym1/IBar 'gensym2/-x 'gensym3/IQux
-              'gensym4/toString 'gensym5/_ 'gensym0/fn 'clojure.core/str
+              'gensym4/toString 'gensym5/_ 'gensym0/fn 'cljs.core/str
               'gensym6/tooBad 'gensym7/a 'gensym0/fn
               'gensym8/IFn]
              (mapv :sym usages))))))
@@ -304,7 +304,8 @@
   (let [code "(ns hi)"
         usages (parser/find-usages code :cljc {})]
     (is (= 4 (count usages)))
-    (is (= 'clojure.core/ns (:sym (nth usages 0)) (:sym (nth usages 2))))
+    (is (= 'clojure.core/ns (:sym (nth usages 0))))
+    (is (= 'cljs.core/ns (:sym (nth usages 2))))
     (is (= "hi" (:str (nth usages 1)) (:str (nth usages 3)))))
   (let [code "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
         usages (parser/find-usages code :cljc {})
@@ -457,25 +458,38 @@
     (is (= #{:scoped} (:tags a-use) (:tags c-use)))))
 
 (deftest macro-def-reify
-  (let [code "(reify String (bar [a] a) (foo []) (qux [c] c))"
+  (let [code "(reify String (bar [a] a) (foo []) (qux [c] c) Exception (x [f]))"
         usages (parser/find-usages code :clj {})
-        [_ string-class bar a-param a-use foo qux c-param c-use] usages]
-    (is (= 9 (count usages)))
+        [_ string-class bar a-param a-use foo qux c-param c-use ex-class x f-param] usages]
+    (is (= 12 (count usages)))
     (is (= 'java.lang.String (:sym string-class)))
     (is (= #{:method :norename} (:tags bar) (:tags foo) (:tags qux)))
     (is (= (:sym a-param) (:sym a-use)))
     (is (= (:sym c-param) (:sym c-use)))
     (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
-    (is (= #{:scoped} (:tags a-use) (:tags c-use)))))
+    (is (= #{:scoped} (:tags a-use) (:tags c-use)))
+    (is (= 'java.lang.Exception (:sym ex-class)))))
 
 (deftest macro-def-defprotocol
-  (let [code "(defprotocol Foo (bar [a] a) (foo []) (qux [c] c))"
-        usages (parser/find-usages code :clj {})
-        [_ class-dec bar a-param a-use foo qux c-param c-use] usages]
-    (is (= 9 (count usages)))
-    (is (= 'user.Foo (:sym class-dec)))
-    (is (= #{:method :norename} (:tags bar) (:tags foo) (:tags qux)))
-    (is (= (:sym a-param) (:sym a-use)))
-    (is (= (:sym c-param) (:sym c-use)))
-    (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
-    (is (= #{:scoped} (:tags a-use) (:tags c-use)))))
+  (testing "no docstring"
+    (let [code "(defprotocol Foo (bar [a] a) (foo []) (qux [c] c))"
+          usages (parser/find-usages code :clj {})
+          [_ class-dec bar a-param a-use foo qux c-param c-use] usages]
+      (is (= 9 (count usages)))
+      (is (= 'user.Foo (:sym class-dec)))
+      (is (= #{:method :declare} (:tags bar) (:tags foo) (:tags qux)))
+      (is (= (:sym a-param) (:sym a-use)))
+      (is (= (:sym c-param) (:sym c-use)))
+      (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
+      (is (= #{:scoped} (:tags a-use) (:tags c-use))))
+    (testing "docstring"
+      (let [code "(defprotocol Foo \"I AM DOC\" (bar [a] a) (foo []) (qux [c] c))"
+            usages (parser/find-usages code :clj {})
+            [_ class-dec bar a-param a-use foo qux c-param c-use] usages]
+        (is (= 9 (count usages)))
+        (is (= 'user.Foo (:sym class-dec)))
+        (is (= #{:method :declare} (:tags bar) (:tags foo) (:tags qux)))
+        (is (= (:sym a-param) (:sym a-use)))
+        (is (= (:sym c-param) (:sym c-use)))
+        (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
+        (is (= #{:scoped} (:tags a-use) (:tags c-use)))))))

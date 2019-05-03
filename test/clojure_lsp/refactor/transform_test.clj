@@ -165,7 +165,7 @@
 
 (deftest extract-function-test
   (let [code "(defn a [b] (let [c 1] (b c)))"
-        usages (parser/find-usages code :clojure {})
+        usages (parser/find-usages code :clj {})
         zloc (z/find-value (z/of-string code) z/next 'let)
         results (transform/extract-function
                   zloc

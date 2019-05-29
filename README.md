@@ -104,8 +104,22 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 `macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
 
 Valid element definitions are:
-  - `{"element": "declaration", "tags", ["unused", "local"], "signature": ["next"]}` This marks a symbol or keyword as a definition. `tags` are optional. The `unused` tag supresses the "unused declaration" diagnostic, useful for `deftest` vars. The `local` tag marks the var as private. `signature` is optional - if the macro has `defn`-like bindings this vector of movements should point to the parameter vector or the first var arg list form (only `next` is supported right now).
-    - e.g. `(my-defn- my-name "docstring" [& params] (count params))` => `{"my.ns/my-defn-" [{"element": "declaration", "tags", ["local"], "signature": ["next" "next"]}]}`
+  - `declaration` This marks a symbol or keyword as a definition/declaration of
+    a var in the current namespace.
+    - In the simplest case, this element can be specified as the keyword
+      `:declaration`.
+    - You can customize the behavior of the declaration by making it a map.
+      - e.g. `{:element :declaration, :tags ["unused" "local"], :signature ["next"]}`
+      - `tags` are optional.
+        - The `unused` tag supresses the "unused declaration" diagnostic, useful
+          for `deftest` vars.
+        - The `local` tag marks the var as private.
+      - `signature` is optional. If the macro has `defn`-like bindings, this
+        vector of movements should point to the parameter vector or the first
+        var arg list form. Only `next` is supported right now.
+    - e.g. `(my-defn- my-name "docstring" [& params] (count params))` =>
+      `{"my.ns/my-defn-" [{"element": "declaration", "tags", ["local"],
+      "signature": ["next" "next"]}]}`
   - `bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
     - e.g. `(my-with-open [resource ()] ....)` => `{"my.ns/my-with-open" ["bindings", "bound-elements"]}`
   - `function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
@@ -114,8 +128,19 @@ Valid element definitions are:
     - e.g. `(myfn [c] ...)` => `{"my.ns/myfn" ["params", "bound-elements"]}`
   - `param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
   - `elements` This will parse the rest of the elements in the macro form with the usual rules.
-    - e.g. `(myif-let [answer (expr)] answer (log "no answer") "no answer")` => `{"my.ns/myif-let" ["bindings", "bound-element", "elements"]}`
-  - `element` This will parse a single element in the macro form with the usual rules.
+    - e.g. `(myif-let [answer (expr)] answer (log "no answer") "no answer")` =>
+      `{"my.ns/myif-let" ["bindings", "bound-element", "elements"]}`
+  - `element` This will parse a single element in the macro form with the usual
+    rules.
+    - In the simplest case, `element` can be specified as the keyword
+      `:element`. This will always parse a single element.
+    - You can make the `element` optional by making it a map that includes
+      a predicate `pred` which will determine whether the current form is parsed
+      as an `element`, or if the `element` should be skipped and the current
+      form parsed as the next defined element.
+    - For example, you can define an optional docstring element as `{:element
+      :element, :pred :string}`, or an optional metadata map as `{:element
+      :element, :pred :map}`.
   - `bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
   - `bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
 

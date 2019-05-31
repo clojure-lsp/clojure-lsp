@@ -852,7 +852,9 @@
             (recur (edit/skip-over loc) scoped))
 
           (= :reader-macro tag)
-          (recur (edit/skip-over loc) scoped)
+          (do
+            (handle-rest (-> loc z/down z/right) context scoped)
+            (recur (edit/skip-over loc) scoped))
 
           :else
           (recur (zm/next loc) scoped))))))

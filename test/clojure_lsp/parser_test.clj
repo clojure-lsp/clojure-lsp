@@ -440,6 +440,11 @@
         usages (parser/find-usages code :clj {})]
     (is (= 0 (count usages)))))
 
+(deftest parse-reader-tag
+  (let [code "#js (inc (inc 3))"
+        usages (parser/find-usages code :cljs {})]
+    (is (= 2 (count usages)))))
+
 (deftest parse-let-sexpr
   (let [code "(let [noparams] noparams)"
         usages (parser/find-usages code :clj {})]

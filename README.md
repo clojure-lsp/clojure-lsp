@@ -53,11 +53,12 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | done | command             | args | notes |
 | ---- | ------------------- | ---- | ----- |
 |   √  | add-missing-libspec | | |
-|   -  | clean-ns            | | | sort only
+|   -  | clean-ns            | | | :require sort only
 |   √  | cycle-coll          | | |
 |   √  | cycle-privacy       | | |
 |   √  | expand-let          | | |
 |   √  | extract-function    | `[document-uri, line, column, function-name]` | |
+|   √  | inline-symbol       | | |
 |   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
 |   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
 |   √  | thread-first        | | |

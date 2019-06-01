@@ -20,9 +20,14 @@
 
 (defn find-op
   [zloc]
-  (if (z/down zloc)
+  (if (and (= :list (z/tag zloc))
+           (z/down zloc))
     (z/down zloc)
-    (z/leftmost zloc)))
+    (loop [op-loc (z/leftmost zloc)]
+      (let [up-loc (z/up op-loc)]
+       (if (= :list (z/tag up-loc))
+         op-loc
+         (recur (z/leftmost up-loc)))))))
 
 (defn find-ops-up
   [zloc & op-syms]

@@ -1,6 +1,7 @@
 (ns clojure-lsp.refactor.transform
   (:require
     [clojure-lsp.db :as db]
+    [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure.set :as set]
     [clojure.string :as string]
@@ -15,7 +16,7 @@
   (mapv (fn [zip-edit]
           (let [loc (:loc zip-edit)]
             (-> zip-edit
-                (assoc :new-text (z/string loc))
+                (assoc :new-text (if loc (z/string loc) ""))
                 (dissoc :loc))))
         zip-edits))
 
@@ -391,6 +392,32 @@
                    name-loc)]
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
+
+(defn inline-symbol
+  [zloc _uri [_ {def-uri :uri definition :usage}] references]
+  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
+        def-loc (parser/loc-at-pos text (:row definition) (:col definition))
+        op (some-> (edit/find-op def-loc)
+                   z/sexpr
+                   #{'let 'def})]
+    (when op
+      (let [uses (remove (comp #(contains? % :declare) :tags :usage) references)
+            val-loc (z/right def-loc)
+            end-pos (if (= op 'def) (meta (z/node (z/up def-loc))) (meta (z/node val-loc)))
+            prev-loc (if (= op 'def) (z/left (z/up def-loc)) (z/left def-loc))
+            start-pos (if prev-loc
+                        (set/rename-keys (meta (z/node prev-loc))
+                                         {:end-row :row :end-col :col})
+                        (meta (z/node def-loc)))
+            def-range {:row (:row start-pos)
+                       :col (:col start-pos)
+                       :end-row (:end-row end-pos)
+                       :end-col (:end-col end-pos)}]
+        (reduce
+          (fn [accum {:keys [uri usage]}]
+            (update accum uri (fnil conj []) {:loc val-loc :range usage}))
+          {def-uri [{:loc nil :range def-range}]}
+          uses)))))
 
 (comment
    ; join if let above

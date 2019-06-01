@@ -205,7 +205,7 @@
                (map (fn [sym] {:label (str sym)}))
                (sort-by :label)))))))
 
-(defn references [doc-id line column]
+(defn reference-usages [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor-sym (:sym (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id)))]
@@ -215,7 +215,12 @@
                 {:keys [sym] :as usage} usages
                 :when (= sym cursor-sym)]
             {:uri uri
-             :range (shared/->range usage)}))))
+             :usage usage}))))
+
+(defn references [doc-id line column]
+  (mapv (fn [{:keys [uri usage]}]
+          {:uri uri :range (shared/->range usage)})
+        (reference-usages doc-id line column)))
 
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
@@ -268,26 +273,34 @@
                                      :edits edits})))]
         (client-changes doc-changes)))))
 
-(defn definition [doc-id line column]
+(defn definition-usage [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         file-type (shared/uri->file-type doc-id)
         cursor (find-reference-under-cursor line column local-env file-type)
         cursor-sym (:sym cursor)]
-    (log/warn "Finding definition" doc-id "row" line "col" column "cursor" cursor-sym)
-    (if cursor-sym
-      (if-let [result (first
-                        (for [[env-doc-id usages] file-envs
-                              {:keys [sym tags] :as usage} usages
-                              :when (= sym cursor-sym)
-                              :when (and (or (= doc-id env-doc-id) (:public tags))
-                                      (:declare tags))]
-                          {:uri env-doc-id :range (shared/->range usage)}))]
-        result
-        (log/warn "Could not find definition for element under cursor, I think your cursor is:" (pr-str (:str cursor)) "qualified as:" (pr-str cursor-sym)))
-      (if-let [next-stuff (find-references-after-cursor line column local-env file-type)]
-        (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
-        (log/warn "Could not find element under cursor, there are no known elements after this position.")))))
+    [cursor
+     (first
+       (for [[env-doc-id usages] file-envs
+             {:keys [sym tags] :as usage} usages
+             :when (= sym cursor-sym)
+             :when (and (or (= doc-id env-doc-id) (:public tags))
+                        (:declare tags))]
+         {:uri env-doc-id :usage usage}))]))
+
+(defn definition [doc-id line column]
+  (let [[cursor {:keys [uri usage]}] (definition-usage doc-id line column)]
+    (log/warn "Finding definition" doc-id "row" line "col" column "cursor" (:sym cursor))
+    (if (:sym cursor)
+      (if usage
+        {:uri uri :range (shared/->range usage) :str (:str usage)}
+        (log/warn "Could not find definition for element under cursor, I think your cursor is:" (pr-str (:str cursor)) "qualified as:" (pr-str (:sym cursor))))
+      (let [file-envs (:file-envs @db/db)
+            local-env (get file-envs doc-id)
+            file-type (shared/uri->file-type doc-id)]
+        (if-let [next-stuff (find-references-after-cursor line column local-env file-type)]
+          (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
+          (log/warn "Could not find element under cursor, there are no known elements after this position."))))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
@@ -297,6 +310,7 @@
    "thread-last-all" #'refactor/thread-last-all
    "unwind-thread" #'refactor/unwind-thread
    "unwind-all" #'refactor/unwind-all
+   "inline-symbol" #'refactor/inline-symbol
    "move-to-let" #'refactor/move-to-let
    "introduce-let" #'refactor/introduce-let
    "expand-let" #'refactor/expand-let
@@ -312,9 +326,16 @@
         usages (get-in @db/db [:file-envs doc-id])
         result (apply (get refactorings refactoring) loc doc-id
                       (cond-> (vec args)
+                        (= "inline-symbol" refactoring) (conj (definition-usage doc-id line column) (reference-usages doc-id line column))
                         (= "extract-function" refactoring) (conj (parser/usages-in-form loc usages))))]
     (if loc
       (cond
+        (map? result)
+        (let [changes (vec (for [[doc-id sub-results] result]
+                             {:text-document {:uri doc-id :version v}
+                              :edits (mapv #(update % :range shared/->range) (refactor/result sub-results))}))]
+          (client-changes changes))
+
         (seq result)
         (let [changes [{:text-document {:uri doc-id :version v}
                         :edits (mapv #(update % :range shared/->range) (refactor/result result))}]]

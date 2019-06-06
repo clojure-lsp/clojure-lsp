@@ -161,6 +161,15 @@ Valid element definitions are:
     - For example, you can define an optional docstring element as `{:element
       :element, :pred :string}`, or an optional metadata map as `{:element
       :element, :pred :map}`.
+    - `element` can also describe repeated elements. For example,
+      `{:element :element, :pred :string, :repeat true}` will parse 1 or more
+      strings.
+    - `element` can also describe multiple elements of different types. This is
+      useful, for example, if you have a macro like
+      [`adzerk.env/def`](https://github.com/adzerk-oss/env#get) whose arguments
+      are pairs of declarations and values:
+      - `(adzerk.env/def FOO :required, BAR nil, BAZ "string")` =>
+        `{adzerk.env/def [{:element [:declaration :element], :repeat true}]}`
 
   - `bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
 

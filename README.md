@@ -132,23 +132,23 @@ Valid element definitions are:
         vector of movements should point to the parameter vector or the first
         var arg list form. Only `next` is supported right now.
     - e.g. `(my-defn- my-name "docstring" [& params] (count params))` =>
-      `{"my.ns/my-defn-" [{"element": "declaration", "tags", ["local"],
+      `{my.ns/my-defn- [{"element": "declaration", "tags", ["local"],
       "signature": ["next" "next"]}]}`
 
   - `bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
-    - e.g. `(my-with-open [resource ()] ....)` => `{"my.ns/my-with-open" ["bindings", "bound-elements"]}`
+    - e.g. `(my-with-open [resource ()] ....)` => `{my.ns/my-with-open ["bindings", "bound-elements"]}`
 
   - `function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
-    - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{"my.ns/myfn" ["function-params-and-bodies"]}`
+    - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{my.ns/myfn ["function-params-and-bodies"]}`
 
   - `params` This marks a `defn` like parameter vector. `bound-elements` will have these parameters in their scope.
-    - e.g. `(myfn [c] ...)` => `{"my.ns/myfn" ["params", "bound-elements"]}`
+    - e.g. `(myfn [c] ...)` => `{my.ns/myfn ["params", "bound-elements"]}`
 
   - `param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
 
   - `elements` This will parse the rest of the elements in the macro form with the usual rules.
     - e.g. `(myif-let [answer (expr)] answer (log "no answer") "no answer")` =>
-      `{"my.ns/myif-let" ["bindings", "bound-element", "elements"]}`
+      `{my.ns/myif-let ["bindings", "bound-element", "elements"]}`
 
   - `element` This will parse a single element in the macro form with the usual
     rules.
@@ -228,7 +228,7 @@ Project-local `.lsp/settings.json` would have content like:
 ```
 {"initializationOptions": {
    "source-paths": ["shared-src", "src", "test", "dashboard/src"],
-   "macro-defs": {"project.macros/dofor": ["bindings", "bound-elements"]}}}
+   "macro-defs": {project.macros/dofor: ["bindings", "bound-elements"]}}}
 ```
 
 ### Oni

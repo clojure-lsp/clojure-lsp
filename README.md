@@ -101,6 +101,7 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
   - `classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
   - `env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE": "x.boot"}`)
 
+### macro-defs
 
 `macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
 
@@ -121,16 +122,22 @@ Valid element definitions are:
     - e.g. `(my-defn- my-name "docstring" [& params] (count params))` =>
       `{"my.ns/my-defn-" [{"element": "declaration", "tags", ["local"],
       "signature": ["next" "next"]}]}`
+
   - `bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
     - e.g. `(my-with-open [resource ()] ....)` => `{"my.ns/my-with-open" ["bindings", "bound-elements"]}`
+
   - `function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
     - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{"my.ns/myfn" ["function-params-and-bodies"]}`
+
   - `params` This marks a `defn` like parameter vector. `bound-elements` will have these parameters in their scope.
     - e.g. `(myfn [c] ...)` => `{"my.ns/myfn" ["params", "bound-elements"]}`
+
   - `param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
+
   - `elements` This will parse the rest of the elements in the macro form with the usual rules.
     - e.g. `(myif-let [answer (expr)] answer (log "no answer") "no answer")` =>
       `{"my.ns/myif-let" ["bindings", "bound-element", "elements"]}`
+
   - `element` This will parse a single element in the macro form with the usual
     rules.
     - In the simplest case, `element` can be specified as the keyword
@@ -142,7 +149,9 @@ Valid element definitions are:
     - For example, you can define an optional docstring element as `{:element
       :element, :pred :string}`, or an optional metadata map as `{:element
       :element, :pred :map}`.
+
   - `bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
+
   - `bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
 
 See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.

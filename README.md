@@ -105,7 +105,19 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 
 `macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
 
+#### Element definitions
+
+Elements can be defined in two ways:
+
+* A simple keyword, e.g. `:declaration`
+
+* A map that includes the element type and options,
+  e.g. `{:element :declaration, :tags ["unused" "local"], :signature ["next"]}`
+
+#### Element types
+
 Valid element definitions are:
+
   - `declaration` This marks a symbol or keyword as a definition/declaration of
     a var in the current namespace.
     - In the simplest case, this element can be specified as the keyword

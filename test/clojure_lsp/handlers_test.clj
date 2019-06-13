@@ -43,12 +43,20 @@
       (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text]))))))
 
 (deftest test-find-diagnostics
-  (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
-                  "file://b.clj" (parser/find-usages "(ns b (:require [a :as a] [c :as c])) (def x a/bar) :a/bar" :clj {})}})
   (testing "unused symbols"
-    (is (= ["Unused alias: c" "Unused declaration: b" "Unused declaration: x"]
-           (map :message (crawler/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"])))))))
+    (reset! db/db {:file-envs
+                   {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
+                    "file://b.clj" (parser/find-usages "(ns b
+                                                          (:require [a :as a]
+                                                            [c :as c]
+                                                            [d :as d-alias]
+                                                            [e :as e-alias]))
+                                                        (def x a/bar)
+                                                        :a/bar
+                                                        (let [{:keys [::d-alias/bar] ::e-alias/keys [foo] ::f/keys [qux]} {}]
+                                                          [bar qux foo])" :clj {})}})
+    (let [usages (crawler/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"]))]
+      (is (= ["Unknown namespace: f" "Unused alias: c" "Unused declaration: b" "Unused declaration: x"] (map :message usages))))))
 
 (deftest test-completion
   (let [db-state {:file-envs

@@ -32,13 +32,20 @@
     (for [usage unknown-usages
           :let [known-alias? (some-> (:unkown-ns usage)
                                      aliases)
-                problem (if known-alias?
+                problem (cond
+                          known-alias?
                           :require
+
+                          (:unknown-ns usage)
+                          :unknown-ns
+
+                          :else
                           :unknown)]]
       {:range (shared/->range usage)
        :code problem
        :message (case problem
-                  :unknown "Unknown symbol"
+                  :unknown (str "Unknown symbol: " (:str usage))
+                  :unknown-ns (str "Unknown namespace: " (:unknown-ns usage))
                   :require "Needs Require")
        :severity 1})))
 

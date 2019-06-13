@@ -159,6 +159,48 @@
     (vswap! context update :usages conj new-usage)
     new-usage))
 
+(defn destructure-keys [scoped key-loc scope-bounds context val-loc]
+  (loop [child-loc (z/down val-loc)
+         scoped scoped]
+    (if child-loc
+      (let [sexpr (z/sexpr child-loc)
+            child-node (z/node child-loc)
+            key-type (name (z/sexpr key-loc))
+            key-ident-info (qualify-ident (z/node key-loc) @context scoped false)
+            ident-info (qualify-ident child-node @context scoped false)
+            scoped-ns (gensym)
+            new-scoped (assoc scoped (symbol (name sexpr)) {:ns scoped-ns :bounds scope-bounds})
+            ok-ns? (and (contains? (:tags ident-info) :unknown)
+                        (not (:unknown-ns ident-info)))
+            key-sym (:sym key-ident-info)]
+        (when (#{"keys" "syms"} key-type)
+          (add-reference context scoped child-node (cond-> {:sym (cond->> (:sym ident-info)
+                                                                   ok-ns?
+                                                                   (name)
+
+                                                                   (and (= "keys" key-type) (simple-ident? key-sym))
+                                                                   (keyword)
+
+                                                                   (and (= "keys" key-type) (qualified-ident? key-sym))
+                                                                   (keyword (namespace key-sym))
+
+                                                                   (and (= "syms" key-type) (simple-ident? key-sym))
+                                                                   (symbol)
+
+                                                                   (and (= "syms" key-type) (qualified-ident? key-sym))
+                                                                   (symbol (namespace key-sym)))}
+                                                     ok-ns? (assoc :tags nil)
+                                                     (:unknown-ns key-ident-info) (assoc :unknown-ns (:unknown-ns key-ident-info))
+                                                     (contains? (:tags key-ident-info) :unknown) (assoc :tags (:tags key-ident-info)))))
+        (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
+                                                          :scope-bounds scope-bounds
+                                                          :sym (symbol (name scoped-ns)
+                                                                       (name sexpr))})
+        (if (nil? (z-right-sexpr child-loc))
+          new-scoped
+          (recur (z-right-sexpr child-loc) new-scoped)))
+      scoped)))
+
 (defn destructure-map [map-loc scope-bounds context scoped]
   (loop [key-loc (z/down (zsub/subzip map-loc))
          scoped scoped]
@@ -166,22 +208,9 @@
       (let [key-sexpr (z/sexpr key-loc)
             val-loc (z-right-sexpr key-loc)]
         (cond
-          (#{:keys :strs :syms} key-sexpr)
+          (and (keyword? key-sexpr) (#{"keys" "strs" "syms"} (name key-sexpr)))
           (recur (edit/skip-over val-loc)
-                 (loop [child-loc (z/down val-loc)
-                        scoped scoped]
-                   (if child-loc
-                     (let [sexpr (z/sexpr child-loc)
-                           scoped-ns (gensym)
-                           new-scoped (assoc scoped (symbol (name sexpr)) {:ns scoped-ns :bounds scope-bounds})]
-                       (add-reference context scoped (z/node child-loc) {:tags #{:declare :param}
-                                                                         :scope-bounds scope-bounds
-                                                                         :sym (symbol (name scoped-ns)
-                                                                                      (name sexpr))})
-                       (if (nil? (z-right-sexpr child-loc))
-                         new-scoped
-                         (recur (z-right-sexpr child-loc) new-scoped)))
-                     scoped)))
+                 (destructure-keys scoped key-loc scope-bounds context val-loc))
 
           (= :as key-sexpr)
           (let [val-node (z/node val-loc)
@@ -198,7 +227,10 @@
           (recur (edit/skip-over val-loc) scoped)
 
           (not= '& key-sexpr)
-          (recur (z-right-sexpr val-loc) (parse-destructuring key-loc scope-bounds context scoped))
+          (let [val-sexpr (z/sexpr val-loc)]
+            (when (keyword? val-sexpr)
+              (add-reference context scoped (z/node val-loc) {}))
+            (recur (z-right-sexpr val-loc) (parse-destructuring key-loc scope-bounds context scoped)))
 
           :else
           (recur (edit/skip-over val-loc) scoped)))

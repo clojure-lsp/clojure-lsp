@@ -20,27 +20,22 @@
 
 (defn find-op
   [zloc]
-  (if (and (= :list (z/tag zloc))
-           (z/down zloc))
-    (z/down zloc)
-    (loop [op-loc (z/leftmost zloc)]
+  (loop [op-loc (or (and (= :list (z/tag zloc))
+                           (z/down zloc))
+                      (z/leftmost zloc))]
       (let [up-loc (z/up op-loc)]
-       (if (= :list (z/tag up-loc))
-         op-loc
-         (recur (z/leftmost up-loc)))))))
+       (cond
+         (nil? up-loc) nil
+         (= :list (z/tag up-loc)) op-loc
+         :else (recur (z/leftmost up-loc))))))
 
 (defn find-ops-up
   [zloc & op-syms]
-  (when-not (top? zloc)
-    (let [oploc (z/leftmost zloc)]
-      (if (contains? (set op-syms) (z/sexpr oploc))
-        oploc
-        (let [next-op (z/leftmost (z/up oploc))]
-          (when-not (= next-op zloc)
-            (apply find-ops-up next-op op-syms)))))))
-
-(comment
-  (find-ops-up (z/find-next-value (z/of-string "(foo ((x) [a]))") z/next 'a) 'x))
+  (loop [op-loc (find-op zloc)]
+    (cond
+      (nil? op-loc) nil
+      (contains? (set op-syms) (z/sexpr op-loc)) op-loc
+      :else (recur (z/leftmost (z/up op-loc))))))
 
 (defn single-child?
   [zloc]

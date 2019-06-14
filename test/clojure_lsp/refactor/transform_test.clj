@@ -123,11 +123,17 @@
       (is (= (str "(let [b (inc a)\n c b]\n  c)") (z/root-string loc))))))
 
 (deftest expand-let-test
-  (let [zloc (-> (z/of-string "(+ 1 (let [a 1] a) 2)") z/down z/right z/right)]
-    (let [[{:keys [loc range]}] (transform/expand-let zloc nil)]
+  (testing "simple"
+    (let [zloc (-> (z/of-string "(+ 1 (let [a 1] a) 2)") (z/find-value z/next 'let))
+          [{:keys [loc range]}] (transform/expand-let zloc nil)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
-      (is (= (str "(let [a 1]\n (+ 1 a 2))") (z/root-string loc))))))
+      (is (= (str "(let [a 1]\n (+ 1 a 2))") (z/root-string loc)))))
+  (testing "in fn literal"
+    (let [code "#(a (b c))"
+          zloc (-> (z/of-string code) (z/find-value z/next 'b) (z/up))
+          [{:keys [loc]}] (transform/expand-let zloc nil)]
+      (is (nil? (z/root-string loc))))))
 
 (deftest clean-ns-test
   (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n    [c  :as x] a [b]))") z/down z/right z/right)

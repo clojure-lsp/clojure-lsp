@@ -183,9 +183,9 @@
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
   [zloc _uri binding-name]
-  (if-let [let-top-loc (some-> zloc
-                               (edit/find-ops-up 'let)
-                               z/up)]
+  (when-let [let-top-loc (some-> zloc
+                                 (edit/find-ops-up 'let)
+                                 z/up)]
     (let [let-loc (z/down (zsub/subzip let-top-loc))
           bound-string (z/string zloc)
           bound-node (z/node zloc)
@@ -217,8 +217,7 @@
                           (= (z/string loc) bound-string) (recur (z/next (z/replace loc binding-sym)))
                           :else (recur (z/next loc))))]
       [{:range (meta (z/node (z/up let-loc)))
-        :loc new-let-loc}])
-    []))
+        :loc new-let-loc}])))
 
 (defn introduce-let
   "Adds a let around the current form."
@@ -243,25 +242,29 @@
 (defn expand-let
   "Expand the scope of the next let up the tree."
   [zloc _uri]
-  (let [let-loc zloc
-        bind-node (-> let-loc z/down z/right z/node)]
-    (if-let [parent-loc (edit/parent-let? let-loc)]
-      [{:range (meta (z/node parent-loc))
-        :loc (edit/join-let let-loc)}]
-      (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))]
-        [{:range parent-meta
-          :loc (-> let-loc
-                   (z/splice) ; splice in let
-                   (z/remove) ; remove let
-                   (z/next)
-                   (z/remove) ; remove binding
-                   (z/up) ; go to form container
-                   (edit/wrap-around :list) ; wrap with new let list
-                   (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
-                   (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
-                   (z/insert-child bind-node)
-                   (z/insert-child 'let)
-                   (edit/join-let))}]))))
+  (let [let-loc (some-> zloc
+                        (edit/find-ops-up 'let)
+                        z/up)]
+    (when let-loc
+      (let [bind-node (-> let-loc z/down z/right z/node)
+            parent-loc (edit/parent-let? let-loc)]
+        (if parent-loc
+          [{:range (meta (z/node parent-loc))
+            :loc (edit/join-let let-loc)}]
+          (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))]
+            [{:range parent-meta
+              :loc (-> let-loc
+                       (z/splice) ; splice in let
+                       (z/remove) ; remove let
+                       (z/next)
+                       (z/remove) ; remove binding
+                       (z/up) ; go to form container
+                       (edit/wrap-around :list) ; wrap with new let list
+                       (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
+                       (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
+                       (z/insert-child bind-node)
+                       (z/insert-child 'let)
+                       (edit/join-let))}]))))))
 
 (defn clean-ns
   [zloc _uri]

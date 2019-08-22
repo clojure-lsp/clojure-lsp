@@ -303,7 +303,7 @@
               'gensym1/IBar 'gensym2/-x 'gensym3/IQux
               'gensym4/toString 'gensym5/_ 'gensym0/fn 'cljs.core/str
               'gensym6/tooBad 'gensym7/a 'gensym0/fn
-              'gensym8/IFn]
+              'cljs.core/IFn]
              (mapv :sym usages))))))
 
 (deftest find-references-cljc-test

@@ -65,7 +65,10 @@
           :when (or (not= :unused-ns code) (not (string/index-of uri "test/")))]
       {:range (shared/->range usage)
        :code code
-       :message (str "Unused declaration: " (:str usage))
+       :message (case code
+                  :unused-ns (str "Unused namespace: " (:str usage))
+                  :unused-param (str "Unused parameter: " (:str usage))
+                  (str "Unused declaration: " (:str usage)))
        :severity 1})))
 
 (defn ^:private diagnose-unused-aliases [_uri declared-aliases usages]

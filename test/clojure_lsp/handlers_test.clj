@@ -56,7 +56,7 @@
                                                         (let [{:keys [::d-alias/bar] ::e-alias/keys [foo] ::f/keys [qux]} {}]
                                                           [bar qux foo])" :clj {})}})
     (let [usages (crawler/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"]))]
-      (is (= ["Unknown namespace: f" "Unused alias: c" "Unused declaration: b" "Unused declaration: x"] (map :message usages))))))
+      (is (= ["Unknown namespace: f" "Unused alias: c" "Unused namespace: b" "Unused declaration: x"] (map :message usages))))))
 
 (deftest test-completion
   (let [db-state {:file-envs

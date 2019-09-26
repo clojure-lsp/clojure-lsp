@@ -504,3 +504,10 @@
         (is (= (:sym c-param) (:sym c-use)))
         (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
         (is (= #{:scoped} (:tags a-use) (:tags c-use)))))))
+
+(deftest forward-declarations
+  (let [code "(ns user (:require [clojure.spec.alpha :as s])) (s/fdef foo) (declare foo) (defn foo [])"
+        usages (parser/find-usages code :clj {})
+        [_ _ _ _ _ fdef-foo _ declare-foo] usages]
+    (is (= #{:forward} (:tags fdef-foo)))
+    (is (= #{:forward} (:tags declare-foo)))))

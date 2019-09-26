@@ -654,7 +654,7 @@
    'clojure.core.async/go-loop [:params :bound-elements]
    'clojure.core/as-> [:element :param :bound-elements]
    'clojure.core/catch [:element :param :bound-elements]
-   'clojure.core/declare [{:element :declaration :repeat true}]
+   'clojure.core/declare [{:element :declaration :forward? true :repeat true}]
    'clojure.core/defmethod [:element :element :function-params-and-bodies]
    'clojure.core/defprotocol [{:element :declaration :declare-class? true :doc? true} {:element :element :pred :string} {:element :fn-spec :repeat true :tags #{:method :declare}}]
    'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
@@ -672,6 +672,7 @@
    'cljs.core/reify [{:element :class-and-methods}]
    'cljs.test/are [:params :bound-element :elements]
    'cljs.test/deftest [{:element :declaration :tags #{:unused}} :elements]
+   'clojure.spec.alpha/fdef [{:element :declaration :forward? true} :elements]
    'compojure.core/ANY [:element :param :bound-elements]
    'compojure.core/DELETE [:element :param :bound-elements]
    'compojure.core/GET [:element :param :bound-elements]
@@ -703,7 +704,7 @@
           (recur next-loc dirs)
           next-loc)))))
 
-(defn- macro-declaration [{:keys [signature kind tags doc? attr-map? declare-class?]} element-loc context scoped]
+(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? declare-class?]} element-loc context scoped]
   (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
       (let [signature-loc (macro-signature-loc signature element-loc)
@@ -728,12 +729,9 @@
           op-local? (vswap! context update :locals conj (name name-sexpr))
           :else (vswap! context update :publics conj (name name-sexpr)))
         (add-reference context scoped (z/node element-loc)
-                       (cond->
-                         {:tags (set/union
-                                  (if op-local?
-                                    #{:declare :local}
-                                    #{:declare :public})
-                                  tags')}
+                       (cond->  {:tags tags'}
+                         forward? (update :tags conj :forward)
+                         (not forward?) (update :tags set/union (if op-local?  #{:declare :local} #{:declare :public}))
                          (:doc dec-meta) (assoc :doc (:doc dec-meta))
                          (:arglists dec-meta) (assoc :signatures (:arglists dec-meta))
                          kind (assoc :kind kind)))))))

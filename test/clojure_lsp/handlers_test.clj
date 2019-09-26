@@ -50,13 +50,23 @@
                                                           (:require [a :as a]
                                                             [c :as c]
                                                             [d :as d-alias]
-                                                            [e :as e-alias]))
+                                                            [e :as e-alias]
+                                                            [clojure.spec.alpha :as s]))
+                                                        (s/fdef wat)
                                                         (def x a/bar)
+                                                        (declare y)
+                                                        (defn y [])
                                                         :a/bar
                                                         (let [{:keys [::d-alias/bar] ::e-alias/keys [foo] ::f/keys [qux]} {}]
                                                           [bar qux foo])" :clj {})}})
     (let [usages (crawler/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"]))]
-      (is (= ["Unknown namespace: f" "Unused alias: c" "Unused namespace: b" "Unused declaration: x"] (map :message usages))))))
+      (is (= ["Unknown namespace: f"
+              "Unused alias: c"
+              "Unused namespace: b"
+              "Unused declaration: x"
+              "Unused declaration: y"
+              "Unknown forward declaration: wat"]
+             (map :message usages))))))
 
 (deftest test-completion
   (let [db-state {:file-envs

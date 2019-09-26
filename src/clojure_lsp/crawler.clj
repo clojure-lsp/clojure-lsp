@@ -49,10 +49,29 @@
                   :require "Needs Require")
        :severity 1})))
 
+(defn ^:private diagnose-unknown-forward-declarations [usages]
+  (let [forward-usages (seq (filter (fn [usage] (contains? (:tags usage) :forward))
+                                    usages))
+        forward-syms (set (map :sym forward-usages))
+        found-declarations (set (keep (fn [usage]
+                                        (when (and (contains? forward-syms (:sym usage))
+                                                   (contains? (:tags usage) :declare))
+                                          (:sym usage)))
+                                      usages))
+        unknown-forwards (filter (fn [usage]
+                                   (not (contains? found-declarations (:sym usage))))
+                                 forward-usages)]
+    (for [usage unknown-forwards]
+      {:range (shared/->range usage)
+       :code :unknown
+       :message (str "Unknown forward declaration: " (:str usage))
+       :severity 1})))
+
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
                         (mapcat (comp val))
                         (remove (comp #(contains? % :declare) :tags))
+                        (remove (comp #(contains? % :forward) :tags))
                         (map :sym)
                         set)
         unused-syms (set/difference (set (map :sym declared-references)) references)]
@@ -62,7 +81,8 @@
                        #{:ns} :unused-ns
                        #{:public} :unused-public
                        :unused)]
-          :when (or (not= :unused-ns code) (not (string/index-of uri "test/")))]
+          :when (or (not= :unused-ns code)
+                    (not (string/index-of uri "test/")))]
       {:range (shared/->range usage)
        :code code
        :message (case code
@@ -98,7 +118,8 @@
 (defn find-diagnostics [project-aliases uri usages]
   (let [unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
-        result (concat unknown unused)]
+        unknown-forwards (diagnose-unknown-forward-declarations usages)
+        result (concat unknown unused unknown-forwards)]
     result))
 
 (defn safe-find-references

@@ -9,15 +9,27 @@
 
 (deftest test-rename
   (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})
                   "file://b.clj" (parser/find-usages "(ns b (:require [a :as aa])) (def x aa/bar) ::aa/bar :aa/bar" :clj {})
-                  "file://c.clj" (parser/find-usages "(ns c (:require [a :as aa])) (def x aa/bar)" :clj {})}})
+                  "file://c.clj" (parser/find-usages "(ns c (:require [a :as aa])) (def x aa/bar) ^:xab aa/baz" :clj {})}})
   (testing "on symbol without namespace"
     (let [changes (:changes (handlers/rename "file://a.clj" 1 13 "foo"))]
       (is (= 1 (count (get changes "file://a.clj"))))
       (is (= 1 (count (get changes "file://b.clj"))))
       (is (= "foo" (get-in changes ["file://a.clj" 0 :new-text])))
       (is (= "aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
+  (testing "on symbol with metadata namespace"
+    (let [changes (:changes (handlers/rename "file://a.clj" 1 33 "qux"))]
+      (is (= 1 (count (get changes "file://a.clj"))))
+      (is (= 1 (count (get changes "file://c.clj"))))
+      (is (= "qux" (get-in changes ["file://a.clj" 0 :new-text])))
+      (is (= [32 35]
+             [(get-in changes ["file://a.clj" 0 :range :start :character])
+              (get-in changes ["file://a.clj" 0 :range :end :character])]))
+      (is (= "aa/qux" (get-in changes ["file://c.clj" 0 :new-text])))
+      (is (= [50 56]
+             [(get-in changes ["file://c.clj" 0 :range :start :character])
+              (get-in changes ["file://c.clj" 0 :range :end :character])]))))
   (testing "on ::keyword"
     (let [changes (:changes (handlers/rename "file://a.clj" 1 17 "foo"))]
       (is (= 1 (count (get changes "file://a.clj"))))

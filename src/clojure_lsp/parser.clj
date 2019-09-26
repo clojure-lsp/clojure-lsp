@@ -138,7 +138,7 @@
         :str ident-str))))
 
 (defn add-reference [context scoped node extra]
-  (let [{:keys [row end-row col end-col]} (meta node)
+  (let [{:keys [row end-row col end-col]} (meta (skip-meta node))
         sexpr (n/sexpr node)
         scope-bounds (get-in scoped [sexpr :bounds])
         ctx @context

@@ -101,13 +101,11 @@
       (is (= "user" (namespace (:sym outside-scope-ref))))
       (is (= "a" (name (:sym outside-scope-ref))))))
   (testing "private meta"
-    (let [code "(defn ^:private a [b] b a) a"
+    (let [code "(defn ^:private ^:foo a [b] b a) ^:qux a"
           usages (parser/find-usages code :clj {})
-          bound-ref (nth usages 2 nil)
-          usage-ref (nth usages 3 nil)
-          outside-scope-ref (nth usages 5 nil)]
-      (is (= 'user/a (:sym (nth usages 1 nil))))
-      (is (= #{:declare :local} (:tags (nth usages 1 nil))))
+          [_ defn-ref bound-ref usage-ref _ _ outside-scope-ref] usages]
+      (is (= 'user/a (:sym defn-ref)))
+      (is (= #{:declare :local} (:tags defn-ref)))
       (is (not= "user" (namespace (:sym bound-ref))))
       (is (= "b" (name (:sym bound-ref))))
       (is (= #{:declare :param} (:tags bound-ref)))

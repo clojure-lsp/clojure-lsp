@@ -89,7 +89,7 @@
                   :unused-ns (str "Unused namespace: " (:str usage))
                   :unused-param (str "Unused parameter: " (:str usage))
                   (str "Unused declaration: " (:str usage)))
-       :severity 1})))
+       :severity 2})))
 
 (defn ^:private diagnose-unused-aliases [_uri declared-aliases usages]
   (let [references (->> usages
@@ -101,7 +101,7 @@
       {:range (shared/->range usage)
        :code :unused-alias
        :message (str "Unused alias: " (:str usage))
-       :severity 1})))
+       :severity 2})))
 
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)

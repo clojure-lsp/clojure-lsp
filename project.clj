@@ -3,9 +3,10 @@
 (def +deps+ (-> "deps.edn" slurp edn/read-string))
 
 (defn deps->vec [deps]
-  (mapv (fn [[dep {:keys [:mvn/version exclusions]}]]
-          (cond-> [dep version]
-            exclusions (conj :exclusions exclusions)))
+  (keep (fn [[dep {:keys [:mvn/version exclusions]}]]
+          (when version
+            (cond-> [dep version]
+              exclusions (conj :exclusions exclusions))))
         deps))
 
 (def dependencies
@@ -16,6 +17,7 @@
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
   :java-source-paths ["src-java"]
+  :resource-paths ["resources" "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"]
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
                              [lein-binplus "0.6.5"]]
                    :bin {:name "clojure-lsp"}}

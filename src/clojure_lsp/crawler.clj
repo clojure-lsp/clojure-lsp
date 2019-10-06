@@ -209,6 +209,8 @@
 (def ^:private default-project-specs
   [{:project-path "project.clj"
     :classpath-cmd ["lein" "classpath"]}
+   {:project-path "deps.edn"
+    :classpath-cmd ["clj" "-Spath"]}
    {:project-path "build.boot"
     :classpath-cmd ["boot" "show" "--fake-classpath"]}])
 

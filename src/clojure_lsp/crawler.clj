@@ -225,6 +225,11 @@
     {}
     project-specs))
 
+(defn get-cp-entry-type [e]
+  (cond (.isFile e) :file
+        (.isDirectory e) :directory
+        :else :unkown))
+
 (defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
         settings (:settings @db/db)
@@ -239,13 +244,21 @@
             classpath (if use-cp-cache
                         (:classpath loaded)
                         (:classpath project))
-            jars (filter #(.isFile %) (map io/file (reverse classpath)))
+            classpath-entryies-by-type (->> classpath
+                                            reverse
+                                            (map io/file)
+                                            (map #(vector (get-cp-entry-type %) %))
+                                            (group-by first)
+                                            (reduce-kv (fn [m k v]
+                                                         (assoc m k (map second v))) {}))
+            jars (:file classpath-entryies-by-type)
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars dependency-scheme))
-            file-envs (crawl-source-dirs source-paths)]
+            source-envs (crawl-source-dirs source-paths)
+            file-envs (crawl-source-dirs (:directory classpath-entryies-by-type))]
         (db/save-deps root-path project-hash classpath jar-envs)
-        (merge file-envs jar-envs))
+        (merge source-envs file-envs jar-envs))
       (crawl-source-dirs source-paths))))
 
 (defn find-project-settings [project-root]

@@ -513,8 +513,8 @@
     (is (= #{:forward} (:tags declare-foo)))))
 
 (deftest forward-declarations
-    (is (= (parser/get-decoded-uri (new TextDocumentItem "" "clojure" 1 ""))  ""))
-    (is (= (parser/get-decoded-uri (new TextDocumentItem "http%3A%2F%2Ffoo%20bar%2F" "clojure" 1 ""))  "http://foo bar/"))
-    (is (= (parser/get-decoded-uri (new TextDocumentItem "http://foo bar/" "clojure" 1 ""))  "http://foo bar/"))
-    (is (= (parser/get-decoded-uri (new TextDocumentItem "zipfile:///something.jar::something/file.cljc" "clojure" 1 ""))  "zipfile:///something.jar::something/file.cljc"))
-    (is (= (parser/get-decoded-uri (new TextDocumentItem "zipfile:///something.jar%3A%3Asomething/file.cljc" "clojure" 1 ""))  "zipfile:///something.jar::something/file.cljc")))
+    (is (= (parser/document->decoded-uri (new TextDocumentItem "" "clojure" 1 ""))  ""))
+    (is (= (parser/document->decoded-uri (new TextDocumentItem "http%3A%2F%2Ffoo%20bar%2F" "clojure" 1 ""))  "http://foo bar/"))
+    (is (= (parser/document->decoded-uri (new TextDocumentItem "http://foo bar/" "clojure" 1 ""))  "http://foo bar/"))
+    (is (= (parser/document->decoded-uri (new TextDocumentItem "zipfile:///something.jar::something/file.cljc" "clojure" 1 ""))  "zipfile:///something.jar::something/file.cljc"))
+    (is (= (parser/document->decoded-uri (new TextDocumentItem "zipfile:///something.jar%3A%3Asomething/file.cljc" "clojure" 1 ""))  "zipfile:///something.jar::something/file.cljc")))

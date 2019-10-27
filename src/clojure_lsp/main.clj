@@ -82,7 +82,7 @@
     (go :didOpen
         (end
           (let [document (.getTextDocument params)]
-            (#'handlers/did-open (parser/get-decoded-uri document) (.getText document))))))
+            (#'handlers/did-open (parser/document->decoded-uri document) (.getText document))))))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
@@ -91,7 +91,7 @@
                 version (.getVersion textDocument)
                 changes (.getContentChanges params)
                 text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
-                uri (parser/get-decoded-uri textDocument)]
+                uri (parser/document->decoded-uri textDocument)]
             (#'handlers/did-change uri text version)))))
 
   (^void didSave [_ ^DidSaveTextDocumentParams _params]
@@ -101,7 +101,7 @@
   (^void didClose [_ ^DidCloseTextDocumentParams params]
     (log/warn "DidCloseTextDocumentParams")
     (go :didClose
-        (end (swap! db/db update :documents dissoc (parser/get-decoded-uri (.getTextDocument params))))))
+        (end (swap! db/db update :documents dissoc (parser/document->decoded-uri (.getTextDocument params))))))
 
   (^CompletableFuture references [this ^ReferenceParams params]
     (go :references
@@ -110,7 +110,7 @@
             (get [this]
               (end
                 (try
-                  (let [doc-id (parser/get-decoded-uri (.getTextDocument params))
+                  (let [doc-id (parser/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))]
@@ -125,7 +125,7 @@
             (get [this]
               (end
                 (try
-                  (let [doc-id (parser/get-decoded-uri (.getTextDocument params))
+                  (let [doc-id (parser/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (int (.getLine pos)))
                         column (inc (int (.getCharacter pos)))]
@@ -140,7 +140,7 @@
             (get [this]
               (end
                 (try
-                  (let [doc-id (parser/get-decoded-uri (.getTextDocument params))
+                  (let [doc-id (parser/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))
@@ -156,7 +156,7 @@
             (get [this]
               (end
                 (try
-                  (let [doc-id (parser/get-decoded-uri (.getTextDocument params))
+                  (let [doc-id (parser/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))]
@@ -180,7 +180,7 @@
             (get [this]
               (end
                 (try
-                  (let [doc-id (parser/get-decoded-uri (.getTextDocument params))]
+                  (let [doc-id (parser/document->decoded-uri (.getTextDocument params))]
                     (interop/conform-or-log ::interop/edits (#'handlers/formatting doc-id)))
                   (catch Exception e
                     (log/error e)))))))))
@@ -190,7 +190,7 @@
         (end
           (let [result (when (compare-and-set! formatting false true)
                          (try
-                           (let [doc-id (parser/get-decoded-uri (.getTextDocument params))
+                           (let [doc-id (parser/document->decoded-uri (.getTextDocument params))
                                  range (.getRange params)
                                  start (.getStart range)
                                  end (.getEnd range)]
@@ -213,7 +213,7 @@
           (CompletableFuture/completedFuture
             (let [start (.getStart (.getRange params))]
               [(Command. "add-missing-libspec" "add-missing-libspec"
-                         [(parser/get-decoded-uri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))))
+                         [(parser/document->decoded-uri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))))
 
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
     (go :definition
@@ -222,7 +222,7 @@
             (get [this]
               (end
                 (try
-                  (let [doc-id (parser/get-decoded-uri (.getTextDocument params))
+                  (let [doc-id (parser/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))]

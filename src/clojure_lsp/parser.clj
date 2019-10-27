@@ -1036,7 +1036,7 @@
   (find-usages "(deftype JSValue [val])" :clj)
   (z/sexpr (loc-at-pos code 1 2)))
 
-(defn get-decoded-uri [document]
+(defn document->decoded-uri [document]
   (-> document
       .getUri
       URLDecoder/decode))

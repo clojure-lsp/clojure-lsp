@@ -13,7 +13,8 @@
     [rewrite-clj.zip.move :as zm]
     [rewrite-clj.zip.subedit :as zsub])
   (:import
-    (rewrite_clj.node.meta MetaNode)))
+    (rewrite_clj.node.meta MetaNode)
+    (java.net URLDecoder)))
 
 (declare find-usages*)
 (declare parse-destructuring)
@@ -1034,3 +1035,8 @@
 
   (find-usages "(deftype JSValue [val])" :clj)
   (z/sexpr (loc-at-pos code 1 2)))
+
+(defn get-decoded-uri [document]
+  (-> document
+      .getUri
+      URLDecoder/decode))

@@ -22,7 +22,8 @@
       TextEdit
       VersionedTextDocumentIdentifier
       WorkspaceEdit)
-    (org.eclipse.lsp4j.jsonrpc.messages Either)))
+    (org.eclipse.lsp4j.jsonrpc.messages Either)
+    (java.net URLDecoder)))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -253,3 +254,8 @@
         (update "project-specs" #(->> % (mapv kwd-keys) not-empty))
         (update "cljfmt" kwd-keys)
         (update-in ["cljfmt" :indents] clean-symbol-map))))
+
+(defn document->decoded-uri [document]
+  (-> document
+      .getUri
+      URLDecoder/decode))

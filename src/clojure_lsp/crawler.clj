@@ -235,6 +235,7 @@
         settings (:settings @db/db)
         source-paths (mapv #(to-file root-path %) (get settings "source-paths"))
         dependency-scheme (get settings "dependency-scheme")
+        ignore-directories? (get settings "ignore-classpath-directories")
         project-specs (or (get settings "project-specs") default-project-specs)
         project (get-project-from root-path project-specs)]
     (if (some? project)
@@ -244,19 +245,19 @@
             classpath (if use-cp-cache
                         (:classpath loaded)
                         (:classpath project))
-            classpath-entryies-by-type (->> classpath
-                                            reverse
-                                            (map io/file)
-                                            (map #(vector (get-cp-entry-type %) %))
-                                            (group-by first)
-                                            (reduce-kv (fn [m k v]
-                                                         (assoc m k (map second v))) {}))
-            jars (:file classpath-entryies-by-type)
+            classpath-entries-by-type (->> classpath
+                                           reverse
+                                           (map io/file)
+                                           (map #(vector (get-cp-entry-type %) %))
+                                           (group-by first)
+                                           (reduce-kv (fn [m k v]
+                                                        (assoc m k (map second v))) {}))
+            jars (:file classpath-entries-by-type)
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars dependency-scheme))
             source-envs (crawl-source-dirs source-paths)
-            file-envs (crawl-source-dirs (:directory classpath-entryies-by-type))]
+            file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
         (db/save-deps root-path project-hash classpath jar-envs)
         (merge source-envs file-envs jar-envs))
       (crawl-source-dirs source-paths))))

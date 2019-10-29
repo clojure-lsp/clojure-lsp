@@ -78,6 +78,8 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 
 `source-paths` value is a vector of project-local directories to look for clj/cljc/cljs files. Default is `["src","test"]`.
 
+`ignore-classpath-directories` if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.
+
 `use-metadata-for-privacy?` if true, will use `^:private` metadata for refactorings instead of `defn-`
 
 `dependency-scheme` by default, dependencies are linked with vim's `zipfile://<zipfile>::<innerfile>` scheme, however you can use a scheme of `jar` to get urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of `clojure/dependencyContents` with the jar uri and the server will return the jar entry's contents. [Similar to java clients](https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298)

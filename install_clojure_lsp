@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# Install the latest version of an executable file from a Github release
+# Keep a local copy of old versions
+# Requires curl
+
+# Customize 
+REPO=snoe/clojure-lsp
+FILE=clojure-lsp
+if [ "$(id -u)" != "0" ]; then
+    # Running as non-root user
+    DST_DIR=${HOME}/bin
+else
+    # Running as root (sudo)
+    DST_DIR=/usr/bin
+fi
+#----------
+
+if [ ! -d "${DST_DIR}" ]; then
+    echo "${DST_DIR} does not exist or is not a directory" 1>&2
+    echo "Exiting" 1>&2
+    exit 1
+fi
+
+LATEST_URL="https://github.com/${REPO}/releases/latest"
+DOWNLOAD_URL="${LATEST_URL}/download/${FILE}"
+LOCAL_FILE="./${FILE}"
+DST_FILE="${DST_DIR}/${FILE}"
+CURL_CMD="curl -Ls"
+
+# Get version of an executable
+function get_exec_version {
+    # echo $(${1} --version)
+    # The above ALWAYS returns "clojure-lsp 0.1.0-SNAPSHOT"
+    # Use executable file size instead:
+    echo $(stat -c%s ${1})
+}
+
+# Get the latest Github release tag
+function get_latest_version {
+    local latestversion=`${CURL_CMD} -o /dev/null -w %{url_effective} ${LATEST_URL}`
+    echo "${latestversion##*/}"
+}
+
+echo "Downloading latest ${FILE}..."
+rm ${LOCAL_FILE} 2> /dev/null
+${CURL_CMD} -o ${FILE} ${DOWNLOAD_URL}
+if [ ! -s "${LOCAL_FILE}" ]; then
+    echo "Failed to download from ${DOWNLOAD_URL}"
+    exit 1
+fi
+chmod 755 ${LOCAL_FILE}
+NEW_VERSION=$(get_exec_version ${LOCAL_FILE})
+
+# Get the current (old) version if installed
+if [ -f "${DST_FILE}" ]; then
+    OLD_VERSION=$(get_exec_version ${DST_FILE})
+    echo "Current version: ${OLD_VERSION}"
+fi
+
+# No need to do anything if the current installed version is the latest
+if [ "${OLD_VERSION}" = "${NEW_VERSION}" ]; then
+    echo "Latest ${FILE} is already installed"
+    rm ${LOCAL_FILE}
+    exit 0
+fi
+
+# Backup old version if needed
+if [ ! -z "${OLD_VERSION}" ]; then
+    backup="${LOCAL_FILE}-${OLD_VERSION}"
+    cp ${DST_FILE} ${backup}
+    echo "Old version backed up to ${backup}"
+fi
+
+# Install new version
+mv -f ${LOCAL_FILE} ${DST_DIR}
+echo "Installed new version: ${NEW_VERSION} ($(get_latest_version))"
+ls -l ${DST_FILE}
+

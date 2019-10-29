@@ -4,16 +4,23 @@
 # Keep a local copy of old versions
 # Requires curl
 
-if [ "$(id -u)" != "0" ]; then
-  echo "This script must be run as root" 1>&2
-  exit 1
-fi
-
 # Customize 
 REPO=snoe/clojure-lsp
 FILE=clojure-lsp
-DST_DIR=/usr/bin
+if [ "$(id -u)" != "0" ]; then
+    # Running as non-root user
+    DST_DIR=${HOME}/bin
+else
+    # Running as root (sudo)
+    DST_DIR=/usr/bin
+fi
 #----------
+
+if [ ! -d "${DST_DIR}" ]; then
+    echo "${DST_DIR} does not exist or is not a directory" 1>&2
+    echo "Exiting" 1>&2
+    exit 1
+fi
 
 LATEST_URL="https://github.com/${REPO}/releases/latest"
 DOWNLOAD_URL="${LATEST_URL}/download/${FILE}"

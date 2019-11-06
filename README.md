@@ -266,7 +266,11 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
   :ensure t
   :commands lsp
   :config
-  (add-to-list 'lsp-language-id-configuration '(clojure-mode . "clojure-mode"))
+  (dolist (m '(clojure-mode
+               clojurec-mode
+               clojurescript-mode
+               clojurex-mode))
+     (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
   :init
   (setq lsp-enable-indentation nil)
   (add-hook 'clojure-mode-hook #'lsp)

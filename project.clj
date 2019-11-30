@@ -18,6 +18,7 @@
   :main clojure-lsp.main
   :java-source-paths ["src-java"]
   :resource-paths ["resources" "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"]
+  :javac-options ["-implicit:none"]
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
                              [lein-binplus "0.6.5"]]
                    :bin {:name "clojure-lsp"}}

@@ -47,7 +47,7 @@
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
 (s/def ::additional-text-edits (s/coll-of ::text-edit))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit ::kind])
+                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit ::kind])
                                 (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind]}]
                                                (let [item (CompletionItem. label)]
                                                  (cond-> item
@@ -66,9 +66,12 @@
 (s/def ::text-document-edit (s/and (s/keys :req-un [::text-document ::edits])
                                    (s/conformer #(TextDocumentEdit. (:text-document %1) (:edits %1)))))
 (s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
-(s/def ::document-changes (s/coll-of ::text-document-edit))
+(s/def ::document-changes (s/and (s/coll-of ::text-document-edit)
+                                 (s/conformer (fn [c] (map #(Either/forLeft %) c)))))
 (s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
-                               (s/conformer #(WorkspaceEdit. (:changes %1) (:document-changes %1)))))
+                               (s/conformer #(if-let [changes (:changes %)]
+                                               (WorkspaceEdit. changes)
+                                               (WorkspaceEdit. (:document-changes %))))))
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))

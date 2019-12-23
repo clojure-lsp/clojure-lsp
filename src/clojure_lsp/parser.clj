@@ -689,16 +689,26 @@
    're-frame.core/reg-event-fx [{:element :declaration :signature [:next :next :next :right]} :element]
    're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element]
    'schema.macros/try-catchall [{:element :bound-elements :sub-forms {'catch [:param :bound-elements]}}]
-   'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]})
+   'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]
+   'schema.core/defn [{:element :declaration :signature [:vector] :doc? true}
+                      {:element :element :pred :keyword}
+                      {:element :element :pred :symbol}
+                      {:element :element :pred :string}
+                      {:element :element :pred :map}
+                      {:element :sub-elements
+                       :match-patterns [[:symbol :keyword :any] [:param :element :element]
+                                        [:symbol] [:param]]}
+                      :bound-elements]})
 
 (defn- macro-signature-loc [signature-dirs element-loc]
   (when signature-dirs
-    (loop [curr-loc (zsub/subzip (z-right-sexpr element-loc))
+    (loop [curr-loc (z-right-sexpr element-loc)
            [dir & dirs] signature-dirs]
       (let [next-loc (case dir
                        :next (z-next-sexpr curr-loc)
                        :right (z-right-sexpr curr-loc)
                        :rightmost (z/rightmost curr-loc)
+                       :vector (z/find curr-loc z/right (comp #{:vector} z/tag))
                        curr-loc)]
         (if (seq dirs)
           (recur next-loc dirs)
@@ -709,12 +719,16 @@
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
       (let [signature-loc (macro-signature-loc signature element-loc)
             signatures (when signature-loc (function-signatures signature-loc))
-            doc (when-let [doc-loc (and doc? (z/find-next element-loc z/right (comp #{:token :vector} z/tag)))]
+            doc (when-let [doc-loc (and doc? (z/find-next element-loc z/right (fn [loc]
+                                                                                (cond
+                                                                                  (= :vector (z/tag loc)) loc
+                                                                                  (and (= :token (z/tag loc))
+                                                                                       (string? (z/sexpr loc))) loc))))]
                   (when (= :token (z/tag doc-loc))
                     (z/sexpr doc-loc)))
             attr-map (when-let [attr-map-loc (and attr-map? (z/find-next element-loc z/right (comp #{:map :vector} z/tag)))]
-                  (when (= :map (z/tag attr-map-loc))
-                    (z/sexpr attr-map-loc)))
+                       (when (= :map (z/tag attr-map-loc))
+                         (z/sexpr attr-map-loc)))
             name-meta (merge (meta (z/sexpr element-loc)) attr-map)
             dec-meta (cond-> name-meta
                        doc (assoc :doc doc)
@@ -748,12 +762,53 @@
       (vswap! context assoc-in [:macro-defs qualified-k] macro-def))
     [new-scope (vals k->qualified)]))
 
-(defn parse-macro-def
-  [op-loc loc context scoped macro-def]
+(declare parse-macro-def-elements)
+
+(defn parse-match-patterns
+  [first-loc match-patterns bound-scope context scoped]
+  (loop [loc first-loc
+         [pattern macro-defs & other-patterns] match-patterns
+         bound-scope' bound-scope]
+    (let [pattern-count (count pattern)
+          pattern-locs (->> loc
+                            (iterate z/right))
+          pattern-sexprs (->> pattern-locs
+                              (take pattern-count)
+                              (keep z/sexpr)
+                              vec)
+          matches? (and loc
+                        (= pattern-count (count pattern-sexprs))
+                        (->> (mapv vector pattern-sexprs pattern)
+                          (every? (fn [[s p]]
+                                    (case p
+                                      :symbol (symbol? s)
+                                      :keyword (keyword? s)
+                                      :any true)))))]
+      (cond
+        (or (nil? loc) (nil? pattern))
+        bound-scope'
+
+        matches?
+        (recur
+          (nth pattern-locs pattern-count)
+          match-patterns
+          (merge bound-scope'
+                 (parse-macro-def-elements macro-defs
+                                           loc
+                                           bound-scope'
+                                           end-bounds
+                                           context
+                                           scoped)))
+
+        :else
+        (recur loc other-patterns bound-scope')))))
+
+(defn parse-macro-def-elements
+  [macro-def element-loc bound-scope end-bounds context scoped]
   (loop [[element' & elements] macro-def
          repeat-idx' 0
-         element-loc (z-right-sexpr op-loc)
-         bound-scope' scoped]
+         element-loc element-loc
+         bound-scope' bound-scope]
     (let [map-element (and (map? element') (:element element'))
           repeat-idx (cond-> repeat-idx'
                        (vector? map-element) (rem (count map-element)))
@@ -777,11 +832,25 @@
           process? (case (:pred element-info)
                      :string (string? sexpr)
                      :map (map? sexpr)
+                     :keyword (keyword? sexpr)
+                     :symbol (symbol? sexpr)
                      nil true)
-          scope-bounds (merge (meta (z/node element-loc)) (end-bounds loc))
-          [bound-scope macro-sub-forms] (if (not-empty (:sub-forms element-info))
-                                           (add-macro-sub-forms element-loc context scope-bounds bound-scope' (:sub-forms element-info))
-                                           [bound-scope' nil])]
+          scope-bounds (merge (meta (z/node element-loc)))
+          [bound-scope macro-sub-forms] (cond
+                                          (not-empty (:sub-forms element-info))
+                                          (add-macro-sub-forms element-loc context scope-bounds bound-scope' (:sub-forms element-info))
+
+                                          (and process? (= :sub-elements element))
+                                          [(parse-match-patterns
+                                             (z/down (zsub/subzip element-loc))
+                                             (:match-patterns element-info)
+                                             bound-scope'
+                                             context
+                                             scoped)
+                                           nil]
+
+                                          :else
+                                          [bound-scope' nil])]
       (when process?
         (case element
           :bound-elements
@@ -803,25 +872,36 @@
           nil))
       (when macro-sub-forms
         (vswap! context update :macro-defs #(apply dissoc % macro-sub-forms)))
-      (when-let [next-element-loc (and (or repeat? (seq elements)) (z-right-sexpr element-loc))]
-        (recur (cond-> elements
-                 repeat? (conj element'))
-               (if repeat? (inc repeat-idx) 0)
-               (if process? next-element-loc element-loc)
-               (cond
-                 (and (= :bindings element) (= :vector (z/tag element-loc)))
-                 (parse-bindings element-loc context (end-bounds loc) scoped)
+      (let [next-bound-scope (cond
+                               (and (= :bindings element) (= :vector (z/tag element-loc)))
+                               (parse-bindings element-loc context end-bounds scoped)
 
-                 (= :params element)
-                 (parse-params element-loc context scoped)
+                               (= :params element)
+                               (parse-params element-loc context scoped)
 
-                 (= :param element)
-                 (parse-destructuring element-loc
-                                      scope-bounds
-                                      context scoped)
+                               (= :param element)
+                               (parse-destructuring element-loc scope-bounds context scoped)
 
-                 :else
-                 scoped))))))
+                               :else
+                               bound-scope)]
+        (if-let [next-element-loc (and (or repeat? (seq elements)) (z-right-sexpr element-loc))]
+          (recur
+            (cond-> elements
+              repeat? (conj element'))
+            (if repeat? (inc repeat-idx) 0)
+            (if process? next-element-loc element-loc)
+            next-bound-scope)
+          next-bound-scope)))))
+
+(defn parse-macro-def
+  [op-loc loc context scoped macro-def]
+  (parse-macro-def-elements
+    macro-def
+    (z-right-sexpr op-loc)
+    scoped
+    (end-bounds loc)
+    context
+    scoped))
 
 (defn handle-sexpr [loc context scoped]
   (try

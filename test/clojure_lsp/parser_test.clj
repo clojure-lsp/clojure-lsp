@@ -509,3 +509,23 @@
         [_ _ _ _ _ fdef-foo _ declare-foo] usages]
     (is (= #{:forward} (:tags fdef-foo)))
     (is (= #{:forward} (:tags declare-foo)))))
+
+(deftest typed-defn
+  (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [b :- Long c :- [S/Str]] b)"
+        usages (parser/find-usages code :clj {})
+        [_ u _ s _ a _ _ b _ _ c _ _ b2] usages]
+    (is (= #{:declare :public} (:tags a)))
+    (is (= 'user/a (:sym a)))
+    (is (= "Docs" (:doc a)))
+    (is (= ["[b :- Long c :- [S/Str]]"] (:signatures a)))
+    (is (= (:sym b) (:sym b2)))
+    (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
+  (let [code "(ns user (:require [schema.core :as s])) (s/defn a [b c] b)"
+        usages (parser/find-usages code :clj {})
+        [_ u _ s _ a b c b2] usages]
+    (is (= #{:declare :public} (:tags a)))
+    (is (= 'user/a (:sym a)))
+    (is (= nil (:doc a)))
+    (is (= ["[b c]"] (:signatures a)))
+    (is (= (:sym b) (:sym b2)))
+    (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))

@@ -28,6 +28,13 @@ This is an early work in progress, contributions are very welcome.
 - Place it in your $PATH with a chmod 755
 - Follow the documentation for your editor's language client. See [Clients](#clients) below.
 
+### NixOS
+`clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):
+
+```bash
+nix-shell -p clojure-lsp
+```
+
 ## Troubleshooting
 
 See [troubleshooting.md](docs/troubleshooting.md).

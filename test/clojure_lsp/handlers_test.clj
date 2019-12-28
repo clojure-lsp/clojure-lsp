@@ -66,7 +66,7 @@
                                                                      (foo :yoo)
                                                                      (baz {:x 1 :y 2} :no)
                                                                      (bar))
-                                                                   (-> 1
+                                                                   (-> (foo :moo)
                                                                      (foo)
                                                                      (bar)
                                                                      (bar 1)

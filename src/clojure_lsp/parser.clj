@@ -362,10 +362,13 @@
 
 (defn handle-thread
   [op-loc _loc context scoped]
-  (loop [sub-loc (zm/right op-loc)]
-    (when sub-loc
-      (handle-sexpr (zsub/subzip sub-loc) context scoped true)
-      (recur (zm/right sub-loc)))))
+  (let [value-loc (zm/right op-loc)]
+    (do
+      (find-usages* (zsub/subzip value-loc) context scoped)
+      (loop [sub-loc (zm/right value-loc)]
+        (when sub-loc
+          (handle-sexpr (zsub/subzip sub-loc) context scoped true)
+          (recur (zm/right sub-loc)))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)

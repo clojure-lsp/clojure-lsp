@@ -370,6 +370,17 @@
           (handle-sexpr (zsub/subzip sub-loc) context scoped true)
           (recur (zm/right sub-loc)))))))
 
+(defn handle-cond-thread
+  [op-loc _loc context scoped]
+  (let [value-loc (zm/right op-loc)]
+    (do
+      (find-usages* (zsub/subzip value-loc) context scoped)
+      (loop [sub-loc (zm/right value-loc)]
+        (when sub-loc
+          (find-usages* (zsub/subzip value-loc) context scoped) ; test
+          (handle-sexpr (zsub/subzip (zm/right sub-loc)) context scoped true) ; form
+          (recur (zm/right (zm/right sub-loc))))))))
+
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)
         required-ns (z/sexpr entry-ns-loc)
@@ -661,7 +672,10 @@
                   'clojure.core/quote handle-quote
                   'clojure.core/-> handle-thread
                   'clojure.core/->> handle-thread
-                  'clojure.core/some-> handle-thread}]
+                  'clojure.core/some-> handle-thread
+                  'clojure.core/some->> handle-thread
+                  'clojure.core/cond-> handle-cond-thread
+                  'clojure.core/cond->> handle-cond-thread}]
     (merge handlers (medley/map-keys #(symbol "cljs.core" (name %)) handlers))))
 
 (def default-macro-defs

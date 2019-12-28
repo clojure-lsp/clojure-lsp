@@ -71,6 +71,9 @@
                                                                      (bar)
                                                                      (bar 1)
                                                                      (baz))
+                                                                   (cond->> [1 8 9]
+                                                                     int? (foo)
+                                                                     false (bar))
                                                                    (baz :broken :brokken [nil :ok :okay])
                                                                    (baz {bar baz foo :no?})
                                                                    (bar)

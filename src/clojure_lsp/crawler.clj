@@ -67,6 +67,26 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
+(defn ^:private diagnose-wrong-arity [uri usages]
+  (let [all-envs (assoc (:file-envs @db/db) uri usages)
+        declarations (->> usages
+                          (filter #(and (contains? (:tags %) :declare)
+                                        (= (:kind %) :function))))
+        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
+        references (->> all-envs
+                        (mapcat (comp val))
+                        (remove (comp #(contains? % :declare) :tags))
+                        (remove (comp #(contains? % :forward) :tags)))]
+    (for [usage references
+          :let [decls (filter #(= (:sym usage) (:sym %)) declared-references)]
+          :when (when-let [[decl] (seq decls)]
+                  (not (contains?
+                         (set (map count (:signatures decl)))
+                         (:argc usage))))]
+      {:range (shared/->range usage)
+       :code :wrong-arity
+       :message (str "Wrong number of arguments to function: " (:str usage))})))
+
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
                         (mapcat (comp val))
@@ -118,8 +138,9 @@
 (defn find-diagnostics [project-aliases uri usages]
   (let [unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
+        arity (diagnose-wrong-arity uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        result (concat unknown unused unknown-forwards)]
+        result (concat unknown unused arity unknown-forwards)]
     result))
 
 (defn safe-find-references

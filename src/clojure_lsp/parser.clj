@@ -908,7 +908,11 @@
     (let [op-loc (some-> loc (zm/down))]
       (cond
         (and op-loc (symbol? (z/sexpr op-loc)))
-        (let [usage (add-reference context scoped (z/node op-loc) {})
+        (let [argc (->> loc
+                        (z/node)
+                        (n/children)
+                        (count))
+              usage (add-reference context scoped (z/node op-loc) {:argc argc})
               handler (get *sexpr-handlers* (:sym usage))
               macro-def (get (:macro-defs @context) (:sym usage))]
           (cond

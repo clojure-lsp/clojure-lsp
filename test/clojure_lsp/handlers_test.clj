@@ -55,6 +55,10 @@
       (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text]))))))
 
 (deftest test-find-diagnostics
+  (testing "wrong arity"
+    (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo ([x] x) ([x y] '(x y))) (foo 1) (foo 1 2) (foo 1 2 3)" :clj {})}})
+    (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
+      (is (= ["Wrong number of arguments to function: foo"] (map :message usages)))))
   (testing "unused symbols"
     (reset! db/db {:file-envs
                    {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})

@@ -89,8 +89,8 @@
       {:range (shared/->range call-site)
        :code :wrong-arity
        :message (let [plural (not= argc 1)]
-                  (format "No overload supporting %d argument%s for function: %s"
-                          argc (if plural "s" "") (:str call-site)))
+                  (format "No overload %s for %d argument%s"
+                          (:str call-site) argc (if plural "s" "")))
        :severity 1})))
 
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]

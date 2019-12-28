@@ -58,6 +58,12 @@
   (testing "wrong arity"
     (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo ([x] x) ([x y] (x y)))
                                                                    (defn bar [y & rest] (y (bar rest)))
+                                                                   (defn baz [{x :x y :y :as long}
+                                                                              {:keys [k v] :as short}
+                                                                              [_ a b]]
+                                                                     (x y k v a b long short))
+                                                                   (baz :broken :brokken [nil :ok :okay])
+                                                                   (baz {bar baz foo :no?})
                                                                    (bar)
                                                                    (bar {:a [:b]})
                                                                    (bar :one-fish :two-fish :red-fish :blue-fish)
@@ -69,7 +75,8 @@
                                                                    (foo 1 ['a 'b])
                                                                    (foo 1 2 3 {:k 1 :v 2})" :clj {})}})
     (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-      (is (= ["No overload supporting 0 arguments for function: bar"
+      (is (= ["No overload supporting 1 argument for function: baz"
+              "No overload supporting 0 arguments for function: bar"
               "No overload supporting 3 arguments for function: foo"
               "No overload supporting 0 arguments for function: foo"
               "No overload supporting 4 arguments for function: foo"]

@@ -68,7 +68,11 @@
        :severity 1})))
 
 (defn ^:private supports-argc [signature argc]
-  true) ; TODO: Implement
+  (let [min-argc (count (take-while #(not= '& %) signature))
+        has-rest (not= min-argc (count signature))]
+    (if has-rest
+      (>= argc min-argc)
+      (= argc min-argc))))
 
 (defn ^:private diagnose-wrong-arity [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
@@ -84,7 +88,9 @@
                   (not-any? #(supports-argc % argc) (:signatures relevant-function)))]
       {:range (shared/->range call-site)
        :code :wrong-arity
-       :message (str "No overload supporting " argc " arguments for function: " (:str call-site))
+       :message (let [plural (not= argc 1)]
+                  (format "No overload supporting %d argument%s for function: %s"
+                          argc (if plural "s" "") (:str call-site)))
        :severity 1})))
 
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]

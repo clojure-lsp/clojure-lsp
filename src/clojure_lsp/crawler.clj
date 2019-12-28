@@ -69,23 +69,19 @@
 
 (defn ^:private diagnose-wrong-arity [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        declarations (->> usages
-                          (filter #(and (contains? (:tags %) :declare)
-                                        (= (:kind %) :function))))
-        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
-        references (->> all-envs
+        function-references (filter :arities usages)
+        call-sites (->> all-envs
                         (mapcat (comp val))
-                        (remove (comp #(contains? % :declare) :tags))
-                        (remove (comp #(contains? % :forward) :tags)))]
-    (for [usage references
-          :let [decls (filter #(= (:sym usage) (:sym %)) declared-references)]
-          :when (when-let [[decl] (seq decls)]
-                  (not (contains?
-                         (set (map count (:signatures decl)))
-                         (:argc usage))))]
-      {:range (shared/->range usage)
+                        (filter :argc))]
+    (for [call-site call-sites
+          :let [argc (:argc call-site)
+                function-sym (:sym call-site)
+                relevant-functions (filter #(->> % (:sym) (= function-sym)) function-references)]
+          :when (when-let [relevant-function (last relevant-functions)]
+                  (not (contains? (:arities relevant-function) argc)))]
+      {:range (shared/->range call-site)
        :code :wrong-arity
-       :message (str "Wrong number of arguments to function: " (:str usage))})))
+       :message (str "No overload supporting " argc " arguments for function: " (:str call-site))})))
 
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
@@ -138,9 +134,9 @@
 (defn find-diagnostics [project-aliases uri usages]
   (let [unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
-        arity (diagnose-wrong-arity uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        result (concat unknown unused arity unknown-forwards)]
+        wrong-arity (diagnose-wrong-arity uri usages)
+        result (concat unknown unused unknown-forwards wrong-arity)]
     result))
 
 (defn safe-find-references

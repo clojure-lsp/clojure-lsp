@@ -518,14 +518,22 @@
         op-local? (vswap! context update :locals conj (name (z/sexpr name-loc)))
         :else (vswap! context update :publics conj (name (z/sexpr name-loc))))
 
-      (add-reference context scoped (z/node name-loc)
-                     {:tags (cond
-                              op-fn? name-tags
-                              op-local? (conj name-tags :local)
-                              :else (conj name-tags :public))
-                      :kind :function
-                      :doc (check string? (z/sexpr (z-right-sexpr name-loc)))
-                      :signatures (function-signatures params-loc)}))
+      (let [signatures (function-signatures params-loc)
+            arities (set (map #(->> %
+                                    (z/of-string)
+                                    (z/node)
+                                    (n/child-sexprs)
+                                    (count))
+                              signatures))]
+        (add-reference context scoped (z/node name-loc)
+                       {:tags (cond
+                                op-fn? name-tags
+                                op-local? (conj name-tags :local)
+                                :else (conj name-tags :public))
+                        :kind :function
+                        :doc (check string? (z/sexpr (z-right-sexpr name-loc)))
+                        :signatures signatures
+                        :arities arities})))
     (function-params-and-bodies params-loc context scoped)))
 
 (defn handle-fn
@@ -910,8 +918,9 @@
         (and op-loc (symbol? (z/sexpr op-loc)))
         (let [argc (->> loc
                         (z/node)
-                        (n/children)
-                        (count))
+                        (n/child-sexprs)
+                        (count)
+                        (dec))
               usage (add-reference context scoped (z/node op-loc) {:argc argc})
               handler (get *sexpr-handlers* (:sym usage))
               macro-def (get (:macro-defs @context) (:sym usage))]

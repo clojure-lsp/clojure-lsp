@@ -56,7 +56,11 @@
 
 (deftest test-find-diagnostics
   (testing "wrong arity"
-    (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo ([x] x) ([x y] '(x y)))
+    (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo ([x] x) ([x y] (x y)))
+                                                                   (defn bar [y & rest] (y (bar rest)))
+                                                                   (bar)
+                                                                   (bar {:a [:b]})
+                                                                   (bar :one-fish :two-fish :red-fish :blue-fish)
                                                                    [foo]
                                                                    {foo 1 2 3}
                                                                    [foo 1 (foo 5 6 7)]
@@ -65,7 +69,8 @@
                                                                    (foo 1 ['a 'b])
                                                                    (foo 1 2 3 {:k 1 :v 2})" :clj {})}})
     (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-      (is (= ["No overload supporting 3 arguments for function: foo"
+      (is (= ["No overload supporting 0 arguments for function: bar"
+              "No overload supporting 3 arguments for function: foo"
               "No overload supporting 0 arguments for function: foo"
               "No overload supporting 4 arguments for function: foo"]
              (map :message usages)))))

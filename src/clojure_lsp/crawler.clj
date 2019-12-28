@@ -67,9 +67,12 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
+(defn ^:private supports-argc [signature argc]
+  true) ; TODO: Implement
+
 (defn ^:private diagnose-wrong-arity [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        function-references (filter :arities usages)
+        function-references (filter :signatures usages)
         call-sites (->> all-envs
                         (mapcat (comp val))
                         (filter :argc))]
@@ -78,10 +81,11 @@
                 function-sym (:sym call-site)
                 relevant-functions (filter #(->> % (:sym) (= function-sym)) function-references)]
           :when (when-let [relevant-function (last relevant-functions)]
-                  (not (contains? (:arities relevant-function) argc)))]
+                  (not-any? #(supports-argc % argc) (:signatures relevant-function)))]
       {:range (shared/->range call-site)
        :code :wrong-arity
-       :message (str "No overload supporting " argc " arguments for function: " (:str call-site))})))
+       :message (str "No overload supporting " argc " arguments for function: " (:str call-site))
+       :severity 1})))
 
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs

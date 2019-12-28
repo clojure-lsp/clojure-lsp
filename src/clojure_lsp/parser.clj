@@ -485,11 +485,11 @@
   (if (= :list (z/tag params-loc))
     (loop [list-loc params-loc
            params []]
-      (let [params (conj params (z/string (z/down list-loc)))]
+      (let [params (conj params (z/sexpr (z/down list-loc)))]
         (if-let [next-list (z/find-next-tag list-loc :list)]
           (recur next-list params)
           params)))
-    [(z/string params-loc)]))
+    [(z/sexpr params-loc)]))
 
 (defn- single-params-and-body [params-loc context scoped]
   (let [body-loc (z-right-sexpr params-loc)]
@@ -518,22 +518,14 @@
         op-local? (vswap! context update :locals conj (name (z/sexpr name-loc)))
         :else (vswap! context update :publics conj (name (z/sexpr name-loc))))
 
-      (let [signatures (function-signatures params-loc)
-            arities (set (map #(->> %
-                                    (z/of-string)
-                                    (z/node)
-                                    (n/child-sexprs)
-                                    (count))
-                              signatures))]
-        (add-reference context scoped (z/node name-loc)
-                       {:tags (cond
-                                op-fn? name-tags
-                                op-local? (conj name-tags :local)
-                                :else (conj name-tags :public))
-                        :kind :function
-                        :doc (check string? (z/sexpr (z-right-sexpr name-loc)))
-                        :signatures signatures
-                        :arities arities})))
+      (add-reference context scoped (z/node name-loc)
+                     {:tags (cond
+                              op-fn? name-tags
+                              op-local? (conj name-tags :local)
+                              :else (conj name-tags :public))
+                      :kind :function
+                      :doc (check string? (z/sexpr (z-right-sexpr name-loc)))
+                      :signatures (function-signatures params-loc)}))
     (function-params-and-bodies params-loc context scoped)))
 
 (defn handle-fn

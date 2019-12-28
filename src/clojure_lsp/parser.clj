@@ -236,6 +236,8 @@
           (recur (edit/skip-over val-loc) scoped)))
       scoped)))
 
+(declare handle-sexpr)
+
 (defn handle-rest
   "Crawl each form from `loc` to the end of the parent-form
   `(fn [x 1] | (a) (b) (c))`
@@ -357,6 +359,13 @@
     (vswap! context assoc :quoting? true)
     (handle-rest (z-right-sexpr op-loc) context scoped)
     (vswap! context assoc :quoting? current-quoted)))
+
+(defn handle-thread
+  [op-loc _loc context scoped]
+  (loop [sub-loc (zm/right op-loc)]
+    (when sub-loc
+      (handle-sexpr (zsub/subzip sub-loc) context scoped true)
+      (recur (zm/right sub-loc)))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)
@@ -646,7 +655,10 @@
                   'clojure.core/for handle-let
                   'clojure.core/doseq handle-let
                   'clojure.core/comment handle-comment
-                  'clojure.core/quote handle-quote}]
+                  'clojure.core/quote handle-quote
+                  'clojure.core/-> handle-thread
+                  'clojure.core/->> handle-thread
+                  'clojure.core/some-> handle-thread}]
     (merge handlers (medley/map-keys #(symbol "cljs.core" (name %)) handlers))))
 
 (def default-macro-defs
@@ -903,32 +915,35 @@
     context
     scoped))
 
-(defn handle-sexpr [loc context scoped]
-  (try
-    (let [op-loc (some-> loc (zm/down))]
-      (cond
-        (and op-loc (symbol? (z/sexpr op-loc)))
-        (let [argc (->> loc
-                        (z/node)
-                        (n/child-sexprs)
-                        (count)
-                        (dec))
-              usage (add-reference context scoped (z/node op-loc) {:argc argc})
-              handler (get *sexpr-handlers* (:sym usage))
-              macro-def (get (:macro-defs @context) (:sym usage))]
-          (cond
-            (and macro-def (not (:quoting? @context)))
-            (parse-macro-def op-loc loc context scoped macro-def)
+(defn handle-sexpr
+  ([loc context scoped] (handle-sexpr loc context scoped false))
+  ([loc context scoped threading?]
+    (try
+      (let [op-loc (some-> loc (zm/down))]
+        (cond
+          (and op-loc (symbol? (z/sexpr op-loc)))
+          (let [argc (->> loc
+                          (z/node)
+                          (n/child-sexprs)
+                          (count))
+                usage (add-reference context scoped (z/node op-loc) {:argc (if threading?
+                                                                             argc
+                                                                             (dec argc))})
+                handler (get *sexpr-handlers* (:sym usage))
+                macro-def (get (:macro-defs @context) (:sym usage))]
+            (cond
+              (and macro-def (not (:quoting? @context)))
+              (parse-macro-def op-loc loc context scoped macro-def)
 
-            (and handler (not (:quoting? @context)))
-            (handler op-loc loc context scoped)
+              (and handler (not (:quoting? @context)))
+              (handler op-loc loc context scoped)
 
-            :else
-            (handle-rest (zm/right op-loc) context scoped)))
-        op-loc
-        (handle-rest op-loc context scoped)))
-    (catch Throwable e
-      (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc)))))
+              :else
+              (handle-rest (zm/right op-loc) context scoped)))
+          op-loc
+          (handle-rest op-loc context scoped)))
+      (catch Throwable e
+        (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc))))))
 
 (defn- find-usages* [loc context scoped]
   (loop [loc loc

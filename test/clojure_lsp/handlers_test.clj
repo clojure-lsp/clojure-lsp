@@ -62,6 +62,15 @@
                                                                               {:keys [k v] :as short}
                                                                               [_ a b]]
                                                                      (x y k v a b long short))
+                                                                   (->> :test
+                                                                     (foo :yoo)
+                                                                     (baz {:x 1 :y 2} :no)
+                                                                     (bar))
+                                                                   (-> 1
+                                                                     (foo)
+                                                                     (bar)
+                                                                     (bar 1)
+                                                                     (baz))
                                                                    (baz :broken :brokken [nil :ok :okay])
                                                                    (baz {bar baz foo :no?})
                                                                    (bar)
@@ -75,11 +84,12 @@
                                                                    (foo 1 ['a 'b])
                                                                    (foo 1 2 3 {:k 1 :v 2})" :clj {})}})
     (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-      (is (= ["No overload supporting 1 argument for function: baz"
-              "No overload supporting 0 arguments for function: bar"
-              "No overload supporting 3 arguments for function: foo"
-              "No overload supporting 0 arguments for function: foo"
-              "No overload supporting 4 arguments for function: foo"]
+      (is (= ["No overload baz for 1 argument"
+              "No overload baz for 1 argument"
+              "No overload bar for 0 arguments"
+              "No overload foo for 3 arguments"
+              "No overload foo for 0 arguments"
+              "No overload foo for 4 arguments"]
              (map :message usages)))))
   (testing "unused symbols"
     (reset! db/db {:file-envs

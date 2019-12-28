@@ -1135,5 +1135,5 @@
   (find-usages "(do #inst \"2019-04-04\")" :clj {})
   (z/sexpr (z/right (z/of-string "#(:a 1)")))
 
-  (find-usages "(deftype JSValue [val])" :clj)
+  (find-usages "(deftype JSValue [val])" :clj {})
   (z/sexpr (loc-at-pos code 1 2)))

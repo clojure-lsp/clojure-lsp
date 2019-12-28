@@ -62,8 +62,8 @@
                                                                    [foo 1 (foo 5 6 7)]
                                                                    (foo)
                                                                    (foo 1)
-                                                                   (foo 1 2)
-                                                                   (foo 1 2 3 4)" :clj {})}})
+                                                                   (foo 1 ['a 'b])
+                                                                   (foo 1 2 3 {:k 1 :v 2})" :clj {})}})
     (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
       (is (= ["No overload supporting 3 arguments for function: foo"
               "No overload supporting 0 arguments for function: foo"

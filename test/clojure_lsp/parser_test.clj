@@ -511,6 +511,15 @@
     (is (= #{:forward} (:tags declare-foo)))))
 
 (deftest typed-defn
+  (let [code "(ns user (:require [schema.core :as s])) (s/defn a [b c] b)"
+        usages (parser/find-usages code :clj {})
+        [_ u _ s _ a b c b2] usages]
+    (is (= #{:declare :public} (:tags a)))
+    (is (= 'user/a (:sym a)))
+    (is (= nil (:doc a)))
+    (is (= ["[b c]"] (:signatures a)))
+    (is (= (:sym b) (:sym b2)))
+    (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
   (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [b :- Long c :- [S/Str]] b)"
         usages (parser/find-usages code :clj {})
         [_ u _ s _ a _ _ b _ _ c _ _ b2] usages]
@@ -520,12 +529,13 @@
     (is (= ["[b :- Long c :- [S/Str]]"] (:signatures a)))
     (is (= (:sym b) (:sym b2)))
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
-  (let [code "(ns user (:require [schema.core :as s])) (s/defn a [b c] b)"
-        usages (parser/find-usages code :clj {})
-        [_ u _ s _ a b c b2] usages]
-    (is (= #{:declare :public} (:tags a)))
-    (is (= 'user/a (:sym a)))
-    (is (= nil (:doc a)))
-    (is (= ["[b c]"] (:signatures a)))
-    (is (= (:sym b) (:sym b2)))
-    (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))
+  (testing "destructures param"
+    (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
+          usages (parser/find-usages code :clj {})
+          [_ u _ s _ a _ _ _ b _ _ c _ _ b2] usages]
+      (is (= #{:declare :public} (:tags a)))
+      (is (= 'user/a (:sym a)))
+      (is (= "Docs" (:doc a)))
+      (is (= ["[{b :b} :- Long c :- [S/Str]]"] (:signatures a)))
+      (is (= (:sym b) (:sym b2)))
+      (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))))

@@ -696,8 +696,8 @@
                       {:element :element :pred :string}
                       {:element :element :pred :map}
                       {:element :sub-elements
-                       :match-patterns [[:symbol :keyword :any] [:param :element :element]
-                                        [:symbol] [:param]]}
+                       :match-patterns [[:any :keyword :any] [:param :element :element]
+                                        [:any] [:param]]}
                       :bound-elements]})
 
 (defn- macro-signature-loc [signature-dirs element-loc]

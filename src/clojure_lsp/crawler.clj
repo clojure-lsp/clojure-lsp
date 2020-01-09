@@ -86,7 +86,7 @@
           :when (when-let [relevant-function (last relevant-functions)]
                   (:sym relevant-function)
                   (try
-                    (not-any? #(supports-argc % argc) (:signatures relevant-function))
+                    (not-any? #(supports-argc % argc) (get-in relevant-function [:signatures :sexprs]))
                     (catch Exception e
                       false)))]
       {:range (shared/->range call-site)

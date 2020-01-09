@@ -487,6 +487,16 @@
         (not (string/starts-with? op-name "def"))
         (string/ends-with? op-name "-"))))
 
+(defn args-to-sigs
+  [arglists]
+  (let [sexprs (into [] (map (comp z/sexpr z/of-string) arglists))]
+    {:sexprs sexprs
+     :strings arglists}))
+
+(defn sigs-to-args
+  [signatures]
+  (:strings signatures))
+
 (defn handle-def
   [op-loc _loc context scoped]
   (let [name-loc (z-right-sexpr op-loc)
@@ -500,19 +510,23 @@
                                                    #{:declare :local}
                                                    #{:declare :public})
                                            :doc (:doc def-meta)
-                                           :signatures (:arglists def-meta)})
+                                           :signatures (args-to-sigs (:arglists def-meta))})
     (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 
 (defn- function-signatures [params-loc]
   (if (= :list (z/tag params-loc))
     (loop [list-loc params-loc
-           params []]
-      (let [params (conj params (z/sexpr (z/down list-loc)))]
+           sexprs []
+           strings []]
+      (let [next-loc (z/down list-loc)
+            sexprs (conj sexprs (z/sexpr next-loc))
+            strings (conj strings (z/string next-loc))]
         (if-let [next-list (z/find-next-tag list-loc :list)]
-          (recur next-list params)
-          params)))
-    [(z/sexpr params-loc)]))
+          (recur next-list sexprs strings)
+          {:sexprs sexprs :strings strings})))
+    {:sexprs [(z/sexpr params-loc)]
+     :strings [(z/string params-loc)]}))
 
 (defn- single-params-and-body [params-loc context scoped]
   (let [body-loc (z-right-sexpr params-loc)]
@@ -604,7 +618,8 @@
     (vswap! context update :local-classes conj (z/sexpr type-loc))
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
-                                                     :signatures [(z/sexpr fields-loc)]})
+                                                     :signatures {:sexprs [(z/sexpr fields-loc)]
+                                                                  :strings [(z/string fields-loc)]}})
     (when (= "defrecord" (name (z/sexpr op-loc)))
       (let [type-name (name (z/sexpr type-loc))
             mapper-name (str "map->" type-name)
@@ -761,7 +776,7 @@
             name-meta (merge (meta (z/sexpr element-loc)) attr-map)
             dec-meta (cond-> name-meta
                        doc (assoc :doc doc)
-                       (seq signatures) (assoc :arglists signatures))
+                       (seq signatures) (assoc :arglists (sigs-to-args signatures)))
             tags' (set tags)
             op-local? (contains? tags' :local)
             context-ns (:ns @context)
@@ -776,7 +791,7 @@
                          forward? (update :tags conj :forward)
                          (not forward?) (update :tags set/union (if op-local?  #{:declare :local} #{:declare :public}))
                          (:doc dec-meta) (assoc :doc (:doc dec-meta))
-                         (:arglists dec-meta) (assoc :signatures (:arglists dec-meta))
+                         (:arglists dec-meta) (assoc :signatures (args-to-sigs (:arglists dec-meta)))
                          kind (assoc :kind kind)))))))
 
 (defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]

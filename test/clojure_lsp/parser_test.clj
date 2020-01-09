@@ -378,7 +378,7 @@
       (is (= (:sym (nth usages 2 nil)) (:sym (nth usages 3 nil))))
       (is (= (:sym (nth usages-noopt 2 nil)) (:sym (nth usages-noopt 3 nil))))
       (is (= "docstring" (:doc (nth usages 1 nil))))
-      (is (= '[[a] [a b]] (:signatures (nth usages 1 nil))))))
+      (is (= "[[a] [a b]]" (get-in (nth usages 1 nil) [:signatures :strings])))))
   (testing "deftest"
     (let [code "(ns user (:require clojure.test)) (clojure.test/deftest my-test)"
           usages (parser/find-usages code :clj {})]
@@ -427,7 +427,8 @@
               :sym :foo/name
               :str ":foo/name"
               :file-type :clj
-              :signatures ['[_ b]]}
+              :signatures {:sexprs ['[_ b]]
+                           :strings ["[_ b]"]}}
              (dissoc (nth usages 4 nil) :col :row :end-row :end-col)))
       (is (= (:sym (nth usages 8 nil)) (:sym (nth usages 9 nil)))))))
 
@@ -517,7 +518,7 @@
     (is (= #{:declare :public} (:tags a)))
     (is (= 'user/a (:sym a)))
     (is (= "Docs" (:doc a)))
-    (is (= ['[b :- Long c :- [S/Str]]] (:signatures a)))
+    (is (= ["[b :- Long c :- [S/Str]]"] (get-in a [:signatures :strings])))
     (is (= (:sym b) (:sym b2)))
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
   (let [code "(ns user (:require [schema.core :as s])) (s/defn a [b c] b)"
@@ -526,6 +527,6 @@
     (is (= #{:declare :public} (:tags a)))
     (is (= 'user/a (:sym a)))
     (is (= nil (:doc a)))
-    (is (= ['[b c]] (:signatures a)))
+    (is (= ["[b c]"] (get-in a [:signatures :strings])))
     (is (= (:sym b) (:sym b2)))
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))

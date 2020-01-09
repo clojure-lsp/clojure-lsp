@@ -538,4 +538,14 @@
       (is (= "Docs" (:doc a)))
       (is (= ["[{b :b} :- Long c :- [S/Str]]"] (:signatures a)))
       (is (= (:sym b) (:sym b2)))
+      (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))
+  (testing "handles complex return type"
+    (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- [A] \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
+          usages (parser/find-usages code :clj {})
+          [_ u _ s _ a _ _ _ b _ _ c _ _ b2] usages]
+      (is (= #{:declare :public} (:tags a)))
+      (is (= 'user/a (:sym a)))
+      (is (= "Docs" (:doc a)))
+      (is (= ["[{b :b} :- Long c :- [S/Str]]"] (:signatures a)))
+      (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))))

@@ -76,16 +76,19 @@
 
 (defn ^:private diagnose-wrong-arity [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        function-references (filter :signatures usages)
-        call-sites (->> all-envs
-                        (mapcat (comp val))
+        function-references (filter :signatures (mapcat val all-envs))
+        call-sites (->> usages
                         (filter :argc))]
     (for [call-site call-sites
           :let [argc (:argc call-site)
                 function-sym (:sym call-site)
                 relevant-functions (filter #(->> % (:sym) (= function-sym)) function-references)]
           :when (when-let [relevant-function (last relevant-functions)]
-                  (not-any? #(supports-argc % argc) (:signatures relevant-function)))]
+                  (:sym relevant-function)
+                  (try
+                    (not-any? #(supports-argc % argc) (:signatures relevant-function))
+                    (catch Exception e
+                      false)))]
       {:range (shared/->range call-site)
        :code :wrong-arity
        :message (let [plural (not= argc 1)]

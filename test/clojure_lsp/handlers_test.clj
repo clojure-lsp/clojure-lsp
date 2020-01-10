@@ -116,12 +116,14 @@
         (is (= ["No overload foo for 2 arguments"]
                (map :message usages)))))
     (testing "for meta arglists"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(def ^{:arglists '([x])
-                                                                            :static true}
-                                                                       foo (fn foo [x] (x 1 0)))
+      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(def
+                                                                       ^{:doc \"Don't use this\"
+                                                                         :arglists '([z])
+                                                                         :added \"1.17\"
+                                                                         :static true}
+                                                                       foo nil)
                                                                      (foo)
-                                                                     (foo 1)
-                                                                     (foo 1 -1)" :clj {})}})
+                                                                     (foo (foo :a :b))" :clj {})}})
       (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
         (is (= ["No overload foo for 0 arguments"
                 "No overload foo for 2 arguments"]

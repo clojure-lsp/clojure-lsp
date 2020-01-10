@@ -489,10 +489,19 @@
 
 (defn arglists-to-signatures
   [arglists]
-  (let [strings (map str arglists)
-        sexprs (into [] (map (comp z/sexpr z/of-string) strings))]
-    {:sexprs sexprs
-     :strings strings}))
+  (cond
+    (= 'quote (first arglists))
+    (let [sexprs (eval arglists)]
+      {:sexprs sexprs
+       :strings (map str sexprs)})
+
+    (string? (first arglists))
+    {:sexprs (map (comp z/sexpr z/of-string) arglists)
+     :strings arglists}
+
+    :else
+    {:sexprs (seq arglists)
+     :strings (map str arglists)}))
 
 (defn handle-def
   [op-loc _loc context scoped]
@@ -523,8 +532,8 @@
         (if-let [next-list (z/find-next-tag list-loc :list)]
           (recur next-list sexprs strings)
           {:sexprs sexprs :strings strings})))
-    {:sexprs [(z/sexpr params-loc)]
-     :strings [(z/string params-loc)]}))
+    {:sexprs (list (z/sexpr params-loc))
+     :strings (list (z/string params-loc))}))
 
 (defn- single-params-and-body [params-loc context scoped]
   (let [body-loc (z-right-sexpr params-loc)]
@@ -616,8 +625,8 @@
     (vswap! context update :local-classes conj (z/sexpr type-loc))
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
-                                                     :signatures {:sexprs [(z/sexpr fields-loc)]
-                                                                  :strings [(z/string fields-loc)]}})
+                                                     :signatures {:sexprs (list (z/sexpr fields-loc))
+                                                                  :strings (list (z/string fields-loc))}})
     (when (= "defrecord" (name (z/sexpr op-loc)))
       (let [type-name (name (z/sexpr type-loc))
             mapper-name (str "map->" type-name)

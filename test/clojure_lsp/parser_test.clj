@@ -378,7 +378,7 @@
       (is (= (:sym (nth usages 2 nil)) (:sym (nth usages 3 nil))))
       (is (= (:sym (nth usages-noopt 2 nil)) (:sym (nth usages-noopt 3 nil))))
       (is (= "docstring" (:doc (nth usages 1 nil))))
-      (is (= "[[a] [a b]]" (get-in (nth usages 1 nil) [:signatures :strings])))))
+      (is (= ["[a]" "[a b]"] (get-in (nth usages 1 nil) [:signatures :strings])))))
   (testing "deftest"
     (let [code "(ns user (:require clojure.test)) (clojure.test/deftest my-test)"
           usages (parser/find-usages code :clj {})]

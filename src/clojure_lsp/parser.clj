@@ -487,15 +487,12 @@
         (not (string/starts-with? op-name "def"))
         (string/ends-with? op-name "-"))))
 
-(defn args-to-sigs
+(defn arglists-to-signatures
   [arglists]
-  (let [sexprs (into [] (map (comp z/sexpr z/of-string) arglists))]
+  (let [strings (map str arglists)
+        sexprs (into [] (map (comp z/sexpr z/of-string) strings))]
     {:sexprs sexprs
-     :strings arglists}))
-
-(defn sigs-to-args
-  [signatures]
-  (:strings signatures))
+     :strings strings}))
 
 (defn handle-def
   [op-loc _loc context scoped]
@@ -511,7 +508,7 @@
                                                    #{:declare :public})
                                            :doc (:doc def-meta)
                                            :signatures (some-> (:arglists def-meta)
-                                                               args-to-sigs)})
+                                                               arglists-to-signatures)})
     (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 
@@ -777,7 +774,7 @@
             name-meta (merge (meta (z/sexpr element-loc)) attr-map)
             dec-meta (cond-> name-meta
                        doc (assoc :doc doc)
-                       (seq signatures) (assoc :arglists (sigs-to-args signatures)))
+                       (seq signatures) (assoc :arglists (:strings signatures)))
             tags' (set tags)
             op-local? (contains? tags' :local)
             context-ns (:ns @context)
@@ -792,7 +789,7 @@
                          forward? (update :tags conj :forward)
                          (not forward?) (update :tags set/union (if op-local?  #{:declare :local} #{:declare :public}))
                          (:doc dec-meta) (assoc :doc (:doc dec-meta))
-                         (:arglists dec-meta) (assoc :signatures (args-to-sigs (:arglists dec-meta)))
+                         (:arglists dec-meta) (assoc :signatures (arglists-to-signatures (:arglists dec-meta)))
                          kind (assoc :kind kind)))))))
 
 (defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]

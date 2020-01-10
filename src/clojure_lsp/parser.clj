@@ -510,7 +510,8 @@
                                                    #{:declare :local}
                                                    #{:declare :public})
                                            :doc (:doc def-meta)
-                                           :signatures (args-to-sigs (:arglists def-meta))})
+                                           :signatures (some-> (:arglists def-meta)
+                                                               args-to-sigs)})
     (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 

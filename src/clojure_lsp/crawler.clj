@@ -85,10 +85,7 @@
                 relevant-functions (filter #(->> % (:sym) (= function-sym)) function-references)]
           :when (when-let [relevant-function (last relevant-functions)]
                   (:sym relevant-function)
-                  (try
-                    (not-any? #(supports-argc % argc) (get-in relevant-function [:signatures :sexprs]))
-                    (catch Exception e
-                      false)))]
+                  (not-any? #(supports-argc % argc) (get-in relevant-function [:signatures :sexprs])))]
       {:range (shared/->range call-site)
        :code :wrong-arity
        :message (let [plural (not= argc 1)]

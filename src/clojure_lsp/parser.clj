@@ -508,7 +508,7 @@
                                                    #{:declare :public})
                                            :doc (:doc def-meta)
                                            :signatures (some-> (:arglists def-meta)
-                                                               arglists-to-signatures)})
+                                                               (arglists-to-signatures))})
     (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 

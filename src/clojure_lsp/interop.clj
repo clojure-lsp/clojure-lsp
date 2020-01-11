@@ -11,6 +11,7 @@
       CompletionItemKind
       Diagnostic
       DiagnosticSeverity
+      DocumentSymbol
       Hover
       Location
       MarkedString
@@ -18,6 +19,7 @@
       Position
       PublishDiagnosticsParams
       Range
+      SymbolKind
       TextDocumentEdit
       TextEdit
       VersionedTextDocumentIdentifier
@@ -34,20 +36,20 @@
 (s/def ::range (s/and (s/keys :req-un [::start ::end])
                       (s/conformer #(Range. (:start %1) (:end %1)))))
 
-(def kind-enum
+(def completion-kind-enum
   {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
    :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
-(s/def ::kind (s/and keyword?
-                     kind-enum
-                     (s/conformer (fn [v] (CompletionItemKind/forValue (get kind-enum v))))))
+(s/def :completion-item/kind (s/and keyword?
+                     completion-kind-enum
+                     (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
 (s/def ::new-text string?)
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
 (s/def ::additional-text-edits (s/coll-of ::text-edit))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit ::kind])
+                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit :completion-item/kind])
                                 (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind]}]
                                                (let [item (CompletionItem. label)]
                                                  (cond-> item
@@ -75,6 +77,32 @@
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))
+
+(def symbol-kind-enum
+  {:file 1 :module 2 :namespace 3 :package 4 :class 5 :method 6 :property 7 :field 8 :constructor 9
+   :enum 10 :interface 11 :function 12 :variable 13 :constant 14 :string 15 :number 16 :boolean 17
+   :array 18 :object 19 :key 20 :null 21 :enum-member 22 :struct 23 :event 24 :operator 25
+   :type-parameter 26})
+
+(s/def :symbol/kind (s/and keyword?
+                           symbol-kind-enum
+                           (s/conformer (fn [v] (SymbolKind/forValue (get symbol-kind-enum v))))))
+
+(s/def :document-symbol/selection-range ::range)
+
+(s/def :document-symbol/detail string?)
+
+(s/def ::document-symbol (s/and (s/keys :req-un [::name :symbol/kind ::range :document-symbol/selection-range]
+                                        :opt-un [:document-symbol/detail :document-symbol/children])
+                                (s/conformer (fn [m]
+                                               (DocumentSymbol. (:name m) (:kind m) (:range m) 
+                                                                (:selection-range m) (:detail m) (:children m))))))
+
+(s/def :document-symbol/children (s/coll-of ::document-symbol))
+
+(s/def ::document-symbols (s/and (s/coll-of ::document-symbol)
+                                 (s/conformer (fn [c]
+                                                (map #(Either/forRight %) c)))))
 
 (s/def ::severity (s/and integer?
                          (s/conformer #(DiagnosticSeverity/forValue %1))))

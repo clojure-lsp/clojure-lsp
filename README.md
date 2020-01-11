@@ -273,6 +273,10 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
   :ensure t
   :commands lsp
   :config
+  ;; add paths to your local installation of project mgmt tools, like lein
+  (setenv "PATH" (concat
+                   "/usr/local/bin" path-separator
+                   (getenv "PATH")))
   (dolist (m '(clojure-mode
                clojurec-mode
                clojurescript-mode

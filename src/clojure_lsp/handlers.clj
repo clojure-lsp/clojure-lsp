@@ -125,8 +125,8 @@
                            (recur (dec try-column)))))
         {cursor-value :str cursor-file-type :file-type} cursor-usage
         [cursor-ns _] (if-let [idx (some-> cursor-value (string/index-of "/"))]
-                                  [(subs cursor-value 0 idx) (subs cursor-value (inc idx))]
-                                  [cursor-value nil])
+                        [(subs cursor-value 0 idx) (subs cursor-value (inc idx))]
+                        [cursor-value nil])
         matches? (partial matches-cursor? cursor-value)
         namespaces-and-aliases (->> file-envs
                                     (mapcat val)
@@ -251,7 +251,7 @@
         :let [[u-prefix u-ns _] (parser/ident-split u-str)]]
     {:range (shared/->range usage)
      :new-text (str u-prefix u-ns (when u-ns "/") replacement)
-     :text-document {:version version :uri doc-id}}) )
+     :text-document {:version version :uri doc-id}}))
 
 (defn rename [doc-id line column new-name]
   (let [file-envs (:file-envs @db/db)
@@ -301,6 +301,45 @@
         (if-let [next-stuff (find-references-after-cursor line column local-env file-type)]
           (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
           (log/warn "Could not find element under cursor, there are no known elements after this position."))))))
+
+(defn entry-kind->symbol-kind [k]
+  (case k
+    :module :namespace
+    :function :function
+    :declaration :variable
+    :null))
+
+(defn file-env-entry->document-symbol [[e kind]]
+  (let [{n :str :keys [row col end-row end-col sym]} e
+        symbol-kind (entry-kind->symbol-kind kind)
+        r {:start {:line (dec row) :character (dec col)}
+           :end {:line (dec end-row) :character (dec end-col)}}]
+    {:name n
+     :kind symbol-kind
+     :range r
+     :selection-range r
+     :namespace (namespace sym)}))
+
+(defn is-declaration? [e]
+  (and (get-in e [:tags :declare])
+       (or (get-in e [:tags :local])
+         (get-in e [:tags :public]))))
+
+(defn document-symbol [doc-id]
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
+        symbol-parent-map (->> local-env
+                               (keep #(cond (:kind %) [% (:kind %)]
+                                            (is-declaration? %) [% :declaration]
+                                            :else nil))
+                               (map file-env-entry->document-symbol)
+                               (group-by :namespace))]
+    (->> (symbol-parent-map nil)
+         (map (fn [e]
+                (if-let [children (symbol-parent-map (:name e))]
+                  (assoc e :children children)
+                  e)))
+         (into []))))
 
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll

@@ -579,7 +579,6 @@
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
         params-loc (z/find op-loc is-params)]
-    (log/warn "handle-function on name" (z/sexpr name-loc))
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil
@@ -765,26 +764,39 @@
    're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element]
    'schema.macros/try-catchall [{:element :bound-elements :sub-forms {'catch [:param :bound-elements]}}]
    'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]
-   'schema.core/defn [{:element :declaration :signature [:vector] :doc? true}
+   'schema.core/defn [{:element :declaration
+                       :doc? [{:pred :keyword} {:pred :follows-constant :constant :-}]
+                       :attr-map? [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string}]
+                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]}
                       {:element :element :pred :keyword}
-                      {:element :element :pred :symbol}
+                      {:element :element :pred :follows-constant :constant :-}
                       {:element :element :pred :string}
                       {:element :element :pred :map}
                       {:element :sub-elements
-                       :match-patterns [[:symbol :keyword :any] [:param :element :element]
-                                        [:symbol] [:param]]}
+                       :match-patterns [[:any :keyword :any] [:param :element :element]
+                                        [:any] [:param]]}
                       :bound-elements]})
 
-(defn- macro-signature-loc [signature-dirs element-loc]
-  (when signature-dirs
+(defn- match-pred? [loc {:keys [pred constant]}]
+  (let [sexpr (z/sexpr loc)]
+    (case pred
+      :keyword (keyword? sexpr)
+      :string (string? sexpr)
+      :map (map? sexpr)
+      :symbol (symbol? sexpr)
+      :follows-constant (some-> loc z/left z/sexpr #{constant}))))
+
+(defn- macro-dirs-to-loc [dirs element-loc]
+  (when dirs
     (loop [curr-loc (z-right-sexpr element-loc)
-           [dir & dirs] signature-dirs]
+           [dir & dirs] dirs]
       (let [next-loc (case dir
                        :next (z-next-sexpr curr-loc)
                        :right (z-right-sexpr curr-loc)
                        :rightmost (z/rightmost curr-loc)
-                       :vector (z/find curr-loc z/right (comp #{:vector} z/tag))
-                       curr-loc)]
+                       (if (and (map? dir) (contains? dir :pred) (match-pred? curr-loc dir))
+                         (z-right-sexpr curr-loc)
+                         curr-loc))]
         (if (seq dirs)
           (recur next-loc dirs)
           next-loc)))))
@@ -792,18 +804,22 @@
 (defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? declare-class?]} element-loc context scoped]
   (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
-      (let [signature-loc (macro-signature-loc signature element-loc)
+      (let [signature-loc (macro-dirs-to-loc signature element-loc)
             signatures (when signature-loc (function-signatures signature-loc))
-            doc (when-let [doc-loc (and doc? (z/find-next element-loc z/right (fn [loc]
-                                                                                (cond
-                                                                                  (= :vector (z/tag loc)) loc
-                                                                                  (and (= :token (z/tag loc))
-                                                                                       (string? (z/sexpr loc))) loc))))]
-                  (when (= :token (z/tag doc-loc))
-                    (z/sexpr doc-loc)))
-            attr-map (when-let [attr-map-loc (and attr-map? (z/find-next element-loc z/right (comp #{:map :vector} z/tag)))]
-                       (when (= :map (z/tag attr-map-loc))
-                         (z/sexpr attr-map-loc)))
+            doc-loc (cond
+                      (vector? doc?) (macro-dirs-to-loc doc? element-loc)
+                      doc? (z/find-next element-loc z/right (fn [loc]
+                                                              (cond
+                                                                (= :vector (z/tag loc)) loc
+                                                                (and (= :token (z/tag loc))
+                                                                     (string? (z/sexpr loc))) loc))))
+            doc (when (and doc-loc (= :token (z/tag doc-loc)))
+                  (z/sexpr doc-loc))
+            attr-map-loc (cond
+                           (vector? attr-map?) (macro-dirs-to-loc attr-map? element-loc)
+                           attr-map? (z/find-next element-loc z/right (comp #{:map :vector} z/tag)))
+            attr-map (when (and attr-map-loc (= :map (z/tag attr-map-loc)))
+                       (z/sexpr attr-map-loc))
             name-meta (merge (meta (z/sexpr element-loc)) attr-map)
             dec-meta (cond-> name-meta
                        doc (assoc :doc doc)
@@ -904,12 +920,8 @@
                     :list (list? sexpr)
                     true true
                     nil)
-          process? (case (:pred element-info)
-                     :string (string? sexpr)
-                     :map (map? sexpr)
-                     :keyword (keyword? sexpr)
-                     :symbol (symbol? sexpr)
-                     nil true)
+          process? (or (nil? (:pred element-info))
+                       (match-pred? element-loc element-info))
           scope-bounds (merge (meta (z/node element-loc)))
           [bound-scope macro-sub-forms] (cond
                                           (not-empty (:sub-forms element-info))

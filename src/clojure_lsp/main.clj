@@ -45,7 +45,8 @@
       TextDocumentContentChangeEvent
       TextDocumentPositionParams
       TextDocumentSyncKind
-      TextDocumentSyncOptions)
+      TextDocumentSyncOptions
+      WorkspaceSymbolParams)
     (org.eclipse.lsp4j.launch LSPLauncher)
     (org.eclipse.lsp4j.jsonrpc.services JsonSegment JsonRequest)
     (java.util.concurrent CompletableFuture)
@@ -281,7 +282,19 @@
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams _params]
-    (log/warn "DidChangeWatchedFilesParams")))
+    (log/warn "DidChangeWatchedFilesParams"))
+
+  (^CompletableFuture symbol [this ^WorkspaceSymbolParams params]
+    (go :workspaceSymbol
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [query (.getQuery params)]
+                    (interop/conform-or-log ::interop/workspace-symbols (#'handlers/workspace-symbols query)))
+                  (catch Exception e
+                    (log/error e))))))))))
 
 (defn client-settings [^InitializeParams params]
   (-> params
@@ -323,6 +336,7 @@
                                      (.setDocumentRangeFormattingProvider true)
                                      (.setDocumentSymbolProvider true)
                                      (.setDocumentHighlightProvider true)
+                                     (.setWorkspaceSymbolProvider true)
                                      (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
                                                                    (.setCommands (keys handlers/refactorings))))
                                      (.setTextDocumentSync (doto (TextDocumentSyncOptions.)

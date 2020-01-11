@@ -550,12 +550,20 @@
 
 (def check (fn [pred x] (when (pred x) x)))
 
+(defn is-params
+  [loc]
+  (or
+    (#{:vector :list} (z/tag loc))
+    ; z/tag could be :meta not :vector if there is a return type annotation
+    (vector? (z/sexpr loc))))
+
 (defn handle-function
   [op-loc _loc context scoped name-tags]
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
-        params-loc (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))]
+        params-loc (z/find op-loc is-params)]
+    (log/warn "handle-function on name" (z/sexpr name-loc))
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil

@@ -107,7 +107,7 @@
                (map :message usages)))))
     (testing "with annotations"
       (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo {:added \"1.0\"} [x] (inc x))
-                                                                     (defn ^:private bar [^Class x & rest] (str x rest))
+                                                                     (defn ^:private bar ^String [^Class x & rest] (str x rest))
                                                                      (foo foo)
                                                                      (foo foo foo)
                                                                      (bar :a)

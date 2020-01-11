@@ -67,6 +67,12 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
+(def ignore-arity
+  #{'clojure.core/defn     ; regex-like arglists
+    'clojure.core/defmacro ; regex-like arglists
+    'clojure.core/format   ; return type annotation breaks clojure.core arglists
+    })
+
 (defn ^:private supports-argc [signature argc]
   (let [min-argc (count (take-while #(not= '& %) signature))
         has-rest (not= min-argc (count signature))]
@@ -84,7 +90,14 @@
                 relevant-functions (filter #(= (:sym %) function-sym) function-references)
                 relevant-function (last relevant-functions)
                 overloads (get-in relevant-function [:signatures :sexprs])]
-          :when (and overloads (not-any? #(supports-argc % argc) overloads))]
+          :when (and
+                  overloads
+                  (not (ignore-arity function-sym))
+                  (try
+                    (not-any? #(supports-argc % argc) overloads)
+                    (catch Exception e
+                      (log/warn "Couldn't interpret signature for" function-sym ":" (.getMessage e))
+                      false)))]
       {:range (shared/->range call-site)
        :code :wrong-arity
        :message (let [plural (not= argc 1)]

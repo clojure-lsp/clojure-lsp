@@ -44,7 +44,7 @@
 (deftest handle-fn-test
   (let [zloc (z/of-string "(fn [^String b])")
         context (volatile! {})]
-    (parser/handle-fn (z/next zloc) zloc context {})
+    (parser/handle-fn (z/next zloc) zloc context {} false)
     (is (= '{"java.lang.String" #{:norename}
              "b" #{:declare :param}}
            (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))

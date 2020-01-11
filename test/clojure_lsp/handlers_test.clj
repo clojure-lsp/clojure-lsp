@@ -93,6 +93,8 @@
                                                                        (bar))
                                                                      (-> 1
                                                                        (baz)
+                                                                       (->> (baz)
+                                                                            (foo 1 2))
                                                                        (baz :p :q :r)
                                                                        (bar))
                                                                      (cond-> 0

@@ -350,35 +350,51 @@
     (vswap! context assoc :ignored? curr-ignored?)))
 
 (defn handle-comment
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (handle-ignored (z-right-sexpr op-loc) context scoped))
 
 (defn handle-quote
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [current-quoted (:quoting? @context)]
     (vswap! context assoc :quoting? true)
     (handle-rest (z-right-sexpr op-loc) context scoped)
     (vswap! context assoc :quoting? current-quoted)))
 
 (defn handle-thread
-  [op-loc _loc context scoped]
-  (let [value-loc (zm/right op-loc)]
+  [op-loc _loc context scoped threading?]
+  (let [first-loc (zm/right op-loc)
+        ; Check if the value is threaded in already
+        thread-loc (if threading?
+                     first-loc
+                     (zm/right first-loc))]
     (do
-      (find-usages* (zsub/subzip value-loc) context scoped)
-      (loop [sub-loc (zm/right value-loc)]
+      ; Look at the value
+      (when (not threading?)
+        (find-usages* (zsub/subzip first-loc) context scoped))
+      ; Look at the forms threaded through
+      (loop [sub-loc thread-loc]
         (when sub-loc
           (handle-sexpr (zsub/subzip sub-loc) context scoped true)
           (recur (zm/right sub-loc)))))))
 
 (defn handle-cond-thread
-  [op-loc _loc context scoped]
-  (let [value-loc (zm/right op-loc)]
+  [op-loc _loc context scoped threading?]
+  (let [first-loc (zm/right op-loc)
+        ; Check if the value is threaded in already
+        thread-loc (if threading?
+                     first-loc
+                     (zm/right first-loc))]
     (do
-      (find-usages* (zsub/subzip value-loc) context scoped)
-      (loop [sub-loc (zm/right value-loc)]
+      ; Look at the value
+      (when (not threading?)
+        (find-usages* (zsub/subzip first-loc) context scoped))
+      ; Look at the tests and forms threaded through
+      (loop [sub-loc thread-loc]
         (when sub-loc
-          (find-usages* (zsub/subzip value-loc) context scoped) ; test
-          (handle-sexpr (zsub/subzip (zm/right sub-loc)) context scoped true) ; form
+          ; Test
+          (find-usages* (zsub/subzip sub-loc) context scoped)
+          ; Form
+          (handle-sexpr (zsub/subzip (zm/right sub-loc)) context scoped true)
           (recur (zm/right (zm/right sub-loc))))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
@@ -453,7 +469,7 @@
         (recur (z-right-sexpr entry-loc))))))
 
 (defn handle-ns
-  [_op-loc loc context scoped]
+  [_op-loc loc context scoped _threading?]
   (let [name-loc (z-right-sexpr (z/down (zsub/subzip loc)))
         first-list-loc (z/find-tag name-loc z-right-sexpr :list)
         require-loc (z/find first-list-loc z-right-sexpr (comp #{:require} z/sexpr z/down))
@@ -466,13 +482,13 @@
     (add-libspecs :import context scoped (some-> import-loc z/down z-right-sexpr) nil)))
 
 (defn handle-let
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
     (handle-rest (z-right-sexpr bindings-loc) context scoped)))
 
 (defn handle-if-let
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         if-loc (z-right-sexpr bindings-loc)
         if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
@@ -504,7 +520,7 @@
      :strings (map str arglists)}))
 
 (defn handle-def
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [name-loc (z-right-sexpr op-loc)
         def-sym (z/node name-loc)
         def-meta  (meta (z/sexpr name-loc))
@@ -581,15 +597,15 @@
     (function-params-and-bodies params-loc context scoped)))
 
 (defn handle-fn
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-defn
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-defmacro
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-fn-spec [method-loc context scoped tags]
@@ -627,7 +643,7 @@
                       (recur)))))))
 
 (defn handle-deftype
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [type-loc (z-right-sexpr op-loc)
         fields-loc (z-right-sexpr type-loc)]
     (vswap! context update :local-classes conj (z/sexpr type-loc))
@@ -983,7 +999,7 @@
               (parse-macro-def op-loc loc context scoped macro-def)
 
               (and handler (not (:quoting? @context)))
-              (handler op-loc loc context scoped)
+              (handler op-loc loc context scoped threading?)
 
               :else
               (handle-rest (zm/right op-loc) context scoped)))

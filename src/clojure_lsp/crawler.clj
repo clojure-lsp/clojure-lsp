@@ -70,7 +70,6 @@
 (def ignore-arity
   #{'clojure.core/defn     ; regex-like arglists
     'clojure.core/defmacro ; regex-like arglists
-    'clojure.core/format   ; return type annotation breaks clojure.core arglists
     })
 
 (defn ^:private supports-argc [signature argc]

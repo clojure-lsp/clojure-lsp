@@ -11,6 +11,7 @@
       CompletionItemKind
       Diagnostic
       DiagnosticSeverity
+      DocumentHighlight
       DocumentSymbol
       Hover
       Location
@@ -103,6 +104,12 @@
 (s/def ::document-symbols (s/and (s/coll-of ::document-symbol)
                                  (s/conformer (fn [c]
                                                 (map #(Either/forRight %) c)))))
+
+(s/def ::document-highlight (s/and (s/keys :req-un [::range])
+                                   (s/conformer (fn [m]
+                                                  (DocumentHighlight. (:range m))))))
+
+(s/def ::document-highlights (s/coll-of ::document-highlight))
 
 (s/def ::severity (s/and integer?
                          (s/conformer #(DiagnosticSeverity/forValue %1))))

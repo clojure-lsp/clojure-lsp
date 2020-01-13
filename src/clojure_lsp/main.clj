@@ -256,8 +256,7 @@
                         column (inc (.getCharacter pos))]
                     (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))
                   (catch Exception e
-                    (log/error e)))))))))
-)
+                    (log/error e))))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService

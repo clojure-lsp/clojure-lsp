@@ -350,8 +350,7 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))
-        sym (:sym cursor)
-         ]
+        sym (:sym cursor)]
     (into [] (comp (filter #(= (:sym %) sym))
                    (map file-env-entry->document-highlight)) local-env)))
 

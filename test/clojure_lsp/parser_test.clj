@@ -550,3 +550,10 @@
       (is (= ["[{b :b} :- Long c :- [S/Str]]"] (get-in a [:signatures :strings])))
       (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))))
+
+(deftest fncall-arity
+  (let [code "(defn x [y] y (-> 1 x (x) (x 2)))"
+        usages (parser/find-usages code :clj {})
+        [_ _ _ _ _  x1 x2 x3] usages]
+    (is (= 1 (:argc x1) (:argc x2)))
+    (is (= 2 (:argc x3)))))

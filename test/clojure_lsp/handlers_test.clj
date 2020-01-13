@@ -96,7 +96,7 @@
                                                                        (->> (baz)
                                                                             (foo 1 2))
                                                                        (baz :p :q :r)
-                                                                       (bar))
+                                                                       bar)
                                                                      (cond-> 0
                                                                       int? (bar :a :b)
                                                                       false (foo)

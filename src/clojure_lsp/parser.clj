@@ -374,7 +374,7 @@
       ; Look at the forms threaded through
       (loop [sub-loc thread-loc]
         (when sub-loc
-          (handle-sexpr (zsub/subzip sub-loc) context scoped true)
+          (find-usages* (zsub/subzip sub-loc) context scoped true)
           (recur (zm/right sub-loc)))))))
 
 (defn handle-cond-thread
@@ -394,7 +394,7 @@
           ; Test
           (find-usages* (zsub/subzip sub-loc) context scoped)
           ; Form
-          (handle-sexpr (zsub/subzip (zm/right sub-loc)) context scoped true)
+          (find-usages* (zsub/subzip (zm/right sub-loc)) context scoped true)
           (recur (zm/right (zm/right sub-loc))))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
@@ -1020,49 +1020,51 @@
       (catch Throwable e
         (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc))))))
 
-(defn- find-usages* [loc context scoped]
-  (loop [loc loc
-         scoped scoped]
-    (if (or (not loc) (zm/end? loc))
-      (:usages @context)
+(defn- find-usages*
+  ([loc context scoped] (find-usages* loc context scoped false))
+  ([loc context scoped threading?]
+    (loop [loc loc
+           scoped scoped]
+      (if (or (not loc) (zm/end? loc))
+        (:usages @context)
 
-      (let [tag (z/tag loc)]
-        (cond
-          (#{:syntax-quote :quote} tag)
-          (let [current-quoted (:quoting? @context)]
-            (vswap! context assoc :quoting? true)
-            (handle-sexpr (z/next loc) context scoped)
-            (vswap! context assoc :quoting? current-quoted)
-            (recur (edit/skip-over loc) scoped))
+        (let [tag (z/tag loc)]
+          (cond
+            (#{:syntax-quote :quote} tag)
+            (let [current-quoted (:quoting? @context)]
+              (vswap! context assoc :quoting? true)
+              (handle-sexpr (z/next loc) context scoped)
+              (vswap! context assoc :quoting? current-quoted)
+              (recur (edit/skip-over loc) scoped))
 
-          (= :uneval tag)
-          (do
-            (handle-ignored (z/next loc) context scoped)
-            (recur (edit/skip-over loc) scoped))
+            (= :uneval tag)
+            (do
+              (handle-ignored (z/next loc) context scoped)
+              (recur (edit/skip-over loc) scoped))
 
-          (or (= :list tag)
-              (and (= :fn tag) (:in-fn-literal? @context)))
-          (do
-            (handle-sexpr loc context scoped)
-            (recur (edit/skip-over loc) scoped))
+            (or (= :list tag)
+                (and (= :fn tag) (:in-fn-literal? @context)))
+            (do
+              (handle-sexpr loc context scoped threading?)
+              (recur (edit/skip-over loc) scoped))
 
-          (and (= :fn tag) (not (:in-fn-literal? @context)))
-          (do
-            (handle-dispatch-macro loc context scoped)
-            (recur (edit/skip-over loc) scoped))
+            (and (= :fn tag) (not (:in-fn-literal? @context)))
+            (do
+              (handle-dispatch-macro loc context scoped)
+              (recur (edit/skip-over loc) scoped))
 
-          (and (= :token tag) (ident? (z/sexpr loc)))
-          (do
-            (add-reference context scoped (z/node loc) {})
-            (recur (edit/skip-over loc) scoped))
+            (and (= :token tag) (ident? (z/sexpr loc)))
+            (do
+              (add-reference context scoped (z/node loc) {:argc (when threading? 1)})
+              (recur (edit/skip-over loc) scoped))
 
-          (= :reader-macro tag)
-          (do
-            (handle-rest (-> loc z/down z/right) context scoped)
-            (recur (edit/skip-over loc) scoped))
+            (= :reader-macro tag)
+            (do
+              (handle-rest (-> loc z/down z/right) context scoped)
+              (recur (edit/skip-over loc) scoped))
 
-          :else
-          (recur (zm/next loc) scoped))))))
+            :else
+            (recur (zm/next loc) scoped)))))))
 
 (defn process-reader-macro [loc file-type]
   (loop [loc loc]

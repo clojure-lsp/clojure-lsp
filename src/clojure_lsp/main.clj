@@ -241,7 +241,23 @@
                   (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
                     (interop/conform-or-log ::interop/document-symbols (#'handlers/document-symbol doc-id)))
                   (catch Exception e
-                    (log/error e))))))))))
+                    (log/error e)))))))))
+
+(^CompletableFuture documentHighlight [this ^TextDocumentPositionParams params]
+    (go :documentSymbol
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                        pos (.getPosition params)
+                        line (inc (.getLine pos))
+                        column (inc (.getCharacter pos))]
+                    (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))
+                  (catch Exception e
+                    (log/error e)))))))))
+)
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -307,6 +323,7 @@
                                      (.setDocumentFormattingProvider true)
                                      (.setDocumentRangeFormattingProvider true)
                                      (.setDocumentSymbolProvider true)
+                                     (.setDocumentHighlightProvider true)
                                      (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
                                                                    (.setCommands (keys handlers/refactorings))))
                                      (.setTextDocumentSync (doto (TextDocumentSyncOptions.)

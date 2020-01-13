@@ -341,6 +341,20 @@
                   e)))
          (into []))))
 
+(defn file-env-entry->document-highlight [{:keys [row end-row col end-col]}]
+  (let [r {:start {:line (dec row) :character (dec col)}
+           :end {:line (dec end-row) :character (dec end-col)}}]
+    {:range r}))
+
+(defn document-highlight [doc-id line column]
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
+        cursor (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))
+        sym (:sym cursor)
+         ]
+    (into [] (comp (filter #(= (:sym %) sym))
+                   (map file-env-entry->document-highlight)) local-env)))
+
 (def refactorings
   {"cycle-coll" #'refactor/cycle-coll
    "thread-first" #'refactor/thread-first

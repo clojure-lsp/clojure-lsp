@@ -69,8 +69,9 @@
 
 (def ignore-arity
   #{'clojure.core/defn     ; regex-like arglists
+    'cljs.core/defn
     'clojure.core/defmacro ; regex-like arglists
-    })
+    'cljs.core/defmacro})
 
 (defn ^:private supports-argc [signature argc]
   (let [min-argc (count (take-while #(not= '& %) signature))

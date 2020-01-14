@@ -557,3 +557,9 @@
         [_ _ _ _ _  x1 x2 x3] usages]
     (is (= 1 (:argc x1) (:argc x2)))
     (is (= 2 (:argc x3)))))
+
+(deftest colon-symbols
+  (let [code "(def foo:bar 12)"
+        usages (parser/find-usages code :clj {})
+        [_ foobar _] usages]
+    (is (= 'user/foo:bar (:sym foobar)))))

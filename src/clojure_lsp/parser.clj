@@ -58,7 +58,7 @@
   (z/find-next loc z/right #(not (n/printable-only? (z/node %)))))
 
 (defn ident-split [ident-str]
-  (let [ident-conformed (some-> ident-str (string/replace ":" ""))
+  (let [ident-conformed (some-> ident-str (string/replace #"^::?" ""))
         prefix (string/replace ident-str #"^(::?)?.*" "$1")
         idx (string/index-of ident-conformed "/")]
     (if (and idx (not= idx (dec (count ident-conformed))))

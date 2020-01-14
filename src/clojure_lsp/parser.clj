@@ -236,6 +236,8 @@
           (recur (edit/skip-over val-loc) scoped)))
       scoped)))
 
+(declare handle-sexpr)
+
 (defn handle-rest
   "Crawl each form from `loc` to the end of the parent-form
   `(fn [x 1] | (a) (b) (c))`
@@ -348,15 +350,52 @@
     (vswap! context assoc :ignored? curr-ignored?)))
 
 (defn handle-comment
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (handle-ignored (z-right-sexpr op-loc) context scoped))
 
 (defn handle-quote
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [current-quoted (:quoting? @context)]
     (vswap! context assoc :quoting? true)
     (handle-rest (z-right-sexpr op-loc) context scoped)
     (vswap! context assoc :quoting? current-quoted)))
+
+(defn handle-thread
+  [op-loc _loc context scoped threading?]
+  (let [first-loc (zm/right op-loc)
+        ; Check if the value is threaded in already
+        thread-loc (if threading?
+                     first-loc
+                     (zm/right first-loc))]
+    (do
+      ; Look at the value
+      (when (not threading?)
+        (find-usages* (zsub/subzip first-loc) context scoped))
+      ; Look at the forms threaded through
+      (loop [sub-loc thread-loc]
+        (when sub-loc
+          (find-usages* (zsub/subzip sub-loc) context scoped true)
+          (recur (zm/right sub-loc)))))))
+
+(defn handle-cond-thread
+  [op-loc _loc context scoped threading?]
+  (let [first-loc (zm/right op-loc)
+        ; Check if the value is threaded in already
+        thread-loc (if threading?
+                     first-loc
+                     (zm/right first-loc))]
+    (do
+      ; Look at the value
+      (when (not threading?)
+        (find-usages* (zsub/subzip first-loc) context scoped))
+      ; Look at the tests and forms threaded through
+      (loop [sub-loc thread-loc]
+        (when sub-loc
+          ; Test
+          (find-usages* (zsub/subzip sub-loc) context scoped)
+          ; Form
+          (find-usages* (zsub/subzip (zm/right sub-loc)) context scoped true)
+          (recur (zm/right (zm/right sub-loc))))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)
@@ -430,7 +469,7 @@
         (recur (z-right-sexpr entry-loc))))))
 
 (defn handle-ns
-  [_op-loc loc context scoped]
+  [_op-loc loc context scoped _threading?]
   (let [name-loc (z-right-sexpr (z/down (zsub/subzip loc)))
         first-list-loc (z/find-tag name-loc z-right-sexpr :list)
         require-loc (z/find first-list-loc z-right-sexpr (comp #{:require} z/sexpr z/down))
@@ -443,13 +482,13 @@
     (add-libspecs :import context scoped (some-> import-loc z/down z-right-sexpr) nil)))
 
 (defn handle-let
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
     (handle-rest (z-right-sexpr bindings-loc) context scoped)))
 
 (defn handle-if-let
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         if-loc (z-right-sexpr bindings-loc)
         if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
@@ -464,8 +503,24 @@
         (not (string/starts-with? op-name "def"))
         (string/ends-with? op-name "-"))))
 
+(defn arglists-to-signatures
+  [arglists]
+  (cond
+    (= 'quote (first arglists))
+    (let [sexprs (eval arglists)]
+      {:sexprs sexprs
+       :strings (map str sexprs)})
+
+    (string? (first arglists))
+    {:sexprs (map (comp z/sexpr z/of-string) arglists)
+     :strings arglists}
+
+    :else
+    {:sexprs (seq arglists)
+     :strings (map str arglists)}))
+
 (defn handle-def
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [name-loc (z-right-sexpr op-loc)
         def-sym (z/node name-loc)
         def-meta  (meta (z/sexpr name-loc))
@@ -477,19 +532,24 @@
                                                    #{:declare :local}
                                                    #{:declare :public})
                                            :doc (:doc def-meta)
-                                           :signatures (:arglists def-meta)})
+                                           :signatures (some-> (:arglists def-meta)
+                                                               (arglists-to-signatures))})
     (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 
 (defn- function-signatures [params-loc]
   (if (= :list (z/tag params-loc))
     (loop [list-loc params-loc
-           params []]
-      (let [params (conj params (z/string (z/down list-loc)))]
+           sexprs []
+           strings []]
+      (let [next-loc (z/down list-loc)
+            sexprs (conj sexprs (z/sexpr next-loc))
+            strings (conj strings (z/string next-loc))]
         (if-let [next-list (z/find-next-tag list-loc :list)]
-          (recur next-list params)
-          params)))
-    [(z/string params-loc)]))
+          (recur next-list sexprs strings)
+          {:sexprs sexprs :strings strings})))
+    {:sexprs (list (z/sexpr params-loc))
+     :strings (list (z/string params-loc))}))
 
 (defn- single-params-and-body [params-loc context scoped]
   (let [body-loc (z-right-sexpr params-loc)]
@@ -506,12 +566,19 @@
 
 (def check (fn [pred x] (when (pred x) x)))
 
+(defn is-params
+  [loc]
+  (or
+    (#{:vector :list} (z/tag loc))
+    ; z/tag could be :meta not :vector if there is a return type annotation
+    (vector? (z/sexpr loc))))
+
 (defn handle-function
   [op-loc _loc context scoped name-tags]
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
-        params-loc (z/find op-loc (fn [loc] (#{:vector :list} (z/tag loc))))]
+        params-loc (z/find op-loc is-params)]
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil
@@ -529,15 +596,15 @@
     (function-params-and-bodies params-loc context scoped)))
 
 (defn handle-fn
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-defn
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-defmacro
-  [op-loc loc context scoped]
+  [op-loc loc context scoped _threading?]
   (handle-function op-loc loc context scoped #{:declare}))
 
 (defn handle-fn-spec [method-loc context scoped tags]
@@ -575,13 +642,14 @@
                       (recur)))))))
 
 (defn handle-deftype
-  [op-loc _loc context scoped]
+  [op-loc _loc context scoped _threading?]
   (let [type-loc (z-right-sexpr op-loc)
         fields-loc (z-right-sexpr type-loc)]
     (vswap! context update :local-classes conj (z/sexpr type-loc))
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
-                                                     :signatures [(z/sexpr fields-loc)]})
+                                                     :signatures {:sexprs (list (z/sexpr fields-loc))
+                                                                  :strings (list (z/string fields-loc))}})
     (when (= "defrecord" (name (z/sexpr op-loc)))
       (let [type-name (name (z/sexpr type-loc))
             mapper-name (str "map->" type-name)
@@ -646,7 +714,13 @@
                   'clojure.core/for handle-let
                   'clojure.core/doseq handle-let
                   'clojure.core/comment handle-comment
-                  'clojure.core/quote handle-quote}]
+                  'clojure.core/quote handle-quote
+                  'clojure.core/-> handle-thread
+                  'clojure.core/->> handle-thread
+                  'clojure.core/some-> handle-thread
+                  'clojure.core/some->> handle-thread
+                  'clojure.core/cond-> handle-cond-thread
+                  'clojure.core/cond->> handle-cond-thread}]
     (merge handlers (medley/map-keys #(symbol "cljs.core" (name %)) handlers))))
 
 (def default-macro-defs
@@ -749,7 +823,7 @@
             name-meta (merge (meta (z/sexpr element-loc)) attr-map)
             dec-meta (cond-> name-meta
                        doc (assoc :doc doc)
-                       (seq signatures) (assoc :arglists signatures))
+                       (seq signatures) (assoc :arglists (:strings signatures)))
             tags' (set tags)
             op-local? (contains? tags' :local)
             context-ns (:ns @context)
@@ -764,7 +838,7 @@
                          forward? (update :tags conj :forward)
                          (not forward?) (update :tags set/union (if op-local?  #{:declare :local} #{:declare :public}))
                          (:doc dec-meta) (assoc :doc (:doc dec-meta))
-                         (:arglists dec-meta) (assoc :signatures (:arglists dec-meta))
+                         (:arglists dec-meta) (assoc :signatures (arglists-to-signatures (:arglists dec-meta)))
                          kind (assoc :kind kind)))))))
 
 (defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]
@@ -916,71 +990,81 @@
     context
     scoped))
 
-(defn handle-sexpr [loc context scoped]
-  (try
-    (let [op-loc (some-> loc (zm/down))]
-      (cond
-        (and op-loc (symbol? (z/sexpr op-loc)))
-        (let [usage (add-reference context scoped (z/node op-loc) {})
-              handler (get *sexpr-handlers* (:sym usage))
-              macro-def (get (:macro-defs @context) (:sym usage))]
-          (cond
-            (and macro-def (not (:quoting? @context)))
-            (parse-macro-def op-loc loc context scoped macro-def)
+(defn handle-sexpr
+  ([loc context scoped] (handle-sexpr loc context scoped false))
+  ([loc context scoped threading?]
+    (try
+      (let [op-loc (some-> loc (zm/down))]
+        (cond
+          (and op-loc (symbol? (z/sexpr op-loc)))
+          (let [argc (->> loc
+                          (z/node)
+                          (n/child-sexprs)
+                          (count))
+                usage (add-reference context scoped (z/node op-loc) {:argc (if threading?
+                                                                             argc
+                                                                             (dec argc))})
+                handler (get *sexpr-handlers* (:sym usage))
+                macro-def (get (:macro-defs @context) (:sym usage))]
+            (cond
+              (and macro-def (not (:quoting? @context)))
+              (parse-macro-def op-loc loc context scoped macro-def)
 
-            (and handler (not (:quoting? @context)))
-            (handler op-loc loc context scoped)
+              (and handler (not (:quoting? @context)))
+              (handler op-loc loc context scoped threading?)
+
+              :else
+              (handle-rest (zm/right op-loc) context scoped)))
+          op-loc
+          (handle-rest op-loc context scoped)))
+      (catch Throwable e
+        (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc))))))
+
+(defn- find-usages*
+  ([loc context scoped] (find-usages* loc context scoped false))
+  ([loc context scoped threading?]
+    (loop [loc loc
+           scoped scoped]
+      (if (or (not loc) (zm/end? loc))
+        (:usages @context)
+
+        (let [tag (z/tag loc)]
+          (cond
+            (#{:syntax-quote :quote} tag)
+            (let [current-quoted (:quoting? @context)]
+              (vswap! context assoc :quoting? true)
+              (handle-sexpr (z/next loc) context scoped)
+              (vswap! context assoc :quoting? current-quoted)
+              (recur (edit/skip-over loc) scoped))
+
+            (= :uneval tag)
+            (do
+              (handle-ignored (z/next loc) context scoped)
+              (recur (edit/skip-over loc) scoped))
+
+            (or (= :list tag)
+                (and (= :fn tag) (:in-fn-literal? @context)))
+            (do
+              (handle-sexpr loc context scoped threading?)
+              (recur (edit/skip-over loc) scoped))
+
+            (and (= :fn tag) (not (:in-fn-literal? @context)))
+            (do
+              (handle-dispatch-macro loc context scoped)
+              (recur (edit/skip-over loc) scoped))
+
+            (and (= :token tag) (ident? (z/sexpr loc)))
+            (do
+              (add-reference context scoped (z/node loc) {:argc (when threading? 1)})
+              (recur (edit/skip-over loc) scoped))
+
+            (= :reader-macro tag)
+            (do
+              (handle-rest (-> loc z/down z/right) context scoped)
+              (recur (edit/skip-over loc) scoped))
 
             :else
-            (handle-rest (zm/right op-loc) context scoped)))
-        op-loc
-        (handle-rest op-loc context scoped)))
-    (catch Throwable e
-      (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc)))))
-
-(defn- find-usages* [loc context scoped]
-  (loop [loc loc
-         scoped scoped]
-    (if (or (not loc) (zm/end? loc))
-      (:usages @context)
-
-      (let [tag (z/tag loc)]
-        (cond
-          (#{:syntax-quote :quote} tag)
-          (let [current-quoted (:quoting? @context)]
-            (vswap! context assoc :quoting? true)
-            (handle-sexpr (z/next loc) context scoped)
-            (vswap! context assoc :quoting? current-quoted)
-            (recur (edit/skip-over loc) scoped))
-
-          (= :uneval tag)
-          (do
-            (handle-ignored (z/next loc) context scoped)
-            (recur (edit/skip-over loc) scoped))
-
-          (or (= :list tag)
-              (and (= :fn tag) (:in-fn-literal? @context)))
-          (do
-            (handle-sexpr loc context scoped)
-            (recur (edit/skip-over loc) scoped))
-
-          (and (= :fn tag) (not (:in-fn-literal? @context)))
-          (do
-            (handle-dispatch-macro loc context scoped)
-            (recur (edit/skip-over loc) scoped))
-
-          (and (= :token tag) (ident? (z/sexpr loc)))
-          (do
-            (add-reference context scoped (z/node loc) {})
-            (recur (edit/skip-over loc) scoped))
-
-          (= :reader-macro tag)
-          (do
-            (handle-rest (-> loc z/down z/right) context scoped)
-            (recur (edit/skip-over loc) scoped))
-
-          :else
-          (recur (zm/next loc) scoped))))))
+            (recur (zm/next loc) scoped)))))))
 
 (defn process-reader-macro [loc file-type]
   (loop [loc loc]
@@ -1125,5 +1209,5 @@
   (find-usages "(do #inst \"2019-04-04\")" :clj {})
   (z/sexpr (z/right (z/of-string "#(:a 1)")))
 
-  (find-usages "(deftype JSValue [val])" :clj)
+  (find-usages "(deftype JSValue [val])" :clj {})
   (z/sexpr (loc-at-pos code 1 2)))

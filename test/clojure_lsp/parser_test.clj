@@ -44,7 +44,7 @@
 (deftest handle-fn-test
   (let [zloc (z/of-string "(fn [^String b])")
         context (volatile! {})]
-    (parser/handle-fn (z/next zloc) zloc context {})
+    (parser/handle-fn (z/next zloc) zloc context {} false)
     (is (= '{"java.lang.String" #{:norename}
              "b" #{:declare :param}}
            (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
@@ -378,7 +378,7 @@
       (is (= (:sym (nth usages 2 nil)) (:sym (nth usages 3 nil))))
       (is (= (:sym (nth usages-noopt 2 nil)) (:sym (nth usages-noopt 3 nil))))
       (is (= "docstring" (:doc (nth usages 1 nil))))
-      (is (= '[[a] [a b]] (:signatures (nth usages 1 nil))))))
+      (is (= ["[a]" "[a b]"] (get-in (nth usages 1 nil) [:signatures :strings])))))
   (testing "deftest"
     (let [code "(ns user (:require clojure.test)) (clojure.test/deftest my-test)"
           usages (parser/find-usages code :clj {})]
@@ -427,7 +427,8 @@
               :sym :foo/name
               :str ":foo/name"
               :file-type :clj
-              :signatures ["[_ b]"]}
+              :signatures {:sexprs ['[_ b]]
+                           :strings ["[_ b]"]}}
              (dissoc (nth usages 4 nil) :col :row :end-row :end-col)))
       (is (= (:sym (nth usages 8 nil)) (:sym (nth usages 9 nil)))))))
 
@@ -517,7 +518,7 @@
     (is (= #{:declare :public} (:tags a)))
     (is (= 'user/a (:sym a)))
     (is (= nil (:doc a)))
-    (is (= ["[b c]"] (:signatures a)))
+    (is (= ["[b c]"] (get-in a [:signatures :strings])))
     (is (= (:sym b) (:sym b2)))
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
   (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [b :- Long c :- [S/Str]] b)"
@@ -526,7 +527,7 @@
     (is (= #{:declare :public} (:tags a)))
     (is (= 'user/a (:sym a)))
     (is (= "Docs" (:doc a)))
-    (is (= ["[b :- Long c :- [S/Str]]"] (:signatures a)))
+    (is (= ["[b :- Long c :- [S/Str]]"] (get-in a [:signatures :strings])))
     (is (= (:sym b) (:sym b2)))
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
   (testing "destructures param"
@@ -536,7 +537,7 @@
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
-      (is (= ["[{b :b} :- Long c :- [S/Str]]"] (:signatures a)))
+      (is (= ["[{b :b} :- Long c :- [S/Str]]"] (get-in a [:signatures :strings])))
       (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))
   (testing "handles complex return type"
@@ -546,6 +547,13 @@
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
-      (is (= ["[{b :b} :- Long c :- [S/Str]]"] (:signatures a)))
+      (is (= ["[{b :b} :- Long c :- [S/Str]]"] (get-in a [:signatures :strings])))
       (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))))
+
+(deftest fncall-arity
+  (let [code "(defn x [y] y (-> 1 x (x) (x 2)))"
+        usages (parser/find-usages code :clj {})
+        [_ _ _ _ _  x1 x2 x3] usages]
+    (is (= 1 (:argc x1) (:argc x2)))
+    (is (= 2 (:argc x3)))))

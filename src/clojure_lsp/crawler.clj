@@ -67,6 +67,43 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
+(def ignore-arity
+  #{'clojure.core/defn     ; regex-like arglists
+    'clojure.core/defmacro ; regex-like arglists
+    })
+
+(defn ^:private supports-argc [signature argc]
+  (let [min-argc (count (take-while #(not= '& %) signature))
+        has-rest (not= min-argc (count signature))]
+    (if has-rest
+      (>= argc min-argc)
+      (= argc min-argc))))
+
+(defn ^:private diagnose-wrong-arity [uri usages]
+  (let [all-envs (assoc (:file-envs @db/db) uri usages)
+        function-references (filter :signatures (mapcat val all-envs))
+        call-sites (filter :argc usages)]
+    (for [call-site call-sites
+          :let [argc (:argc call-site)
+                function-sym (:sym call-site)
+                relevant-functions (filter #(= (:sym %) function-sym) function-references)
+                relevant-function (last relevant-functions)
+                overloads (get-in relevant-function [:signatures :sexprs])]
+          :when (and
+                  overloads
+                  (not (ignore-arity function-sym))
+                  (try
+                    (not-any? #(supports-argc % argc) overloads)
+                    (catch Exception e
+                      (log/warn "Couldn't interpret signature for" function-sym ":" (.getMessage e))
+                      false)))]
+      {:range (shared/->range call-site)
+       :code :wrong-arity
+       :message (let [plural (not= argc 1)]
+                  (format "No overload %s for %d argument%s"
+                          (:str call-site) argc (if plural "s" "")))
+       :severity 1})))
+
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
                         (mapcat (comp val))
@@ -119,7 +156,8 @@
   (let [unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        result (concat unknown unused unknown-forwards)]
+        wrong-arity (diagnose-wrong-arity uri usages)
+        result (concat unknown unused unknown-forwards wrong-arity)]
     result))
 
 (defn safe-find-references

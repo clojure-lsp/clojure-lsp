@@ -415,7 +415,9 @@
       {:range (shared/->range cursor)
        :contents (case content-format
                    "markdown" (let [{:keys [sym tags]} cursor
-                                    signatures (some->> signatures (string/join "\n"))
+                                    signatures (some->> signatures
+                                                        (:strings)
+                                                        (string/join "\n"))
                                     tags (string/join " " tags)]
                                 {:kind "markdown"
                                  :value (cond-> (str "```\n" sym "\n```\n")
@@ -425,7 +427,7 @@
 
                    ;; default to plaintext
                    [(cond-> (select-keys cursor [:sym :tags])
-                      (seq signatures) (assoc :signatures signatures)
+                      (seq signatures) (assoc :signatures (:strings signatures))
                       :always (pr-str))])}
       {:contents []})))
 

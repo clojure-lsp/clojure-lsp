@@ -562,4 +562,4 @@
   (let [code "(def foo:bar 12)"
         usages (parser/find-usages code :clj {})
         [_ foobar _] usages]
-    (is (= 'foo:bar (:sym foobar)))))
+    (is (= 'user/foo:bar (:sym foobar)))))

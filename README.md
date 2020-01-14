@@ -47,9 +47,12 @@ See [troubleshooting.md](docs/troubleshooting.md).
 | referencesProvider | √ | |
 | renameProvider     | √ | |
 | definitionProvider |   | TODO: java classes |
-| diagnostics        |   | TODO: wrong arity, others? |
+| diagnostics        | √ | |
 | hover              | √ | |
 | formatting         | √ | |
+| workspace-symbols  | √ | |
+| document-symbols   | √ | |
+| document-highlight | √ | |
 
 ## Refactorings
 

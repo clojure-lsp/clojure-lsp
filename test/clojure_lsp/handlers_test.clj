@@ -3,6 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
+   [clojure.string :as string]
    [clojure.test :refer :all]
    [clojure.tools.logging :as log]
    [clojure-lsp.crawler :as crawler]))
@@ -181,34 +182,40 @@
                                     {})}}]
     (testing "complete-a"
       (reset! db/db db-state)
-      (is (= [{:label "alpha"}
+      (is (= [{:label "alpha" :data "user/alpha"}
               {:label "alpaca" :detail "user"}
               {:label "alpaca" :detail "alpaca.ns"}
               {:label "alpaca.ns" :detail "alpaca.ns"}]
              (handlers/completion "file://b.clj" 3 18))))
     (testing "complete-ba"
       (reset! db/db db-state)
-			(is (= [{:label "bases"}]
+			(is (= [{:label "bases" :data "clojure.core/bases"}]
              (handlers/completion "file://b.clj" 4 3))))
     (testing "complete-alph"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'user/alph :str "alph"}))
-      (is (= [{:label "alpha"}]
+      (is (= [{:label "alpha" :data "user/alpha"}]
              (handlers/completion "file://b.clj" 3 3))))
     (testing "complete-alpaca"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'alpaca :str "alpaca"}))
       (is (= [{:label "alpaca" :detail "user"}
               {:label "alpaca" :detail "alpaca.ns"}
               {:label "alpaca.ns" :detail "alpaca.ns"}
-              {:label "alpaca/barr" :detail "alpaca.ns"}
-              {:label "alpaca/bazz" :detail "alpaca.ns"}]
+              {:label "alpaca/barr" :detail "alpaca.ns" :data "alpaca.ns/barr"}
+              {:label "alpaca/bazz" :detail "alpaca.ns" :data "alpaca.ns/bazz"}]
              (handlers/completion "file://b.clj" 3 18))))
     (testing "complete-core-stuff"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
-      (is (= [{:label "frequencies"}]
+      (is (= [{:label "frequencies" :data "clojure.core/frequencies"}]
              (handlers/completion "file://b.clj" 3 18)))
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'Sys :str "Sys"}))
-      (is (= [{:label "System"}]
-             (handlers/completion "file://b.clj" 3 18))))))
+      (is (= [{:label "System" :data "java.lang.System"}]
+             (handlers/completion "file://b.clj" 3 18))))
+    (testing "resolving completion item"
+      (reset! db/db db-state)
+      (let [{:keys [label data documentation]} (handlers/resolve-completion-item "alpha" "user/alpha")]
+        (and (is (= label "alpha"))
+             (is (= data "user/alpha"))
+             (is (string/includes? documentation data)))))))
 
 (deftest test-range-formatting
     (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})

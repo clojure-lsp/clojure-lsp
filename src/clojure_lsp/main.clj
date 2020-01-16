@@ -14,6 +14,7 @@
       ApplyWorkspaceEditParams
       CodeActionParams
       Command
+      CompletionItem
       CompletionItemKind
       CompletionOptions
       CompletionParams
@@ -132,6 +133,19 @@
                         line (inc (int (.getLine pos)))
                         column (inc (int (.getCharacter pos)))]
                     (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))
+                  (catch Exception e
+                    (log/error e)))))))))
+
+  (^CompletableFuture resolveCompletionItem [this ^CompletionItem item]
+    (go :resolveCompletionItem
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [this]
+              (end
+                (try
+                  (let [label (.getLabel item)
+                        sym-wanted (interop/json->clj (.getData item))]
+                    (interop/conform-or-log ::interop/completion-item (#'handlers/resolve-completion-item label sym-wanted)))
                   (catch Exception e
                     (log/error e)))))))))
 
@@ -343,7 +357,7 @@
                                                              (.setOpenClose true)
                                                              (.setChange TextDocumentSyncKind/Full)
                                                              (.setSave (SaveOptions. true))))
-                                     (.setCompletionProvider (CompletionOptions. false [\c])))))))))
+                                     (.setCompletionProvider (CompletionOptions. true [\c])))))))))
     (^void initialized [^InitializedParams params]
       (log/warn "Initialized" params))
     (^CompletableFuture shutdown []

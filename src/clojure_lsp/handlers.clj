@@ -162,7 +162,8 @@
                        (when-let [scope-bounds (:scope-bounds usage)]
                          (not= :within (check-bounds line column scope-bounds)))))
              (mapv (fn [{:keys [sym kind]}]
-                     (cond-> {:label (name sym)}
+                     (cond-> {:label (name sym)
+                              :data (str sym)}
                        kind (assoc :kind kind))))
              (sort-by :label))
         (->> namespaces-and-aliases
@@ -187,23 +188,53 @@
                                               (refactor/add-known-libspec (symbol alias-str) alias-ns)
                                               (refactor/result))]]
                (cond-> {:label (str alias-str "/" (name (:sym usage)))
-                        :detail (name alias-ns)}
+                        :detail (name alias-ns)
+                        :data (str (:sym usage))}
                  require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))
              (sort-by :label))
         (->> cc/core-syms
              (filter (comp matches? str))
-             (map (fn [sym] {:label (str sym)}))
+             (map (fn [sym] {:label (str sym)
+                             :data (str "clojure.core/" sym)}))
              (sort-by :label))
         (when (contains? #{:cljc :cljs} cursor-file-type)
           (->> cc/cljs-syms
                (filter (comp matches? str))
-               (map (fn [sym] {:label (str sym)}))
+               (map (fn [sym] {:label (str sym)
+                               :data (str "cljs.core/" sym)}))
                (sort-by :label)))
         (when (contains? #{:cljc :clj} cursor-file-type)
           (->> cc/java-lang-syms
                (filter (comp matches? str))
-               (map (fn [sym] {:label (str sym)}))
+               (map (fn [sym] {:label (str sym)
+                               :data (str "java.lang." sym)}))
                (sort-by :label)))))))
+
+(defn resolve-completion-item [label sym-wanted]
+  (let [file-envs (:file-envs @db/db)
+        {:keys [signatures doc tags sym]} (first
+                                            (for [[_ usages] file-envs
+                                                  {:keys [sym tags] :as usage} usages
+                                                  :when (and (= (str sym) sym-wanted)
+                                                             (:declare tags))]
+                                              usage))
+        signatures (some->> signatures
+                            (:strings)
+                            (string/join "\n"))
+        tags (string/join " " tags)
+        [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])]
+    (merge {:label label :data sym-wanted}
+           {:documentation (case content-format
+                             "markdown" {:kind "markdown"
+                                         :value (cond-> (str "```\n" sym "\n```\n")
+                                                  signatures (str "```\n" signatures "\n```\n")
+                                                  (seq doc) (str doc "\n")
+                                                  (seq tags) (str "\n----\n" "lsp: " tags))}
+                             ;; Default to plaintext
+                             (cond-> (str sym "\n")
+                               signatures (str signatures "\n")
+                               (seq doc) (str doc "\n")
+                               (seq tags) (str "\n----\n" "lsp: " tags)))})))
 
 (defn reference-usages [doc-id line column]
   (let [file-envs (:file-envs @db/db)

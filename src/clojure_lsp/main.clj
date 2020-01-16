@@ -5,7 +5,7 @@
     [clojure-lsp.interop :as interop]
     [clojure.core.async :as async]
     [clojure.tools.logging :as log]
-    [clojure.tools.nrepl.server :as nrepl.server]
+    [nrepl.server :as nrepl.server]
     [trptcolin.versioneer.core :as version])
   (:import
     (clojure_lsp ClojureExtensions)

@@ -50,16 +50,21 @@
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
 (s/def ::additional-text-edits (s/coll-of ::text-edit))
+(s/def ::documentation (s/and (s/or :string string?
+                                    :markup-content ::markup-content)
+                              (s/conformer second)))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit :completion-item/kind])
-                                (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind]}]
+                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit :completion-item/kind ::documentation ::data])
+                                (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind documentation data]}]
                                                (let [item (CompletionItem. label)]
                                                  (cond-> item
                                                    filter-text (doto (.setFilterText filter-text))
                                                    kind (doto (.setKind kind))
                                                    additional-text-edits (doto (.setAdditionalTextEdits additional-text-edits))
                                                    detail (doto (.setDetail detail))
-                                                   text-edit (doto (.setTextEdit text-edit))))))))
+                                                   text-edit (doto (.setTextEdit text-edit))
+                                                   documentation (doto (.setDocumentation documentation))
+                                                   data (doto (.setData data))))))))
 (s/def ::completion-items (s/coll-of ::completion-item))
 (s/def ::version (s/and integer? (s/conformer int)))
 (s/def ::uri string?)

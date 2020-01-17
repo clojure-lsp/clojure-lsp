@@ -779,8 +779,7 @@
    'schema.core/defn [{:element :declaration
                        :doc? [{:pred :keyword} {:pred :follows-constant :constant :-}]
                        :attr-map? [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string}]
-                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
-                       :ignore-arity? true}
+                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]}
                       {:element :element :pred :keyword}
                       {:element :element :pred :follows-constant :constant :-}
                       {:element :element :pred :string}

@@ -520,7 +520,7 @@
   (cond
     (= 'quote (first arglists))
     (let [sexprs (eval arglists)]
-      {:sexprs (clean-signature sexprs)
+      {:sexprs (map clean-signature sexprs)
        :strings (map str sexprs)})
 
     (string? (first arglists))
@@ -528,7 +528,7 @@
      :strings arglists}
 
     :else
-    {:sexprs (clean-signature (seq arglists))
+    {:sexprs (map clean-signature arglists)
      :strings (map str arglists)}))
 
 (defn handle-def

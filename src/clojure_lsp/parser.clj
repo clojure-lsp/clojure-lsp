@@ -767,7 +767,8 @@
    'schema.core/defn [{:element :declaration
                        :doc? [{:pred :keyword} {:pred :follows-constant :constant :-}]
                        :attr-map? [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string}]
-                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]}
+                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
+                       :ignore-arity? true}
                       {:element :element :pred :keyword}
                       {:element :element :pred :follows-constant :constant :-}
                       {:element :element :pred :string}
@@ -801,7 +802,7 @@
           (recur next-loc dirs)
           next-loc)))))
 
-(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? declare-class?]} element-loc context scoped]
+(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? declare-class? ignore-arity?]} element-loc context scoped]
   (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
       (let [signature-loc (macro-dirs-to-loc signature element-loc)
@@ -836,6 +837,7 @@
         (add-reference context scoped (z/node element-loc)
                        (cond->  {:tags tags'}
                          forward? (update :tags conj :forward)
+                         ignore-arity? (update :tags conj :ignore-arity?)
                          (not forward?) (update :tags set/union (if op-local?  #{:declare :local} #{:declare :public}))
                          (:doc dec-meta) (assoc :doc (:doc dec-meta))
                          (:arglists dec-meta) (assoc :signatures (arglists-to-signatures (:arglists dec-meta)))
@@ -845,7 +847,7 @@
   (let [k->qualified (into {} (map (comp (juxt identity #(symbol (str (gensym)) (name %))) key) sub-forms))
         new-scope (reduce (fn [accum qualified-k]
                             (assoc accum (symbol (name qualified-k)) {:ns (symbol (namespace qualified-k))
-                                                      :bounds scope-bounds}))
+                                                                      :bounds scope-bounds}))
                           bound-scope
                           (vals k->qualified))]
     (doseq [[k macro-def] sub-forms

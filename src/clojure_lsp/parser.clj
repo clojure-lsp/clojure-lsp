@@ -242,11 +242,13 @@
   "Crawl each form from `loc` to the end of the parent-form
   `(fn [x 1] | (a) (b) (c))`
   With cursor at `|` find references for `(a)`, `(b)`, and `(c)`"
-  [loc context scoped]
-  (loop [sub-loc loc]
-    (when sub-loc
-      (find-usages* (zsub/subzip sub-loc) context scoped)
-      (recur (zm/right sub-loc)))))
+  ([loc context scoped]
+   (handle-rest loc context scoped false))
+  ([loc context scoped threading?]
+   (loop [sub-loc loc]
+     (when sub-loc
+       (find-usages* (zsub/subzip sub-loc) context scoped threading?)
+       (recur (zm/right sub-loc))))))
 
 (defn parse-destructuring [param-loc scope-bounds context scoped]
   (if param-loc
@@ -392,9 +394,13 @@
       (loop [sub-loc thread-loc]
         (when sub-loc
           ; Test
-          (find-usages* (zsub/subzip sub-loc) context scoped)
+          (some-> sub-loc
+                  zsub/subzip
+                  (find-usages* context scoped))
           ; Form
-          (find-usages* (zsub/subzip (zm/right sub-loc)) context scoped true)
+          (some-> (zm/right sub-loc)
+                  zsub/subzip
+                  (find-usages* context scoped true))
           (recur (zm/right (zm/right sub-loc))))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
@@ -963,7 +969,7 @@
           :bound-elements
           (handle-rest element-loc context bound-scope)
           :elements
-          (handle-rest element-loc context scoped)
+          (handle-rest element-loc context scoped (boolean (:thread-style element-info)))
           :bound-element
           (find-usages* (zsub/subzip element-loc) context bound-scope)
           :element

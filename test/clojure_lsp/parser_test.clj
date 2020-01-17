@@ -564,3 +564,13 @@
         usages (parser/find-usages code :clj {})
         [_ foobar _] usages]
     (is (= 'user/foo:bar (:sym foobar)))))
+
+(deftest custom-thread-macro
+  (testing "cond-> should handle too few args"
+    (let [code "(cond-> :always reverse)"
+          [c _ _] (parser/find-usages code :clj {})]
+      (is (= 2 (:argc c)))))
+  (testing "my-> should tell cond-> of extra arg"
+    (let [code "(defmacro my-> [& _]) (my-> 1 (cond-> :always 1))"
+          [_ _ _ _ c] (parser/find-usages code :clj {'user/my-> [{:element :elements :thread-style :first}]})]
+      (is (= 3 (:argc c))))))

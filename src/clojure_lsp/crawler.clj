@@ -93,6 +93,7 @@
           :when (and
                   overloads
                   (not (ignore-arity function-sym))
+                  (not (contains? (:tags relevant-function) :ignore-arity?))
                   (try
                     (not-any? #(supports-argc % argc) overloads)
                     (catch Exception e

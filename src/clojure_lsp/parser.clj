@@ -551,8 +551,8 @@
 
 (defn- function-signatures
   ([params-loc] (function-signatures params-loc nil))
-  ([params-loc signature-style?]
-    (let [signature-fn (case signature-style?
+  ([params-loc signature-style]
+    (let [signature-fn (case signature-style
                          :typed remove-type-annots
                          identity)]
       (if (= :list (z/tag params-loc))
@@ -784,7 +784,7 @@
    'schema.core/defn [{:element :declaration
                        :doc? [{:pred :keyword} {:pred :follows-constant :constant :-}]
                        :attr-map? [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string}]
-                       :signature-style? :typed
+                       :signature-style :typed
                        :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]}
                       {:element :element :pred :keyword}
                       {:element :element :pred :follows-constant :constant :-}
@@ -819,11 +819,11 @@
           (recur next-loc dirs)
           next-loc)))))
 
-(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? signature-style? declare-class? ignore-arity?]} element-loc context scoped]
+(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? signature-style declare-class? ignore-arity?]} element-loc context scoped]
   (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
       (let [signature-loc (macro-dirs-to-loc signature element-loc)
-            signatures (when signature-loc (function-signatures signature-loc signature-style?))
+            signatures (when signature-loc (function-signatures signature-loc signature-style))
             doc-loc (cond
                       (vector? doc?) (macro-dirs-to-loc doc? element-loc)
                       doc? (z/find-next element-loc z/right (fn [loc]

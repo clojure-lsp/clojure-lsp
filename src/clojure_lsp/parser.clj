@@ -503,20 +503,32 @@
         (not (string/starts-with? op-name "def"))
         (string/ends-with? op-name "-"))))
 
+(defn clean-signature
+  "Remove `:- Type` type annotations from an fn signature sexpr."
+  [sexpr]
+  (loop [to-add sexpr
+         args []]
+    (if (seq to-add)
+      (let [[arg & xs] to-add]
+        (if (= arg :-)
+          (recur (drop 1 xs) args)
+          (recur xs (conj args arg))))
+      args)))
+
 (defn arglists-to-signatures
   [arglists]
   (cond
     (= 'quote (first arglists))
     (let [sexprs (eval arglists)]
-      {:sexprs sexprs
+      {:sexprs (clean-signature sexprs)
        :strings (map str sexprs)})
 
     (string? (first arglists))
-    {:sexprs (map (comp z/sexpr z/of-string) arglists)
+    {:sexprs (map (comp clean-signature z/sexpr z/of-string) arglists)
      :strings arglists}
 
     :else
-    {:sexprs (seq arglists)
+    {:sexprs (clean-signature (seq arglists))
      :strings (map str arglists)}))
 
 (defn handle-def
@@ -543,13 +555,13 @@
            sexprs []
            strings []]
       (let [next-loc (z/down list-loc)
-            sexprs (conj sexprs (z/sexpr next-loc))
+            sexprs (conj sexprs (-> next-loc z/sexpr clean-signature))
             strings (conj strings (z/string next-loc))]
         (if-let [next-list (z/find-next-tag list-loc :list)]
           (recur next-list sexprs strings)
           {:sexprs sexprs :strings strings})))
-    {:sexprs (list (z/sexpr params-loc))
-     :strings (list (z/string params-loc))}))
+    {:sexprs [(-> params-loc z/sexpr clean-signature)]
+     :strings [(z/string params-loc)]}))
 
 (defn- single-params-and-body [params-loc context scoped]
   (let [body-loc (z-right-sexpr params-loc)]
@@ -648,8 +660,8 @@
     (vswap! context update :local-classes conj (z/sexpr type-loc))
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
-                                                     :signatures {:sexprs (list (z/sexpr fields-loc))
-                                                                  :strings (list (z/string fields-loc))}})
+                                                     :signatures {:sexprs [(-> fields-loc z/sexpr clean-signature)]
+                                                                  :strings [(z/string fields-loc)]}})
     (when (= "defrecord" (name (z/sexpr op-loc)))
       (let [type-name (name (z/sexpr type-loc))
             mapper-name (str "map->" type-name)

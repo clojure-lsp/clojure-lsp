@@ -538,6 +538,7 @@
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
       (is (= ["[{b :b} :- Long c :- [S/Str]]"] (get-in a [:signatures :strings])))
+      (is (= ['[{b :b} c]] (get-in a [:signatures :sexprs])))
       (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))
   (testing "handles complex return type"

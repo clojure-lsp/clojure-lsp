@@ -140,7 +140,7 @@
                                                                      (foo 1 2)
                                                                      (foo 1)" :clj {})}})
       (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= ["Unused ns user"
+        (is (= ["Unused namespace: user"
                 "No overload foo for 0 arguments"
                 "No overload foo for 1 argument"]
                (map :message usages))))))

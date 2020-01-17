@@ -143,7 +143,19 @@
         (is (= ["Unused namespace: user"
                 "No overload foo for 0 arguments"
                 "No overload foo for 1 argument"]
-               (map :message usages))))))
+               (map :message usages)))))
+    (testing "for ignore-arity? macros"
+      (let [usages  (parser/find-usages "(ns user (:require [schema.core :as s])) (s/defn foo [x :- int?] x) (foo 1 2 3)" :clj
+                                        {'schema.core/defn [{:element :declaration
+                                                             :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
+                                                             :ignore-arity? true}
+                                                            {:element :sub-elements
+                                                             :match-patterns [[:any :keyword :any] [:param :element :element]
+                                                                              [:any] [:param]]}
+                                                            :bound-elements]})
+            _ (reset! db/db {:file-envs {"file://a.clj" usages}})
+            diagnostics (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
+        (is (= [] (mapv :message (drop 1 diagnostics)))))))
   (testing "unused symbols"
     (reset! db/db {:file-envs
                    {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})

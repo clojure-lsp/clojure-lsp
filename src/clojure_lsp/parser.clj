@@ -503,12 +503,12 @@
         (not (string/starts-with? op-name "def"))
         (string/ends-with? op-name "-"))))
 
-(defn arglists-to-signatures
+(defn- arglists-to-signatures
   [arglists]
   (cond
     (= 'quote (first arglists))
     (let [sexprs (eval arglists)]
-      {:sexprs sexprs
+      {:sexprs (seq sexprs)
        :strings (map str sexprs)})
 
     (string? (first arglists))
@@ -537,19 +537,36 @@
     (handle-rest (z-right-sexpr name-loc)
                  context scoped)))
 
-(defn- function-signatures [params-loc]
-  (if (= :list (z/tag params-loc))
-    (loop [list-loc params-loc
-           sexprs []
-           strings []]
-      (let [next-loc (z/down list-loc)
-            sexprs (conj sexprs (z/sexpr next-loc))
-            strings (conj strings (z/string next-loc))]
-        (if-let [next-list (z/find-next-tag list-loc :list)]
-          (recur next-list sexprs strings)
-          {:sexprs sexprs :strings strings})))
-    {:sexprs (list (z/sexpr params-loc))
-     :strings (list (z/string params-loc))}))
+(defn- remove-type-annots
+  "Remove `:- Type` type annotations from an fn signature sexpr."
+  [sexpr]
+  (loop [to-add sexpr
+         args []]
+    (if (seq to-add)
+      (let [[arg & xs] to-add]
+        (if (= arg :-)
+          (recur (drop 1 xs) args)
+          (recur xs (conj args arg))))
+      args)))
+
+(defn- function-signatures
+  ([params-loc] (function-signatures params-loc nil))
+  ([params-loc signature-style]
+    (let [signature-fn (case signature-style
+                         :typed remove-type-annots
+                         identity)]
+      (if (= :list (z/tag params-loc))
+        (loop [list-loc params-loc
+               sexprs []
+               strings []]
+          (let [next-loc (z/down list-loc)
+                sexprs (conj sexprs (-> next-loc z/sexpr signature-fn))
+                strings (conj strings (z/string next-loc))]
+            (if-let [next-list (z/find-next-tag list-loc :list)]
+              (recur next-list sexprs strings)
+              {:sexprs sexprs :strings strings})))
+        {:sexprs [(-> params-loc z/sexpr signature-fn)]
+         :strings [(z/string params-loc)]}))))
 
 (defn- single-params-and-body [params-loc context scoped]
   (let [body-loc (z-right-sexpr params-loc)]
@@ -648,8 +665,8 @@
     (vswap! context update :local-classes conj (z/sexpr type-loc))
     (add-reference context scoped (z/node type-loc) {:tags #{:declare :public}
                                                      :kind :class
-                                                     :signatures {:sexprs (list (z/sexpr fields-loc))
-                                                                  :strings (list (z/string fields-loc))}})
+                                                     :signatures {:sexprs [(-> fields-loc z/sexpr)]
+                                                                  :strings [(z/string fields-loc)]}})
     (when (= "defrecord" (name (z/sexpr op-loc)))
       (let [type-name (name (z/sexpr type-loc))
             mapper-name (str "map->" type-name)
@@ -767,8 +784,8 @@
    'schema.core/defn [{:element :declaration
                        :doc? [{:pred :keyword} {:pred :follows-constant :constant :-}]
                        :attr-map? [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string}]
-                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
-                       :ignore-arity? true}
+                       :signature-style :typed
+                       :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]}
                       {:element :element :pred :keyword}
                       {:element :element :pred :follows-constant :constant :-}
                       {:element :element :pred :string}
@@ -802,11 +819,11 @@
           (recur next-loc dirs)
           next-loc)))))
 
-(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? declare-class? ignore-arity?]} element-loc context scoped]
+(defn- macro-declaration [{:keys [signature kind tags forward? doc? attr-map? signature-style declare-class? ignore-arity?]} element-loc context scoped]
   (let [name-sexpr (z/sexpr element-loc)]
     (when (or (symbol? name-sexpr) (keyword? name-sexpr))
       (let [signature-loc (macro-dirs-to-loc signature element-loc)
-            signatures (when signature-loc (function-signatures signature-loc))
+            signatures (when signature-loc (function-signatures signature-loc signature-style))
             doc-loc (cond
                       (vector? doc?) (macro-dirs-to-loc doc? element-loc)
                       doc? (z/find-next element-loc z/right (fn [loc]
@@ -841,6 +858,7 @@
                          (not forward?) (update :tags set/union (if op-local?  #{:declare :local} #{:declare :public}))
                          (:doc dec-meta) (assoc :doc (:doc dec-meta))
                          (:arglists dec-meta) (assoc :signatures (arglists-to-signatures (:arglists dec-meta)))
+                         (seq signatures) (assoc :signatures signatures)
                          kind (assoc :kind kind)))))))
 
 (defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]

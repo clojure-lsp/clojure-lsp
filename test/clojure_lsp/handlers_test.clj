@@ -130,6 +130,19 @@
       (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
         (is (= ["No overload foo for 0 arguments"
                 "No overload foo for 2 arguments"]
+               (map :message usages)))))
+    (testing "for schema defs"
+      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(ns user (:require [schema.core :as s]))
+                                                                     (s/defn foo :- s/Str
+                                                                       [x :- Long y :- Long]
+                                                                       (str x y))
+                                                                     (foo)
+                                                                     (foo 1 2)
+                                                                     (foo 1)" :clj {})}})
+      (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
+        (is (= ["Unused ns user"
+                "No overload foo for 0 arguments"
+                "No overload foo for 1 argument"]
                (map :message usages))))))
   (testing "unused symbols"
     (reset! db/db {:file-envs

@@ -325,24 +325,33 @@
       (log/warn "bindings" (.getMessage e) (z/sexpr bindings-loc) (z/sexpr (z/up bindings-loc)))
       (throw e))))
 
-(defn parse-params [params-loc context scoped]
-  (try
-    (let [{:keys [row col]} (meta (z/node params-loc))
-          {:keys [end-row end-col]} (meta (z/node (z/up params-loc)))
-          scope-bounds {:row row :col col :end-row end-row :end-col end-col}
-          single? (not= :vector (z/tag params-loc))]
-      (loop [param-loc (cond-> params-loc
-                         (not single?) (z/down))
-             scoped scoped]
-        (if param-loc
-          (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
-            (if (or single? (nil? (z-right-sexpr param-loc)))
-              new-scoped
-              (recur (z-right-sexpr param-loc) new-scoped)))
-          scoped)))
-    (catch Exception e
-      (log/warn "params" (.getMessage e) (z/sexpr params-loc))
-      (throw e))))
+(defn parse-params
+  ([params-loc context scoped] (parse-params params-loc context scoped nil))
+  ([params-loc context scoped signature-style]
+    (try
+      (let [{:keys [row col]} (meta (z/node params-loc))
+            {:keys [end-row end-col]} (meta (z/node (z/up params-loc)))
+            scope-bounds {:row row :col col :end-row end-row :end-col end-col}
+            typed? (= signature-style :typed)
+            single? (not= :vector (z/tag params-loc))]
+        (loop [param-loc (cond-> params-loc
+                           (not single?) (z/down))
+               scoped scoped]
+          (cond
+            (and typed? param-loc (= :- (z/sexpr param-loc)))
+            (recur (-> param-loc z-right-sexpr z-right-sexpr) scoped)
+
+            param-loc
+            (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
+              (if (or single? (nil? (z-right-sexpr param-loc)))
+                new-scoped
+                (recur (z-right-sexpr param-loc) new-scoped)))
+
+            :else
+            scoped)))
+      (catch Exception e
+        (log/warn "params" (.getMessage e) (z/sexpr params-loc))
+        (throw e)))))
 
 (defn handle-ignored
   [rest-loc context scoped]
@@ -574,18 +583,20 @@
         {:sexprs [(-> params-loc z/sexpr signature-fn)]
          :strings [(z/string params-loc)]}))))
 
-(defn- single-params-and-body [params-loc context scoped]
+(defn- single-params-and-body [params-loc context scoped signature-style]
   (let [body-loc (z-right-sexpr params-loc)]
-    (->> (parse-params params-loc context scoped)
+    (->> (parse-params params-loc context scoped signature-style)
          (handle-rest body-loc context))))
 
-(defn- function-params-and-bodies [params-loc context scoped]
-  (if (= :list (z/tag params-loc))
-    (loop [list-loc params-loc]
-      (single-params-and-body (z/down list-loc) context scoped)
-      (when-let [next-list (z/find-next-tag list-loc :list)]
-        (recur next-list)))
-    (single-params-and-body params-loc context scoped)))
+(defn- function-params-and-bodies
+  ([params-loc context scoped] (function-params-and-bodies params-loc context scoped nil))
+  ([params-loc context scoped signature-style]
+    (if (= :list (z/tag params-loc))
+      (loop [list-loc params-loc]
+        (single-params-and-body (z/down list-loc) context scoped signature-style)
+        (when-let [next-list (z/find-next-tag list-loc :list)]
+          (recur next-list)))
+      (single-params-and-body params-loc context scoped signature-style))))
 
 (def check (fn [pred x] (when (pred x) x)))
 
@@ -796,7 +807,8 @@
                       {:element :element :pred :follows-constant :constant :-}
                       {:element :element :pred :string}
                       {:element :element :pred :map}
-                      :function-params-and-bodies]})
+                      {:element :function-params-and-bodies
+                       :signature-style :typed}]})
 
 (defn- match-pred? [loc {:keys [pred constant]}]
   (let [sexpr (z/sexpr loc)]
@@ -972,7 +984,7 @@
           :element
           (find-usages* (zsub/subzip element-loc) context scoped)
           :function-params-and-bodies
-          (function-params-and-bodies element-loc context scoped)
+          (function-params-and-bodies element-loc context scoped (:signature-style element-info))
           :declaration
           (macro-declaration element-info element-loc context scoped)
           :fn-spec
@@ -987,7 +999,7 @@
                                (parse-bindings element-loc context end-bounds scoped)
 
                                (= :params element)
-                               (parse-params element-loc context scoped)
+                               (parse-params element-loc context scoped (:signature-style element-info))
 
                                (= :param element)
                                (parse-destructuring element-loc scope-bounds context scoped)

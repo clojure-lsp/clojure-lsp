@@ -796,10 +796,7 @@
                       {:element :element :pred :follows-constant :constant :-}
                       {:element :element :pred :string}
                       {:element :element :pred :map}
-                      {:element :sub-elements
-                       :match-patterns [[:any :keyword :any] [:param :element :element]
-                                        [:any] [:param]]}
-                      :bound-elements]})
+                      :function-params-and-bodies]})
 
 (defn- match-pred? [loc {:keys [pred constant]}]
   (let [sexpr (z/sexpr loc)]

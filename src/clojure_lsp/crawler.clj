@@ -1,5 +1,6 @@
 (ns clojure-lsp.crawler
   (:require
+    [clj-kondo.core :as kondo]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.shared :as shared]
@@ -120,8 +121,7 @@
                        #{:ns} :unused-ns
                        #{:public} :unused-public
                        :unused)]
-          :when (or (not= :unused-ns code)
-                    (not (string/index-of uri "test/")))]
+          :when (= code :unused)] ;; Other types covered by clj-kondo
       {:range (shared/->range usage)
        :code code
        :message (case code
@@ -154,12 +154,31 @@
     (concat (diagnose-unused-aliases uri declared-aliases usages)
             (diagnose-unused-references uri declared-references all-envs))))
 
-(defn find-diagnostics [project-aliases uri usages]
-  (let [unknown (diagnose-unknown project-aliases usages)
+(defn- kondo-finding->diagnostic [usages {:keys [row col message level]}]
+  {:range (shared/->range (merge {:row row :col col
+                                  :end-row row :end-col col}
+                                 (->> usages
+                                      (filter #(and (= row (:row %)) (= col (:col %))))
+                                      first
+                                      (#(select-keys % [:end-row :end-col])))))
+   :message (str (string/upper-case (str (first message))) (string/join (rest message)))
+   :severity (case level
+               :error 1
+               :warning 2
+               :info 3)
+   :source "clj-kondo"})
+
+(defn- kondo-find-diagnostics [uri text usages]
+  (let [file-type (shared/uri->file-type uri)
+        {:keys [findings]} (with-in-str text (kondo/run! {:lint ["-"]
+                                                          :lang file-type}))]
+    (map (partial kondo-finding->diagnostic usages) findings)))
+
+(defn find-diagnostics [uri text usages]
+  (let [kondo-chan (async/go (kondo-find-diagnostics uri text usages))
         unused (diagnose-unused uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        wrong-arity (diagnose-wrong-arity uri usages)
-        result (concat unknown unused unknown-forwards wrong-arity)]
+        result (concat unused unknown-forwards (async/<!! kondo-chan))]
     result))
 
 (defn safe-find-references
@@ -175,7 +194,7 @@
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri
-                      :diagnostics (find-diagnostics (:project-aliases @db/db) uri references)}))
+                      :diagnostics (find-diagnostics uri text references)}))
        references)
      (catch Throwable e
        (log/warn e "Cannot parse: " uri (.getMessage e))

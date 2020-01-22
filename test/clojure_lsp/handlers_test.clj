@@ -165,8 +165,14 @@
                                                             [c :as c]
                                                             [d :as d-alias]
                                                             [e :as e-alias]
-                                                            [clojure.spec.alpha :as s]))
+                                                            [clojure.spec.alpha :as s]
+                                                            [schema.core :as sc]))
                                                         (s/fdef wat)
+                                                        (sc/defn over :- s/Int
+                                                          ([a :- s/Int] a)
+                                                          ([a :- s/Int b :- s/Int] (+ a b)))
+                                                        (over 1)
+                                                        (over 2 :a)
                                                         (def x a/bar)
                                                         (declare y)
                                                         (defn y [])

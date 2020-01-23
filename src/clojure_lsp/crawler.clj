@@ -257,7 +257,9 @@
    {:project-path "deps.edn"
     :classpath-cmd ["clj" "-Spath"]}
    {:project-path "build.boot"
-    :classpath-cmd ["boot" "show" "--fake-classpath"]}])
+    :classpath-cmd ["boot" "show" "--fake-classpath"]}
+   {:project-path "shadow-cljs.edn"
+    :classpath-cmd ["shadow-cljs" "classpath"]}])
 
 (defn get-project-from [root-path project-specs]
   (reduce

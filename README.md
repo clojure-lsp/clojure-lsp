@@ -122,7 +122,7 @@ Note: You may also consider configuring project specs via the (optional) `.lsp/c
                    :classpath-cmd ["clj" "-Spath"]}]}
    ```
 Each project-spec will add to the list of dependencies for lsp to crawl:
-  - `project-file` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
+  - `project-path` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
   - `classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
   - `env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE": "x.boot"}`)
 

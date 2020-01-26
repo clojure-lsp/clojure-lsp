@@ -76,18 +76,18 @@
           dropped (subs s n)]
       (last (sort-by count [fully-trimmed dropped])))))
 
+(defn- count-whitespace [s]
+  (- (count s) (count (string/triml s))))
+
 (defn- format-docstring [doc]
   (let [lines (string/split-lines doc)
-        multi-line? (< 1 (count
-                           (filter (comp not string/blank?) lines)))]
+        other-lines (filter (comp not string/blank?) (rest lines))
+        multi-line? (> (count other-lines) 0)]
     (if-not multi-line?
       doc
-      (let [[first-line & rest-lines] lines
-            first-indented (first (drop-while string/blank? rest-lines))
-            indentation (- (count first-indented)
-                           (count (string/triml first-indented)))
-            unindented-lines (cons first-line
-                                   (map #(drop-whitespace indentation %) rest-lines))]
+      (let [indentation (apply min (map count-whitespace other-lines))
+            unindented-lines (cons (first lines)
+                                   (map #(drop-whitespace indentation %) (rest lines)))]
         (string/join "\n" unindented-lines)))))
 
 (defn- generate-docs [content-format usage]

@@ -70,9 +70,11 @@
                             changes))}))
 
 (defn- drop-whitespace [n s]
-  (let [fully-trimmed (string/triml s)
-        dropped (subs s n)]
-    (last (sort-by count [fully-trimmed dropped]))))
+  (if (> n (count s))
+    s
+    (let [fully-trimmed (string/triml s)
+          dropped (subs s n)]
+      (last (sort-by count [fully-trimmed dropped])))))
 
 (defn- format-docstring [doc]
   (let [lines (string/split-lines doc)

@@ -69,17 +69,23 @@
                               [(:uri text-document) edits])
                             changes))}))
 
-(defn format-docstring [doc]
+(defn- drop-whitespace [n s]
+  (let [fully-trimmed (string/triml s)
+        dropped (subs s n)]
+    (last (sort-by count [fully-trimmed dropped]))))
+
+(defn- format-docstring [doc]
   (let [lines (string/split-lines doc)
-        multi-line? (< 1 (count lines))]
+        multi-line? (< 1 (count
+                           (filter (comp not string/blank?) lines)))]
     (if-not multi-line?
       doc
       (let [[first-line & rest-lines] lines
-            next-line (first rest-lines)
-            indentation (-
-                          (count next-line)
-                          (count (string/triml next-line)))
-            unindented-lines (cons first-line (map #(subs % indentation) rest-lines))]
+            first-indented (first (drop-while string/blank? rest-lines))
+            indentation (- (count first-indented)
+                           (count (string/triml first-indented)))
+            unindented-lines (cons first-line
+                                   (map #(drop-whitespace indentation %) rest-lines))]
         (string/join "\n" unindented-lines)))))
 
 (defn- generate-docs [content-format usage]

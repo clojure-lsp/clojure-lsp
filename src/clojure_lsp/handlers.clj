@@ -69,6 +69,19 @@
                               [(:uri text-document) edits])
                             changes))}))
 
+(defn format-docstring [doc]
+  (let [lines (string/split-lines doc)
+        multi-line? (< 1 (count lines))]
+    (if-not multi-line?
+      doc
+      (let [[first-line & rest-lines] lines
+            next-line (first rest-lines)
+            indentation (-
+                          (count next-line)
+                          (count (string/triml next-line)))
+            unindented-lines (cons first-line (map #(subs % indentation) rest-lines))]
+        (string/join "\n" unindented-lines)))))
+
 (defn- generate-docs [content-format usage]
   (let [{:keys [sym signatures doc tags]} usage
         signatures (some->> signatures
@@ -79,7 +92,7 @@
       "markdown" {:kind "markdown"
                   :value (cond-> (str "```\n" sym "\n```\n")
                            signatures (str "```\n" signatures "\n```\n")
-                           (seq doc) (str doc "\n")
+                           (seq doc) (str (format-docstring doc) "\n")
                            (seq tags) (str "\n----\n" "lsp: " tags))}
       ;; Default to plaintext
       (cond-> (str sym "\n")

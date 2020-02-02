@@ -159,13 +159,11 @@
     (concat (diagnose-unused-aliases uri declared-aliases usages)
             (diagnose-unused-references uri declared-references all-envs))))
 
-(defn- kondo-finding->diagnostic [usages {:keys [row col message level]}]
-  {:range (shared/->range (merge {:row row :col col
-                                  :end-row row :end-col col}
-                                 (->> usages
-                                      (filter #(and (= row (:row %)) (= col (:col %))))
-                                      first
-                                      (#(select-keys % [:end-row :end-col])))))
+(defn- kondo-finding->diagnostic [text {:keys [message level row col] :as finding}]
+  {:range (shared/->range (let [^String line (nth (string/split-lines text) (dec row))]
+                            (if (= \( (.charAt line (dec col)))
+                              (assoc finding :end-row row :end-col col)
+                              finding)))
    :message (str (string/upper-case (str (first message))) (string/join (rest message)))
    :severity (case level
                :error 1
@@ -177,7 +175,7 @@
   (let [file-type (shared/uri->file-type uri)
         {:keys [findings]} (with-in-str text (kondo/run! {:lint ["-"]
                                                           :lang file-type}))]
-    (map (partial kondo-finding->diagnostic usages) findings)))
+    (map (partial kondo-finding->diagnostic text) findings)))
 
 (defn find-diagnostics [uri text usages]
   (let [kondo-chan (async/go (kondo-find-diagnostics uri text usages))

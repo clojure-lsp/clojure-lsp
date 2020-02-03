@@ -126,7 +126,7 @@
                        #{:ns} :unused-ns
                        #{:public} :unused-public
                        :unused)]
-          :when (= code :unused)] ;; Other types covered by clj-kondo
+          :when (= :unused-public code)]  ;; Other types covered by clj-kondo
       {:range (shared/->range usage)
        :code code
        :message (case code
@@ -154,34 +154,42 @@
                                               (not (contains? % :factory))
                                               (not (contains? % :unused))) :tags))
                           (remove (comp #(string/starts-with? % "_") name :sym)))
-        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
-        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
-    (concat (diagnose-unused-aliases uri declared-aliases usages)
-            (diagnose-unused-references uri declared-references all-envs))))
+        declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
+    (diagnose-unused-references uri declared-references all-envs)))
 
-(defn- kondo-finding->diagnostic [text {:keys [message level row col] :as finding}]
-  {:range (shared/->range (let [^String line (nth (string/split-lines text) (dec row))]
-                            (if (= \( (.charAt line (dec col)))
+(defn- kondo-finding->diagnostic [lines {:keys [message level row col] :as finding}]
+  (let [^String line (nth lines (dec row))
+        start-char (.charAt line (dec col))
+        finding (merge {:end-row row :end-col (inc col)}
+                       finding)]
+    {:range (shared/->range (if (= \( start-char)
                               (assoc finding :end-row row :end-col col)
-                              finding)))
-   :message (str (string/upper-case (str (first message))) (string/join (rest message)))
-   :severity (case level
-               :error 1
-               :warning 2
-               :info 3)
-   :source "clj-kondo"})
+                              finding))
+    :message (str (string/upper-case (str (first message))) (string/join (rest message)))
+    :severity (case level
+                :error 1
+                :warning 2
+                :info 3)
+    :source "clj-kondo"}))
 
-(defn- kondo-find-diagnostics [uri text usages]
+(defn- kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
         {:keys [findings]} (with-in-str text (kondo/run! {:lint ["-"]
-                                                          :lang file-type}))]
-    (map (partial kondo-finding->diagnostic text) findings)))
+                                                          :lang file-type
+                                                          :config {:linters {:invalid-arity {:level :off}
+                                                                             :unused-bindings {:level :off}
+                                                                             :unresolved-symbol {:level :off}
+                                                                             :unresolved-namespace {:level :off}}}}))
+        lines (string/split-lines text)]
+    (map (partial kondo-finding->diagnostic lines) findings)))
 
-(defn find-diagnostics [uri text usages]
-  (let [kondo-chan (async/go (kondo-find-diagnostics uri text usages))
+(defn find-diagnostics [project-aliases uri text usages]
+  (let [kondo-chan (async/go (kondo-find-diagnostics uri text))
+        unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        result (concat unused unknown-forwards (async/<!! kondo-chan))]
+        wrong-arity (diagnose-wrong-arity uri usages)
+        result (concat unknown unused unknown-forwards (async/<!! kondo-chan) wrong-arity)]
     result))
 
 (defn safe-find-references
@@ -197,7 +205,7 @@
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri
-                      :diagnostics (find-diagnostics uri text references)}))
+                      :diagnostics (find-diagnostics (:project-aliases @db/db) uri text references)}))
        references)
      (catch Throwable e
        (log/warn e "Cannot parse: " uri (.getMessage e))

@@ -69,6 +69,27 @@
                               [(:uri text-document) edits])
                             changes))}))
 
+(defn- drop-whitespace [n s]
+  (if (> n (count s))
+    s
+    (let [fully-trimmed (string/triml s)
+          dropped (subs s n)]
+      (last (sort-by count [fully-trimmed dropped])))))
+
+(defn- count-whitespace [s]
+  (- (count s) (count (string/triml s))))
+
+(defn- format-docstring [doc]
+  (let [lines (string/split-lines doc)
+        other-lines (filter (comp not string/blank?) (rest lines))
+        multi-line? (> (count other-lines) 0)]
+    (if-not multi-line?
+      doc
+      (let [indentation (apply min (map count-whitespace other-lines))
+            unindented-lines (cons (first lines)
+                                   (map #(drop-whitespace indentation %) (rest lines)))]
+        (string/join "\n" unindented-lines)))))
+
 (defn- generate-docs [content-format usage]
   (let [{:keys [sym signatures doc tags]} usage
         signatures (some->> signatures
@@ -79,7 +100,7 @@
       "markdown" {:kind "markdown"
                   :value (cond-> (str "```\n" sym "\n```\n")
                            signatures (str "```\n" signatures "\n```\n")
-                           (seq doc) (str doc "\n")
+                           (seq doc) (str (format-docstring doc) "\n")
                            (seq tags) (str "\n----\n" "lsp: " tags))}
       ;; Default to plaintext
       (cond-> (str sym "\n")

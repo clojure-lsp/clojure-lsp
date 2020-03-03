@@ -102,7 +102,7 @@
 (s/def ::document-symbol (s/and (s/keys :req-un [::name :symbol/kind ::range :document-symbol/selection-range]
                                         :opt-un [:document-symbol/detail :document-symbol/children])
                                 (s/conformer (fn [m]
-                                               (DocumentSymbol. (:name m) (:kind m) (:range m) 
+                                               (DocumentSymbol. (:name m) (:kind m) (:range m)
                                                                 (:selection-range m) (:detail m) (:children m))))))
 
 (s/def :document-symbol/children (s/coll-of ::document-symbol))
@@ -241,6 +241,12 @@
                                                        :capabilities/symbol])))
 (s/def ::client-capabilities (s/and ::debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
+
+(def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
+(s/def :watched-files/type (s/conformer (fn [v] (get watched-files-type-enum (.getValue v)))))
+(s/def :watched-files/change (s/and ::debean (s/keys :req-un [::uri :watched-files/type])))
+(s/def ::watched-files-changes (s/and (s/conformer (fn [vs] (into [] vs)))
+                                      (s/coll-of :watched-files/change)))
 
 (defn conform-or-log [spec value]
   (when value

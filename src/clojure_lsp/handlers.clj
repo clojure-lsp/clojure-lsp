@@ -529,3 +529,10 @@
         entry (.getJarEntry connection)]
     (with-open [stream (.getInputStream jar entry)]
       (slurp stream))))
+
+(defn did-change-watched-files [changes]
+  (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
+    (swap! db/db (fn [db]
+                   (-> db
+                       (update :documents #(apply dissoc % uris))
+                       (update :file-envs #(apply dissoc % uris)))))))

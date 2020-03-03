@@ -23,6 +23,7 @@
       DidChangeConfigurationParams
       DidChangeTextDocumentParams
       DidChangeWatchedFilesParams
+      DidChangeWatchedFilesRegistrationOptions
       DidCloseTextDocumentParams
       DidOpenTextDocumentParams
       DidSaveTextDocumentParams
@@ -32,11 +33,14 @@
       DocumentSymbol
       ExecuteCommandOptions
       ExecuteCommandParams
+      FileSystemWatcher
       InitializeParams
       InitializeResult
       InitializedParams
       ParameterInformation
       ReferenceParams
+      Registration
+      RegistrationParams
       RenameParams
       SaveOptions
       ServerCapabilities
@@ -295,8 +299,15 @@
     (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
-  (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams _params]
-    (log/warn "DidChangeWatchedFilesParams"))
+
+  (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
+    (log/warn "DidChangeWatchedFilesParams")
+    (go :didChangeWatchedFiles
+        (end
+          (some->> params
+                   (.getChanges)
+                   (interop/conform-or-log ::interop/watched-files-changes)
+                   (handlers/did-change-watched-files)))))
 
   (^CompletableFuture symbol [this ^WorkspaceSymbolParams params]
     (go :workspaceSymbol
@@ -359,7 +370,14 @@
                                                              (.setSave (SaveOptions. true))))
                                      (.setCompletionProvider (CompletionOptions. true [\c])))))))))
     (^void initialized [^InitializedParams params]
-      (log/warn "Initialized" params))
+      (log/warn "Initialized" params)
+      (go :initialized
+          (end
+            (doto
+             (:client @db/db)
+              (.registerCapability
+                (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                     (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct

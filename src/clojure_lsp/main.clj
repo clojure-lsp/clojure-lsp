@@ -227,6 +227,7 @@
             (CompletableFuture/completedFuture
               result)))))
 
+  #_
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (go :codeAction
         (end
@@ -353,7 +354,7 @@
               (CompletableFuture/completedFuture
                 (InitializeResult. (doto (ServerCapabilities.)
                                      (.setHoverProvider true)
-                                     (.setCodeActionProvider true)
+                                     (.setCodeActionProvider false)
                                      (.setReferencesProvider true)
                                      (.setRenameProvider true)
                                      (.setDefinitionProvider true)

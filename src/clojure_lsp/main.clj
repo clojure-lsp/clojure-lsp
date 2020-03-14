@@ -369,7 +369,7 @@
                                                              (.setOpenClose true)
                                                              (.setChange TextDocumentSyncKind/Full)
                                                              (.setSave (SaveOptions. true))))
-                                     (.setCompletionProvider (CompletionOptions. true [\c])))))))))
+                                     (.setCompletionProvider (CompletionOptions. true [])))))))))
     (^void initialized [^InitializedParams params]
       (log/warn "Initialized" params)
       (go :initialized

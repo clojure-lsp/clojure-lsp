@@ -366,13 +366,6 @@
   [op-loc _loc context scoped _threading?]
   (handle-ignored (z-right-sexpr op-loc) context scoped))
 
-(defn handle-quote
-  [op-loc _loc context scoped _threading?]
-  (let [current-quoted (:quoting? @context)]
-    (vswap! context assoc :quoting? true)
-    (handle-rest (z-right-sexpr op-loc) context scoped)
-    (vswap! context assoc :quoting? current-quoted)))
-
 (defn handle-thread
   [op-loc _loc context scoped threading?]
   (let [first-loc (zm/right op-loc)
@@ -750,7 +743,6 @@
                   'clojure.core/for handle-let
                   'clojure.core/doseq handle-let
                   'clojure.core/comment handle-comment
-                  'clojure.core/quote handle-quote
                   'clojure.core/-> handle-thread
                   'clojure.core/->> handle-thread
                   'clojure.core/some-> handle-thread
@@ -769,6 +761,7 @@
    'clojure.core/defprotocol [{:element :declaration :declare-class? true :doc? true} {:element :element :pred :string} {:element :fn-spec :repeat true :tags #{:method :declare}}]
    'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.core/reify [{:element :class-and-methods}]
+   'clojure.core/quote []
    'clojure.test/are [:params :bound-element :elements]
    'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'cljs.core.match/match [:element {:element [:params :bound-element] :repeat true}]
@@ -1067,7 +1060,10 @@
 
         (let [tag (z/tag loc)]
           (cond
-            (#{:syntax-quote :quote} tag)
+            (= :quote tag)
+            (recur (edit/skip-over loc) scoped)
+
+            (= :syntax-quote tag)
             (let [current-quoted (:quoting? @context)]
               (vswap! context assoc :quoting? true)
               (handle-sexpr (z/next loc) context scoped)

@@ -340,12 +340,17 @@
     (is (= (:sym (nth usages 6 nil)) (:sym (nth usages 3 nil))))
     (is (= #{:scoped} (:tags (nth usages 5 nil))))
     (is (= #{:scoped} (:tags (nth usages 6 nil)))))
-
-  (let [code "(quote (def a)) (quote a)"
+  (let [code "'a '(b c d) (quote e)"
         usages (parser/find-usages code :clj {})]
+    (is (= 1 (count usages)))
+    (is (= 'clojure.core/quote (:sym (first usages)))))
+  (let [code "(def a) `(def a) (quote a) 'a '(a)"
+        [d1 a1 d2 a2 q :as usages] (parser/find-usages code :clj {})]
     (is (= 5 (count usages)))
-    (is (= 'clojure.core/def (:sym (nth usages 1 nil))))
-    (is (not= (:sym (nth usages 2 nil)) (:sym (nth usages 4 nil))))))
+    (is (= 0 (count (filter (comp #{:unknown} :tags) usages))))
+    (is (= (:sym d1) (:sym d2)))
+    (is (= (:sym a1) (:sym a2)))
+    (is (= 'clojure.core/quote (:sym q)))))
 
 (deftest find-references-macro-def-test
   (testing "GET-like"

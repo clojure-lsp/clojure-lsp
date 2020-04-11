@@ -339,7 +339,9 @@
                scoped scoped]
           (cond
             (and typed? param-loc (= :- (z/sexpr param-loc)))
-            (recur (-> param-loc z-right-sexpr z-right-sexpr) scoped)
+            (let [type-loc (-> param-loc z-right-sexpr)]
+              (handle-rest (zsub/subzip type-loc) context scoped)
+              (recur (-> type-loc z-right-sexpr) scoped))
 
             param-loc
             (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]

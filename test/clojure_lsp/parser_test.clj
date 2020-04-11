@@ -523,7 +523,7 @@
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
   (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [b :- Long c :- [S/Str]] b)"
         usages (parser/find-usages code :clj {})
-        [_ u _ s _ a _ _ b c b2] usages]
+        [_ u _ s _ a _ _ b _ c _ b2] usages]
     (is (= #{:declare :public} (:tags a)))
     (is (= 'user/a (:sym a)))
     (is (= "Docs" (:doc a)))
@@ -533,7 +533,7 @@
   (testing "destructures param"
     (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
           usages (parser/find-usages code :clj {})
-          [_ u _ s _ a _ _ _ b c b2] usages]
+          [_ u _ s _ a _ _ _ b _ c _ b2] usages]
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
@@ -541,10 +541,15 @@
       (is (= ['[{b :b} c]] (get-in a [:signatures :sexprs])))
       (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))
+  (testing "types in params are considered"
+    (let [code "(ns user (:require [schema.core :as s])) (def t) (s/defn a :- t ([b :- t] b) ([c :- t d] (c d)))"
+          usages (parser/find-usages code :clj {})
+          [_ _u _ _s _ def-t _ _a _ t1  _b t2 _b2 _c t3 _d _c2 _d2] usages]
+      (is (apply = (map :sym [def-t t1 t2 t3])))))
   (testing "handles complex return type"
     (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- [A] \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
           usages (parser/find-usages code :clj {})
-          [_ u _ s _ a _ _ _ b c b2] usages]
+          [_ u _ s _ a _ _ _ b _ c _ b2] usages]
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))

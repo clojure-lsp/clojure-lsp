@@ -797,7 +797,7 @@
    'outpace.config/defconfig! [:declaration :element]
    're-frame.core/reg-event-db [{:element :declaration :signature [:next :next :next :right]} :element]
    're-frame.core/reg-event-fx [{:element :declaration :signature [:next :next :next :right]} :element]
-   're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element]
+   're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element :element]
    'schema.macros/try-catchall [{:element :bound-elements :sub-forms {'catch [:param :bound-elements]}}]
    'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]
    'schema.core/defn [{:element :declaration

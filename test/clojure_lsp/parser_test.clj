@@ -223,12 +223,10 @@
       (is (= 'clojure.test/deftest (:sym deftest-ref)))))
   (testing "refers"
     (let [code "(ns foo.bar (:require [clojure.test :refer [deftest]])) (deftest hi)"
-          usages (parser/find-usages code :clj {})
-          deftest-ref (nth usages 4 nil)
-          hi-ref (nth usages 5 nil)]
-      (is (= 'clojure.test/deftest (:sym deftest-ref)))
-      #_
-      (is (not= #{:unknown} (:tags hi-ref)))))
+          [_ _n _r dt1 dt2 hi :as _usages] (parser/find-usages code :clj {})]
+      (is (= 'clojure.test/deftest (:sym dt2)))
+      (is (= #{:refer} (:tags dt1)))
+      (is (not= #{:unknown} (:tags hi)))))
   (testing "import"
     (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static 1) (JarFile.)"
           usages (drop 4 (parser/find-usages code :clj {}))

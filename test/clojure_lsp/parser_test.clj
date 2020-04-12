@@ -599,3 +599,12 @@
     (let [code "(defmacro my-> [& _]) (my-> 1 (cond-> :always 1))"
           [_ _ _ _ c] (parser/find-usages code :clj {'user/my-> [{:element :elements :thread-style :first}]})]
       (is (= 3 (:argc c))))))
+
+(deftest custom-sub-forms
+  (let [code "(ns f (:require [midje.sweet :as ms]))
+              (ms/fact \"foo\"
+                      (let [a (blah c)]
+                        (bar a) => 1
+                        (baz a false) => nil))"
+        usages (parser/find-usages code :clj {})]
+    (is (= #{:scoped} (set (mapcat :tags (filter (comp #{"=>"} :str) usages)))))))

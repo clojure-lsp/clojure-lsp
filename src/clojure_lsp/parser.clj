@@ -804,7 +804,9 @@
                       {:element :element :pred :string}
                       {:element :element :pred :map}
                       {:element :function-params-and-bodies
-                       :signature-style :typed}]})
+                       :signature-style :typed}]
+   'midje.sweet/fact [{:element :bound-elements :sub-forms {'=> [] 'provided [:elements]}}]
+   'midje.sweet/facts [{:element :bound-elements :sub-forms {'=> [] 'provided [:elements]}}]})
 
 (defn- match-pred? [loc {:keys [pred constant]}]
   (let [sexpr (z/sexpr loc)]

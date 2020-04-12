@@ -700,19 +700,20 @@
 
 (defn handle-dispatch-macro
   [loc context scoped]
-  (vswap! context assoc :in-fn-literal? true)
-  (->>
-    (loop [sub-loc (z-next-sexpr (zsub/subzip loc))
-           scoped scoped]
-      (if (and sub-loc (not (z/end? sub-loc)))
-        (let [sexpr (z/sexpr sub-loc)]
-          (if (and (symbol? sexpr)
-                   (re-find #"^%(:?\d+|&)?$" (name sexpr)))
-            (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
-            (recur (z-next-sexpr sub-loc) scoped)))
-        scoped))
-    (handle-rest loc context))
-  (vswap! context dissoc :in-fn-literal?))
+  (let [sub-loc (zsub/subzip loc)]
+    (vswap! context assoc :in-fn-literal? true)
+    (->>
+      (loop [sub-loc (z-next-sexpr sub-loc)
+             scoped scoped]
+        (if (and sub-loc (not (z/end? sub-loc)))
+          (let [sexpr (z/sexpr sub-loc)]
+            (if (and (symbol? sexpr)
+                     (re-find #"^%(:?\d+|&)?$" (name sexpr)))
+              (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
+              (recur (z-next-sexpr sub-loc) scoped)))
+          scoped))
+      (handle-rest sub-loc context))
+    (vswap! context dissoc :in-fn-literal?)))
 
 (comment
   '[
@@ -1146,12 +1147,14 @@
               (find-usages* (volatile! (assoc default-env :requires (get requires file-type) :file-type file-type :macro-defs macro-defs :uri uri)) {})))))))
 
 ;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col] :as _form-pos}
-                 {r :row c :col er :end-row ec :end-col :as _selection-pos}]
-  (and (>= r row)
-       (<= er end-row)
-       (if (= r row) (>= c col) true)
-       (if (= er end-row) (< ec end-col) true)))
+(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
+                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
+  (or (nil? form-pos)
+      (nil? selection-pos)
+      (and (>= r row)
+           (<= er end-row)
+           (if (= r row) (>= c col) true)
+           (if (= er end-row) (< ec end-col) true))))
 
 ;; From rewrite-cljs
 (defn find-forms
@@ -1173,9 +1176,7 @@
 
 (defn find-top-forms-in-range
   [code pos]
-  (->> (find-forms (z/of-string code) #(let [test-pos (-> % z/node meta)]
-                                         (or (nil? test-pos)
-                                             (in-range? pos test-pos))))
+  (->> (find-forms (z/of-string code) #(in-range? pos (-> % z/node meta)))
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 

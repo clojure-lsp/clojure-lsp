@@ -68,6 +68,10 @@
   (testing "#(dispatch-macro)"
     (let [code "#(% %1 %2 %&)"
           usages (parser/find-usages code :clj {})]
+      (is (= [] (filter (fn [usage] (contains? (:tags usage) :unknown)) usages))))
+    (let [code "#(+ %1) #(- %2)"
+          usages (parser/find-usages code :clj {})]
+      (is (= 4 (count usages)))
       (is (= [] (filter (fn [usage] (contains? (:tags usage) :unknown)) usages))))))
 
 (deftest find-references-defn-test

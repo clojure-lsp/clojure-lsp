@@ -495,14 +495,14 @@
   [op-loc loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
-    (handle-rest (z-right-sexpr bindings-loc) context scoped)))
+    (handle-rest (z/right bindings-loc) context scoped)))
 
 (defn handle-if-let
   [op-loc _loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         if-loc (z-right-sexpr bindings-loc)
         if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
-    (handle-rest if-loc context if-scoped)
+    (handle-rest (zsub/subzip if-loc) context if-scoped)
     (handle-rest (z-right-sexpr if-loc) context scoped)))
 
 (defn- local? [op-loc]
@@ -579,7 +579,7 @@
          :strings [(z/string params-loc)]}))))
 
 (defn- single-params-and-body [params-loc context scoped signature-style]
-  (let [body-loc (z-right-sexpr params-loc)]
+  (let [body-loc (z/right params-loc)]
     (->> (parse-params params-loc context scoped signature-style)
          (handle-rest body-loc context))))
 

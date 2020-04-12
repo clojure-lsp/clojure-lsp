@@ -325,15 +325,26 @@
     (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
     (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
 
+(deftest if-let-test
+  (let [code "(if-let [] a b)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 3 (count usages)))))
+
 (deftest find-references-ignored-test
   (let [code "(def x 1) (comment x (def y 2) y) #_x"
         usages (parser/find-usages code :clj {})
         def-usage (nth usages 5 nil)]
-   (is (= 8 (count usages)))
-   (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
-   (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
-   (is (not= 'user (namespace (:sym def-usage))))
-   (is (= #{:declare} (:tags def-usage)))))
+    (is (= 8 (count usages)))
+    (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
+    (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
+    (is (not= 'user (namespace (:sym def-usage))))
+    (is (= #{:declare} (:tags def-usage))))
+  (let [code "(defn x [] #_y 1)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 3 (count (map :sym usages)))))
+  (let [code "(let [] #_y 1)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 2 (count (map :sym usages))))))
 
 (deftest find-references-syntax-quote
   (let [code "(defmacro x [a & body] `(def ~'a ~a ~@body))"

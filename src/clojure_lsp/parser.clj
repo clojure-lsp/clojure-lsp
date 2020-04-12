@@ -1173,8 +1173,9 @@
 
 (defn find-top-forms-in-range
   [code pos]
-  (->> (find-forms (z/of-string code) #(in-range?
-                                         pos (-> % z/node meta)))
+  (->> (find-forms (z/of-string code) #(let [test-pos (-> % z/node meta)]
+                                         (or (nil? test-pos)
+                                             (in-range? pos test-pos))))
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 

@@ -603,6 +603,6 @@
               (ms/fact \"foo\"
                       (let [a (blah c)]
                         (bar a) => 1
-                        (baz a false) => nil))"
+                        (baz a false) =not=> nil))"
         usages (parser/find-usages code :clj {})]
-    (is (= #{:scoped} (set (mapcat :tags (filter (comp #{"=>"} :str) usages)))))))
+    (is (= #{:scoped} (set (mapcat :tags (filter (comp #{"=>" "=not=>"} :str) usages)))))))

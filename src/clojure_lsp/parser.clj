@@ -805,8 +805,8 @@
                       {:element :element :pred :map}
                       {:element :function-params-and-bodies
                        :signature-style :typed}]
-   'midje.sweet/fact [{:element :bound-elements :sub-forms {'=> [] 'provided [:elements]}}]
-   'midje.sweet/facts [{:element :bound-elements :sub-forms {'=> [] 'provided [:elements]}}]})
+   'midje.sweet/fact [{:element :bound-elements :sub-forms {'=> [] '=not=> [] '=deny=> [] '=expands-to=> [] '=future=> [] 'provided [:elements]}}]
+   'midje.sweet/facts [{:element :bound-elements :sub-forms {'=> [] '=not=> [] '=deny=> [] '=expands-to=> [] '=future=> [] 'provided [:elements]}}]})
 
 (defn- match-pred? [loc {:keys [pred constant]}]
   (let [sexpr (z/sexpr loc)]

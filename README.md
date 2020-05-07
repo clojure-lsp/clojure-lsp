@@ -276,7 +276,9 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
 ```
 (use-package lsp-mode
   :ensure t
-  :commands lsp
+  :hook ((clojure-mode . lsp)
+         (clojurec-mode . lsp)
+         (clojurescript-mode . lsp))
   :config
   ;; add paths to your local installation of project mgmt tools, like lein
   (setenv "PATH" (concat
@@ -287,11 +289,8 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
                clojurescript-mode
                clojurex-mode))
      (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
-  :init
-  (setq lsp-enable-indentation nil)
-  (add-hook 'clojure-mode-hook #'lsp)
-  (add-hook 'clojurec-mode-hook #'lsp)
-  (add-hook 'clojurescript-mode-hook #'lsp))
+  (setq lsp-enable-indentation nil
+        lsp-clojure-server-command '("bash" "-c" "clojure-lsp")))
 ```
 
 Optionally you can add `lsp-ui` and `company-lsp` too:

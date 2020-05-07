@@ -271,7 +271,7 @@
   (let [ns-loc (edit/find-namespace zloc)
         require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
         col (if require-loc
-              (dec (:col (meta (z/node (z/right require-loc)))))
+              (-> require-loc z/right z/node meta :col dec)
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")

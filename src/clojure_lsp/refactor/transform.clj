@@ -274,14 +274,20 @@
               (dec (:col (meta (z/node (z/right require-loc)))))
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
+        single-space (n/whitespace-node " ")
+        keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
         requires (->> require-loc
                       z/remove
                       z/node
                       n/children
                       (remove n/printable-only?)
                       (sort-by (comp str n/sexpr))
-                      (mapcat (fn [node]
-                                [(n/newlines 1) sep node]))
+                      (map-indexed (fn [idx node]
+                                     (if (and keep-require-at-start?
+                                              (= idx 0))
+                                       [single-space node]
+                                       [(n/newlines 1) sep node])))
+                      (apply concat)
                       (cons (n/keyword-node :require)))
         result-loc (z/subedit-> ns-loc
                                 (z/find-value z/next :require)

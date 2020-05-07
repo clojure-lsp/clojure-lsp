@@ -136,6 +136,7 @@
       (is (nil? (z/root-string loc))))))
 
 (deftest clean-ns-test
+  (reset! db/db {:settings {"keep-require-at-start?" false}})
   (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n    [c  :as x] a [b]))") z/down z/right z/right)
         [{:keys [loc range]}] (transform/clean-ns zloc nil)]
     (is (some? range))
@@ -144,6 +145,17 @@
                 "    [b]\n"
                 "    [c  :as x]\n"
                 "    a))")
+           (z/root-string loc)))))
+
+(deftest clean-ns-with-require-at-start-test
+  (reset! db/db {:settings {"keep-require-at-start?" true}})
+  (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require [c  :as x] a [b]))") z/down z/right z/right)
+        [{:keys [loc range]}] (transform/clean-ns zloc nil)]
+    (is (some? range))
+    (is (= (str "(ns foo.bar\n"
+                "  (:require [b]\n"
+                "            [c  :as x]\n"
+                "            a))")
            (z/root-string loc)))))
 
 (deftest add-missing-libspec

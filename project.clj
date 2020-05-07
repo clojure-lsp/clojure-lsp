@@ -12,13 +12,17 @@
 (def dependencies
   (deps->vec (:deps +deps+)))
 
-(defproject clojure-lsp "0.1.0-SNAPSHOT"
+(defproject clojure-lsp :project/git-tag
   :dependencies ~dependencies
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :main clojure-lsp.main
   :java-source-paths ["src-java"]
   :resource-paths ["resources" "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"]
   :javac-options ["-implicit:none"]
+  :plugins [[me.arrdem/lein-git-version "2.0.8"]]
+  :git-version {:status-to-version
+                (fn [{:keys [tag]}]
+                  tag)}
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
                              [lein-binplus "0.6.5"]]
                    :bin {:name "clojure-lsp"}}

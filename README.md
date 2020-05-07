@@ -320,3 +320,7 @@ In `lsp-mode` `lsp-clojure-server-command` defcustom is available to override th
 ### Others
 - Better completion item kinds and auto require
 - other lsp capabilities?
+
+## Building local
+
+For building local, run `lein bin` to generate the binary inside `target` folder.

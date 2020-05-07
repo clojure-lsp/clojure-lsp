@@ -92,6 +92,8 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 
 `use-metadata-for-privacy?` if true, will use `^:private` metadata for refactorings instead of `defn-`
 
+`keep-require-at-start?` if true, will keep first require at the first line instead of inserting a new line before it. 
+
 `dependency-scheme` by default, dependencies are linked with vim's `zipfile://<zipfile>::<innerfile>` scheme, however you can use a scheme of `jar` to get urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of `clojure/dependencyContents` with the jar uri and the server will return the jar entry's contents. [Similar to java clients](https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298)
 
 `cljfmt` json encoded configuration for https://github.com/weavejester/cljfmt
@@ -320,3 +322,7 @@ In `lsp-mode` `lsp-clojure-server-command` defcustom is available to override th
 ### Others
 - Better completion item kinds and auto require
 - other lsp capabilities?
+
+## Building local
+
+For building local, run `lein bin` to generate the binary inside `target` folder.

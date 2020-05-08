@@ -135,28 +135,35 @@
                   (str "Unused declaration: " (:str usage)))
        :severity 2})))
 
-(defn ^:private diagnose-unused-aliases [_uri declared-aliases usages]
-  (let [references (->> usages
-                        (remove (comp #(contains? % :declare) :tags))
-                        (map #(some-> % :sym namespace symbol))
-                        set)
-        unused-aliases (set/difference (set (map :ns declared-aliases)) references)]
-    (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
-      {:range (shared/->range usage)
-       :code :unused-alias
-       :message (str "Unused alias: " (:str usage))
-       :severity 2})))
+(defn ^:private process-unused-aliases
+  [usages declared-aliases]
+  (->> usages
+       (remove (comp #(contains? % :declare) :tags))
+       (map #(some-> % :sym namespace symbol))
+       set
+       (set/difference (set (map :ns declared-aliases)))))
+
+(defn ^:private diagnose-unused-aliases [_uri declared-aliases unused-aliases]
+  (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
+    {:range (shared/->range usage)
+     :code :unused-alias
+     :message (str "Unused alias: " (:str usage))
+     :severity 2}))
+
+(defn ^:private usages->declarations [usages]
+  (->> usages
+       (filter (comp #(and (contains? % :declare)
+                           (not (contains? % :factory))
+                           (not (contains? % :unused))) :tags))
+       (remove (comp #(string/starts-with? % "_") name :sym))))
 
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        declarations (->> usages
-                          (filter (comp #(and (contains? % :declare)
-                                              (not (contains? % :factory))
-                                              (not (contains? % :unused))) :tags))
-                          (remove (comp #(string/starts-with? % "_") name :sym)))
+        declarations (usages->declarations usages)
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)
-        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
-    (concat (diagnose-unused-aliases uri declared-aliases usages)
+        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)
+        unused-aliases (process-unused-aliases usages declared-aliases)]
+    (concat (diagnose-unused-aliases uri declared-aliases unused-aliases)
             (diagnose-unused-references uri declared-references all-envs))))
 
 (defn find-diagnostics [project-aliases uri usages]
@@ -186,6 +193,12 @@
        (log/warn e "Cannot parse: " uri (.getMessage e))
        ;; On purpose
        nil))))
+
+(defn find-unused-aliases [uri]
+  (let [usages (safe-find-references uri (slurp uri) false false)
+        declarations (usages->declarations usages)
+        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
+    (process-unused-aliases usages declared-aliases)))
 
 (defn crawl-jars [jars dependency-scheme]
   (let [xf (comp

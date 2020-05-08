@@ -135,28 +135,41 @@
           [{:keys [loc]}] (transform/expand-let zloc nil)]
       (is (nil? (z/root-string loc))))))
 
+(def ns-to-clean
+  (str "(ns foo.bar\n"
+       " (:require\n"
+       "   [foo  :as f] [bar :as b] baz [z] ))\n"
+       "(s/defn func []\n"
+       "  (f/some))"))
+
 (deftest clean-ns-test
-  (testing "without keep-require-at-start?"
-    (reset! db/db {:settings {"keep-require-at-start?" false}})
-    (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n    [c  :as x] a [b]))") z/down z/right z/right)
-          [{:keys [loc range]}] (transform/clean-ns zloc nil)]
-      (is (some? range))
-      (is (= (str "(ns foo.bar\n"
-                  "  (:require\n"
-                  "    [b]\n"
-                  "    [c  :as x]\n"
-                  "    a))")
-             (z/root-string loc)))))
-  (testing "with keep-require-at-start?"
-    (reset! db/db {:settings {"keep-require-at-start?" true}})
-    (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require [c  :as x] a [b]))") z/down z/right z/right)
-          [{:keys [loc range]}] (transform/clean-ns zloc nil)]
-      (is (some? range))
-      (is (= (str "(ns foo.bar\n"
-                  "  (:require [b]\n"
-                  "            [c  :as x]\n"
-                  "            a))")
-             (z/root-string loc))))))
+  (with-redefs [slurp (constantly ns-to-clean)]
+    (testing "without keep-require-at-start?"
+      (reset! db/db {:settings {"keep-require-at-start?" false}})
+      (let [zloc (-> (z/of-string ns-to-clean) z/down z/right z/right)
+            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
+        (is (some? range))
+        (is (= (str "(ns foo.bar\n"
+                    " (:require\n"
+                    "   [foo  :as f]\n"
+                    "   [z]\n"
+                    "   baz))\n"
+                    "(s/defn func []\n"
+                    "  (f/some))")
+               (z/root-string loc))))))
+  (with-redefs [slurp (constantly ns-to-clean)]
+    (testing "with keep-require-at-start?"
+      (reset! db/db {:settings {"keep-require-at-start?" true}})
+      (let [zloc (-> (z/of-string ns-to-clean) z/down z/right z/right)
+            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
+        (is (some? range))
+        (is (= (str "(ns foo.bar\n"
+                    " (:require [foo  :as f]\n"
+                    "           [z]\n"
+                    "           baz))\n"
+                    "(s/defn func []\n"
+                    "  (f/some))")
+               (z/root-string loc)))))))
 
 (deftest add-missing-libspec
   (reset! db/db {:file-envs

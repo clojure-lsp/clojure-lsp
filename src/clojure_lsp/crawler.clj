@@ -197,7 +197,10 @@
 (defn find-unused-aliases [uri]
   (let [usages (safe-find-references uri (slurp uri) false false)
         declarations (usages->declarations usages)
-        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)]
+        excludes (-> (get-in @db/db [:settings "linters" :unused-namespace :exclude] #{}) set)
+        declared-aliases (->> declarations
+                              (filter (comp #(contains? % :alias) :tags))
+                              (remove (comp excludes :ns)))]
     (process-unused-aliases usages declared-aliases)))
 
 (defn crawl-jars [jars dependency-scheme]

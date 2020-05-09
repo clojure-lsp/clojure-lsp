@@ -63,7 +63,7 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | done | command             | args | notes |
 | ---- | ------------------- | ---- | ----- |
 |   √  | add-missing-libspec | | |
-|   -  | clean-ns            | | | :require sort only
+|   -  | clean-ns            | | | :require sort and remove unused only
 |   √  | cycle-coll          | | |
 |   √  | cycle-privacy       | | |
 |   √  | expand-let          | | |

@@ -1,11 +1,11 @@
 (ns clojure-lsp.refactor.transform
   (:require
+    [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure.set :as set]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
     [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
@@ -266,18 +266,31 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
+(defn ^:private remove-unused-require
+  [node unused-aliases]
+  (if (z/vector? node)
+    (let [alias-node (-> node z/down z/leftmost)]
+      (if (contains? unused-aliases (z/sexpr alias-node))
+        (-> node z/remove z/up)
+        node))
+    node))
+
 (defn clean-ns
-  [zloc _uri]
+  [zloc uri]
   (let [ns-loc (edit/find-namespace zloc)
         require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+        keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
         col (if require-loc
-              (-> require-loc z/right z/node meta :col dec)
+              (if keep-require-at-start?
+                (-> require-loc z/node meta :end-col)
+                (-> require-loc z/right z/node meta :col dec))
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
-        keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
+        unused-aliases (crawler/find-unused-aliases uri)
         requires (->> require-loc
                       z/remove
+                      (z/map #(remove-unused-require % unused-aliases))
                       z/node
                       n/children
                       (remove n/printable-only?)

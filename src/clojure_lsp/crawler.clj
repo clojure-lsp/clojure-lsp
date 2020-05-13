@@ -137,11 +137,12 @@
 
 (defn ^:private process-unused-aliases
   [usages declared-aliases]
-  (->> usages
-       (remove (comp #(contains? % :declare) :tags))
-       (map #(some-> % :sym namespace symbol))
-       set
-       (set/difference (set (map :ns declared-aliases)))))
+  (let [ensure-sym (fn [s] (when (symbol? s) s))]
+    (->> usages
+         (remove (comp #(contains? % :declare) :tags))
+         (map #(some-> % :sym ensure-sym namespace symbol))
+         set
+         (set/difference (set (map :ns declared-aliases))))))
 
 (defn ^:private diagnose-unused-aliases [_uri declared-aliases unused-aliases]
   (for [usage (filter (comp unused-aliases :ns) declared-aliases)]

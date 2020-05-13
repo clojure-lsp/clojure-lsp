@@ -137,7 +137,7 @@
 
 (defn ^:private process-unused-aliases
   [usages declared-aliases]
-  (let [ensure-sym (fn [s] (when (symbol? s) s))]
+  (let [ensure-sym (fn [s] (when-not (string? s) s))]
     (->> usages
          (remove (comp #(contains? % :declare) :tags))
          (map #(some-> % :sym ensure-sym namespace symbol))

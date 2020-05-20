@@ -3,8 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
     [clojure.string :as string]
-    [clojure.test :refer :all]
-    [clojure.tools.logging :as log]
+    [clojure.test :refer [deftest is testing]]
     [rewrite-clj.zip :as z]))
 
 (defn syms [code]
@@ -308,7 +307,7 @@
 
 (deftest find-references-cljc-test
   (let [code "(ns hi)"
-        usages (parser/find-usages code :cljc {})]
+        usages (parser/find-usages "(ns hi)" :cljc {})]
     (is (= 4 (count usages)))
     (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
     (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
@@ -509,18 +508,18 @@
       (is (= (:sym a-param) (:sym a-use)))
       (is (= (:sym c-param) (:sym c-use)))
       (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
-      (is (= #{:scoped} (:tags a-use) (:tags c-use))))
-    (testing "docstring"
-      (let [code "(defprotocol Foo \"I AM DOC\" (bar [a] a) (foo []) (qux [c] c))"
-            usages (parser/find-usages code :clj {})
-            [_ class-dec bar a-param a-use foo qux c-param c-use] usages]
-        (is (= 9 (count usages)))
-        (is (= 'user.Foo (:sym class-dec)))
-        (is (= #{:method :declare} (:tags bar) (:tags foo) (:tags qux)))
-        (is (= (:sym a-param) (:sym a-use)))
-        (is (= (:sym c-param) (:sym c-use)))
-        (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
-        (is (= #{:scoped} (:tags a-use) (:tags c-use)))))))
+      (is (= #{:scoped} (:tags a-use) (:tags c-use)))))
+  (testing "docstring"
+    (let [code "(defprotocol Foo \"I AM DOC\" (bar [a] a) (foo []) (qux [c] c))"
+          usages (parser/find-usages code :clj {})
+          [_ class-dec bar a-param a-use foo qux c-param c-use] usages]
+      (is (= 9 (count usages)))
+      (is (= 'user.Foo (:sym class-dec)))
+      (is (= #{:method :declare} (:tags bar) (:tags foo) (:tags qux)))
+      (is (= (:sym a-param) (:sym a-use)))
+      (is (= (:sym c-param) (:sym c-use)))
+      (is (= #{:declare :param} (:tags a-param) (:tags c-param)))
+      (is (= #{:scoped} (:tags a-use) (:tags c-use))))))
 
 (deftest forward-declarations
   (let [code "(ns user (:require [clojure.spec.alpha :as s])) (s/fdef foo) (declare foo) (defn foo [])"

@@ -21,8 +21,8 @@
 (defn find-op
   [zloc]
   (loop [op-loc (or (and (= :list (z/tag zloc))
-                           (z/down zloc))
-                      (z/leftmost zloc))]
+                         (z/down zloc))
+                    (z/leftmost zloc))]
       (let [up-loc (z/up op-loc)]
        (cond
          (nil? up-loc) nil
@@ -136,122 +136,122 @@
     zloc))
 
 (comment
-(z/sexpr (find-namespace (z/rightmost (z/of-string "(ns foo) (a)"))))
+ (z/sexpr (find-namespace (z/rightmost (z/of-string "(ns foo) (a)"))))
 
-  (defn remove-left [zloc]
-    (-> zloc
-        (zu/remove-left-while ws/whitespace?)
-        (zu/remove-left-while (complement ws/whitespace?))))
+ (defn remove-left [zloc]
+   (-> zloc
+       (zu/remove-left-while ws/whitespace?)
+       (zu/remove-left-while (complement ws/whitespace?))))
 
-  (defn transpose-with-right
-    [zloc]
-    (if (z/rightmost? zloc)
-      zloc
-      (let [right-node (z/node (z/right zloc))]
-        (-> zloc
-            (remove-right)
-            (z/insert-left right-node)))))
+ (defn transpose-with-right
+   [zloc]
+   (if (z/rightmost? zloc)
+     zloc
+     (let [right-node (z/node (z/right zloc))]
+       (-> zloc
+           (remove-right)
+           (z/insert-left right-node)))))
 
-  (defn transpose-with-left
-    [zloc]
-    (if (z/leftmost? zloc)
-      zloc
-      (let [left-node (z/node (z/left zloc))]
-        (-> zloc
-            (z/left)
-            (transpose-with-right)))))
+ (defn transpose-with-left
+   [zloc]
+   (if (z/leftmost? zloc)
+     zloc
+     (let [left-node (z/node (z/left zloc))]
+       (-> zloc
+           (z/left)
+           (transpose-with-right)))))
 
 
   ;; TODO this can probably escape the ns form - need to root the search it somehow (z/.... (z/node zloc))
-  (defn find-or-create-libspec [zloc v]
-    (if-let [zfound (z/find-next-value zloc z/next v)]
-      zfound
-      (-> zloc
-          (z/append-child (n/newline-node "\n"))
-          (z/append-child (list v))
-          z/down
-          z/rightmost
-          z/down
-          z/down)))
+ (defn find-or-create-libspec [zloc v]
+   (if-let [zfound (z/find-next-value zloc z/next v)]
+     zfound
+     (-> zloc
+         (z/append-child (n/newline-node "\n"))
+         (z/append-child (list v))
+         z/down
+         z/rightmost
+         z/down
+         z/down)))
 
-  (defn remove-children
-    [zloc]
-    (if (z/seq? zloc)
-      (z/replace zloc (n/replace-children (z/node zloc) []))
-      zloc))
+ (defn remove-children
+   [zloc]
+   (if (z/seq? zloc)
+     (z/replace zloc (n/replace-children (z/node zloc) []))
+     zloc))
 
-  (defn remove-all-after
-    [zloc]
-    (loop [loc (zu/remove-right-while (remove-children zloc) (constantly true))]
-      (if-let [uploc (z/up loc)]
-        (recur (zu/remove-right-while uploc (constantly true)))
-        loc)))
+ (defn remove-all-after
+   [zloc]
+   (loop [loc (zu/remove-right-while (remove-children zloc) (constantly true))]
+     (if-let [uploc (z/up loc)]
+       (recur (zu/remove-right-while uploc (constantly true)))
+       loc)))
 
-  (defn read-position
-    [old-pos zloc offset]
-    (let [n (-> zloc
-                (remove-all-after)
-                (z/root-string)
-                (z/of-string)
-                (z/rightmost)
-                (z/find-next-depth-first (comp z/end? z/next)))]
-      (if n
-        (-> n
-            (z/node)
-            (meta)
-            ((juxt :row (comp (partial + offset) :col))))
-        old-pos)))
+ (defn read-position
+   [old-pos zloc offset]
+   (let [n (-> zloc
+               (remove-all-after)
+               (z/root-string)
+               (z/of-string)
+               (z/rightmost)
+               (z/find-next-depth-first (comp z/end? z/next)))]
+     (if n
+       (-> n
+           (z/node)
+           (meta)
+           ((juxt :row (comp (partial + offset) :col))))
+       old-pos)))
 
-  (defn mark-position
-    [zloc marker]
-    (z/replace zloc (update (z/node zloc) ::markers (fnil conj #{}) marker)))
+ (defn mark-position
+   [zloc marker]
+   (z/replace zloc (update (z/node zloc) ::markers (fnil conj #{}) marker)))
 
-  (defn find-mark-or-nil
-    [zloc marker]
-    (z/find (to-first-top zloc) z/next (fn [loc] (contains? (get (z/node loc) ::markers) marker))))
+ (defn find-mark-or-nil
+   [zloc marker]
+   (z/find (to-first-top zloc) z/next (fn [loc] (contains? (get (z/node loc) ::markers) marker))))
 
-  (defn find-mark
-    [zloc marker]
-    (if-let [mloc (find-mark-or-nil zloc marker)]
-      mloc
-      zloc))
+ (defn find-mark
+   [zloc marker]
+   (if-let [mloc (find-mark-or-nil zloc marker)]
+     mloc
+     zloc))
 
-  (defn remove-mark
-    [zloc marker]
-    (z/replace zloc (update (z/node zloc) ::markers disj marker)))
+ (defn remove-mark
+   [zloc marker]
+   (z/replace zloc (update (z/node zloc) ::markers disj marker)))
 
-  (defn find-first-sexpr
-    [zloc search-sexpr]
-    (-> zloc
-        (to-first-top)
-        (z/find z/next #(= (z/sexpr %) search-sexpr))))
+ (defn find-first-sexpr
+   [zloc search-sexpr]
+   (-> zloc
+       (to-first-top)
+       (z/find z/next #(= (z/sexpr %) search-sexpr))))
 
-  (defn replace-all-sexpr
-    [zloc sexpr def-name mark?]
-    (if-let [found-loc (find-first-sexpr zloc sexpr)]
-      (let [new-loc (if mark?
-                      (mark-position (z/replace found-loc def-name) :new-cursor)
-                      (z/replace found-loc def-name))]
-        (recur (mark-position new-loc :reformat) sexpr def-name false))
-      zloc))
+ (defn replace-all-sexpr
+   [zloc sexpr def-name mark?]
+   (if-let [found-loc (find-first-sexpr zloc sexpr)]
+     (let [new-loc (if mark?
+                     (mark-position (z/replace found-loc def-name) :new-cursor)
+                     (z/replace found-loc def-name))]
+       (recur (mark-position new-loc :reformat) sexpr def-name false))
+     zloc))
 
-  (defn format-form
-    [zloc]
-    (let [expr-loc (to-top zloc)
-          formatted-node (fmt/reformat-form (z/node expr-loc) {})]
-      (z/replace expr-loc formatted-node)))
+ (defn format-form
+   [zloc]
+   (let [expr-loc (to-top zloc)
+         formatted-node (fmt/reformat-form (z/node expr-loc) {})]
+     (z/replace expr-loc formatted-node)))
 
-  (defn format-all
-    [zloc]
-    (loop [top-loc (to-first-top zloc)]
-      (let [formatted (format-form top-loc)]
-        (if (z/rightmost? formatted)
-          formatted
-          (recur (z/right formatted))))))
+ (defn format-all
+   [zloc]
+   (loop [top-loc (to-first-top zloc)]
+     (let [formatted (format-form top-loc)]
+       (if (z/rightmost? formatted)
+         formatted
+         (recur (z/right formatted))))))
 
-  (defn format-marked
-    [zloc]
-    (let [floc (find-mark-or-nil (to-first-top zloc) :reformat)]
-      (cond
-        floc (recur (z/replace floc (fmt/reformat-form (z/node (remove-mark floc :reformat)) {})))
-        :else zloc))))
+ (defn format-marked
+   [zloc]
+   (let [floc (find-mark-or-nil (to-first-top zloc) :reformat)]
+     (cond
+       floc (recur (z/replace floc (fmt/reformat-form (z/node (remove-mark floc :reformat)) {})))
+       :else zloc))))

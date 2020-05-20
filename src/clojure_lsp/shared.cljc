@@ -1,4 +1,5 @@
 (ns clojure-lsp.shared
+  #?(:cljs (:require-macros [clojure-lsp.shared]))
   (:require
     [clojure.string :as string]))
 
@@ -12,4 +13,3 @@
 (defn ->range [{:keys [row end-row col end-col]}]
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
-

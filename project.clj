@@ -26,5 +26,8 @@
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
                              [lein-binplus "0.6.5"]]
                    :bin {:name "clojure-lsp"}}
-             :test {:test-selectors {:focused :focused}}
+             :test {:test-selectors {:focused :focused}
+                    :dependencies [[pjstadig/humane-test-output "0.9.0"]]
+                    :injections [(require 'pjstadig.humane-test-output)
+                                 (pjstadig.humane-test-output/activate!)]}
              :uberjar {:aot :all}})

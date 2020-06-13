@@ -45,7 +45,9 @@
     (->> env
          (filter (comp file-types :file-type))
          (filter (comp #{:within} (partial check-bounds line column)))
-         first)))
+         ;; Pushes keywords last
+         (sort-by (comp keyword? :sym))
+         (first))))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -314,7 +316,7 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))]
-    (when-not (contains? tags :norename)
+    (when (and cursor-usage (not (simple-keyword? cursor-sym)) (not (contains? tags :norename)))
       (let [[_ cursor-ns cursor-name] (parser/ident-split cursor-str)
             replacement (if cursor-ns
                           (string/replace new-name (re-pattern (str "^:{0,2}" cursor-ns "/")) "")
@@ -410,6 +412,7 @@
         sym (:sym cursor)]
     (into [] (comp (filter #(= (:sym %) sym))
                    (map file-env-entry->document-highlight)) local-env)))
+
 (defn file-env-entry->workspace-symbol [uri [e kind]]
   (let [{:keys [sym row col end-row end-col sym]} e
         symbol-kind (entry-kind->symbol-kind kind)

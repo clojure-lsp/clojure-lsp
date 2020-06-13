@@ -55,6 +55,17 @@
       (is (= "xx" (get-in changes ["file://b.clj" 0 :new-text])))
       (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text]))))))
 
+(deftest test-rename-simple-keywords
+  (reset! db/db {:file-envs
+                 {"file://a.cljc" (parser/find-usages ":a (let [{:keys [a]} {}] a)" :cljc {})}})
+  (testing "should not rename plain keywords"
+    (let [changes (:changes (handlers/rename "file://a.cljc" 1 1 "b"))]
+      (is (= nil changes))))
+
+  (testing "should rename local in destructure not keywords"
+    (let [changes (:changes (handlers/rename "file://a.cljc" 1 18 "b"))]
+      (is (= [18 26] (mapv (comp inc :character :start :range) (get-in changes ["file://a.cljc"])))))))
+
 (deftest test-find-diagnostics
   (testing "wrong arity"
     (testing "for argument destructuring"

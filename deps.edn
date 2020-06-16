@@ -15,6 +15,10 @@
         medley {:mvn/version "1.0.0"}
         com.taoensso/tufte {:mvn/version "2.0.1"}
         trptcolin/versioneer {:mvn/version "0.2.0"}}
- :paths ["resources" "src"]
+ :paths ["resources" "src"
+         ;; lein compiles project's java to this dir:
+         "target/classes"]
  :aliases {:run {:main-opts ["-m" "clojure-lsp.main"]
-                 :jvm-opts ["-Xmx1g" "-server"]}}}
+                 :jvm-opts ["-Xmx1g" "-server"]}
+           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.632"}}
+                  :main-opts ["-m" "kaocha.runner"]}}}

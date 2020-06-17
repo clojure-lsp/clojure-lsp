@@ -1,0 +1,9 @@
+{:deps {org.clojure/clojure {:mvn/version "1.10.1"}
+        org.clojure/tools.cli {:mvn/version "0.4.2"}
+        org.clojure/tools.reader {:mvn/version "1.3.2"}
+        com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
+        rewrite-cljc {:git/url "https://github.com/lread/rewrite-cljc-playground.git"
+                      :sha "4eeac8576341cfd0b205e21745b8ca4063b70476"}}
+ :paths ["src" "resources"]
+ :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.632"}}
+                  :main-opts ["-m" "kaocha.runner"]}}}

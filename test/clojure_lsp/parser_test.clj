@@ -5,7 +5,7 @@
     [clojure.string :as string]
     [clojure.test :refer :all]
     [clojure.tools.logging :as log]
-    [rewrite-clj.zip :as z]))
+    [rewrite-cljc.zip :as z]))
 
 (defn syms [code]
   (->> (parser/find-usages code :clj {})

@@ -3,7 +3,8 @@
         org.eclipse.lsp4j/org.eclipse.lsp4j {:mvn/version "0.8.1"  :exclusions [org.eclipse.xtend/org.eclipse.xtend.lib]}
         org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.20.0" :exclusions [com.google.guava/guava]}
         com.google.guava/guava {:mvn/version "19.0"}
-        rewrite-clj {:local/root "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"}
+        rewrite-cljc {:git/url "https://github.com/lread/rewrite-cljc-playground.git"
+                      :sha "4eeac8576341cfd0b205e21745b8ca4063b70476"}
         log4j/log4j {:mvn/version "1.2.17"}
         org.clojure/tools.logging {:mvn/version "0.3.1"}
         nrepl/nrepl {:mvn/version "0.6.0"}
@@ -11,7 +12,10 @@
         org.xerial/sqlite-jdbc {:mvn/version "3.21.0.1"}
         seancorfield/next.jdbc {:mvn/version "1.0.13"}
         digest {:mvn/version "1.4.8"}
-        cljfmt {:mvn/version "0.6.4" :exclusions [rewrite-cljs]}
+        cljfmt {;; reference rewrite-cljc version of cljfmt
+                :local/root "./lread-hack/cljfmt/cljfmt"
+                ;; let's not confuse things by having competing rewrite-cljc refs
+                :exclusions "rewrite-cljc"}
         medley {:mvn/version "1.0.0"}
         com.taoensso/tufte {:mvn/version "2.0.1"}
         trptcolin/versioneer {:mvn/version "0.2.0"}}

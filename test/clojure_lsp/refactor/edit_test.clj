@@ -3,7 +3,7 @@
     [clojure-lsp.refactor.edit :as edit]
     [clojure.test :refer :all]
     [clojure.tools.logging :as log]
-    [rewrite-clj.zip :as z]))
+    [rewrite-cljc.zip :as z]))
 
 (deftest find-op-test
   (let [code "(foo ((x) [a] (b {c d})))"

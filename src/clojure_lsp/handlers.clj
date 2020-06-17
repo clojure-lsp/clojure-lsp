@@ -13,8 +13,8 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z])
+    [rewrite-cljc.node :as n]
+    [rewrite-cljc.zip :as z])
   (:import
     [java.net URI URL JarURLConnection]
     [java.util.jar JarFile]

@@ -8,7 +8,7 @@
     [clojure.string :as string]
     [clojure.test :refer :all]
     [clojure.tools.logging :as log]
-    [rewrite-clj.zip :as z]))
+    [rewrite-cljc.zip :as z]))
 
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -eou pipefail
+
+rm -rf cljfmt
+git clone https://github.com/lread/cljfmt.git
+cd cljfmt
+git checkout lread-rewrite-cljc-test
+cd cljfmt
+# sanity tests
+lein uberjar
+lein test
+
+# add a deps.edn so I can easily ref this thing
+cp ../../deps.edn .
+clojure -A:test

@@ -7,10 +7,8 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [medley.core :as medley]
-    [rewrite-clj.custom-zipper.core :as cz]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]))
+    [rewrite-cljc.node :as n]
+    [rewrite-cljc.zip :as z]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -65,8 +63,8 @@
                                         threaded?
                                         (-> (z/insert-left first-node)
                                             (z/left)
-                                            (cz/insert-right (n/spaces first-col))
-                                            (cz/insert-right (n/newlines 1))
+                                            (z/insert-right* (n/spaces first-col))
+                                            (z/insert-right* (n/newlines 1))
                                             z/up)
 
                                         (not threaded?)
@@ -159,7 +157,7 @@
       result)))
 
 (defn find-within [zloc p?]
-  (when (z/find (zsub/subzip zloc) z/next p?)
+  (when (z/find (z/subzip zloc) z/next p?)
     (z/find zloc z/next p?)))
 
 (defn replace-in-bind-values [first-bind p? replacement]
@@ -186,7 +184,7 @@
   (when-let [let-top-loc (some-> zloc
                                  (edit/find-ops-up 'let)
                                  z/up)]
-    (let [let-loc (z/down (zsub/subzip let-top-loc))
+    (let [let-loc (z/down (z/subzip let-top-loc))
           bound-string (z/string zloc)
           bound-node (z/node zloc)
           binding-sym (symbol binding-name)
@@ -200,13 +198,13 @@
           with-binding (if bindings-pos
                          (-> bindings-pos
                              (z/insert-left binding-sym)
-                             (cz/insert-left bound-node)
-                             (cz/insert-left (n/newlines 1))
-                             (cz/insert-left (n/spaces col)))
+                             (z/insert-left* bound-node)
+                             (z/insert-left* (n/newlines 1))
+                             (z/insert-left* (n/spaces col)))
                          (-> bindings-loc
                              (cond->
-                               first-bind (cz/append-child (n/newlines 1))
-                               first-bind (cz/append-child (n/spaces col))) ; insert let and binding backwards
+                               first-bind (z/append-child* (n/newlines 1))
+                               first-bind (z/append-child* (n/spaces col))) ; insert let and binding backwards
                              (z/append-child binding-sym) ; add binding symbol
                              (z/append-child bound-node)
                              (z/down)
@@ -227,8 +225,8 @@
         loc (-> zloc
                 (edit/wrap-around :list) ; wrap with new let list
                 (z/insert-child 'let) ; add let
-                (cz/append-child (n/newlines 1)) ; add new line after location
-                (cz/append-child (n/spaces (inc col)))  ; indent body
+                (z/append-child* (n/newlines 1)) ; add new line after location
+                (z/append-child* (n/spaces (inc col)))  ; indent body
                 (z/append-child sym) ; add new symbol to body of let
                 (z/down) ; enter let list
                 (z/right) ; skip 'let
@@ -260,8 +258,8 @@
                        (z/remove) ; remove binding
                        (z/up) ; go to form container
                        (edit/wrap-around :list) ; wrap with new let list
-                       (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
-                       (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
+                       (z/insert-child* (n/spaces col)) ; insert let and bindings backwards
+                       (z/insert-child* (n/newlines 1)) ; insert let and bindings backwards
                        (z/insert-child bind-node)
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
@@ -278,7 +276,7 @@
 (defn clean-ns
   [zloc uri]
   (let [ns-loc (edit/find-namespace zloc)
-        require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+        require-loc (z/find-value (z/subzip ns-loc) z/next :require)
         keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
         col (if require-loc
               (if keep-require-at-start?
@@ -312,12 +310,12 @@
 (defn add-known-libspec
   [zloc ns-to-add qualified-ns-to-add]
   (let [ns-loc (edit/find-namespace zloc)
-        ns-zip (zsub/subzip ns-loc)
+        ns-zip (z/subzip ns-loc)
         need-to-add? (and (not (z/find-value ns-zip z/next qualified-ns-to-add))
                           (not (z/find-value ns-zip z/next ns-to-add)))]
     (when (and ns-to-add qualified-ns-to-add need-to-add?)
       (let [add-require? (not (z/find-value ns-zip z/next :require))
-            require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+            require-loc (z/find-value (z/subzip ns-loc) z/next :require)
             col (if require-loc
                   (:col (meta (z/node (z/rightmost require-loc))))
                   5)
@@ -328,8 +326,8 @@
                                       add-require? (z/append-child (list :require)))
                                     (z/find-value z/next :require)
                                     (z/up)
-                                    (cz/append-child (n/newlines 1))
-                                    (cz/append-child (n/spaces (dec col)))
+                                    (z/append-child* (n/newlines 1))
+                                    (z/append-child* (n/spaces (dec col)))
                                     (z/append-child [qualified-ns-to-add :as ns-to-add]))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
@@ -382,8 +380,8 @@
         defn-edit (-> (z/of-string "(defn)\n\n")
                       (z/append-child fn-sym)
                       (z/append-child used-syms)
-                      (cz/append-child (n/newlines 1))
-                      (cz/append-child (n/spaces 2))
+                      (z/append-child* (n/newlines 1))
+                      (z/append-child* (n/spaces 2))
                       (z/append-child expr-node))]
     [{:loc defn-edit
       :range (assoc form-pos :end-row (:row form-pos)

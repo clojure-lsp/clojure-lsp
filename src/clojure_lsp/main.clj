@@ -230,17 +230,19 @@
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
    (go :codeAction
-       (end
-         (CompletableFuture/completedFuture
-           (try
-             (let [doc-id          (interop/document->decoded-uri (.getTextDocument params))
-                   diagnostics     (.getDiagnostics (.getContext params))
-                   start           (.getStart (.getRange params))
-                   start-line      (.getLine start)
-                   start-character (.getCharacter start)]
-               (interop/conform-or-log ::interop/code-actions (#'handlers/code-actions doc-id diagnostics start-line start-character)))
-             (catch Exception e
-               (log/error e)))))))
+       (CompletableFuture/supplyAsync
+         (reify Supplier
+           (get [_this]
+             (end
+               (try
+                 (let [doc-id          (interop/document->decoded-uri (.getTextDocument params))
+                       diagnostics     (.getDiagnostics (.getContext params))
+                       start           (.getStart (.getRange params))
+                       start-line      (.getLine start)
+                       start-character (.getCharacter start)]
+                   (interop/conform-or-log ::interop/code-actions (#'handlers/code-actions doc-id diagnostics start-line start-character)))
+                 (catch Exception e
+                   (log/error e)))))))))
 
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
     (go :definition

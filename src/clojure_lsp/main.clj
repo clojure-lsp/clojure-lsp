@@ -233,11 +233,12 @@
        (end
          (CompletableFuture/completedFuture
            (try
-             (let [uri             (interop/document->decoded-uri (.getTextDocument params))
+             (let [doc-id          (interop/document->decoded-uri (.getTextDocument params))
+                   diagnostics     (.getDiagnostics (.getContext params))
                    start           (.getStart (.getRange params))
                    start-line      (.getLine start)
                    start-character (.getCharacter start)]
-               (interop/conform-or-log ::interop/code-actions (#'handlers/code-actions uri start-line start-character)))
+               (interop/conform-or-log ::interop/code-actions (#'handlers/code-actions doc-id diagnostics start-line start-character)))
              (catch Exception e
                (log/error e)))))))
 

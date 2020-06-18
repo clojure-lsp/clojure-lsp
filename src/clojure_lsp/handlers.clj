@@ -539,3 +539,21 @@
                    (-> db
                        (update :documents #(apply dissoc % uris))
                        (update :file-envs #(apply dissoc % uris)))))))
+
+(defn code-actions
+  [uri line character]
+  (cond-> []
+
+    (get-in @db/db [:client-capabilities :workspace :workspace-edit])
+    (conj {:title   "Clean namespace"
+           :kind    :source-organize-imports
+           :command {:title     "Clean namespace"
+                     :command   "clean-ns"
+                     :arguments [uri line character]}})
+
+    true
+    (conj {:title   "Add missing namespace"
+           :kind    :source
+           :command {:title     "add-missing-libspec"
+                     :command   "add-missing-libspec"
+                     :arguments [uri line character]}})))

@@ -749,7 +749,9 @@
                   'clojure.core/some-> handle-thread
                   'clojure.core/some->> handle-thread
                   'clojure.core/cond-> handle-cond-thread
-                  'clojure.core/cond->> handle-cond-thread}]
+                  'clojure.core/cond->> handle-cond-thread
+                  'clojure.core/doto handle-thread}]
+
     (merge handlers (medley/map-keys #(symbol "cljs.core" (name %)) handlers))))
 
 (def default-macro-defs

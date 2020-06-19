@@ -107,7 +107,7 @@
       {:range (shared/->range call-site)
        :code :wrong-arity
        :message (let [plural (not= argc 1)]
-                  (format "No overload %s for %d argument%s"
+                  (format "No overload for '%s' with %d argument%s"
                           (:str call-site) argc (if plural "s" "")))
        :severity 1})))
 

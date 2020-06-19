@@ -1,12 +1,17 @@
 (ns clojure-lsp.handlers-test
   (:require
+   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
    [clojure.string :as string]
-   [clojure.test :refer :all]
-   [clojure.tools.logging :as log]
-   [clojure-lsp.crawler :as crawler]))
+   [clojure.test :refer :all])
+  (:import
+   (org.eclipse.lsp4j
+     Diagnostic
+     DiagnosticSeverity
+     Range
+     Position)))
 
 (deftest test-rename
   (reset! db/db {:file-envs
@@ -266,3 +271,43 @@
                    :end {:line 0 :character 5}}
            :new-text "(a)"}]
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
+
+(deftest test-code-actions
+  (let [a-code (str "(ns some-ns)\n"
+                    "(def foo)")
+        b-code (str "(ns other-ns (:require [some-ns :as somens])\n"
+                    "(def bar")
+        c-code (str "(ns another-ns)\n"
+                    "(def foo somens/foo)\n"
+                    "(def bar otherns/bar)")
+        db-state {:documents {"file://a.clj" {:text a-code}
+                              "file://b.clj" {:text b-code}
+                              "file://c.clj" {:text c-code}}
+                  :file-envs {"file://a.clj" (parser/find-usages a-code :clj {})
+                              "file://b.clj" (parser/find-usages b-code :clj {})
+                              "file://c.clj" (parser/find-usages c-code :clj {})}}]
+    (testing "clean namespace without workspace edit client capability"
+      (reset! db/db db-state)
+      (is (= [] (handlers/code-actions "file://b.clj" [] 1 1))))
+
+    (testing "clean namespace with workspace edit client capability"
+      (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
+      (is (= [{:title   "Clean namespace"
+               :kind    :source-organize-imports
+               :command {:title     "Clean namespace"
+                         :command   "clean-ns"
+                         :arguments ["file://b.clj" 1 1]}}] (handlers/code-actions "file://b.clj" [] 1 1))))
+
+    (testing "Add missing libspec when it has unknow-ns and can find namespace"
+      (reset! db/db db-state)
+      (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 9) (Position. 1 9)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+        (is (= [{:title "Add missing namespace"
+                 :kind :quick-fix
+                 :workspace-edit
+                 {:changes
+                  {"file://c.clj"
+                   [{:range
+                     {:start {:line 0 :character 0} :end {:line 0 :character 15}}
+                     :new-text
+                     "(ns another-ns \n  (:require\n    [{\"some-ns\" [{:alias-str \"some-ns\", :label \"some-ns\", :detail \"some-ns\", :alias-ns some-ns}], \"another-ns\" [{:alias-str \"another-ns\", :label \"another-ns\", :detail \"another-ns\", :alias-ns another-ns}]} :as somens]))"}]}}}]
+               (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 1 9)))))))

@@ -21,6 +21,7 @@
       CompletionParams
       ConfigurationItem
       ConfigurationParams
+      DefinitionParams
       DidChangeConfigurationParams
       DidChangeTextDocumentParams
       DidChangeWatchedFilesParams
@@ -29,12 +30,14 @@
       DidOpenTextDocumentParams
       DidSaveTextDocumentParams
       DocumentFormattingParams
+      DocumentHighlightParams
       DocumentRangeFormattingParams
       DocumentSymbolParams
       DocumentSymbol
       ExecuteCommandOptions
       ExecuteCommandParams
       FileSystemWatcher
+      HoverParams
       InitializeParams
       InitializeResult
       InitializedParams
@@ -47,9 +50,9 @@
       ServerCapabilities
       SignatureHelp
       SignatureHelpOptions
+      SignatureHelpParams
       SignatureInformation
       TextDocumentContentChangeEvent
-      TextDocumentPositionParams
       TextDocumentSyncKind
       TextDocumentSyncOptions
       WorkspaceSymbolParams)
@@ -170,7 +173,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-  (^CompletableFuture hover [this ^TextDocumentPositionParams params]
+  (^CompletableFuture hover [this ^HoverParams params]
     (go :hover
         (CompletableFuture/supplyAsync
           (reify Supplier
@@ -185,7 +188,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-  (^CompletableFuture signatureHelp [_ ^TextDocumentPositionParams _params]
+  (^CompletableFuture signatureHelp [_ ^SignatureHelpParams _params]
     (go :signatureHelp
         (CompletableFuture/completedFuture
           (end
@@ -244,7 +247,7 @@
                  (catch Exception e
                    (log/error e)))))))))
 
-  (^CompletableFuture definition [this ^TextDocumentPositionParams params]
+  (^CompletableFuture definition [this ^DefinitionParams params]
     (go :definition
         (CompletableFuture/supplyAsync
           (reify Supplier
@@ -271,7 +274,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-(^CompletableFuture documentHighlight [this ^TextDocumentPositionParams params]
+(^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
     (go :documentSymbol
         (CompletableFuture/supplyAsync
           (reify Supplier

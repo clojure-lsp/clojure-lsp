@@ -13,6 +13,7 @@
     (org.eclipse.lsp4j
       ApplyWorkspaceEditParams
       CodeActionParams
+      CodeAction
       Command
       CompletionItem
       CompletionItemKind
@@ -227,14 +228,21 @@
             (CompletableFuture/completedFuture
               result)))))
 
-  #_
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
-    (go :codeAction
-        (end
-          (CompletableFuture/completedFuture
-            (let [start (.getStart (.getRange params))]
-              [(Command. "add-missing-libspec" "add-missing-libspec"
-                         [(interop/document->decoded-uri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))))
+   (go :codeAction
+       (CompletableFuture/supplyAsync
+         (reify Supplier
+           (get [_this]
+             (end
+               (try
+                 (let [doc-id          (interop/document->decoded-uri (.getTextDocument params))
+                       diagnostics     (.getDiagnostics (.getContext params))
+                       start           (.getStart (.getRange params))
+                       start-line      (.getLine start)
+                       start-character (.getCharacter start)]
+                   (interop/conform-or-log ::interop/code-actions (#'handlers/code-actions doc-id diagnostics start-line start-character)))
+                 (catch Exception e
+                   (log/error e)))))))))
 
   (^CompletableFuture definition [this ^TextDocumentPositionParams params]
     (go :definition
@@ -354,7 +362,7 @@
               (CompletableFuture/completedFuture
                 (InitializeResult. (doto (ServerCapabilities.)
                                      (.setHoverProvider true)
-                                     (.setCodeActionProvider false)
+                                     (.setCodeActionProvider true)
                                      (.setReferencesProvider true)
                                      (.setRenameProvider true)
                                      (.setDefinitionProvider true)

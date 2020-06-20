@@ -7,6 +7,9 @@
     [medley.core :as medley])
   (:import
     (org.eclipse.lsp4j
+      CodeAction
+      CodeActionKind
+      Command
       CompletionItem
       CompletionItemKind
       Diagnostic
@@ -157,6 +160,39 @@
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
                       (s/conformer #(Hover. (:contents %1) (:range %1)))))
+
+(s/def :command/title string?)
+(s/def :command/command string?)
+(s/def :command/arguments (s/coll-of any?))
+
+(s/def ::command (s/and (s/keys :req-un [:command/title :command/command]
+                              :opt-un [:command/arguments])
+                      (s/conformer #(Command. (:title %1) (:command %1)(:arguments %1)))))
+
+(s/def :code-action/title string?)
+
+(def code-action-kind
+  {:quick-fix CodeActionKind/QuickFix
+   :refactor CodeActionKind/Refactor
+   :refactor-extract CodeActionKind/RefactorExtract
+   :refactor-inline CodeActionKind/RefactorInline
+   :refactor-rewrite CodeActionKind/RefactorRewrite
+   :source CodeActionKind/Source
+   :source-organize-imports CodeActionKind/SourceOrganizeImports})
+
+(s/def :code-action/kind (s/and keyword?
+                                code-action-kind
+                                (s/conformer (fn [v] (get code-action-kind v)))))
+
+(s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
+                                    :opt-un [:code-action/kind ::diagnostics ::workspace-edit ::command])
+                            (s/conformer #(doto (CodeAction. (:title %1))
+                                            (.setKind (:kind %1))
+                                            (.setDiagnostics (:diagnostics %1))
+                                            (.setEdit (:workspace-edit %1))
+                                            (.setCommand (:command %1))))))
+
+(s/def ::code-actions (s/coll-of ::code-action))
 
 (defn debeaner [inst]
   (when inst

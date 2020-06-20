@@ -539,3 +539,26 @@
                    (-> db
                        (update :documents #(apply dissoc % uris))
                        (update :file-envs #(apply dissoc % uris)))))))
+
+(defn code-actions
+  [doc-id diagnostics line character]
+  (let [has-unknow-ns? (some #(compare "unknown-ns" (.getCode %)) diagnostics)
+        missing-ns     (when has-unknow-ns?
+                         (refactor doc-id
+                                   (inc (int line))
+                                   (inc (int character))
+                                   "add-missing-libspec"
+                                   []))]
+    (cond-> []
+
+      (get-in @db/db [:client-capabilities :workspace :workspace-edit])
+      (conj {:title   "Clean namespace"
+             :kind    :source-organize-imports
+             :command {:title     "Clean namespace"
+                       :command   "clean-ns"
+                       :arguments [doc-id line character]}})
+
+      (and has-unknow-ns? missing-ns)
+      (conj {:title "Add missing namespace"
+             :kind  :quick-fix
+             :workspace-edit missing-ns}))))

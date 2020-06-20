@@ -344,7 +344,7 @@
                                    (or
                                      (set/subset? #{:public :ns} (:tags usage))
                                      (get-in usage [:tags :alias]))))
-                         (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
+                         (mapv (fn [{:keys [sym _tags] alias-str :str alias-ns :ns}]
                                  {:alias-str alias-str
                                   :label (name sym)
                                   :detail (if alias-ns

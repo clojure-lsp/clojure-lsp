@@ -13,6 +13,37 @@
      Range
      Position)))
 
+(deftest hover
+  (testing "plain text"
+    (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                       "(defn foo [x] x)\n"
+                                                                       "(foo 1)") :clj {})}})
+    (is (= {:range    {:start {:line      2
+                               :character 1}
+                       :end   {:line 2 :character 4}}
+            :contents ["a/foo [x]\n\n----\nlsp: :declare :public"]}
+           (handlers/hover "file://a.clj" 3 3))))
+  (testing "markdown content with function args"
+    (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                   :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                 "(defn foo [x] x)\n"
+                                                                                 "(foo 1)") :clj {})}})
+    (is (= {:range    {:start {:line 2 :character 1}
+                       :end   {:line 2 :character 4}}
+            :contents {:kind "markdown"
+                       :value "```clojure\na/foo [x]\n```\n\n----\nlsp: :declare :public"}}
+           (handlers/hover "file://a.clj" 3 3))))
+  (testing "markdown content with no function args"
+    (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                   :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                 "(defn foo [] 1)\n"
+                                                                                 "(foo)") :clj {})}})
+    (is (= {:range    {:start {:line 2 :character 1}
+                       :end   {:line 2 :character 4}}
+            :contents {:kind "markdown"
+                       :value "```clojure\na/foo []\n```\n\n----\nlsp: :declare :public"}}
+           (handlers/hover "file://a.clj" 3 2)))))
+
 (deftest test-rename
   (reset! db/db {:file-envs
                  {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})

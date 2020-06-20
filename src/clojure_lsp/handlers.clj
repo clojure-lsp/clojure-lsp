@@ -100,13 +100,11 @@
         tags (string/join " " tags)]
     (case content-format
       "markdown" {:kind "markdown"
-                  :value (cond-> (str "```\n" sym "\n```\n")
-                           signatures (str "```\n" signatures "\n```\n")
+                  :value (cond-> (str "```clojure\n" sym " " signatures "\n```\n")
                            (seq doc) (str (format-docstring doc) "\n")
                            (seq tags) (str "\n----\n" "lsp: " tags))}
       ;; Default to plaintext
-      (cond-> (str sym "\n")
-        signatures (str signatures "\n")
+      (cond-> (str sym " " signatures "\n")
         (seq doc) (str doc "\n")
         (seq tags) (str "\n----\n" "lsp: " tags)))))
 

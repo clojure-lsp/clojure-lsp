@@ -1,24 +1,25 @@
 (ns clojure-lsp.handlers
   (:require
-    [cljfmt.core :as cljfmt]
-    [cljfmt.main :as cljfmt.main]
-    [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.crawler :as crawler]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.interop :as interop]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.transform :as refactor]
-    [clojure-lsp.shared :as shared]
-    [clojure.core.async :as async]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [clojure.tools.logging :as log]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z])
+   [cljfmt.core :as cljfmt]
+   [cljfmt.main :as cljfmt.main]
+   [clojure-lsp.clojure-core :as cc]
+   [clojure-lsp.crawler :as crawler]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.interop :as interop]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.refactor.transform :as refactor]
+   [clojure-lsp.refactor.transform :as transform]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [clojure.tools.logging :as log]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z])
   (:import
-    [java.net URI URL JarURLConnection]
-    [java.util.jar JarFile]
-    [java.nio.file Paths]))
+   [java.net URI URL JarURLConnection]
+   [java.util.jar JarFile]
+   [java.nio.file Paths]))
 
 (defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
@@ -425,15 +426,15 @@
 (defn workspace-symbols [query]
   (if (seq query)
     (let [file-envs (:file-envs @db/db)]
-     (->> file-envs
-          (mapcat (fn [[uri env]]
-                    (->> env
-                         (keep #(cond (:kind %) [% (:kind %)]
-                                      (is-declaration? %) [% :declaration]
-                                      :else nil))
-                         (filter #(.contains (str (:sym (first %))) query))
-                         (map (partial file-env-entry->workspace-symbol uri)))))
-          (sort-by :name)))
+      (->> file-envs
+           (mapcat (fn [[uri env]]
+                     (->> env
+                          (keep #(cond (:kind %) [% (:kind %)]
+                                       (is-declaration? %) [% :declaration]
+                                       :else nil))
+                          (filter #(.contains (str (:sym (first %))) query))
+                          (map (partial file-env-entry->workspace-symbol uri)))))
+           (sort-by :name)))
     []))
 
 (def refactorings
@@ -542,13 +543,16 @@
 
 (defn code-actions
   [doc-id diagnostics line character]
-  (let [has-unknow-ns? (some #(compare "unknown-ns" (.getCode %)) diagnostics)
-        missing-ns     (when has-unknow-ns?
-                         (refactor doc-id
-                                   (inc (int line))
-                                   (inc (int character))
-                                   "add-missing-libspec"
-                                   []))]
+  (let [has-unknow-ns?       (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
+        row                  (inc (int line))
+        col                  (inc (int character))
+        missing-ns           (when has-unknow-ns?
+                               (refactor doc-id row col "add-missing-libspec" []))
+        zloc                 (-> @db/db
+                                 (get-in [:documents doc-id])
+                                 :text
+                                 (parser/loc-at-pos row col))
+        inside-function?         (transform/inside-function? zloc)]
     (cond-> []
 
       (get-in @db/db [:client-capabilities :workspace :workspace-edit])
@@ -559,6 +563,14 @@
                        :arguments [doc-id line character]}})
 
       (and has-unknow-ns? missing-ns)
-      (conj {:title "Add missing namespace"
-             :kind  :quick-fix
-             :workspace-edit missing-ns}))))
+      (conj {:title          "Add missing namespace"
+             :kind           :quick-fix
+             :preferred?     true
+             :workspace-edit missing-ns})
+
+      inside-function?
+      (conj {:title   "Cycle privacy"
+             :kind    :refactor-rewrite
+             :command {:title     "Cycle privacy"
+                       :command   "cycle-privacy"
+                       :arguments [doc-id line character]}}))))

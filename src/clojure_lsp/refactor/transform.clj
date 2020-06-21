@@ -394,9 +394,12 @@
      {:loc expr-edit
       :range (meta expr-node)}]))
 
+(defn inside-function? [zloc]
+  (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
+
 (defn cycle-privacy
   [zloc _]
-  (when-let [oploc (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti)]
+  (when-let [oploc (inside-function? zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
                              (not (get-in @db/db [:settings "use-metadata-for-privacy?"])))

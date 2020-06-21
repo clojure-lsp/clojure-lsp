@@ -328,4 +328,13 @@
       (testing "when on function location"
         (reset! db/db db-state)
         (is (some #(= (:title %) "Cycle privacy")
+                  (handlers/code-actions "file://a.clj" [] 1 4)))))
+    (testing "Extract function"
+      (testing "when non function location"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Extract function")
+                      (handlers/code-actions "file://a.clj" [] 0 4))))
+      (testing "when on function location"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Extract function")
                   (handlers/code-actions "file://a.clj" [] 1 4)))))))

@@ -573,4 +573,9 @@
              :kind    :refactor-rewrite
              :command {:title     "Cycle privacy"
                        :command   "cycle-privacy"
-                       :arguments [doc-id line character]}}))))
+                       :arguments [doc-id line character]}}
+            {:title   "Extract function"
+             :kind    :refactor-extract
+             :command {:title     "Extract function"
+                       :command   "extract-function"
+                       :arguments [doc-id line character "new-function"]}}))))

@@ -8,7 +8,6 @@
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.transform :as refactor]
-    [clojure-lsp.refactor.transform :as transform]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.set :as set]
@@ -543,20 +542,20 @@
 
 (defn code-actions
   [doc-id diagnostics line character]
-  (let [db                         @db/db
-        row                        (inc (int line))
-        col                        (inc (int character))
-        has-unknow-ns?             (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
-        missing-ns                 (when has-unknow-ns?
-                                     (refactor doc-id row col "add-missing-libspec" []))
-        zloc                       (-> db
-                                       (get-in [:documents doc-id])
-                                       :text
-                                       (parser/loc-at-pos row col))
-        inside-function?           (transform/inside-function? zloc)
+  (let [db @db/db
+        row (inc (int line))
+        col (inc (int character))
+        has-unknow-ns? (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
+        missing-ns (when has-unknow-ns?
+                     (refactor doc-id row col "add-missing-libspec" []))
+        zloc (-> db
+                 (get-in [:documents doc-id])
+                 :text
+                 (parser/loc-at-pos row col))
+        inside-function? (refactor/inside-function? zloc)
         [_ {def-uri :uri
-            definition :usage}]    (definition-usage doc-id row col)
-        inline-symbol?             (transform/inline-symbol? def-uri definition)
+            definition :usage}] (definition-usage doc-id row col)
+        inline-symbol? (refactor/inline-symbol? def-uri definition)
         workspace-edit-capability? (get-in db [:client-capabilities :workspace :workspace-edit])]
     (cond-> []
 

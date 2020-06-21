@@ -83,7 +83,7 @@
          (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)
                running# (filter (comp seq val) @status)]
            (when (or (> duration# 100) (seq running#))
-             (log/debug ~'_id duration#)))
+             (log/debug ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
 

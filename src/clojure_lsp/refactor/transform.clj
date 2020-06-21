@@ -418,13 +418,19 @@
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
 
+(defn inline-symbol?
+  [def-uri definition]
+  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
+        def-loc        (parser/loc-at-pos text (:row definition) (:col definition))]
+    (some-> (edit/find-op def-loc)
+            z/sexpr
+            #{'let 'def})))
+
 (defn inline-symbol
   [zloc _uri [_ {def-uri :uri definition :usage}] references]
   (let [{:keys [text]} (get-in @db/db [:documents def-uri])
         def-loc (parser/loc-at-pos text (:row definition) (:col definition))
-        op (some-> (edit/find-op def-loc)
-                   z/sexpr
-                   #{'let 'def})]
+        op (inline-symbol? def-uri definition)]
     (when op
       (let [uses (remove (comp #(contains? % :declare) :tags :usage) references)
             val-loc (z/right def-loc)

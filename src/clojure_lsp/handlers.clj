@@ -1,25 +1,25 @@
 (ns clojure-lsp.handlers
   (:require
-   [cljfmt.core :as cljfmt]
-   [cljfmt.main :as cljfmt.main]
-   [clojure-lsp.clojure-core :as cc]
-   [clojure-lsp.crawler :as crawler]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.interop :as interop]
-   [clojure-lsp.parser :as parser]
-   [clojure-lsp.refactor.transform :as refactor]
-   [clojure-lsp.refactor.transform :as transform]
-   [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [clojure.tools.logging :as log]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z])
+    [cljfmt.core :as cljfmt]
+    [cljfmt.main :as cljfmt.main]
+    [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.crawler :as crawler]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.interop :as interop]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.refactor.transform :as refactor]
+    [clojure-lsp.refactor.transform :as transform]
+    [clojure-lsp.shared :as shared]
+    [clojure.core.async :as async]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z])
   (:import
-   [java.net URI URL JarURLConnection]
-   [java.util.jar JarFile]
-   [java.nio.file Paths]))
+    [java.net URI URL JarURLConnection]
+    [java.util.jar JarFile]
+    [java.nio.file Paths]))
 
 (defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
@@ -543,30 +543,35 @@
 
 (defn code-actions
   [doc-id diagnostics line character]
-  (let [has-unknow-ns?       (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
-        row                  (inc (int line))
-        col                  (inc (int character))
-        missing-ns           (when has-unknow-ns?
-                               (refactor doc-id row col "add-missing-libspec" []))
-        zloc                 (-> @db/db
-                                 (get-in [:documents doc-id])
-                                 :text
-                                 (parser/loc-at-pos row col))
-        inside-function?         (transform/inside-function? zloc)]
+  (let [db                         @db/db
+        row                        (inc (int line))
+        col                        (inc (int character))
+        has-unknow-ns?             (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
+        missing-ns                 (when has-unknow-ns?
+                                     (refactor doc-id row col "add-missing-libspec" []))
+        zloc                       (-> db
+                                       (get-in [:documents doc-id])
+                                       :text
+                                       (parser/loc-at-pos row col))
+        inside-function?           (transform/inside-function? zloc)
+        [_ {def-uri :uri
+            definition :usage}]    (definition-usage doc-id row col)
+        inline-symbol?             (transform/inline-symbol? def-uri definition)
+        workspace-edit-capability? (get-in db [:client-capabilities :workspace :workspace-edit])]
     (cond-> []
-
-      (get-in @db/db [:client-capabilities :workspace :workspace-edit])
-      (conj {:title   "Clean namespace"
-             :kind    :source-organize-imports
-             :command {:title     "Clean namespace"
-                       :command   "clean-ns"
-                       :arguments [doc-id line character]}})
 
       (and has-unknow-ns? missing-ns)
       (conj {:title          "Add missing namespace"
              :kind           :quick-fix
              :preferred?     true
              :workspace-edit missing-ns})
+
+      inline-symbol?
+      (conj {:title   "Inline symbol"
+             :kind    :refactor-inline
+             :command {:title     "Inline symbol"
+                       :command   "inline-symbol"
+                       :arguments [doc-id line character]}})
 
       inside-function?
       (conj {:title   "Cycle privacy"
@@ -578,4 +583,11 @@
              :kind    :refactor-extract
              :command {:title     "Extract function"
                        :command   "extract-function"
-                       :arguments [doc-id line character "new-function"]}}))))
+                       :arguments [doc-id line character "new-function"]}})
+
+      workspace-edit-capability?
+      (conj {:title   "Clean namespace"
+             :kind    :source-organize-imports
+             :command {:title     "Clean namespace"
+                       :command   "clean-ns"
+                       :arguments [doc-id line character]}}))))

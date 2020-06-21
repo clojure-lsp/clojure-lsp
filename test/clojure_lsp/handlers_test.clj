@@ -279,30 +279,21 @@
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
 (deftest test-code-actions
-  (let [a-code (str "(ns some-ns)\n"
-                    "(def foo)")
-        b-code (str "(ns other-ns (:require [some-ns :as sns]))\n"
-                    "(def bar)")
-        c-code (str "(ns another-ns)\n"
-                    "(def bar ons/bar)\n"
-                    "(def foo sns/foo)")
+  (let [a-code   (str "(ns some-ns)\n"
+                      "(def foo)")
+        b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
+                      "(def bar 1)\n"
+                      "(defn baz []\n"
+                      "  bar)")
+        c-code   (str "(ns another-ns)\n"
+                      "(def bar ons/bar)\n"
+                      "(def foo sns/foo)")
         db-state {:documents {"file://a.clj" {:text a-code}
                               "file://b.clj" {:text b-code}
                               "file://c.clj" {:text c-code}}
                   :file-envs {"file://a.clj" (parser/find-usages a-code :clj {})
                               "file://b.clj" (parser/find-usages b-code :clj {})
                               "file://c.clj" (parser/find-usages c-code :clj {})}}]
-    (testing "clean namespace"
-      (testing "without workspace edit client capability"
-        (reset! db/db db-state)
-        (is (not-any? #(= (:title %) "Clean namespace")
-                      (handlers/code-actions "file://b.clj" [] 1 1))))
-
-      (testing "with workspace edit client capability"
-        (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
-        (is (some #(= (:title %) "Clean namespace")
-                  (handlers/code-actions "file://b.clj" [] 1 1)))))
-
     (testing "Add missing namespace"
       (testing "when it has not unknow-ns diagnostic"
         (reset! db/db db-state)
@@ -320,6 +311,15 @@
         (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
           (is (some #(= (:title %) "Add missing namespace")
                     (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 2 10))))))
+    (testing "Inline symbol"
+      (testing "when in not a let/def symbol"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Inline symbol")
+                      (handlers/code-actions "file://b.clj" [] 3 7))))
+      (testing "when in let/def symbol"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Inline symbol")
+                  (handlers/code-actions "file://b.clj" [] 3 4)))))
     (testing "Cycle privacy"
       (testing "when non function location"
         (reset! db/db db-state)
@@ -337,4 +337,14 @@
       (testing "when on function location"
         (reset! db/db db-state)
         (is (some #(= (:title %) "Extract function")
-                  (handlers/code-actions "file://a.clj" [] 1 4)))))))
+                  (handlers/code-actions "file://a.clj" [] 1 4)))))
+    (testing "clean namespace"
+      (testing "without workspace edit client capability"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Clean namespace")
+                      (handlers/code-actions "file://b.clj" [] 1 1))))
+
+      (testing "with workspace edit client capability"
+        (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
+        (is (some #(= (:title %) "Clean namespace")
+                  (handlers/code-actions "file://b.clj" [] 1 1)))))))

@@ -92,21 +92,26 @@
                                    (map #(drop-whitespace indentation %) (rest lines)))]
         (string/join "\n" unindented-lines)))))
 
-(defn- generate-docs [content-format usage]
+(defn- generate-docs [content-format usage show-docs-arity-on-same-line?]
   (let [{:keys [sym signatures doc tags]} usage
         signatures (some->> signatures
                             (:strings)
                             (string/join "\n"))
+        signatures (if (and show-docs-arity-on-same-line? signatures)
+                     (-> signatures
+                         (clojure.string/replace #"\n" ",")
+                         (clojure.string/replace #"  +" " "))
+                     signatures)
         tags (string/join " " tags)]
     (case content-format
       "markdown" {:kind "markdown"
-                  :value (cond-> (str "```\n" sym "\n```\n")
-                           signatures (str "```\n" signatures "\n```\n")
+                  :value (cond-> (str "```clojure\n" sym " " (when show-docs-arity-on-same-line? signatures) "\n```\n")
+                           (and (not show-docs-arity-on-same-line?) signatures) (str "```clojure\n" signatures "\n```\n")
                            (seq doc) (str (format-docstring doc) "\n")
                            (seq tags) (str "\n----\n" "lsp: " tags))}
       ;; Default to plaintext
-      (cond-> (str sym "\n")
-        signatures (str signatures "\n")
+      (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
+        (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")
         (seq doc) (str doc "\n")
         (seq tags) (str "\n----\n" "lsp: " tags)))))
 
@@ -259,10 +264,11 @@
                       :when (and (= (str sym) sym-wanted)
                                  (:declare tags))]
                   usage))
-        [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])]
+        [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])
+        show-docs-arity-on-same-line? (get-in @db/db [:settings "show-docs-arity-on-same-line?"])]
     {:label label
      :data sym-wanted
-     :documentation (generate-docs content-format usage)}))
+     :documentation (generate-docs content-format usage show-docs-arity-on-same-line?)}))
 
 (defn reference-usages [doc-id line column]
   (let [file-envs (:file-envs @db/db)
@@ -493,7 +499,8 @@
                                  (:declare tags))]
                   usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
-        docs (generate-docs content-format usage)]
+        show-docs-arity-on-same-line? (get-in @db/db [:settings "show-docs-arity-on-same-line?"])
+        docs (generate-docs content-format usage show-docs-arity-on-same-line?)]
     (if cursor
       {:range (shared/->range cursor)
        :contents (if (= content-format "markdown")

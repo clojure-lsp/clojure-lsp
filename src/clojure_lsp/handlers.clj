@@ -97,6 +97,11 @@
         signatures (some->> signatures
                             (:strings)
                             (string/join "\n"))
+        signatures (if (and show-docs-arity-on-same-line? signatures)
+                     (-> signatures
+                         (clojure.string/replace #"\n" ",")
+                         (clojure.string/replace #"  +" " "))
+                     signatures)
         tags (string/join " " tags)]
     (case content-format
       "markdown" {:kind "markdown"

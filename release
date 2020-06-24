@@ -1,4 +1,5 @@
 #!/bin/bash
 
+git pull
 git tag release-$(date -u +"%Y%m%dT%H%M%S")
 git push --tags

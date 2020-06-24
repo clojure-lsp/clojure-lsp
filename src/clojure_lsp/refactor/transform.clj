@@ -394,9 +394,12 @@
      {:loc expr-edit
       :range (meta expr-node)}]))
 
+(defn inside-function? [zloc]
+  (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
+
 (defn cycle-privacy
   [zloc _]
-  (when-let [oploc (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti)]
+  (when-let [oploc (inside-function? zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
                              (not (get-in @db/db [:settings "use-metadata-for-privacy?"])))
@@ -415,13 +418,19 @@
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
 
+(defn inline-symbol?
+  [def-uri definition]
+  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
+        def-loc        (parser/loc-at-pos text (:row definition) (:col definition))]
+    (some-> (edit/find-op def-loc)
+            z/sexpr
+            #{'let 'def})))
+
 (defn inline-symbol
   [zloc _uri [_ {def-uri :uri definition :usage}] references]
   (let [{:keys [text]} (get-in @db/db [:documents def-uri])
         def-loc (parser/loc-at-pos text (:row definition) (:col definition))
-        op (some-> (edit/find-op def-loc)
-                   z/sexpr
-                   #{'let 'def})]
+        op (inline-symbol? def-uri definition)]
     (when op
       (let [uses (remove (comp #(contains? % :declare) :tags :usage) references)
             val-loc (z/right def-loc)

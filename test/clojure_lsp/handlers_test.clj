@@ -1,17 +1,17 @@
 (ns clojure-lsp.handlers-test
   (:require
-   [clojure-lsp.crawler :as crawler]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.parser :as parser]
-   [clojure.string :as string]
-   [clojure.test :refer :all])
+    [clojure-lsp.crawler :as crawler]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.handlers :as handlers]
+    [clojure-lsp.parser :as parser]
+    [clojure.string :as string]
+    [clojure.test :refer :all])
   (:import
-   (org.eclipse.lsp4j
-     Diagnostic
-     DiagnosticSeverity
-     Range
-     Position)))
+    (org.eclipse.lsp4j
+      Diagnostic
+      DiagnosticSeverity
+      Range
+      Position)))
 
 (deftest hover
   (testing "with show-docs-arity-on-same-line? disabled"
@@ -291,10 +291,10 @@
                                     :clj
                                     {})
                    "file://c.cljs" (parser/find-usages
-                                    (str "(ns alpaca.ns)\n"
-                                         "(def baff)\n")
-                                    :cljs
-                                    {})
+                                     (str "(ns alpaca.ns)\n"
+                                          "(def baff)\n")
+                                     :cljs
+                                     {})
                    "file://d.clj" (parser/find-usages
                                     (str "(ns d (:require [alpaca.ns :as alpaca]))")
                                     :clj
@@ -308,7 +308,7 @@
              (handlers/completion "file://b.clj" 3 18))))
     (testing "complete-ba"
       (reset! db/db db-state)
-			(is (= [{:label "bases" :data "clojure.core/bases"}]
+      (is (= [{:label "bases" :data "clojure.core/bases"}]
              (handlers/completion "file://b.clj" 4 3))))
     (testing "complete-alph"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'user/alph :str "alph"}))
@@ -337,51 +337,79 @@
              (is (string/includes? documentation data)))))))
 
 (deftest test-range-formatting
-    (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= [{:range {:start {:line 0 :character 0}
                    :end {:line 0 :character 5}}
            :new-text "(a)"}]
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
 (deftest test-code-actions
-  (let [a-code (str "(ns some-ns)\n"
-                    "(def foo)")
-        b-code (str "(ns other-ns (:require [some-ns :as sns]))\n"
-                    "(def bar)")
-        c-code (str "(ns another-ns)\n"
-                    "(def bar ons/bar)\n"
-                    "(def foo sns/foo)")
+  (let [a-code   (str "(ns some-ns)\n"
+                      "(def foo)")
+        b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
+                      "(def bar 1)\n"
+                      "(defn baz []\n"
+                      "  bar)")
+        c-code   (str "(ns another-ns)\n"
+                      "(def bar ons/bar)\n"
+                      "(def foo sns/foo)")
         db-state {:documents {"file://a.clj" {:text a-code}
                               "file://b.clj" {:text b-code}
                               "file://c.clj" {:text c-code}}
                   :file-envs {"file://a.clj" (parser/find-usages a-code :clj {})
                               "file://b.clj" (parser/find-usages b-code :clj {})
                               "file://c.clj" (parser/find-usages c-code :clj {})}}]
-    (testing "clean namespace without workspace edit client capability"
-      (reset! db/db db-state)
-      (is (= [] (handlers/code-actions "file://b.clj" [] 1 1))))
+    (testing "Add missing namespace"
+      (testing "when it has not unknow-ns diagnostic"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Add missing namespace")
+                      (handlers/code-actions "file://c.clj" [] 1 9))))
 
-    (testing "clean namespace with workspace edit client capability"
-      (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
-      (is (= [{:title   "Clean namespace"
-               :kind    :source-organize-imports
-               :command {:title     "Clean namespace"
-                         :command   "clean-ns"
-                         :arguments ["file://b.clj" 1 1]}}] (handlers/code-actions "file://b.clj" [] 1 1))))
+      (testing "when it has unknow-ns but cannot find namespace"
+        (reset! db/db db-state)
+        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 10) (Position. 1 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+          (is (not-any? #(= (:title %) "Add missing namespace")
+                        (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 1 10)))))
 
-    (testing "Add missing libspec when it has not unknow-ns diagnostic"
-      (reset! db/db db-state)
-      (is (= []
-             (handlers/code-actions "file://c.clj" [] 1 9))))
+      (testing "when it has unknow-ns and can find namespace"
+        (reset! db/db db-state)
+        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+          (is (some #(= (:title %) "Add missing namespace")
+                    (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 2 10))))))
+    (testing "Inline symbol"
+      (testing "when in not a let/def symbol"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Inline symbol")
+                      (handlers/code-actions "file://b.clj" [] 3 7))))
+      (testing "when in let/def symbol"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Inline symbol")
+                  (handlers/code-actions "file://b.clj" [] 3 4)))))
+    (testing "Cycle privacy"
+      (testing "when non function location"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Cycle privacy")
+                      (handlers/code-actions "file://a.clj" [] 0 4))))
+      (testing "when on function location"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Cycle privacy")
+                  (handlers/code-actions "file://a.clj" [] 1 4)))))
+    (testing "Extract function"
+      (testing "when non function location"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Extract function")
+                      (handlers/code-actions "file://a.clj" [] 0 4))))
+      (testing "when on function location"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Extract function")
+                  (handlers/code-actions "file://a.clj" [] 1 4)))))
+    (testing "clean namespace"
+      (testing "without workspace edit client capability"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Clean namespace")
+                      (handlers/code-actions "file://b.clj" [] 1 1))))
 
-    (testing "Add missing libspec when it has unknow-ns but cannot find namespace"
-      (reset! db/db db-state)
-      (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 10) (Position. 1 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
-        (is (= []
-               (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 1 10)))))
-
-    (testing "Add missing libspec when it has unknow-ns and can find namespace"
-      (reset! db/db db-state)
-      (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
-        (is (= 1
-               (count (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 2 10))))))))
+      (testing "with workspace edit client capability"
+        (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
+        (is (some #(= (:title %) "Clean namespace")
+                  (handlers/code-actions "file://b.clj" [] 1 1)))))))

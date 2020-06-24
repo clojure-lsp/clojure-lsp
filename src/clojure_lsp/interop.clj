@@ -184,11 +184,14 @@
                                 code-action-kind
                                 (s/conformer (fn [v] (get code-action-kind v)))))
 
+(s/def :code-action/preferred? boolean?)
+
 (s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
-                                    :opt-un [:code-action/kind ::diagnostics ::workspace-edit ::command])
+                                    :opt-un [:code-action/kind ::diagnostics ::workspace-edit ::command :code-action/preferred?])
                             (s/conformer #(doto (CodeAction. (:title %1))
                                             (.setKind (:kind %1))
                                             (.setDiagnostics (:diagnostics %1))
+                                            (.setIsPreferred (:preferred? %1))
                                             (.setEdit (:workspace-edit %1))
                                             (.setCommand (:command %1))))))
 

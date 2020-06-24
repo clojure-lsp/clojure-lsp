@@ -431,15 +431,15 @@
 (defn workspace-symbols [query]
   (if (seq query)
     (let [file-envs (:file-envs @db/db)]
-     (->> file-envs
-          (mapcat (fn [[uri env]]
-                    (->> env
-                         (keep #(cond (:kind %) [% (:kind %)]
-                                      (is-declaration? %) [% :declaration]
-                                      :else nil))
-                         (filter #(.contains (str (:sym (first %))) query))
-                         (map (partial file-env-entry->workspace-symbol uri)))))
-          (sort-by :name)))
+      (->> file-envs
+           (mapcat (fn [[uri env]]
+                     (->> env
+                          (keep #(cond (:kind %) [% (:kind %)]
+                                       (is-declaration? %) [% :declaration]
+                                       :else nil))
+                          (filter #(.contains (str (:sym (first %))) query))
+                          (map (partial file-env-entry->workspace-symbol uri)))))
+           (sort-by :name)))
     []))
 
 (def refactorings
@@ -549,23 +549,51 @@
 
 (defn code-actions
   [doc-id diagnostics line character]
-  (let [has-unknow-ns? (some #(compare "unknown-ns" (.getCode %)) diagnostics)
-        missing-ns     (when has-unknow-ns?
-                         (refactor doc-id
-                                   (inc (int line))
-                                   (inc (int character))
-                                   "add-missing-libspec"
-                                   []))]
+  (let [db @db/db
+        row (inc (int line))
+        col (inc (int character))
+        has-unknow-ns? (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
+        missing-ns (when has-unknow-ns?
+                     (refactor doc-id row col "add-missing-libspec" []))
+        zloc (-> db
+                 (get-in [:documents doc-id])
+                 :text
+                 (parser/loc-at-pos row col))
+        inside-function? (refactor/inside-function? zloc)
+        [_ {def-uri :uri
+            definition :usage}] (definition-usage doc-id row col)
+        inline-symbol? (refactor/inline-symbol? def-uri definition)
+        workspace-edit-capability? (get-in db [:client-capabilities :workspace :workspace-edit])]
     (cond-> []
 
-      (get-in @db/db [:client-capabilities :workspace :workspace-edit])
+      (and has-unknow-ns? missing-ns)
+      (conj {:title          "Add missing namespace"
+             :kind           :quick-fix
+             :preferred?     true
+             :workspace-edit missing-ns})
+
+      inline-symbol?
+      (conj {:title   "Inline symbol"
+             :kind    :refactor-inline
+             :command {:title     "Inline symbol"
+                       :command   "inline-symbol"
+                       :arguments [doc-id line character]}})
+
+      inside-function?
+      (conj {:title   "Cycle privacy"
+             :kind    :refactor-rewrite
+             :command {:title     "Cycle privacy"
+                       :command   "cycle-privacy"
+                       :arguments [doc-id line character]}}
+            {:title   "Extract function"
+             :kind    :refactor-extract
+             :command {:title     "Extract function"
+                       :command   "extract-function"
+                       :arguments [doc-id line character "new-function"]}})
+
+      workspace-edit-capability?
       (conj {:title   "Clean namespace"
              :kind    :source-organize-imports
              :command {:title     "Clean namespace"
                        :command   "clean-ns"
-                       :arguments [doc-id line character]}})
-
-      (and has-unknow-ns? missing-ns)
-      (conj {:title "Add missing namespace"
-             :kind  :quick-fix
-             :workspace-edit missing-ns}))))
+                       :arguments [doc-id line character]}}))))

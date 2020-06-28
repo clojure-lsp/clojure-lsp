@@ -271,7 +271,10 @@
   (if (z/vector? node)
     (let [alias-node (-> node z/down z/leftmost)]
       (if (contains? unused-aliases (z/sexpr alias-node))
-        (-> node z/remove z/up)
+        (let [removed-node (-> node z/remove)]
+          (if (z/list? removed-node)
+            (z/down removed-node)
+            (z/up removed-node)))
         node))
     node))
 

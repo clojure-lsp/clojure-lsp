@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: clojure:lein-2.9.1
+      - image: clojure:openjdk-8-lein-2.9.3
     working_directory: ~/repo
 
     environment:

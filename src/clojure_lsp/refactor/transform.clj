@@ -271,9 +271,25 @@
   (if (z/vector? node)
     (let [alias-node (-> node z/down z/leftmost)]
       (if (contains? unused-aliases (z/sexpr alias-node))
-        (-> node z/remove z/up)
+        (let [removed-node (-> node z/remove)]
+          (if (z/list? removed-node)
+            (z/down removed-node)
+            (z/up removed-node)))
         node))
     node))
+
+(defn ^:private remove-unused-requires
+  [unused-aliases nodes]
+  (let [single-require? (= 1 (count (z/child-sexprs nodes)))
+        first-node      (z/next nodes)
+        single-unused?  (when (and single-require? (z/vector? first-node))
+                         (contains? unused-aliases (-> first-node
+                                                       z/down
+                                                       z/leftmost
+                                                       z/sexpr)))]
+    (if single-unused?
+      (z/remove first-node)
+      (z/map #(remove-unused-require % unused-aliases) nodes))))
 
 (defn clean-ns
   [zloc uri]
@@ -288,9 +304,10 @@
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
         unused-aliases (crawler/find-unused-aliases uri)
-        requires (->> require-loc
-                      z/remove
-                      (z/map #(remove-unused-require % unused-aliases))
+        removed-nodes (->> require-loc
+                           z/remove
+                           (remove-unused-requires unused-aliases))
+        requires (->> removed-nodes
                       z/node
                       n/children
                       (remove n/printable-only?)
@@ -302,10 +319,15 @@
                                        [(n/newlines 1) sep node])))
                       (apply concat)
                       (cons (n/keyword-node :require)))
-        result-loc (z/subedit-> ns-loc
-                                (z/find-value z/next :require)
-                                (z/up)
-                                (z/replace (n/list-node requires)))]
+        result-loc (if (empty? (z/child-sexprs removed-nodes))
+                     (z/subedit-> ns-loc
+                                  (z/find-value z/next :require)
+                                  (z/up)
+                                  z/remove)
+                     (z/subedit-> ns-loc
+                                  (z/find-value z/next :require)
+                                  (z/up)
+                                  (z/replace (n/list-node requires))))]
     [{:range (meta (z/node result-loc))
       :loc result-loc}]))
 

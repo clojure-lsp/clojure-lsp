@@ -137,22 +137,23 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
 
 ### macro-defs
 
-`macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
+`macro-defs` value is a map of fully-qualified macro names to a vector of definitions of those macros' forms.
 
 #### Element definitions
 
-Elements can be defined in two ways:
+An element represents one or more forms within a macro-def vector. They can be defined in two ways:
 
 * A simple keyword, e.g. `:declaration`
 
 * A map that includes the element type and options,
   e.g. `{:element :declaration, :tags ["unused" "local"], :signature ["next"]}`
 
+
 #### Element types
 
 Valid element definitions are:
 
-  - `declaration` This marks a symbol or keyword as a definition/declaration of
+  - `:declaration` This marks a symbol or keyword as a definition/declaration of
     a var in the current namespace.
     - In the simplest case, this element can be specified as the keyword
       `:declaration`.
@@ -169,45 +170,45 @@ Valid element definitions are:
       `{my.ns/my-defn- [{"element": "declaration", "tags", ["local"],
       "signature": ["next" "next"]}]}`
 
-  - `bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
-    - e.g. `(my-with-open [resource ()] ....)` => `{my.ns/my-with-open ["bindings", "bound-elements"]}`
+  - `:bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
+  - e.g. `(my-with-open [resource ()] ....)` => `{my.ns/my-with-open [:bindings :bound-elements]}`
 
-  - `function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
-    - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{my.ns/myfn ["function-params-and-bodies"]}`
+  - `:function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
+    - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{my.ns/myfn [:function-params-and-bodies]}`
 
-  - `params` This marks a `defn` like parameter vector. `bound-elements` will have these parameters in their scope.
-    - e.g. `(myfn [c] ...)` => `{my.ns/myfn ["params", "bound-elements"]}`
+  - `:params` This marks a `defn` like parameter vector. `bound-elements` will have these parameters in their scope.
+    - e.g. `(myfn [c] ...)` => `{my.ns/myfn [:params :bound-elements]}`
 
-  - `param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
+  - `:param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
 
-  - `elements` This will parse the rest of the elements in the macro form with the usual rules.
+  - `:elements` This will parse the rest of the elements in the macro form with the usual rules.
     - e.g. `(myif-let [answer (expr)] answer (log "no answer") "no answer")` =>
-      `{my.ns/myif-let ["bindings", "bound-element", "elements"]}`
+      `{my.ns/myif-let [:bindings :bound-element :elements]}`
 
-  - `element` This will parse a single element in the macro form with the usual
+  - `:element` This will parse a single element in the macro form with the usual
     rules.
-    - In the simplest case, `element` can be specified as the keyword
+    - In the simplest case, `:element` can be specified as the keyword
       `:element`. This will always parse a single element.
-    - You can make the `element` optional by making it a map that includes
+    - You can make the `:element` optional by making it a map that includes
       a predicate `pred` which will determine whether the current form is parsed
-      as an `element`, or if the `element` should be skipped and the current
+      as an `:element`, or if the `:element` should be skipped and the current
       form parsed as the next defined element.
     - For example, you can define an optional docstring element as `{:element
       :element, :pred :string}`, or an optional metadata map as `{:element
       :element, :pred :map}`.
-    - `element` can also describe repeated elements. For example,
+    - `:element` can also describe repeated elements. For example,
       `{:element :element, :pred :string, :repeat true}` will parse 1 or more
       strings.
-    - `element` can also describe multiple elements of different types. This is
+    - `:element` can also describe multiple elements of different types. This is
       useful, for example, if you have a macro like
       [`adzerk.env/def`](https://github.com/adzerk-oss/env#get) whose arguments
       are pairs of declarations and values:
       - `(adzerk.env/def FOO :required, BAR nil, BAZ "string")` =>
         `{adzerk.env/def [{:element [:declaration :element], :repeat true}]}`
 
-  - `bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
+  - `:bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
 
-  - `bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
+  - `:bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
 
 See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.
 

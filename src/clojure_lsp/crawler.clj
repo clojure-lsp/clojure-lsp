@@ -108,7 +108,7 @@
       {:range (shared/->range call-site)
        :code :wrong-arity
        :message (let [plural (not= argc 1)]
-                  (format "No overload %s for %d argument%s"
+                  (format "No overload for '%s' with %d argument%s"
                           (:str call-site) argc (if plural "s" "")))
        :severity 1})))
 
@@ -135,31 +135,41 @@
                   (str "Unused declaration: " (:str usage)))
        :severity 2})))
 
-(defn ^:private diagnose-unused-aliases [_uri declared-aliases usages]
-  (let [references (->> usages
-                        (remove (comp #(contains? % :declare) :tags))
-                        (map #(some-> % :sym namespace symbol))
-                        set)
-        unused-aliases (set/difference (set (map :ns declared-aliases)) references)]
-    (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
-      {:range (shared/->range usage)
-       :code :unused-alias
-       :message (str "Unused alias: " (:str usage))
-       :severity 2})))
+(defn ^:private process-unused-aliases
+  [usages declared-aliases]
+  (let [ensure-sym (fn [s] (when-not (string? s) s))]
+    (->> usages
+         (remove (comp #(contains? % :declare) :tags))
+         (map #(some-> % :sym ensure-sym namespace symbol))
+         set
+         (set/difference (set (map :ns declared-aliases))))))
+
+(defn ^:private diagnose-unused-aliases [_uri declared-aliases unused-aliases]
+  (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
+    {:range (shared/->range usage)
+     :code :unused-alias
+     :message (str "Unused alias: " (:str usage))
+     :severity 2}))
+
+(defn ^:private usages->declarations [usages]
+  (->> usages
+       (filter (comp #(and (contains? % :declare)
+                           (not (contains? % :factory))
+                           (not (contains? % :unused))) :tags))
+       (remove (comp #(string/starts-with? % "_") name :sym))))
 
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        declarations (->> usages
-                          (filter (comp #(and (contains? % :declare)
-                                              (not (contains? % :factory))
-                                              (not (contains? % :unused))) :tags))
-                          (remove (comp #(string/starts-with? % "_") name :sym)))
-        declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
-    (diagnose-unused-references uri declared-references all-envs)))
+        declarations (usages->declarations usages)
+        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
+        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)
+        unused-aliases (process-unused-aliases usages declared-aliases)]
+    (concat (diagnose-unused-aliases uri declared-aliases unused-aliases)
+            (diagnose-unused-references uri declared-references all-envs))))
 
 (defn- kondo-finding->diagnostic [lines {:keys [message level row col] :as finding}]
-  (let [^String line (nth lines (dec row))
-        start-char (.charAt line (dec col))
+  (let [^String line (nth lines (max 0 (dec row)))
+        start-char (.charAt line (max 0 (dec col)))
         finding (merge {:end-row row :end-col (inc col)}
                        finding)]
     {:range (shared/->range (if (= \( start-char)
@@ -211,6 +221,15 @@
        (log/warn e "Cannot parse: " uri (.getMessage e))
        ;; On purpose
        nil))))
+
+(defn find-unused-aliases [uri]
+  (let [usages (safe-find-references uri (slurp uri) false false)
+        declarations (usages->declarations usages)
+        excludes (-> (get-in @db/db [:settings "linters" :unused-namespace :exclude] #{}) set)
+        declared-aliases (->> declarations
+                              (filter (comp #(contains? % :alias) :tags))
+                              (remove (comp excludes :ns)))]
+    (process-unused-aliases usages declared-aliases)))
 
 (defn crawl-jars [jars dependency-scheme]
   (let [xf (comp

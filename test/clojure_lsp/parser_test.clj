@@ -68,6 +68,10 @@
   (testing "#(dispatch-macro)"
     (let [code "#(% %1 %2 %&)"
           usages (parser/find-usages code :clj {})]
+      (is (= [] (filter (fn [usage] (contains? (:tags usage) :unknown)) usages))))
+    (let [code "#(+ %1) #(- %2)"
+          usages (parser/find-usages code :clj {})]
+      (is (= 4 (count usages)))
       (is (= [] (filter (fn [usage] (contains? (:tags usage) :unknown)) usages))))))
 
 (deftest find-references-defn-test
@@ -219,12 +223,10 @@
       (is (= 'clojure.test/deftest (:sym deftest-ref)))))
   (testing "refers"
     (let [code "(ns foo.bar (:require [clojure.test :refer [deftest]])) (deftest hi)"
-          usages (parser/find-usages code :clj {})
-          deftest-ref (nth usages 4 nil)
-          hi-ref (nth usages 5 nil)]
-      (is (= 'clojure.test/deftest (:sym deftest-ref)))
-      #_
-      (is (not= #{:unknown} (:tags hi-ref)))))
+          [_ _n _r dt1 dt2 hi :as _usages] (parser/find-usages code :clj {})]
+      (is (= 'clojure.test/deftest (:sym dt2)))
+      (is (= #{:refer} (:tags dt1)))
+      (is (not= #{:unknown} (:tags hi)))))
   (testing "import"
     (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static 1) (JarFile.)"
           usages (drop 4 (parser/find-usages code :clj {}))
@@ -321,15 +323,26 @@
     (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
     (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
 
+(deftest if-let-test
+  (let [code "(if-let [] a b)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 3 (count usages)))))
+
 (deftest find-references-ignored-test
   (let [code "(def x 1) (comment x (def y 2) y) #_x"
         usages (parser/find-usages code :clj {})
         def-usage (nth usages 5 nil)]
-   (is (= 8 (count usages)))
-   (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
-   (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
-   (is (not= 'user (namespace (:sym def-usage))))
-   (is (= #{:declare} (:tags def-usage)))))
+    (is (= 8 (count usages)))
+    (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
+    (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
+    (is (not= 'user (namespace (:sym def-usage))))
+    (is (= #{:declare} (:tags def-usage))))
+  (let [code "(defn x [] #_y 1)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 3 (count (map :sym usages)))))
+  (let [code "(let [] #_y 1)"
+        usages (parser/find-usages code :clj {})]
+    (is (= 2 (count (map :sym usages))))))
 
 (deftest find-references-syntax-quote
   (let [code "(defmacro x [a & body] `(def ~'a ~a ~@body))"
@@ -340,12 +353,17 @@
     (is (= (:sym (nth usages 6 nil)) (:sym (nth usages 3 nil))))
     (is (= #{:scoped} (:tags (nth usages 5 nil))))
     (is (= #{:scoped} (:tags (nth usages 6 nil)))))
-
-  (let [code "(quote (def a)) (quote a)"
+  (let [code "'a '(b c d) (quote e)"
         usages (parser/find-usages code :clj {})]
+    (is (= 1 (count usages)))
+    (is (= 'clojure.core/quote (:sym (first usages)))))
+  (let [code "(def a) `(def a) (quote a) 'a '(a)"
+        [d1 a1 d2 a2 q :as usages] (parser/find-usages code :clj {})]
     (is (= 5 (count usages)))
-    (is (= 'clojure.core/def (:sym (nth usages 1 nil))))
-    (is (not= (:sym (nth usages 2 nil)) (:sym (nth usages 4 nil))))))
+    (is (= 0 (count (filter (comp #{:unknown} :tags) usages))))
+    (is (= (:sym d1) (:sym d2)))
+    (is (= (:sym a1) (:sym a2)))
+    (is (= 'clojure.core/quote (:sym q)))))
 
 (deftest find-references-macro-def-test
   (testing "GET-like"
@@ -523,7 +541,7 @@
     (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages))))
   (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [b :- Long c :- [S/Str]] b)"
         usages (parser/find-usages code :clj {})
-        [_ u _ s _ a _ _ b c b2] usages]
+        [_ u _ s _ a _ _ b _ c _ b2] usages]
     (is (= #{:declare :public} (:tags a)))
     (is (= 'user/a (:sym a)))
     (is (= "Docs" (:doc a)))
@@ -533,7 +551,7 @@
   (testing "destructures param"
     (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
           usages (parser/find-usages code :clj {})
-          [_ u _ s _ a _ _ _ b c b2] usages]
+          [_ u _ s _ a _ _ _ b _ c _ b2] usages]
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
@@ -541,10 +559,15 @@
       (is (= ['[{b :b} c]] (get-in a [:signatures :sexprs])))
       (is (= (:sym b) (:sym b2)))
       (is (= [u s a b c] (filter (comp #(contains? % :declare) :tags) usages)))))
+  (testing "types in params are considered"
+    (let [code "(ns user (:require [schema.core :as s])) (def t) (s/defn a :- t ([b :- t] b) ([c :- t d] (c d)))"
+          usages (parser/find-usages code :clj {})
+          [_ _u _ _s _ def-t _ _a _ t1  _b t2 _b2 _c t3 _d _c2 _d2] usages]
+      (is (apply = (map :sym [def-t t1 t2 t3])))))
   (testing "handles complex return type"
     (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- [A] \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
           usages (parser/find-usages code :clj {})
-          [_ u _ s _ a _ _ _ b c b2] usages]
+          [_ u _ s _ a _ _ _ b _ c _ b2] usages]
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
@@ -574,3 +597,12 @@
     (let [code "(defmacro my-> [& _]) (my-> 1 (cond-> :always 1))"
           [_ _ _ _ c] (parser/find-usages code :clj {'user/my-> [{:element :elements :thread-style :first}]})]
       (is (= 3 (:argc c))))))
+
+(deftest custom-sub-forms
+  (let [code "(ns f (:require [midje.sweet :as ms]))
+              (ms/fact \"foo\"
+                      (let [a (blah c)]
+                        (bar a) => 1
+                        (baz a false) =not=> nil))"
+        usages (parser/find-usages code :clj {})]
+    (is (= #{:scoped} (set (mapcat :tags (filter (comp #{"=>" "=not=>"} :str) usages)))))))

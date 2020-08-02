@@ -13,6 +13,7 @@
     (org.eclipse.lsp4j
       ApplyWorkspaceEditParams
       CodeActionParams
+      CodeAction
       Command
       CompletionItem
       CompletionItemKind
@@ -20,31 +21,38 @@
       CompletionParams
       ConfigurationItem
       ConfigurationParams
+      DefinitionParams
       DidChangeConfigurationParams
       DidChangeTextDocumentParams
       DidChangeWatchedFilesParams
+      DidChangeWatchedFilesRegistrationOptions
       DidCloseTextDocumentParams
       DidOpenTextDocumentParams
       DidSaveTextDocumentParams
       DocumentFormattingParams
+      DocumentHighlightParams
       DocumentRangeFormattingParams
       DocumentSymbolParams
       DocumentSymbol
       ExecuteCommandOptions
       ExecuteCommandParams
+      FileSystemWatcher
+      HoverParams
       InitializeParams
       InitializeResult
       InitializedParams
       ParameterInformation
       ReferenceParams
+      Registration
+      RegistrationParams
       RenameParams
       SaveOptions
       ServerCapabilities
       SignatureHelp
       SignatureHelpOptions
+      SignatureHelpParams
       SignatureInformation
       TextDocumentContentChangeEvent
-      TextDocumentPositionParams
       TextDocumentSyncKind
       TextDocumentSyncOptions
       WorkspaceSymbolParams)
@@ -75,7 +83,7 @@
          (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)
                running# (filter (comp seq val) @status)]
            (when (or (> duration# 100) (seq running#))
-             (log/info ~'_id duration# running#)))
+             (log/debug ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
 
@@ -165,7 +173,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-  (^CompletableFuture hover [this ^TextDocumentPositionParams params]
+  (^CompletableFuture hover [this ^HoverParams params]
     (go :hover
         (CompletableFuture/supplyAsync
           (reify Supplier
@@ -180,7 +188,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-  (^CompletableFuture signatureHelp [_ ^TextDocumentPositionParams _params]
+  (^CompletableFuture signatureHelp [_ ^SignatureHelpParams _params]
     (go :signatureHelp
         (CompletableFuture/completedFuture
           (end
@@ -224,14 +232,22 @@
               result)))))
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
-    (go :codeAction
-        (end
-          (CompletableFuture/completedFuture
-            (let [start (.getStart (.getRange params))]
-              [(Command. "add-missing-libspec" "add-missing-libspec"
-                         [(interop/document->decoded-uri (.getTextDocument params)) (.getLine start) (.getCharacter start)])])))))
+   (go :codeAction
+       (CompletableFuture/supplyAsync
+         (reify Supplier
+           (get [_this]
+             (end
+               (try
+                 (let [doc-id          (interop/document->decoded-uri (.getTextDocument params))
+                       diagnostics     (.getDiagnostics (.getContext params))
+                       start           (.getStart (.getRange params))
+                       start-line      (.getLine start)
+                       start-character (.getCharacter start)]
+                   (interop/conform-or-log ::interop/code-actions (#'handlers/code-actions doc-id diagnostics start-line start-character)))
+                 (catch Exception e
+                   (log/error e)))))))))
 
-  (^CompletableFuture definition [this ^TextDocumentPositionParams params]
+  (^CompletableFuture definition [this ^DefinitionParams params]
     (go :definition
         (CompletableFuture/supplyAsync
           (reify Supplier
@@ -258,7 +274,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-(^CompletableFuture documentHighlight [this ^TextDocumentPositionParams params]
+(^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
     (go :documentSymbol
         (CompletableFuture/supplyAsync
           (reify Supplier
@@ -295,8 +311,15 @@
     (CompletableFuture/completedFuture 0))
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
-  (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams _params]
-    (log/warn "DidChangeWatchedFilesParams"))
+
+  (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
+    (log/warn "DidChangeWatchedFilesParams")
+    (go :didChangeWatchedFiles
+        (end
+          (some->> params
+                   (.getChanges)
+                   (interop/conform-or-log ::interop/watched-files-changes)
+                   (handlers/did-change-watched-files)))))
 
   (^CompletableFuture symbol [this ^WorkspaceSymbolParams params]
     (go :workspaceSymbol
@@ -357,9 +380,16 @@
                                                              (.setOpenClose true)
                                                              (.setChange TextDocumentSyncKind/Full)
                                                              (.setSave (SaveOptions. true))))
-                                     (.setCompletionProvider (CompletionOptions. true [\c])))))))))
+                                     (.setCompletionProvider (CompletionOptions. true [])))))))))
     (^void initialized [^InitializedParams params]
-      (log/warn "Initialized" params))
+      (log/warn "Initialized" params)
+      (go :initialized
+          (end
+            (doto
+             (:client @db/db)
+              (.registerCapability
+                (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                     (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct

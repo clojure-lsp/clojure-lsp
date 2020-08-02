@@ -45,7 +45,9 @@
     (->> env
          (filter (comp file-types :file-type))
          (filter (comp #{:within} (partial check-bounds line column)))
-         first)))
+         ;; Pushes keywords last
+         (sort-by (comp keyword? :sym))
+         (first))))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -69,21 +71,47 @@
                               [(:uri text-document) edits])
                             changes))}))
 
-(defn- generate-docs [content-format usage]
+(defn- drop-whitespace [n s]
+  (if (> n (count s))
+    s
+    (let [fully-trimmed (string/triml s)
+          dropped (subs s n)]
+      (last (sort-by count [fully-trimmed dropped])))))
+
+(defn- count-whitespace [s]
+  (- (count s) (count (string/triml s))))
+
+(defn- format-docstring [doc]
+  (let [lines (string/split-lines doc)
+        other-lines (filter (comp not string/blank?) (rest lines))
+        multi-line? (> (count other-lines) 0)]
+    (if-not multi-line?
+      doc
+      (let [indentation (apply min (map count-whitespace other-lines))
+            unindented-lines (cons (first lines)
+                                   (map #(drop-whitespace indentation %) (rest lines)))]
+        (string/join "\n" unindented-lines)))))
+
+(defn- generate-docs [content-format usage show-docs-arity-on-same-line?]
   (let [{:keys [sym signatures doc tags]} usage
         signatures (some->> signatures
                             (:strings)
                             (string/join "\n"))
+        signatures (if (and show-docs-arity-on-same-line? signatures)
+                     (-> signatures
+                         (clojure.string/replace #"\n" ",")
+                         (clojure.string/replace #"  +" " "))
+                     signatures)
         tags (string/join " " tags)]
     (case content-format
       "markdown" {:kind "markdown"
-                  :value (cond-> (str "```\n" sym "\n```\n")
-                           signatures (str "```\n" signatures "\n```\n")
-                           (seq doc) (str doc "\n")
+                  :value (cond-> (str "```clojure\n" sym " " (when show-docs-arity-on-same-line? signatures) "\n```\n")
+                           (and (not show-docs-arity-on-same-line?) signatures) (str "```clojure\n" signatures "\n```\n")
+                           (seq doc) (str (format-docstring doc) "\n")
                            (seq tags) (str "\n----\n" "lsp: " tags))}
       ;; Default to plaintext
-      (cond-> (str sym "\n")
-        signatures (str signatures "\n")
+      (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
+        (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")
         (seq doc) (str doc "\n")
         (seq tags) (str "\n----\n" "lsp: " tags)))))
 
@@ -236,10 +264,11 @@
                       :when (and (= (str sym) sym-wanted)
                                  (:declare tags))]
                   usage))
-        [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])]
+        [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])
+        show-docs-arity-on-same-line? (get-in @db/db [:settings "show-docs-arity-on-same-line?"])]
     {:label label
      :data sym-wanted
-     :documentation (generate-docs content-format usage)}))
+     :documentation (generate-docs content-format usage show-docs-arity-on-same-line?)}))
 
 (defn reference-usages [doc-id line column]
   (let [file-envs (:file-envs @db/db)
@@ -293,7 +322,7 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))]
-    (when-not (contains? tags :norename)
+    (when (and cursor-usage (not (simple-keyword? cursor-sym)) (not (contains? tags :norename)))
       (let [[_ cursor-ns cursor-name] (parser/ident-split cursor-str)
             replacement (if cursor-ns
                           (string/replace new-name (re-pattern (str "^:{0,2}" cursor-ns "/")) "")
@@ -389,6 +418,7 @@
         sym (:sym cursor)]
     (into [] (comp (filter #(= (:sym %) sym))
                    (map file-env-entry->document-highlight)) local-env)))
+
 (defn file-env-entry->workspace-symbol [uri [e kind]]
   (let [{:keys [sym row col end-row end-col sym]} e
         symbol-kind (entry-kind->symbol-kind kind)
@@ -401,15 +431,15 @@
 (defn workspace-symbols [query]
   (if (seq query)
     (let [file-envs (:file-envs @db/db)]
-     (->> file-envs
-          (mapcat (fn [[uri env]]
-                    (->> env
-                         (keep #(cond (:kind %) [% (:kind %)]
-                                      (is-declaration? %) [% :declaration]
-                                      :else nil))
-                         (filter #(.contains (str (:sym (first %))) query))
-                         (map (partial file-env-entry->workspace-symbol uri)))))
-          (sort-by :name)))
+      (->> file-envs
+           (mapcat (fn [[uri env]]
+                     (->> env
+                          (keep #(cond (:kind %) [% (:kind %)]
+                                       (is-declaration? %) [% :declaration]
+                                       :else nil))
+                          (filter #(.contains (str (:sym (first %))) query))
+                          (map (partial file-env-entry->workspace-symbol uri)))))
+           (sort-by :name)))
     []))
 
 (def refactorings
@@ -469,7 +499,8 @@
                                  (:declare tags))]
                   usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
-        docs (generate-docs content-format usage)]
+        show-docs-arity-on-same-line? (get-in @db/db [:settings "show-docs-arity-on-same-line?"])
+        docs (generate-docs content-format usage show-docs-arity-on-same-line?)]
     (if cursor
       {:range (shared/->range cursor)
        :contents (if (= content-format "markdown")
@@ -508,3 +539,61 @@
         entry (.getJarEntry connection)]
     (with-open [stream (.getInputStream jar entry)]
       (slurp stream))))
+
+(defn did-change-watched-files [changes]
+  (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
+    (swap! db/db (fn [db]
+                   (-> db
+                       (update :documents #(apply dissoc % uris))
+                       (update :file-envs #(apply dissoc % uris)))))))
+
+(defn code-actions
+  [doc-id diagnostics line character]
+  (let [db @db/db
+        row (inc (int line))
+        col (inc (int character))
+        has-unknow-ns? (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
+        missing-ns (when has-unknow-ns?
+                     (refactor doc-id row col "add-missing-libspec" []))
+        zloc (-> db
+                 (get-in [:documents doc-id])
+                 :text
+                 (parser/loc-at-pos row col))
+        inside-function? (refactor/inside-function? zloc)
+        [_ {def-uri :uri
+            definition :usage}] (definition-usage doc-id row col)
+        inline-symbol? (refactor/inline-symbol? def-uri definition)
+        workspace-edit-capability? (get-in db [:client-capabilities :workspace :workspace-edit])]
+    (cond-> []
+
+      (and has-unknow-ns? missing-ns)
+      (conj {:title          "Add missing namespace"
+             :kind           :quick-fix
+             :preferred?     true
+             :workspace-edit missing-ns})
+
+      inline-symbol?
+      (conj {:title   "Inline symbol"
+             :kind    :refactor-inline
+             :command {:title     "Inline symbol"
+                       :command   "inline-symbol"
+                       :arguments [doc-id line character]}})
+
+      inside-function?
+      (conj {:title   "Cycle privacy"
+             :kind    :refactor-rewrite
+             :command {:title     "Cycle privacy"
+                       :command   "cycle-privacy"
+                       :arguments [doc-id line character]}}
+            {:title   "Extract function"
+             :kind    :refactor-extract
+             :command {:title     "Extract function"
+                       :command   "extract-function"
+                       :arguments [doc-id line character "new-function"]}})
+
+      workspace-edit-capability?
+      (conj {:title   "Clean namespace"
+             :kind    :source-organize-imports
+             :command {:title     "Clean namespace"
+                       :command   "clean-ns"
+                       :arguments [doc-id line character]}}))))

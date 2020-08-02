@@ -1,11 +1,11 @@
 (ns clojure-lsp.refactor.transform
   (:require
+    [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure.set :as set]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
     [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
@@ -266,27 +266,68 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
+(defn ^:private remove-unused-require
+  [node unused-aliases]
+  (if (z/vector? node)
+    (let [alias-node (-> node z/down z/leftmost)]
+      (if (contains? unused-aliases (z/sexpr alias-node))
+        (let [removed-node (-> node z/remove)]
+          (if (z/list? removed-node)
+            (z/down removed-node)
+            (z/up removed-node)))
+        node))
+    node))
+
+(defn ^:private remove-unused-requires
+  [unused-aliases nodes]
+  (let [single-require? (= 1 (count (z/child-sexprs nodes)))
+        first-node      (z/next nodes)
+        single-unused?  (when (and single-require? (z/vector? first-node))
+                         (contains? unused-aliases (-> first-node
+                                                       z/down
+                                                       z/leftmost
+                                                       z/sexpr)))]
+    (if single-unused?
+      (z/remove first-node)
+      (z/map #(remove-unused-require % unused-aliases) nodes))))
+
 (defn clean-ns
-  [zloc _uri]
+  [zloc uri]
   (let [ns-loc (edit/find-namespace zloc)
         require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+        keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
         col (if require-loc
-              (dec (:col (meta (z/node (z/right require-loc)))))
+              (if keep-require-at-start?
+                (-> require-loc z/node meta :end-col)
+                (-> require-loc z/right z/node meta :col dec))
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
-        requires (->> require-loc
-                      z/remove
+        single-space (n/whitespace-node " ")
+        unused-aliases (crawler/find-unused-aliases uri)
+        removed-nodes (->> require-loc
+                           z/remove
+                           (remove-unused-requires unused-aliases))
+        requires (->> removed-nodes
                       z/node
                       n/children
                       (remove n/printable-only?)
                       (sort-by (comp str n/sexpr))
-                      (mapcat (fn [node]
-                                [(n/newlines 1) sep node]))
+                      (map-indexed (fn [idx node]
+                                     (if (and keep-require-at-start?
+                                              (= idx 0))
+                                       [single-space node]
+                                       [(n/newlines 1) sep node])))
+                      (apply concat)
                       (cons (n/keyword-node :require)))
-        result-loc (z/subedit-> ns-loc
-                                (z/find-value z/next :require)
-                                (z/up)
-                                (z/replace (n/list-node requires)))]
+        result-loc (if (empty? (z/child-sexprs removed-nodes))
+                     (z/subedit-> ns-loc
+                                  (z/find-value z/next :require)
+                                  (z/up)
+                                  z/remove)
+                     (z/subedit-> ns-loc
+                                  (z/find-value z/next :require)
+                                  (z/up)
+                                  (z/replace (n/list-node requires))))]
     [{:range (meta (z/node result-loc))
       :loc result-loc}]))
 
@@ -325,7 +366,7 @@
                                    (or
                                      (set/subset? #{:public :ns} (:tags usage))
                                      (get-in usage [:tags :alias]))))
-                         (mapv (fn [{:keys [sym tags] alias-str :str alias-ns :ns :as usage}]
+                         (mapv (fn [{:keys [sym _tags] alias-str :str alias-ns :ns}]
                                  {:alias-str alias-str
                                   :label (name sym)
                                   :detail (if alias-ns
@@ -375,9 +416,12 @@
      {:loc expr-edit
       :range (meta expr-node)}]))
 
+(defn inside-function? [zloc]
+  (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
+
 (defn cycle-privacy
   [zloc _]
-  (when-let [oploc (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti)]
+  (when-let [oploc (inside-function? zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
                              (not (get-in @db/db [:settings "use-metadata-for-privacy?"])))
@@ -396,13 +440,19 @@
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
 
+(defn inline-symbol?
+  [def-uri definition]
+  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
+        def-loc        (parser/loc-at-pos text (:row definition) (:col definition))]
+    (some-> (edit/find-op def-loc)
+            z/sexpr
+            #{'let 'def})))
+
 (defn inline-symbol
   [zloc _uri [_ {def-uri :uri definition :usage}] references]
   (let [{:keys [text]} (get-in @db/db [:documents def-uri])
         def-loc (parser/loc-at-pos text (:row definition) (:col definition))
-        op (some-> (edit/find-op def-loc)
-                   z/sexpr
-                   #{'let 'def})]
+        op (inline-symbol? def-uri definition)]
     (when op
       (let [uses (remove (comp #(contains? % :declare) :tags :usage) references)
             val-loc (z/right def-loc)

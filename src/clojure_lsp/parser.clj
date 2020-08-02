@@ -339,7 +339,9 @@
                scoped scoped]
           (cond
             (and typed? param-loc (= :- (z/sexpr param-loc)))
-            (recur (-> param-loc z-right-sexpr z-right-sexpr) scoped)
+            (let [type-loc (-> param-loc z-right-sexpr)]
+              (handle-rest (zsub/subzip type-loc) context scoped)
+              (recur (-> type-loc z-right-sexpr) scoped))
 
             param-loc
             (let [new-scoped (parse-destructuring param-loc scope-bounds context scoped)]
@@ -363,13 +365,6 @@
 (defn handle-comment
   [op-loc _loc context scoped _threading?]
   (handle-ignored (z-right-sexpr op-loc) context scoped))
-
-(defn handle-quote
-  [op-loc _loc context scoped _threading?]
-  (let [current-quoted (:quoting? @context)]
-    (vswap! context assoc :quoting? true)
-    (handle-rest (z-right-sexpr op-loc) context scoped)
-    (vswap! context assoc :quoting? current-quoted)))
 
 (defn handle-thread
   [op-loc _loc context scoped threading?]
@@ -449,7 +444,7 @@
                     referee (n/string refer-node)]]
         (vswap! context update :refers assoc referee refered)
         (add-reference context scoped refer-node
-                       {:tags #{:refer :declare}
+                       {:tags #{:refer}
                         :sym refered})))))
 
 (defn add-libspecs [libtype context scoped entry-loc prefix-ns]
@@ -500,14 +495,14 @@
   [op-loc loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         scoped (parse-bindings bindings-loc context (end-bounds loc) scoped)]
-    (handle-rest (z-right-sexpr bindings-loc) context scoped)))
+    (handle-rest (z/right bindings-loc) context scoped)))
 
 (defn handle-if-let
   [op-loc _loc context scoped _threading?]
   (let [bindings-loc (zf/find-tag op-loc :vector)
         if-loc (z-right-sexpr bindings-loc)
         if-scoped (parse-bindings bindings-loc context (end-bounds if-loc) scoped)]
-    (handle-rest if-loc context if-scoped)
+    (handle-rest (zsub/subzip if-loc) context if-scoped)
     (handle-rest (z-right-sexpr if-loc) context scoped)))
 
 (defn- local? [op-loc]
@@ -584,7 +579,7 @@
          :strings [(z/string params-loc)]}))))
 
 (defn- single-params-and-body [params-loc context scoped signature-style]
-  (let [body-loc (z-right-sexpr params-loc)]
+  (let [body-loc (z/right params-loc)]
     (->> (parse-params params-loc context scoped signature-style)
          (handle-rest body-loc context))))
 
@@ -705,19 +700,20 @@
 
 (defn handle-dispatch-macro
   [loc context scoped]
-  (vswap! context assoc :in-fn-literal? true)
-  (->>
-    (loop [sub-loc (z-next-sexpr (zsub/subzip loc))
-           scoped scoped]
-      (if (and sub-loc (not (z/end? sub-loc)))
-        (let [sexpr (z/sexpr sub-loc)]
-          (if (and (symbol? sexpr)
-                   (re-find #"^%(:?\d+|&)?$" (name sexpr)))
-            (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
-            (recur (z-next-sexpr sub-loc) scoped)))
-        scoped))
-    (handle-rest loc context))
-  (vswap! context dissoc :in-fn-literal?))
+  (let [sub-loc (zsub/subzip loc)]
+    (vswap! context assoc :in-fn-literal? true)
+    (->>
+      (loop [sub-loc (z-next-sexpr sub-loc)
+             scoped scoped]
+        (if (and sub-loc (not (z/end? sub-loc)))
+          (let [sexpr (z/sexpr sub-loc)]
+            (if (and (symbol? sexpr)
+                     (re-find #"^%(:?\d+|&)?$" (name sexpr)))
+              (recur (z-next-sexpr sub-loc) (assoc scoped sexpr {:ns (gensym) :bounds (meta (z/node sub-loc))}))
+              (recur (z-next-sexpr sub-loc) scoped)))
+          scoped))
+      (handle-rest sub-loc context))
+    (vswap! context dissoc :in-fn-literal?)))
 
 (comment
   '[
@@ -748,13 +744,14 @@
                   'clojure.core/for handle-let
                   'clojure.core/doseq handle-let
                   'clojure.core/comment handle-comment
-                  'clojure.core/quote handle-quote
                   'clojure.core/-> handle-thread
                   'clojure.core/->> handle-thread
                   'clojure.core/some-> handle-thread
                   'clojure.core/some->> handle-thread
                   'clojure.core/cond-> handle-cond-thread
-                  'clojure.core/cond->> handle-cond-thread}]
+                  'clojure.core/cond->> handle-cond-thread
+                  'clojure.core/doto handle-thread}]
+
     (merge handlers (medley/map-keys #(symbol "cljs.core" (name %)) handlers))))
 
 (def default-macro-defs
@@ -767,6 +764,7 @@
    'clojure.core/defprotocol [{:element :declaration :declare-class? true :doc? true} {:element :element :pred :string} {:element :fn-spec :repeat true :tags #{:method :declare}}]
    'clojure.core/proxy [:element :element {:element :fn-spec :repeat true :tags #{:method :norename}}]
    'clojure.core/reify [{:element :class-and-methods}]
+   'clojure.core/quote []
    'clojure.test/are [:params :bound-element :elements]
    'clojure.test/deftest [{:element :declaration :tags #{:unused}} :elements]
    'cljs.core.match/match [:element {:element [:params :bound-element] :repeat true}]
@@ -795,7 +793,7 @@
    'outpace.config/defconfig! [:declaration :element]
    're-frame.core/reg-event-db [{:element :declaration :signature [:next :next :next :right]} :element]
    're-frame.core/reg-event-fx [{:element :declaration :signature [:next :next :next :right]} :element]
-   're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element]
+   're-frame.core/reg-sub [{:element :declaration :signature [:rightmost :next :next :next :right]} :element :element]
    'schema.macros/try-catchall [{:element :bound-elements :sub-forms {'catch [:param :bound-elements]}}]
    'slingshot.slingshot/try+ [{:element :bound-elements :sub-forms {'else [:elements]}}]
    'schema.core/defn [{:element :declaration
@@ -808,7 +806,9 @@
                       {:element :element :pred :string}
                       {:element :element :pred :map}
                       {:element :function-params-and-bodies
-                       :signature-style :typed}]})
+                       :signature-style :typed}]
+   'midje.sweet/fact [{:element :bound-elements :sub-forms {'=> [] '=not=> [] '=deny=> [] '=expands-to=> [] '=future=> [] 'provided [:elements]}}]
+   'midje.sweet/facts [{:element :bound-elements :sub-forms {'=> [] '=not=> [] '=deny=> [] '=expands-to=> [] '=future=> [] 'provided [:elements]}}]})
 
 (defn- match-pred? [loc {:keys [pred constant]}]
   (let [sexpr (z/sexpr loc)]
@@ -1065,7 +1065,10 @@
 
         (let [tag (z/tag loc)]
           (cond
-            (#{:syntax-quote :quote} tag)
+            (= :quote tag)
+            (recur (edit/skip-over loc) scoped)
+
+            (= :syntax-quote tag)
             (let [current-quoted (:quoting? @context)]
               (vswap! context assoc :quoting? true)
               (handle-sexpr (z/next loc) context scoped)
@@ -1148,12 +1151,14 @@
               (find-usages* (volatile! (assoc default-env :requires (get requires file-type) :file-type file-type :macro-defs macro-defs :uri uri)) {})))))))
 
 ;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col] :as _form-pos}
-                 {r :row c :col er :end-row ec :end-col :as _selection-pos}]
-  (and (>= r row)
-       (<= er end-row)
-       (if (= r row) (>= c col) true)
-       (if (= er end-row) (< ec end-col) true)))
+(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
+                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
+  (or (nil? form-pos)
+      (nil? selection-pos)
+      (and (>= r row)
+           (<= er end-row)
+           (if (= r row) (>= c col) true)
+           (if (= er end-row) (< ec end-col) true))))
 
 ;; From rewrite-cljs
 (defn find-forms
@@ -1175,8 +1180,7 @@
 
 (defn find-top-forms-in-range
   [code pos]
-  (->> (find-forms (z/of-string code) #(in-range?
-                                         pos (-> % z/node meta)))
+  (->> (find-forms (z/of-string code) #(in-range? pos (-> % z/node meta)))
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 

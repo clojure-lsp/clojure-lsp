@@ -1,12 +1,82 @@
 (ns clojure-lsp.handlers-test
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.parser :as parser]
-   [clojure.string :as string]
-   [clojure.test :refer :all]
-   [clojure.tools.logging :as log]
-   [clojure-lsp.crawler :as crawler]))
+    [clojure-lsp.crawler :as crawler]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.handlers :as handlers]
+    [clojure-lsp.parser :as parser]
+    [clojure.string :as string]
+    [clojure.test :refer :all])
+  (:import
+    (org.eclipse.lsp4j
+      Diagnostic
+      DiagnosticSeverity
+      Range
+      Position)))
+
+(deftest hover
+  (testing "with show-docs-arity-on-same-line? disabled"
+    (testing "plain text"
+      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                         "(defn foo [x] x)\n"
+                                                                         "(foo 1)") :clj {})}})
+      (is (= {:range    {:start {:line      2
+                                 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents ["a/foo \n[x]\n\n----\nlsp: :declare :public"]}
+             (handlers/hover "file://a.clj" 3 3))))
+    (testing "markdown content with function args"
+      (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                   "(defn foo [x] x)\n"
+                                                                                   "(foo 1)") :clj {})}})
+      (is (= {:range    {:start {:line 2 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents {:kind  "markdown"
+                         :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n\n----\nlsp: :declare :public"}}
+             (handlers/hover "file://a.clj" 3 3))))
+    (testing "markdown content with no function args"
+      (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                   "(defn foo [] 1)\n"
+                                                                                   "(foo)") :clj {})}})
+      (is (= {:range    {:start {:line 2 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents {:kind  "markdown"
+                         :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n\n----\nlsp: :declare :public"}}
+             (handlers/hover "file://a.clj" 3 2)))))
+  (testing "with show-docs-arity-on-same-line? enabled"
+    (testing "plain text"
+      (reset! db/db {:settings  {"show-docs-arity-on-same-line?" true}
+                     :file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                         "(defn foo [x] x)\n"
+                                                                         "(foo 1)") :clj {})}})
+      (is (= {:range    {:start {:line      2
+                                 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents ["a/foo [x]\n\n----\nlsp: :declare :public"]}
+             (handlers/hover "file://a.clj" 3 3))))
+    (testing "markdown content with function args"
+      (reset! db/db {:settings            {"show-docs-arity-on-same-line?" true}
+                     :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                   "(defn foo [x] x)\n"
+                                                                                   "(foo 1)") :clj {})}})
+      (is (= {:range    {:start {:line 2 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents {:kind  "markdown"
+                         :value "```clojure\na/foo [x]\n```\n\n----\nlsp: :declare :public"}}
+             (handlers/hover "file://a.clj" 3 3))))
+    (testing "markdown content with no function args"
+      (reset! db/db {:settings            {"show-docs-arity-on-same-line?" true}
+                     :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                   "(defn foo [] 1)\n"
+                                                                                   "(foo)") :clj {})}})
+      (is (= {:range    {:start {:line 2 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents {:kind  "markdown"
+                         :value "```clojure\na/foo []\n```\n\n----\nlsp: :declare :public"}}
+             (handlers/hover "file://a.clj" 3 2))))))
 
 (deftest test-rename
   (reset! db/db {:file-envs
@@ -55,6 +125,17 @@
       (is (= "xx" (get-in changes ["file://b.clj" 0 :new-text])))
       (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text]))))))
 
+(deftest test-rename-simple-keywords
+  (reset! db/db {:file-envs
+                 {"file://a.cljc" (parser/find-usages ":a (let [{:keys [a]} {}] a)" :cljc {})}})
+  (testing "should not rename plain keywords"
+    (let [changes (:changes (handlers/rename "file://a.cljc" 1 1 "b"))]
+      (is (= nil changes))))
+
+  (testing "should rename local in destructure not keywords"
+    (let [changes (:changes (handlers/rename "file://a.cljc" 1 18 "b"))]
+      (is (= [18 26] (mapv (comp inc :character :start :range) (get-in changes ["file://a.cljc"])))))))
+
 (deftest test-find-diagnostics
   (testing "wrong arity"
     (testing "for argument destructuring"
@@ -90,25 +171,31 @@
                   (defn bar [] :bar)
                   (defn baz [arg & rest] (apply arg rest))
                   (->> :test
+                       (foo)
+                       (foo 1)
+                       (bar))
+                  (-> 1
+                      (baz)
+                      (->> (baz)
+                           (foo 1 2))
+                      (baz :p :q :r)
+                      bar)
+                  (cond-> 0
+                    int? (bar :a :b)
+                    false (foo)
+                    :else (baz 3))
+                  (doto 1
                     (foo)
                     (foo 1)
-                    (bar))
-                  (-> 1
-                    (baz)
-                    (->> (baz)
-                         (foo 1 2))
-                    (baz :p :q :r)
-                    bar)
-                  (cond-> 0
-                   int? (bar :a :b)
-                   false (foo)
-                   :else (baz 3))"]
+                    (bar))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
         (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["No overload foo for 2 arguments"
                   "No overload bar for 1 argument"
                   "No overload bar for 1 argument"
-                  "No overload bar for 3 arguments"]
+                  "No overload bar for 3 arguments"
+                  "No overload bar for 2 arguments"
+                  "No overload bar for 1 arguments"]
                  (map :message usages))))))
     (testing "with annotations"
       (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
@@ -209,10 +296,10 @@
                                     :clj
                                     {})
                    "file://c.cljs" (parser/find-usages
-                                    (str "(ns alpaca.ns)\n"
-                                         "(def baff)\n")
-                                    :cljs
-                                    {})
+                                     (str "(ns alpaca.ns)\n"
+                                          "(def baff)\n")
+                                     :cljs
+                                     {})
                    "file://d.clj" (parser/find-usages
                                     (str "(ns d (:require [alpaca.ns :as alpaca]))")
                                     :clj
@@ -226,7 +313,7 @@
              (handlers/completion "file://b.clj" 3 18))))
     (testing "complete-ba"
       (reset! db/db db-state)
-			(is (= [{:label "bases" :data "clojure.core/bases"}]
+      (is (= [{:label "bases" :data "clojure.core/bases"}]
              (handlers/completion "file://b.clj" 4 3))))
     (testing "complete-alph"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'user/alph :str "alph"}))
@@ -255,8 +342,79 @@
              (is (string/includes? documentation data)))))))
 
 (deftest test-range-formatting
-    (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= [{:range {:start {:line 0 :character 0}
                    :end {:line 0 :character 5}}
            :new-text "(a)"}]
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
+
+(deftest test-code-actions
+  (let [a-code   (str "(ns some-ns)\n"
+                      "(def foo)")
+        b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
+                      "(def bar 1)\n"
+                      "(defn baz []\n"
+                      "  bar)")
+        c-code   (str "(ns another-ns)\n"
+                      "(def bar ons/bar)\n"
+                      "(def foo sns/foo)")
+        db-state {:documents {"file://a.clj" {:text a-code}
+                              "file://b.clj" {:text b-code}
+                              "file://c.clj" {:text c-code}}
+                  :file-envs {"file://a.clj" (parser/find-usages a-code :clj {})
+                              "file://b.clj" (parser/find-usages b-code :clj {})
+                              "file://c.clj" (parser/find-usages c-code :clj {})}}]
+    (testing "Add missing namespace"
+      (testing "when it has not unknow-ns diagnostic"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Add missing namespace")
+                      (handlers/code-actions "file://c.clj" [] 1 9))))
+
+      (testing "when it has unknow-ns but cannot find namespace"
+        (reset! db/db db-state)
+        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 10) (Position. 1 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+          (is (not-any? #(= (:title %) "Add missing namespace")
+                        (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 1 10)))))
+
+      (testing "when it has unknow-ns and can find namespace"
+        (reset! db/db db-state)
+        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+          (is (some #(= (:title %) "Add missing namespace")
+                    (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 2 10))))))
+    (testing "Inline symbol"
+      (testing "when in not a let/def symbol"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Inline symbol")
+                      (handlers/code-actions "file://b.clj" [] 3 7))))
+      (testing "when in let/def symbol"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Inline symbol")
+                  (handlers/code-actions "file://b.clj" [] 3 4)))))
+    (testing "Cycle privacy"
+      (testing "when non function location"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Cycle privacy")
+                      (handlers/code-actions "file://a.clj" [] 0 4))))
+      (testing "when on function location"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Cycle privacy")
+                  (handlers/code-actions "file://a.clj" [] 1 4)))))
+    (testing "Extract function"
+      (testing "when non function location"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Extract function")
+                      (handlers/code-actions "file://a.clj" [] 0 4))))
+      (testing "when on function location"
+        (reset! db/db db-state)
+        (is (some #(= (:title %) "Extract function")
+                  (handlers/code-actions "file://a.clj" [] 1 4)))))
+    (testing "clean namespace"
+      (testing "without workspace edit client capability"
+        (reset! db/db db-state)
+        (is (not-any? #(= (:title %) "Clean namespace")
+                      (handlers/code-actions "file://b.clj" [] 1 1))))
+
+      (testing "with workspace edit client capability"
+        (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
+        (is (some #(= (:title %) "Clean namespace")
+                  (handlers/code-actions "file://b.clj" [] 1 1)))))))

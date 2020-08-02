@@ -7,6 +7,9 @@
     [medley.core :as medley])
   (:import
     (org.eclipse.lsp4j
+      CodeAction
+      CodeActionKind
+      Command
       CompletionItem
       CompletionItemKind
       Diagnostic
@@ -102,7 +105,7 @@
 (s/def ::document-symbol (s/and (s/keys :req-un [::name :symbol/kind ::range :document-symbol/selection-range]
                                         :opt-un [:document-symbol/detail :document-symbol/children])
                                 (s/conformer (fn [m]
-                                               (DocumentSymbol. (:name m) (:kind m) (:range m) 
+                                               (DocumentSymbol. (:name m) (:kind m) (:range m)
                                                                 (:selection-range m) (:detail m) (:children m))))))
 
 (s/def :document-symbol/children (s/coll-of ::document-symbol))
@@ -157,6 +160,42 @@
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
                       (s/conformer #(Hover. (:contents %1) (:range %1)))))
+
+(s/def :command/title string?)
+(s/def :command/command string?)
+(s/def :command/arguments (s/coll-of any?))
+
+(s/def ::command (s/and (s/keys :req-un [:command/title :command/command]
+                              :opt-un [:command/arguments])
+                      (s/conformer #(Command. (:title %1) (:command %1)(:arguments %1)))))
+
+(s/def :code-action/title string?)
+
+(def code-action-kind
+  {:quick-fix CodeActionKind/QuickFix
+   :refactor CodeActionKind/Refactor
+   :refactor-extract CodeActionKind/RefactorExtract
+   :refactor-inline CodeActionKind/RefactorInline
+   :refactor-rewrite CodeActionKind/RefactorRewrite
+   :source CodeActionKind/Source
+   :source-organize-imports CodeActionKind/SourceOrganizeImports})
+
+(s/def :code-action/kind (s/and keyword?
+                                code-action-kind
+                                (s/conformer (fn [v] (get code-action-kind v)))))
+
+(s/def :code-action/preferred? boolean?)
+
+(s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
+                                    :opt-un [:code-action/kind ::diagnostics ::workspace-edit ::command :code-action/preferred?])
+                            (s/conformer #(doto (CodeAction. (:title %1))
+                                            (.setKind (:kind %1))
+                                            (.setDiagnostics (:diagnostics %1))
+                                            (.setIsPreferred (:preferred? %1))
+                                            (.setEdit (:workspace-edit %1))
+                                            (.setCommand (:command %1))))))
+
+(s/def ::code-actions (s/coll-of ::code-action))
 
 (defn debeaner [inst]
   (when inst
@@ -241,6 +280,12 @@
                                                        :capabilities/symbol])))
 (s/def ::client-capabilities (s/and ::debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
+
+(def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
+(s/def :watched-files/type (s/conformer (fn [v] (get watched-files-type-enum (.getValue v)))))
+(s/def :watched-files/change (s/and ::debean (s/keys :req-un [::uri :watched-files/type])))
+(s/def ::watched-files-changes (s/and (s/conformer (fn [vs] (into [] vs)))
+                                      (s/coll-of :watched-files/change)))
 
 (defn conform-or-log [spec value]
   (when value

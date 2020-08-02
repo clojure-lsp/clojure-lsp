@@ -513,7 +513,8 @@
         new-text (cljfmt/reformat-string
                    text
                    (get-in @db/db [:settings "cljfmt"]))]
-    (when-not (= new-text text)
+    (if (= new-text text)
+      []
       [{:range (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
         :new-text new-text}])))
 

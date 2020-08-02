@@ -336,6 +336,17 @@
              (is (= data "user/alpha"))
              (is (string/includes? documentation data)))))))
 
+(deftest test-formatting
+  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (is (= "(a)\n(b c d)"
+         (:new-text (first (handlers/formatting "file://a.clj"))))))
+
+(deftest test-formatting-noop
+  (reset! db/db {:documents {"file://a.clj" {:text "(a)\n(b c d)"}}})
+  (let [r (handlers/formatting "file://a.clj")]
+    (is (empty? r))
+    (is (vector? r))))
+
 (deftest test-range-formatting
   (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= [{:range {:start {:line 0 :character 0}

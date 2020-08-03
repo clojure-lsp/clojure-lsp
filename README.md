@@ -118,7 +118,7 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 ```
 
 `project-specs` value is a vector containing a map of key/value pairs, for example:
-```
+```clojure
 "initializationOptions": {
     "project-specs": [{
         "project-path": "deps.edn",
@@ -126,7 +126,7 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
     }
 ```
 Note: You may also consider configuring project specs via the (optional) `.lsp/config.edn` file, i.e.,
-```
+```clojure
 {"project-specs" [{:project-path "deps.edn"
                    :classpath-cmd ["clj" "-Spath"]}]}
    ```
@@ -260,7 +260,7 @@ nnoremap <silent> cram :call LanguageClient#workspace_executeCommand('add-missin
 `let g:LanguageClient_settingsPath=".lsp/settings.json"`
 
 Project-local `.lsp/settings.json` would have content like:
-```
+```clojure
 {"initializationOptions": {
    "source-paths": ["shared-src", "src", "test", "dashboard/src"],
    "macro-defs": {project.macros/dofor: ["bindings", "bound-elements"]}}}
@@ -272,16 +272,16 @@ Seems to work reasonably well but couldn't get rename to work reliably https://g
 ### Intellij / Cursive
 https://github.com/gtache/intellij-lsp tested only briefly.
 
-### vscode
+### VScode
 Proof of concept in the client-vscode directory in this repo.
 
-### atom
+### Atom
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.
 
-### emacs
-[lsp-mode](https://github.com/emacs-lsp/lsp-mode) has built in support for `clojure-lsp` since `lsp-mode-20190416.1936`. With `use-package` add the following to your emacs config:
+### Emacs
+[lsp-mode](https://github.com/emacs-lsp/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
 
-```
+```elisp
 (use-package lsp-mode
   :ensure t
   :hook ((clojure-mode . lsp)
@@ -297,13 +297,13 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
                clojurescript-mode
                clojurex-mode))
      (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
-  (setq lsp-enable-indentation nil
-        lsp-clojure-server-command '("bash" "-c" "clojure-lsp")))
+  (setq lsp-clojure-server-command '("bash" "-c" "clojure-lsp") ;; Optional: In case `clojure-lsp` is not in your PATH
+        lsp-enable-indentation nil))
 ```
 
-Optionally you can add `lsp-ui` and `company-lsp` too:
+Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completion:
 
-```
+```elisp
 (use-package lsp-ui
   :ensure t
   :commands lsp-ui-mode)
@@ -313,13 +313,13 @@ Optionally you can add `lsp-ui` and `company-lsp` too:
   :commands company-lsp)
 ```
 
-In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
+In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy, like `~/.lsp`) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
 
-```
+```clojure
 {"dependency-scheme" "jar"}
 ```
 
-In `lsp-mode` `lsp-clojure-server-command` defcustom is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
+In `lsp-mode` `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
 
 ## TODO
 

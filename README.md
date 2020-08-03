@@ -41,42 +41,93 @@ See [troubleshooting.md](docs/troubleshooting.md).
 
 ## Capabilities
 
-| capability | done | notes |
-| ---------- | ---- | ----- |
-| completionProvider | √ | |
-| referencesProvider | √ | |
-| renameProvider     | √ | |
-| definitionProvider |   | TODO: java classes |
-| diagnostics        | √ | |
-| hover              | √ | |
-| formatting         | √ | |
-| workspace-symbols  | √ | |
-| document-symbols   | √ | |
-| document-highlight | √ | |
+Bellow are all the currently supported LSP capabilities and their implementation status:
 
-## Refactorings
+| capability                          | done | notes                                         |
+| ----------                          | ---- | -----                                         |
+| initialize                          | √    |                                               |
+| initialized                         | √    |                                               |
+| shutdown                            | √    |                                               |
+| exit                                | √    |                                               |
+| $/cancelRequest                     |      |                                               |
+| $/progress                          |      |                                               |
+| window/showMessage                  |      |                                               |
+| window/showMessageRequest           |      |                                               |
+| window/logMessage                   |      |                                               |
+| window/workDoneProgress/create      |      |                                               |
+| window/workDoneProgress/cancel      |      |                                               |
+| telemetry/event                     |      |                                               |
+| client/registerCapability           | √    |                                               |
+| client/unregisterCapability         |      |                                               |
+| workspace/workspaceFolders          |      |                                               |
+| workspace/didChangeWorkspaceFolders |      |                                               |
+| workspace/didChangeConfiguration    | √    | Currently only log                            |
+| workspace/configuration             |      |                                               |
+| workspace/didChangeWatchedFiles     | √    |                                               |
+| workspace/symbol                    | √    |                                               |
+| workspace/executeCommand            | √    | See [Extra capabilities](#extra-capabilities) |
+| workspace/applyEdit                 | √    |                                               |
+| textDocument/didOpen                | √    |                                               |
+| textDocument/didChange              | √    |                                               |
+| textDocument/willSave               |      |                                               |
+| textDocument/willSaveWaitUntil      |      |                                               |
+| textDocument/didSave                | √    | Do nothing currently                          |
+| textDocument/didClose               | √    |                                               |
+| textDocument/publishDiagnostics     | √    |                                               |
+| textDocument/completion             | √    |                                               |
+| completionItem/resolve              | √    |                                               |
+| textDocument/hover                  | √    |                                               |
+| textDocument/signatureHelp          | X    | Implemented hard coded                        |
+| textDocument/declaration            |      |                                               |
+| textDocument/definition             | √    | TODO: Find java classes definition            |
+| textDocument/typeDefinition         |      |                                               |
+| textDocument/implementation         |      |                                               |
+| textDocument/references             | √    |                                               |
+| textDocument/documentHighlight      | √    |                                               |
+| textDocument/documentSymbol         | √    |                                               |
+| textDocument/codeAction             | √    |                                               |
+| textDocument/codeLens               |      |                                               |
+| codeLens/resolve                    |      |                                               |
+| textDocument/documentLink           |      |                                               |
+| documentLink/resolve                |      |                                               |
+| textDocument/documentColor          |      |                                               |
+| textDocument/colorPresentation      |      |                                               |
+| textDocument/formatting             | √    |                                               |
+| textDocument/rangeFormatting        | √    |                                               |
+| textDocument/onTypeFormatting       |      |                                               |
+| textDocument/rename                 | √    |                                               |
+| textDocument/prepareRename          |      |                                               |
+| textDocument/foldingRange           |      |                                               |
+| textDocument/selectionRange         |      |                                               |
+
+## Extra capabilities
+
+Besides LSP official capabilities, `clojure-lsp` has some extra features:
+
+### Refactorings
 
 It should be possible to introduce most of the refactorings here: https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples
 Calling executeCommand with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
-| done | command             | args | notes |
-| ---- | ------------------- | ---- | ----- |
-|   √  | add-missing-libspec | | |
-|   -  | clean-ns            | | | :require sort and remove unused only
-|   √  | cycle-coll          | | |
-|   √  | cycle-privacy       | | |
-|   √  | expand-let          | | |
-|   √  | extract-function    | `[document-uri, line, column, function-name]` | |
-|   √  | inline-symbol       | | |
-|   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
-|   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
-|   √  | thread-first        | | |
-|   √  | thread-first-all    | | |
-|   √  | thread-last         | | |
-|   √  | thread-last-all     | | |
-|   √  | unwind-all          | | |
-|   √  | unwind-thread       | | |
+| done | command             | args                                          | notes                                |
+| ---- | ------------------- | ----                                          | -----                                |
+| √    | add-missing-libspec |                                               |                                      |
+| -    | clean-ns            |                                               | :require sort and remove unused only |
+|      |                     |                                               |                                      |
+| √    | cycle-coll          |                                               |                                      |
+| √    | cycle-privacy       |                                               |                                      |
+| √    | expand-let          |                                               |                                      |
+| √    | extract-function    | `[document-uri, line, column, function-name]` |                                      |
+| √    | inline-symbol       |                                               |                                      |
+| √    | introduce-let       | `[document-uri, line, column, binding-name]`  |                                      |
+| √    | move-to-let         | `[document-uri, line, column, binding-name]`  |                                      |
+| √    | thread-first        |                                               |                                      |
+| √    | thread-first-all    |                                               |                                      |
+| √    | thread-last         |                                               |                                      |
+| √    | thread-last-all     |                                               |                                      |
+| √    | unwind-all          |                                               |                                      |
+| √    | unwind-thread       |                                               |                                      |
 
 See Vim client section for an example.
 

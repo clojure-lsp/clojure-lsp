@@ -10,7 +10,7 @@ jobs:
     name: Tag new version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Bump version and push tag
         run: "bash release"
 
@@ -19,16 +19,20 @@ jobs:
     needs: tag
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
+      - uses: actions/checkout@v1
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ steps.latest-tag.outputs.tag}}
+          release_name: ${{ steps.latest-tag.outputs.tag}}
 
   build-binary:
     name: Build binary
@@ -55,19 +59,25 @@ jobs:
           name: clojure-lsp
           path: target/clojure-lsp
 
-   upload-binary:
+  upload-binary:
     name: Upload Binary to release
-    needs: [release build-binary]
+    needs: build-binary
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v1
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp
-      - name: Upload the artifacts
-        uses: skx/github-action-publish-binaries@release-1.3
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload binary to release
+        uses: svenstaro/upload-release-action@v2
         with:
-          releaseId: ${{ needs.release.outputs.id }}
-          args: 'clojure-lsp'
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp
+          asset_name: clojure-lsp
+          tag: ${{ steps.latest-tag.outputs.tag}}

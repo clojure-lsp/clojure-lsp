@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
-git pull
+set -v
+
+git pull ogirin HEAD
 git tag release-$(date -u +"%Y%m%dT%H%M%S")
-git push --tags
+git push origin HEAD --tags

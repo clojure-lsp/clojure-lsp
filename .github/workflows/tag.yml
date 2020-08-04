@@ -1,0 +1,15 @@
+name: Tag
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  tag:
+    name: Tag new version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bump version and push tag
+        run: "bash release"

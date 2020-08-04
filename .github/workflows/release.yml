@@ -2,25 +2,16 @@ name: Release
 
 on:
   push:
-    branches:
-      - master
+    tags:
+    - '*'
 
 jobs:
-  tag:
-    name: Tag new version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Bump version and push tag
-        run: "bash release"
-
   release:
     name: Create Release
     needs: tag
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -28,7 +19,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: ${{ github.ref }}
 
   build-binary:
     name: Build binary
@@ -36,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Prepare java
         uses: actions/setup-java@v1
         with:
@@ -55,12 +46,13 @@ jobs:
           name: clojure-lsp
           path: target/clojure-lsp
 
-   upload-binary:
+  upload-binary:
     name: Upload Binary to release
-    needs: [release build-binary]
+    needs: build-binary
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp

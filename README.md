@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/snoe/clojure-lsp/tree/master.svg?style=svg)](https://circleci.com/gh/snoe/clojure-lsp/tree/master)
+![CI](https://github.com/snoe/clojure-lsp/workflows/CI/badge.svg?branch=master)
 
 # clojure-lsp
 

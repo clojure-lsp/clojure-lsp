@@ -86,7 +86,7 @@ Bellow are all the currently supported LSP capabilities and their implementation
 | textDocument/documentHighlight      | √    |                                               |
 | textDocument/documentSymbol         | √    |                                               |
 | textDocument/codeAction             | √    |                                               |
-| textDocument/codeLens               |      |                                               |
+| textDocument/codeLens               | √    |                                               |
 | codeLens/resolve                    |      |                                               |
 | textDocument/documentLink           |      |                                               |
 | documentLink/resolve                |      |                                               |

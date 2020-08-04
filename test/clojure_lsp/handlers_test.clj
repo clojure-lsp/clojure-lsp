@@ -355,7 +355,7 @@
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
 (deftest test-code-actions
-  (let [a-code   (str "(ns some-ns)\n"
+  (let [references-code   (str "(ns some-ns)\n"
                       "(def foo)")
         b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
                       "(def bar 1)\n"
@@ -364,10 +364,10 @@
         c-code   (str "(ns another-ns)\n"
                       "(def bar ons/bar)\n"
                       "(def foo sns/foo)")
-        db-state {:documents {"file://a.clj" {:text a-code}
+        db-state {:documents {"file://a.clj" {:text references-code}
                               "file://b.clj" {:text b-code}
                               "file://c.clj" {:text c-code}}
-                  :file-envs {"file://a.clj" (parser/find-usages a-code :clj {})
+                  :file-envs {"file://a.clj" (parser/find-usages references-code :clj {})
                               "file://b.clj" (parser/find-usages b-code :clj {})
                               "file://c.clj" (parser/find-usages c-code :clj {})}}]
     (testing "Add missing namespace"
@@ -424,3 +424,29 @@
         (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
         (is (some #(= (:title %) "Clean namespace")
                   (handlers/code-actions "file://b.clj" [] 1 1)))))))
+
+(deftest test-code-lens
+  (let [references-code (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n")
+        db-state {:file-envs {"file://a.clj" (parser/find-usages references-code :clj {})}}]
+    (testing "references lens"
+      (reset! db/db db-state)
+      (is (= (handlers/code-lens "file://a.clj")
+             '({:range
+                {:start {:line 0 :character 4} :end {:line 0 :character 11}}
+                :command {:title "0 references"}}
+               {:range
+                {:start {:line 1 :character 5} :end {:line 1 :character 8}}
+                :command {:title "1 references"}}
+               {:range
+                {:start {:line 2 :character 7} :end {:line 2 :character 11}}
+                :command {:title "1 references"}}
+               {:range
+                {:start {:line 4 :character 6} :end {:line 4 :character 9}}
+                :command {:title "1 references"}}))))))

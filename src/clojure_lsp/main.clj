@@ -14,6 +14,8 @@
       ApplyWorkspaceEditParams
       CodeActionParams
       CodeAction
+      CodeLensParams
+      CodeLensOptions
       Command
       CompletionItem
       CompletionItemKind
@@ -247,6 +249,15 @@
                  (catch Exception e
                    (log/error e)))))))))
 
+  (^CompletableFuture codeLens [_ ^CodeLensParams params]
+   (go :codeLens
+       (CompletableFuture/supplyAsync
+         (reify Supplier
+           (get [_this]
+             (end
+               (let [doc-id          (interop/document->decoded-uri (.getTextDocument params))]
+                 (interop/conform-or-log ::interop/code-lenses (#'handlers/code-lens doc-id)))))))))
+
   (^CompletableFuture definition [this ^DefinitionParams params]
     (go :definition
         (CompletableFuture/supplyAsync
@@ -366,6 +377,7 @@
                 (InitializeResult. (doto (ServerCapabilities.)
                                      (.setHoverProvider true)
                                      (.setCodeActionProvider true)
+                                     (.setCodeLensProvider (CodeLensOptions. true))
                                      (.setReferencesProvider true)
                                      (.setRenameProvider true)
                                      (.setDefinitionProvider true)

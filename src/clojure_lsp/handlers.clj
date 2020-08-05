@@ -601,17 +601,22 @@
                        :arguments [doc-id line character]}}))))
 (defn code-lens
   [doc-id]
-  (let [db @db/db
+  (let [db     @db/db
         usages (get-in db [:file-envs doc-id])]
-
     (->> usages
          (filter (fn [{:keys [tags]}]
                    (and (contains? tags :declare)
                         (not (contains? tags :alias))
                         (not (contains? tags :param)))))
          (map (fn [usage]
-                {:range   (shared/->range usage)
-                 :command {:title (-> doc-id
-                                      (reference-usages (:row usage) (:col usage))
-                                      count
-                                      (str " references"))}})))))
+                {:range (shared/->range usage)
+                 :data  [doc-id (:row usage) (:col usage)]})))))
+
+(defn code-lens-resolve
+  [range [doc-id row col]]
+  {:range   range
+   :command {:title   (-> doc-id
+                          (reference-usages row col)
+                          count
+                          (str " references"))
+             :command "code-lens-references"}})

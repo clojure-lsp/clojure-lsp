@@ -343,6 +343,17 @@
              (is (= data "user/alpha"))
              (is (string/includes? documentation data)))))))
 
+(deftest test-formatting
+  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (is (= "(a)\n(b c d)"
+         (:new-text (first (handlers/formatting "file://a.clj"))))))
+
+(deftest test-formatting-noop
+  (reset! db/db {:documents {"file://a.clj" {:text "(a)\n(b c d)"}}})
+  (let [r (handlers/formatting "file://a.clj")]
+    (is (empty? r))
+    (is (vector? r))))
+
 (deftest test-range-formatting
   (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= [{:range {:start {:line 0 :character 0}
@@ -351,7 +362,7 @@
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
 (deftest test-code-actions
-  (let [a-code   (str "(ns some-ns)\n"
+  (let [references-code   (str "(ns some-ns)\n"
                       "(def foo)")
         b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
                       "(def bar 1)\n"
@@ -360,10 +371,10 @@
         c-code   (str "(ns another-ns)\n"
                       "(def bar ons/bar)\n"
                       "(def foo sns/foo)")
-        db-state {:documents {"file://a.clj" {:text a-code}
+        db-state {:documents {"file://a.clj" {:text references-code}
                               "file://b.clj" {:text b-code}
                               "file://c.clj" {:text c-code}}
-                  :file-envs {"file://a.clj" (parser/find-usages a-code :clj {})
+                  :file-envs {"file://a.clj" (parser/find-usages references-code :clj {})
                               "file://b.clj" (parser/find-usages b-code :clj {})
                               "file://c.clj" (parser/find-usages c-code :clj {})}}]
     (testing "Add missing namespace"
@@ -420,3 +431,61 @@
         (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
         (is (some #(= (:title %) "Clean namespace")
                   (handlers/code-actions "file://b.clj" [] 1 1)))))))
+
+(deftest test-code-lens
+  (let [references-code (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n")
+        db-state        {:file-envs {"file://a.clj" (parser/find-usages references-code :clj {})}}]
+    (testing "references lens"
+      (reset! db/db db-state)
+      (is (= '({:range
+                {:start {:line 0 :character 4} :end {:line 0 :character 11}}
+                :data ["file://a.clj" 1 5]}
+               {:range
+                {:start {:line 1 :character 5} :end {:line 1 :character 8}}
+                :data ["file://a.clj" 2 6]}
+               {:range
+                {:start {:line 2 :character 7} :end {:line 2 :character 11}}
+                :data ["file://a.clj" 3 8]}
+               {:range
+                {:start {:line 4 :character 6} :end {:line 4 :character 9}}
+                :data ["file://a.clj" 5 7]})
+             (handlers/code-lens "file://a.clj"))))))
+
+(deftest test-code-lens-resolve
+  (let [references-code (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n")
+        db-state        {:file-envs {"file://a.clj" (parser/find-usages references-code :clj {})}}]
+    (testing "references"
+      (testing "empty lens"
+        (reset! db/db db-state)
+        (is (= {:range   {:start {:line      1
+                                  :character 5}
+                          :end   {:line      1
+                                  :character 12}}
+                :command {:title   "0 references"
+                          :command "code-lens-references"}}
+               (handlers/code-lens-resolve {:start {:line 1 :character 5} :end {:line 1 :character 12}}
+                                           ["file://a.clj" 1 5]))))
+      (testing "some lens"
+        (reset! db/db db-state)
+        (is (= {:range   {:start {:line      2
+                                  :character 7}
+                          :end   {:line      2
+                                  :character 11}}
+                :command {:title   "1 references"
+                          :command "code-lens-references"}}
+               (handlers/code-lens-resolve {:start {:line 2 :character 7} :end {:line 2 :character 11}}
+                                           ["file://a.clj" 3 8])))))))

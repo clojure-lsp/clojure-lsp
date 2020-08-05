@@ -1,6 +1,9 @@
 (ns clojure-lsp.shared
   (:require
-    [clojure.string :as string]))
+   [clojure.string :as string])
+  (:import
+   (org.eclipse.lsp4j
+     Range)))
 
 (defn uri->file-type [uri]
   (cond
@@ -14,3 +17,8 @@
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
 
+(defn range->clj [^Range range]
+  {:start {:line      (.getLine (.getStart range))
+           :character (.getCharacter (.getStart range))}
+   :end   {:line      (.getLine (.getEnd range))
+           :character (.getCharacter (.getEnd range))}})

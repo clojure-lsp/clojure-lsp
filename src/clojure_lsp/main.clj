@@ -1,65 +1,69 @@
 (ns clojure-lsp.main
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.handlers :as handlers]
-    [clojure-lsp.interop :as interop]
-    [clojure.core.async :as async]
-    [clojure.tools.logging :as log]
-    [nrepl.server :as nrepl.server]
-    [trptcolin.versioneer.core :as version])
+   [clojure-lsp.db :as db]
+   [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.interop :as interop]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
+   [clojure.tools.logging :as log]
+   [nrepl.server :as nrepl.server]
+   [trptcolin.versioneer.core :as version])
   (:import
-    (clojure_lsp ClojureExtensions)
-    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
-    (org.eclipse.lsp4j
-      ApplyWorkspaceEditParams
-      CodeActionParams
-      CodeAction
-      Command
-      CompletionItem
-      CompletionItemKind
-      CompletionOptions
-      CompletionParams
-      ConfigurationItem
-      ConfigurationParams
-      DefinitionParams
-      DidChangeConfigurationParams
-      DidChangeTextDocumentParams
-      DidChangeWatchedFilesParams
-      DidChangeWatchedFilesRegistrationOptions
-      DidCloseTextDocumentParams
-      DidOpenTextDocumentParams
-      DidSaveTextDocumentParams
-      DocumentFormattingParams
-      DocumentHighlightParams
-      DocumentRangeFormattingParams
-      DocumentSymbolParams
-      DocumentSymbol
-      ExecuteCommandOptions
-      ExecuteCommandParams
-      FileSystemWatcher
-      HoverParams
-      InitializeParams
-      InitializeResult
-      InitializedParams
-      ParameterInformation
-      ReferenceParams
-      Registration
-      RegistrationParams
-      RenameParams
-      SaveOptions
-      ServerCapabilities
-      SignatureHelp
-      SignatureHelpOptions
-      SignatureHelpParams
-      SignatureInformation
-      TextDocumentContentChangeEvent
-      TextDocumentSyncKind
-      TextDocumentSyncOptions
-      WorkspaceSymbolParams)
-    (org.eclipse.lsp4j.launch LSPLauncher)
-    (org.eclipse.lsp4j.jsonrpc.services JsonSegment JsonRequest)
-    (java.util.concurrent CompletableFuture)
-    (java.util.function Supplier))
+   (clojure_lsp ClojureExtensions)
+   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
+   (org.eclipse.lsp4j
+     ApplyWorkspaceEditParams
+     CodeActionParams
+     CodeAction
+     CodeLens
+     CodeLensParams
+     CodeLensOptions
+     Command
+     CompletionItem
+     CompletionItemKind
+     CompletionOptions
+     CompletionParams
+     ConfigurationItem
+     ConfigurationParams
+     DefinitionParams
+     DidChangeConfigurationParams
+     DidChangeTextDocumentParams
+     DidChangeWatchedFilesParams
+     DidChangeWatchedFilesRegistrationOptions
+     DidCloseTextDocumentParams
+     DidOpenTextDocumentParams
+     DidSaveTextDocumentParams
+     DocumentFormattingParams
+     DocumentHighlightParams
+     DocumentRangeFormattingParams
+     DocumentSymbolParams
+     DocumentSymbol
+     ExecuteCommandOptions
+     ExecuteCommandParams
+     FileSystemWatcher
+     HoverParams
+     InitializeParams
+     InitializeResult
+     InitializedParams
+     ParameterInformation
+     ReferenceParams
+     Registration
+     RegistrationParams
+     RenameParams
+     SaveOptions
+     ServerCapabilities
+     SignatureHelp
+     SignatureHelpOptions
+     SignatureHelpParams
+     SignatureInformation
+     TextDocumentContentChangeEvent
+     TextDocumentSyncKind
+     TextDocumentSyncOptions
+     WorkspaceSymbolParams)
+   (org.eclipse.lsp4j.launch LSPLauncher)
+   (org.eclipse.lsp4j.jsonrpc.services JsonSegment JsonRequest)
+   (java.util.concurrent CompletableFuture)
+   (java.util.function Supplier))
   (:gen-class))
 
 (defonce formatting (atom false))
@@ -247,6 +251,26 @@
                  (catch Exception e
                    (log/error e)))))))))
 
+  (^CompletableFuture codeLens [_ ^CodeLensParams params]
+   (go :codeLens
+       (CompletableFuture/supplyAsync
+         (reify Supplier
+           (get [_this]
+             (end
+               (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
+                 (interop/conform-or-log ::interop/code-lenses (#'handlers/code-lens doc-id)))))))))
+
+  (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
+   (go :resolveCodeLens
+       (CompletableFuture/supplyAsync
+         (reify Supplier
+           (get [_this]
+             (end
+               (->> (.getData params)
+                    interop/json->clj
+                    (handlers/code-lens-resolve (-> params .getRange shared/range->clj))
+                    (interop/conform-or-log ::interop/code-lens))))))))
+
   (^CompletableFuture definition [this ^DefinitionParams params]
     (go :definition
         (CompletableFuture/supplyAsync
@@ -366,6 +390,7 @@
                 (InitializeResult. (doto (ServerCapabilities.)
                                      (.setHoverProvider true)
                                      (.setCodeActionProvider true)
+                                     (.setCodeLensProvider (CodeLensOptions. true))
                                      (.setReferencesProvider true)
                                      (.setRenameProvider true)
                                      (.setDefinitionProvider true)

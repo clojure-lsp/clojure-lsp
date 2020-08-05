@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/snoe/clojure-lsp/tree/master.svg?style=svg)](https://circleci.com/gh/snoe/clojure-lsp/tree/master)
+![CI](https://github.com/snoe/clojure-lsp/workflows/CI/badge.svg?branch=master)
 
 # clojure-lsp
 
@@ -41,42 +41,93 @@ See [troubleshooting.md](docs/troubleshooting.md).
 
 ## Capabilities
 
-| capability | done | notes |
-| ---------- | ---- | ----- |
-| completionProvider | √ | |
-| referencesProvider | √ | |
-| renameProvider     | √ | |
-| definitionProvider |   | TODO: java classes |
-| diagnostics        | √ | |
-| hover              | √ | |
-| formatting         | √ | |
-| workspace-symbols  | √ | |
-| document-symbols   | √ | |
-| document-highlight | √ | |
+Bellow are all the currently supported LSP capabilities and their implementation status:
 
-## Refactorings
+| capability                          | done | notes                                         |
+| ----------                          | ---- | -----                                         |
+| initialize                          | √    |                                               |
+| initialized                         | √    |                                               |
+| shutdown                            | √    |                                               |
+| exit                                | √    |                                               |
+| $/cancelRequest                     |      |                                               |
+| $/progress                          |      |                                               |
+| window/showMessage                  |      |                                               |
+| window/showMessageRequest           |      |                                               |
+| window/logMessage                   |      |                                               |
+| window/workDoneProgress/create      |      |                                               |
+| window/workDoneProgress/cancel      |      |                                               |
+| telemetry/event                     |      |                                               |
+| client/registerCapability           | √    |                                               |
+| client/unregisterCapability         |      |                                               |
+| workspace/workspaceFolders          |      |                                               |
+| workspace/didChangeWorkspaceFolders |      |                                               |
+| workspace/didChangeConfiguration    | √    | Currently only log                            |
+| workspace/configuration             |      |                                               |
+| workspace/didChangeWatchedFiles     | √    |                                               |
+| workspace/symbol                    | √    |                                               |
+| workspace/executeCommand            | √    | See [Extra capabilities](#extra-capabilities) |
+| workspace/applyEdit                 | √    |                                               |
+| textDocument/didOpen                | √    |                                               |
+| textDocument/didChange              | √    |                                               |
+| textDocument/willSave               |      |                                               |
+| textDocument/willSaveWaitUntil      |      |                                               |
+| textDocument/didSave                | √    | Do nothing currently                          |
+| textDocument/didClose               | √    |                                               |
+| textDocument/publishDiagnostics     | √    |                                               |
+| textDocument/completion             | √    |                                               |
+| completionItem/resolve              | √    |                                               |
+| textDocument/hover                  | √    |                                               |
+| textDocument/signatureHelp          | X    | Implemented hard coded                        |
+| textDocument/declaration            |      |                                               |
+| textDocument/definition             | √    | TODO: Find java classes definition            |
+| textDocument/typeDefinition         |      |                                               |
+| textDocument/implementation         |      |                                               |
+| textDocument/references             | √    |                                               |
+| textDocument/documentHighlight      | √    |                                               |
+| textDocument/documentSymbol         | √    |                                               |
+| textDocument/codeAction             | √    |                                               |
+| textDocument/codeLens               | √    |                                               |
+| codeLens/resolve                    | √    |                                               |
+| textDocument/documentLink           |      |                                               |
+| documentLink/resolve                |      |                                               |
+| textDocument/documentColor          |      |                                               |
+| textDocument/colorPresentation      |      |                                               |
+| textDocument/formatting             | √    |                                               |
+| textDocument/rangeFormatting        | √    |                                               |
+| textDocument/onTypeFormatting       |      |                                               |
+| textDocument/rename                 | √    |                                               |
+| textDocument/prepareRename          |      |                                               |
+| textDocument/foldingRange           |      |                                               |
+| textDocument/selectionRange         |      |                                               |
+
+## Extra capabilities
+
+Besides LSP official capabilities, `clojure-lsp` has some extra features:
+
+### Refactorings
 
 It should be possible to introduce most of the refactorings here: https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples
 Calling executeCommand with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
-| done | command             | args | notes |
-| ---- | ------------------- | ---- | ----- |
-|   √  | add-missing-libspec | | |
-|   -  | clean-ns            | | | :require sort and remove unused only
-|   √  | cycle-coll          | | |
-|   √  | cycle-privacy       | | |
-|   √  | expand-let          | | |
-|   √  | extract-function    | `[document-uri, line, column, function-name]` | |
-|   √  | inline-symbol       | | |
-|   √  | introduce-let       | `[document-uri, line, column, binding-name]` | |
-|   √  | move-to-let         | `[document-uri, line, column, binding-name]` | |
-|   √  | thread-first        | | |
-|   √  | thread-first-all    | | |
-|   √  | thread-last         | | |
-|   √  | thread-last-all     | | |
-|   √  | unwind-all          | | |
-|   √  | unwind-thread       | | |
+| done | command             | args                                          | notes                                |
+| ---- | ------------------- | ----                                          | -----                                |
+| √    | add-missing-libspec |                                               |                                      |
+| -    | clean-ns            |                                               | :require sort and remove unused only |
+|      |                     |                                               |                                      |
+| √    | cycle-coll          |                                               |                                      |
+| √    | cycle-privacy       |                                               |                                      |
+| √    | expand-let          |                                               |                                      |
+| √    | extract-function    | `[document-uri, line, column, function-name]` |                                      |
+| √    | inline-symbol       |                                               |                                      |
+| √    | introduce-let       | `[document-uri, line, column, binding-name]`  |                                      |
+| √    | move-to-let         | `[document-uri, line, column, binding-name]`  |                                      |
+| √    | thread-first        |                                               |                                      |
+| √    | thread-first-all    |                                               |                                      |
+| √    | thread-last         |                                               |                                      |
+| √    | thread-last-all     |                                               |                                      |
+| √    | unwind-all          |                                               |                                      |
+| √    | unwind-thread       |                                               |                                      |
 
 See Vim client section for an example.
 
@@ -118,7 +169,7 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 ```
 
 `project-specs` value is a vector containing a map of key/value pairs, for example:
-```
+```clojure
 "initializationOptions": {
     "project-specs": [{
         "project-path": "deps.edn",
@@ -126,7 +177,7 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
     }
 ```
 Note: You may also consider configuring project specs via the (optional) `.lsp/config.edn` file, i.e.,
-```
+```clojure
 {"project-specs" [{:project-path "deps.edn"
                    :classpath-cmd ["clj" "-Spath"]}]}
    ```
@@ -137,22 +188,23 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
 
 ### macro-defs
 
-`macro-defs` value is a map of fully-qualified macros to a vector of definitions of those macros' forms.
+`macro-defs` value is a map of fully-qualified macro names to a vector of definitions of those macros' forms.
 
 #### Element definitions
 
-Elements can be defined in two ways:
+An element represents one or more forms within a macro-def vector. They can be defined in two ways:
 
 * A simple keyword, e.g. `:declaration`
 
 * A map that includes the element type and options,
   e.g. `{:element :declaration, :tags ["unused" "local"], :signature ["next"]}`
 
+
 #### Element types
 
 Valid element definitions are:
 
-  - `declaration` This marks a symbol or keyword as a definition/declaration of
+  - `:declaration` This marks a symbol or keyword as a definition/declaration of
     a var in the current namespace.
     - In the simplest case, this element can be specified as the keyword
       `:declaration`.
@@ -169,45 +221,45 @@ Valid element definitions are:
       `{my.ns/my-defn- [{"element": "declaration", "tags", ["local"],
       "signature": ["next" "next"]}]}`
 
-  - `bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
-    - e.g. `(my-with-open [resource ()] ....)` => `{my.ns/my-with-open ["bindings", "bound-elements"]}`
+  - `:bindings` This marks `let` and `for`-like bindings. `bound-elements` will have these bindings in their scope.
+  - e.g. `(my-with-open [resource ()] ....)` => `{my.ns/my-with-open [:bindings :bound-elements]}`
 
-  - `function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
-    - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{my.ns/myfn ["function-params-and-bodies"]}`
+  - `:function-params-and-bodies` This will parse function like forms that support optional var-args like `fn`.
+    - e.g. `(myfn ([a] ...) ([b] ...)) (myfn [c] ...)` => `{my.ns/myfn [:function-params-and-bodies]}`
 
-  - `params` This marks a `defn` like parameter vector. `bound-elements` will have these parameters in their scope.
-    - e.g. `(myfn [c] ...)` => `{my.ns/myfn ["params", "bound-elements"]}`
+  - `:params` This marks a `defn` like parameter vector. `bound-elements` will have these parameters in their scope.
+    - e.g. `(myfn [c] ...)` => `{my.ns/myfn [:params :bound-elements]}`
 
-  - `param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
+  - `:param` This marks a single `defn` like parameter. `bound-elements` will have these parameters in their scope.
 
-  - `elements` This will parse the rest of the elements in the macro form with the usual rules.
+  - `:elements` This will parse the rest of the elements in the macro form with the usual rules.
     - e.g. `(myif-let [answer (expr)] answer (log "no answer") "no answer")` =>
-      `{my.ns/myif-let ["bindings", "bound-element", "elements"]}`
+      `{my.ns/myif-let [:bindings :bound-element :elements]}`
 
-  - `element` This will parse a single element in the macro form with the usual
+  - `:element` This will parse a single element in the macro form with the usual
     rules.
-    - In the simplest case, `element` can be specified as the keyword
+    - In the simplest case, `:element` can be specified as the keyword
       `:element`. This will always parse a single element.
-    - You can make the `element` optional by making it a map that includes
+    - You can make the `:element` optional by making it a map that includes
       a predicate `pred` which will determine whether the current form is parsed
-      as an `element`, or if the `element` should be skipped and the current
+      as an `:element`, or if the `:element` should be skipped and the current
       form parsed as the next defined element.
     - For example, you can define an optional docstring element as `{:element
       :element, :pred :string}`, or an optional metadata map as `{:element
       :element, :pred :map}`.
-    - `element` can also describe repeated elements. For example,
+    - `:element` can also describe repeated elements. For example,
       `{:element :element, :pred :string, :repeat true}` will parse 1 or more
       strings.
-    - `element` can also describe multiple elements of different types. This is
+    - `:element` can also describe multiple elements of different types. This is
       useful, for example, if you have a macro like
       [`adzerk.env/def`](https://github.com/adzerk-oss/env#get) whose arguments
       are pairs of declarations and values:
       - `(adzerk.env/def FOO :required, BAR nil, BAZ "string")` =>
         `{adzerk.env/def [{:element [:declaration :element], :repeat true}]}`
 
-  - `bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
+  - `:bound-elements` This will parse the rest of the elements in the macro form with the usual rules but with any `bindings` or `params` in scope.
 
-  - `bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
+  - `:bound-element` This will parse a single element in the macro form with the usual rules but with any `bindings` or `params` in scope.
 
 See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.
 
@@ -259,7 +311,7 @@ nnoremap <silent> cram :call LanguageClient#workspace_executeCommand('add-missin
 `let g:LanguageClient_settingsPath=".lsp/settings.json"`
 
 Project-local `.lsp/settings.json` would have content like:
-```
+```clojure
 {"initializationOptions": {
    "source-paths": ["shared-src", "src", "test", "dashboard/src"],
    "macro-defs": {project.macros/dofor: ["bindings", "bound-elements"]}}}
@@ -271,16 +323,16 @@ Seems to work reasonably well but couldn't get rename to work reliably https://g
 ### Intellij / Cursive
 https://github.com/gtache/intellij-lsp tested only briefly.
 
-### vscode
+### VScode
 Proof of concept in the client-vscode directory in this repo.
 
-### atom
+### Atom
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.
 
-### emacs
-[lsp-mode](https://github.com/emacs-lsp/lsp-mode) has built in support for `clojure-lsp` since `lsp-mode-20190416.1936`. With `use-package` add the following to your emacs config:
+### Emacs
+[lsp-mode](https://github.com/emacs-lsp/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
 
-```
+```elisp
 (use-package lsp-mode
   :ensure t
   :hook ((clojure-mode . lsp)
@@ -296,13 +348,13 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
                clojurescript-mode
                clojurex-mode))
      (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
-  (setq lsp-enable-indentation nil
-        lsp-clojure-server-command '("bash" "-c" "clojure-lsp")))
+  (setq lsp-clojure-server-command '("bash" "-c" "clojure-lsp") ;; Optional: In case `clojure-lsp` is not in your PATH
+        lsp-enable-indentation nil))
 ```
 
-Optionally you can add `lsp-ui` and `company-lsp` too:
+Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completion:
 
-```
+```elisp
 (use-package lsp-ui
   :ensure t
   :commands lsp-ui-mode)
@@ -312,13 +364,13 @@ Optionally you can add `lsp-ui` and `company-lsp` too:
   :commands company-lsp)
 ```
 
-In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
+In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy, like `~/.lsp`) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
 
-```
+```clojure
 {"dependency-scheme" "jar"}
 ```
 
-In `lsp-mode` `lsp-clojure-server-command` defcustom is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
+In `lsp-mode` `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
 
 ## TODO
 

@@ -9,6 +9,7 @@
     (org.eclipse.lsp4j
       CodeAction
       CodeActionKind
+      CodeLens
       Command
       CompletionItem
       CompletionItemKind
@@ -196,6 +197,15 @@
                                             (.setCommand (:command %1))))))
 
 (s/def ::code-actions (s/coll-of ::code-action))
+
+(s/def ::code-lens (s/and (s/keys :req-un [::range]
+                                  :opt-un [::command ::data])
+                          (s/conformer #(doto (CodeLens.)
+                                          (.setRange (:range %1))
+                                          (.setCommand (:command %1))
+                                          (.setData (:data %1))))))
+
+(s/def ::code-lenses (s/coll-of ::code-lens))
 
 (defn debeaner [inst]
   (when inst

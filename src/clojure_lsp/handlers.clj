@@ -273,12 +273,13 @@
 (defn reference-usages [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor-sym (:sym (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id)))]
+        {cursor-sym :sym} (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))]
     (log/warn "references" doc-id line column cursor-sym)
     (into []
           (for [[uri usages] (:file-envs @db/db)
-                {:keys [sym] :as usage} usages
-                :when (= sym cursor-sym)]
+                {:keys [sym tags] :as usage} usages
+                :when (and (= sym cursor-sym)
+                           (not (contains? tags :declare)))]
             {:uri uri
              :usage usage}))))
 
@@ -513,7 +514,8 @@
         new-text (cljfmt/reformat-string
                    text
                    (get-in @db/db [:settings "cljfmt"]))]
-    (when-not (= new-text text)
+    (if (= new-text text)
+      []
       [{:range (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
         :new-text new-text}])))
 
@@ -597,3 +599,24 @@
              :command {:title     "Clean namespace"
                        :command   "clean-ns"
                        :arguments [doc-id line character]}}))))
+(defn code-lens
+  [doc-id]
+  (let [db     @db/db
+        usages (get-in db [:file-envs doc-id])]
+    (->> usages
+         (filter (fn [{:keys [tags]}]
+                   (and (contains? tags :declare)
+                        (not (contains? tags :alias))
+                        (not (contains? tags :param)))))
+         (map (fn [usage]
+                {:range (shared/->range usage)
+                 :data  [doc-id (:row usage) (:col usage)]})))))
+
+(defn code-lens-resolve
+  [range [doc-id row col]]
+  {:range   range
+   :command {:title   (-> doc-id
+                          (reference-usages row col)
+                          count
+                          (str " references"))
+             :command "code-lens-references"}})

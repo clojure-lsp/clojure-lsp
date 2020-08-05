@@ -10,6 +10,7 @@
     (string/ends-with? uri ".cljs") :cljs
     (string/ends-with? uri ".cljc") :cljc
     (string/ends-with? uri ".clj") :clj
+    (string/ends-with? uri ".edn") :edn
     :else :unknown))
 
 (defn ->range [{:keys [row end-row col end-col]}]

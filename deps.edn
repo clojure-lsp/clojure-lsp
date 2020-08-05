@@ -14,7 +14,8 @@
         cljfmt {:mvn/version "0.6.4" :exclusions [rewrite-cljs]}
         medley {:mvn/version "1.0.0"}
         com.taoensso/tufte {:mvn/version "2.0.1"}
-        trptcolin/versioneer {:mvn/version "0.2.0"}}
+        trptcolin/versioneer {:mvn/version "0.2.0"}
+        clj-kondo {:mvn/version "2020.07.29"}}
  :paths ["resources" "src"]
  :aliases {:run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx1g" "-server"]}}}

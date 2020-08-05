@@ -139,141 +139,148 @@
 (deftest test-find-diagnostics
   (testing "wrong arity"
     (testing "for argument destructuring"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo ([x] x) ([x y] (x y)))
-                                                                     (defn bar [y & rest] ((foo y y y) (bar rest)))
-                                                                     (defn baz [{x :x y :y :as long}
-                                                                                {:keys [k v] :as short}
-                                                                                [_ a b]]
-                                                                       (x y k v a b long short))
-                                                                     (baz :broken :brokken [nil :ok :okay])
-                                                                     (baz {bar baz foo :no?})
-                                                                     (bar)
-                                                                     (bar {:a [:b]})
-                                                                     (bar :one-fish :two-fish :red-fish :blue-fish)
-                                                                     [foo]
-                                                                     {foo 1 2 3}
-                                                                     [foo 1 (foo 5 6 7)]
-                                                                     (foo)
-                                                                     (foo 1)
-                                                                     (foo 1 ['a 'b])
-                                                                     (foo 1 2 3 {:k 1 :v 2})" :clj {})}})
-      (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= ["No overload for 'foo' with 3 arguments"
-                "No overload for 'baz' with 1 argument"
-                "No overload for 'bar' with 0 arguments"
-                "No overload for 'foo' with 3 arguments"
-                "No overload for 'foo' with 0 arguments"
-                "No overload for 'foo' with 4 arguments"]
-               (map :message usages)))))
-    (testing "for threading macros and doto"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo ([x] x) ([x y z] (z x y)))
-                                                                     (defn bar [] :bar)
-                                                                     (defn baz [arg & rest] (apply arg rest))
-                                                                     (->> :test
-                                                                       (foo)
-                                                                       (foo 1)
-                                                                       (bar))
-                                                                     (-> 1
-                                                                       (baz)
-                                                                       (->> (baz)
-                                                                            (foo 1 2))
-                                                                       (baz :p :q :r)
-                                                                       bar)
-                                                                     (cond-> 0
-                                                                      int? (bar :a :b)
-                                                                      false (foo)
-                                                                      :else (baz 3))
-                                                                     (doto 1
-                                                                       (foo)
-                                                                       (foo 1)
-                                                                       (bar))" :clj {})}})
-      (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= ["No overload for 'foo' with 2 arguments"
-                "No overload for 'bar' with 1 argument"
-                "No overload for 'bar' with 1 argument"
-                "No overload for 'bar' with 3 arguments"
-                "No overload for 'foo' with 2 arguments"
-                "No overload for 'bar' with 1 argument"]
-               (map :message usages)))))
+      (let [code "(defn foo ([x] x) ([x y] (x y)))
+                  (defn bar [y & rest] ((foo y y y) (bar rest)))
+                  (defn baz [{x :x y :y :as long}
+                             {:keys [k v] :as short}
+                             [_ a b]]
+                    (x y k v a b long short))
+                  (baz :broken :brokken [nil :ok :okay])
+                  (baz {bar baz foo :no?})
+                  (bar)
+                  (bar {:a [:b]})
+                  (bar :one-fish :two-fish :red-fish :blue-fish)
+                  [foo]
+                  {foo 1 2 3}
+                  [foo 1 (foo 5 6 7)]
+                  (foo)
+                  (foo 1)
+                  (foo 1 ['a 'b])
+                  (foo 1 2 3 {:k 1 :v 2})"]
+        (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
+        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+          (is (= ["No overload for 'foo' with 3 arguments"
+                  "No overload for 'baz' with 1 argument"
+                  "No overload for 'bar' with 0 arguments"
+                  "No overload for 'foo' with 3 arguments"
+                  "No overload for 'foo' with 0 arguments"
+                  "No overload for 'foo' with 4 arguments"]
+                 (map :message usages))))))
+    (testing "for threading macros"
+      (let [code "(defn foo ([x] x) ([x y z] (z x y)))
+                  (defn bar [] :bar)
+                  (defn baz [arg & rest] (apply arg rest))
+                  (->> :test
+                       (foo)
+                       (foo 1)
+                       (bar))
+                  (-> 1
+                      (baz)
+                      (->> (baz)
+                           (foo 1 2))
+                      (baz :p :q :r)
+                      bar)
+                  (cond-> 0
+                    int? (bar :a :b)
+                    false (foo)
+                    :else (baz 3))
+                  (doto 1
+                    (foo)
+                    (foo 1)
+                    (bar))"]
+        (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
+        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+          (is (= ["No overload for 'foo' with 2 arguments"
+                  "No overload for 'bar' with 1 argument"
+                  "No overload for 'bar' with 1 argument"
+                  "No overload for 'bar' with 3 arguments"
+                  "No overload for 'foo' with 2 arguments"
+                  "No overload for 'bar' with 1 argument"]
+                 (map :message usages))))))
     (testing "with annotations"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(defn foo {:added \"1.0\"} [x] (inc x))
-                                                                     (defn ^:private bar ^String [^Class x & rest] (str x rest))
-                                                                     (foo foo)
-                                                                     (foo foo foo)
-                                                                     (bar :a)
-                                                                     (bar :a :b)" :clj {})}})
-      (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= ["No overload for 'foo' with 2 arguments"]
-               (map :message usages)))))
+      (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
+                  (defn ^:private bar ^String [^Class x & rest] (str x rest))
+                  (foo foo)
+                  (foo foo foo)
+                  (bar :a)
+                  (bar :a :b)"]
+        (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
+        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+          (is (= ["No overload for 'foo' with 2 arguments"]
+                 (map :message usages))))))
     (testing "for meta arglists"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(def
-                                                                       ^{:doc \"Don't use this\"
-                                                                         :arglists '([z])
-                                                                         :added \"1.17\"
-                                                                         :static true}
-                                                                       foo nil)
-                                                                     (foo)
-                                                                     (foo (foo :a :b))" :clj {})}})
-      (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= ["No overload for 'foo' with 0 arguments"
-                "No overload for 'foo' with 2 arguments"]
-               (map :message usages)))))
+      (let [code "(def
+                    ^{:doc \"Don't use this\"
+                      :arglists '([z])
+                      :added \"1.17\"
+                      :static true}
+                    foo nil)
+                  (foo)
+                  (foo (foo :a :b))"]
+        (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
+        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+          (is (= ["No overload for 'foo' with 0 arguments"
+                  "No overload for 'foo' with 2 arguments"]
+                 (map :message usages))))))
     (testing "for schema defs"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages "(ns user (:require [schema.core :as s]))
-                                                                     (s/defn foo :- s/Str
-                                                                       [x :- Long y :- Long]
-                                                                       (str x y))
-                                                                     (foo)
-                                                                     (foo 1 2)
-                                                                     (foo 1)" :clj {})}})
-      (let [usages (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= ["Unused namespace: user"
-                "No overload for 'foo' with 0 arguments"
-                "No overload for 'foo' with 1 argument"]
-               (map :message usages)))))
+      (let [code "(ns user (:require [schema.core :as s]))
+                  (s/defn foo :- s/Str
+                    [x :- Long y :- Long]
+                    (str x y))
+                  (foo)
+                  (foo 1 2)
+                  (foo 1)"]
+        (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
+        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+          (is (= ["Unused namespace: user"
+                  "No overload for 'foo' with 0 arguments"
+                  "No overload for 'foo' with 1 argument"]
+                 (map :message usages))))))
     (testing "for ignore-arity? macros"
-      (let [usages  (parser/find-usages "(ns user (:require [schema.core :as s])) (s/defn foo [x :- int?] x) (foo 1 2 3)" :clj
-                                        {'schema.core/defn [{:element :declaration
-                                                             :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
-                                                             :signature-style :typed
-                                                             :ignore-arity? true}
-                                                            {:element :sub-elements
-                                                             :match-patterns [[:any :keyword :any] [:param :element :element]
-                                                                              [:any] [:param]]}
-                                                            :bound-elements]})
+      (let [code "(ns user (:require [schema.core :as s])) (s/defn foo [x :- int?] x) (foo 1 2 3)"
+            usages (parser/find-usages code :clj
+                                       {'schema.core/defn [{:element :declaration
+                                                            :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
+                                                            :signature-style :typed
+                                                            :ignore-arity? true}
+                                                           {:element :sub-elements
+                                                            :match-patterns [[:any :keyword :any] [:param :element :element]
+                                                                             [:any] [:param]]}
+                                                           :bound-elements]})
             _ (reset! db/db {:file-envs {"file://a.clj" usages}})
-            diagnostics (crawler/find-diagnostics #{} "file://a.clj" (get-in @db/db [:file-envs "file://a.clj"]))]
+            diagnostics (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
         (is (= [] (mapv :message (drop 1 diagnostics)))))))
   (testing "unused symbols"
-    (reset! db/db {:file-envs
-                   {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
-                    "file://b.clj" (parser/find-usages "(ns b
-                                                          (:require [a :as a]
-                                                            [c :as c]
-                                                            [d :as d-alias]
-                                                            [e :as e-alias]
-                                                            [clojure.spec.alpha :as s]
-                                                            [schema.core :as sc]))
-                                                        (s/fdef wat)
-                                                        (sc/defn over :- s/Int
-                                                          ([a :- s/Int] a)
-                                                          ([a :- s/Int b :- s/Int] (+ a b)))
-                                                        (over 1)
-                                                        (over 2 :a)
-                                                        (def x a/bar)
-                                                        (declare y)
-                                                        (defn y [])
-                                                        :a/bar
-                                                        (let [{:keys [::d-alias/bar] ::e-alias/keys [foo] ::f/keys [qux]} {}]
-                                                          [bar qux foo])" :clj {})}})
-    (let [usages (crawler/find-diagnostics #{} "file://b.clj" (get-in @db/db [:file-envs "file://b.clj"]))]
-      (is (= ["Unknown namespace: f"
-              "Unused alias: c"
-              "Unused namespace: b"
-              "Unused declaration: x"
-              "Unused declaration: y"
-              "Unknown forward declaration: wat"]
-             (map :message usages))))))
+    (let [code-b "(ns b
+                    (:require [a :as a]
+                      [c :as c]
+                      [d :as d-alias]
+                      [e :as e-alias]
+                      [clojure.spec.alpha :as s]
+                      [schema.core :as sc]))
+                  (s/fdef wat)
+                  (sc/defn over :- s/Int
+                    ([a :- s/Int] a)
+                    ([a :- s/Int b :- s/Int] (+ a b)))
+                  (over 1)
+                  (over 2 :a)
+                  (def x a/bar)
+                  (declare y)
+                  (defn y [])
+                  :a/bar
+                  (let [{:keys [::d-alias/bar] ::e-alias/keys [foo] ::f/keys [qux]} {}]
+                    [bar qux foo])"]
+      (reset! db/db {:file-envs
+                     {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
+                      "file://b.clj" (parser/find-usages code-b :clj {})}})
+      (let [usages (crawler/find-diagnostics #{} "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]))]
+        (is (= ["Unknown namespace: f"
+                "Unused alias: c"
+                "Unused namespace: b"
+                "Unused declaration: x"
+                "Unused declaration: y"
+                "Unknown forward declaration: wat"]
+               (map :message usages)))))))
 
 (deftest test-completion
   (let [db-state {:file-envs

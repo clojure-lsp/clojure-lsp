@@ -126,7 +126,8 @@
                        #{:ns} :unused-ns
                        #{:public} :unused-public
                        :unused)]
-          :when (= :unused-public code)]  ;; Other types covered by clj-kondo
+          :when (or (not= :unused-ns code)
+                    (not (string/index-of uri "test/")))]
       {:range (shared/->range usage)
        :code code
        :message (case code
@@ -168,11 +169,15 @@
             (diagnose-unused-references uri declared-references all-envs))))
 
 (defn- kondo-finding->diagnostic [lines {:keys [message level row col] :as finding}]
-  (let [^String line (nth lines (max 0 (dec row)))
-        start-char (.charAt line (max 0 (dec col)))
-        finding (merge {:end-row row :end-col (inc col)}
-                       finding)]
-    {:range (shared/->range (if (= \( start-char)
+  (let [decrow (max 0 (dec row))
+        deccol (max 0 (dec col))
+        ^String line (when (> (count lines) decrow)
+                       (nth lines decrow))
+        start-char (when (> (count line) deccol)
+                     (.charAt line deccol))
+        expression? (identical? \( start-char)
+        finding (merge {:end-row row :end-col col} finding)]
+    {:range (shared/->range (if expression?
                               (assoc finding :end-row row :end-col col)
                               finding))
     :message (str (string/upper-case (str (first message))) (string/join (rest message)))
@@ -182,16 +187,29 @@
                 :info 3)
     :source "clj-kondo"}))
 
+(def kondo-base-args {:cache true
+                      :cache-dir ".clj-kondo/cache"
+                      :config {:linters (into {} (map #(hash-map % {:level :off})
+                                                      #{:invalid-arity
+                                                        :unused-bindings
+                                                        :unresolved-symbol
+                                                        :unresolved-namespace
+                                                        :unused-namespace}))}})
+
+(defn- run-kondo!
+  ([paths]
+   (kondo/run! (merge kondo-base-args {:lint paths})))
+  ([text lang]
+   (with-in-str text (kondo/run! (merge kondo-base-args {:lint ["-"]
+                                                         :lang lang})))))
+
 (defn- kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
-        {:keys [findings]} (with-in-str text (kondo/run! {:lint ["-"]
-                                                          :lang file-type
-                                                          :config {:linters {:invalid-arity {:level :off}
-                                                                             :unused-bindings {:level :off}
-                                                                             :unresolved-symbol {:level :off}
-                                                                             :unresolved-namespace {:level :off}}}}))
+        {:keys [findings]} (run-kondo! text file-type)
         lines (string/split-lines text)]
-    (map (partial kondo-finding->diagnostic lines) findings)))
+    (->> findings
+         (filter #(= "<stdin>" (:filename %)))
+         (map (partial kondo-finding->diagnostic lines)))))
 
 (defn find-diagnostics [project-aliases uri text usages]
   (let [kondo-chan (async/go (kondo-find-diagnostics uri text))
@@ -344,14 +362,20 @@
                                            (reduce-kv (fn [m k v]
                                                         (assoc m k (map second v))) {}))
             jars (:file classpath-entries-by-type)
+            kondo-output-chan (async/go (run-kondo! classpath))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars dependency-scheme))
             source-envs (crawl-source-dirs source-paths)
             file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
         (db/save-deps root-path project-hash classpath jar-envs)
+        (log/info "clj-kondo initialized in"
+                  (str (get-in (async/<!! kondo-output-chan) [:summary :duration]) "ms"))
         (merge source-envs file-envs jar-envs))
-      (crawl-source-dirs source-paths))))
+      (let [crawler-output-chan (async/go (crawl-source-dirs source-paths))]
+        (log/info "clj-kondo initialized in"
+                  (str (get-in (run-kondo! source-paths) [:summary :duration]) "ms"))
+        (async/<!! crawler-output-chan)))))
 
 (defn find-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]

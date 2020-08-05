@@ -249,7 +249,7 @@
                                                            :bound-elements]})
             _ (reset! db/db {:file-envs {"file://a.clj" usages}})
             diagnostics (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= [] (map :message (drop 1 diagnostics)))))))
+        (is (= [] (mapv :message (drop 1 diagnostics)))))))
   (testing "unused symbols"
     (let [code-b "(ns b
                     (:require [a :as a]

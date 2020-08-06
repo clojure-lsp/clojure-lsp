@@ -346,7 +346,6 @@
      every?
      ex-data
      ex-info
-     exists?
      extend
      extend-protocol
      extend-type
@@ -1118,6 +1117,7 @@
      es6-set-entries-iterator
      ex-cause
      ex-message
+     exists?
      find-macros-ns
      find-ns-obj
      gensym_counter

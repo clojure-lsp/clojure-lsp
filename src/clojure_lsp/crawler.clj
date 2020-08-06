@@ -125,7 +125,7 @@
 
 (defn- kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
-        user-config (get-in @db/db [:settings :clj-kondo])
+        user-config (get-in @db/db [:settings "clj-kondo"])
         {:keys [findings]} (run-kondo! text file-type user-config)
         lines (string/split-lines text)]
     (->> findings
@@ -264,7 +264,7 @@
         dependency-scheme (get settings "dependency-scheme")
         ignore-directories? (get settings "ignore-classpath-directories")
         project-specs (or (get settings "project-specs") default-project-specs)
-        kondo-user-config (get settings :clj-kondo)
+        kondo-user-config (get settings "clj-kondo")
         project (get-project-from root-path project-specs)]
     (if (some? project)
       (let [project-hash (:project-hash project)

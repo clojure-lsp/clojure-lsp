@@ -58,13 +58,13 @@
                        #{:ns} :unused-ns
                        #{:public} :unused-public
                        :unused)]
-          :when (or (not= :unused-ns code)
-                    (not (string/index-of uri "test/")))]
+          :when (and (not= code :unused-param)
+                     (or (not= :unused-ns code)
+                         (not (string/index-of uri "test/"))))]
       {:range (shared/->range usage)
        :code code
        :message (case code
                   :unused-ns (str "Unused namespace: " (:str usage))
-                  :unused-param (str "Unused parameter: " (:str usage))
                   (str "Unused declaration: " (:str usage)))
        :severity 2})))
 
@@ -77,13 +77,6 @@
          set
          (set/difference (set (map :ns declared-aliases))))))
 
-(defn ^:private diagnose-unused-aliases [_uri declared-aliases unused-aliases]
-  (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
-    {:range (shared/->range usage)
-     :code :unused-alias
-     :message (str "Unused alias: " (:str usage))
-     :severity 2}))
-
 (defn ^:private usages->declarations [usages]
   (->> usages
        (filter (comp #(and (contains? % :declare)
@@ -94,11 +87,8 @@
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
         declarations (usages->declarations usages)
-        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
-        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)
-        unused-aliases (process-unused-aliases usages declared-aliases)]
-    (concat (diagnose-unused-aliases uri declared-aliases unused-aliases)
-            (diagnose-unused-references uri declared-references all-envs))))
+        declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
+    (concat (diagnose-unused-references uri declared-references all-envs))))
 
 (defn- kondo-finding->diagnostic [lines {:keys [message level row col] :as finding}]
   (let [decrow (max 0 (dec row))
@@ -120,10 +110,7 @@
     :source "clj-kondo"}))
 
 (def kondo-base-args {:cache true
-                      :cache-dir ".clj-kondo/cache"
-                      :config {:linters (into {} (map #(hash-map % {:level :off})
-                                                      #{:unused-bindings
-                                                        :unused-namespace}))}})
+                      :cache-dir ".clj-kondo/cache"})
 
 (defn- run-kondo!
   ([paths user-config]

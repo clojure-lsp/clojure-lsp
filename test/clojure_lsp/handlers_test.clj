@@ -261,11 +261,11 @@
                      {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
                       "file://b.clj" (parser/find-usages code-b :clj {})}})
       (let [usages (crawler/find-diagnostics "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]))]
-        (is (= ["Unused alias: c"
-                "Unused namespace: b"
+        (is (= ["Unused namespace: b"
                 "Unused declaration: x"
                 "Unused declaration: y"
                 "Unknown forward declaration: wat"
+                "namespace c is required but never used"
                 "Unresolved namespace f. Are you missing a require?"]
                (map :message usages)))))))
 

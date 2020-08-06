@@ -346,6 +346,7 @@
      every?
      ex-data
      ex-info
+     exists?
      extend
      extend-protocol
      extend-type

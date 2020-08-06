@@ -1186,6 +1186,7 @@
      t_cljs$core11184
      t_cljs$core9576
      tap>
+     this-as
      transformer-iterator
      truth_
      type->str

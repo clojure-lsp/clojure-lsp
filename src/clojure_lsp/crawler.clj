@@ -197,15 +197,20 @@
                                                         :unused-namespace}))}})
 
 (defn- run-kondo!
-  ([paths]
-   (kondo/run! (merge kondo-base-args {:lint paths})))
-  ([text lang]
-   (with-in-str text (kondo/run! (merge kondo-base-args {:lint ["-"]
-                                                         :lang lang})))))
+  ([paths user-config]
+   (kondo/run! (-> kondo-base-args
+                   (merge {:lint paths})
+                   (update-in [:config] merge user-config))))
+  ([text lang user-config]
+   (with-in-str text (kondo/run! (-> kondo-base-args
+                                     (merge {:lint ["-"]
+                                             :lang lang})
+                                     (update-in [:config] merge user-config))))))
 
 (defn- kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
-        {:keys [findings]} (run-kondo! text file-type)
+        user-config (get-in @db/db [:settings :clj-kondo])
+        {:keys [findings]} (run-kondo! text file-type user-config)
         lines (string/split-lines text)]
     (->> findings
          (filter #(= "<stdin>" (:filename %)))
@@ -346,6 +351,7 @@
         dependency-scheme (get settings "dependency-scheme")
         ignore-directories? (get settings "ignore-classpath-directories")
         project-specs (or (get settings "project-specs") default-project-specs)
+        kondo-user-config (get settings :clj-kondo)
         project (get-project-from root-path project-specs)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -362,19 +368,19 @@
                                            (reduce-kv (fn [m k v]
                                                         (assoc m k (map second v))) {}))
             jars (:file classpath-entries-by-type)
-            kondo-output-chan (async/go (run-kondo! classpath))
+            kondo-output-chan (async/go (run-kondo! classpath kondo-user-config))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars dependency-scheme))
             source-envs (crawl-source-dirs source-paths)
             file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
         (db/save-deps root-path project-hash classpath jar-envs)
-        (log/info "clj-kondo initialized in"
+        (log/info "clj-kondo scanned project classpath in"
                   (str (get-in (async/<!! kondo-output-chan) [:summary :duration]) "ms"))
         (merge source-envs file-envs jar-envs))
       (let [crawler-output-chan (async/go (crawl-source-dirs source-paths))]
-        (log/info "clj-kondo initialized in"
-                  (str (get-in (run-kondo! source-paths) [:summary :duration]) "ms"))
+        (log/info "clj-kondo scanned file classpath in"
+                  (str (get-in (run-kondo! source-paths kondo-user-config) [:summary :duration]) "ms"))
         (async/<!! crawler-output-chan)))))
 
 (defn find-project-settings [project-root]

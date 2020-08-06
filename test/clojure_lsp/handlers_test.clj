@@ -159,12 +159,12 @@
                   (foo 1 2 3 {:k 1 :v 2})"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
         (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
-          (is (= ["No overload for 'foo' with 3 arguments"
-                  "No overload for 'baz' with 1 argument"
-                  "No overload for 'bar' with 0 arguments"
-                  "No overload for 'foo' with 3 arguments"
-                  "No overload for 'foo' with 0 arguments"
-                  "No overload for 'foo' with 4 arguments"]
+          (is (= ["user/foo is called with 3 args but expects 1 or 2"
+                  "user/baz is called with 1 arg but expects 3"
+                  "user/bar is called with 0 args but expects 1 or more"
+                  "user/foo is called with 3 args but expects 1 or 2"
+                  "user/foo is called with 0 args but expects 1 or 2"
+                  "user/foo is called with 4 args but expects 1 or 2"]
                  (map :message usages))))))
     (testing "for threading macros"
       (let [code "(defn foo ([x] x) ([x y z] (z x y)))
@@ -190,12 +190,12 @@
                     (bar))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
         (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
-          (is (= ["No overload for 'foo' with 2 arguments"
-                  "No overload for 'bar' with 1 argument"
-                  "No overload for 'bar' with 1 argument"
-                  "No overload for 'bar' with 3 arguments"
-                  "No overload for 'foo' with 2 arguments"
-                  "No overload for 'bar' with 1 argument"]
+          (is (= ["user/foo is called with 2 args but expects 1 or 3"
+                  "user/bar is called with 1 arg but expects 0"
+                  "user/bar is called with 1 arg but expects 0"
+                  "user/bar is called with 3 args but expects 0"
+                  "user/foo is called with 2 args but expects 1 or 3"
+                  "user/bar is called with 1 arg but expects 0"]
                  (map :message usages))))))
     (testing "with annotations"
       (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
@@ -206,9 +206,10 @@
                   (bar :a :b)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
         (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
-          (is (= ["No overload for 'foo' with 2 arguments"]
+          (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message usages))))))
-    (testing "for meta arglists"
+    ;; Waiting for kondo implement this support: https://github.com/borkdude/clj-kondo/issues/912
+    #_(testing "for meta arglists"
       (let [code "(def
                     ^{:doc \"Don't use this\"
                       :arglists '([z])
@@ -233,23 +234,9 @@
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
         (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["Unused namespace: user"
-                  "No overload for 'foo' with 0 arguments"
-                  "No overload for 'foo' with 1 argument"]
-                 (map :message usages))))))
-    (testing "for ignore-arity? macros"
-      (let [code "(ns user (:require [schema.core :as s])) (s/defn foo [x :- int?] x) (foo 1 2 3)"
-            usages (parser/find-usages code :clj
-                                       {'schema.core/defn [{:element :declaration
-                                                            :signature [{:pred :keyword} {:pred :follows-constant :constant :-} {:pred :string} {:pred :map}]
-                                                            :signature-style :typed
-                                                            :ignore-arity? true}
-                                                           {:element :sub-elements
-                                                            :match-patterns [[:any :keyword :any] [:param :element :element]
-                                                                             [:any] [:param]]}
-                                                           :bound-elements]})
-            _ (reset! db/db {:file-envs {"file://a.clj" usages}})
-            diagnostics (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
-        (is (= [] (mapv :message (drop 1 diagnostics)))))))
+                  "user/foo is called with 0 args but expects 2"
+                  "user/foo is called with 1 arg but expects 2"]
+                 (map :message usages)))))))
   (testing "unused symbols"
     (let [code-b "(ns b
                     (:require [a :as a]

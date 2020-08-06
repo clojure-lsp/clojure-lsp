@@ -44,50 +44,6 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
-(def ignore-arity
-  #{'clojure.core/defn     ; regex-like arglists
-    'cljs.core/defn
-    'clojure.core/defmacro ; regex-like arglists
-    'cljs.core/defmacro})
-
-(defn ^:private supports-argc [signature argc]
-  (let [min-argc (count (take-while #(not= '& %) signature))
-        has-rest (not= min-argc (count signature))]
-    (if has-rest
-      (>= argc min-argc)
-      (= argc min-argc))))
-
-(defn ^:private diagnose-wrong-arity [uri usages]
-  (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        call-sites (filter :argc usages)
-        function-syms (set (map :sym call-sites))
-        function-references (into {} (comp
-                                       (mapcat val)
-                                       (filter :signatures)
-                                       (filter (comp function-syms :sym))
-                                       (map (juxt :sym identity)))
-                                  all-envs)]
-    (for [call-site call-sites
-          :let [argc (:argc call-site)
-                function-sym (:sym call-site)
-                relevant-function (get function-references function-sym)
-                overloads (get-in relevant-function [:signatures :sexprs])]
-          :when (and
-                  overloads
-                  (not (ignore-arity function-sym))
-                  (not (contains? (:tags relevant-function) :ignore-arity?))
-                  (try
-                    (not-any? #(supports-argc % argc) overloads)
-                    (catch Exception e
-                      (log/warn "Couldn't interpret signature for" function-sym ":" (.getMessage e))
-                      false)))]
-      {:range (shared/->range call-site)
-       :code :wrong-arity
-       :message (let [plural (not= argc 1)]
-                  (format "No overload for '%s' with %d argument%s"
-                          (:str call-site) argc (if plural "s" "")))
-       :severity 1})))
-
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
                         (mapcat (comp val))
@@ -156,7 +112,7 @@
     {:range (shared/->range (if expression?
                               (assoc finding :end-row row :end-col col)
                               finding))
-    :message (str (string/upper-case (str (first message))) (string/join (rest message)))
+    :message message
     :severity (case level
                 :error 1
                 :warning 2
@@ -166,8 +122,7 @@
 (def kondo-base-args {:cache true
                       :cache-dir ".clj-kondo/cache"
                       :config {:linters (into {} (map #(hash-map % {:level :off})
-                                                      #{:invalid-arity
-                                                        :unused-bindings
+                                                      #{:unused-bindings
                                                         :unused-namespace}))}})
 
 (defn- run-kondo!
@@ -194,8 +149,7 @@
   (let [kondo-chan (async/go (kondo-find-diagnostics uri text))
         unused (diagnose-unused uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        wrong-arity (diagnose-wrong-arity uri usages)
-        result (concat unused unknown-forwards (async/<!! kondo-chan) wrong-arity)]
+        result (concat unused unknown-forwards (async/<!! kondo-chan))]
     result))
 
 (defn safe-find-references

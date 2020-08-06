@@ -15,13 +15,14 @@ You will get:
 - **Jump to definition**
 - **Find usages**
 - **Renaming**
+- **Code actions**
 - **Errors**
 - **Automatic ns management**
 - **Refactorings**
 
-This is an early work in progress, contributions are very welcome.
-
 ## Installation
+
+### Manually
 
 - You need `java` on your $PATH.
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
@@ -106,8 +107,8 @@ Besides LSP official capabilities, `clojure-lsp` has some extra features:
 
 ### Refactorings
 
-It should be possible to introduce most of the refactorings here: https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples
-Calling executeCommand with the following commands and additional args will notify the client with `applyEdit`.
+It should be possible to introduce most of the refactorings [here](https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples)
+Calling `executeCommand` with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
 | done | command             | args                                          | notes                                |
@@ -159,16 +160,23 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
     "and": [["inner", 0]],
     "or": [["inner", 0]],
     "are": [["inner", 0]]
-}},
+  }
+},
 ```
 
-`linters` some initial support for disabling diagnostics currently only this one that will suppress the unused alias warning and stop the require from being cleaned by `clean-ns`:
+`clj-kondo` (Experimental) -  `clojure-lsp` uses [clj-kondo](https://github.com/borkdude/clj-kondo) to lint code, so you can use here any `clj-kondo` configuration or just have your config file by project at `.clj-kondo/config.edn`, for more information about `clj-kondo` available configurations, check [here](https://github.com/borkdude/clj-kondo/blob/master/doc/config.md).
+
+```clojure
+"clj-kondo" {:linters {:missing-docstring {:level :warning}}}
+```
+ 
+~`linters`~ (Deprecated in favor of `clj-kondo`) - some initial support for disabling diagnostics currently only this one that will suppress the unused alias warning and stop the require from being cleaned by `clean-ns`:
 
 ```clojure
  "linters" {:unused-namespace {:exclude [clojure.data]}}
 ```
 
-`project-specs` value is a vector containing a map of key/value pairs, for example:
+`project-specs` - value is a vector containing a map of key/value pairs, for example:
 ```clojure
 "initializationOptions": {
     "project-specs": [{
@@ -198,7 +206,6 @@ An element represents one or more forms within a macro-def vector. They can be d
 
 * A map that includes the element type and options,
   e.g. `{:element :declaration, :tags ["unused" "local"], :signature ["next"]}`
-
 
 #### Element types
 
@@ -269,7 +276,8 @@ LSP will also look for project specific settings in a file called '.lsp/config.e
 
 ```clojure
 {"macro-defs" {korma.core/defentity [:declaration :elements]}
- "cljfmt" {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}}
+ "cljfmt" {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
+ "clj-kondo" {:linters {:missing-docstring {:level :warning}}}}
  ```
 
 ## Clients
@@ -317,20 +325,8 @@ Project-local `.lsp/settings.json` would have content like:
    "macro-defs": {project.macros/dofor: ["bindings", "bound-elements"]}}}
 ```
 
-### Oni
-Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni
-
-### Intellij / Cursive
-https://github.com/gtache/intellij-lsp tested only briefly.
-
-### VScode
-Proof of concept in the client-vscode directory in this repo.
-
-### Atom
-I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.
-
 ### Emacs
-[lsp-mode](https://github.com/emacs-lsp/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
+[lsp-mode](https://emacs-lsp.github.io/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
 
 ```elisp
 (use-package lsp-mode
@@ -372,14 +368,23 @@ In order to make the jumping into dependency jars work you have to have a `confi
 
 In `lsp-mode` `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
 
+
+### Oni
+Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni
+
+### Intellij / Cursive
+https://github.com/gtache/intellij-lsp tested only briefly.
+
+### VScode
+Proof of concept in the client-vscode directory in this repo.
+
+### Atom
+I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.
+
 ## TODO
 
-### Diagnostics
-- configuration (see joker lint options)
-
 ### Others
-- Better completion item kinds and auto require
-- other lsp capabilities?
+- Better completion item kinds
 
 ## Building local
 

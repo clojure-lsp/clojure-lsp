@@ -26,30 +26,6 @@
 (defn- uri->path [uri]
   (Paths/get (URI. uri)))
 
-(defn ^:private diagnose-unknown [project-aliases usages]
-  (let [unknown-usages (seq (filter (fn [usage] (contains? (:tags usage) :unknown))
-                                    usages))
-        aliases (set/map-invert project-aliases)]
-    (for [usage unknown-usages
-          :let [known-alias? (some-> (:unkown-ns usage)
-                                     aliases)
-                problem (cond
-                          known-alias?
-                          :require
-
-                          (:unknown-ns usage)
-                          :unknown-ns
-
-                          :else
-                          :unknown)]]
-      {:range (shared/->range usage)
-       :code problem
-       :message (case problem
-                  :unknown (str "Unknown symbol: " (:str usage))
-                  :unknown-ns (str "Unknown namespace: " (:unknown-ns usage))
-                  :require "Needs Require")
-       :severity 1})))
-
 (defn ^:private diagnose-unknown-forward-declarations [usages]
   (let [forward-usages (seq (filter (fn [usage] (contains? (:tags usage) :forward))
                                     usages))
@@ -68,50 +44,6 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
-(def ignore-arity
-  #{'clojure.core/defn     ; regex-like arglists
-    'cljs.core/defn
-    'clojure.core/defmacro ; regex-like arglists
-    'cljs.core/defmacro})
-
-(defn ^:private supports-argc [signature argc]
-  (let [min-argc (count (take-while #(not= '& %) signature))
-        has-rest (not= min-argc (count signature))]
-    (if has-rest
-      (>= argc min-argc)
-      (= argc min-argc))))
-
-(defn ^:private diagnose-wrong-arity [uri usages]
-  (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        call-sites (filter :argc usages)
-        function-syms (set (map :sym call-sites))
-        function-references (into {} (comp
-                                       (mapcat val)
-                                       (filter :signatures)
-                                       (filter (comp function-syms :sym))
-                                       (map (juxt :sym identity)))
-                                  all-envs)]
-    (for [call-site call-sites
-          :let [argc (:argc call-site)
-                function-sym (:sym call-site)
-                relevant-function (get function-references function-sym)
-                overloads (get-in relevant-function [:signatures :sexprs])]
-          :when (and
-                  overloads
-                  (not (ignore-arity function-sym))
-                  (not (contains? (:tags relevant-function) :ignore-arity?))
-                  (try
-                    (not-any? #(supports-argc % argc) overloads)
-                    (catch Exception e
-                      (log/warn "Couldn't interpret signature for" function-sym ":" (.getMessage e))
-                      false)))]
-      {:range (shared/->range call-site)
-       :code :wrong-arity
-       :message (let [plural (not= argc 1)]
-                  (format "No overload for '%s' with %d argument%s"
-                          (:str call-site) argc (if plural "s" "")))
-       :severity 1})))
-
 (defn ^:private diagnose-unused-references [uri declared-references all-envs]
   (let [references (->> all-envs
                         (mapcat (comp val))
@@ -126,13 +58,13 @@
                        #{:ns} :unused-ns
                        #{:public} :unused-public
                        :unused)]
-          :when (or (not= :unused-ns code)
-                    (not (string/index-of uri "test/")))]
+          :when (and (not= code :unused-param)
+                     (or (not= :unused-ns code)
+                         (not (string/index-of uri "test/"))))]
       {:range (shared/->range usage)
        :code code
        :message (case code
                   :unused-ns (str "Unused namespace: " (:str usage))
-                  :unused-param (str "Unused parameter: " (:str usage))
                   (str "Unused declaration: " (:str usage)))
        :severity 2})))
 
@@ -145,13 +77,6 @@
          set
          (set/difference (set (map :ns declared-aliases))))))
 
-(defn ^:private diagnose-unused-aliases [_uri declared-aliases unused-aliases]
-  (for [usage (filter (comp unused-aliases :ns) declared-aliases)]
-    {:range (shared/->range usage)
-     :code :unused-alias
-     :message (str "Unused alias: " (:str usage))
-     :severity 2}))
-
 (defn ^:private usages->declarations [usages]
   (->> usages
        (filter (comp #(and (contains? % :declare)
@@ -162,11 +87,8 @@
 (defn ^:private diagnose-unused [uri usages]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
         declarations (usages->declarations usages)
-        declared-references (remove (comp #(contains? % :alias) :tags) declarations)
-        declared-aliases (filter (comp #(contains? % :alias) :tags) declarations)
-        unused-aliases (process-unused-aliases usages declared-aliases)]
-    (concat (diagnose-unused-aliases uri declared-aliases unused-aliases)
-            (diagnose-unused-references uri declared-references all-envs))))
+        declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
+    (concat (diagnose-unused-references uri declared-references all-envs))))
 
 (defn- kondo-finding->diagnostic [lines {:keys [message level row col] :as finding}]
   (let [decrow (max 0 (dec row))
@@ -180,7 +102,7 @@
     {:range (shared/->range (if expression?
                               (assoc finding :end-row row :end-col col)
                               finding))
-    :message (str (string/upper-case (str (first message))) (string/join (rest message)))
+    :message message
     :severity (case level
                 :error 1
                 :warning 2
@@ -188,13 +110,7 @@
     :source "clj-kondo"}))
 
 (def kondo-base-args {:cache true
-                      :cache-dir ".clj-kondo/cache"
-                      :config {:linters (into {} (map #(hash-map % {:level :off})
-                                                      #{:invalid-arity
-                                                        :unused-bindings
-                                                        :unresolved-symbol
-                                                        :unresolved-namespace
-                                                        :unused-namespace}))}})
+                      :cache-dir ".clj-kondo/cache"})
 
 (defn- run-kondo!
   ([paths user-config]
@@ -216,13 +132,11 @@
          (filter #(= "<stdin>" (:filename %)))
          (map (partial kondo-finding->diagnostic lines)))))
 
-(defn find-diagnostics [project-aliases uri text usages]
+(defn find-diagnostics [uri text usages]
   (let [kondo-chan (async/go (kondo-find-diagnostics uri text))
-        unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
-        wrong-arity (diagnose-wrong-arity uri usages)
-        result (concat unknown unused unknown-forwards (async/<!! kondo-chan) wrong-arity)]
+        result (concat unused unknown-forwards (async/<!! kondo-chan))]
     result))
 
 (defn safe-find-references
@@ -230,7 +144,6 @@
    (safe-find-references uri text true false))
   ([uri text diagnose? remove-private?]
    (try
-     #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (shared/uri->file-type uri)
            macro-defs (get-in @db/db [:settings "macro-defs"])
            references (cond->> (parser/find-usages uri text file-type macro-defs)
@@ -238,7 +151,7 @@
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri
-                      :diagnostics (find-diagnostics (:project-aliases @db/db) uri text references)}))
+                      :diagnostics (find-diagnostics uri text references)}))
        references)
      (catch Throwable e
        (log/warn e "Cannot parse: " uri (.getMessage e))

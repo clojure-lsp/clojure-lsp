@@ -278,7 +278,8 @@
                 "Unused namespace: b"
                 "Unused declaration: x"
                 "Unused declaration: y"
-                "Unknown forward declaration: wat"]
+                "Unknown forward declaration: wat"
+                "Unresolved namespace f. Are you missing a require?"]
                (map :message usages)))))))
 
 (deftest test-completion

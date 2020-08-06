@@ -168,7 +168,6 @@
                       :config {:linters (into {} (map #(hash-map % {:level :off})
                                                       #{:invalid-arity
                                                         :unused-bindings
-                                                        :unresolved-namespace
                                                         :unused-namespace}))}})
 
 (defn- run-kondo!

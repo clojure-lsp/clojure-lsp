@@ -26,30 +26,6 @@
 (defn- uri->path [uri]
   (Paths/get (URI. uri)))
 
-(defn ^:private diagnose-unknown [project-aliases usages]
-  (let [unknown-usages (seq (filter (fn [usage] (contains? (:tags usage) :unknown))
-                                    usages))
-        aliases (set/map-invert project-aliases)]
-    (for [usage unknown-usages
-          :let [known-alias? (some-> (:unkown-ns usage)
-                                     aliases)
-                problem (cond
-                          known-alias?
-                          :require
-
-                          (:unknown-ns usage)
-                          :unknown-ns
-
-                          :else
-                          :unknown)]]
-      {:range (shared/->range usage)
-       :code problem
-       :message (case problem
-                  :unknown (str "Unknown symbol: " (:str usage))
-                  :unknown-ns (str "Unknown namespace: " (:unknown-ns usage))
-                  :require "Needs Require")
-       :severity 1})))
-
 (defn ^:private diagnose-unknown-forward-declarations [usages]
   (let [forward-usages (seq (filter (fn [usage] (contains? (:tags usage) :forward))
                                     usages))
@@ -192,7 +168,6 @@
                       :config {:linters (into {} (map #(hash-map % {:level :off})
                                                       #{:invalid-arity
                                                         :unused-bindings
-                                                        :unresolved-symbol
                                                         :unresolved-namespace
                                                         :unused-namespace}))}})
 
@@ -216,13 +191,12 @@
          (filter #(= "<stdin>" (:filename %)))
          (map (partial kondo-finding->diagnostic lines)))))
 
-(defn find-diagnostics [project-aliases uri text usages]
+(defn find-diagnostics [uri text usages]
   (let [kondo-chan (async/go (kondo-find-diagnostics uri text))
-        unknown (diagnose-unknown project-aliases usages)
         unused (diagnose-unused uri usages)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
         wrong-arity (diagnose-wrong-arity uri usages)
-        result (concat unknown unused unknown-forwards (async/<!! kondo-chan) wrong-arity)]
+        result (concat unused unknown-forwards (async/<!! kondo-chan) wrong-arity)]
     result))
 
 (defn safe-find-references
@@ -230,7 +204,6 @@
    (safe-find-references uri text true false))
   ([uri text diagnose? remove-private?]
    (try
-     #_(log/warn "trying" uri (get-in @db/db [:documents uri :v]))
      (let [file-type (shared/uri->file-type uri)
            macro-defs (get-in @db/db [:settings "macro-defs"])
            references (cond->> (parser/find-usages uri text file-type macro-defs)
@@ -238,7 +211,7 @@
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri
-                      :diagnostics (find-diagnostics (:project-aliases @db/db) uri text references)}))
+                      :diagnostics (find-diagnostics uri text references)}))
        references)
      (catch Throwable e
        (log/warn e "Cannot parse: " uri (.getMessage e))

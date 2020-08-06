@@ -158,7 +158,7 @@
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
-        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["No overload for 'foo' with 3 arguments"
                   "No overload for 'baz' with 1 argument"
                   "No overload for 'bar' with 0 arguments"
@@ -189,7 +189,7 @@
                     (foo 1)
                     (bar))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
-        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["No overload for 'foo' with 2 arguments"
                   "No overload for 'bar' with 1 argument"
                   "No overload for 'bar' with 1 argument"
@@ -205,7 +205,7 @@
                   (bar :a)
                   (bar :a :b)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
-        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["No overload for 'foo' with 2 arguments"]
                  (map :message usages))))))
     (testing "for meta arglists"
@@ -218,7 +218,7 @@
                   (foo)
                   (foo (foo :a :b))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
-        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["No overload for 'foo' with 0 arguments"
                   "No overload for 'foo' with 2 arguments"]
                  (map :message usages))))))
@@ -231,7 +231,7 @@
                   (foo 1 2)
                   (foo 1)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})}})
-        (let [usages (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
           (is (= ["Unused namespace: user"
                   "No overload for 'foo' with 0 arguments"
                   "No overload for 'foo' with 1 argument"]
@@ -248,7 +248,7 @@
                                                                              [:any] [:param]]}
                                                            :bound-elements]})
             _ (reset! db/db {:file-envs {"file://a.clj" usages}})
-            diagnostics (crawler/find-diagnostics #{} "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+            diagnostics (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
         (is (= [] (mapv :message (drop 1 diagnostics)))))))
   (testing "unused symbols"
     (let [code-b "(ns b
@@ -273,9 +273,8 @@
       (reset! db/db {:file-envs
                      {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
                       "file://b.clj" (parser/find-usages code-b :clj {})}})
-      (let [usages (crawler/find-diagnostics #{} "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]))]
-        (is (= ["Unknown namespace: f"
-                "Unused alias: c"
+      (let [usages (crawler/find-diagnostics "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]))]
+        (is (= ["Unused alias: c"
                 "Unused namespace: b"
                 "Unused declaration: x"
                 "Unused declaration: y"

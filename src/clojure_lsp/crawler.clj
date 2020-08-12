@@ -15,7 +15,7 @@
   (:import
     [java.net URI]
     [java.util.jar JarFile]
-    [java.nio.file Paths]))
+    [java.nio.file Paths Files]))
 
 (defn- file->uri [file]
   (str (.toUri (.toPath file))))
@@ -105,8 +105,9 @@
 (defn- kondo-args [root-path user-config extra]
   (let [kondo-dir (.resolve root-path ".clj-kondo")]
     (cond-> {:cache true
-             :cache-dir (str (.resolve kondo-dir ".cache"))
-             :config-dir (str kondo-dir)}
+             :cache-dir ".clj-kondo/cache"}
+      (.exists (.toFile kondo-dir)) (assoc :cache-dir (str (.resolve kondo-dir ".cache"))
+                                           :config-dir (str kondo-dir))
       :always (merge extra)
       user-config (update-in [:config] merge user-config))))
 

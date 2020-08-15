@@ -170,6 +170,11 @@
                               :opt-un [:command/arguments])
                       (s/conformer #(Command. (:title %1) (:command %1)(:arguments %1)))))
 
+(s/def ::server-info (s/keys :req-un [:server-info/port
+                                      :server-info/project-settings
+                                      :server-info/client-settings
+                                      :server-info/project-root]))
+
 (s/def :code-action/title string?)
 
 (def code-action-kind

@@ -90,17 +90,18 @@
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
     (concat (diagnose-unused-references uri declared-references all-envs))))
 
-(defn- kondo-finding->diagnostic [{:keys [message level row col] :as finding}]
+(defn- kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   expression? (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
-    :message message
-    :severity (case level
-                :error 1
-                :warning 2
-                :info 3)
-    :source "clj-kondo"}))
+     :message message
+     :code (name type)
+     :severity (case level
+                 :error   1
+                 :warning 2
+                 :info    3)
+     :source "clj-kondo"}))
 
 (defn- kondo-args [root-path user-config extra]
   (let [kondo-dir (.resolve root-path ".clj-kondo")]

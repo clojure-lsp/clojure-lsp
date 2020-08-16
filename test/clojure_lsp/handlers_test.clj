@@ -366,20 +366,20 @@
                               "file://b.clj" (parser/find-usages b-code :clj {})
                               "file://c.clj" (parser/find-usages c-code :clj {})}}]
     (testing "Add missing namespace"
-      (testing "when it has not unknow-ns diagnostic"
+      (testing "when it has not unresolved-namespace diagnostic"
         (reset! db/db db-state)
         (is (not-any? #(= (:title %) "Add missing namespace")
                       (handlers/code-actions "file://c.clj" [] 1 9))))
 
-      (testing "when it has unknow-ns but cannot find namespace"
+      (testing "when it has unresolved-namespace but cannot find namespace"
         (reset! db/db db-state)
-        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 10) (Position. 1 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 10) (Position. 1 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unresolved-namespace")]
           (is (not-any? #(= (:title %) "Add missing namespace")
                         (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 1 10)))))
 
-      (testing "when it has unknow-ns and can find namespace"
+      (testing "when it has unresolved-namespace and can find namespace"
         (reset! db/db db-state)
-        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unknown-ns")]
+        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unresolved-namespace")]
           (is (some #(= (:title %) "Add missing namespace")
                     (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 2 10))))))
     (testing "Inline symbol"

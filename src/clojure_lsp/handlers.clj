@@ -554,7 +554,7 @@
   (let [db @db/db
         row (inc (int line))
         col (inc (int character))
-        has-unknow-ns? (some #(compare "unknown-ns" (-> % .getCode .get)) diagnostics)
+        has-unknow-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
         missing-ns (when has-unknow-ns?
                      (refactor doc-id row col "add-missing-libspec" []))
         zloc (-> db

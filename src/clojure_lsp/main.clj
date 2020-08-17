@@ -83,6 +83,21 @@
          (catch Throwable ex#
            (log/error ex#))))))
 
+(defn ^:private execute-server-info []
+  (.showMessage (:client @db/db)
+                (interop/conform-or-log ::interop/show-message (#'handlers/server-info))))
+
+(defn ^:private execute-refactor [command args]
+  (let [[doc-id line col & args] (map interop/json->clj args)]
+    (when-let [result (#'handlers/refactor doc-id
+                                           (inc (int line))
+                                           (inc (int col))
+                                           command
+                                           args)]
+      (.get (.applyEdit (:client @db/db)
+                        (ApplyWorkspaceEditParams.
+                          (interop/conform-or-log ::interop/workspace-edit result)))))))
+
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
@@ -310,14 +325,18 @@
 
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
    (go :executeCommand
-       (CompletableFuture/supplyAsync
-         (reify Supplier
-           (get [this]
-             (end
-               (let [command (.getCommand params)
-                     args (.getArguments params)]
-                 (log/info "Executing command" command "with args" args)
-                 (#'handlers/execute-command command args))))))))
+       (future
+         (end
+           (let [command (.getCommand params)
+                 args (.getArguments params)]
+             (log/info "Executing command" command "with args" args)
+             (cond
+               (= command "server-info")
+               (execute-server-info)
+
+               (contains? #'handlers/refactorings command)
+               (execute-refactor command args))))))
+   (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))

@@ -21,6 +21,8 @@
       Location
       MarkedString
       MarkupContent
+      MessageParams
+      MessageType
       Position
       PublishDiagnosticsParams
       Range
@@ -169,6 +171,22 @@
 (s/def ::command (s/and (s/keys :req-un [:command/title :command/command]
                               :opt-un [:command/arguments])
                       (s/conformer #(Command. (:title %1) (:command %1)(:arguments %1)))))
+
+(def show-message-type-enum
+  {:error MessageType/Error
+   :warning MessageType/Warning
+   :info MessageType/Info
+   :log MessageType/Log})
+
+(s/def :show-message/type (s/and keyword?
+                                 show-message-type-enum
+                                 (s/conformer #(get show-message-type-enum %))))
+
+(s/def :show-message/message string?)
+
+(s/def ::show-message (s/and (s/keys :req-un [:show-message/type
+                                              :show-message/message])
+                             (s/conformer #(MessageParams. (:type %) (:message %)))))
 
 (s/def :code-action/title string?)
 

@@ -16,9 +16,7 @@
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
-    [java.net URI URL JarURLConnection]
-    [java.util.jar JarFile]
-    [java.nio.file Paths]))
+    [java.net URL JarURLConnection]))
 
 (defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
@@ -144,12 +142,6 @@
       (swap! db/db assoc
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
-
-(comment
-  ;; Reinitialize
-  (let [{:keys [project-root client-capabilities client-settings]} @db/db]
-    (initialize project-root client-capabilities client-settings)
-    (:project-settings @db/db)))
 
 (defn- matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))
@@ -421,7 +413,7 @@
                    (map file-env-entry->document-highlight)) local-env)))
 
 (defn file-env-entry->workspace-symbol [uri [e kind]]
-  (let [{:keys [sym row col end-row end-col sym]} e
+  (let [{:keys [row col end-row end-col sym]} e
         symbol-kind (entry-kind->symbol-kind kind)
         r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
@@ -488,6 +480,14 @@
         :else
         (log/warn "Could not apply" refactoring "to form: " (z/string loc)))
       (log/warn "Could not find a form at this location. row" line "col" column "file" doc-id))))
+
+(defn server-info []
+  (let [db @db/db]
+    {:type :info
+     :message (str {:project-root (:project-root db)
+                    :project-settings (crawler/find-raw-project-settings (:project-root db))
+                    :client-settings (:client-settings db)
+                    :port (:port db)})}))
 
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)

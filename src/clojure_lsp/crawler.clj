@@ -292,7 +292,7 @@
                   (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))
         (async/<!! crawler-output-chan)))))
 
-(defn find-project-settings [project-root]
+(defn find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]
     (loop [dir (uri->path project-root)]
       (let [full-config-path (.resolve dir config-path)
@@ -300,10 +300,14 @@
             parent-dir (.getParent dir)]
         (cond
           (.exists file)
-          (edn/read-string {:readers {'re re-pattern}} (slurp file))
+          (slurp file)
 
           parent-dir
           (recur parent-dir)
 
           :else
-          {})))))
+          "{}")))))
+
+(defn find-project-settings [project-root]
+  (->> (find-raw-project-settings project-root)
+       (edn/read-string {:readers {'re re-pattern}})))

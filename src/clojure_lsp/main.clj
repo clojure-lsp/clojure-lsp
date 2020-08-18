@@ -14,17 +14,12 @@
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams
      CodeActionParams
-     CodeAction
      CodeLens
      CodeLensParams
      CodeLensOptions
-     Command
      CompletionItem
-     CompletionItemKind
      CompletionOptions
      CompletionParams
-     ConfigurationItem
-     ConfigurationParams
      DefinitionParams
      DidChangeConfigurationParams
      DidChangeTextDocumentParams
@@ -37,7 +32,6 @@
      DocumentHighlightParams
      DocumentRangeFormattingParams
      DocumentSymbolParams
-     DocumentSymbol
      ExecuteCommandOptions
      ExecuteCommandParams
      FileSystemWatcher
@@ -53,7 +47,6 @@
      SaveOptions
      ServerCapabilities
      SignatureHelp
-     SignatureHelpOptions
      SignatureHelpParams
      SignatureInformation
      TextDocumentContentChangeEvent
@@ -61,7 +54,6 @@
      TextDocumentSyncOptions
      WorkspaceSymbolParams)
    (org.eclipse.lsp4j.launch LSPLauncher)
-   (org.eclipse.lsp4j.jsonrpc.services JsonSegment JsonRequest)
    (java.util.concurrent CompletableFuture)
    (java.util.function Supplier))
   (:gen-class))
@@ -90,6 +82,21 @@
              (log/debug ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
+
+(defn ^:private execute-server-info []
+  (.showMessage (:client @db/db)
+                (interop/conform-or-log ::interop/show-message (#'handlers/server-info))))
+
+(defn ^:private execute-refactor [command args]
+  (let [[doc-id line col & args] (map interop/json->clj args)]
+    (when-let [result (#'handlers/refactor doc-id
+                                           (inc (int line))
+                                           (inc (int col))
+                                           command
+                                           args)]
+      (.get (.applyEdit (:client @db/db)
+                        (ApplyWorkspaceEditParams.
+                          (interop/conform-or-log ::interop/workspace-edit result)))))))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
@@ -315,24 +322,22 @@
 
 (deftype LSPWorkspaceService []
   WorkspaceService
+
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
-    (go :executeCommand
-        (let [[doc-id line col & args] (map interop/json->clj (.getArguments params))
-              command (.getCommand params)]
-          (future
-            (end
-              (try
-                (when-let [result (#'handlers/refactor doc-id
-                                                       (inc (int line))
-                                                       (inc (int col))
-                                                       command
-                                                       args)]
-                  (.get (.applyEdit (:client @db/db)
-                                    (ApplyWorkspaceEditParams.
-                                      (interop/conform-or-log ::interop/workspace-edit result)))))
-                (catch Exception e
-                  (log/error e)))))))
-    (CompletableFuture/completedFuture 0))
+   (go :executeCommand
+       (future
+         (end
+           (let [command (.getCommand params)
+                 args (.getArguments params)]
+             (log/info "Executing command" command "with args" args)
+             (cond
+               (= command "server-info")
+               (execute-server-info)
+
+               (contains? #'handlers/refactorings command)
+               (execute-refactor command args))))))
+   (CompletableFuture/completedFuture 0))
+
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
 
@@ -430,11 +435,14 @@
       (LSPWorkspaceService.))))
 
 (defn- run []
-  (log/info "Server started")
+  (log/info "Starting server...")
   (let [launcher (LSPLauncher/createServerLauncher server System/in System/out)
-        repl-server (nrepl.server/start-server)]
-    (log/info "====== LSP nrepl server started on port" (:port repl-server))
-    (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
+        repl-server (nrepl.server/start-server)
+        port (:port repl-server)]
+    (log/info "====== LSP nrepl server started on port" port)
+    (swap! db/db assoc
+           :client ^LanguageClient (.getRemoteProxy launcher)
+           :port port)
     (async/go
       (loop [edit (async/<! db/edits-chan)]
         (log/warn "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))

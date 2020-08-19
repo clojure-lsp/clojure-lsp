@@ -334,7 +334,7 @@
                (= command "server-info")
                (execute-server-info)
 
-               (contains? #'handlers/refactorings command)
+               (contains? handlers/refactorings command)
                (execute-refactor command args))))))
    (CompletableFuture/completedFuture 0))
 

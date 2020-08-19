@@ -88,7 +88,7 @@
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
         declarations (usages->declarations usages)
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
-    (concat (diagnose-unused-references uri declared-references all-envs))))
+    (diagnose-unused-references uri declared-references all-envs)))
 
 (defn- kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))
@@ -103,6 +103,26 @@
                  :info    3)
      :source "clj-kondo"}))
 
+(defn ^:private kondo-analysis->references
+  [uri {:keys [namespace-definitions namespace-usages var-definitions var-usages]}]
+  (let [requires {:clj  #{'clojure.core}
+                  :cljs #{'cljs.core}}]
+    (->> var-usages
+         (filter #(string/ends-with? uri (:filename %)))
+         (map (fn [usage]
+                {:ns             (:from usage)
+                 :requires       (get requires :clj)
+                 :uri            uri
+                 :refer-all-syms {}
+                 :refers         {}
+                 :imports        {}
+                 :aliases        {}
+                 :local-classes  #{}
+                 :publics        #{}
+                 :locals         #{}
+                 :usages         []
+                 :ignored?       false})))))
+
 (defn- kondo-args [root-path user-config extra]
   (let [kondo-dir (.resolve root-path ".clj-kondo")]
     (cond-> {:cache true
@@ -113,7 +133,12 @@
       user-config (update-in [:config] merge user-config))))
 
 (defn- run-kondo-on-paths! [root-path paths user-config]
-  (kondo/run! (kondo-args root-path user-config {:lint paths})))
+  (let [args (kondo-args root-path user-config {:lint   paths
+                                                :config {:output {:analysis true}}})
+        {:keys [analysis] :as kondo} (kondo/run! args)]
+    (swap! db/db assoc
+           :kondo-analysis analysis)
+    kondo))
 
 (defn- run-kondo-on-text! [root-path text lang user-config]
   (with-in-str text (kondo/run! (kondo-args root-path user-config {:lint ["-"] :lang lang}))))
@@ -127,12 +152,16 @@
          (filter #(= "<stdin>" (:filename %)))
          (map kondo-finding->diagnostic))))
 
-(defn find-diagnostics [uri text usages]
+(defn find-diagnostics [uri text references]
   (let [kondo-diagnostics (kondo-find-diagnostics uri text)
-        unused (diagnose-unused uri usages)
-        unknown-forwards (diagnose-unknown-forward-declarations usages)
+        unused (diagnose-unused uri references)
+        unknown-forwards (diagnose-unknown-forward-declarations references)
         result (concat unused unknown-forwards kondo-diagnostics)]
     result))
+
+(defn ^:private kondo-references
+  [uri text]
+  (kondo-analysis->references uri (:kondo-analysis @db/db)))
 
 (defn safe-find-references
   ([uri text]
@@ -141,8 +170,7 @@
    (try
      (let [file-type (shared/uri->file-type uri)
            macro-defs (get-in @db/db [:settings "macro-defs"])
-           references (cond->> (parser/find-usages uri text file-type macro-defs)
-                        remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
+           references (kondo-references uri text)]
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri

@@ -156,6 +156,13 @@
        "(defn func []\n"
        "  (b/some))"))
 
+(def require-with-refer-ns-to-clean
+  (str "(ns foo.bar\n"
+       " (:require\n"
+       "   [foo  :as f] [bar :refer [some]] baz [z] ))\n"
+       "(defn func []\n"
+       "  (f/some))"))
+
 (deftest clean-ns-test
   (with-redefs [slurp (constantly ns-to-clean)]
     (testing "without keep-require-at-start?"
@@ -206,6 +213,20 @@
         (is (= (str "(ns foo.bar)\n"
                     "(defn func []\n"
                     "  (b/some))")
+               (z/root-string loc))))))
+  (with-redefs [slurp (constantly require-with-refer-ns-to-clean)]
+    (testing "with refer at require"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string require-with-refer-ns-to-clean) z/down z/right z/right)
+            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
+        (is (some? range))
+        (is (= (str "(ns foo.bar\n"
+                    " (:require\n"
+                    "   [foo  :as f]\n"
+                    "   [z]\n"
+                    "   baz))\n"
+                    "(defn func []\n"
+                    "  (f/some))")
                (z/root-string loc)))))))
 
 (deftest add-missing-libspec

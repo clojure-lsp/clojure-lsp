@@ -7,7 +7,6 @@
     [clojure-lsp.refactor.transform :as transform]
     [clojure.string :as string]
     [clojure.test :refer :all]
-    [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
 
 (deftest paredit-test

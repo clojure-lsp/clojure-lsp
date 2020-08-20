@@ -46,11 +46,6 @@
    :usages []
    :ignored? false})
 
-(defmacro zspy [loc]
-  `(do
-     (log/warn '~loc (pr-str (z/sexpr ~loc)))
-     ~loc))
-
 (defn z-next-sexpr [loc]
   (z/find-next loc z/next #(not (n/printable-only? (z/node %)))))
 
@@ -373,7 +368,6 @@
         thread-loc (if threading?
                      first-loc
                      (zm/right first-loc))]
-    (do
       ; Look at the value
       (when (not threading?)
         (find-usages* (zsub/subzip first-loc) context scoped))
@@ -381,7 +375,7 @@
       (loop [sub-loc thread-loc]
         (when sub-loc
           (find-usages* (zsub/subzip sub-loc) context scoped true)
-          (recur (zm/right sub-loc)))))))
+          (recur (zm/right sub-loc))))))
 
 (defn handle-cond-thread
   [op-loc _loc context scoped threading?]
@@ -390,7 +384,6 @@
         thread-loc (if threading?
                      first-loc
                      (zm/right first-loc))]
-    (do
       ; Look at the value
       (when (not threading?)
         (find-usages* (zsub/subzip first-loc) context scoped))
@@ -405,7 +398,7 @@
           (some-> (zm/right sub-loc)
                   zsub/subzip
                   (find-usages* context scoped true))
-          (recur (zm/right (zm/right sub-loc))))))))
+          (recur (zm/right (zm/right sub-loc)))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)
@@ -876,7 +869,7 @@
                          (seq signatures) (assoc :signatures signatures)
                          kind (assoc :kind kind)))))))
 
-(defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]
+(defn- add-macro-sub-forms [context scope-bounds bound-scope sub-forms]
   (let [k->qualified (into {} (map (comp (juxt identity #(symbol (str (gensym)) (name %))) key) sub-forms))
         new-scope (reduce (fn [accum qualified-k]
                             (assoc accum (symbol (name qualified-k)) {:ns (symbol (namespace qualified-k))
@@ -960,7 +953,7 @@
           scope-bounds (merge (meta (z/node element-loc)))
           [bound-scope macro-sub-forms] (cond
                                           (not-empty (:sub-forms element-info))
-                                          (add-macro-sub-forms element-loc context scope-bounds bound-scope' (:sub-forms element-info))
+                                          (add-macro-sub-forms context scope-bounds bound-scope' (:sub-forms element-info))
 
                                           (and process? (= :sub-elements element))
                                           [(parse-match-patterns
@@ -1195,58 +1188,3 @@
                    (z/up loc))
         form-pos (-> form-loc z/node meta)]
     (filter #(in-range? form-pos %) usages)))
-
-(comment
-  (loc-at-pos  "foo" 1 5)
-  (in-range? {:row 23, :col 1, :end-row 23, :end-col 9} {:row 23, :col 7, :end-row 23, :end-col 7})
-  (let [code (string/join "\n"
-                          ["(ns thinger.foo"
-                           "  (:refer-clojure :exclude [update])"
-                           "  (:require"
-                           "    [thinger [my.bun :as bun]"
-                           "             [bung.bong :as bb :refer [bing byng]]]))"
-                           "(comment foo)"
-                           "(let [x 1] (inc x))"
-                           "(def x 1)"
-                           "(defn y [y] (y x))"
-                           "(inc x)"
-                           "(bun/foo)"
-                           "(bing)"])]
-    (n/string (z/node (z/of-string "::foo")))
-    (find-usages code :clj {}))
-
-
-  (do
-    (require '[taoensso.tufte :as tufte :refer (defnp p profiled profile)])
-
-    (->>
-      (find-usages (slurp "test/clojure_lsp/parser_test.clj") :clj {})
-      (tufte/profiled {})
-      (second)
-      deref
-      :stats
-      (map (juxt key (comp #(int (quot % 1000000)) :max val) (comp :n val) (comp #(int (quot % 1000000)) :sum val)))
-      clojure.pprint/pprint
-      with-out-str
-      (spit "x.edn")))
-
-  (let [code (slurp "bad.clj")]
-    (find-usages code :clj {})
-    #_
-    (println (tufte/format-pstats prof)))
-
-  (let [code "(ns foob) (defn ^:private chunk [] :a)"]
-    (find-usages code :clj {}))
-  (let [code "(def #?@(:clj a :cljs b) 1)"]
-    (n/children (z/node (z/of-string code)))
-    (find-usages code :cljc {}))
-
-  (do (defmacro x [] (let [y 2] `(let [z# ~y] [z# ~'y]))) (let [y 3]  (x)))
-  (do (defmacro x [] 'y)
-      (let [y 3] (y)))
-
-  (find-usages "(do #inst \"2019-04-04\")" :clj {})
-  (z/sexpr (z/right (z/of-string "#(:a 1)")))
-
-  (find-usages "(deftype JSValue [val])" :clj {})
-  (z/sexpr (loc-at-pos code 1 2)))

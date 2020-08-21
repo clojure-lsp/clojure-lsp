@@ -1,8 +1,14 @@
 (ns clojure-lsp.refactor.edit
   (:require
-   [rewrite-clj.node :as n]
+   [clojure.tools.logging :as log]
    [rewrite-clj.custom-zipper.core :as cz]
+   [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
+
+(defmacro zspy [loc]
+  `(do
+     (log/warn '~loc (pr-str (z/string ~loc)))
+     ~loc))
 
 (defn top? [loc]
   (= :forms (z/tag (z/up loc))))
@@ -88,6 +94,10 @@
           (z/up))) ; move to let-form
     let-loc))
 
+(defn inside? [zloc possible-parent]
+  (z/find zloc z/up (fn [loc]
+                      (= possible-parent (z/up loc)))))
+
 (defn skip-over [loc]
   (if (z/down loc)
     (->> loc
@@ -108,6 +118,12 @@
 (defn back-to-mark-or-nil
   [zloc marker]
   (z/find zloc z/prev (fn [loc] (contains? (get (z/node loc) ::markers) marker))))
+
+(defn back-to-mark
+  [zloc marker]
+  (if-let [mloc (back-to-mark-or-nil zloc marker)]
+    mloc
+    zloc))
 
 (defn mark-position
   [zloc marker]

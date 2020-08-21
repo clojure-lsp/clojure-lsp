@@ -3,6 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
     [clojure.test :refer :all]
+    [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
 
 (defn syms [code]

@@ -43,9 +43,3 @@
          :project-hash (:hash project-row)}))
     (catch Exception e
       (log/warn "Could not load db" (.getMessage e)))))
-
-(comment
-  (do
-    (save-db! "/Users/case/dev/lsp")
-    (load-db! "/Users/case/dev/lsp")
-    (:jar-envs @db)))

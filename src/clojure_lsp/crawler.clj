@@ -15,7 +15,7 @@
   (:import
     [java.net URI]
     [java.util.jar JarFile]
-    [java.nio.file Paths Files]))
+    [java.nio.file Paths]))
 
 (defn- file->uri [file]
   (str (.toUri (.toPath file))))

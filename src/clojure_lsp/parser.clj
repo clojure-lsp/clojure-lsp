@@ -373,7 +373,6 @@
         thread-loc (if threading?
                      first-loc
                      (zm/right first-loc))]
-    (do
       ; Look at the value
       (when (not threading?)
         (find-usages* (zsub/subzip first-loc) context scoped))
@@ -381,7 +380,7 @@
       (loop [sub-loc thread-loc]
         (when sub-loc
           (find-usages* (zsub/subzip sub-loc) context scoped true)
-          (recur (zm/right sub-loc)))))))
+          (recur (zm/right sub-loc))))))
 
 (defn handle-cond-thread
   [op-loc _loc context scoped threading?]
@@ -390,7 +389,6 @@
         thread-loc (if threading?
                      first-loc
                      (zm/right first-loc))]
-    (do
       ; Look at the value
       (when (not threading?)
         (find-usages* (zsub/subzip first-loc) context scoped))
@@ -405,7 +403,7 @@
           (some-> (zm/right sub-loc)
                   zsub/subzip
                   (find-usages* context scoped true))
-          (recur (zm/right (zm/right sub-loc))))))))
+          (recur (zm/right (zm/right sub-loc)))))))
 
 (defn add-libspec [libtype context scoped entry-loc prefix-ns]
   (let [entry-ns-loc (z/down entry-loc)
@@ -876,7 +874,7 @@
                          (seq signatures) (assoc :signatures signatures)
                          kind (assoc :kind kind)))))))
 
-(defn- add-macro-sub-forms [element-loc context scope-bounds bound-scope sub-forms]
+(defn- add-macro-sub-forms [context scope-bounds bound-scope sub-forms]
   (let [k->qualified (into {} (map (comp (juxt identity #(symbol (str (gensym)) (name %))) key) sub-forms))
         new-scope (reduce (fn [accum qualified-k]
                             (assoc accum (symbol (name qualified-k)) {:ns (symbol (namespace qualified-k))
@@ -960,7 +958,7 @@
           scope-bounds (merge (meta (z/node element-loc)))
           [bound-scope macro-sub-forms] (cond
                                           (not-empty (:sub-forms element-info))
-                                          (add-macro-sub-forms element-loc context scope-bounds bound-scope' (:sub-forms element-info))
+                                          (add-macro-sub-forms context scope-bounds bound-scope' (:sub-forms element-info))
 
                                           (and process? (= :sub-elements element))
                                           [(parse-match-patterns
@@ -1214,7 +1212,6 @@
                            "(bing)"])]
     (n/string (z/node (z/of-string "::foo")))
     (find-usages code :clj {}))
-
 
   (do
     (require '[taoensso.tufte :as tufte :refer (defnp p profiled profile)])

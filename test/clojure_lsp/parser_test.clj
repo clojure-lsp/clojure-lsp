@@ -2,7 +2,6 @@
   (:require
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
-    [clojure.string :as string]
     [clojure.test :refer :all]
     [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
@@ -141,8 +140,6 @@
 (deftest find-references-let-test
   (testing "let"
     (let [code "(let [#_#_x 1 a 2 b 3] a)"
-          a-valid (string/index-of code "3")
-          end-scope (inc (count code))
           usages (parser/find-usages code :clj {})
           bound-ref (second usages)
           usage-ref (nth usages 3 nil)]
@@ -189,21 +186,21 @@
 
 (deftest find-references-destructuring-test
   (let [code "(let [{:keys [a] b :b} {}] a b)"
-        [_ a-kw a-param b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
+        [_ _a-kw a-param _b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
     (is (= 7 (count usages)))
     (is (= #{:declare :param} (:tags a-param)))
     (is (= (namespace (:sym a-usage)) (namespace (:sym a-param))))
     (is (= #{:declare :param} (:tags b-param)))
     (is (= (namespace (:sym b-usage)) (namespace (:sym b-param)))))
   (let [code "(fn [y {:keys [a] b :b}] a b)"
-        [_ _ a-kw a-param b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
+        [_ _ _a-kw a-param _b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
     (is (= 8 (count usages)))
     (is (= #{:declare :param} (:tags a-param)))
     (is (= (namespace (:sym a-param)) (namespace (:sym a-usage))))
     (is (= #{:declare :param} (:tags b-param)))
     (is (= (namespace (:sym b-param)) (namespace (:sym b-usage)))))
   (let [code "(fn myname [y {:keys [a] b :b}] a b)"
-        [_ name-ref _ a-kw a-param b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
+        [_ name-ref _ _a-kw a-param _b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
     (is (= 9 (count usages)))
     (is (not= "user" (namespace (:sym name-ref))))
     (is (= #{:declare} (:tags name-ref)))
@@ -218,8 +215,7 @@
                                         {:sym 'clojure.test/deftest :tags #{:declare :public}}]}})
     (let [code "(ns foo.bar (:require [clojure.test :refer :all])) (deftest hi)"
           usages (parser/find-usages code :clj {})
-          deftest-ref (nth usages 3 nil)
-          hi-ref (nth usages 4 nil)]
+          deftest-ref (nth usages 3 nil)]
       (is (= 'clojure.test/deftest (:sym deftest-ref)))))
   (testing "refers"
     (let [code "(ns foo.bar (:require [clojure.test :refer [deftest]])) (deftest hi)"
@@ -265,7 +261,7 @@
   (testing "namespace ::keys"
     (let [code "(ns bar (:require [qux :as q]))
                 (let [{::keys [a] :qux/keys [b] ::q/keys [c] :foo/keys [d]} {}] 1)"
-          [a1 a2 b1 b2 c1 c2 d1 d2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
+          [a1 _a2 b1 _b2 c1 _c2 d1 _d2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
       (is (= ["a" "a" "b" "b" "c" "c" "d" "d"] (mapv :str usages)))
       (is (= [:bar/a :qux/b :qux/c :foo/d] (map :sym [a1 b1 c1 d1]))))))
 
@@ -488,7 +484,7 @@
 (deftest macro-def-reify
   (let [code "(reify String (bar [a] a) (foo []) (qux [c] c) Exception (x [f]))"
         usages (parser/find-usages code :clj {})
-        [_ string-class bar a-param a-use foo qux c-param c-use ex-class x f-param] usages]
+        [_ string-class bar a-param a-use foo qux c-param c-use ex-class _x _f-param] usages]
     (is (= 12 (count usages)))
     (is (= 'java.lang.String (:sym string-class)))
     (is (= #{:method :norename} (:tags bar) (:tags foo) (:tags qux)))

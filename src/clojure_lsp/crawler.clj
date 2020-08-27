@@ -103,26 +103,30 @@
                  :info    3)
      :source "clj-kondo"}))
 
-(defn- kondo-args [root-path user-config extra]
-  (let [kondo-dir (.resolve root-path ".clj-kondo")]
+(defn- kondo-args [extra]
+  (let [root-path (uri->path (:project-root @db/db))
+        user-config (get-in @db/db [:settings :clj-kondo])
+        kondo-dir (.resolve root-path ".clj-kondo")]
     (cond-> {:cache true
              :cache-dir ".clj-kondo/cache"}
-      (.exists (.toFile kondo-dir)) (assoc :cache-dir (str (.resolve kondo-dir ".cache"))
-                                           :config-dir (str kondo-dir))
-      :always (merge extra)
-      user-config (update-in [:config] merge user-config))))
+      (.exists (.toFile kondo-dir))
+      (assoc :cache-dir (str (.resolve kondo-dir ".cache")) :config-dir (str kondo-dir))
 
-(defn- run-kondo-on-paths! [root-path paths user-config]
-  (kondo/run! (kondo-args root-path user-config {:lint paths})))
+      :always
+      (merge extra)
 
-(defn- run-kondo-on-text! [root-path text lang user-config]
-  (with-in-str text (kondo/run! (kondo-args root-path user-config {:lint ["-"] :lang lang}))))
+      user-config
+      (update-in [:config] merge user-config))))
+
+(defn- run-kondo-on-paths! [paths]
+  (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]})))
+
+(defn- run-kondo-on-text! [text lang]
+  (with-in-str text (kondo/run! (kondo-args {:lint ["-"] :lang lang}))))
 
 (defn- kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
-        user-config (get-in @db/db [:settings :clj-kondo])
-        root-path (uri->path (:project-root @db/db))
-        {:keys [findings]} (run-kondo-on-text! root-path text file-type user-config)]
+        {:keys [findings]} (run-kondo-on-text! text file-type)]
     (->> findings
          (filter #(= "<stdin>" (:filename %)))
          (map kondo-finding->diagnostic))))
@@ -276,17 +280,20 @@
                                            (reduce-kv (fn [m k v]
                                                         (assoc m k (map second v))) {}))
             jars (:file classpath-entries-by-type)
-            kondo-output-chan (async/go (run-kondo-on-paths! root-path classpath kondo-user-config))
             jar-envs (if use-cp-cache
                        (:jar-envs loaded)
                        (crawl-jars jars dependency-scheme))
             source-envs (crawl-source-dirs source-paths)
             file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
         (db/save-deps root-path project-hash classpath jar-envs)
-        (log/info "clj-kondo scanned project classpath in"
-                  (str (get-in (async/<!! kondo-output-chan) [:summary :duration]) "ms"))
+        (if use-cp-cache
+          (log/info "skipping classpath scan due to project hash match")
+          (do
+            (log/info "starting clj-kondo project classpath scan (this takes awhile)")
+            (let [results (run-kondo-on-paths! classpath)]
+              (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
         (merge source-envs file-envs jar-envs))
-      (let [kondo-source-chan (async/go (run-kondo-on-paths! root-path source-paths kondo-user-config))
+      (let [kondo-source-chan (async/go (run-kondo-on-paths! source-paths))
             crawler-output-chan (async/go (crawl-source-dirs source-paths))]
         (log/info "clj-kondo scanned source paths in"
                   (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))

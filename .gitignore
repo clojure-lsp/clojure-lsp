@@ -9,4 +9,4 @@
 /.cpcache
 /node_modules
 /test.clj
-
+/.clj-kondo/.cache

@@ -10,6 +10,7 @@
     [clojure-lsp.refactor.transform :as refactor]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
+    [clojure.pprint :as pprint]
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
@@ -486,10 +487,10 @@
 (defn server-info []
   (let [db @db/db]
     {:type :info
-     :message (str {:project-root (:project-root db)
-                    :project-settings (crawler/find-raw-project-settings (:project-root db))
-                    :client-settings (:client-settings db)
-                    :port (:port db)})}))
+     :message (with-out-str (pprint/pprint {:project-root (:project-root db)
+                                            :project-settings (:project-settings db)
+                                            :client-settings (:client-settings db)
+                                            :port (:port db)}))}))
 
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)

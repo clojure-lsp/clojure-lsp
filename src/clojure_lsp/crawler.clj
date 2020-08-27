@@ -68,18 +68,20 @@
                   (str "Unused declaration: " (:str usage)))
        :severity 2})))
 
-(defn ^:private process-unused-aliases
-  [usages declared-aliases]
+(defn ^:private process-unused
+  [usages declarations]
   (let [ensure-sym (fn [s] (when-not (string? s) s))]
     (->> usages
-         (remove (comp #(contains? % :declare) :tags))
+         (remove (comp #(or (contains? % :declare)
+                            (contains? % :refer)) :tags))
          (map #(some-> % :sym ensure-sym namespace symbol))
          set
-         (set/difference (set (map :ns declared-aliases))))))
+         (set/difference (set (map :ns declarations))))))
 
 (defn ^:private usages->declarations [usages]
   (->> usages
-       (filter (comp #(and (contains? % :declare)
+       (filter (comp #(and (or (contains? % :declare)
+                               (contains? % :refer))
                            (not (contains? % :factory))
                            (not (contains? % :unused))) :tags))
        (remove (comp #(string/starts-with? % "_") name :sym))))
@@ -164,7 +166,16 @@
         declared-aliases (->> declarations
                               (filter (comp #(contains? % :alias) :tags))
                               (remove (comp excludes :ns)))]
-    (process-unused-aliases usages declared-aliases)))
+    (process-unused usages declared-aliases)))
+
+(defn find-unused-refers [uri]
+  (let [usages (safe-find-references uri (slurp uri) false false)
+        declarations (usages->declarations usages)
+        excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
+        declared-refers (->> declarations
+                              (filter (comp #(contains? % :refer) :tags))
+                              (remove (comp excludes :ns)))]
+    (process-unused usages declared-refers)))
 
 (defn crawl-jars [jars dependency-scheme]
   (let [xf (comp
@@ -263,7 +274,6 @@
         dependency-scheme (get settings :dependency-scheme)
         ignore-directories? (get settings :ignore-classpath-directories)
         project-specs (or (get settings :project-specs) default-project-specs)
-        kondo-user-config (get settings :clj-kondo)
         project (get-project-from root-path project-specs)]
     (if (some? project)
       (let [project-hash (:project-hash project)

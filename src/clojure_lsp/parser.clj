@@ -442,7 +442,7 @@
                     referee (n/string refer-node)]]
         (vswap! context update :refers assoc referee refered)
         (add-reference context scoped refer-node
-                       {:tags #{:declare :alias :refer}
+                       {:tags #{:refer}
                         :ns full-ns
                         :sym refered})))))
 

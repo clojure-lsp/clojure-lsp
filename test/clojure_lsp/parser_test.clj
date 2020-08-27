@@ -221,7 +221,7 @@
     (let [code "(ns foo.bar (:require [clojure.test :refer [deftest]])) (deftest hi)"
           [_ _n _r dt1 dt2 hi :as _usages] (parser/find-usages code :clj {})]
       (is (= 'clojure.test/deftest (:sym dt2)))
-      (is (= #{:refer :alias :declare} (:tags dt1)))
+      (is (= #{:refer} (:tags dt1)))
       (is (not= #{:unknown} (:tags hi)))))
   (testing "import"
     (let [code "(ns foo.bar (:import java.util.jar.JarFile (java.io File))) (java.util.jar.JarFile.) (File.) (File/static 1) (JarFile.)"

@@ -11,4 +11,4 @@
     (let [params (InitializeParams.)]
       (.setInitializationOptions params nil)
       (is (= #{"src" "test"}
-             (get (main/client-settings params) "source-paths"))))))
+             (get (main/client-settings params) :source-paths))))))

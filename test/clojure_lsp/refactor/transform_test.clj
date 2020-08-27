@@ -159,7 +159,7 @@
 (deftest clean-ns-test
   (with-redefs [slurp (constantly ns-to-clean)]
     (testing "without keep-require-at-start?"
-      (reset! db/db {:settings {"keep-require-at-start?" false}})
+      (reset! db/db {:settings {:keep-require-at-start? false}})
       (let [zloc (-> (z/of-string ns-to-clean) z/down z/right z/right)
             [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
         (is (some? range))
@@ -172,7 +172,7 @@
                     "  (f/some))")
                (z/root-string loc)))))
     (testing "with keep-require-at-start?"
-      (reset! db/db {:settings {"keep-require-at-start?" true}})
+      (reset! db/db {:settings {:keep-require-at-start? true}})
       (let [zloc (-> (z/of-string ns-to-clean) z/down z/right z/right)
             [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
         (is (some? range))
@@ -297,7 +297,7 @@
                               (transform/cycle-privacy nil))]
       (is (= (z/string loc) "a"))))
   (testing "with-setting"
-    (reset! db/db {:settings {"use-metadata-for-privacy?" true}})
+    (reset! db/db {:settings {:use-metadata-for-privacy? true}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
                               (transform/cycle-privacy nil))]
       (is (= (z/string loc) "^:private a")))

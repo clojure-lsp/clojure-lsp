@@ -287,7 +287,7 @@
   [zloc uri]
   (let [ns-loc (edit/find-namespace zloc)
         require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
-        keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
+        keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
         col (if require-loc
               (if keep-require-at-start?
                 (-> require-loc z/node meta :end-col)
@@ -416,7 +416,7 @@
   (when-let [oploc (inside-function? zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
-                             (not (get-in @db/db [:settings "use-metadata-for-privacy?"])))
+                             (not (get-in @db/db [:settings :use-metadata-for-privacy?])))
           switch-defn? (= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?

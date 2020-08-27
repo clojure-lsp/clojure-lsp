@@ -46,7 +46,7 @@
              (handlers/hover "file://a.clj" 3 2)))))
   (testing "with show-docs-arity-on-same-line? enabled"
     (testing "plain text"
-      (reset! db/db {:settings  {"show-docs-arity-on-same-line?" true}
+      (reset! db/db {:settings  {:show-docs-arity-on-same-line? true}
                      :file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
                                                                          "(defn foo [x] x)\n"
                                                                          "(foo 1)") :clj {})}})
@@ -56,7 +56,7 @@
               :contents ["a/foo [x]\n\n----\nlsp: :declare :public"]}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with function args"
-      (reset! db/db {:settings            {"show-docs-arity-on-same-line?" true}
+      (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
                      :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
                      :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
                                                                                    "(defn foo [x] x)\n"
@@ -67,7 +67,7 @@
                          :value "```clojure\na/foo [x]\n```\n\n----\nlsp: :declare :public"}}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with no function args"
-      (reset! db/db {:settings            {"show-docs-arity-on-same-line?" true}
+      (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
                      :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
                      :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
                                                                                    "(defn foo [] 1)\n"

@@ -367,6 +367,7 @@
       (.getInitializationOptions)
       (interop/json->clj)
       (or {})
+      shared/keywordize-first-depth
       (interop/clean-client-settings)))
 
 (defn client-capabilities [^InitializeParams params]

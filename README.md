@@ -138,7 +138,7 @@ Other clients might provide a higher level interface to `workspace/executeComman
 
 It is possible to pass some options to clojure-lsp through clients' `InitializationOptions`. Options are a map with keys:
 
-`source-paths` value is a vector of project-local directories to look for clj/cljc/cljs files. Default is `#{"src", "test"}`.
+`source-paths` value is a set of project-local directories to look for clj/cljc/cljs files. Default is `#{"src", "test"}`.
 
 `ignore-classpath-directories` if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.
 

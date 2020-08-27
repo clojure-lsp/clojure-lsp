@@ -371,12 +371,12 @@
 (defn clean-client-settings [client-settings]
   (let [kwd-keys #(medley/map-keys keyword %)]
     (-> client-settings
-        (update "dependency-scheme" #(or % "zipfile"))
-        (update "source-paths" #(if (seq %) (set %) #{"src" "test"}))
-        (update "macro-defs" clean-symbol-map)
-        (update "project-specs" #(->> % (mapv kwd-keys) not-empty))
-        (update "cljfmt" kwd-keys)
-        (update-in ["cljfmt" :indents] clean-symbol-map))))
+        (update :dependency-scheme #(or % "zipfile"))
+        (update :source-paths #(if (seq %) (set %) #{"src" "test"}))
+        (update :macro-defs clean-symbol-map)
+        (update :project-specs #(->> % (mapv kwd-keys) not-empty))
+        (update :cljfmt kwd-keys)
+        (update-in [:cljfmt :indents] clean-symbol-map))))
 
 (defn document->decoded-uri [document]
   (-> document

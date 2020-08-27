@@ -138,7 +138,7 @@ Other clients might provide a higher level interface to `workspace/executeComman
 
 It is possible to pass some options to clojure-lsp through clients' `InitializationOptions`. Options are a map with keys:
 
-`source-paths` value is a vector of project-local directories to look for clj/cljc/cljs files. Default is `["src","test"]`.
+`source-paths` value is a set of project-local directories to look for clj/cljc/cljs files. Default is `#{"src", "test"}`.
 
 `ignore-classpath-directories` if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.
 
@@ -154,28 +154,26 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 
 `cljfmt` json encoded configuration for https://github.com/weavejester/cljfmt
 
-```json
-"cljfmt": {
-  "indents": {
-    "#.*": [["block", 0]],
-    "ns": [["inner", 0], ["inner", 1]],
-    "and": [["inner", 0]],
-    "or": [["inner", 0]],
-    "are": [["inner", 0]]
-  }
-},
+```clojure
+:cljfmt 
+  {:indents 
+    {"#.*" [["block", 0]]
+     "ns" [["inner", 0], ["inner", 1]]
+     "and" [["inner", 0]]
+     "or" [["inner", 0]]
+     "are" [["inner", 0]]}}
 ```
 
 `clj-kondo` (Experimental) -  `clojure-lsp` uses [clj-kondo](https://github.com/borkdude/clj-kondo) to lint code, so you can use here any `clj-kondo` configuration or just have your config file by project at `.clj-kondo/config.edn`, for more information about `clj-kondo` available configurations, check [here](https://github.com/borkdude/clj-kondo/blob/master/doc/config.md).
 
 ```clojure
-"clj-kondo" {:linters {:missing-docstring {:level :warning}}}
+:clj-kondo {:linters {:missing-docstring {:level :warning}}}
 ```
  
 ~`linters`~ (Deprecated in favor of `clj-kondo`) - some initial support for disabling diagnostics currently only this one that will suppress the unused alias warning and stop the require from being cleaned by `clean-ns`:
 
 ```clojure
- "linters" {:unused-namespace {:exclude [clojure.data]}}
+ :linters {:unused-namespace {:exclude [clojure.data]}}
 ```
 
 `project-specs` - value is a vector containing a map of key/value pairs, for example:
@@ -277,9 +275,9 @@ See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test
 LSP will also look for project specific settings in a file called '.lsp/config.edn'. It will search from your root folder up the directory structure so you can have multiple projects share the settings.
 
 ```clojure
-{"macro-defs" {korma.core/defentity [:declaration :elements]}
- "cljfmt" {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
- "clj-kondo" {:linters {:missing-docstring {:level :warning}}}}
+{:macro-defs {korma.core/defentity [:declaration :elements]}
+ :cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
+ :clj-kondo {:linters {:missing-docstring {:level :warning}}}}
  ```
 
 ## Clients
@@ -322,9 +320,9 @@ nnoremap <silent> cram :call LanguageClient#workspace_executeCommand('add-missin
 
 Project-local `.lsp/settings.json` would have content like:
 ```clojure
-{"initializationOptions": {
-   "source-paths": ["shared-src", "src", "test", "dashboard/src"],
-   "macro-defs": {project.macros/dofor: ["bindings", "bound-elements"]}}}
+{:initializationOptions {
+   :source-paths ["shared-src", "src", "test", "dashboard/src"],
+   :macro-defs {project.macros/dofor: ["bindings", "bound-elements"]}}}
 ```
 
 ### Emacs

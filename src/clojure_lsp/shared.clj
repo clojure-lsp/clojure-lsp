@@ -22,3 +22,9 @@
            :character (.getCharacter (.getStart range))}
    :end   {:line      (.getLine (.getEnd range))
            :character (.getCharacter (.getEnd range))}})
+
+(defn keywordize-first-depth
+  [m]
+  (into {}
+        (for [[k v] m]
+          [(keyword k) v])))

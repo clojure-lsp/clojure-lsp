@@ -120,7 +120,7 @@
 
 (defn- kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
-        user-config (get-in @db/db [:settings "clj-kondo"])
+        user-config (get-in @db/db [:settings :clj-kondo])
         root-path (uri->path (:project-root @db/db))
         {:keys [findings]} (run-kondo-on-text! root-path text file-type user-config)]
     (->> findings
@@ -140,7 +140,7 @@
   ([uri text diagnose? remove-private?]
    (try
      (let [file-type (shared/uri->file-type uri)
-           macro-defs (get-in @db/db [:settings "macro-defs"])
+           macro-defs (get-in @db/db [:settings :macro-defs])
            references (cond->> (parser/find-usages uri text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
@@ -156,7 +156,7 @@
 (defn find-unused-aliases [uri]
   (let [usages (safe-find-references uri (slurp uri) false false)
         declarations (usages->declarations usages)
-        excludes (-> (get-in @db/db [:settings "linters" :unused-namespace :exclude] #{}) set)
+        excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
         declared-aliases (->> declarations
                               (filter (comp #(contains? % :alias) :tags))
                               (remove (comp excludes :ns)))]
@@ -255,11 +255,11 @@
 (defn determine-dependencies [project-root]
   (let [root-path (uri->path project-root)
         settings (:settings @db/db)
-        source-paths (mapv #(to-file root-path %) (get settings "source-paths"))
-        dependency-scheme (get settings "dependency-scheme")
-        ignore-directories? (get settings "ignore-classpath-directories")
-        project-specs (or (get settings "project-specs") default-project-specs)
-        kondo-user-config (get settings "clj-kondo")
+        source-paths (mapv #(to-file root-path %) (get settings :source-paths))
+        dependency-scheme (get settings :dependency-scheme)
+        ignore-directories? (get settings :ignore-classpath-directories)
+        project-specs (or (get settings :project-specs) default-project-specs)
+        kondo-user-config (get settings :clj-kondo)
         project (get-project-from root-path project-specs)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -310,4 +310,5 @@
 
 (defn find-project-settings [project-root]
   (->> (find-raw-project-settings project-root)
-       (edn/read-string {:readers {'re re-pattern}})))
+       (edn/read-string {:readers {'re re-pattern}})
+       shared/keywordize-first-depth))

@@ -271,17 +271,17 @@
     node))
 
 (defn ^:private remove-unused-requires
-  [unused-aliases nodes]
+  [unused-ns nodes]
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
         single-unused?  (when (and single-require? (z/vector? first-node))
-                         (contains? unused-aliases (-> first-node
+                         (contains? unused-ns (-> first-node
                                                        z/down
                                                        z/leftmost
                                                        z/sexpr)))]
     (if single-unused?
       (z/remove first-node)
-      (z/map #(remove-unused-require % unused-aliases) nodes))))
+      (z/map #(remove-unused-require % unused-ns) nodes))))
 
 (defn clean-ns
   [zloc uri]
@@ -296,9 +296,10 @@
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
         unused-aliases (crawler/find-unused-aliases uri)
+        unused-refers (crawler/find-unused-refers uri)
         removed-nodes (->> require-loc
                            z/remove
-                           (remove-unused-requires unused-aliases))
+                           (remove-unused-requires (set/union unused-aliases unused-refers)))
         requires (->> removed-nodes
                       z/node
                       n/children

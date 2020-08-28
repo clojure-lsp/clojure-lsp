@@ -26,48 +26,6 @@
 (defn- uri->path [uri]
   (Paths/get (URI. uri)))
 
-(defn ^:private diagnose-unknown-forward-declarations [usages]
-  (let [forward-usages (seq (filter (fn [usage] (contains? (:tags usage) :forward))
-                                    usages))
-        forward-syms (set (map :sym forward-usages))
-        found-declarations (set (keep (fn [usage]
-                                        (when (and (contains? forward-syms (:sym usage))
-                                                   (contains? (:tags usage) :declare))
-                                          (:sym usage)))
-                                      usages))
-        unknown-forwards (filter (fn [usage]
-                                   (not (contains? found-declarations (:sym usage))))
-                                 forward-usages)]
-    (for [usage unknown-forwards]
-      {:range (shared/->range usage)
-       :code :unknown
-       :message (str "Unknown forward declaration: " (:str usage))
-       :severity 1})))
-
-(defn ^:private diagnose-unused-references [uri declared-references all-envs]
-  (let [references (->> all-envs
-                        (mapcat (comp val))
-                        (remove (comp #(contains? % :declare) :tags))
-                        (remove (comp #(contains? % :forward) :tags))
-                        (map :sym)
-                        set)
-        unused-syms (set/difference (set (map :sym declared-references)) references)]
-    (for [usage (filter (comp unused-syms :sym) declared-references)
-          :let [code (condp set/subset? (:tags usage)
-                       #{:param} :unused-param
-                       #{:ns} :unused-ns
-                       #{:public} :unused-public
-                       :unused)]
-          :when (and (not= code :unused-param)
-                     (or (not= :unused-ns code)
-                         (not (string/index-of uri "test/"))))]
-      {:range (shared/->range usage)
-       :code code
-       :message (case code
-                  :unused-ns (str "Unused namespace: " (:str usage))
-                  (str "Unused declaration: " (:str usage)))
-       :severity 2})))
-
 (defn ^:private process-unused-aliases
   [usages declared-aliases]
   (let [ensure-sym (fn [s] (when-not (string? s) s))]
@@ -84,12 +42,6 @@
                            (not (contains? % :unused))) :tags))
        (remove (comp #(string/starts-with? % "_") name :sym))))
 
-(defn ^:private diagnose-unused [uri usages]
-  (let [all-envs (assoc (:file-envs @db/db) uri usages)
-        declarations (usages->declarations usages)
-        declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
-    (diagnose-unused-references uri declared-references all-envs)))
-
 (defn- kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))
         finding (cond-> (merge {:end-row row :end-col col} finding)
@@ -103,32 +55,51 @@
                  :info    3)
      :source "clj-kondo"}))
 
-(defn ^:private kondo-analysis->references
-  [uri {:keys [namespace-definitions namespace-usages var-definitions var-usages]}]
-  (let [requires {:clj  #{'clojure.core}
-                  :cljs #{'cljs.core}}]
-    (->> var-usages
-         (filter #(string/ends-with? uri (:filename %)))
-         (map (fn [usage]
-                {:ns             (:from usage)
-                 :requires       (get requires :clj)
-                 :uri            uri
-                 :refer-all-syms {}
-                 :refers         {}
-                 :imports        {}
-                 :aliases        {}
-                 :local-classes  #{}
-                 :publics        #{}
-                 :locals         #{}
-                 :usages         []
-                 :ignored?       false})))))
+(defn index-by
+  [f coll]
+  (persistent! (reduce #(assoc! %1 (f %2) %2) (transient {}) coll)))
+
+(defn kondo-ignore? [api-namespaces {:keys [:ns :export :defined-by :test :private :name]}]
+  (or
+   test
+   export
+   (when (contains? api-namespaces ns)
+     (not private))
+   (.startsWith (str name) "-")
+   (= 'clojure.core/deftype defined-by)
+   (= 'clojure.core/defrecord defined-by)
+   (= 'clojure.core/defprotocol defined-by)
+   (= 'clojure.core/definterface defined-by)))
+
+(defn ^:private kondo-unused-diagnostics
+  [uri {:keys [var-definitions var-usages]}]
+  (let [other-analysis (dissoc (:uri->analysis @db/db) uri)
+        var-usages (into (mapcat (comp :var-usages val) other-analysis) var-usages)
+        api-namespaces #{}
+        definitions-by-ns+name (index-by (juxt :ns :name) var-definitions)
+        defined-vars (set (map (juxt :ns :name) var-definitions))
+        used-vars (set (map (juxt :to :name) var-usages))
+        unused-vars (set/difference (set defined-vars) used-vars)
+        unused-vars-data (map definitions-by-ns+name unused-vars)
+        unused-vars-data (remove #(kondo-ignore? api-namespaces %) unused-vars-data)
+        results (into [] unused-vars-data)]
+    (map
+      (fn [{:keys [row col ns name] :as result}]
+        (let [expression? (not= row (:end-row result))
+              result-range (shared/->range (cond-> (merge {:end-row row :end-col col} result)
+                                             expression? (assoc :end-row row :end-col col)))]
+          {:range result-range
+           :message "Unused"
+           :source "clj-kondo"
+           :severity 2}))
+      results)))
 
 (defn- kondo-args [extra]
   (let [root-path (uri->path (:project-root @db/db))
         user-config (get-in @db/db [:settings :clj-kondo])
         kondo-dir (.resolve root-path ".clj-kondo")]
     (cond-> {:cache true
-             :cache-dir ".clj-kondo/cache"}
+             :cache-dir ".clj-kondo/.cache"}
       (.exists (.toFile kondo-dir))
       (assoc :cache-dir (str (.resolve kondo-dir ".cache")) :config-dir (str kondo-dir))
 
@@ -138,61 +109,40 @@
       user-config
       (update-in [:config] merge user-config))))
 
-(defn- run-kondo-on-paths! [paths]
-  (let [{:keys [analysis] :as result} (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]
-                                                               :config {:output {:analysis true}}}))]
-    (swap! db/db assoc :kondo-analysis analysis)
+(comment
+  (let [ana (get (get-in @db/db [:uri->analysis]) "file:///Users/case/dev/carve/src/bar.clj")]
+    (count (:var-usages ana))))
+
+(defn- run-kondo-on-text! [uri text]
+  (with-in-str text (kondo/run! (kondo-args {:lint ["-"] :lang (shared/uri->file-type uri) :config {:output {:analysis true}}}))))
+
+(defn- kondo-find-diagnostics [{:keys [findings]}]
+  (->> findings
+       (filter #(= "<stdin>" (:filename %)))
+       (map kondo-finding->diagnostic)))
+
+(defn find-diagnostics [uri kondo-results]
+  (let [kondo-diagnostics (kondo-find-diagnostics kondo-results)
+        unused (kondo-unused-diagnostics uri (:analysis kondo-results))
+        result (concat unused kondo-diagnostics)]
     result))
-
-(defn- run-kondo-on-text! [text lang]
-  (with-in-str text (kondo/run! (kondo-args {:lint ["-"] :lang lang}))))
-
-(defn- kondo-find-diagnostics [uri text]
-  (let [file-type (shared/uri->file-type uri)
-        {:keys [findings]} (run-kondo-on-text! text file-type)]
-    (->> findings
-         (filter #(= "<stdin>" (:filename %)))
-         (map kondo-finding->diagnostic))))
-
-(defn find-diagnostics [uri text references]
-  (let [kondo-diagnostics (kondo-find-diagnostics uri text)
-        unused (diagnose-unused uri references)
-        unknown-forwards (diagnose-unknown-forward-declarations references)
-        result (concat unused unknown-forwards kondo-diagnostics)]
-    result))
-
-(defn ^:private kondo-references
-  [uri text]
-  (kondo-analysis->references uri (:kondo-analysis @db/db)))
 
 (defn safe-find-references
   ([uri text]
-   (safe-find-references uri text true false))
+    (safe-find-references uri text true false))
   ([uri text diagnose? remove-private?]
-   (try
-     (let [file-type (shared/uri->file-type uri)
-           macro-defs (get-in @db/db [:settings :macro-defs])
-           references (cond->> (kondo-references uri text)
-                        #_#_
-                        remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
-       (when diagnose?
-         (async/put! db/diagnostics-chan
-                     {:uri uri
-                      :diagnostics (find-diagnostics uri text references)}))
-       references)
-     (catch Throwable e
-       (log/warn e "Cannot parse: " uri (.getMessage e))
+    (try
+      (let [result (run-kondo-on-text! uri text)]
+        (when diagnose?
+          (async/put! db/diagnostics-chan
+                      {:uri uri
+                       :diagnostics (find-diagnostics uri result)}))
+        (cond->> (:analysis result)
+          remove-private? (remove :private)))
+      (catch Throwable e
+        (log/warn e "Cannot parse: " uri (.getMessage e))
        ;; On purpose
-       nil))))
-
-(defn find-unused-aliases [uri]
-  (let [usages (safe-find-references uri (slurp uri) false false)
-        declarations (usages->declarations usages)
-        excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
-        declared-aliases (->> declarations
-                              (filter (comp #(contains? % :alias) :tags))
-                              (remove (comp excludes :ns)))]
-    (process-unused-aliases usages declared-aliases)))
+        nil))))
 
 (defn crawl-jars [jars dependency-scheme]
   (let [xf (comp
@@ -236,6 +186,15 @@
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan dirs) true (fn [e] (log/warn e "hello")))
     (async/<!! (async/into {} output-chan))))
+
+(defn find-unused-aliases [uri]
+  (let [usages (safe-find-references uri (slurp uri) false false)
+        declarations (usages->declarations usages)
+        excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
+        declared-aliases (->> declarations
+                              (filter (comp #(contains? % :alias) :tags))
+                              (remove (comp excludes :ns)))]
+    (process-unused-aliases usages declared-aliases)))
 
 (defn lookup-classpath [root-path command-args env]
   (try
@@ -291,7 +250,6 @@
         dependency-scheme (get settings :dependency-scheme)
         ignore-directories? (get settings :ignore-classpath-directories)
         project-specs (or (get settings :project-specs) default-project-specs)
-        kondo-user-config (get settings :clj-kondo)
         project (get-project-from root-path project-specs)]
     (if (some? project)
       (let [project-hash (:project-hash project)
@@ -314,18 +272,8 @@
             source-envs (crawl-source-dirs source-paths)
             file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
         (db/save-deps root-path project-hash classpath jar-envs)
-        (if use-cp-cache
-          (log/info "skipping classpath scan due to project hash match")
-          (do
-            (log/info "starting clj-kondo project classpath scan (this takes awhile)")
-            (let [results (run-kondo-on-paths! classpath)]
-              (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
         (merge source-envs file-envs jar-envs))
-      (let [kondo-source-chan (async/go (run-kondo-on-paths! source-paths))
-            crawler-output-chan (async/go (crawl-source-dirs source-paths))]
-        (log/info "clj-kondo scanned source paths in"
-                  (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))
-        (async/<!! crawler-output-chan)))))
+      (crawl-source-dirs source-paths))))
 
 (defn find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]

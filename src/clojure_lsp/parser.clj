@@ -417,9 +417,11 @@
     (when (= libtype :require)
       (vswap! context update :requires conj full-ns)
       (when refer-all?
+        ;; TODO
+        #_
         (vswap! context update :refer-all-syms merge
-                (->> (for [[_ usages] (:file-envs @db/db)
-                           :when (->> usages
+                (->> (for [[_ {:keys [namespace-definitions var-usages]}] (:uri->analysis @db/db)
+                           :when (->> var-usages
                                       (filter (comp #(set/subset? #{:ns :public} %) :tags))
                                       (filter (comp #{full-ns} :sym))
                                       (seq))

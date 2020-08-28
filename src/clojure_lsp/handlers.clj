@@ -37,16 +37,20 @@
          (filter (comp #{:within :before} (partial check-bounds line column) first))
          first)))
 
-(defn find-reference-under-cursor [line column env file-type]
+(defn find-reference-under-cursor [line column analysis file-type]
   (let [file-types (if (= :cljc file-type)
                      #{:clj :cljs}
                      #{file-type})]
-    (->> env
-         (filter (comp file-types :file-type))
-         (filter (comp #{:within} (partial check-bounds line column)))
-         ;; Pushes keywords last
-         (sort-by (comp keyword? :sym))
-         (first))))
+    (->> analysis
+         vals
+         (apply concat)
+         (filter #(contains? file-types (:lang %)))
+         (filter #(= (:row %) line))
+         (filter #(and (= (:row %) line)
+                       (> column (:col %))))
+         (sort-by :col)
+         last
+         )))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -604,22 +608,18 @@
                        :arguments [doc-id line character]}}))))
 (defn code-lens
   [doc-id]
-  (let [db     @db/db
-        usages (get-in db [:file-envs doc-id])]
-    (->> usages
-         (filter (fn [{:keys [tags]}]
-                   (and (contains? tags :declare)
-                        (not (contains? tags :alias))
-                        (not (contains? tags :param)))))
+  (let [db @db/db
+        usages (get-in db [:uri->analysis doc-id])]
+    (->> (:var-definitions usages)
          (map (fn [usage]
                 {:range (shared/->range usage)
-                 :data  [doc-id (:row usage) (:col usage)]})))))
+                 :data [doc-id (:row usage) (:col usage)]})))))
 
 (defn code-lens-resolve
   [range [doc-id row col]]
   {:range   range
-   :command {:title   (-> doc-id
-                          (reference-usages row col)
-                          count
-                          (str " references"))
+   :command {:title (-> doc-id
+                        (reference-usages row col)
+                        count
+                        (str " references"))
              :command "code-lens-references"}})

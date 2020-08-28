@@ -1117,6 +1117,7 @@
      es6-set-entries-iterator
      ex-cause
      ex-message
+     exists?
      find-macros-ns
      find-ns-obj
      gensym_counter
@@ -1185,6 +1186,7 @@
      t_cljs$core11184
      t_cljs$core9576
      tap>
+     this-as
      transformer-iterator
      truth_
      type->str

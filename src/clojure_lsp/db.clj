@@ -11,7 +11,7 @@
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
-(def version 1)
+(def version 2)
 
 (defn make-spec [project-root]
   (let [lsp-db (io/file (str project-root) ".lsp" "sqlite.1.db")]
@@ -25,8 +25,8 @@
       (jdbc/execute! conn ["drop table if exists project;"])
       (jdbc/execute! conn ["create table project (version text, root text unique, hash text, classpath text, jar_envs text);"])
       (jdbc/execute! conn ["insert or replace into project
-                          (version, root, hash, classpath, jar_envs)
-                          values (?,?,?,?,?);" (str version) (str project-root) project-hash (pr-str classpath) (pr-str jar-envs)]))))
+                            (version, root, hash, classpath, jar_envs)
+                            values (?,?,?,?,?);" (str version) (str project-root) project-hash (pr-str classpath) (pr-str jar-envs)]))))
 
 (defn read-deps [project-root]
   (try
@@ -41,11 +41,5 @@
         {:jar-envs (edn/read-string (:jar_envs project-row))
          :classpath (edn/read-string (:classpath project-row))
          :project-hash (:hash project-row)}))
-    (catch Exception e
+    (catch Throwable e
       (log/warn "Could not load db" (.getMessage e)))))
-
-(comment
-  (do
-    (save-db! "/Users/case/dev/lsp")
-    (load-db! "/Users/case/dev/lsp")
-    (:jar-envs @db)))

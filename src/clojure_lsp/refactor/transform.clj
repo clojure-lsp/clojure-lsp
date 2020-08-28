@@ -79,14 +79,6 @@
           :loc result-loc}])
       [])))
 
-(comment
-  [:a :b]
-  (foo (-> (quux (qux x w))
-           (bar y)) z)
-  (->> (bar w (qux y x))
-       (foo z))
-  )
-
 (defn- can-thread? [zloc]
   (= (z/tag zloc) :list))
 
@@ -295,7 +287,7 @@
   [zloc uri]
   (let [ns-loc (edit/find-namespace zloc)
         require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
-        keep-require-at-start? (get-in @db/db [:settings "keep-require-at-start?"])
+        keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
         col (if require-loc
               (if keep-require-at-start?
                 (-> require-loc z/node meta :end-col)
@@ -424,7 +416,7 @@
   (when-let [oploc (inside-function? zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
-                             (not (get-in @db/db [:settings "use-metadata-for-privacy?"])))
+                             (not (get-in @db/db [:settings :use-metadata-for-privacy?])))
           switch-defn? (= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?
@@ -449,7 +441,7 @@
             #{'let 'def})))
 
 (defn inline-symbol
-  [zloc _uri [_ {def-uri :uri definition :usage}] references]
+  [_zloc _uri [_ {def-uri :uri definition :usage}] references]
   (let [{:keys [text]} (get-in @db/db [:documents def-uri])
         def-loc (parser/loc-at-pos text (:row definition) (:col definition))
         op (inline-symbol? def-uri definition)]
@@ -471,126 +463,3 @@
             (update accum uri (fnil conj []) {:loc val-loc :range usage}))
           {def-uri [{:loc nil :range def-range}]}
           uses)))))
-
-(comment
-   ; join if let above
-
-  ;; TODO replace bound forms that are being expanded around
-   ; join if let above
-
-  (defn extract-def
-    [zloc [def-name]]
-    (let [def-sexpr (z/sexpr zloc)
-          def-node (z/node zloc)
-          def-sym (symbol def-name)]
-      (-> zloc
-          (edit/to-top)
-          (edit/mark-position :first-occurrence)
-          (edit/replace-all-sexpr def-sexpr def-sym true)
-          (edit/find-mark :first-occurrence)
-          (zz/insert-left (n/coerce (list 'def def-sym))) ; add declare
-          (zz/insert-left (n/newlines 2)) ; add new line after location
-          (z/left)
-          (zz/append-child (n/newlines 1))
-          (z/append-child def-node))))
-
-  (defn add-declaration
-    "Adds a declaration for the current symbol above the current top level form"
-    [zloc _]
-    (let [node (z/sexpr zloc)]
-      (if (symbol? node)
-        (-> zloc
-            (edit/to-top)
-            (zz/insert-left (n/coerce (list 'declare node))) ; add declare
-            (zz/insert-left (n/newlines 2)) ; add new line after location
-            (z/left))
-        zloc)))
-
-  (defn cycle-if
-    "Cycles between if and if-not form"
-    [zloc _]
-    (if-let [if-loc (z/find-value zloc z/prev #{'if 'if-not})] ; find first ancestor if
-      (-> if-loc
-          (z/insert-left (if (= 'if (z/sexpr if-loc)) 'if-not 'if)) ; add inverse if / if-not
-          (z/remove) ; remove original if/if-not
-          (z/rightmost) ; Go to last child (else form)
-          (edit/transpose-with-left)) ; Swap children
-      zloc))
-
-  ;; TODO will insert duplicates
-  ;; TODO handle :type and :macro
-  (defn add-candidate
-    "Add a lib spec to ns form - `missing` is the package or class and `missing-type` is one of `#{:ns :class :type :macro}`"
-    [zloc [missing missing-type sym-ns]]
-    (-> zloc
-        (edit/find-namespace)
-        (edit/mark-position :reformat)
-        (cond->
-         (= missing-type :class)
-          (->
-           (edit/find-or-create-libspec :import) ; go to import
-           (zz/insert-right (n/newlines 1))
-           (z/insert-right (symbol missing))) ; add class
-
-          (= missing-type :ns)
-          (->
-           (edit/find-or-create-libspec :require) ; go to require
-           (zz/insert-right (n/newlines 1))
-           (z/insert-right [(symbol missing)]) ; add require vec and ns
-           (z/right))
-
-          (and sym-ns (= missing-type :ns)) ; if there was a requested ns `str/trim`
-          (->
-           (z/append-child :as) ; add :as
-           (z/append-child (symbol sym-ns)))))) ; as prefix
-
-  (defn replace-ns
-    [zloc [new-ns]]
-    (-> zloc
-        (edit/find-namespace)
-        (z/insert-right new-ns)
-        (z/remove)
-        (edit/find-namespace)))
-
-  (defn cycle-op
-    [zloc a-op b-op]
-    (if-let [oploc (edit/find-ops-up zloc a-op b-op)]
-      (let [thread-type (z/sexpr oploc)]
-        (cond
-          (= a-op thread-type) (z/replace oploc b-op)
-          (= b-op thread-type) (z/replace oploc a-op)
-          :else zloc))
-      zloc))
-
-  (defn cycle-thread
-    [zloc _]
-    (cycle-op zloc '-> '->>))
-
-  (defn cycle-privacy
-    [zloc _]
-    (cycle-op zloc 'defn 'defn-))
-
-  (defn function-from-example
-    [zloc _]
-    (let [op-loc (edit/find-op zloc)
-          example-loc (z/up (edit/find-op zloc))
-          child-sexprs (n/child-sexprs (z/node example-loc))
-          fn-name (first child-sexprs)
-          args (for [[i arg] (map-indexed vector (rest child-sexprs))]
-                 (if (symbol? arg)
-                   arg
-                   (symbol (str "arg" (inc i)))))]
-      (-> example-loc
-          (edit/to-top)
-          (zz/insert-left (n/coerce `(~'defn ~fn-name [~@args]))) ; add declare
-          (zz/insert-left (n/newlines 2))))) ; add new line after location
-
-
-
-  (defn format-form
-    [zloc _]
-    (edit/format-form zloc))
-
-  (defn format-all
-    [zloc _]
-    (edit/format-all zloc)))

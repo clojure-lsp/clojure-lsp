@@ -10,15 +10,14 @@
     [clojure-lsp.refactor.transform :as refactor]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
+    [clojure.pprint :as pprint]
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z])
   (:import
-    [java.net URI URL JarURLConnection]
-    [java.util.jar JarFile]
-    [java.nio.file Paths]))
+    [java.net URL JarURLConnection]))
 
 (defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
@@ -51,7 +50,7 @@
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
-        source-paths (get-in @db/db [:settings "source-paths"])
+        source-paths (get-in @db/db [:settings :source-paths])
         in-project? (string/starts-with? uri project-root)
         file-type (shared/uri->file-type uri)]
     (when (and in-project? (not= :unknown file-type))
@@ -116,12 +115,14 @@
         (seq tags) (str "\n----\n" "lsp: " tags)))))
 
 (defn did-open [uri text]
-  (when-let [new-ns (and (string/blank? text) (uri->namespace uri))]
-    (let [new-text (format "(ns %s)" new-ns)
-          changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
-                    :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
-                             :new-text new-text}]}]]
-      (async/put! db/edits-chan (client-changes changes))))
+  (when-let [new-ns (and (string/blank? text)
+                         (uri->namespace uri))]
+    (when (get-in @db/db [:settings :auto-add-ns-to-new-files?] true)
+      (let [new-text (format "(ns %s)" new-ns)
+            changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
+                      :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
+                               :new-text new-text}]}]]
+        (async/put! db/edits-chan (client-changes changes)))))
 
   (when-let [references (crawler/safe-find-references uri text)]
     (swap! db/db (fn [state-db]
@@ -138,18 +139,12 @@
              :project-settings project-settings
              :client-settings client-settings
              :settings (-> (merge client-settings project-settings)
-                           (update "cljfmt" cljfmt.main/merge-default-options))
+                           (update :cljfmt cljfmt.main/merge-default-options))
              :client-capabilities client-capabilities))
     (let [file-envs (crawler/determine-dependencies project-root)]
       (swap! db/db assoc
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
-
-(comment
-  ;; Reinitialize
-  (let [{:keys [project-root client-capabilities client-settings]} @db/db]
-    (initialize project-root client-capabilities client-settings)
-    (:project-settings @db/db)))
 
 (defn- matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))
@@ -265,7 +260,7 @@
                                  (:declare tags))]
                   usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])
-        show-docs-arity-on-same-line? (get-in @db/db [:settings "show-docs-arity-on-same-line?"])]
+        show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])]
     {:label label
      :data sym-wanted
      :documentation (generate-docs content-format usage show-docs-arity-on-same-line?)}))
@@ -421,7 +416,7 @@
                    (map file-env-entry->document-highlight)) local-env)))
 
 (defn file-env-entry->workspace-symbol [uri [e kind]]
-  (let [{:keys [sym row col end-row end-col sym]} e
+  (let [{:keys [row col end-row end-col sym]} e
         symbol-kind (entry-kind->symbol-kind kind)
         r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
@@ -489,6 +484,14 @@
         (log/warn "Could not apply" refactoring "to form: " (z/string loc)))
       (log/warn "Could not find a form at this location. row" line "col" column "file" doc-id))))
 
+(defn server-info []
+  (let [db @db/db]
+    {:type :info
+     :message (with-out-str (pprint/pprint {:project-root (:project-root db)
+                                            :project-settings (:project-settings db)
+                                            :client-settings (:client-settings db)
+                                            :port (:port db)}))}))
+
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
@@ -500,7 +503,7 @@
                                  (:declare tags))]
                   usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
-        show-docs-arity-on-same-line? (get-in @db/db [:settings "show-docs-arity-on-same-line?"])
+        show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
         docs (generate-docs content-format usage show-docs-arity-on-same-line?)]
     (if cursor
       {:range (shared/->range cursor)
@@ -513,7 +516,7 @@
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
         new-text (cljfmt/reformat-string
                    text
-                   (get-in @db/db [:settings "cljfmt"]))]
+                   (get-in @db/db [:settings :cljfmt]))]
     (if (= new-text text)
       []
       [{:range (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
@@ -527,7 +530,7 @@
              :new-text (n/string
                          (cljfmt/reformat-form
                            (z/node form-loc)
-                           (get-in @db/db [:settings "cljfmt"])))})
+                           (get-in @db/db [:settings :cljfmt])))})
           forms)))
 
 (defmulti extension (fn [method _] method))

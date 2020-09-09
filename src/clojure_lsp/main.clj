@@ -7,7 +7,8 @@
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
    [nrepl.server :as nrepl.server]
-   [trptcolin.versioneer.core :as version])
+   [trptcolin.versioneer.core :as version]
+   [clojure.spec.alpha :as s])
   (:import
    (clojure_lsp ClojureExtensions)
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
@@ -179,8 +180,9 @@
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))
-                        new-name (.getNewName params)]
-                    (interop/conform-or-log ::interop/workspace-edit (#'handlers/rename doc-id line column new-name)))
+                        new-name (.getNewName params)
+                        edit (#'handlers/rename doc-id line column new-name)]
+                    (interop/conform-or-log ::interop/workspace-edit edit))
                   (catch Exception e
                     (log/error e)))))))))
 

@@ -26,6 +26,7 @@
       Position
       PublishDiagnosticsParams
       Range
+      RenameFile
       SymbolKind
       SymbolInformation
       TextDocumentEdit
@@ -76,13 +77,25 @@
 (s/def ::uri string?)
 (s/def ::edits (s/coll-of ::text-edit))
 (s/def ::text-document (s/and (s/keys :req-un [::version ::uri])
-                              (s/conformer #(doto (VersionedTextDocumentIdentifier. (:version %1))
-                                              (.setUri (:uri %1))))))
+                              (s/conformer #(VersionedTextDocumentIdentifier. (:uri %) (:version %)))))
 (s/def ::text-document-edit (s/and (s/keys :req-un [::text-document ::edits])
                                    (s/conformer #(TextDocumentEdit. (:text-document %1) (:edits %1)))))
 (s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
-(s/def ::document-changes (s/and (s/coll-of ::text-document-edit)
-                                 (s/conformer (fn [c] (map #(Either/forLeft %) c)))))
+(s/def :rename-file/kind (s/and string?
+                                #(= % "rename")))
+(s/def :rename-file/old-uri string?)
+(s/def :rename-file/new-uri string?)
+(s/def ::rename-file (s/and (s/keys :req-un [:rename-file/kind :rename-file/old-uri :rename-file/new-uri])
+                            (s/conformer #(RenameFile. (:old-uri %) (:new-uri %)))))
+
+(s/def ::document-changes-entry (s/or :rename-file ::rename-file
+                                      :text-document-edit ::text-document-edit ))
+(s/def ::document-changes (s/and (s/coll-of ::document-changes-entry)
+                                 (s/conformer #(map (fn [c]
+                                                      (case (first c)
+                                                        :text-document-edit (Either/forLeft (second c))
+                                                        :rename-file (Either/forRight (second c))))
+                                                      %))))
 (s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
                                (s/conformer #(if-let [changes (:changes %)]
                                                (WorkspaceEdit. changes)
@@ -293,7 +306,6 @@
                                                            :capabilities/signature-help
                                                            :capabilities/implementation])))
 
-(s/def :capabilities/workspace-edit ::debean)
 (s/def :capabilities/workspace-edit ::debean)
 (s/def :capabilities/did-change-configuration ::debean)
 (s/def :capabilities/did-change-watched-files ::debean)

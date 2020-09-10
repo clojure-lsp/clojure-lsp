@@ -67,7 +67,7 @@ Bellow are all the currently supported LSP capabilities and their implementation
 | workspace/didChangeWatchedFiles     | √    |                                               |
 | workspace/symbol                    | √    |                                               |
 | workspace/executeCommand            | √    | See [Extra capabilities](#extra-capabilities) |
-| workspace/applyEdit                 | √    |                                               |
+| workspace/applyEdit                 | √    | TextDocumentEdit and RenameFile only          |
 | textDocument/didOpen                | √    |                                               |
 | textDocument/didChange              | √    |                                               |
 | textDocument/willSave               |      |                                               |

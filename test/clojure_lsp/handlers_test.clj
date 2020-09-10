@@ -13,6 +13,17 @@
       Range
       Position)))
 
+(deftest did-close
+  (reset! db/db {:documents {"file://a.clj" {:text "(ns a)"}
+                             "file://b.clj" {:text "(ns b)"}}
+                 :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
+                             "file://b.clj" (parser/find-usages "(ns b)" :clj {})}})
+  (testing "should remove references to file"
+    (handlers/did-close "file://a.clj")
+    (is (= {:documents {"file://b.clj" {:text "(ns b)"}}
+            :file-envs {"file://b.clj" (parser/find-usages "(ns b)" :clj {})}}
+           @db/db))))
+
 (deftest hover
   (testing "with show-docs-arity-on-same-line? disabled"
     (testing "plain text"
@@ -123,7 +134,25 @@
       (is (= 0 (count (get changes "file://c.clj"))))
       (is (= 3 (count (get changes "file://b.clj"))))
       (is (= "xx" (get-in changes ["file://b.clj" 0 :new-text])))
-      (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text]))))))
+      (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text])))))
+  (testing "on a namespace"
+    (reset! db/db {:project-root "file:///my-project"
+                   :settings {:source-paths #{"src" "test"}}
+                   :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                   :file-envs {"file:///my-project/src/foo/bar_baz.clj" (parser/find-usages "(ns foo.bar-baz)" :clj {})}})
+    (is (= {:document-changes
+            [{:text-document {:version 0
+                              :uri "file:///my-project/src/foo/bar_baz.clj"}
+              :edits [{:range
+                       {:start {:line 0 :character 4}
+                        :end {:line 0 :character 15}}
+                       :new-text "foo.baz-qux"
+                       :text-document {:version 0
+                                       :uri "file:///my-project/src/foo/bar_baz.clj"}}]}
+             {:kind "rename"
+              :old-uri "file:///my-project/src/foo/bar_baz.clj"
+              :new-uri "file:///my-project/src/foo/baz_qux.clj"}]}
+           (handlers/rename "file:///my-project/src/foo/bar_baz.clj" 1 5 "foo.baz-qux")))))
 
 (deftest test-rename-simple-keywords
   (reset! db/db {:file-envs

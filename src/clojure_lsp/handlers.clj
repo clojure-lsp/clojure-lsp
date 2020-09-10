@@ -63,6 +63,26 @@
                              (subs (count source-path))
                              (string/replace #"/" ".")
                              (string/replace #"_" "-")))))))))
+
+(defn ^:private source-path-from-uri [uri]
+  (let [project-root (:project-root @db/db)
+        source-paths (get-in @db/db [:settings :source-paths])]
+    (->> source-paths
+         (some (fn [source-path]
+                 (when (string/starts-with? uri (str project-root "/" source-path "/"))
+                   source-path))))))
+
+(defn ^:private namespace->uri [namespace project-root source-path file-type]
+  (str project-root
+       "/"
+       source-path
+       "/"
+       (-> namespace
+           (string/replace "." "/")
+           (string/replace "-" "_"))
+       "."
+       (name file-type)))
+
 (defn- client-changes [changes]
   (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
     {:document-changes changes}
@@ -283,6 +303,11 @@
           {:uri uri :range (shared/->range usage)})
         (reference-usages doc-id line column)))
 
+(defn did-close [uri]
+  (swap! db/db #(-> %
+                    (update :documents dissoc uri)
+                    (update :file-envs dissoc uri))))
+
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
   (loop [state-db @db/db]
@@ -316,8 +341,11 @@
 
 (defn rename [doc-id line column new-name]
   (let [file-envs (:file-envs @db/db)
+        project-root (:project-root @db/db)
         local-env (get file-envs doc-id)
-        {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))]
+        file-type (shared/uri->file-type doc-id)
+        source-path (source-path-from-uri doc-id)
+        {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (find-reference-under-cursor line column local-env file-type)]
     (when (and cursor-usage (not (simple-keyword? cursor-sym)) (not (contains? tags :norename)))
       (let [[_ cursor-ns cursor-name] (parser/ident-split cursor-str)
             replacement (if cursor-ns
@@ -332,7 +360,15 @@
                              (map (fn [[text-document edits]]
                                     {:text-document text-document
                                      :edits edits})))]
-        (client-changes doc-changes)))))
+        (if (and (contains? tags :ns)
+                 (not= (compare cursor-name replacement) 0)
+                 (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes]))
+          (let [new-uri (namespace->uri replacement project-root source-path file-type)]
+            (client-changes (concat doc-changes
+                                    [{:kind "rename"
+                                      :old-uri doc-id
+                                      :new-uri new-uri}])))
+          (client-changes doc-changes))))))
 
 (defn definition-usage [doc-id line column]
   (let [file-envs (:file-envs @db/db)

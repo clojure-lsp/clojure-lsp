@@ -303,6 +303,11 @@
           {:uri uri :range (shared/->range usage)})
         (reference-usages doc-id line column)))
 
+(defn did-close [uri]
+  (swap! db/db #(-> %
+                    (update :documents dissoc uri)
+                    (update :file-envs dissoc uri))))
+
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
   (loop [state-db @db/db]

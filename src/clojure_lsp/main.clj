@@ -124,7 +124,9 @@
   (^void didClose [_ ^DidCloseTextDocumentParams params]
     (log/warn "DidCloseTextDocumentParams")
     (go :didClose
-        (end (swap! db/db update :documents dissoc (interop/document->decoded-uri (.getTextDocument params))))))
+        (end (-> (.getTextDocument params)
+                 interop/document->decoded-uri
+                 handlers/did-close))))
 
   (^CompletableFuture references [this ^ReferenceParams params]
     (go :references

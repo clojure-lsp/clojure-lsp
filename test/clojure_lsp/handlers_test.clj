@@ -13,6 +13,17 @@
       Range
       Position)))
 
+(deftest did-close
+  (reset! db/db {:documents {"file://a.clj" {:text "(ns a)"}
+                             "file://b.clj" {:text "(ns b)"}}
+                 :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
+                             "file://b.clj" (parser/find-usages "(ns b)" :clj {})}})
+  (testing "should remove references to file"
+    (handlers/did-close "file://a.clj")
+    (is (= {:documents {"file://b.clj" {:text "(ns b)"}}
+            :file-envs {"file://b.clj" (parser/find-usages "(ns b)" :clj {})}}
+           @db/db))))
+
 (deftest hover
   (testing "with show-docs-arity-on-same-line? disabled"
     (testing "plain text"

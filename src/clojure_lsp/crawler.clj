@@ -44,7 +44,7 @@
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
-(defn ^:private diagnose-unused-references [uri declared-references all-envs]
+(defn ^:private diagnose-unused-references [uri declared-references all-envs excluded-unused-ns-declarations]
   (let [references (->> all-envs
                         (mapcat (comp val))
                         (remove (comp #(contains? % :declare) :tags))
@@ -60,7 +60,8 @@
                        :unused)]
           :when (and (not= code :unused-param)
                      (or (not= :unused-ns code)
-                         (not (string/index-of uri "test/"))))]
+                         (not-any? #(string/index-of uri %)
+                                   (set/union #{"test/"} excluded-unused-ns-declarations))))]
       {:range (shared/->range usage)
        :code code
        :message (case code
@@ -86,11 +87,11 @@
                            (not (contains? % :unused))) :tags))
        (remove (comp #(string/starts-with? % "_") name :sym))))
 
-(defn ^:private diagnose-unused [uri usages]
+(defn ^:private diagnose-unused [uri usages excluded-unused-ns-declarations]
   (let [all-envs (assoc (:file-envs @db/db) uri usages)
         declarations (usages->declarations usages)
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
-    (concat (diagnose-unused-references uri declared-references all-envs))))
+    (concat (diagnose-unused-references uri declared-references all-envs excluded-unused-ns-declarations))))
 
 (defn- kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))
@@ -133,9 +134,9 @@
          (filter #(= "<stdin>" (:filename %)))
          (map kondo-finding->diagnostic))))
 
-(defn find-diagnostics [uri text usages]
+(defn find-diagnostics [uri text usages excluded-unused-ns-declarations]
   (let [kondo-diagnostics (kondo-find-diagnostics uri text)
-        unused (diagnose-unused uri usages)
+        unused (diagnose-unused uri usages excluded-unused-ns-declarations)
         unknown-forwards (diagnose-unknown-forward-declarations usages)
         result (concat unused unknown-forwards kondo-diagnostics)]
     result))
@@ -147,12 +148,13 @@
    (try
      (let [file-type (shared/uri->file-type uri)
            macro-defs (get-in @db/db [:settings :macro-defs])
+           excluded-unused-ns-declarations (get-in @db/db [:settings :linters :unused-namespace-declarations] #{})
            references (cond->> (parser/find-usages uri text file-type macro-defs)
                         remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri
-                      :diagnostics (find-diagnostics uri text references)}))
+                      :diagnostics (find-diagnostics uri text references excluded-unused-ns-declarations)}))
        references)
      (catch Throwable e
        (log/warn e "Cannot parse: " uri (.getMessage e))

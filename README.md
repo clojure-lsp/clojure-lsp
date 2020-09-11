@@ -173,7 +173,8 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 ~`linters`~ (Deprecated in favor of `clj-kondo`) - some initial support for disabling diagnostics currently only this one that will suppress the unused alias warning and stop the require from being cleaned by `clean-ns`:
 
 ```clojure
- :linters {:unused-namespace {:exclude [clojure.data]}}
+ :linters {:unused-namespace {:exclude [clojure.data]}
+           :unused-namespace-declarations #{"test/" "foo/bar"}}
 ```
 
 `project-specs` - value is a vector containing a map of key/value pairs, for example:

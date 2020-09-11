@@ -187,7 +187,7 @@
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["user/foo is called with 3 args but expects 1 or 2"
                   "user/baz is called with 1 arg but expects 3"
                   "user/bar is called with 0 args but expects 1 or more"
@@ -218,7 +218,7 @@
                     (foo 1)
                     (bar))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["user/foo is called with 2 args but expects 1 or 3"
                   "user/bar is called with 1 arg but expects 0"
                   "user/bar is called with 1 arg but expects 0"
@@ -234,7 +234,7 @@
                   (bar :a)
                   (bar :a :b)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message usages))))))
     ;; Waiting for kondo implement this support: https://github.com/borkdude/clj-kondo/issues/912
@@ -248,7 +248,7 @@
                   (foo)
                   (foo (foo :a :b))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["No overload for 'foo' with 0 arguments"
                   "No overload for 'foo' with 2 arguments"]
                  (map :message usages))))))
@@ -261,7 +261,7 @@
                   (foo 1 2)
                   (foo 1)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]))]
+        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["Unused namespace: user"
                   "user/foo is called with 0 args but expects 2"
                   "user/foo is called with 1 arg but expects 2"]
@@ -290,13 +290,20 @@
                      {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
                       "file://b.clj" (parser/find-usages code-b :clj {})}
                     :project-root "file:///"})
-      (let [usages (crawler/find-diagnostics "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]))]
+      (let [usages (crawler/find-diagnostics "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]) #{})]
         (is (= ["Unused namespace: b"
                 "Unused declaration: x"
                 "Unused declaration: y"
                 "Unknown forward declaration: wat"
                 "namespace c is required but never used"
                 "Unresolved namespace f. Are you missing a require?"]
+               (map :message usages))))))
+  (testing "custom unused namespace declaration"
+    (let [code "(ns foo.bar)"]
+      (reset! db/db {:file-envs {"file://foo/bar.clj" (parser/find-usages code :clj {})}
+                     :project-root "file:///"})
+      (let [usages (crawler/find-diagnostics "file://foo/bar.clj" code (get-in @db/db [:file-envs "file://foo/bar.clj"]) #{"foo"})]
+        (is (empty?
                (map :message usages)))))))
 
 (deftest test-completion

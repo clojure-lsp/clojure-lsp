@@ -305,8 +305,7 @@
 
 (defn did-close [uri]
   (swap! db/db #(-> %
-                    (update :documents dissoc uri)
-                    (update :file-envs dissoc uri))))
+                    (update :documents dissoc uri))))
 
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
@@ -364,6 +363,9 @@
                  (not= (compare cursor-name replacement) 0)
                  (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes]))
           (let [new-uri (namespace->uri replacement project-root source-path file-type)]
+            (swap! db/db #(-> %
+                              (update :documents dissoc doc-id)
+                              (update :file-envs dissoc doc-id)))
             (client-changes (concat doc-changes
                                     [{:kind "rename"
                                       :old-uri doc-id

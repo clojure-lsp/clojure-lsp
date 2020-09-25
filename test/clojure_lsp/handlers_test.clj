@@ -21,7 +21,8 @@
   (testing "should remove references to file"
     (handlers/did-close "file://a.clj")
     (is (= {:documents {"file://b.clj" {:text "(ns b)"}}
-            :file-envs {"file://b.clj" (parser/find-usages "(ns b)" :clj {})}}
+            :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
+                        "file://b.clj" (parser/find-usages "(ns b)" :clj {})}}
            @db/db))))
 
 (deftest hover
@@ -152,7 +153,8 @@
              {:kind "rename"
               :old-uri "file:///my-project/src/foo/bar_baz.clj"
               :new-uri "file:///my-project/src/foo/baz_qux.clj"}]}
-           (handlers/rename "file:///my-project/src/foo/bar_baz.clj" 1 5 "foo.baz-qux")))))
+           (handlers/rename "file:///my-project/src/foo/bar_baz.clj" 1 5 "foo.baz-qux")))
+    (is (empty? (get @db/db :file-envs)))))
 
 (deftest test-rename-simple-keywords
   (reset! db/db {:file-envs

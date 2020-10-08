@@ -23,8 +23,8 @@
   :git-version {:status-to-version
                 (fn [{:keys [tag]}]
                   tag)}
-  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.23.0"]
-                             [lein-binplus "0.6.5"]]
+  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.24.1"]
+                             [lein-binplus "0.6.6"]]
                    :bin {:name "clojure-lsp"}}
              :test {:test-selectors {:focused :focused}
                     :dependencies [[pjstadig/humane-test-output "0.9.0"]]

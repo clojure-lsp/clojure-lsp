@@ -10,3 +10,5 @@
 /node_modules
 /test.clj
 /.clj-kondo/.cache
+/.clj-kondo/cache
+/.calva/output-window

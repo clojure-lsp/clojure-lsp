@@ -661,4 +661,4 @@
                           count
                           (str " references"))
              :command "code-lens-references"
-             :arguments {:range range}}})
+             :arguments [doc-id row col]}})

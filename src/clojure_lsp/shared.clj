@@ -14,8 +14,8 @@
     :else :unknown))
 
 (defn ->range [{:keys [row end-row col end-col]}]
-  {:start {:line (dec row) :character (dec col)}
-   :end {:line (dec end-row) :character (dec end-col)}})
+  {:start {:line (max 0 (dec row)) :character (max 0 (dec col))}
+   :end {:line (max 0 (dec end-row)) :character (max 0 (dec end-col))}})
 
 (defn range->clj [^Range range]
   {:start {:line      (.getLine (.getStart range))

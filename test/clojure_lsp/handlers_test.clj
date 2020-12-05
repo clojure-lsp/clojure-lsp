@@ -502,7 +502,8 @@
                           :end   {:line      1
                                   :character 12}}
                 :command {:title   "0 references"
-                          :command "code-lens-references"}}
+                          :command "code-lens-references"
+                          :arguments ["file://a.clj" 1 5]}}
                (handlers/code-lens-resolve {:start {:line 1 :character 5} :end {:line 1 :character 12}}
                                            ["file://a.clj" 1 5]))))
       (testing "some lens"
@@ -512,6 +513,7 @@
                           :end   {:line      2
                                   :character 11}}
                 :command {:title   "1 references"
-                          :command "code-lens-references"}}
+                          :command "code-lens-references"
+                          :arguments ["file://a.clj" 3 8]}}
                (handlers/code-lens-resolve {:start {:line 2 :character 7} :end {:line 2 :character 11}}
                                            ["file://a.clj" 3 8])))))))

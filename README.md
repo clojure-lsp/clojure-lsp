@@ -187,13 +187,13 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 ```
 Note: You may also consider configuring project specs via the (optional) `.lsp/config.edn` file, i.e.,
 ```clojure
-{"project-specs" [{:project-path "deps.edn"
-                   :classpath-cmd ["clj" "-Spath"]}]}
+{:project-specs [{:project-path "deps.edn"
+                  :classpath-cmd ["clj" "-Spath"]}]}
    ```
 Each project-spec will add to the list of dependencies for lsp to crawl:
-  - `project-path` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
-  - `classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
-  - `env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE": "x.boot"}`)
+  - `:project-path` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
+  - `:classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
+  - `:env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE" "x.boot"}`)
 
 ### macro-defs
 
@@ -316,14 +316,14 @@ nnoremap <silent> crel :call LanguageClient#workspace_executeCommand('expand-let
 nnoremap <silent> cram :call LanguageClient#workspace_executeCommand('add-missing-libspec', [Expand('%:p'), line('.') - 1, col('.') - 1])<CR>
 ```
 
-`InitializationOptions` can be sent by setting:
+`initializationOptions` can be sent by setting:
 `let g:LanguageClient_settingsPath=".lsp/settings.json"`
 
 Project-local `.lsp/settings.json` would have content like:
 ```clojure
-{:initializationOptions {
-   :source-paths ["shared-src", "src", "test", "dashboard/src"],
-   :macro-defs {project.macros/dofor: ["bindings", "bound-elements"]}}}
+{"initializationOptions": {
+   "source-paths": ["shared-src", "src", "test", "dashboard/src"],
+   "macro-defs": {"project.macros/dofor": ["bindings", "bound-elements"]}}}
 ```
 
 ### Emacs
@@ -364,7 +364,7 @@ Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completio
 In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy, like `~/.lsp`) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
 
 ```clojure
-{"dependency-scheme" "jar"}
+{:dependency-scheme "jar"}
 ```
 
 In `lsp-mode` `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.

@@ -389,7 +389,8 @@
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
         (update :cljfmt kwd-keys)
         (update-in [:cljfmt :indents] clean-symbol-map)
-        (update :document-formatting? (fnil identity true)))))
+        (update :document-formatting? (fnil identity true))
+        (update :document-range-formatting? (fnil identity true)))))
 
 (defn document->decoded-uri [document]
   (-> document

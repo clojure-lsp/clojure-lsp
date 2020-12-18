@@ -405,7 +405,7 @@
                                      (.setRenameProvider true)
                                      (.setDefinitionProvider true)
                                      (.setDocumentFormattingProvider (:document-formatting? c-settings))
-                                     (.setDocumentRangeFormattingProvider (:document-formatting? c-settings))
+                                     (.setDocumentRangeFormattingProvider (:document-range-formatting? c-settings))
                                      (.setDocumentSymbolProvider true)
                                      (.setDocumentHighlightProvider true)
                                      (.setWorkspaceSymbolProvider true)

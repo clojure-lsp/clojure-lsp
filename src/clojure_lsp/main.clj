@@ -391,11 +391,11 @@
     (^CompletableFuture initialize [^InitializeParams params]
       (go :initialize
           (end
-            (do
+            (let [c-settings (client-settings params)]
               (log/warn "Initialize")
               (#'handlers/initialize (.getRootUri params)
                                      (client-capabilities params)
-                                     (client-settings params))
+                                     c-settings)
               (CompletableFuture/completedFuture
                 (InitializeResult. (doto (ServerCapabilities.)
                                      (.setHoverProvider true)
@@ -404,8 +404,8 @@
                                      (.setReferencesProvider true)
                                      (.setRenameProvider true)
                                      (.setDefinitionProvider true)
-                                     (.setDocumentFormattingProvider true)
-                                     (.setDocumentRangeFormattingProvider true)
+                                     (.setDocumentFormattingProvider (:document-formatting? c-settings))
+                                     (.setDocumentRangeFormattingProvider (:document-range-formatting? c-settings))
                                      (.setDocumentSymbolProvider true)
                                      (.setDocumentHighlightProvider true)
                                      (.setWorkspaceSymbolProvider true)

@@ -303,21 +303,27 @@
              (mapv :sym usages))))))
 
 (deftest find-references-cljc-test
-  (let [code "(ns hi)"
-        usages (parser/find-usages code :cljc {})]
-    (is (= 4 (count usages)))
-    (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
-    (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
-    (is (= "hi" (:str (nth usages 1 nil)) (:str (nth usages 3 nil)))))
-  (let [code "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
-        usages (parser/find-usages code :cljc {})
-        clj-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :clj))
-        cljs-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :cljs))]
-    (is (= '(do y a b) clj-sexpr))
-    (is (= '(do x c d) cljs-sexpr))
-    (is (= 6 (count usages)))
-    (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
-    (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
+  (testing "simple"
+    (let [code   "(ns hi)"
+          usages (parser/find-usages code :cljc {})]
+      (is (= 4 (count usages)))
+      (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
+      (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
+      (is (= "hi" (:str (nth usages 1 nil)) (:str (nth usages 3 nil))))))
+  (testing "cljs and clj"
+    (let [code       "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
+          usages     (parser/find-usages code :cljc {})
+          clj-sexpr  (z/sexpr (parser/process-reader-macro (z/of-string code) :clj))
+          cljs-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :cljs))]
+      (is (= '(do y a b) clj-sexpr))
+      (is (= '(do x c d) cljs-sexpr))
+      (is (= 6 (count usages)))
+      (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
+      (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
+  (testing "cljc"
+    (let [code "(def hello 123) (comment hello)"
+          usages (parser/find-usages code :cljc {})]
+      (is (= 4 (count usages))))))
 
 (deftest if-let-test
   (let [code "(if-let [] a b)"

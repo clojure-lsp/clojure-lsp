@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+lein with-profiles +clojure-1.10.2,+native-image "do" clean, uberjar

@@ -30,4 +30,7 @@
                     :dependencies [[pjstadig/humane-test-output "0.9.0"]]
                     :injections [(require 'pjstadig.humane-test-output)
                                  (pjstadig.humane-test-output/activate!)]}
+             :clojure-1.10.2 {:dependencies [[org.clojure/clojure "1.10.2-rc2"]]}
+             :native-image {:dependencies [[borkdude/clj-reflector-graal-java11-fix "0.0.1-graalvm-20.3.0"]
+                                           [borkdude/sci.impl.reflector "0.0.1-java11"]]}
              :uberjar {:aot :all}})

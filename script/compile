@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+if [ -z "$GRAALVM_HOME" ]; then
+    echo "Please set GRAALVM_HOME"
+    exit 1
+fi
+
+"$GRAALVM_HOME/bin/gu" install native-image || true
+
+export JAVA_HOME="$GRAALVM_HOME"
+export PATH="$GRAALVM_HOME/bin:$PATH"
+
+outfile=( target/clojure-lsp-release-*-standalone.jar )
+
+args=( "-jar" "${outfile[0]}"
+              "-H:Name=clojure-lsp"
+              "-H:+ReportExceptionStackTraces"
+              "-J-Dclojure.spec.skip-macros=true"
+              "-J-Dclojure.compiler.direct-linking=true"
+              "-H:ReflectionConfigurationFiles=reflection.json"
+              "--initialize-at-build-time"
+              "--report-unsupported-elements-at-runtime"
+              "-H:Log=registerResource:"
+              "--verbose"
+              "--no-fallback"
+              "--no-server"
+              "--static"
+              "-J-Xmx3g" )
+
+"$GRAALVM_HOME/bin/native-image" "${args[@]}"

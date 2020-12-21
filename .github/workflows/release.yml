@@ -102,6 +102,12 @@ jobs:
       - name: Generate jar
         run: lein uberjar
 
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/upload-artifact@v1
         with:
           name: clojure-lsp.jar

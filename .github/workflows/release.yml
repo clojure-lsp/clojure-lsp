@@ -128,6 +128,9 @@ jobs:
         uses: WyriHaximus/github-action-get-previous-tag@0.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: echo
+        run: |
+          ls
       - name: Upload jar to release
         uses: svenstaro/upload-release-action@v2
         with:

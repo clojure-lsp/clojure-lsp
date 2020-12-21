@@ -310,7 +310,7 @@
                     (log/error e)))))))))
 
 (^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
-    (go :documentSymbol
+    (go :documentHighlight
         (CompletableFuture/supplyAsync
           (reify Supplier
             (get [this]

@@ -306,10 +306,10 @@
   (testing "simple"
     (let [code   "(ns hi)"
           usages (parser/find-usages code :cljc {})]
-      (is (= 4 (count usages)))
+      (is (= 3 (count usages)))
       (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
       (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
-      (is (= "hi" (:str (nth usages 1 nil)) (:str (nth usages 3 nil))))))
+      (is (= "hi" (:str (nth usages 1 nil))))))
   (testing "cljs and clj"
     (let [code       "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
           usages     (parser/find-usages code :cljc {})
@@ -318,12 +318,14 @@
       (is (= '(do y a b) clj-sexpr))
       (is (= '(do x c d) cljs-sexpr))
       (is (= 6 (count usages)))
-      (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
-      (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
-  (testing "cljc"
+      (is (= ["y" "a" "b"] (map :str (filter (comp #(contains? % :clj) :file-type) usages))))
+      (is (= ["x" "c" "d"] (map :str (filter (comp #(contains? % :cljs) :file-type) usages))))))
+  (testing "removing duplicated usages for cljc"
     (let [code "(def hello 123) (comment hello)"
           usages (parser/find-usages code :cljc {})]
-      (is (= 4 (count usages))))))
+      (is (= 6 (count usages)))
+      (is (= ["def" "hello" "comment" "hello"] (map :str (filter (comp #(contains? % :clj) :file-type) usages))))
+      (is (= ["hello" "hello" "def" "comment"] (map :str (filter (comp #(contains? % :cljs) :file-type) usages)))))))
 
 (deftest if-let-test
   (let [code "(if-let [] a b)"
@@ -403,7 +405,7 @@
     (let [code "(ns user (:require clojure.test)) (clojure.test/deftest my-test)"
           usages (parser/find-usages code :clj {})]
       (is (= 5 (count usages)))
-      (is (= '{:file-type :clj
+      (is (= '{:file-type #{:clj}
                :sym user/my-test
                :str "my-test"
                :tags #{:declare :public :unused}}
@@ -446,7 +448,7 @@
       (is (= {:tags #{:declare :public}
               :sym :foo/name
               :str ":foo/name"
-              :file-type :clj
+              :file-type #{:clj}
               :signatures {:sexprs ['[_ b]]
                            :strings ["[_ b]"]}}
              (dissoc (nth usages 4 nil) :col :row :end-row :end-col)))

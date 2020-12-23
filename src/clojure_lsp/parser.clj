@@ -714,13 +714,6 @@
       (handle-rest sub-loc context))
     (vswap! context dissoc :in-fn-literal?)))
 
-(comment
-  '[
-    clojure.core/dotimes
-    clojure.core/letfn
-    clojure.core/with-local-vars
-    ])
-
 (def ^:dynamic *sexpr-handlers*
   (let [handlers {'clojure.core/ns handle-ns
                   'clojure.core/defn handle-defn
@@ -1126,28 +1119,61 @@
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
+(defn ^:private same-usage?
+  [a-usage b-usage]
+  (and (= (:tags a-usage) (:tags b-usage))
+       (= (:sym a-usage) (:sym b-usage))
+       (= (:row a-usage) (:row b-usage))
+       (= (:col a-usage) (:col b-usage))
+       (= (:end-row a-usage) (:end-row b-usage))
+       (= (:end-col a-usage) (:end-col b-usage))))
+
+(defn ^:private merge-by-file-types
+  "Merge usages by file-type checking clj and cljs same usages."
+  [usages]
+  (let [usages-by-file-type (group-by :file-type usages)]
+    (->> usages
+         (map (fn [{:keys [tags file-type] :as usage}]
+                (let [inverse-file-type (if (= file-type :cljs) :clj :cljs)]
+                  (cond
+                    (and tags (contains? tags :norename))
+                    (assoc usage :file-type #{file-type})
+
+                    (not-any? #(same-usage? usage %) (inverse-file-type usages-by-file-type))
+                    (assoc usage :file-type #{file-type})
+
+                    (= file-type :clj)
+                    (assoc usage :file-type #{:clj :cljs})))))
+         (remove nil?)
+         vec)))
+
+(defn ^:private find-raw-usages
+  [code-loc file-type client-macro-defs uri]
+  (let [macro-defs (merge default-macro-defs client-macro-defs)
+        requires {:clj #{'clojure.core}
+                  :cljs #{'cljs.core}}]
+    (if (= :cljc file-type)
+      (into (-> code-loc
+                (process-reader-macro :clj)
+                (find-usages* (volatile! (assoc default-env :requires (get requires :clj) :file-type :clj :macro-defs macro-defs :uri uri)) {}))
+            (-> code-loc
+                (process-reader-macro :cljs)
+                (find-usages* (volatile! (assoc default-env :requires (get requires :cljs) :file-type :cljs :macro-defs macro-defs :uri uri)) {})))
+      (-> code-loc
+          (find-usages* (volatile! (assoc default-env :requires (get requires file-type) :file-type file-type :macro-defs macro-defs :uri uri)) {})))))
+
 (defn find-usages
   ([code file-type client-macro-defs]
-    (find-usages nil code file-type client-macro-defs))
+   (find-usages nil code file-type client-macro-defs))
   ([uri code file-type client-macro-defs]
-    (when-let [code-loc (try (-> code
-                                 (string/replace #"(\w)/(\s|$)" "$1 $2")
-                                 (z/of-string)
-                                 (zm/up))
-                             (catch Throwable e
-                               (log/warn "Cannot read" uri (.getMessage e))))]
-      (let [macro-defs (merge default-macro-defs client-macro-defs)
-            requires {:clj #{'clojure.core}
-                      :cljs #{'cljs.core}}]
-        (if (= :cljc file-type)
-          (into (-> code-loc
-                    (process-reader-macro :clj)
-                    (find-usages* (volatile! (assoc default-env :requires (get requires :clj) :file-type :clj :macro-defs macro-defs :uri uri)) {}))
-                (-> code-loc
-                    (process-reader-macro :cljs)
-                    (find-usages* (volatile! (assoc default-env :requires (get requires :cljs) :file-type :cljs :macro-defs macro-defs :uri uri)) {})))
-          (-> code-loc
-              (find-usages* (volatile! (assoc default-env :requires (get requires file-type) :file-type file-type :macro-defs macro-defs :uri uri)) {})))))))
+   (when-let [code-loc (try (-> code
+                                (string/replace #"(\w)/(\s|$)" "$1 $2")
+                                (z/of-string)
+                                (zm/up))
+                            (catch Throwable e
+                              (log/warn "Cannot read" uri (.getMessage e))))]
+     (-> (find-raw-usages code-loc file-type client-macro-defs uri)
+         merge-by-file-types))))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as form-pos}
@@ -1194,57 +1220,3 @@
                    (z/up loc))
         form-pos (-> form-loc z/node meta)]
     (filter #(in-range? form-pos %) usages)))
-
-(comment
-  (loc-at-pos  "foo" 1 5)
-  (in-range? {:row 23, :col 1, :end-row 23, :end-col 9} {:row 23, :col 7, :end-row 23, :end-col 7})
-  (let [code (string/join "\n"
-                          ["(ns thinger.foo"
-                           "  (:refer-clojure :exclude [update])"
-                           "  (:require"
-                           "    [thinger [my.bun :as bun]"
-                           "             [bung.bong :as bb :refer [bing byng]]]))"
-                           "(comment foo)"
-                           "(let [x 1] (inc x))"
-                           "(def x 1)"
-                           "(defn y [y] (y x))"
-                           "(inc x)"
-                           "(bun/foo)"
-                           "(bing)"])]
-    (n/string (z/node (z/of-string "::foo")))
-    (find-usages code :clj {}))
-
-  (do
-    (require '[taoensso.tufte :as tufte :refer (defnp p profiled profile)])
-
-    (->>
-      (find-usages (slurp "test/clojure_lsp/parser_test.clj") :clj {})
-      (tufte/profiled {})
-      (second)
-      deref
-      :stats
-      (map (juxt key (comp #(int (quot % 1000000)) :max val) (comp :n val) (comp #(int (quot % 1000000)) :sum val)))
-      clojure.pprint/pprint
-      with-out-str
-      (spit "x.edn")))
-
-  (let [code (slurp "bad.clj")]
-    (find-usages code :clj {})
-    #_
-    (println (tufte/format-pstats prof)))
-
-  (let [code "(ns foob) (defn ^:private chunk [] :a)"]
-    (find-usages code :clj {}))
-  (let [code "(def #?@(:clj a :cljs b) 1)"]
-    (n/children (z/node (z/of-string code)))
-    (find-usages code :cljc {}))
-
-  (do (defmacro x [] (let [y 2] `(let [z# ~y] [z# ~'y]))) (let [y 3]  (x)))
-  (do (defmacro x [] 'y)
-      (let [y 3] (y)))
-
-  (find-usages "(do #inst \"2019-04-04\")" :clj {})
-  (z/sexpr (z/right (z/of-string "#(:a 1)")))
-
-  (find-usages "(deftype JSValue [val])" :clj {})
-  (z/sexpr (loc-at-pos code 1 2)))

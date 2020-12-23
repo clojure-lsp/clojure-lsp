@@ -32,7 +32,7 @@
                      #{:clj :cljs}
                      #{file-type})]
     (->> env
-         (filter (comp file-types :file-type))
+         (filter (comp #(set/subset? % file-types) :file-type))
          (partition-all 3 1)
          (filter (comp #{:within :before} (partial check-bounds line column) first))
          first)))
@@ -42,7 +42,7 @@
                      #{:clj :cljs}
                      #{file-type})]
     (->> env
-         (filter (comp file-types :file-type))
+         (filter (comp #(set/subset? % file-types) :file-type))
          (filter (comp #{:within} (partial check-bounds line column)))
          ;; Pushes keywords last
          (sort-by (comp keyword? :sym))
@@ -258,13 +258,15 @@
              (map (fn [sym] {:label (str sym)
                              :data (str "clojure.core/" sym)}))
              (sort-by :label))
-        (when (contains? #{:cljc :cljs} cursor-file-type)
+        (when (or (contains? cursor-file-type :cljc)
+                  (contains? cursor-file-type :cljs))
           (->> cc/cljs-syms
                (filter (comp matches? str))
                (map (fn [sym] {:label (str sym)
                                :data (str "cljs.core/" sym)}))
                (sort-by :label)))
-        (when (contains? #{:cljc :clj} cursor-file-type)
+        (when (or (contains? cursor-file-type :cljc)
+                  (contains? cursor-file-type :clj))
           (->> cc/java-lang-syms
                (filter (comp matches? str))
                (map (fn [sym] {:label (str sym)
@@ -289,7 +291,6 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         {cursor-sym :sym} (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))]
-    (log/warn "references" doc-id line column cursor-sym)
     (into []
           (for [[uri usages] (:file-envs @db/db)
                 {:keys [sym tags] :as usage} usages

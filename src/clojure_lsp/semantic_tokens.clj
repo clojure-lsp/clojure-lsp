@@ -1,7 +1,8 @@
 (ns clojure-lsp.semantic-tokens)
 
 (def token-types
-  [:function])
+  [:function
+   :macro])
 
 (def token-types-str
   (->> token-types
@@ -29,6 +30,9 @@
        (map
          (fn [{:keys [tags] :as usage}]
            (cond
+             (contains? tags :macro)
+             (usage->absolute-token usage :macro)
+
              (contains? tags :refered)
              (usage->absolute-token usage :function))))
        (remove nil?)))
@@ -37,14 +41,14 @@
   [tokens
    index
    [row col length token-type token-modifier :as token]]
-  (let [[previous-row previous-col previous-length _ _] (nth tokens (dec index) nil)]
+  (let [[previous-row previous-col _ _ _] (nth tokens (dec index) nil)]
     (cond
       (nil? previous-row)
       token
 
       (= previous-row row)
       [0
-       (- col (+ previous-col previous-length))
+       (- col previous-col)
        length
        token-type
        token-modifier]

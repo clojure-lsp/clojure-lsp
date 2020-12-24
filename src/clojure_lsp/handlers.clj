@@ -670,6 +670,4 @@
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
         data (semantic-tokens/full usages)]
-    (log/info "======>" usages)
-    (log/info "------>" data)
     {:data data}))

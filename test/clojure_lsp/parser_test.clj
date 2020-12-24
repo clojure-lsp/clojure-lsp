@@ -58,7 +58,9 @@
     (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {} false)))
     (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
     (is (= {:sym 'foo.bar/baz :tags #{:refered} :str "baz"}
-           (parser/qualify-ident 'baz (merge context {:refers {"baz" 'foo.bar/baz}}) {} false)))))
+           (parser/qualify-ident 'baz (merge context {:refers {"baz" 'foo.bar/baz}}) {} false)))
+    (is (= {:sym 'clojure.test/deftest :tags #{:refered :macro} :str "deftest"}
+           (parser/qualify-ident 'deftest (merge context {:refers {"deftest" 'clojure.test/deftest}}) {} false)))))
 
 (deftest find-references-simple-test
   (testing "simple stuff"

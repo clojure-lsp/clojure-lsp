@@ -421,12 +421,13 @@
                                      (.setDocumentSymbolProvider true)
                                      (.setDocumentHighlightProvider true)
                                      (.setWorkspaceSymbolProvider true)
-                                     (.setSemanticTokensProvider (doto (SemanticTokensWithRegistrationOptions.)
-                                                                   (.setLegend (doto (SemanticTokensLegend.
-                                                                                       semantic-tokens/token-types-str
-                                                                                       semantic-tokens/token-modifiers)))
-                                                                   (.setRange false)
-                                                                   (.setFull true)))
+                                     (.setSemanticTokensProvider (when (:semantic-tokens? c-settings)
+                                                                   (doto (SemanticTokensWithRegistrationOptions.)
+                                                                     (.setLegend (doto (SemanticTokensLegend.
+                                                                                         semantic-tokens/token-types-str
+                                                                                         semantic-tokens/token-modifiers)))
+                                                                     (.setRange false)
+                                                                     (.setFull true))))
                                      (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
                                                                    (.setCommands (keys handlers/refactorings))))
                                      (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
@@ -434,6 +435,7 @@
                                                              (.setChange TextDocumentSyncKind/Full)
                                                              (.setSave (SaveOptions. true))))
                                      (.setCompletionProvider (CompletionOptions. true [])))))))))
+
     (^void initialized [^InitializedParams params]
       (log/warn "Initialized" params)
       (go :initialized

@@ -397,7 +397,8 @@
         (update :cljfmt kwd-keys)
         (update-in [:cljfmt :indents] clean-symbol-map)
         (update :document-formatting? (fnil identity true))
-        (update :document-range-formatting? (fnil identity true)))))
+        (update :document-range-formatting? (fnil identity true))
+        (update :semantic-tokens? (fnil identity false)))))
 
 (defn document->decoded-uri [document]
   (-> document

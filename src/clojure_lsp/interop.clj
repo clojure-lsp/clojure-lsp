@@ -27,6 +27,7 @@
       PublishDiagnosticsParams
       Range
       RenameFile
+      SemanticTokens
       SymbolKind
       SymbolInformation
       TextDocumentEdit
@@ -237,6 +238,12 @@
                                           (.setData (:data %1))))))
 
 (s/def ::code-lenses (s/coll-of ::code-lens))
+
+(s/def ::semantic-tokens (s/and (s/keys :req-un [::data]
+                                  :opt-un [::result-id])
+                                (s/conformer #(doto (SemanticTokens. (:result-id %1)
+                                                                     (java.util.ArrayList. (:data %1))))))) ;;TODO need ArrayList?
+
 
 (defn debeaner [inst]
   (when inst

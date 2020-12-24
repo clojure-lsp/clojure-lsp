@@ -75,18 +75,21 @@
            recur)
       result)))
 
-(defn qualify-ident [ident-node {:keys [aliases local-classes imports locals publics refers requires refer-all-syms file-type] :as context} scoped declaration?]
+(defn qualify-ident
+  [ident-node
+   {:keys [aliases local-classes imports locals publics refers requires refer-all-syms file-type ns] :as context}
+   scoped
+   declaration?]
   (when (ident? (n/sexpr ident-node))
     (let [ident (n/sexpr ident-node)
           ident-str (n/string (skip-meta ident-node))
           [prefix ident-ns-str ident-name] (ident-split ident-str)
           ident-ns (some-> ident-ns-str symbol)
           alias-ns (get aliases ident-ns-str)
-          ns-sym (:ns context)
-          declared (when (and ns-sym (or (get locals ident-name) (get publics ident-name)))
-                              (symbol (name ns-sym) ident-name))
+          declared (when (and ns (or (get locals ident-name) (get publics ident-name)))
+                              (symbol (name ns) ident-name))
           local-classes' (->> local-classes
-                              (map (juxt identity #(symbol (str (name ns-sym) "." %))))
+                              (map (juxt identity #(symbol (str (name ns) "." %))))
                               (into {}))
           java-classes (merge local-classes' imports lang-imports)
           java-sym (get java-classes (symbol (string/replace ident-name #"\.$" "")))
@@ -96,17 +99,17 @@
       (assoc
         (if-not ident-ns
           (cond
-            java-sym {:sym java-sym :tags #{:norename}}
-            declaration? {:sym (ctr (name (or ns-sym 'user)) ident-name)}
-            (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns-sym) ident-name)}
+            java-sym {:sym java-sym :tags #{:norename :java}}
+            declaration? {:sym (ctr (name (or ns 'user)) ident-name)}
+            (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns) ident-name)}
             (keyword? ident) {:sym ident}
             (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name) :tags #{:scoped}}
             declared {:sym declared}
-            refered {:sym refered}
+            refered {:sym refered :tags #{:refered}}
             (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
             (and (= :clj file-type) (contains? core-refers ident)) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
             (and (= :cljs file-type) (contains? cljs-refers ident)) {:sym (ctr (name (get cljs-refers ident)) ident-name) :tags #{:norename}}
-            (string/starts-with? ident-name ".") {:sym ident :tags #{:method :norename}}
+            (string/starts-with? ident-name ".") {:sym ident :tags #{:java :method :norename}}
             :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
           (cond
             (and alias-ns
@@ -125,10 +128,10 @@
             {:sym ident}
 
             (contains? imports ident-ns)
-            {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:method :norename}}
+            {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:java :method :norename}}
 
             (contains? lang-imports ident-ns)
-            {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:method :norename}}
+            {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:java :method :norename}}
 
             (and (= :cljs file-type) (= 'js ident-ns))
             {:sym ident :tags #{:method :norename}}

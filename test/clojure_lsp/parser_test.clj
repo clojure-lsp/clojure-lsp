@@ -51,11 +51,14 @@
 (deftest qualify-ident-test
   (let [context {:file-type :clj}]
     (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
-    (is (= {:sym '.getMessage :tags #{:method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
-    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
-    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {} false)))))
+    (is (= {:sym 'java.lang.Exception :tags #{:java :norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:java :norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
+    (is (= {:sym '.getMessage :tags #{:java :method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
+    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename :java} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
+    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {} false)))
+    (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
+    (is (= {:sym 'foo.bar/baz :tags #{:refered} :str "baz"}
+           (parser/qualify-ident 'baz (merge context {:refers {"baz" 'foo.bar/baz}}) {} false)))))
 
 (deftest find-references-simple-test
   (testing "simple stuff"

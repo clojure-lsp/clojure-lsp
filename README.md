@@ -380,8 +380,10 @@ Seems to work reasonably well but couldn't get rename to work reliably https://g
 ### Intellij / Cursive
 https://github.com/gtache/intellij-lsp tested only briefly.
 
-### VScode
+### Visual Studio Code
 Proof of concept in the client-vscode directory in this repo.
+
+Also, the [Calva](https://github.com/BetterThanTomorrow/calva) extension includes clojure-lsp support.
 
 ### Atom
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.

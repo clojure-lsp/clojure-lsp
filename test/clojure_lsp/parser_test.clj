@@ -44,18 +44,23 @@
   (let [zloc (z/of-string "(fn [^String b])")
         context (volatile! {})]
     (parser/handle-fn (z/next zloc) zloc context {} false)
-    (is (= '{"java.lang.String" #{:norename}
+    (is (= '{"java.lang.String" #{:java :norename}
              "b" #{:declare :param}}
            (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
 
 (deftest qualify-ident-test
   (let [context {:file-type :clj}]
-    (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
-    (is (= {:sym '.getMessage :tags #{:method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
-    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
-    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {} false)))))
+    (is (= {:sym 'clojure.core/for :tags #{:norename :core} :str "for"} (parser/qualify-ident 'for context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:java :norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:java :norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
+    (is (= {:sym '.getMessage :tags #{:java :method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
+    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename :java} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
+    (is (= {:sym ':foo :str ":foo" :tags #{}} (parser/qualify-ident :foo context {} false)))
+    (is (= {:sym 'clojure.core/for :tags #{:norename :core} :str "for"} (parser/qualify-ident 'for context {} false)))
+    (is (= {:sym 'foo.bar/baz :tags #{:refered} :str "baz"}
+           (parser/qualify-ident 'baz (merge context {:refers {"baz" 'foo.bar/baz}}) {} false)))
+    (is (= {:sym 'clojure.test/deftest :tags #{:refered :macro} :str "deftest"}
+           (parser/qualify-ident 'deftest (merge context {:refers {"deftest" 'clojure.test/deftest}}) {} false)))))
 
 (deftest find-references-simple-test
   (testing "simple stuff"
@@ -234,7 +239,7 @@
       (is (= 'java.io.File (:sym file-ref)))
       (is (= 'java.io.File/static (:sym file-static-ref)))
       (is (= 'java.util.jar.JarFile (:sym fq-ref)))
-      (is (= #{:norename :method} (set (mapcat :tags usages)))))))
+      (is (= #{:norename :java :method} (set (mapcat :tags usages)))))))
 
 (deftest find-references-keyword-test
   (testing "simple"
@@ -243,7 +248,7 @@
       (is (= [":foo/foo" ":foo" "::foo" "::q/foo" "::x/foo"] (mapv :str usages)))
       (is (= [:foo/foo :foo :bar/foo :qux/foo] (butlast (mapv :sym usages))))
       (is (= :foo (:sym (second usages))))
-      (is (nil? (seq (remove nil? (mapv :tags (butlast usages))))))
+      (is (= [#{} #{} #{} #{}] (seq (remove nil? (mapv :tags (butlast usages))))))
       (is (not= 'x (namespace (:sym (last usages)))))
       (is (not= 'user (namespace (:sym (last usages)))))
       (is (= #{:unknown} (:tags (last usages))))))
@@ -253,7 +258,7 @@
           [a1 a2 b1 b2 c1 c2 d1 d2 e1 e2 f1 f2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
       (is (= [":foo/a" ":foo/a" ":b" ":b" "::c" "::c" "d" "d" "::q/e" "::q/e" "::x/f" "::x/f"] (mapv :str usages)))
       (is (= [:foo/a :b :bar/c :d :qux/e] (map :sym [a1 b1 c1 d1 e1])))
-      (is (nil? (seq (remove nil? (mapv :tags [a1 b1 c1 d1 e1])))))
+      (is (= [#{} #{} #{} #{}] (seq (remove nil? (mapv :tags [a1 b1 c1 d1 e1])))))
       (is (not= 'x (namespace (:sym (last usages)))))
       (is (not= 'user (namespace (:sym (last usages)))))
       (is (= #{:unknown} (:tags f1)))
@@ -340,7 +345,7 @@
     (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
     (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
     (is (not= 'user (namespace (:sym def-usage))))
-    (is (= #{:declare} (:tags def-usage))))
+    (is (= #{:declare :public} (:tags def-usage))))
   (let [code "(defn x [] #_y 1)"
         usages (parser/find-usages code :clj {})]
     (is (= 3 (count (map :sym usages)))))

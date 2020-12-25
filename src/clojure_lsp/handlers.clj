@@ -1,23 +1,24 @@
 (ns clojure-lsp.handlers
   (:require
-    [cljfmt.core :as cljfmt]
-    [cljfmt.main :as cljfmt.main]
-    [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.crawler :as crawler]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.interop :as interop]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.transform :as refactor]
-    [clojure-lsp.shared :as shared]
-    [clojure.core.async :as async]
-    [clojure.pprint :as pprint]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [clojure.tools.logging :as log]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z])
+   [cljfmt.core :as cljfmt]
+   [cljfmt.main :as cljfmt.main]
+   [clojure-lsp.clojure-core :as cc]
+   [clojure-lsp.crawler :as crawler]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.interop :as interop]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.refactor.transform :as refactor]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
+   [clojure.pprint :as pprint]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [clojure.tools.logging :as log]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [clojure-lsp.semantic-tokens :as semantic-tokens])
   (:import
-    [java.net URL JarURLConnection]))
+   [java.net URL JarURLConnection]))
 
 (defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
@@ -390,7 +391,7 @@
 
 (defn definition [doc-id line column]
   (let [[cursor {:keys [uri usage]}] (definition-usage doc-id line column)]
-    (log/warn "Finding definition" doc-id "row" line "col" column "cursor" (:sym cursor))
+    (log/info "Finding definition" doc-id "row" line "col" column "cursor" (:sym cursor))
     (if (:sym cursor)
       (if usage
         {:uri uri :range (shared/->range usage) :str (:str usage)}
@@ -663,3 +664,10 @@
                           (str " references"))
              :command "code-lens-references"
              :arguments [doc-id row col]}})
+
+(defn semantic-tokens-full
+  [doc-id]
+  (let [db @db/db
+        usages (get-in db [:file-envs doc-id])
+        data (semantic-tokens/full usages)]
+    {:data data}))

@@ -17,7 +17,4 @@
       (is (= true (:document-formatting? (main/client-settings params))))))
   (testing "document-range-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
-      (is (= true (:document-range-formatting? (main/client-settings params))))))
-  (testing "semantic-tokens? is set to false if not provided"
-    (let [params (InitializeParams.)]
-      (is (= false (:semantic-tokens? (main/client-settings params)))))))
+      (is (= true (:document-range-formatting? (main/client-settings params)))))))

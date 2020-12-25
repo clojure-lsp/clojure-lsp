@@ -135,7 +135,7 @@
 
 (defn qualify-ident
   [ident-node
-   {:keys [aliases local-classes imports locals publics refers requires refer-all-syms file-type ns] :as context}
+   {:keys [aliases local-classes imports locals publics refers requires refer-all-syms file-type ns] :as _context}
    scoped
    declaration?]
   (when (ident? (n/sexpr ident-node))
@@ -153,8 +153,15 @@
           java-sym (get java-classes (symbol (string/replace ident-name #"\.$" "")))
           refered (get refers ident-name)
           required-ns (get requires ident-ns)
-          known-macro? (contains? default-macro-defs refered)
-          ctr (if (symbol? ident) symbol keyword)]
+          ctr (if (symbol? ident) symbol keyword)
+          core-clj? (and (= :clj file-type) (contains? core-refers ident))
+          core-cljs? (and (= :cljs file-type) (contains? cljs-refers ident))
+          core-clj-symbol (when core-clj? (ctr (name (get core-refers ident)) ident-name))
+          core-cljs-symbol (when core-cljs? (ctr (name (get cljs-refers ident)) ident-name))
+          core-macro? (and (or core-clj? core-cljs?)
+                           (contains? default-macro-defs (or core-clj-symbol core-cljs-symbol)))
+          known-macro? (or core-macro?
+                           (and refered (contains? default-macro-defs refered)))]
       (-> (if-not ident-ns
             (cond
               java-sym {:sym java-sym :tags #{:norename :java}}
@@ -165,8 +172,8 @@
               declared {:sym declared}
               refered {:sym refered :tags #{:refered}}
               (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
-              (and (= :clj file-type) (contains? core-refers ident)) {:sym (ctr (name (get core-refers ident)) ident-name) :tags #{:norename}}
-              (and (= :cljs file-type) (contains? cljs-refers ident)) {:sym (ctr (name (get cljs-refers ident)) ident-name) :tags #{:norename}}
+              core-clj? {:sym core-clj-symbol :tags #{:norename :core}}
+              core-cljs? {:sym core-cljs-symbol :tags #{:norename :core}}
               (string/starts-with? ident-name ".") {:sym ident :tags #{:java :method :norename}}
               :else {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown}})
             (cond

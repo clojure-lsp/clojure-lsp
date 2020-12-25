@@ -81,7 +81,8 @@
           usages (parser/find-usages code :clj {})]
       (is (= [1 9 3 0 -1
               1 0 3 0 -1
-              2 0 3 0 -1]
+              1 1 7 1 -1
+              1 0 3 0 -1]
              (semantic-tokens/full usages)))))
   (testing "testing user refered tokens"
     (let [code (long-str "(ns some.ns (:require [foo.bar :refer [baz]]))"
@@ -94,4 +95,9 @@
                          "(deftest some-test 1)")
           usages (parser/find-usages code :clj {})]
       (is (= [1 1 7 1 -1]
+             (semantic-tokens/full usages)))))
+  (testing "testing macro core tokens"
+    (let [code (long-str "(comment 1)")
+          usages (parser/find-usages code :clj {})]
+      (is (= [0 1 7 1 -1]
              (semantic-tokens/full usages))))))

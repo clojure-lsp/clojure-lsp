@@ -403,41 +403,42 @@
     (^CompletableFuture initialize [^InitializeParams params]
       (go :initialize
           (end
-            (let [c-settings (client-settings params)]
-              (log/warn "Initialize")
+            (do
+              (log/info "Initializing...")
               (#'handlers/initialize (.getRootUri params)
                                      (client-capabilities params)
-                                     c-settings)
-              (CompletableFuture/completedFuture
-                (InitializeResult. (doto (ServerCapabilities.)
-                                     (.setHoverProvider true)
-                                     (.setCodeActionProvider true)
-                                     (.setCodeLensProvider (CodeLensOptions. true))
-                                     (.setReferencesProvider true)
-                                     (.setRenameProvider true)
-                                     (.setDefinitionProvider true)
-                                     (.setDocumentFormattingProvider (:document-formatting? c-settings))
-                                     (.setDocumentRangeFormattingProvider (:document-range-formatting? c-settings))
-                                     (.setDocumentSymbolProvider true)
-                                     (.setDocumentHighlightProvider true)
-                                     (.setWorkspaceSymbolProvider true)
-                                     (.setSemanticTokensProvider (when (:semantic-tokens? c-settings)
-                                                                   (doto (SemanticTokensWithRegistrationOptions.)
-                                                                     (.setLegend (doto (SemanticTokensLegend.
-                                                                                         semantic-tokens/token-types-str
-                                                                                         semantic-tokens/token-modifiers)))
-                                                                     (.setRange false)
-                                                                     (.setFull true))))
-                                     (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
-                                                                   (.setCommands (keys handlers/refactorings))))
-                                     (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                             (.setOpenClose true)
-                                                             (.setChange TextDocumentSyncKind/Full)
-                                                             (.setSave (SaveOptions. true))))
-                                     (.setCompletionProvider (CompletionOptions. true [])))))))))
+                                     (client-settings params))
+              (let [settings (:settings @db/db)]
+                (CompletableFuture/completedFuture
+                  (InitializeResult. (doto (ServerCapabilities.)
+                                       (.setHoverProvider true)
+                                       (.setCodeActionProvider true)
+                                       (.setCodeLensProvider (CodeLensOptions. true))
+                                       (.setReferencesProvider true)
+                                       (.setRenameProvider true)
+                                       (.setDefinitionProvider true)
+                                       (.setDocumentFormattingProvider (:document-formatting? settings))
+                                       (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
+                                       (.setDocumentSymbolProvider true)
+                                       (.setDocumentHighlightProvider true)
+                                       (.setWorkspaceSymbolProvider true)
+                                       (.setSemanticTokensProvider (when (:semantic-tokens? settings)
+                                                                     (doto (SemanticTokensWithRegistrationOptions.)
+                                                                       (.setLegend (doto (SemanticTokensLegend.
+                                                                                           semantic-tokens/token-types-str
+                                                                                           semantic-tokens/token-modifiers)))
+                                                                       (.setRange false)
+                                                                       (.setFull true))))
+                                       (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
+                                                                     (.setCommands (keys handlers/refactorings))))
+                                       (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                               (.setOpenClose true)
+                                                               (.setChange TextDocumentSyncKind/Full)
+                                                               (.setSave (SaveOptions. true))))
+                                       (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
-      (log/warn "Initialized" params)
+      (log/info "Initialized" params)
       (go :initialized
           (end
             (doto

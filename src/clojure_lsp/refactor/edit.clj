@@ -66,6 +66,13 @@
                        (with-meta node-meta)))
         (z/insert-child node))))
 
+(defn wrap-meta [zloc metadata]
+  (let [node (z/node zloc)
+        node-meta (meta node)]
+    (-> zloc
+        (z/replace (-> (n/meta-node (z/node metadata) (z/sexpr zloc))
+                       (with-meta node-meta))))))
+
 (defn parent-let? [zloc]
   (let [parent-op (-> zloc z/leftmost)]
     (when (= 'let (-> parent-op z/sexpr))

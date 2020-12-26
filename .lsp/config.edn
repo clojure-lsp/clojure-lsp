@@ -4,5 +4,5 @@
                     or [[:inner 1]]
                     are [[:inner 0]]}}
  :clj-kondo {:linters {:unused-namespace {:exclude [clojure.tools.logging]}}}
- :semantic-tokens true
+ :semantic-tokens? true
  :use-metadata-for-privacy? true}

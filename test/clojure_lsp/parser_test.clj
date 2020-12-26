@@ -48,6 +48,28 @@
              "b" #{:declare :param}}
            (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
 
+(deftest handle-defn-test
+  (testing "simple defn"
+    (let [zloc (z/of-string "(defn foo [] 1)")
+          context (volatile! {})]
+      (parser/handle-defn (z/next zloc) zloc context {} false)
+      (is (= '{"foo" #{:declare :public}}
+             (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
+  (testing "defn with meta caret"
+    (let [zloc (z/of-string "(defn foo ^{:bar true} [] 1)")
+          context (volatile! {})]
+      (parser/handle-defn (z/next zloc) zloc context {} false)
+      (is (= '{"foo" #{:declare :public}
+               "bar" #{}}
+             (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
+  (testing "defn without meta caret"
+    (let [zloc (z/of-string "(defn foo {:bar true} [] 1)")
+          context (volatile! {})]
+      (parser/handle-defn (z/next zloc) zloc context {} false)
+      (is (= '{"foo" #{:declare :public}
+               "bar" #{}}
+             (into {} (map (juxt (comp name :sym) :tags) (:usages @context))))))))
+
 (deftest qualify-ident-test
   (let [context {:file-type :clj}]
     (is (= {:sym 'clojure.core/for :tags #{:norename :core} :str "for"} (parser/qualify-ident 'for context {} false)))

@@ -632,21 +632,21 @@
 (defn- function-signatures
   ([params-loc] (function-signatures params-loc nil))
   ([params-loc signature-style]
-    (let [signature-fn (case signature-style
-                         :typed remove-type-annots
-                         identity)]
-      (if (= :list (z/tag params-loc))
-        (loop [list-loc params-loc
-               sexprs []
-               strings []]
-          (let [next-loc (z/down list-loc)
-                sexprs (conj sexprs (-> next-loc z/sexpr signature-fn))
-                strings (conj strings (z/string next-loc))]
-            (if-let [next-list (z/find-next-tag list-loc :list)]
-              (recur next-list sexprs strings)
-              {:sexprs sexprs :strings strings})))
-        {:sexprs [(-> params-loc z/sexpr signature-fn)]
-         :strings [(z/string params-loc)]}))))
+   (let [signature-fn (case signature-style
+                        :typed remove-type-annots
+                        identity)]
+     (if (= :list (z/tag params-loc))
+       (loop [list-loc params-loc
+              sexprs   []
+              strings  []]
+         (let [next-loc (z/down list-loc)
+               sexprs   (conj sexprs (-> next-loc z/sexpr signature-fn))
+               strings  (conj strings (z/string next-loc))]
+           (if-let [next-list (z/find-next-tag list-loc :list)]
+             (recur next-list sexprs strings)
+             {:sexprs sexprs :strings strings})))
+       {:sexprs  [(-> params-loc z/sexpr signature-fn)]
+        :strings [(z/string params-loc)]}))))
 
 (defn- single-params-and-body [params-loc context scoped signature-style]
   (let [body-loc (z/right params-loc)]
@@ -665,19 +665,26 @@
 
 (def check (fn [pred x] (when (pred x) x)))
 
-(defn is-params
+(defn ^:private params?
   [loc]
   (or
     (#{:vector :list} (z/tag loc))
     ; z/tag could be :meta not :vector if there is a return type annotation
     (vector? (z/sexpr loc))))
 
-(defn handle-function
+(defn ^:private find-function-params
+  [op-loc]
+  (when-let [raw-params (z/find op-loc params?)]
+    (if (= :map (-> raw-params z/left z/tag))
+      (edit/wrap-meta raw-params (-> raw-params z/left))
+      raw-params)))
+
+(defn ^:private handle-function
   [op-loc _loc context scoped name-tags]
   (let [op-local? (local? op-loc)
         op-fn? (= "fn" (name (z/sexpr op-loc)))
         name-loc (z-right-sexpr op-loc)
-        params-loc (z/find op-loc is-params)]
+        params-loc (find-function-params op-loc)]
     (when (symbol? (z/sexpr name-loc))
       (cond
         op-fn? nil

@@ -22,7 +22,7 @@ jobs:
       - name: Install leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.3
+          lein: 2.9.5
 
       - name: Checkout project
         uses: actions/checkout@v1

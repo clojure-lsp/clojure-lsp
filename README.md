@@ -13,12 +13,14 @@ You will get:
 
 - **Autocomplete**
 - **Jump to definition**
-- **Find usages**
+- **Find references**
 - **Renaming**
 - **Code actions**
 - **Errors**
 - **Automatic ns management**
 - **Refactorings**
+- **Code lens**
+- **Semantic tokens (syntax highlighting)**
 
 ## Installation
 
@@ -29,7 +31,7 @@ You will get:
 - Place it in your $PATH with a chmod 755
 - Follow the documentation for your editor's language client. See [Clients](#clients) below.
 
-### NixOS
+### Nix
 `clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):
 
 ```bash
@@ -43,6 +45,9 @@ See [troubleshooting.md](docs/troubleshooting.md).
 ## Capabilities
 
 Bellow are all the currently supported LSP capabilities and their implementation status:
+
+<details>
+<summary><b>Supported LSP capabilities</b></summary>
 
 | capability                          | done | notes                                         |
 | ----------                          | ---- | -----                                         |
@@ -100,6 +105,13 @@ Bellow are all the currently supported LSP capabilities and their implementation
 | textDocument/prepareRename          |      |                                               |
 | textDocument/foldingRange           |      |                                               |
 | textDocument/selectionRange         |      |                                               |
+| textDocument/semanticTokens/full    | √    | Just `functions` and `macros` ATM             |
+| textDocument/semanticTokens/full/delta |     |                                             |
+| textDocument/semanticTokens/range   |     |                                                |
+| workspace/semanticTokens/refresh   |     |                                                 |
+| textDocument/linkedEditingRange    |     |                                                 |
+| textDocument/moniker               |     |                                                 |
+</details>
 
 ## Extra capabilities
 
@@ -108,6 +120,7 @@ Besides LSP official capabilities, `clojure-lsp` has some extra features:
 ### Refactorings
 
 It should be possible to introduce most of the refactorings [here](https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples)
+
 Calling `executeCommand` with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
@@ -115,7 +128,6 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | ---- | ------------------- | ----                                          | -----                                |
 | √    | add-missing-libspec |                                               |                                      |
 | -    | clean-ns            |                                               | :require sort and remove unused only |
-|      |                     |                                               |                                      |
 | √    | cycle-coll          |                                               |                                      |
 | √    | cycle-privacy       |                                               |                                      |
 | √    | expand-let          |                                               |                                      |
@@ -203,6 +215,9 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
 
 `macro-defs` value is a map of fully-qualified macro names to a vector of definitions of those macros' forms.
 
+<details>
+  <summary>Custom macro defs</summary>
+
 #### Element definitions
 
 An element represents one or more forms within a macro-def vector. They can be defined in two ways:
@@ -275,6 +290,8 @@ Valid element definitions are:
 
 See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.
 
+</details>
+
 ## Project Settings
 
 LSP will also look for project specific settings in a file called '.lsp/config.edn'. It will search from your root folder up the directory structure so you can have multiple projects share the settings.
@@ -294,7 +311,9 @@ In general, make sure to configure the client to use stdio and a server launch c
 If that fails, you may need to have your client launch inside a shell, so use someting like `['bash', '-c', '/usr/local/bin/clojure-lsp']`.
 In windows you probably need to rename to `clojure-lsp.bat`.
 
-### Vim
+<details>
+  <summary><b>Vim</b></summary>
+
 I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well.
 
 See my [nvim/init.vim](https://github.com/snoe/dotfiles/blob/master/home/.vimrc) and [coc-settings.json](https://github.com/snoe/dotfiles/blob/master/home/.vim/coc-settings.json)
@@ -329,8 +348,11 @@ Project-local `.lsp/settings.json` would have content like:
    "source-paths": ["shared-src", "src", "test", "dashboard/src"],
    "macro-defs": {"project.macros/dofor": ["bindings", "bound-elements"]}}}
 ```
+</details>
 
-### Emacs
+<details>
+  <summary><b>Emacs</b></summary>
+
 [lsp-mode](https://emacs-lsp.github.io/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
 
 ```elisp
@@ -349,8 +371,7 @@ Project-local `.lsp/settings.json` would have content like:
                clojurescript-mode
                clojurex-mode))
      (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
-  (setq lsp-clojure-server-command '("bash" "-c" "clojure-lsp") ;; Optional: In case `clojure-lsp` is not in your PATH
-        lsp-enable-indentation nil))
+  (setq lsp-clojure-server-command '("bash" "-c" "clojure-lsp"))) ;; Optional: In case `clojure-lsp` is not in your PATH
 ```
 
 Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completion:
@@ -365,34 +386,42 @@ Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completio
   :commands company-lsp)
 ```
 
-In order to make the jumping into dependency jars work you have to have a `config.edn` in your `project-dir/.lsp` directory (or higher in the directory hierarchy, like `~/.lsp`) with the right `dependency-scheme` so the server returns an URI `emacs-lsp` can process:
+In `lsp-mode`, `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
+</details>
 
-```clojure
-{:dependency-scheme "jar"}
-```
+<details>
+  <summary><b>Oni</b></summary>
 
-In `lsp-mode` `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
-
-
-### Oni
 Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni
 
-### Intellij / Cursive
+</details>
+
+<details>
+  <summary><b>Intellij / Cursive</b></summary>
+
 https://github.com/gtache/intellij-lsp tested only briefly.
 
-### Visual Studio Code
-Proof of concept in the client-vscode directory in this repo.
+</details>
 
-Also, the [Calva](https://github.com/BetterThanTomorrow/calva) extension includes clojure-lsp support.
+<details>
+  <summary><b>Visual Studio Code</b></summary>
 
-### Atom
+* Proof of concept: in the client-vscode directory in this repo.
+* [Calva](https://github.com/BetterThanTomorrow/calva) extension includes clojure-lsp support.
+</details>
+
+<details>
+  <summary><b>Atom</b></summary>
+
 I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.
+</details>
 
 ## TODO
 
-### Others
 - Better completion item kinds
+- Full semantic tokens support
+- Call hierarchy support
 
 ## Building local
 
-For building local, run `lein bin` to generate the binary inside `target` folder.
+For building local, run `lein bin` to generate the binary inside `target` folder or `lein uberjar` for building the jar.

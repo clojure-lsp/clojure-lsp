@@ -197,14 +197,11 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))]
-                    (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      line (inc (.getLine pos))
+                      column (inc (.getCharacter pos))]
+                  (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))))))))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams _params]
     (go :signatureHelp

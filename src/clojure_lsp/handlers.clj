@@ -101,19 +101,25 @@
 (defn- count-whitespace [s]
   (- (count s) (count (string/triml s))))
 
-(defn- format-docstring [doc]
-  (let [lines (string/split-lines doc)
+(def line-break "\n----\n")
+(def opening-code "```clojure\n")
+(def closing-code "\n```\n")
+
+(defn- docstring->formatted-markdown [doc]
+  (let [lines       (string/split-lines doc)
         other-lines (filter (comp not string/blank?) (rest lines))
         multi-line? (> (count other-lines) 0)]
-    (if-not multi-line?
-      doc
-      (let [indentation (apply min (map count-whitespace other-lines))
-            unindented-lines (cons (first lines)
-                                   (map #(drop-whitespace indentation %) (rest lines)))]
-        (string/join "\n" unindented-lines)))))
+    (str opening-code
+         (if-not multi-line?
+           doc
+           (let [indentation      (apply min (map count-whitespace other-lines))
+                 unindented-lines (cons (first lines)
+                                        (map #(drop-whitespace indentation %) (rest lines)))]
+             (string/join "\n" unindented-lines)))
+         closing-code)))
 
 (defn- generate-docs [content-format usage show-docs-arity-on-same-line?]
-  (let [{:keys [sym signatures doc tags]} usage
+  (let [{:keys [sym signatures doc]} usage
         signatures (some->> signatures
                             (:strings)
                             (string/join "\n"))
@@ -121,19 +127,16 @@
                      (-> signatures
                          (clojure.string/replace #"\n" ",")
                          (clojure.string/replace #"  +" " "))
-                     signatures)
-        tags (string/join " " tags)]
+                     signatures)]
     (case content-format
       "markdown" {:kind "markdown"
-                  :value (cond-> (str "```clojure\n" sym " " (when show-docs-arity-on-same-line? signatures) "\n```\n")
-                           (and (not show-docs-arity-on-same-line?) signatures) (str "```clojure\n" signatures "\n```\n")
-                           (seq doc) (str (format-docstring doc) "\n")
-                           (seq tags) (str "\n----\n" "lsp: " tags))}
+                  :value (cond-> (str opening-code sym " " (when show-docs-arity-on-same-line? signatures) closing-code)
+                           (and (not show-docs-arity-on-same-line?) signatures) (str opening-code signatures closing-code)
+                           (seq doc) (str line-break (docstring->formatted-markdown doc)))}
       ;; Default to plaintext
       (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
         (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")
-        (seq doc) (str doc "\n")
-        (seq tags) (str "\n----\n" "lsp: " tags)))))
+        (seq doc) (str line-break doc "\n")))))
 
 (defn did-open [uri text]
   (when-let [new-ns (and (string/blank? text)
@@ -427,8 +430,7 @@
          (get-in e [:tags :public]))))
 
 (defn document-symbol [doc-id]
-  (let [file-envs (:file-envs @db/db)
-        local-env (get file-envs doc-id)
+  (let [local-env (-> @db/db :file-envs doc-id)
         symbol-parent-map (->> local-env
                                (keep #(cond (:kind %) [% (:kind %)]
                                             (is-declaration? %) [% :declaration]

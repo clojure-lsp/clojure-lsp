@@ -250,7 +250,7 @@
                        (z/remove) ; remove let
                        (z/next)
                        (z/remove) ; remove binding
-                       (z/up) ; go to form container
+                       (z/find z/up #(= (z/tag %) :list)) ; go to parent form container
                        (edit/wrap-around :list) ; wrap with new let list
                        (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
                        (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards

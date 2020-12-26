@@ -133,7 +133,21 @@
     (let [code "#(a (b c))"
           zloc (-> (z/of-string code) (z/find-value z/next 'b) (z/up))
           [{:keys [loc]}] (transform/expand-let zloc nil)]
-      (is (nil? (z/root-string loc))))))
+      (is (nil? (z/root-string loc)))))
+  (testing "in fn without args"
+    (let [code "(def foo (fn [] (let [a 1] a) 2))"
+          zloc (-> code z/of-string (z/find-value z/next 'let))
+          [{:keys [loc range]}] (transform/expand-let zloc nil)]
+      (is (some? range))
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= (str "(def foo (let [a 1]\n          (fn [] a 2)))") (z/root-string loc)))))
+  (testing "in fn with args"
+    (let [code "(def foo (fn [bar] (let [a 1] a) 2))"
+          zloc (-> code z/of-string (z/find-value z/next 'let))
+          [{:keys [loc range]}] (transform/expand-let zloc nil)]
+      (is (some? range))
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= (str "(def foo (let [a 1]\n          (fn [bar] a 2)))") (z/root-string loc))))))
 
 (def ns-to-clean
   (str "(ns foo.bar\n"

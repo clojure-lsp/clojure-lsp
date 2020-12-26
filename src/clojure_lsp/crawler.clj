@@ -119,7 +119,11 @@
       (merge extra)
 
       user-config
-      (update-in [:config] merge user-config))))
+      (update-in [:config] merge user-config)
+
+      ;; TODO Duplicated linter. Remove after using clj-kondo for all linters
+      :always
+      (update-in [:config :linters] merge {:unused-private-var {:level :off}}))))
 
 (defn- run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]})))

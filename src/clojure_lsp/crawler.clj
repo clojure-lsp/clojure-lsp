@@ -17,13 +17,13 @@
     [java.util.jar JarFile]
     [java.nio.file Paths]))
 
-(defn- file->uri [file]
+(defn ^:private file->uri [file]
   (str (.toUri (.toPath file))))
 
-(defn- to-file [path child]
+(defn ^:private to-file [path child]
   (.toFile (.resolve path child)))
 
-(defn- uri->path [uri]
+(defn ^:private uri->path [uri]
   (Paths/get (URI. uri)))
 
 (defn ^:private diagnose-unknown-forward-declarations [usages]
@@ -41,6 +41,7 @@
     (for [usage unknown-forwards]
       {:range (shared/->range usage)
        :code :unknown
+       :source "clojure-lsp"
        :message (str "Unknown forward declaration: " (:str usage))
        :severity 1})))
 
@@ -64,6 +65,7 @@
                                    (set/union #{"test/"} excluded-unused-ns-declarations))))]
       {:range (shared/->range usage)
        :code code
+       :source "clojure-lsp"
        :message (case code
                   :unused-ns (str "Unused namespace: " (:str usage))
                   (str "Unused declaration: " (:str usage)))
@@ -93,7 +95,7 @@
         declared-references (remove (comp #(contains? % :alias) :tags) declarations)]
     (concat (diagnose-unused-references uri declared-references all-envs excluded-unused-ns-declarations))))
 
-(defn- kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
+(defn ^:private kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   expression? (assoc :end-row row :end-col col))]
@@ -106,7 +108,7 @@
                  :info    3)
      :source "clj-kondo"}))
 
-(defn- kondo-args [extra]
+(defn ^:private kondo-args [extra]
   (let [root-path (uri->path (:project-root @db/db))
         user-config (get-in @db/db [:settings :clj-kondo])
         kondo-dir (.resolve root-path ".clj-kondo")]
@@ -125,20 +127,20 @@
       :always
       (update-in [:config :linters] merge {:unused-private-var {:level :off}}))))
 
-(defn- run-kondo-on-paths! [paths]
+(defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]})))
 
-(defn- run-kondo-on-text! [text lang]
+(defn ^:private run-kondo-on-text! [text lang]
   (with-in-str text (kondo/run! (kondo-args {:lint ["-"] :lang lang}))))
 
-(defn- kondo-find-diagnostics [uri text]
+(defn ^:private kondo-find-diagnostics [uri text]
   (let [file-type (shared/uri->file-type uri)
         {:keys [findings]} (run-kondo-on-text! text file-type)]
     (->> findings
          (filter #(= "<stdin>" (:filename %)))
          (map kondo-finding->diagnostic))))
 
-(defn find-diagnostics [uri text usages excluded-unused-ns-declarations]
+(defn ^:private find-diagnostics [uri text usages excluded-unused-ns-declarations]
   (let [kondo-diagnostics (kondo-find-diagnostics uri text)
         unused (diagnose-unused uri usages excluded-unused-ns-declarations)
         unknown-forwards (diagnose-unknown-forward-declarations usages)

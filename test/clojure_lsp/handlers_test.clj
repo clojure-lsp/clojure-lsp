@@ -351,6 +351,10 @@
                    "file://d.clj" (parser/find-usages
                                     (str "(ns d (:require [alpaca.ns :as alpaca]))")
                                     :clj
+                                    {})
+                   "file://e.clj" (parser/find-usages
+                                    (str "(ns e (:require [alpaca.ns :refer [ba]]))")
+                                    :clj
                                     {})}}]
     (testing "complete-a"
       (reset! db/db db-state)
@@ -375,6 +379,12 @@
               {:label "alpaca/barr" :detail "alpaca.ns" :data "alpaca.ns/barr"}
               {:label "alpaca/bazz" :detail "alpaca.ns" :data "alpaca.ns/bazz"}]
              (handlers/completion "file://b.clj" 3 18))))
+    (testing "complete-within-refering"
+      (reset! db/db db-state)
+      (print (handlers/completion "file://e.clj" 1 38))
+      (is (= [{:label "barr" :detail "alpaca.ns/barr" :data "alpaca.ns/barr"}
+              {:label "bazz" :detail "alpaca.ns/bazz" :data "alpaca.ns/bazz"}]
+             (handlers/completion "file://e.clj" 1 38))))
     (testing "complete-core-stuff"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
       (is (= [{:label "frequencies" :data "clojure.core/frequencies"}]

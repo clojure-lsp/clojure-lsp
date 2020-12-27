@@ -1,24 +1,24 @@
 (ns clojure-lsp.handlers
   (:require
-   [cljfmt.core :as cljfmt]
-   [cljfmt.main :as cljfmt.main]
-   [clojure-lsp.clojure-core :as cc]
-   [clojure-lsp.crawler :as crawler]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.interop :as interop]
-   [clojure-lsp.parser :as parser]
-   [clojure-lsp.refactor.transform :as refactor]
-   [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
-   [clojure.pprint :as pprint]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [clojure.tools.logging :as log]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [clojure-lsp.semantic-tokens :as semantic-tokens])
+    [cljfmt.core :as cljfmt]
+    [cljfmt.main :as cljfmt.main]
+    [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.crawler :as crawler]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.interop :as interop]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.refactor.transform :as refactor]
+    [clojure-lsp.shared :as shared]
+    [clojure.core.async :as async]
+    [clojure.pprint :as pprint]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z]
+    [clojure-lsp.semantic-tokens :as semantic-tokens])
   (:import
-   [java.net URL JarURLConnection]))
+    [java.net URL JarURLConnection]))
 
 (defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
   (cond
@@ -219,63 +219,75 @@
                              [(:sym usage) usages])
                            (into {}))]
     (when cursor-value
-      (concat
-        (->> local-env
-             (filter (comp :declare :tags))
+      (if (contains? (:tags cursor-usage) :refer)
+        ;; If the cursor is within a :refer then the sole
+        ;; completions should be symbols within the namespace
+        ;; that's being referred
+        (->> (get remotes-by-ns (:ns cursor-usage))
+             (filter #(every? (:tags %) [:declare :public]))
              (filter (comp matches? :str))
-             (remove (fn [usage]
-                       (when-let [scope-bounds (:scope-bounds usage)]
-                         (not= :within (check-bounds line column scope-bounds)))))
-             (mapv (fn [{:keys [sym kind]}]
-                     (cond-> {:label (name sym)
-                              :data (str sym)}
-                       kind (assoc :kind kind))))
-             (sort-by :label))
-        (->> namespaces-and-aliases
-             (filter (comp matches? key))
-             (mapcat val)
-             (mapv (fn [{:keys [alias-str alias-ns] :as info}]
-                     (let [require-edit (some-> cursor-loc
+             (map (fn [candidate]
+                    {:label (:str candidate)
+                     :detail (str (:sym candidate))
+                     :data (str (:sym candidate))})))
+        ;; Otherwise, completions could come from various sources
+        (concat
+          (->> local-env
+               (filter (comp :declare :tags))
+               (filter (comp matches? :str))
+               (remove (fn [usage]
+                         (when-let [scope-bounds (:scope-bounds usage)]
+                           (not= :within (check-bounds line column scope-bounds)))))
+               (mapv (fn [{:keys [sym kind]}]
+                       (cond-> {:label (name sym)
+                                :data (str sym)}
+                         kind (assoc :kind kind))))
+               (sort-by :label))
+          (->> namespaces-and-aliases
+               (filter (comp matches? key))
+               (mapcat val)
+               (mapv (fn [{:keys [alias-str alias-ns] :as info}]
+                       (let [require-edit (some-> cursor-loc
+                                                  (refactor/add-known-libspec (symbol alias-str) alias-ns)
+                                                  (refactor/result))]
+                         (cond-> (dissoc info :alias-ns :alias-str)
+                           require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))
+               (sort-by :label))
+          (->> (for [[alias-str matches] namespaces-and-aliases
+                     :when (= alias-str cursor-ns)
+                     {:keys [alias-ns]} matches
+                     :let [usages (get remotes-by-ns alias-ns)]
+                     usage usages
+                     :when (and (get-in usage [:tags :public])
+                                (not (get-in usage [:tags :ns]))
+                                (= cursor-file-type (:file-type usage)))
+                     :let [require-edit (some-> cursor-loc
                                                 (refactor/add-known-libspec (symbol alias-str) alias-ns)
-                                                (refactor/result))]
-                       (cond-> (dissoc info :alias-ns :alias-str)
-                         require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))
-             (sort-by :label))
-        (->> (for [[alias-str matches] namespaces-and-aliases
-                   :when (= alias-str cursor-ns)
-                   {:keys [alias-ns]} matches
-                   :let [usages (get remotes-by-ns alias-ns)]
-                   usage usages
-                   :when (and (get-in usage [:tags :public])
-                              (not (get-in usage [:tags :ns]))
-                              (= cursor-file-type (:file-type usage)))
-                   :let [require-edit (some-> cursor-loc
-                                              (refactor/add-known-libspec (symbol alias-str) alias-ns)
-                                              (refactor/result))]]
-               (cond-> {:label (str alias-str "/" (name (:sym usage)))
-                        :detail (name alias-ns)
-                        :data (str (:sym usage))}
-                 require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))
-             (sort-by :label))
-        (->> cc/core-syms
-             (filter (comp matches? str))
-             (map (fn [sym] {:label (str sym)
-                             :data (str "clojure.core/" sym)}))
-             (sort-by :label))
-        (when (or (contains? cursor-file-type :cljc)
-                  (contains? cursor-file-type :cljs))
-          (->> cc/cljs-syms
+                                                (refactor/result))]]
+                 (cond-> {:label (str alias-str "/" (name (:sym usage)))
+                          :detail (name alias-ns)
+                          :data (str (:sym usage))}
+                   require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))
+               (sort-by :label))
+          (->> cc/core-syms
                (filter (comp matches? str))
                (map (fn [sym] {:label (str sym)
-                               :data (str "cljs.core/" sym)}))
-               (sort-by :label)))
-        (when (or (contains? cursor-file-type :cljc)
-                  (contains? cursor-file-type :clj))
-          (->> cc/java-lang-syms
-               (filter (comp matches? str))
-               (map (fn [sym] {:label (str sym)
-                               :data (str "java.lang." sym)}))
-               (sort-by :label)))))))
+                               :data (str "clojure.core/" sym)}))
+               (sort-by :label))
+          (when (or (contains? cursor-file-type :cljc)
+                    (contains? cursor-file-type :cljs))
+            (->> cc/cljs-syms
+                 (filter (comp matches? str))
+                 (map (fn [sym] {:label (str sym)
+                                 :data (str "cljs.core/" sym)}))
+                 (sort-by :label)))
+          (when (or (contains? cursor-file-type :cljc)
+                    (contains? cursor-file-type :clj))
+            (->> cc/java-lang-syms
+                 (filter (comp matches? str))
+                 (map (fn [sym] {:label (str sym)
+                                 :data (str "java.lang." sym)}))
+                 (sort-by :label))))))))
 
 (defn resolve-completion-item [label sym-wanted]
   (let [file-envs (:file-envs @db/db)

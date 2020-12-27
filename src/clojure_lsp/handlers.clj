@@ -497,6 +497,7 @@
    "extract-function" #'refactor/extract-function
    "cycle-privacy" #'refactor/cycle-privacy})
 
+ ;;TODO Refactor this function to a better agnostic refactor
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
@@ -506,7 +507,8 @@
                       (cond-> (vec args)
                         (= "inline-symbol" refactoring) (conj (definition-usage doc-id line column) (reference-usages doc-id line column))
                         (= "extract-function" refactoring) (conj (parser/usages-in-form loc usages))))]
-    (if loc
+    (if (or loc
+            (= "clean-ns" refactoring))
       (cond
         (map? result)
         (let [changes (vec (for [[doc-id sub-results] result]

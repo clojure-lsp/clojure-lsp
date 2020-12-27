@@ -177,6 +177,14 @@
        "(defn func []\n"
        "  (f/some))"))
 
+(def ns-to-clean-with-spaces
+  (str "(ns foo.bar\n"
+       " (:require\n"
+       "   [foo  :as f] [bar :refer [some]] baz [z] ))\n"
+       "\n"
+       "(defn func []\n"
+       "  (f/some))"))
+
 (deftest clean-ns-test
   (with-redefs [slurp (constantly ns-to-clean)]
     (testing "without keep-require-at-start?"
@@ -239,6 +247,20 @@
                     "   [foo  :as f]\n"
                     "   [z]\n"
                     "   baz))\n"
+                    "(defn func []\n"
+                    "  (f/some))")
+               (z/root-string loc))))))
+  (with-redefs [slurp (constantly ns-to-clean-with-spaces)]
+    (testing "clearing in any form"
+      (reset! db/db {:documents {"file://a.clj" {:text ns-to-clean-with-spaces}}})
+      (let [[{:keys [loc range]}] (transform/clean-ns nil "file://a.clj")]
+        (is (some? range))
+        (is (= (str "(ns foo.bar\n"
+                    " (:require\n"
+                    "   [foo  :as f]\n"
+                    "   [z]\n"
+                    "   baz))\n"
+                    "\n"
                     "(defn func []\n"
                     "  (f/some))")
                (z/root-string loc)))))))

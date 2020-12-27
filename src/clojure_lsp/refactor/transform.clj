@@ -1,16 +1,16 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure-lsp.crawler :as crawler]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [medley.core :as medley]
-    [rewrite-clj.custom-zipper.core :as cz]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]))
+   [clojure-lsp.crawler :as crawler]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [medley.core :as medley]
+   [rewrite-clj.custom-zipper.core :as cz]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -280,7 +280,8 @@
 
 (defn clean-ns
   [zloc uri]
-  (let [ns-loc (edit/find-namespace zloc)
+  (let [safe-loc (or zloc (z/of-string (get-in @db/db [:documents uri :text])))
+        ns-loc (edit/find-namespace safe-loc)
         require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
         keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
         col (if require-loc

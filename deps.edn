@@ -4,7 +4,10 @@
         org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.24.0" :exclusions [com.google.guava/guava]}
         com.google.guava/guava {:mvn/version "30.1-jre"}
         rewrite-clj/rewrite-clj {:local/root "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"}
-        log4j/log4j {:mvn/version "1.2.17"}
+        log4j/log4j {:mvn/version "1.2.17" :exclusions [javax.mail/mail
+                                                        javax.jms/jms
+                                                        com.sun.jdmk/jmxtools
+                                                        com.sun.jmx/jmxri]}
         org.clojure/tools.logging {:mvn/version "0.3.1"}
         nrepl/nrepl {:mvn/version "0.8.3"}
         org.clojure/core.async {:mvn/version "1.3.610"}

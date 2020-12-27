@@ -36,11 +36,6 @@
           :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
       [])))
 
-(defmacro zass [loc sexpr]
-  `(do
-     (assert (= '~sexpr (z/sexpr ~loc)) (pr-str (z/sexpr ~loc)))
-     ~loc))
-
 (defn thread-sym
   [zloc sym top-meta]
   (let [movement (if (= '-> sym) z/right (comp z/rightmost z/right))]

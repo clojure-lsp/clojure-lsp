@@ -22,7 +22,7 @@
 
 (defn cycle-coll
   "Cycles collection between vector, list, map and set"
-  [zloc _uri]
+  [zloc]
   (let [sexpr (z/sexpr zloc)]
     (if (coll? sexpr)
       (let [node (z/node zloc)
@@ -78,12 +78,12 @@
   (= (z/tag zloc) :list))
 
 (defn thread-first
-  [zloc _uri]
+  [zloc]
   (when (can-thread? zloc)
     (thread-sym zloc '-> (meta (z/node zloc)))))
 
 (defn thread-last
-  [zloc _uri]
+  [zloc]
   (when (can-thread? zloc)
     (thread-sym zloc '->> (meta (z/node zloc)))))
 
@@ -99,15 +99,15 @@
             (assoc-in result [0 :range] top-range)))))))
 
 (defn thread-first-all
-  [zloc _uri]
+  [zloc]
   (thread-all zloc '->))
 
 (defn thread-last-all
-  [zloc _uri]
+  [zloc]
   (thread-all zloc '->>))
 
 (defn unwind-thread
-  [zloc _uri]
+  [zloc]
   (let [thread-loc (if (= (z/tag zloc) :list)
                      (z/next zloc)
                      zloc)
@@ -138,11 +138,11 @@
               :loc result-loc}]))))))
 
 (defn unwind-all
-  [zloc uri]
-  (loop [current (unwind-thread zloc uri)
+  [zloc]
+  (loop [current (unwind-thread zloc)
          result nil]
     (if current
-      (recur (unwind-thread (:loc (first current)) uri) current)
+      (recur (unwind-thread (:loc (first current))) current)
       result)))
 
 (defn find-within [zloc p?]
@@ -169,7 +169,7 @@
 
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
-  [zloc _uri binding-name]
+  [zloc binding-name]
   (when-let [let-top-loc (some-> zloc
                                  (edit/find-ops-up 'let)
                                  z/up)]
@@ -208,7 +208,7 @@
 
 (defn introduce-let
   "Adds a let around the current form."
-  [zloc _uri binding-name]
+  [zloc binding-name]
   (let [sym (symbol binding-name)
         {:keys [col]} (meta (z/node zloc))
         loc (-> zloc
@@ -228,7 +228,7 @@
 
 (defn expand-let
   "Expand the scope of the next let up the tree."
-  [zloc _uri]
+  [zloc]
   (let [let-loc (some-> zloc
                         (edit/find-ops-up 'let)
                         z/up)]
@@ -346,7 +346,7 @@
           :loc result-loc}]))))
 
 (defn add-missing-libspec
-  [zloc _uri]
+  [zloc]
   (let [ns-str-to-add (some-> zloc z/sexpr namespace)
         ns-to-add (some-> ns-str-to-add symbol)
         alias->info (->> (:file-envs @db/db)
@@ -373,7 +373,7 @@
     (add-known-libspec zloc ns-to-add qualified-ns-to-add)))
 
 (defn extract-function
-  [zloc _uri fn-name usages]
+  [zloc fn-name usages]
   (let [expr-loc (if (not= :token (z/tag zloc))
                    zloc
                    (z/up (edit/find-op zloc)))
@@ -409,7 +409,7 @@
   (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
 
 (defn cycle-privacy
-  [zloc _]
+  [zloc]
   (when-let [oploc (inside-function? zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
@@ -438,7 +438,7 @@
             #{'let 'def})))
 
 (defn inline-symbol
-  [_zloc _uri [_ {def-uri :uri definition :usage}] references]
+  [[_ {def-uri :uri definition :usage}] references]
   (let [{:keys [text]} (get-in @db/db [:documents def-uri])
         def-loc (parser/loc-at-pos text (:row definition) (:col definition))
         op (inline-symbol? def-uri definition)]

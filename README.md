@@ -294,7 +294,9 @@ See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test
 
 </details>
 
-## Project Settings
+## Settings 
+
+### Project
 
 LSP will also look for project specific settings in a file called '.lsp/config.edn'. It will search from your root folder up the directory structure so you can have multiple projects share the settings.
 
@@ -303,6 +305,12 @@ LSP will also look for project specific settings in a file called '.lsp/config.e
  :cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
  :clj-kondo {:linters {:missing-docstring {:level :warning}}}}
  ```
+
+### Global
+
+For global settings, you just need to add the same configs to `~/.lsp/config.edn`.
+
+For an example of `config.edn`, check [here](https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn).
 
 ## Clients
 

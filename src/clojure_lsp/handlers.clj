@@ -5,11 +5,12 @@
     [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
-    [clojure-lsp.feature.definition :as f.definition]
-    [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.code-actions :as f.code-actions]
+    [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.documentation :as f.documentation]
+    [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.references :as f.references]
-    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.transform :as r.transform]
@@ -59,59 +60,12 @@
        "."
        (name file-type)))
 
-(defn- client-changes [changes]
+(defn ^:private client-changes [changes]
   (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
     {:document-changes changes}
     {:changes (into {} (map (fn [{:keys [text-document edits]}]
                               [(:uri text-document) edits])
                             changes))}))
-
-(defn- drop-whitespace [n s]
-  (if (> n (count s))
-    s
-    (let [fully-trimmed (string/triml s)
-          dropped (subs s n)]
-      (last (sort-by count [fully-trimmed dropped])))))
-
-(defn- count-whitespace [s]
-  (- (count s) (count (string/triml s))))
-
-(def line-break "\n----\n")
-(def opening-code "```clojure\n")
-(def closing-code "\n```\n")
-
-(defn- docstring->formatted-markdown [doc]
-  (let [lines       (string/split-lines doc)
-        other-lines (filter (comp not string/blank?) (rest lines))
-        multi-line? (> (count other-lines) 0)]
-    (str opening-code
-         (if-not multi-line?
-           doc
-           (let [indentation      (apply min (map count-whitespace other-lines))
-                 unindented-lines (cons (first lines)
-                                        (map #(drop-whitespace indentation %) (rest lines)))]
-             (string/join "\n" unindented-lines)))
-         closing-code)))
-
-(defn- generate-docs [content-format usage show-docs-arity-on-same-line?]
-  (let [{:keys [sym signatures doc]} usage
-        signatures (some->> signatures
-                            (:strings)
-                            (string/join "\n"))
-        signatures (if (and show-docs-arity-on-same-line? signatures)
-                     (-> signatures
-                         (clojure.string/replace #"\n" ",")
-                         (clojure.string/replace #"  +" " "))
-                     signatures)]
-    (case content-format
-      "markdown" {:kind "markdown"
-                  :value (cond-> (str opening-code sym " " (when show-docs-arity-on-same-line? signatures) closing-code)
-                           (and (not show-docs-arity-on-same-line?) signatures) (str opening-code signatures closing-code)
-                           (seq doc) (str line-break (docstring->formatted-markdown doc)))}
-      ;; Default to plaintext
-      (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
-        (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")
-        (seq doc) (str line-break doc "\n")))))
 
 (defn did-open [uri text]
   (when-let [new-ns (and (string/blank? text)
@@ -145,7 +99,7 @@
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
 
-(defn- matches-cursor? [cursor-value s]
+(defn ^:private matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))
     s))
 
@@ -276,7 +230,7 @@
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])]
     {:label label
      :data sym-wanted
-     :documentation (generate-docs content-format usage show-docs-arity-on-same-line?)}))
+     :documentation (f.documentation/generate content-format usage show-docs-arity-on-same-line?)}))
 
 (defn references [doc-id line column]
   (mapv (fn [{:keys [uri usage]}]
@@ -297,7 +251,7 @@
                                                        (assoc-in [:file-envs uri] references)))
           (recur @db/db))))))
 
-(defn- rename-alias [doc-id local-env cursor-usage cursor-name replacement]
+(defn ^:private rename-alias [doc-id local-env cursor-usage cursor-name replacement]
   (for [{u-str :str :as usage} local-env
         :let [version (get-in @db/db [:documents doc-id :v] 0)
               [u-prefix u-ns u-name] (parser/ident-split u-str)
@@ -308,7 +262,7 @@
      :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
      :text-document {:version version :uri doc-id}}))
 
-(defn- rename-name [file-envs cursor-sym replacement]
+(defn ^:private rename-name [file-envs cursor-sym replacement]
   (for [[doc-id usages] file-envs
         :let [version (get-in @db/db [:documents doc-id :v] 0)]
         {u-sym :sym u-str :str :as usage} usages
@@ -491,7 +445,7 @@
                   usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        docs (generate-docs content-format usage show-docs-arity-on-same-line?)]
+        docs (f.documentation/generate content-format usage show-docs-arity-on-same-line?)]
     (if cursor
       {:range (shared/->range cursor)
        :contents (if (= content-format "markdown")
@@ -578,5 +532,5 @@
   [doc-id]
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
-        data (semantic-tokens/full usages)]
+        data (f.semantic-tokens/full usages)]
     {:data data}))

@@ -1,6 +1,6 @@
 (ns clojure-lsp.features.semantic-tokens-test
   (:require [clojure-lsp.parser :as parser]
-            [clojure-lsp.features.semantic-tokens :as semantic-tokens]
+            [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
             [clojure.string :as clojure.string]
             [clojure.test :refer [deftest is testing]]))
 

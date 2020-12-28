@@ -1,10 +1,10 @@
 (ns clojure-lsp.main
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.features.refactor :as f.refactor]
+   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
-   [clojure-lsp.features.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]

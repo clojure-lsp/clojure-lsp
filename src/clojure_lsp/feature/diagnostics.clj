@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.diagnostics
+(ns clojure-lsp.feature.diagnostics
   (:require
     [clojure-lsp.shared :as shared]
     [clj-kondo.core :as kondo]

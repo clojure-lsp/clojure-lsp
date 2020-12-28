@@ -1,7 +1,7 @@
 (ns clojure-lsp.handlers-test
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.features.diagnostics :as f.diagnostic]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
    [clojure.string :as string]

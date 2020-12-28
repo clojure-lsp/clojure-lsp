@@ -1,8 +1,8 @@
 (ns clojure-lsp.crawler
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.features.diagnostics :as f.diagnostic]
-   [clojure-lsp.features.references :as f.references]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]

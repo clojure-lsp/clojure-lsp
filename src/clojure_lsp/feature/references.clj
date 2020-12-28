@@ -1,9 +1,9 @@
-(ns clojure-lsp.features.references
+(ns clojure-lsp.feature.references
   (:require [clojure-lsp.shared :as shared]
             [clojure.set :as set]
             [clojure-lsp.db :as db]
             [clojure-lsp.parser :as parser]
-            [clojure-lsp.features.diagnostics :as f.diagnostic]
+            [clojure-lsp.feature.diagnostics :as f.diagnostic]
             [clojure.core.async :as async]
             [clojure.tools.logging :as log]))
 

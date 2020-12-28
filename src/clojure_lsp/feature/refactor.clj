@@ -1,10 +1,10 @@
-(ns clojure-lsp.features.refactor
+(ns clojure-lsp.feature.refactor
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
-   [clojure-lsp.features.references :as f.references]
-   [clojure-lsp.features.definition :as f.definition]))
+   [clojure-lsp.feature.references :as f.references]
+   [clojure-lsp.feature.definition :as f.definition]))
 
 (defmulti refactor (comp :refactoring))
 

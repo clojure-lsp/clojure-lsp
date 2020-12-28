@@ -1,6 +1,6 @@
-(ns clojure-lsp.features.definition
+(ns clojure-lsp.feature.definition
   (:require [clojure-lsp.db :as db]
-            [clojure-lsp.features.references :as f.references]
+            [clojure-lsp.feature.references :as f.references]
             [clojure-lsp.shared :as shared]))
 
 (defn definition-usage [doc-id line column]

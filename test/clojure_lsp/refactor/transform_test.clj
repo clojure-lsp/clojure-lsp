@@ -1,8 +1,8 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
     [clojure-lsp.db :as db]
-    [clojure-lsp.features.definition :as f.definition]
-    [clojure-lsp.features.references :as f.references]
+    [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.handlers :as handlers]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]

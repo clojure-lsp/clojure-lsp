@@ -1,4 +1,4 @@
-(ns clojure-lsp.semantic-tokens)
+(ns clojure-lsp.features.semantic-tokens)
 
 (def token-types
   [:function

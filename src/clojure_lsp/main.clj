@@ -4,7 +4,7 @@
    [clojure-lsp.features.refactor :as f.refactor]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
-   [clojure-lsp.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.features.semantic-tokens :as semantic-tokens]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]

@@ -11,7 +11,7 @@
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.transform :as r.transform]
-    [clojure-lsp.semantic-tokens :as semantic-tokens]
+    [clojure-lsp.features.semantic-tokens :as semantic-tokens]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]

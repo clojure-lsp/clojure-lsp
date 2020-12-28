@@ -1,13 +1,14 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
     [clojure-lsp.db :as db]
+    [clojure-lsp.features.definition :as f.definition]
+    [clojure-lsp.features.references :as f.references]
     [clojure-lsp.handlers :as handlers]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure-lsp.refactor.transform :as transform]
     [clojure.string :as string]
     [clojure.test :refer :all]
-    [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
 
 (deftest paredit-test
@@ -309,8 +310,8 @@
                      :file-envs {"file://a.clj" usages}})
       (let [zloc (z/find-value (z/of-string code) z/next 'something)
             pos (meta (z/node zloc))
-            definition (handlers/definition-usage "file://a.clj" (:row pos) (:col pos))
-            references (handlers/reference-usages "file://a.clj" (:row pos) (:col pos))
+            definition (f.definition/definition-usage "file://a.clj" (:row pos) (:col pos))
+            references (f.references/reference-usages "file://a.clj" (:row pos) (:col pos))
             results (transform/inline-symbol zloc "file://a.clj" definition references)
             a-results (get results "file://a.clj")]
         (is (map? results))
@@ -328,8 +329,8 @@
                                  "file://b.clj" b-usages}})
       (let [zloc (z/find-value (z/of-string b-code) z/next 'a/something)
             pos (meta (z/node zloc))
-            definition (handlers/definition-usage "file://b.clj" (:row pos) (:col pos))
-            references (handlers/reference-usages "file://b.clj" (:row pos) (:col pos))
+            definition (f.definition/definition-usage "file://b.clj" (:row pos) (:col pos))
+            references (f.references/reference-usages "file://b.clj" (:row pos) (:col pos))
             results (transform/inline-symbol zloc "file://b.clj" definition references)
             a-results (get results "file://a.clj")
             b-results (get results "file://b.clj")]

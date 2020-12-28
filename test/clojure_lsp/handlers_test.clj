@@ -381,7 +381,6 @@
              (handlers/completion "file://b.clj" 3 18))))
     (testing "complete-within-refering"
       (reset! db/db db-state)
-      (print (handlers/completion "file://e.clj" 1 38))
       (is (= [{:label "barr" :detail "alpaca.ns/barr" :data "alpaca.ns/barr"}
               {:label "bazz" :detail "alpaca.ns/bazz" :data "alpaca.ns/bazz"}]
              (handlers/completion "file://e.clj" 1 38))))

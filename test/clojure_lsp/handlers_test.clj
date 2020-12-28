@@ -110,6 +110,12 @@
                          :value "```clojure\na/foo []\n```\n\n----\n```clojure\nSome cool docstring :foo :bar\n```\n"}}
              (handlers/hover "file://a.clj" 3 2))))))
 
+(deftest document-symbol
+  (reset! db/db {:file-envs
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})}})
+  (is (= 1
+         (count (handlers/document-symbol "file://a.clj")))))
+
 (deftest test-rename
   (reset! db/db {:file-envs
                  {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})

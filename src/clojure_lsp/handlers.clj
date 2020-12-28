@@ -430,7 +430,7 @@
          (get-in e [:tags :public]))))
 
 (defn document-symbol [doc-id]
-  (let [local-env (-> @db/db :file-envs doc-id)
+  (let [local-env (get-in @db/db [:file-envs doc-id])
         symbol-parent-map (->> local-env
                                (keep #(cond (:kind %) [% (:kind %)]
                                             (is-declaration? %) [% :declaration]

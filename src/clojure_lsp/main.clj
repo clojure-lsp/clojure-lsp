@@ -355,7 +355,6 @@
     (log/warn params))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
-    (log/warn "DidChangeWatchedFilesParams")
     (go :didChangeWatchedFiles
         (end
           (some->> params

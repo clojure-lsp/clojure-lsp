@@ -945,89 +945,90 @@
 
 (defn parse-macro-def-elements
   [macro-def element-loc bound-scope end-bounds context scoped]
-  (loop [[element' & elements] macro-def
-         repeat-idx' 0
-         element-loc element-loc
-         bound-scope' bound-scope]
-    (let [map-element (and (map? element') (:element element'))
-          repeat-idx (cond-> repeat-idx'
-                       (vector? map-element) (rem (count map-element)))
-          element (cond
-                    (vector? map-element)
-                    (nth map-element repeat-idx)
+  (when element-loc
+    (loop [[element' & elements] macro-def
+           repeat-idx' 0
+           element-loc element-loc
+           bound-scope' bound-scope]
+      (let [map-element (and (map? element') (:element element'))
+            repeat-idx (cond-> repeat-idx'
+                         (vector? map-element) (rem (count map-element)))
+            element (cond
+                      (vector? map-element)
+                      (nth map-element repeat-idx)
 
-                    (map? element')
-                    (:element element')
+                      (map? element')
+                      (:element element')
 
-                    :else
-                    element')
-          element-info (when (map? element')
-                         element')
-          sexpr (z/sexpr element-loc)
-          repeat? (case (:repeat element-info)
-                    :symbol (symbol? sexpr)
-                    :list (list? sexpr)
-                    true true
-                    nil)
-          process? (or (nil? (:pred element-info))
-                       (match-pred? element-loc element-info))
-          scope-bounds (merge (meta (z/node element-loc)))
-          [bound-scope macro-sub-forms] (cond
-                                          (not-empty (:sub-forms element-info))
-                                          (add-macro-sub-forms context scope-bounds bound-scope' (:sub-forms element-info))
+                      :else
+                      element')
+            element-info (when (map? element')
+                           element')
+            sexpr (z/sexpr element-loc)
+            repeat? (case (:repeat element-info)
+                      :symbol (symbol? sexpr)
+                      :list (list? sexpr)
+                      true true
+                      nil)
+            process? (or (nil? (:pred element-info))
+                         (match-pred? element-loc element-info))
+            scope-bounds (merge (meta (z/node element-loc)))
+            [bound-scope macro-sub-forms] (cond
+                                            (not-empty (:sub-forms element-info))
+                                            (add-macro-sub-forms context scope-bounds bound-scope' (:sub-forms element-info))
 
-                                          (and process? (= :sub-elements element))
-                                          [(parse-match-patterns
-                                             (z/down (zsub/subzip element-loc))
-                                             (:match-patterns element-info)
-                                             bound-scope'
-                                             context
-                                             scoped)
-                                           nil]
+                                            (and process? (= :sub-elements element))
+                                            [(parse-match-patterns
+                                               (z/down (zsub/subzip element-loc))
+                                               (:match-patterns element-info)
+                                               bound-scope'
+                                               context
+                                               scoped)
+                                             nil]
 
-                                          :else
-                                          [bound-scope' nil])]
-      (when process?
-        (case element
-          :bound-elements
-          (handle-rest element-loc context bound-scope)
-          :elements
-          (handle-rest element-loc context scoped (boolean (:thread-style element-info)))
-          :bound-element
-          (find-usages* (zsub/subzip element-loc) context bound-scope)
-          :element
-          (find-usages* (zsub/subzip element-loc) context scoped)
-          :function-params-and-bodies
-          (function-params-and-bodies element-loc context scoped (:signature-style element-info))
-          :declaration
-          (macro-declaration element-info element-loc context scoped)
-          :fn-spec
-          (handle-fn-spec element-loc context scoped (:tags element-info))
-          :class-and-methods
-          (handle-class-and-methods element-loc context scoped)
-          nil))
-      (when macro-sub-forms
-        (vswap! context update :macro-defs #(apply dissoc % macro-sub-forms)))
-      (let [next-bound-scope (cond
-                               (and (= :bindings element) (= :vector (z/tag element-loc)))
-                               (parse-bindings element-loc context end-bounds scoped)
+                                            :else
+                                            [bound-scope' nil])]
+        (when process?
+          (case element
+            :bound-elements
+            (handle-rest element-loc context bound-scope)
+            :elements
+            (handle-rest element-loc context scoped (boolean (:thread-style element-info)))
+            :bound-element
+            (find-usages* (zsub/subzip element-loc) context bound-scope)
+            :element
+            (find-usages* (zsub/subzip element-loc) context scoped)
+            :function-params-and-bodies
+            (function-params-and-bodies element-loc context scoped (:signature-style element-info))
+            :declaration
+            (macro-declaration element-info element-loc context scoped)
+            :fn-spec
+            (handle-fn-spec element-loc context scoped (:tags element-info))
+            :class-and-methods
+            (handle-class-and-methods element-loc context scoped)
+            nil))
+        (when macro-sub-forms
+          (vswap! context update :macro-defs #(apply dissoc % macro-sub-forms)))
+        (let [next-bound-scope (cond
+                                 (and (= :bindings element) (= :vector (z/tag element-loc)))
+                                 (parse-bindings element-loc context end-bounds scoped)
 
-                               (= :params element)
-                               (parse-params element-loc context scoped (:signature-style element-info))
+                                 (= :params element)
+                                 (parse-params element-loc context scoped (:signature-style element-info))
 
-                               (= :param element)
-                               (parse-destructuring element-loc scope-bounds context scoped)
+                                 (= :param element)
+                                 (parse-destructuring element-loc scope-bounds context scoped)
 
-                               :else
-                               bound-scope)]
-        (if-let [next-element-loc (and (or repeat? (seq elements)) (z-right-sexpr element-loc))]
-          (recur
-            (cond-> elements
-              repeat? (conj element'))
-            (if repeat? (inc repeat-idx) 0)
-            (if process? next-element-loc element-loc)
-            next-bound-scope)
-          next-bound-scope)))))
+                                 :else
+                                 bound-scope)]
+          (if-let [next-element-loc (and (or repeat? (seq elements)) (z-right-sexpr element-loc))]
+            (recur
+              (cond-> elements
+                repeat? (conj element'))
+              (if repeat? (inc repeat-idx) 0)
+              (if process? next-element-loc element-loc)
+              next-bound-scope)
+            next-bound-scope))))))
 
 (defn parse-macro-def
   [op-loc loc context scoped macro-def]
@@ -1042,32 +1043,32 @@
 (defn handle-sexpr
   ([loc context scoped] (handle-sexpr loc context scoped false))
   ([loc context scoped threading?]
-    (try
-      (let [op-loc (some-> loc (zm/down))]
-        (cond
-          (and op-loc (symbol? (z/sexpr op-loc)))
-          (let [argc (->> loc
-                          (z/node)
-                          (n/child-sexprs)
-                          (count))
-                usage (add-reference context scoped (z/node op-loc) {:argc (if threading?
-                                                                             argc
-                                                                             (dec argc))})
-                handler (get *sexpr-handlers* (:sym usage))
-                macro-def (get (:macro-defs @context) (:sym usage))]
-            (cond
-              (and macro-def (not (:quoting? @context)))
-              (parse-macro-def op-loc loc context scoped macro-def)
+   (try
+     (let [op-loc (some-> loc (zm/down))]
+       (cond
+         (and op-loc (symbol? (z/sexpr op-loc)))
+         (let [argc (->> loc
+                         (z/node)
+                         (n/child-sexprs)
+                         (count))
+               usage (add-reference context scoped (z/node op-loc) {:argc (if threading?
+                                                                            argc
+                                                                            (dec argc))})
+               handler (get *sexpr-handlers* (:sym usage))
+               macro-def (get (:macro-defs @context) (:sym usage))]
+           (cond
+             (and macro-def (not (:quoting? @context)))
+             (parse-macro-def op-loc loc context scoped macro-def)
 
-              (and handler (not (:quoting? @context)))
-              (handler op-loc loc context scoped threading?)
+             (and handler (not (:quoting? @context)))
+             (handler op-loc loc context scoped threading?)
 
-              :else
-              (handle-rest (zm/right op-loc) context scoped)))
-          op-loc
-          (handle-rest op-loc context scoped)))
-      (catch Throwable e
-        (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc))))))
+             :else
+             (handle-rest (zm/right op-loc) context scoped)))
+         op-loc
+         (handle-rest op-loc context scoped)))
+     (catch Throwable e
+       (log/warn #_e "Cannot parse" (:uri @context) "\n" (.getMessage e) "\n" (z/string loc))))))
 
 (defn- find-usages*
   ([loc context scoped] (find-usages* loc context scoped false))
@@ -1076,7 +1077,6 @@
            scoped scoped]
       (if (or (not loc) (zm/end? loc))
         (:usages @context)
-
         (let [tag (z/tag loc)]
           (cond
             (= :quote tag)

@@ -637,3 +637,9 @@
                         (baz a false) =not=> nil))"
         usages (parser/find-usages code :clj {})]
     (is (= #{:scoped} (set (mapcat :tags (filter (comp #{"=>" "=not=>"} :str) usages)))))))
+
+(deftest no-arity-macros
+  (let [code "(comment)"
+        usages (parser/find-usages code :clj {})
+        [comment] usages]
+    (is (= 'clojure.core/comment (:sym comment)))))

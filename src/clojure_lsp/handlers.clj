@@ -8,10 +8,10 @@
     [clojure-lsp.features.definition :as f.definition]
     [clojure-lsp.features.refactor :as f.refactor]
     [clojure-lsp.features.references :as f.references]
+    [clojure-lsp.features.semantic-tokens :as semantic-tokens]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.transform :as r.transform]
-    [clojure-lsp.features.semantic-tokens :as semantic-tokens]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
@@ -122,7 +122,7 @@
                                :new-text new-text}]}]]
         (async/put! db/edits-chan (client-changes changes)))))
 
-  (when-let [references (crawler/safe-find-references uri text)]
+  (when-let [references (f.references/safe-find-references uri text)]
     (swap! db/db (fn [state-db]
                    (-> state-db
                        (assoc-in [:documents uri] {:v 0 :text text})
@@ -290,7 +290,7 @@
   ;; Ensure we are only accepting newer changes
   (loop [state-db @db/db]
     (when (> version (get-in state-db [:documents uri :v] -1))
-      (when-let [references (crawler/safe-find-references uri text)]
+      (when-let [references (f.references/safe-find-references uri text)]
         (when-not (compare-and-set! db/db state-db (-> state-db
                                                        (assoc-in [:documents uri] {:v version :text text})
                                                        (assoc-in [:file-envs uri] references)))

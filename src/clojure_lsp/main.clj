@@ -1,9 +1,10 @@
 (ns clojure-lsp.main
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
-   [clojure-lsp.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
@@ -337,19 +338,19 @@
   WorkspaceService
 
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
-   (go :executeCommand
-       (future
-         (end
-           (let [command (.getCommand params)
-                 args (.getArguments params)]
-             (log/info "Executing command" command "with args" args)
-             (cond
-               (= command "server-info")
-               (execute-server-info)
+    (go :executeCommand
+        (future
+          (end
+            (let [command (.getCommand params)
+                  args (.getArguments params)]
+              (log/info "Executing command" command "with args" args)
+              (cond
+                (= command "server-info")
+                (execute-server-info)
 
-               (contains? handlers/refactorings command)
-               (execute-refactor command args))))))
-   (CompletableFuture/completedFuture 0))
+                (some #(= % command) f.refactor/available-refactors)
+                (execute-refactor command args))))))
+    (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
@@ -426,7 +427,7 @@
                                                                        (.setRange false)
                                                                        (.setFull true))))
                                        (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
-                                                                     (.setCommands (keys handlers/refactorings))))
+                                                                     (.setCommands f.refactor/available-refactors)))
                                        (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                                (.setOpenClose true)
                                                                (.setChange TextDocumentSyncKind/Full)

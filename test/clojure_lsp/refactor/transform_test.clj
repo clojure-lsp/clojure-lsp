@@ -1,13 +1,14 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
     [clojure-lsp.db :as db]
+    [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.handlers :as handlers]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure-lsp.refactor.transform :as transform]
     [clojure.string :as string]
     [clojure.test :refer :all]
-    [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
 
 (deftest paredit-test
@@ -22,12 +23,12 @@
 
 (deftest thread-test
   (let [zloc (z/of-string "(remove nil? (filter :id (map (comp now doit) xs)))")]
-    (let [[{:keys [loc]}] (transform/thread-last zloc nil)]
+    (let [[{:keys [loc]}] (transform/thread-last zloc)]
       (is (= '->> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(->> (filter :id (map (comp now doit) xs))"
                                 "     (remove nil?))"])
              (z/root-string loc))))
-    (let [[{:keys [loc]}] (transform/thread-last-all zloc nil)]
+    (let [[{:keys [loc]}] (transform/thread-last-all zloc)]
       (is (= '->> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(->> xs"
                                 "     (map (comp now doit))"
@@ -35,12 +36,12 @@
                                 "     (remove nil?))"])
              (z/root-string loc)))))
   (let [zloc (z/of-string "(assoc (dissoc (update m :xs reverse) :bye) :hello :world)")]
-    (let [[{:keys [loc]}] (transform/thread-first zloc nil)]
+    (let [[{:keys [loc]}] (transform/thread-first zloc)]
       (is (= '-> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(-> (dissoc (update m :xs reverse) :bye)"
                                 "    (assoc :hello :world))"])
              (z/root-string loc))))
-    (let [[{:keys [loc]}] (transform/thread-first-all zloc nil)]
+    (let [[{:keys [loc]}] (transform/thread-first-all zloc)]
       (is (= '-> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(-> m"
                                 "    (update :xs reverse)"
@@ -48,76 +49,76 @@
                                 "    (assoc :hello :world))"])
              (z/root-string loc)))))
   (let [zloc (z/of-string "(interpose (spaces) (foo))")
-        [{:keys [loc]} :as _result] (transform/thread-last-all zloc nil)]
+        [{:keys [loc]} :as _result] (transform/thread-last-all zloc)]
     (is (= '->> (z/sexpr (z/down loc))))
     (is (= "(->> (foo)\n     (interpose (spaces)))" (z/root-string loc))))
   (let [zloc (z/of-string "[:a :b]")
-        result (transform/thread-last-all zloc nil)]
+        result (transform/thread-last-all zloc)]
     (is (nil? result)))
   (let [zloc (z/of-string "(get-in foo [:a :b])")
-        [{:keys [loc]} :as _result] (transform/thread-last-all zloc nil)]
+        [{:keys [loc]} :as _result] (transform/thread-last-all zloc)]
     (is (= '->> (z/sexpr (z/down loc))))
     (is (= "(->> [:a :b]\n     (get-in foo))" (z/root-string loc)))))
 
 (deftest move-to-let-test
   (let [zloc (z/rightmost (z/down (z/of-string "(let [a 1] a)")))
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [a 1" \newline
                 "      b a] b)")
            (z/root-string loc))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] (inc a))") z/next 'inc))
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [a 1" \newline
                 "      b (inc a)] b)") (z/root-string loc))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] (thing (inc a)))") z/next 'inc))
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [a 1" \newline
                 "      b (inc a)] (thing b))") (z/root-string loc))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a 1] a) (inc b)") z/next 'inc))
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'b)]
     (is (nil? loc)))
   (let [zloc (z/of-string "(let [as [{:a :a}]] b)")
-        [{:keys [loc]}] (transform/move-to-let (z/rightmost (z/down zloc)) nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let (z/rightmost (z/down zloc)) 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [as [{:a :a}]\n      b b] b)") (z/root-string loc))))
   (let [zloc (z/find-value (z/of-string "(let [a (inc 1)] a (inc 1))") z/next 1)
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [b 1" \newline
                 "      a (inc b)] a (inc b))") (z/root-string loc))))
   (let [zloc (z/up (z/find-value (z/of-string "(let [a (inc 1)] a (inc 1))") z/next 1))
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'b)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'b)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [b (inc 1)" \newline
                 "      a b] a b)") (z/root-string loc))))
   (let [zloc (z/find-value (z/of-string "(let [x 1] y)") z/next 'y)
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'x)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'x)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [x 1" \newline
                 "      x y] x)")
            (z/root-string loc))))
   (let [zloc (z/find-value (z/of-string "(let [[_] 1 a (x)] a)") z/next 'x)
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'x)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'x)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [[_] 1 x x" \newline
                 "      a (x)] a)")
            (z/root-string loc))))
   (let [zloc (z/find-value (z/of-string "(let [] a)") z/next 'a)
-        [{:keys [loc]}] (transform/move-to-let zloc nil 'x)]
+        [{:keys [loc]}] (transform/move-to-let zloc 'x)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [x a] x)")
            (z/root-string loc)))))
 
 (deftest introduce-let-test
   (let [zloc (z/of-string "(inc a)")
-        [{:keys [loc range]}] (transform/introduce-let zloc nil 'b)]
+        [{:keys [loc range]}] (transform/introduce-let zloc 'b)]
     (is (some? range))
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [b (inc a)]\n  b)") (z/root-string loc)))
-    (let [[{:keys [loc range]}] (transform/introduce-let (z/rightmost (z/down  (z/of-string (z/root-string loc)))) nil 'c)]
+    (let [[{:keys [loc range]}] (transform/introduce-let (z/rightmost (z/down (z/of-string (z/root-string loc)))) 'c)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= (str "(let [b (inc a)\n c b]\n  c)") (z/root-string loc))))))
@@ -125,26 +126,26 @@
 (deftest expand-let-test
   (testing "simple"
     (let [zloc (-> (z/of-string "(+ 1 (let [a 1] a) 2)") (z/find-value z/next 'let))
-          [{:keys [loc range]}] (transform/expand-let zloc nil)]
+          [{:keys [loc range]}] (transform/expand-let zloc)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= (str "(let [a 1]\n (+ 1 a 2))") (z/root-string loc)))))
   (testing "in fn literal"
     (let [code "#(a (b c))"
           zloc (-> (z/of-string code) (z/find-value z/next 'b) (z/up))
-          [{:keys [loc]}] (transform/expand-let zloc nil)]
+          [{:keys [loc]}] (transform/expand-let zloc)]
       (is (nil? (z/root-string loc)))))
   (testing "in fn without args"
     (let [code "(def foo (fn [] (let [a 1] a) 2))"
           zloc (-> code z/of-string (z/find-value z/next 'let))
-          [{:keys [loc range]}] (transform/expand-let zloc nil)]
+          [{:keys [loc range]}] (transform/expand-let zloc)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= (str "(def foo (let [a 1]\n          (fn [] a 2)))") (z/root-string loc)))))
   (testing "in fn with args"
     (let [code "(def foo (fn [bar] (let [a 1] a) 2))"
           zloc (-> code z/of-string (z/find-value z/next 'let))
-          [{:keys [loc range]}] (transform/expand-let zloc nil)]
+          [{:keys [loc range]}] (transform/expand-let zloc)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= (str "(def foo (let [a 1]\n          (fn [bar] a 2)))") (z/root-string loc))))))
@@ -269,15 +270,15 @@
   (reset! db/db {:file-envs
                  {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj {})}})
   (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
-        [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
+        [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
     (is (some? range))
     (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
 
 (deftest unwind-thread-test
   (let [zloc (z/of-string "(-> a b (c) d)")
-        [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc nil)
-        [{loc2 :loc}] (transform/unwind-thread loc1 nil)
-        [{loc3 :loc}] (transform/unwind-thread loc2 nil)]
+        [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+        [{loc2 :loc}] (transform/unwind-thread loc1)
+        [{loc3 :loc}] (transform/unwind-thread loc2)]
     (is (some? range))
     (is (= "(-> (b a) (c) d)" (z/string loc1)))
     (is (= "(-> (c (b a)) d)" (z/string loc2)))
@@ -285,7 +286,7 @@
 
 (deftest unwind-all-test
   (let [zloc (z/of-string "(->> (a) b (c x y) d)")
-        [{:keys [loc range]}] (transform/unwind-all zloc nil)]
+        [{:keys [loc range]}] (transform/unwind-all zloc)]
     (is (some? range))
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
 
@@ -295,7 +296,6 @@
         zloc (z/find-value (z/of-string code) z/next 'let)
         results (transform/extract-function
                   zloc
-                  nil
                   "foo"
                   (parser/usages-in-form zloc usages))]
     (is (= (z/string (:loc (first results))) "(defn foo [b]\n  (let [c 1] (b c)))"))
@@ -309,9 +309,9 @@
                      :file-envs {"file://a.clj" usages}})
       (let [zloc (z/find-value (z/of-string code) z/next 'something)
             pos (meta (z/node zloc))
-            definition (handlers/definition-usage "file://a.clj" (:row pos) (:col pos))
-            references (handlers/reference-usages "file://a.clj" (:row pos) (:col pos))
-            results (transform/inline-symbol zloc "file://a.clj" definition references)
+            definition (f.definition/definition-usage "file://a.clj" (:row pos) (:col pos))
+            references (f.references/reference-usages "file://a.clj" (:row pos) (:col pos))
+            results (transform/inline-symbol definition references)
             a-results (get results "file://a.clj")]
         (is (map? results))
         (is (= 1 (count results)))
@@ -328,9 +328,9 @@
                                  "file://b.clj" b-usages}})
       (let [zloc (z/find-value (z/of-string b-code) z/next 'a/something)
             pos (meta (z/node zloc))
-            definition (handlers/definition-usage "file://b.clj" (:row pos) (:col pos))
-            references (handlers/reference-usages "file://b.clj" (:row pos) (:col pos))
-            results (transform/inline-symbol zloc "file://b.clj" definition references)
+            definition (f.definition/definition-usage "file://b.clj" (:row pos) (:col pos))
+            references (f.references/reference-usages "file://b.clj" (:row pos) (:col pos))
+            results (transform/inline-symbol definition references)
             a-results (get results "file://a.clj")
             b-results (get results "file://b.clj")]
         (is (map? results))
@@ -342,22 +342,22 @@
   (testing "without-setting"
     (reset! db/db {:settings {}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
-                              (transform/cycle-privacy nil))]
+                              transform/cycle-privacy)]
       (is (= (z/string loc) "defn-")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn- a [])") z/next 'a)
-                              (transform/cycle-privacy nil))]
+                              transform/cycle-privacy)]
       (is (= (z/string loc) "defn")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(def a [])") z/next 'a)
-                              (transform/cycle-privacy nil))]
+                              transform/cycle-privacy)]
       (is (= (z/string loc) "^:private a")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(def ^:private a [])") z/next 'a)
-                              (transform/cycle-privacy nil))]
+                              transform/cycle-privacy)]
       (is (= (z/string loc) "a"))))
   (testing "with-setting"
     (reset! db/db {:settings {:use-metadata-for-privacy? true}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
-                              (transform/cycle-privacy nil))]
+                              transform/cycle-privacy)]
       (is (= (z/string loc) "^:private a")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn ^:private a [])") z/next 'a)
-                              (transform/cycle-privacy nil))]
+                              transform/cycle-privacy)]
       (is (= (z/string loc) "a")))))

@@ -2,52 +2,27 @@
   (:require
     [cljfmt.core :as cljfmt]
     [cljfmt.main :as cljfmt.main]
-    [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
+    [clojure-lsp.feature.code-actions :as f.code-actions]
+    [clojure-lsp.feature.completion :as f.completion]
+    [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.documentation :as f.documentation]
+    [clojure-lsp.feature.refactor :as f.refactor]
+    [clojure-lsp.feature.references :as f.references]
+    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.transform :as refactor]
+    [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
-    [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [clojure-lsp.semantic-tokens :as semantic-tokens])
+    [rewrite-clj.zip :as z])
   (:import
     [java.net URL JarURLConnection]))
-
-(defn check-bounds [line column {:keys [row end-row col end-col] :as _usage}]
-  (cond
-    (< line row) :before
-    (and (= line row) (< column col)) :before
-    (< line end-row) :within
-    (and (= end-row line) (>= end-col column)) :within
-    :else :after))
-
-(defn- find-references-after-cursor [line column env file-type]
-  (let [file-types (if (= :cljc file-type)
-                     #{:clj :cljs}
-                     #{file-type})]
-    (->> env
-         (filter (comp #(set/subset? % file-types) :file-type))
-         (partition-all 3 1)
-         (filter (comp #{:within :before} (partial check-bounds line column) first))
-         first)))
-
-(defn find-reference-under-cursor [line column env file-type]
-  (let [file-types (if (= :cljc file-type)
-                     #{:clj :cljs}
-                     #{file-type})]
-    (->> env
-         (filter (comp #(set/subset? % file-types) :file-type))
-         (filter (comp #{:within} (partial check-bounds line column)))
-         ;; Pushes keywords last
-         (sort-by (comp keyword? :sym))
-         (first))))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -84,59 +59,12 @@
        "."
        (name file-type)))
 
-(defn- client-changes [changes]
+(defn ^:private client-changes [changes]
   (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
     {:document-changes changes}
     {:changes (into {} (map (fn [{:keys [text-document edits]}]
                               [(:uri text-document) edits])
                             changes))}))
-
-(defn- drop-whitespace [n s]
-  (if (> n (count s))
-    s
-    (let [fully-trimmed (string/triml s)
-          dropped (subs s n)]
-      (last (sort-by count [fully-trimmed dropped])))))
-
-(defn- count-whitespace [s]
-  (- (count s) (count (string/triml s))))
-
-(def line-break "\n----\n")
-(def opening-code "```clojure\n")
-(def closing-code "\n```\n")
-
-(defn- docstring->formatted-markdown [doc]
-  (let [lines       (string/split-lines doc)
-        other-lines (filter (comp not string/blank?) (rest lines))
-        multi-line? (> (count other-lines) 0)]
-    (str opening-code
-         (if-not multi-line?
-           doc
-           (let [indentation      (apply min (map count-whitespace other-lines))
-                 unindented-lines (cons (first lines)
-                                        (map #(drop-whitespace indentation %) (rest lines)))]
-             (string/join "\n" unindented-lines)))
-         closing-code)))
-
-(defn- generate-docs [content-format usage show-docs-arity-on-same-line?]
-  (let [{:keys [sym signatures doc]} usage
-        signatures (some->> signatures
-                            (:strings)
-                            (string/join "\n"))
-        signatures (if (and show-docs-arity-on-same-line? signatures)
-                     (-> signatures
-                         (clojure.string/replace #"\n" ",")
-                         (clojure.string/replace #"  +" " "))
-                     signatures)]
-    (case content-format
-      "markdown" {:kind "markdown"
-                  :value (cond-> (str opening-code sym " " (when show-docs-arity-on-same-line? signatures) closing-code)
-                           (and (not show-docs-arity-on-same-line?) signatures) (str opening-code signatures closing-code)
-                           (seq doc) (str line-break (docstring->formatted-markdown doc)))}
-      ;; Default to plaintext
-      (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
-        (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")
-        (seq doc) (str line-break doc "\n")))))
 
 (defn did-open [uri text]
   (when-let [new-ns (and (string/blank? text)
@@ -148,7 +76,7 @@
                                :new-text new-text}]}]]
         (async/put! db/edits-chan (client-changes changes)))))
 
-  (when-let [references (crawler/safe-find-references uri text)]
+  (when-let [references (f.references/safe-find-references uri text)]
     (swap! db/db (fn [state-db]
                    (-> state-db
                        (assoc-in [:documents uri] {:v 0 :text text})
@@ -170,10 +98,6 @@
              :file-envs file-envs
              :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
 
-(defn- matches-cursor? [cursor-value s]
-  (when (and s (string/starts-with? s cursor-value))
-    s))
-
 (defn completion [doc-id line column]
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
         file-envs (:file-envs @db/db)
@@ -184,141 +108,22 @@
                      (catch Exception e
                        (log/error (.getMessage e))))
         cursor-usage (loop [try-column column]
-                       (if-let [usage (find-reference-under-cursor line try-column local-env (shared/uri->file-type doc-id))]
+                       (if-let [usage (f.references/find-under-cursor line try-column local-env (shared/uri->file-type doc-id))]
                          usage
                          (when (pos? try-column)
-                           (recur (dec try-column)))))
-        {cursor-value :str cursor-file-type :file-type} cursor-usage
-        [cursor-ns _] (if-let [idx (some-> cursor-value (string/index-of "/"))]
-                        [(subs cursor-value 0 idx) (subs cursor-value (inc idx))]
-                        [cursor-value nil])
-        matches? (partial matches-cursor? cursor-value)
-        namespaces-and-aliases (->> file-envs
-                                    (mapcat val)
-                                    (filter (fn [{:keys [file-type tags] :as _usage}]
-                                              (and
-                                                (= cursor-file-type file-type)
-                                                (or
-                                                  (set/subset? #{:public :ns} tags)
-                                                  (:alias tags)))))
-                                    (mapv (fn [{:keys [sym] alias-str :str alias-ns :ns :as _usage}]
-                                            [alias-str {:label (name sym)
-                                                        :detail (if alias-ns
-                                                                  (str alias-ns)
-                                                                  (name sym))
-                                                        :alias-str alias-str
-                                                        :alias-ns alias-ns}]))
-                                    (distinct)
-                                    (reduce (fn [m [k v]]
-                                              (update m k (fnil conj []) v))
-                                            {}))
-        remotes-by-ns (->> (for [[_ usages] remote-envs
-                                 usage usages
-                                 :when (and (set/subset? #{:ns :public} (:tags usage))
-                                            (= cursor-file-type (:file-type usage)))]
-                             [(:sym usage) usages])
-                           (into {}))]
-    (when cursor-value
-      (if (contains? (:tags cursor-usage) :refer)
-        ;; If the cursor is within a :refer then the sole
-        ;; completions should be symbols within the namespace
-        ;; that's being referred
-        (->> (get remotes-by-ns (:ns cursor-usage))
-             (filter #(every? (:tags %) [:declare :public]))
-             (filter (comp matches? :str))
-             (map (fn [candidate]
-                    {:label (:str candidate)
-                     :detail (str (:sym candidate))
-                     :data (str (:sym candidate))})))
-        ;; Otherwise, completions could come from various sources
-        (concat
-          (->> local-env
-               (filter (comp :declare :tags))
-               (filter (comp matches? :str))
-               (remove (fn [usage]
-                         (when-let [scope-bounds (:scope-bounds usage)]
-                           (not= :within (check-bounds line column scope-bounds)))))
-               (mapv (fn [{:keys [sym kind]}]
-                       (cond-> {:label (name sym)
-                                :data (str sym)}
-                         kind (assoc :kind kind))))
-               (sort-by :label))
-          (->> namespaces-and-aliases
-               (filter (comp matches? key))
-               (mapcat val)
-               (mapv (fn [{:keys [alias-str alias-ns] :as info}]
-                       (let [require-edit (some-> cursor-loc
-                                                  (refactor/add-known-libspec (symbol alias-str) alias-ns)
-                                                  (refactor/result))]
-                         (cond-> (dissoc info :alias-ns :alias-str)
-                           require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))
-               (sort-by :label))
-          (->> (for [[alias-str matches] namespaces-and-aliases
-                     :when (= alias-str cursor-ns)
-                     {:keys [alias-ns]} matches
-                     :let [usages (get remotes-by-ns alias-ns)]
-                     usage usages
-                     :when (and (get-in usage [:tags :public])
-                                (not (get-in usage [:tags :ns]))
-                                (= cursor-file-type (:file-type usage)))
-                     :let [require-edit (some-> cursor-loc
-                                                (refactor/add-known-libspec (symbol alias-str) alias-ns)
-                                                (refactor/result))]]
-                 (cond-> {:label (str alias-str "/" (name (:sym usage)))
-                          :detail (name alias-ns)
-                          :data (str (:sym usage))}
-                   require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))
-               (sort-by :label))
-          (->> cc/core-syms
-               (filter (comp matches? str))
-               (map (fn [sym] {:label (str sym)
-                               :data (str "clojure.core/" sym)}))
-               (sort-by :label))
-          (when (or (contains? cursor-file-type :cljc)
-                    (contains? cursor-file-type :cljs))
-            (->> cc/cljs-syms
-                 (filter (comp matches? str))
-                 (map (fn [sym] {:label (str sym)
-                                 :data (str "cljs.core/" sym)}))
-                 (sort-by :label)))
-          (when (or (contains? cursor-file-type :cljc)
-                    (contains? cursor-file-type :clj))
-            (->> cc/java-lang-syms
-                 (filter (comp matches? str))
-                 (map (fn [sym] {:label (str sym)
-                                 :data (str "java.lang." sym)}))
-                 (sort-by :label))))))))
+                           (recur (dec try-column)))))]
+    (f.completion/completion doc-id line column file-envs remote-envs cursor-loc cursor-usage)))
 
 (defn resolve-completion-item [label sym-wanted]
   (let [file-envs (:file-envs @db/db)
-        usage (first
-                (for [[_ usages] file-envs
-                      {:keys [sym tags] :as usage} usages
-                      :when (and (= (str sym) sym-wanted)
-                                 (:declare tags))]
-                  usage))
-        [content-format] (get-in @db/db [:client-capabilities :text-document :completion :completion-item :documentation-format])
-        show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])]
-    {:label label
-     :data sym-wanted
-     :documentation (generate-docs content-format usage show-docs-arity-on-same-line?)}))
-
-(defn reference-usages [doc-id line column]
-  (let [file-envs (:file-envs @db/db)
-        local-env (get file-envs doc-id)
-        {cursor-sym :sym} (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))]
-    (into []
-          (for [[uri usages] (:file-envs @db/db)
-                {:keys [sym tags] :as usage} usages
-                :when (and (= sym cursor-sym)
-                           (not (contains? tags :declare)))]
-            {:uri uri
-             :usage usage}))))
+        client-capabilities (get @db/db :client-capabilities)
+        settings (get @db/db :settings)]
+    (f.completion/resolve-item label sym-wanted file-envs client-capabilities settings)))
 
 (defn references [doc-id line column]
   (mapv (fn [{:keys [uri usage]}]
           {:uri uri :range (shared/->range usage)})
-        (reference-usages doc-id line column)))
+        (f.references/reference-usages doc-id line column)))
 
 (defn did-close [uri]
   (swap! db/db #(-> %
@@ -328,13 +133,13 @@
   ;; Ensure we are only accepting newer changes
   (loop [state-db @db/db]
     (when (> version (get-in state-db [:documents uri :v] -1))
-      (when-let [references (crawler/safe-find-references uri text)]
+      (when-let [references (f.references/safe-find-references uri text)]
         (when-not (compare-and-set! db/db state-db (-> state-db
                                                        (assoc-in [:documents uri] {:v version :text text})
                                                        (assoc-in [:file-envs uri] references)))
           (recur @db/db))))))
 
-(defn- rename-alias [doc-id local-env cursor-usage cursor-name replacement]
+(defn ^:private rename-alias [doc-id local-env cursor-usage cursor-name replacement]
   (for [{u-str :str :as usage} local-env
         :let [version (get-in @db/db [:documents doc-id :v] 0)
               [u-prefix u-ns u-name] (parser/ident-split u-str)
@@ -345,7 +150,7 @@
      :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
      :text-document {:version version :uri doc-id}}))
 
-(defn- rename-name [file-envs cursor-sym replacement]
+(defn ^:private rename-name [file-envs cursor-sym replacement]
   (for [[doc-id usages] file-envs
         :let [version (get-in @db/db [:documents doc-id :v] 0)]
         {u-sym :sym u-str :str :as usage} usages
@@ -361,7 +166,7 @@
         local-env (get file-envs doc-id)
         file-type (shared/uri->file-type doc-id)
         source-path (source-path-from-uri doc-id)
-        {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (find-reference-under-cursor line column local-env file-type)]
+        {cursor-sym :sym cursor-str :str tags :tags :as cursor-usage} (f.references/find-under-cursor line column local-env file-type)]
     (when (and cursor-usage (not (simple-keyword? cursor-sym)) (not (contains? tags :norename)))
       (let [[_ cursor-ns cursor-name] (parser/ident-split cursor-str)
             replacement (if cursor-ns
@@ -389,23 +194,8 @@
                                       :new-uri new-uri}])))
           (client-changes doc-changes))))))
 
-(defn definition-usage [doc-id line column]
-  (let [file-envs (:file-envs @db/db)
-        local-env (get file-envs doc-id)
-        file-type (shared/uri->file-type doc-id)
-        cursor (find-reference-under-cursor line column local-env file-type)
-        cursor-sym (:sym cursor)]
-    [cursor
-     (first
-       (for [[env-doc-id usages] file-envs
-             {:keys [sym tags] :as usage} usages
-             :when (= sym cursor-sym)
-             :when (and (or (= doc-id env-doc-id) (:public tags))
-                        (:declare tags))]
-         {:uri env-doc-id :usage usage}))]))
-
 (defn definition [doc-id line column]
-  (let [[cursor {:keys [uri usage]}] (definition-usage doc-id line column)]
+  (let [[cursor {:keys [uri usage]}] (f.definition/definition-usage doc-id line column)]
     (log/info "Finding definition" doc-id "row" line "col" column "cursor" (:sym cursor))
     (if (:sym cursor)
       (if usage
@@ -414,7 +204,7 @@
       (let [file-envs (:file-envs @db/db)
             local-env (get file-envs doc-id)
             file-type (shared/uri->file-type doc-id)]
-        (if-let [next-stuff (find-references-after-cursor line column local-env file-type)]
+        (if-let [next-stuff (f.references/find-after-cursor line column local-env file-type)]
           (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
           (log/warn "Could not find element under cursor, there are no known elements after this position."))))))
 
@@ -464,7 +254,7 @@
 (defn document-highlight [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))
+        cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
         sym (:sym cursor)]
     (into [] (comp (filter #(= (:sym %) sym))
                    (map file-env-entry->document-highlight)) local-env)))
@@ -492,45 +282,28 @@
            (sort-by :name)))
     []))
 
-(def refactorings
-  {"cycle-coll" #'refactor/cycle-coll
-   "thread-first" #'refactor/thread-first
-   "thread-first-all" #'refactor/thread-first-all
-   "thread-last" #'refactor/thread-last
-   "thread-last-all" #'refactor/thread-last-all
-   "unwind-thread" #'refactor/unwind-thread
-   "unwind-all" #'refactor/unwind-all
-   "inline-symbol" #'refactor/inline-symbol
-   "move-to-let" #'refactor/move-to-let
-   "introduce-let" #'refactor/introduce-let
-   "expand-let" #'refactor/expand-let
-   "clean-ns" #'refactor/clean-ns
-   "add-missing-libspec" #'refactor/add-missing-libspec
-   "extract-function" #'refactor/extract-function
-   "cycle-privacy" #'refactor/cycle-privacy})
-
- ;;TODO Refactor this function to a better agnostic refactor
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
         loc (parser/loc-at-pos text line column)
-        usages (get-in @db/db [:file-envs doc-id])
-        result (apply (get refactorings refactoring) loc doc-id
-                      (cond-> (vec args)
-                        (= "inline-symbol" refactoring) (conj (definition-usage doc-id line column) (reference-usages doc-id line column))
-                        (= "extract-function" refactoring) (conj (parser/usages-in-form loc usages))))]
+        result (f.refactor/refactor {:refactoring (keyword refactoring)
+                                       :loc loc
+                                       :uri doc-id
+                                       :row line
+                                       :col column
+                                       :args args})]
     (if (or loc
             (= "clean-ns" refactoring))
       (cond
         (map? result)
         (let [changes (vec (for [[doc-id sub-results] result]
                              {:text-document {:uri doc-id :version v}
-                              :edits (mapv #(update % :range shared/->range) (refactor/result sub-results))}))]
+                              :edits (mapv #(update % :range shared/->range) (r.transform/result sub-results))}))]
           (client-changes changes))
 
         (seq result)
         (let [changes [{:text-document {:uri doc-id :version v}
-                        :edits (mapv #(update % :range shared/->range) (refactor/result result))}]]
+                        :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
           (client-changes changes))
 
         (empty? result)
@@ -551,7 +324,7 @@
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        cursor (find-reference-under-cursor line column local-env (shared/uri->file-type doc-id))
+        cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
         usage (first
                 (for [[_ usages] file-envs
                       {:keys [sym tags] :as usage} usages
@@ -560,7 +333,7 @@
                   usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        docs (generate-docs content-format usage show-docs-arity-on-same-line?)]
+        docs (f.documentation/generate content-format usage show-docs-arity-on-same-line?)]
     (if cursor
       {:range (shared/->range cursor)
        :contents (if (= content-format "markdown")
@@ -613,51 +386,13 @@
   (let [db @db/db
         row (inc (int line))
         col (inc (int character))
-        has-unknow-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
-        missing-ns (when has-unknow-ns?
-                     (refactor doc-id row col "add-missing-libspec" []))
         zloc (-> db
                  (get-in [:documents doc-id])
                  :text
                  (parser/loc-at-pos row col))
-        inside-function? (refactor/inside-function? zloc)
-        [_ {def-uri :uri
-            definition :usage}] (definition-usage doc-id row col)
-        inline-symbol? (refactor/inline-symbol? def-uri definition)
-        workspace-edit-capability? (get-in db [:client-capabilities :workspace :workspace-edit])]
-    (cond-> []
+        client-capabilities (get db :client-capabilities)]
+    (f.code-actions/all zloc doc-id row col diagnostics client-capabilities)))
 
-      (and has-unknow-ns? missing-ns)
-      (conj {:title          "Add missing namespace"
-             :kind           :quick-fix
-             :preferred?     true
-             :workspace-edit missing-ns})
-
-      inline-symbol?
-      (conj {:title   "Inline symbol"
-             :kind    :refactor-inline
-             :command {:title     "Inline symbol"
-                       :command   "inline-symbol"
-                       :arguments [doc-id line character]}})
-
-      inside-function?
-      (conj {:title   "Cycle privacy"
-             :kind    :refactor-rewrite
-             :command {:title     "Cycle privacy"
-                       :command   "cycle-privacy"
-                       :arguments [doc-id line character]}}
-            {:title   "Extract function"
-             :kind    :refactor-extract
-             :command {:title     "Extract function"
-                       :command   "extract-function"
-                       :arguments [doc-id line character "new-function"]}})
-
-      workspace-edit-capability?
-      (conj {:title   "Clean namespace"
-             :kind    :source-organize-imports
-             :command {:title     "Clean namespace"
-                       :command   "clean-ns"
-                       :arguments [doc-id line character]}}))))
 (defn code-lens
   [doc-id]
   (let [db     @db/db
@@ -675,7 +410,7 @@
   [range [doc-id row col]]
   {:range   range
    :command {:title   (-> doc-id
-                          (reference-usages row col)
+                          (f.references/reference-usages row col)
                           count
                           (str " references"))
              :command "code-lens-references"
@@ -685,5 +420,5 @@
   [doc-id]
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
-        data (semantic-tokens/full usages)]
+        data (f.semantic-tokens/full usages)]
     {:data data}))

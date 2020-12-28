@@ -49,6 +49,7 @@
      SaveOptions
      SemanticTokensLegend
      SemanticTokensParams
+     SemanticTokensRangeParams
      SemanticTokensWithRegistrationOptions
      ServerCapabilities
      SignatureHelp
@@ -332,7 +333,22 @@
             (get [_this]
               (end
                 (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                  (interop/conform-or-log ::interop/semantic-tokens (#'handlers/semantic-tokens-full doc-id))))))))))
+                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-full doc-id)))))))))
+
+  (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
+    (go :semanticTokensRange
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [_this]
+              (end
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      start (-> params .getRange .getStart)
+                      end (-> params .getRange .getEnd)
+                      range {:row (inc (.getLine start))
+                             :col (inc (.getCharacter start))
+                             :end-row (inc (.getLine end))
+                             :end-col (inc (.getCharacter end))}]
+                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-range doc-id range))))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -424,7 +440,7 @@
                                                                        (.setLegend (doto (SemanticTokensLegend.
                                                                                            semantic-tokens/token-types-str
                                                                                            semantic-tokens/token-modifiers)))
-                                                                       (.setRange false)
+                                                                       (.setRange true)
                                                                        (.setFull true))))
                                        (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
                                                                      (.setCommands f.refactor/available-refactors)))

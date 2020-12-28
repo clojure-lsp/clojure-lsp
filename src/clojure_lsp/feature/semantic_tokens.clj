@@ -14,6 +14,12 @@
 
 (def token-modifier -1)
 
+(defn ^:private usage-inside-range?
+  [{usage-row :row usage-end-row :end-row}
+   {:keys [row end-row]}]
+  (and (>= usage-row row)
+       (<= usage-end-row end-row)))
+
 (defn ^:private usage->absolute-token
   [{:keys [row col end-col]}
    token-type]
@@ -23,7 +29,7 @@
    (.indexOf token-types token-type)
    token-modifier])
 
-(defn ^:private full-absolute
+(defn ^:private usages->absolute-tokens
   [usages]
   (->> usages
        (sort-by (juxt :row :col))
@@ -60,9 +66,17 @@
        token-type
        token-modifier])))
 
-(defn full
+(defn full-tokens
   [usages]
-  (let [absolute-tokens (full-absolute usages)]
+  (let [absolute-tokens (usages->absolute-tokens usages)]
+    (->> absolute-tokens
+         (map-indexed (partial absolute-token->relative-token absolute-tokens))
+         flatten)))
+
+(defn range-tokens
+  [usages range]
+  (let [range-usages (filter #(usage-inside-range? % range) usages)
+        absolute-tokens (usages->absolute-tokens range-usages)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))

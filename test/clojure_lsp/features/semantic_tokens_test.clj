@@ -71,7 +71,7 @@
                                                              2
                                                              (->token refered-usage-c :function))))))
 
-(deftest full
+(deftest full-tokens
   (testing "testing tokens order"
     (let [code (long-str "(ns some.ns (:require [foo.bar :refer [baz]]))"
                          "(def bla baz)"
@@ -83,21 +83,34 @@
               1 0 3 0 -1
               1 1 7 1 -1
               1 0 3 0 -1]
-             (semantic-tokens/full usages)))))
+             (semantic-tokens/full-tokens usages)))))
   (testing "testing user refered tokens"
     (let [code (long-str "(ns some.ns (:require [foo.bar :refer [baz]]))"
                          "(def bla baz)")
           usages (parser/find-usages code :clj {})]
       (is (= [1 9 3 0 -1]
-             (semantic-tokens/full usages)))))
+             (semantic-tokens/full-tokens usages)))))
   (testing "testing macro refered tokens"
     (let [code (long-str "(ns some.ns (:require [clojure.test :refer [deftest]]))"
                          "(deftest some-test 1)")
           usages (parser/find-usages code :clj {})]
       (is (= [1 1 7 1 -1]
-             (semantic-tokens/full usages)))))
+             (semantic-tokens/full-tokens usages)))))
   (testing "testing macro core tokens"
     (let [code (long-str "(comment 1)")
           usages (parser/find-usages code :clj {})]
       (is (= [0 1 7 1 -1]
-             (semantic-tokens/full usages))))))
+             (semantic-tokens/full-tokens usages))))))
+
+(deftest range-tokens
+  (testing "testing tokens only for range"
+    (let [code (long-str "(ns some.ns (:require [foo.bar :refer [baz]]))"
+                         "(def bla baz)"
+                         "baz"
+                         "(comment)"
+                         "baz")
+          range {:row 3 :col 0 :end-row 4 :end-col 0}
+          usages (parser/find-usages code :clj {})]
+      (is (= [2 0 3 0 -1
+              1 1 7 1 -1]
+             (semantic-tokens/range-tokens usages range))))))

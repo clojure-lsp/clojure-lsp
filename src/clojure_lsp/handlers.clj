@@ -420,5 +420,12 @@
   [doc-id]
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
-        data (f.semantic-tokens/full usages)]
+        data (f.semantic-tokens/full-tokens usages)]
+    {:data data}))
+
+(defn semantic-tokens-range
+  [doc-id range]
+  (let [db @db/db
+        usages (get-in db [:file-envs doc-id])
+        data (f.semantic-tokens/range-tokens usages range)]
     {:data data}))

@@ -3,7 +3,6 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.references :as f.references]
-    [clojure-lsp.handlers :as handlers]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure-lsp.refactor.transform :as transform]

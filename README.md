@@ -109,7 +109,7 @@ Bellow are all the currently supported LSP capabilities and their implementation
 | textDocument/selectionRange         |      |                                               |
 | textDocument/semanticTokens/full    | √    | Just `functions` and `macros` ATM             |
 | textDocument/semanticTokens/full/delta |     |                                             |
-| textDocument/semanticTokens/range   |     |                                                |
+| textDocument/semanticTokens/range   | √    |                                                |
 | workspace/semanticTokens/refresh   |     |                                                 |
 | textDocument/linkedEditingRange    |     |                                                 |
 | textDocument/moniker               |     |                                                 |

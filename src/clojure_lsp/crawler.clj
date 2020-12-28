@@ -186,15 +186,17 @@
     (process-unused usages declared-refers)))
 
 (defn crawl-jars [jars dependency-scheme]
-  (let [xf (comp
+  (let [jar-dependency-scheme? (= "jar" dependency-scheme)
+        xf (comp
              (mapcat (fn [jar-file]
+                       (log/info "Crawling jar" (.getPath jar-file))
                        (let [jar (JarFile. jar-file)]
                          (->> jar
                               (.entries)
                               (enumeration-seq)
                               (remove #(.isDirectory %))
                               (map (fn [entry]
-                                     [(if (= "jar" dependency-scheme)
+                                     [(if jar-dependency-scheme?
                                         (str "jar:file://" jar-file "!/" (.getName entry))
                                         (str "zipfile://" jar-file "::" (.getName entry)))
                                       entry
@@ -209,7 +211,7 @@
                       [uri (safe-find-references uri text false true)])))
              (remove (comp nil? second)))
         output-chan (async/chan 5)]
-    (async/pipeline-blocking 5 output-chan xf (async/to-chan! jars) true (fn [e] (log/warn e "hello")))
+    (async/pipeline-blocking 5 output-chan xf (async/to-chan! jars) true (fn [e] (log/error "Error crawling jars" e)))
     (async/<!! (async/into {} output-chan))))
 
 (defn crawl-source-dirs [dirs]

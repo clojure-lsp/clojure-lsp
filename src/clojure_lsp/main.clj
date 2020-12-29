@@ -435,7 +435,8 @@
                                        (.setDocumentSymbolProvider true)
                                        (.setDocumentHighlightProvider true)
                                        (.setWorkspaceSymbolProvider true)
-                                       (.setSemanticTokensProvider (when (:semantic-tokens? settings)
+                                       (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                                                             (:semantic-tokens? settings))
                                                                      (doto (SemanticTokensWithRegistrationOptions.)
                                                                        (.setLegend (doto (SemanticTokensLegend.
                                                                                            semantic-tokens/token-types-str

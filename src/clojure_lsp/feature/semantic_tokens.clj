@@ -1,7 +1,10 @@
-(ns clojure-lsp.feature.semantic-tokens)
+(ns clojure-lsp.feature.semantic-tokens
+  (:require
+    [clojure.string :as string]))
 
 (def token-types
-  [:function
+  [:type
+   :function
    :macro])
 
 (def token-types-str
@@ -29,6 +32,14 @@
    (.indexOf token-types token-type)
    token-modifier])
 
+(defn ^:private alias-reference-usage->absolute-token
+  [{:keys [row col end-col str]}]
+  (let [slash-col (string/index-of str "/")
+        function-col (+ col (inc slash-col))
+        alias-end-col (+ col slash-col)]
+    [(usage->absolute-token {:row row :col col :end-col alias-end-col} :type)
+     (usage->absolute-token {:row row :col function-col :end-col end-col} :function)]))
+
 (defn ^:private usages->absolute-tokens
   [usages]
   (->> usages
@@ -37,11 +48,18 @@
          (fn [{:keys [tags] :as usage}]
            (cond
              (contains? tags :macro)
-             (usage->absolute-token usage :macro)
+             [(usage->absolute-token usage :macro)]
+
+             (contains? tags :declared)
+             [(usage->absolute-token usage :function)]
 
              (contains? tags :refered)
-             (usage->absolute-token usage :function))))
-       (remove nil?)))
+             [(usage->absolute-token usage :function)]
+
+             (contains? tags :alias-reference)
+             (alias-reference-usage->absolute-token usage))))
+       (remove nil?)
+       (mapcat identity)))
 
 (defn ^:private absolute-token->relative-token
   [tokens

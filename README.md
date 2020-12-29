@@ -51,68 +51,68 @@ Bellow are all the currently supported LSP capabilities and their implementation
 <details>
 <summary><b>Supported LSP capabilities</b></summary>
 
-| capability                          | done | notes                                         |
-| ----------                          | ---- | -----                                         |
-| initialize                          | √    |                                               |
-| initialized                         | √    |                                               |
-| shutdown                            | √    |                                               |
-| exit                                | √    |                                               |
-| $/cancelRequest                     |      |                                               |
-| $/progress                          |      |                                               |
-| window/showMessage                  | √    |                                               |
-| window/showMessageRequest           |      |                                               |
-| window/logMessage                   |      |                                               |
-| window/workDoneProgress/create      |      |                                               |
-| window/workDoneProgress/cancel      |      |                                               |
-| telemetry/event                     |      |                                               |
-| client/registerCapability           | √    |                                               |
-| client/unregisterCapability         |      |                                               |
-| workspace/workspaceFolders          |      |                                               |
-| workspace/didChangeWorkspaceFolders |      |                                               |
-| workspace/didChangeConfiguration    | √    | Currently only log                            |
-| workspace/configuration             |      |                                               |
-| workspace/didChangeWatchedFiles     | √    |                                               |
-| workspace/symbol                    | √    |                                               |
-| workspace/executeCommand            | √    | See [Extra capabilities](#extra-capabilities) |
-| workspace/applyEdit                 | √    | TextDocumentEdit and RenameFile only          |
-| textDocument/didOpen                | √    |                                               |
-| textDocument/didChange              | √    |                                               |
-| textDocument/willSave               |      |                                               |
-| textDocument/willSaveWaitUntil      |      |                                               |
-| textDocument/didSave                | √    | Do nothing currently                          |
-| textDocument/didClose               | √    |                                               |
-| textDocument/publishDiagnostics     | √    |                                               |
-| textDocument/completion             | √    |                                               |
-| completionItem/resolve              | √    |                                               |
-| textDocument/hover                  | √    |                                               |
-| textDocument/signatureHelp          | X    | Implemented hard coded                        |
-| textDocument/declaration            |      |                                               |
-| textDocument/definition             | √    | TODO: Find java classes definition            |
-| textDocument/typeDefinition         |      |                                               |
-| textDocument/implementation         |      |                                               |
-| textDocument/references             | √    |                                               |
-| textDocument/documentHighlight      | √    |                                               |
-| textDocument/documentSymbol         | √    |                                               |
-| textDocument/codeAction             | √    |                                               |
-| textDocument/codeLens               | √    |                                               |
-| codeLens/resolve                    | √    |                                               |
-| textDocument/documentLink           |      |                                               |
-| documentLink/resolve                |      |                                               |
-| textDocument/documentColor          |      |                                               |
-| textDocument/colorPresentation      |      |                                               |
-| textDocument/formatting             | √    |                                               |
-| textDocument/rangeFormatting        | √    |                                               |
-| textDocument/onTypeFormatting       |      |                                               |
-| textDocument/rename                 | √    |                                               |
-| textDocument/prepareRename          |      |                                               |
-| textDocument/foldingRange           |      |                                               |
-| textDocument/selectionRange         |      |                                               |
-| textDocument/semanticTokens/full    | √    | Just `functions` and `macros` ATM             |
-| textDocument/semanticTokens/full/delta |     |                                             |
-| textDocument/semanticTokens/range   | √    |                                                |
-| workspace/semanticTokens/refresh   |     |                                                 |
-| textDocument/linkedEditingRange    |     |                                                 |
-| textDocument/moniker               |     |                                                 |
+| capability                             | done | notes                                         |
+| ----------                             | ---- | -----                                         |
+| initialize                             | √    |                                               |
+| initialized                            | √    |                                               |
+| shutdown                               | √    |                                               |
+| exit                                   | √    |                                               |
+| $/cancelRequest                        |      |                                               |
+| $/progress                             |      |                                               |
+| window/showMessage                     | √    |                                               |
+| window/showMessageRequest              |      |                                               |
+| window/logMessage                      |      |                                               |
+| window/workDoneProgress/create         |      |                                               |
+| window/workDoneProgress/cancel         |      |                                               |
+| telemetry/event                        |      |                                               |
+| client/registerCapability              | √    |                                               |
+| client/unregisterCapability            |      |                                               |
+| workspace/workspaceFolders             |      |                                               |
+| workspace/didChangeWorkspaceFolders    |      |                                               |
+| workspace/didChangeConfiguration       | √    | Currently only log                            |
+| workspace/configuration                |      |                                               |
+| workspace/didChangeWatchedFiles        | √    |                                               |
+| workspace/symbol                       | √    |                                               |
+| workspace/executeCommand               | √    | See [Extra capabilities](#extra-capabilities) |
+| workspace/applyEdit                    | √    | TextDocumentEdit and RenameFile only          |
+| textDocument/didOpen                   | √    |                                               |
+| textDocument/didChange                 | √    |                                               |
+| textDocument/willSave                  |      |                                               |
+| textDocument/willSaveWaitUntil         |      |                                               |
+| textDocument/didSave                   | √    | Do nothing currently                          |
+| textDocument/didClose                  | √    |                                               |
+| textDocument/publishDiagnostics        | √    |                                               |
+| textDocument/completion                | √    |                                               |
+| completionItem/resolve                 | √    |                                               |
+| textDocument/hover                     | √    |                                               |
+| textDocument/signatureHelp             | X    | Implemented hard coded                        |
+| textDocument/declaration               |      |                                               |
+| textDocument/definition                | √    | TODO: Find java classes definition            |
+| textDocument/typeDefinition            |      |                                               |
+| textDocument/implementation            |      |                                               |
+| textDocument/references                | √    |                                               |
+| textDocument/documentHighlight         | √    |                                               |
+| textDocument/documentSymbol            | √    |                                               |
+| textDocument/codeAction                | √    |                                               |
+| textDocument/codeLens                  | √    |                                               |
+| codeLens/resolve                       | √    |                                               |
+| textDocument/documentLink              |      |                                               |
+| documentLink/resolve                   |      |                                               |
+| textDocument/documentColor             |      |                                               |
+| textDocument/colorPresentation         |      |                                               |
+| textDocument/formatting                | √    |                                               |
+| textDocument/rangeFormatting           | √    |                                               |
+| textDocument/onTypeFormatting          |      |                                               |
+| textDocument/rename                    | √    |                                               |
+| textDocument/prepareRename             |      |                                               |
+| textDocument/foldingRange              |      |                                               |
+| textDocument/selectionRange            |      |                                               |
+| textDocument/semanticTokens/full       | √    | Just `functions`, type' and `macros` ATM             |
+| textDocument/semanticTokens/full/delta |      |                                               |
+| textDocument/semanticTokens/range      | √    |                                               |
+| workspace/semanticTokens/refresh       |      |                                               |
+| textDocument/linkedEditingRange        |      |                                               |
+| textDocument/moniker                   |      |                                               |
 </details>
 
 ## Extra capabilities
@@ -159,6 +159,8 @@ It is possible to pass some options to clojure-lsp through clients' `Initializat
 `use-metadata-for-privacy?` if true, will use `^:private` metadata for refactorings instead of `defn-`
 
 `keep-require-at-start?` if true, will keep first require at the first line instead of inserting a new line before it.
+
+`semantic-tokens?` if true or not present, will enable LSP semantic tokens server support for syntax highlighting. 
 
 `show-docs-arity-on-same-line?` if true, will keep the arity on the same line of the function on hover, useful for Emacs users.
 

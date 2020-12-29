@@ -165,11 +165,11 @@
       (-> (if-not ident-ns
             (cond
               java-sym {:sym java-sym :tags #{:norename :java}}
-              declaration? {:sym (ctr (name (or ns 'user)) ident-name)}
-              (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns) ident-name)}
-              (keyword? ident) {:sym ident}
+              declaration? {:sym (ctr (name (or ns 'user)) ident-name) :tags #{:declarion}}
+              (and (keyword? ident) (= prefix "::")) {:sym (ctr (name ns) ident-name) :tags #{:keyword :namespaced}}
+              (keyword? ident) {:sym ident :tags #{:keyword}}
               (contains? scoped ident) {:sym (ctr (name (get-in scoped [ident :ns])) ident-name) :tags #{:scoped}}
-              declared {:sym declared}
+              declared {:sym declared :tags #{:declared}}
               refered {:sym refered :tags #{:refered}}
               (contains? refer-all-syms ident) {:sym (get refer-all-syms ident)}
               core-clj? {:sym core-clj-symbol :tags #{:norename :core}}
@@ -181,16 +181,16 @@
                    (or
                      (and (keyword? ident) (= prefix "::"))
                      (symbol? ident)))
-              {:sym (ctr (name alias-ns) ident-name)}
+              {:sym (ctr (name alias-ns) ident-name) :tags #{:alias-reference}}
 
               (and (keyword? ident) (= prefix "::"))
               {:sym (ctr (name (gensym)) ident-name) :tags #{:unknown} :unknown-ns ident-ns}
 
               (keyword? ident)
-              {:sym ident}
+              {:sym ident :tags #{:keyword}}
 
               required-ns
-              {:sym ident}
+              {:sym ident :tags #{:raw-reference}}
 
               (contains? imports ident-ns)
               {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:java :method :norename}}

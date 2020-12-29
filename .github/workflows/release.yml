@@ -60,7 +60,7 @@ jobs:
           path: target/clojure-lsp
 
   upload-binary:
-    name: Upload Binary to release
+    name: Upload binary to release
     needs: build-binary
     runs-on: ubuntu-latest
 
@@ -74,12 +74,20 @@ jobs:
         uses: WyriHaximus/github-action-get-previous-tag@0.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload binary to release
+      - name: Upload linux binary to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: clojure-lsp
           asset_name: clojure-lsp
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload Windows binary to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp
+          asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
 
   build-jar:

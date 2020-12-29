@@ -1,4 +1,6 @@
-(ns clojure-lsp.feature.semantic-tokens)
+(ns clojure-lsp.feature.semantic-tokens
+  (:require
+    [clojure.tools.logging :as log]))
 
 (def token-types
   [:function
@@ -39,6 +41,9 @@
              (contains? tags :macro)
              (usage->absolute-token usage :macro)
 
+             (contains? tags :declared)
+             (usage->absolute-token usage :function)
+
              (contains? tags :refered)
              (usage->absolute-token usage :function))))
        (remove nil?)))
@@ -68,6 +73,7 @@
 
 (defn full-tokens
   [usages]
+  (log/info "---->" usages)
   (let [absolute-tokens (usages->absolute-tokens usages)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))

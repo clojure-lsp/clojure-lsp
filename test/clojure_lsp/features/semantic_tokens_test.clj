@@ -73,16 +73,19 @@
 
 (deftest full-tokens
   (testing "testing tokens order"
-    (let [code (long-str "(ns some.ns (:require [foo.bar :refer [baz]]))"
-                         "(def bla baz)"
+    (let [code (long-str "(ns some.ns"
+                         "  (:require [foo.bar :as f :refer [baz]]))"
+                         ""
+                         "(def bla 2)"
                          "baz"
-                         "(comment)"
-                         "baz")
+                         "f/bar"
+                         ""
+                         "bla"
+                         "(comment)")
           usages (parser/find-usages code :clj {})]
-      (is (= [1 9 3 0 -1
-              1 0 3 0 -1
-              1 1 7 1 -1
-              1 0 3 0 -1]
+      (is (= [4 0 3 0 -1
+              3 0 3 0 -1
+              1 1 7 1 -1]
              (semantic-tokens/full-tokens usages)))))
   (testing "testing user refered tokens"
     (let [code (long-str "(ns some.ns (:require [foo.bar :refer [baz]]))"
@@ -100,6 +103,12 @@
     (let [code (long-str "(comment 1)")
           usages (parser/find-usages code :clj {})]
       (is (= [0 1 7 1 -1]
+             (semantic-tokens/full-tokens usages)))))
+  (testing "testing function declared tokens"
+    (let [code (long-str "(def foo 1)"
+                         "foo")
+          usages (parser/find-usages code :clj {})]
+      (is (= [1 0 3 0 -1]
              (semantic-tokens/full-tokens usages))))))
 
 (deftest range-tokens

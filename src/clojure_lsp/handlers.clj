@@ -13,7 +13,6 @@
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
@@ -59,13 +58,6 @@
        "."
        (name file-type)))
 
-(defn ^:private client-changes [changes]
-  (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
-    {:document-changes changes}
-    {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                              [(:uri text-document) edits])
-                            changes))}))
-
 (defn did-open [uri text]
   (when-let [new-ns (and (string/blank? text)
                          (uri->namespace uri))]
@@ -74,7 +66,7 @@
             changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
                                :new-text new-text}]}]]
-        (async/put! db/edits-chan (client-changes changes)))))
+        (async/put! db/edits-chan (f.refactor/client-changes changes)))))
 
   (when-let [references (f.references/safe-find-references uri text)]
     (swap! db/db (fn [state-db]
@@ -188,11 +180,11 @@
             (swap! db/db #(-> %
                               (update :documents dissoc doc-id)
                               (update :file-envs dissoc doc-id)))
-            (client-changes (concat doc-changes
+            (f.refactor/client-changes (concat doc-changes
                                     [{:kind "rename"
                                       :old-uri doc-id
                                       :new-uri new-uri}])))
-          (client-changes doc-changes))))))
+          (f.refactor/client-changes doc-changes))))))
 
 (defn definition [doc-id line column]
   (let [[cursor {:keys [uri usage]}] (f.definition/definition-usage doc-id line column)]
@@ -285,33 +277,14 @@
 (defn refactor [doc-id line column refactoring args]
   (let [;; TODO Instead of v=0 should I send a change AND a document change
         {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
-        loc (parser/loc-at-pos text line column)
-        result (f.refactor/refactor {:refactoring (keyword refactoring)
-                                       :loc loc
-                                       :uri doc-id
-                                       :row line
-                                       :col column
-                                       :args args})]
-    (if (or loc
-            (= "clean-ns" refactoring))
-      (cond
-        (map? result)
-        (let [changes (vec (for [[doc-id sub-results] result]
-                             {:text-document {:uri doc-id :version v}
-                              :edits (mapv #(update % :range shared/->range) (r.transform/result sub-results))}))]
-          (client-changes changes))
-
-        (seq result)
-        (let [changes [{:text-document {:uri doc-id :version v}
-                        :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
-          (client-changes changes))
-
-        (empty? result)
-        (log/warn refactoring "made no changes" (z/string loc))
-
-        :else
-        (log/warn "Could not apply" refactoring "to form: " (z/string loc)))
-      (log/warn "Could not find a form at this location. row" line "col" column "file" doc-id))))
+        loc (parser/loc-at-pos text line column)]
+    (f.refactor/call-refactor {:refactoring (keyword refactoring)
+                               :loc loc
+                               :uri doc-id
+                               :row line
+                               :col column
+                               :args args
+                               :version v})))
 
 (defn server-info []
   (let [db @db/db]

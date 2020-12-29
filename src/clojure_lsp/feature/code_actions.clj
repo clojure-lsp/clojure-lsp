@@ -1,7 +1,8 @@
 (ns clojure-lsp.feature.code-actions
   (:require
-    [clojure-lsp.feature.definition :as f.definition]
-    [clojure-lsp.refactor.transform :as r.transform]))
+   [clojure-lsp.feature.definition :as f.definition]
+   [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.refactor.transform :as r.transform]))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
@@ -9,11 +10,16 @@
         [_ {def-uri :uri
             definition :usage}] (f.definition/definition-usage uri row col)
         inline-symbol? (r.transform/inline-symbol? def-uri definition)
+        line (dec row)
+        character (dec col)
         has-unknow-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
         missing-ns (when has-unknow-ns?
-                     (r.transform/add-missing-libspec zloc))
-        line (dec row)
-        character (dec col)]
+                     (f.refactor/call-refactor {:loc zloc
+                                                :refactoring :add-missing-libspec
+                                                :uri uri
+                                                :version 0
+                                                :row row
+                                                :col col}))]
     (cond-> []
 
       (and has-unknow-ns? missing-ns)

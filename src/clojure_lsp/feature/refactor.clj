@@ -1,10 +1,20 @@
 (ns clojure-lsp.feature.refactor
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.definition :as f.definition]
+   [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
-   [clojure-lsp.feature.references :as f.references]
-   [clojure-lsp.feature.definition :as f.definition]))
+   [clojure-lsp.shared :as shared]
+   [clojure.tools.logging :as log]
+   [rewrite-clj.zip :as z]))
+
+(defn client-changes [changes]
+  (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
+    {:document-changes changes}
+    {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                              [(:uri text-document) edits])
+                            changes))}))
 
 (defmulti refactor (comp :refactoring))
 
@@ -63,3 +73,26 @@
        keys
        (map name)
        vec))
+
+(defn call-refactor [{:keys [loc uri refactoring row col version] :as data}]
+  (let [result (refactor data)]
+    (if (or loc
+            (= :clean-ns refactoring))
+      (cond
+        (map? result)
+        (let [changes (vec (for [[doc-id sub-results] result]
+                             {:text-document {:uri doc-id :version version}
+                              :edits (mapv #(update % :range shared/->range) (r.transform/result sub-results))}))]
+          (client-changes changes))
+
+        (seq result)
+        (let [changes [{:text-document {:uri uri :version version}
+                        :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
+          (client-changes changes))
+
+        (empty? result)
+        (log/warn refactoring "made no changes" (z/string loc))
+
+        :else
+        (log/warn "Could not apply" refactoring "to form: " (z/string loc)))
+      (log/warn "Could not find a form at this location. row" row "col" col "file" uri))))

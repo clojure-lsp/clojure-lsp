@@ -7,6 +7,8 @@
     [medley.core :as medley])
   (:import
     (org.eclipse.lsp4j
+      CallHierarchyIncomingCall
+      CallHierarchyItem
       CodeAction
       CodeActionKind
       CodeLens
@@ -45,6 +47,7 @@
 (s/def ::end ::position)
 (s/def ::range (s/and (s/keys :req-un [::start ::end])
                       (s/conformer #(Range. (:start %1) (:end %1)))))
+(s/def ::selection-range ::range)
 
 (def completion-kind-enum
   {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
@@ -242,8 +245,31 @@
 (s/def ::semantic-tokens (s/and (s/keys :req-un [::data]
                                   :opt-un [::result-id])
                                 (s/conformer #(doto (SemanticTokens. (:result-id %1)
-                                                                     (java.util.ArrayList. (:data %1))))))) ;;TODO need ArrayList?
+                                                                     (java.util.ArrayList. (:data %1)))))))
 
+(s/def ::call-hierarchy-item (s/and (s/keys :req-un [::name :symbol/kind ::uri ::range ::selection-range]
+                                            :opt-un [::tags ::detail ::data])
+                                    (s/conformer #(doto (CallHierarchyItem.)
+                                                    (.setName (:name %1))
+                                                    (.setKind (:kind %1))
+                                                    (.setUri (:uri %1))
+                                                    (.setRange (:range %1))
+                                                    (.setSelectionRange (:selection-range %1))
+                                                    (.setTags (:tags %1))
+                                                    (.setDetail (:detail %1))
+                                                    (.setData (:data %1))))))
+
+(s/def ::call-hierarchy-items (s/coll-of ::call-hierarchy-item))
+
+(s/def :call-hierarchy/from-ranges (s/coll-of ::range))
+(s/def :call-hierarchy/from ::call-hierarchy-item)
+
+(s/def ::call-hierarchy-incoming-call (s/and (s/keys :req-un [:call-hierarchy/from :call-hierarchy/from-ranges])
+                                             (s/conformer #(doto (CallHierarchyIncomingCall.)
+                                                             (.setFrom (:from %1))
+                                                             (.setFromRanges (:from-ranges %1))))))
+
+(s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
 (defn debeaner [inst]
   (when inst

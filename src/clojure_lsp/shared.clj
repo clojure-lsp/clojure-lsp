@@ -17,6 +17,9 @@
 (defn uri->path [uri]
   (Paths/get (URI. uri)))
 
+(defn uri->project-related-path [uri project-root]
+  (string/replace uri project-root ""))
+
 (defn ->range [{:keys [row end-row col end-col]}]
   {:start {:line (max 0 (dec row)) :character (max 0 (dec col))}
    :end {:line (max 0 (dec end-row)) :character (max 0 (dec end-col))}})

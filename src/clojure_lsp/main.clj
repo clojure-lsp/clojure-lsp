@@ -15,6 +15,8 @@
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams
+     CallHierarchyIncomingCallsParams
+     CallHierarchyPrepareParams
      CodeActionParams
      CodeLens
      CodeLensParams
@@ -348,7 +350,28 @@
                              :col (inc (.getCharacter start))
                              :end-row (inc (.getLine end))
                              :end-col (inc (.getCharacter end))}]
-                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-range doc-id range))))))))))
+                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-range doc-id range)))))))))
+
+  (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
+    (go :prepareCallHierarchy
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [_this]
+              (end
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      row (inc (.getLine pos))
+                      col (inc (.getCharacter pos))]
+                  (interop/conform-or-log ::interop/call-hierarchy-items (handlers/prepare-call-hierarchy doc-id row col)))))))))
+
+  (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
+    (go :callHierarchyIncomingCalls
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [_this]
+              (end
+                (let [item (.getItem params)]
+                  (interop/conform-or-log ::interop/call-hierarchy-incoming-calls (handlers/call-hierarchy-incoming item))))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -425,6 +448,7 @@
                 (CompletableFuture/completedFuture
                   (InitializeResult. (doto (ServerCapabilities.)
                                        (.setHoverProvider true)
+                                       (.setCallHierarchyProvider true)
                                        (.setCodeActionProvider true)
                                        (.setCodeLensProvider (CodeLensOptions. true))
                                        (.setReferencesProvider true)

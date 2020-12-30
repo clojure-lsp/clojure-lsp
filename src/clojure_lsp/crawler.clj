@@ -189,7 +189,7 @@
                               (remove #(.isDirectory %))
                               (map (fn [entry]
                                      [(if (= "jar" dependency-scheme)
-                                        (str "jar:file://" jar-file "!/" (.getName entry))
+                                        (str "jar:file:///" jar-file "!/" (.getName entry))
                                         (str "zipfile://" jar-file "::" (.getName entry)))
                                       entry
                                       jar]))))))

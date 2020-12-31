@@ -4,6 +4,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.window :as window]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -79,6 +80,13 @@
     (async/pipeline-blocking 5 output-chan xf (async/to-chan! jars) true (fn [e] (log/error "Error crawling jars" e)))
     (async/<!! (async/into {} output-chan))))
 
+(defn crawl-jars-async [jars dependency-scheme root-path project-hash classpath]
+  (async/go
+    (let [jar-envs (crawl-jars jars dependency-scheme)]
+      (db/save-deps root-path project-hash classpath jar-envs)
+      (swap! db/db update :file-envs merge jar-envs)
+      (window/show-message "Jars scanned async successfully" :info))))
+
 (defn crawl-source-dirs [dirs]
   (let [xf (comp
             (mapcat file-seq)
@@ -149,7 +157,8 @@
         dependency-scheme (get settings :dependency-scheme)
         ignore-directories? (get settings :ignore-classpath-directories)
         project-specs (or (get settings :project-specs) default-project-specs)
-        project (get-project-from root-path project-specs)]
+        project (get-project-from root-path project-specs)
+        async-scan-jars-on-startup? (get settings :async-scan-jars-on-startup? false)]
     (if (some? project)
       (let [project-hash (:project-hash project)
             loaded (db/read-deps root-path)
@@ -165,11 +174,18 @@
                                            (reduce-kv (fn [m k v]
                                                         (assoc m k (map second v))) {}))
             jars (:file classpath-entries-by-type)
-            jar-envs (if use-cp-cache
-                       (:jar-envs loaded)
-                       (crawl-jars jars dependency-scheme))
             source-envs (crawl-source-dirs source-paths)
-            file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
+            file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))
+            jar-envs (cond
+                       use-cp-cache
+                       (:jar-envs loaded)
+
+                       async-scan-jars-on-startup?
+                       (do (crawl-jars-async jars dependency-scheme root-path project-hash classpath)
+                           {})
+
+                       :else
+                       (crawl-jars jars dependency-scheme))]
         (db/save-deps root-path project-hash classpath jar-envs)
         (if use-cp-cache
           (log/info "skipping classpath scan due to project hash match")

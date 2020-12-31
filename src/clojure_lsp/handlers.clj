@@ -9,7 +9,7 @@
     [clojure-lsp.feature.completion :as f.completion]
     [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.document-symbol :as f.document-symbol]
-    [clojure-lsp.feature.documentation :as f.documentation]
+    [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
@@ -109,10 +109,8 @@
     (f.completion/completion doc-id line column file-envs remote-envs cursor-loc cursor-usage)))
 
 (defn resolve-completion-item [label sym-wanted]
-  (let [file-envs (:file-envs @db/db)
-        client-capabilities (get @db/db :client-capabilities)
-        settings (get @db/db :settings)]
-    (f.completion/resolve-item label sym-wanted file-envs client-capabilities settings)))
+  (let [file-envs (:file-envs @db/db)]
+    (f.completion/resolve-item label sym-wanted file-envs)))
 
 (defn references [doc-id line column]
   (mapv (fn [{:keys [uri usage]}]
@@ -288,15 +286,8 @@
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
-        usage (first
-                (for [[_ usages] file-envs
-                      {:keys [sym tags] :as usage} usages
-                      :when (and (= sym (:sym cursor))
-                                 (:declare tags))]
-                  usage))
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
-        show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        docs (f.documentation/generate content-format usage show-docs-arity-on-same-line?)]
+        docs (f.hover/hover-documentation (-> cursor :sym str) file-envs)]
     (if cursor
       {:range (shared/->range cursor)
        :contents (if (= content-format "markdown")

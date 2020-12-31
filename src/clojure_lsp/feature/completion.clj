@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.completion
   (:require
     [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.feature.documentation :as f.documentation]
+    [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
     [clojure.set :as set]
@@ -114,15 +114,7 @@
                                  :data (str "java.lang." sym)}))
                  (sort-by :label))))))))
 
-(defn resolve-item [label sym-wanted file-envs client-capabilities settings]
-  (let [usage (first
-                (for [[_ usages] file-envs
-                      {:keys [sym tags] :as usage} usages
-                      :when (and (= (str sym) sym-wanted)
-                                 (:declare tags))]
-                  usage))
-        [content-format] (get-in client-capabilities [:text-document :completion :completion-item :documentation-format])
-        show-docs-arity-on-same-line? (get-in settings [:show-docs-arity-on-same-line?])]
-    {:label label
-     :data sym-wanted
-     :documentation (f.documentation/generate content-format usage show-docs-arity-on-same-line?)}))
+(defn resolve-item [label sym-wanted file-envs]
+  {:label label
+   :data sym-wanted
+   :documentation (f.hover/hover-documentation sym-wanted file-envs)})

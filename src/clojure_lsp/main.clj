@@ -129,7 +129,6 @@
         (end nil)))
 
   (^void didClose [_ ^DidCloseTextDocumentParams params]
-    (log/warn "DidCloseTextDocumentParams")
     (go :didClose
         (end (-> (.getTextDocument params)
                  interop/document->decoded-uri
@@ -509,7 +508,7 @@
            :port port)
     (async/go
       (loop [edit (async/<! db/edits-chan)]
-        (log/warn "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))
+        (log/info "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))
         (recur (async/<! db/edits-chan))))
     (async/go
       (loop [diagnostic (async/<! db/diagnostics-chan)]

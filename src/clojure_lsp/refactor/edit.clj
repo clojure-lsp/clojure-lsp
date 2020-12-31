@@ -5,11 +5,6 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
-(defmacro zspy [loc]
-  `(do
-     (log/warn '~loc (pr-str (z/string ~loc)))
-     ~loc))
-
 (defn top? [loc]
   (= :forms (z/tag (z/up loc))))
 

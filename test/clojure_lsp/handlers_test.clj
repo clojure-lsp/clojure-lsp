@@ -34,7 +34,7 @@
       (is (= {:range    {:start {:line      2
                                  :character 1}
                          :end   {:line 2 :character 4}}
-              :contents ["a/foo \n[x]\n"]}
+              :contents ["a/foo \n[x]\nfile://a.clj\n"]}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "plain text with docs"
       (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
@@ -43,7 +43,7 @@
       (is (= {:range    {:start {:line      2
                                  :character 1}
                          :end   {:line 2 :character 4}}
-              :contents ["a/foo \n[x]\n\n----\nSome cool docs :foo\n"]}
+              :contents ["a/foo \n[x]\nfile://a.clj\n\n----\nSome cool docs :foo\n"]}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with function args"
       (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -53,7 +53,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n"}}
+                         :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n*file://a.clj*\n"}}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with no function args"
       (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -63,7 +63,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n"}}
+                         :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n*file://a.clj*\n"}}
              (handlers/hover "file://a.clj" 3 2)))))
   (testing "with show-docs-arity-on-same-line? enabled"
     (testing "plain text"
@@ -74,7 +74,7 @@
       (is (= {:range    {:start {:line      2
                                  :character 1}
                          :end   {:line 2 :character 4}}
-              :contents ["a/foo [x]\n"]}
+              :contents ["a/foo [x]\nfile://a.clj\n"]}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with function args"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
@@ -85,7 +85,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo [x]\n```\n"}}
+                         :value "```clojure\na/foo [x]\n```\n*file://a.clj*\n"}}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with no function args"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
@@ -96,7 +96,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo []\n```\n"}}
+                         :value "```clojure\na/foo []\n```\n*file://a.clj*\n"}}
              (handlers/hover "file://a.clj" 3 2))))
     (testing "markdown content with docs"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
@@ -107,7 +107,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo []\n```\n\n----\n```clojure\nSome cool docstring :foo :bar\n```\n"}}
+                         :value "```clojure\na/foo []\n```\n*file://a.clj*\n\n----\n```clojure\nSome cool docstring :foo :bar\n```\n"}}
              (handlers/hover "file://a.clj" 3 2))))))
 
 (deftest document-symbol

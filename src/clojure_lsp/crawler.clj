@@ -92,7 +92,7 @@
                                   (f.references/safe-find-references uri (slurp uri) false false))))
             (remove (comp nil? second)))
         output-chan (async/chan)]
-    (async/pipeline-blocking 5 output-chan xf (async/to-chan! dirs) true (fn [e] (log/warn e "hello")))
+    (async/pipeline-blocking 5 output-chan xf (async/to-chan! dirs) true (fn [e] (log/warn "Could not crawl source dirs, exception: " e)))
     (async/<!! (async/into {} output-chan))))
 
 (defn lookup-classpath [root-path command-args env]

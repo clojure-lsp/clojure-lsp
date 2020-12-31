@@ -107,11 +107,14 @@ Bellow are all the currently supported LSP capabilities and their implementation
 | textDocument/prepareRename             |      |                                               |
 | textDocument/foldingRange              |      |                                               |
 | textDocument/selectionRange            |      |                                               |
-| textDocument/semanticTokens/full       | √    | Just `functions`, type' and `macros` ATM             |
+| textDocument/semanticTokens/full       | √    | Just `functions`, type' and `macros` ATM      |
 | textDocument/semanticTokens/full/delta |      |                                               |
 | textDocument/semanticTokens/range      | √    |                                               |
 | workspace/semanticTokens/refresh       |      |                                               |
 | textDocument/linkedEditingRange        |      |                                               |
+| textDocument/prepareCallHierarchy      | √    |                                               |
+| callHierarchy/incomingCalls            | √    |                                               |
+| callHierarchy/outgoingCalls            |      |                                               |
 | textDocument/moniker                   |      |                                               |
 </details>
 
@@ -432,7 +435,7 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
 
 - Better completion item kinds
 - Full semantic tokens support
-- Call hierarchy support
+- Outgoing only Call hierarchy support
 
 ## Building local
 

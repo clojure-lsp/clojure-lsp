@@ -4,9 +4,11 @@
     [cljfmt.main :as cljfmt.main]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
+    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
     [clojure-lsp.feature.code-actions :as f.code-actions]
     [clojure-lsp.feature.completion :as f.completion]
     [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.document-symbol :as f.document-symbol]
     [clojure-lsp.feature.documentation :as f.documentation]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.references :as f.references]
@@ -200,16 +202,9 @@
           (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
           (log/warn "Could not find element under cursor, there are no known elements after this position."))))))
 
-(defn entry-kind->symbol-kind [k]
-  (case k
-    :module :namespace
-    :function :function
-    :declaration :variable
-    :null))
-
 (defn file-env-entry->document-symbol [[e kind]]
   (let [{n :str :keys [row col end-row end-col sym]} e
-        symbol-kind (entry-kind->symbol-kind kind)
+        symbol-kind (f.document-symbol/entry-kind->symbol-kind kind)
         r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
     {:name n
@@ -218,16 +213,11 @@
      :selection-range r
      :namespace (namespace sym)}))
 
-(defn is-declaration? [e]
-  (and (get-in e [:tags :declare])
-       (or (get-in e [:tags :local])
-         (get-in e [:tags :public]))))
-
 (defn document-symbol [doc-id]
   (let [local-env (get-in @db/db [:file-envs doc-id])
         symbol-parent-map (->> local-env
                                (keep #(cond (:kind %) [% (:kind %)]
-                                            (is-declaration? %) [% :declaration]
+                                            (f.document-symbol/is-declaration? %) [% :declaration]
                                             :else nil))
                                (map file-env-entry->document-symbol)
                                (group-by :namespace))]
@@ -253,7 +243,7 @@
 
 (defn file-env-entry->workspace-symbol [uri [e kind]]
   (let [{:keys [row col end-row end-col sym]} e
-        symbol-kind (entry-kind->symbol-kind kind)
+        symbol-kind (f.document-symbol/entry-kind->symbol-kind kind)
         r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
     {:name (str sym)
@@ -267,7 +257,7 @@
            (mapcat (fn [[uri env]]
                      (->> env
                           (keep #(cond (:kind %) [% (:kind %)]
-                                       (is-declaration? %) [% :declaration]
+                                       (f.document-symbol/is-declaration? %) [% :declaration]
                                        :else nil))
                           (filter #(.contains (str (:sym (first %))) query))
                           (map (partial file-env-entry->workspace-symbol uri)))))
@@ -402,3 +392,17 @@
         usages (get-in db [:file-envs doc-id])
         data (f.semantic-tokens/range-tokens usages range)]
     {:data data}))
+
+(defn prepare-call-hierarchy
+  [doc-id row col]
+  (let [{:keys [project-root file-envs]} @db/db
+        local-env (get file-envs doc-id)]
+    (f.call-hierarchy/prepare doc-id row col local-env project-root)))
+
+(defn call-hierarchy-incoming
+  [item]
+  (let [uri (.getUri item)
+        row (inc (-> item .getRange .getStart .getLine))
+        col (inc (-> item .getRange .getStart .getCharacter))
+        project-root (:project-root @db/db)]
+    (f.call-hierarchy/incoming uri row col project-root)))

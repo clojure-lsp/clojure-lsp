@@ -2,6 +2,10 @@
   (:require [clojure-lsp.shared :as shared]
             [clojure.test :refer [deftest testing is]]))
 
+(deftest uri->project-related-path
+  (is (= "/src/my-project/some/ns.clj"
+        (shared/uri->project-related-path "file://home/foo/bar/my-project/src/my-project/some/ns.clj" "file://home/foo/bar/my-project"))))
+
 (deftest ->range-test
   (testing "should subtract 1 from row and col values"
     (is (= {:start {:line      1

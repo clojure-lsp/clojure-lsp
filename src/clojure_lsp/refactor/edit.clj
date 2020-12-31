@@ -37,6 +37,25 @@
       (contains? (set op-syms) (z/sexpr op-loc)) op-loc
       :else (recur (z/leftmost (z/up op-loc))))))
 
+(defn find-function-name [loc]
+  (let [function-loc (find-ops-up loc 'defn 'defn- 'def 'defmacro 'defmulti 'defonce 's/def 's/defn)]
+    (cond
+      (and function-loc
+           (= :map (-> function-loc z/next z/tag)))
+      (-> function-loc z/next z/right)
+
+      (and function-loc
+           (= :meta (-> function-loc z/next z/tag))
+           (= :map (-> function-loc z/next z/next z/tag)))
+      (-> function-loc z/next z/down z/rightmost)
+
+      (and function-loc
+           (= :meta (-> function-loc z/next z/tag)))
+      (-> function-loc z/next z/next z/next)
+
+      function-loc
+      (z/next function-loc))))
+
 (defn single-child?
   [zloc]
   (let [child (z/down zloc)]
@@ -121,6 +140,13 @@
       (z/find-value z/next 'ns) ; go to ns
       (z/up))) ; ns form
 
+(defn find-namespace-name [zloc]
+  (some-> zloc
+          find-namespace
+          z/down
+          z/next
+          z/sexpr
+          str))
 
 (defn back-to-mark-or-nil
   [zloc marker]

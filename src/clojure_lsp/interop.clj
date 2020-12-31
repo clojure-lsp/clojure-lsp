@@ -27,6 +27,7 @@
       PublishDiagnosticsParams
       Range
       RenameFile
+      SemanticTokens
       SymbolKind
       SymbolInformation
       TextDocumentEdit
@@ -238,6 +239,12 @@
 
 (s/def ::code-lenses (s/coll-of ::code-lens))
 
+(s/def ::semantic-tokens (s/and (s/keys :req-un [::data]
+                                  :opt-un [::result-id])
+                                (s/conformer #(doto (SemanticTokens. (:result-id %1)
+                                                                     (java.util.ArrayList. (:data %1))))))) ;;TODO need ArrayList?
+
+
 (defn debeaner [inst]
   (when inst
     (->> (dissoc (bean inst) :class)
@@ -388,7 +395,9 @@
         (update :macro-defs clean-symbol-map)
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
         (update :cljfmt kwd-keys)
-        (update-in [:cljfmt :indents] clean-symbol-map))))
+        (update-in [:cljfmt :indents] clean-symbol-map)
+        (update :document-formatting? (fnil identity true))
+        (update :document-range-formatting? (fnil identity true)))))
 
 (defn document->decoded-uri [document]
   (-> document

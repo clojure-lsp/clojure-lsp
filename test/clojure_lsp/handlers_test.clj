@@ -1,17 +1,17 @@
 (ns clojure-lsp.handlers-test
   (:require
-    [clojure-lsp.crawler :as crawler]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.handlers :as handlers]
-    [clojure-lsp.parser :as parser]
-    [clojure.string :as string]
-    [clojure.test :refer :all])
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.parser :as parser]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]])
   (:import
-    (org.eclipse.lsp4j
-      Diagnostic
-      DiagnosticSeverity
-      Range
-      Position)))
+   (org.eclipse.lsp4j
+     Diagnostic
+     DiagnosticSeverity
+     Range
+     Position)))
 
 (deftest did-close
   (reset! db/db {:documents {"file://a.clj" {:text "(ns a)"}
@@ -27,14 +27,23 @@
 
 (deftest hover
   (testing "with show-docs-arity-on-same-line? disabled"
-    (testing "plain text"
+    (testing "plain text without docs"
       (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
                                                                          "(defn foo [x] x)\n"
                                                                          "(foo 1)") :clj {})}})
       (is (= {:range    {:start {:line      2
                                  :character 1}
                          :end   {:line 2 :character 4}}
-              :contents ["a/foo \n[x]\n\n----\nlsp: :declare :public"]}
+              :contents ["a/foo \n[x]\n"]}
+             (handlers/hover "file://a.clj" 3 3))))
+    (testing "plain text with docs"
+      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                         "(defn foo \"Some cool docs :foo\" [x] x)\n"
+                                                                         "(foo 1)") :clj {})}})
+      (is (= {:range    {:start {:line      2
+                                 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents ["a/foo \n[x]\n\n----\nSome cool docs :foo\n"]}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with function args"
       (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -44,7 +53,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n\n----\nlsp: :declare :public"}}
+                         :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n"}}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with no function args"
       (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -54,7 +63,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n\n----\nlsp: :declare :public"}}
+                         :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n"}}
              (handlers/hover "file://a.clj" 3 2)))))
   (testing "with show-docs-arity-on-same-line? enabled"
     (testing "plain text"
@@ -65,7 +74,7 @@
       (is (= {:range    {:start {:line      2
                                  :character 1}
                          :end   {:line 2 :character 4}}
-              :contents ["a/foo [x]\n\n----\nlsp: :declare :public"]}
+              :contents ["a/foo [x]\n"]}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with function args"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
@@ -76,7 +85,7 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo [x]\n```\n\n----\nlsp: :declare :public"}}
+                         :value "```clojure\na/foo [x]\n```\n"}}
              (handlers/hover "file://a.clj" 3 3))))
     (testing "markdown content with no function args"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
@@ -87,8 +96,25 @@
       (is (= {:range    {:start {:line 2 :character 1}
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
-                         :value "```clojure\na/foo []\n```\n\n----\nlsp: :declare :public"}}
+                         :value "```clojure\na/foo []\n```\n"}}
+             (handlers/hover "file://a.clj" 3 2))))
+    (testing "markdown content with docs"
+      (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
+                     :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
+                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
+                                                                                   "(defn foo \"Some cool docstring :foo :bar\" [] 1)\n"
+                                                                                   "(foo)") :clj {})}})
+      (is (= {:range    {:start {:line 2 :character 1}
+                         :end   {:line 2 :character 4}}
+              :contents {:kind  "markdown"
+                         :value "```clojure\na/foo []\n```\n\n----\n```clojure\nSome cool docstring :foo :bar\n```\n"}}
              (handlers/hover "file://a.clj" 3 2))))))
+
+(deftest document-symbol
+  (reset! db/db {:file-envs
+                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})}})
+  (is (= 1
+         (count (handlers/document-symbol "file://a.clj")))))
 
 (deftest test-rename
   (reset! db/db {:file-envs
@@ -189,7 +215,7 @@
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
+        (let [usages (f.diagnostic/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["user/foo is called with 3 args but expects 1 or 2"
                   "user/baz is called with 1 arg but expects 3"
                   "user/bar is called with 0 args but expects 1 or more"
@@ -220,7 +246,7 @@
                     (foo 1)
                     (bar))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
+        (let [usages (f.diagnostic/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["user/foo is called with 2 args but expects 1 or 3"
                   "user/bar is called with 1 arg but expects 0"
                   "user/bar is called with 1 arg but expects 0"
@@ -236,7 +262,7 @@
                   (bar :a)
                   (bar :a :b)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
+        (let [usages (f.diagnostic/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message usages))))))
     ;; Waiting for kondo implement this support: https://github.com/borkdude/clj-kondo/issues/912
@@ -250,7 +276,7 @@
                   (foo)
                   (foo (foo :a :b))"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
+        (let [usages (f.diagnostic/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["No overload for 'foo' with 0 arguments"
                   "No overload for 'foo' with 2 arguments"]
                  (map :message usages))))))
@@ -263,7 +289,7 @@
                   (foo 1 2)
                   (foo 1)"]
         (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages code :clj {})} :project-root "file:///"})
-        (let [usages (crawler/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
+        (let [usages (f.diagnostic/find-diagnostics "file://a.clj" code (get-in @db/db [:file-envs "file://a.clj"]) #{})]
           (is (= ["Unused namespace: user"
                   "user/foo is called with 0 args but expects 2"
                   "user/foo is called with 1 arg but expects 2"]
@@ -292,7 +318,7 @@
                      {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar)" :clj {})
                       "file://b.clj" (parser/find-usages code-b :clj {})}
                     :project-root "file:///"})
-      (let [usages (crawler/find-diagnostics "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]) #{})]
+      (let [usages (f.diagnostic/find-diagnostics "file://b.clj" code-b (get-in @db/db [:file-envs "file://b.clj"]) #{})]
         (is (= ["Unused namespace: b"
                 "Unused declaration: x"
                 "Unused declaration: y"
@@ -304,7 +330,7 @@
     (let [code "(ns foo.bar)"]
       (reset! db/db {:file-envs {"file://foo/bar.clj" (parser/find-usages code :clj {})}
                      :project-root "file:///"})
-      (let [usages (crawler/find-diagnostics "file://foo/bar.clj" code (get-in @db/db [:file-envs "file://foo/bar.clj"]) #{"foo"})]
+      (let [usages (f.diagnostic/find-diagnostics "file://foo/bar.clj" code (get-in @db/db [:file-envs "file://foo/bar.clj"]) #{"foo"})]
         (is (empty?
                (map :message usages)))))))
 
@@ -331,6 +357,10 @@
                    "file://d.clj" (parser/find-usages
                                     (str "(ns d (:require [alpaca.ns :as alpaca]))")
                                     :clj
+                                    {})
+                   "file://e.clj" (parser/find-usages
+                                    (str "(ns e (:require [alpaca.ns :refer [ba]]))")
+                                    :clj
                                     {})}}]
     (testing "complete-a"
       (reset! db/db db-state)
@@ -355,6 +385,11 @@
               {:label "alpaca/barr" :detail "alpaca.ns" :data "alpaca.ns/barr"}
               {:label "alpaca/bazz" :detail "alpaca.ns" :data "alpaca.ns/bazz"}]
              (handlers/completion "file://b.clj" 3 18))))
+    (testing "complete-within-refering"
+      (reset! db/db db-state)
+      (is (= [{:label "barr" :detail "alpaca.ns/barr" :data "alpaca.ns/barr"}
+              {:label "bazz" :detail "alpaca.ns/bazz" :data "alpaca.ns/bazz"}]
+             (handlers/completion "file://e.clj" 1 38))))
     (testing "complete-core-stuff"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
       (is (= [{:label "frequencies" :data "clojure.core/frequencies"}]

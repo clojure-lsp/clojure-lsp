@@ -1,14 +1,15 @@
 (ns clojure-lsp.main
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
    [nrepl.server :as nrepl.server]
-   [trptcolin.versioneer.core :as version]
-   [clojure.spec.alpha :as s])
+   [trptcolin.versioneer.core :as version])
   (:import
    (clojure_lsp ClojureExtensions)
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
@@ -46,6 +47,10 @@
      RegistrationParams
      RenameParams
      SaveOptions
+     SemanticTokensLegend
+     SemanticTokensParams
+     SemanticTokensRangeParams
+     SemanticTokensWithRegistrationOptions
      ServerCapabilities
      SignatureHelp
      SignatureHelpParams
@@ -194,14 +199,11 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))]
-                    (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      line (inc (.getLine pos))
+                      column (inc (.getCharacter pos))]
+                  (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))))))))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams _params]
     (go :signatureHelp
@@ -297,7 +299,7 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-(^CompletableFuture documentSymbol [this ^DocumentSymbolParams params]
+  (^CompletableFuture documentSymbol [this ^DocumentSymbolParams params]
     (go :documentSymbol
         (CompletableFuture/supplyAsync
           (reify Supplier
@@ -309,8 +311,8 @@
                   (catch Exception e
                     (log/error e)))))))))
 
-(^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
-    (go :documentSymbol
+  (^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
+    (go :documentHighlight
         (CompletableFuture/supplyAsync
           (reify Supplier
             (get [this]
@@ -322,31 +324,54 @@
                         column (inc (.getCharacter pos))]
                     (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))
                   (catch Exception e
-                    (log/error e))))))))))
+                    (log/error e)))))))))
+
+  (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
+    (go :semanticTokensFull
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [_this]
+              (end
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
+                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-full doc-id)))))))))
+
+  (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
+    (go :semanticTokensRange
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [_this]
+              (end
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      start (-> params .getRange .getStart)
+                      end (-> params .getRange .getEnd)
+                      range {:row (inc (.getLine start))
+                             :col (inc (.getCharacter start))
+                             :end-row (inc (.getLine end))
+                             :end-col (inc (.getCharacter end))}]
+                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-range doc-id range))))))))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
 
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
-   (go :executeCommand
-       (future
-         (end
-           (let [command (.getCommand params)
-                 args (.getArguments params)]
-             (log/info "Executing command" command "with args" args)
-             (cond
-               (= command "server-info")
-               (execute-server-info)
+    (go :executeCommand
+        (future
+          (end
+            (let [command (.getCommand params)
+                  args (.getArguments params)]
+              (log/info "Executing command" command "with args" args)
+              (cond
+                (= command "server-info")
+                (execute-server-info)
 
-               (contains? handlers/refactorings command)
-               (execute-refactor command args))))))
-   (CompletableFuture/completedFuture 0))
+                (some #(= % command) f.refactor/available-refactors)
+                (execute-refactor command args))))))
+    (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (log/warn params))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
-    (log/warn "DidChangeWatchedFilesParams")
     (go :didChangeWatchedFiles
         (end
           (some->> params
@@ -392,32 +417,42 @@
       (go :initialize
           (end
             (do
-              (log/warn "Initialize")
+              (log/info "Initializing...")
               (#'handlers/initialize (.getRootUri params)
                                      (client-capabilities params)
                                      (client-settings params))
-              (CompletableFuture/completedFuture
-                (InitializeResult. (doto (ServerCapabilities.)
-                                     (.setHoverProvider true)
-                                     (.setCodeActionProvider true)
-                                     (.setCodeLensProvider (CodeLensOptions. true))
-                                     (.setReferencesProvider true)
-                                     (.setRenameProvider true)
-                                     (.setDefinitionProvider true)
-                                     (.setDocumentFormattingProvider true)
-                                     (.setDocumentRangeFormattingProvider true)
-                                     (.setDocumentSymbolProvider true)
-                                     (.setDocumentHighlightProvider true)
-                                     (.setWorkspaceSymbolProvider true)
-                                     (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
-                                                                   (.setCommands (keys handlers/refactorings))))
-                                     (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                             (.setOpenClose true)
-                                                             (.setChange TextDocumentSyncKind/Full)
-                                                             (.setSave (SaveOptions. true))))
-                                     (.setCompletionProvider (CompletionOptions. true [])))))))))
+              (let [settings (:settings @db/db)]
+                (CompletableFuture/completedFuture
+                  (InitializeResult. (doto (ServerCapabilities.)
+                                       (.setHoverProvider true)
+                                       (.setCodeActionProvider true)
+                                       (.setCodeLensProvider (CodeLensOptions. true))
+                                       (.setReferencesProvider true)
+                                       (.setRenameProvider true)
+                                       (.setDefinitionProvider true)
+                                       (.setDocumentFormattingProvider (:document-formatting? settings))
+                                       (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
+                                       (.setDocumentSymbolProvider true)
+                                       (.setDocumentHighlightProvider true)
+                                       (.setWorkspaceSymbolProvider true)
+                                       (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                                                             (:semantic-tokens? settings))
+                                                                     (doto (SemanticTokensWithRegistrationOptions.)
+                                                                       (.setLegend (doto (SemanticTokensLegend.
+                                                                                           semantic-tokens/token-types-str
+                                                                                           semantic-tokens/token-modifiers)))
+                                                                       (.setRange true)
+                                                                       (.setFull true))))
+                                       (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
+                                                                     (.setCommands f.refactor/available-refactors)))
+                                       (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                               (.setOpenClose true)
+                                                               (.setChange TextDocumentSyncKind/Full)
+                                                               (.setSave (SaveOptions. true))))
+                                       (.setCompletionProvider (CompletionOptions. true []))))))))))
+
     (^void initialized [^InitializedParams params]
-      (log/warn "Initialized" params)
+      (log/info "Initialized" params)
       (go :initialized
           (end
             (doto

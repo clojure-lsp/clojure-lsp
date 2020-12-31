@@ -2,7 +2,7 @@
   (:require
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
-    [clojure.test :refer :all]
+    [clojure.test :refer [deftest is testing]]
     [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z]))
 
@@ -44,18 +44,45 @@
   (let [zloc (z/of-string "(fn [^String b])")
         context (volatile! {})]
     (parser/handle-fn (z/next zloc) zloc context {} false)
-    (is (= '{"java.lang.String" #{:norename}
+    (is (= '{"java.lang.String" #{:java :norename}
              "b" #{:declare :param}}
            (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
 
+(deftest handle-defn-test
+  (testing "simple defn"
+    (let [zloc (z/of-string "(defn foo [] 1)")
+          context (volatile! {})]
+      (parser/handle-defn (z/next zloc) zloc context {} false)
+      (is (= '{"foo" #{:declare :public}}
+             (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
+  (testing "defn with meta caret"
+    (let [zloc (z/of-string "(defn foo ^{:bar true} [] 1)")
+          context (volatile! {})]
+      (parser/handle-defn (z/next zloc) zloc context {} false)
+      (is (= '{"foo" #{:declare :public}
+               "bar" #{:keyword}}
+             (into {} (map (juxt (comp name :sym) :tags) (:usages @context)))))))
+  (testing "defn without meta caret"
+    (let [zloc (z/of-string "(defn foo {:bar true} [] 1)")
+          context (volatile! {})]
+      (parser/handle-defn (z/next zloc) zloc context {} false)
+      (is (= '{"foo" #{:declare :public}
+               "bar" #{:keyword}}
+             (into {} (map (juxt (comp name :sym) :tags) (:usages @context))))))))
+
 (deftest qualify-ident-test
   (let [context {:file-type :clj}]
-    (is (= {:sym 'clojure.core/for :tags #{:norename} :str "for"} (parser/qualify-ident 'for context {} false)))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
-    (is (= {:sym 'java.lang.Exception :tags #{:norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
-    (is (= {:sym '.getMessage :tags #{:method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
-    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
-    (is (= {:sym ':foo :str ":foo"} (parser/qualify-ident :foo context {} false)))))
+    (is (= {:sym 'clojure.core/for :tags #{:norename :core} :str "for"} (parser/qualify-ident 'for context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:java :norename} :str "Exception"} (parser/qualify-ident 'Exception context {} false)))
+    (is (= {:sym 'java.lang.Exception :tags #{:java :norename} :str "Exception."} (parser/qualify-ident 'Exception. context {} false)))
+    (is (= {:sym '.getMessage :tags #{:java :method :norename} :str ".getMessage"} (parser/qualify-ident '.getMessage context {} false)))
+    (is (= {:sym 'java.lang.Thread/sleep :tags #{:method :norename :java} :str "Thread/sleep"} (parser/qualify-ident 'Thread/sleep context {} false)))
+    (is (= {:sym ':foo :str ":foo" :tags #{:keyword}} (parser/qualify-ident :foo context {} false)))
+    (is (= {:sym 'clojure.core/for :tags #{:norename :core} :str "for"} (parser/qualify-ident 'for context {} false)))
+    (is (= {:sym 'foo.bar/baz :tags #{:refered} :str "baz"}
+           (parser/qualify-ident 'baz (merge context {:refers {"baz" 'foo.bar/baz}}) {} false)))
+    (is (= {:sym 'clojure.test/deftest :tags #{:refered :macro} :str "deftest"}
+           (parser/qualify-ident 'deftest (merge context {:refers {"deftest" 'clojure.test/deftest}}) {} false)))))
 
 (deftest find-references-simple-test
   (testing "simple stuff"
@@ -234,7 +261,7 @@
       (is (= 'java.io.File (:sym file-ref)))
       (is (= 'java.io.File/static (:sym file-static-ref)))
       (is (= 'java.util.jar.JarFile (:sym fq-ref)))
-      (is (= #{:norename :method} (set (mapcat :tags usages)))))))
+      (is (= #{:norename :java :method} (set (mapcat :tags usages)))))))
 
 (deftest find-references-keyword-test
   (testing "simple"
@@ -243,7 +270,7 @@
       (is (= [":foo/foo" ":foo" "::foo" "::q/foo" "::x/foo"] (mapv :str usages)))
       (is (= [:foo/foo :foo :bar/foo :qux/foo] (butlast (mapv :sym usages))))
       (is (= :foo (:sym (second usages))))
-      (is (nil? (seq (remove nil? (mapv :tags (butlast usages))))))
+      (is (= [#{:keyword} #{:keyword} #{:namespaced :keyword} #{:alias-reference}] (seq (remove nil? (mapv :tags (butlast usages))))))
       (is (not= 'x (namespace (:sym (last usages)))))
       (is (not= 'user (namespace (:sym (last usages)))))
       (is (= #{:unknown} (:tags (last usages))))))
@@ -253,7 +280,7 @@
           [a1 a2 b1 b2 c1 c2 d1 d2 e1 e2 f1 f2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
       (is (= [":foo/a" ":foo/a" ":b" ":b" "::c" "::c" "d" "d" "::q/e" "::q/e" "::x/f" "::x/f"] (mapv :str usages)))
       (is (= [:foo/a :b :bar/c :d :qux/e] (map :sym [a1 b1 c1 d1 e1])))
-      (is (nil? (seq (remove nil? (mapv :tags [a1 b1 c1 d1 e1])))))
+      (is (= [#{:keyword} #{:keyword} #{:namespaced :keyword} #{:alias-reference}] (seq (remove nil? (mapv :tags [a1 b1 c1 d1 e1])))))
       (is (not= 'x (namespace (:sym (last usages)))))
       (is (not= 'user (namespace (:sym (last usages)))))
       (is (= #{:unknown} (:tags f1)))
@@ -303,21 +330,29 @@
              (mapv :sym usages))))))
 
 (deftest find-references-cljc-test
-  (let [code "(ns hi)"
-        usages (parser/find-usages code :cljc {})]
-    (is (= 4 (count usages)))
-    (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
-    (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
-    (is (= "hi" (:str (nth usages 1 nil)) (:str (nth usages 3 nil)))))
-  (let [code "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
-        usages (parser/find-usages code :cljc {})
-        clj-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :clj))
-        cljs-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :cljs))]
-    (is (= '(do y a b) clj-sexpr))
-    (is (= '(do x c d) cljs-sexpr))
-    (is (= 6 (count usages)))
-    (is (= ["y" "a" "b"] (map :str (filter (comp #{:clj} :file-type) usages))))
-    (is (= ["x" "c" "d"] (map :str (filter (comp #{:cljs} :file-type) usages))))))
+  (testing "simple"
+    (let [code   "(ns hi)"
+          usages (parser/find-usages code :cljc {})]
+      (is (= 3 (count usages)))
+      (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
+      (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
+      (is (= "hi" (:str (nth usages 1 nil))))))
+  (testing "cljs and clj"
+    (let [code       "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
+          usages     (parser/find-usages code :cljc {})
+          clj-sexpr  (z/sexpr (parser/process-reader-macro (z/of-string code) :clj))
+          cljs-sexpr (z/sexpr (parser/process-reader-macro (z/of-string code) :cljs))]
+      (is (= '(do y a b) clj-sexpr))
+      (is (= '(do x c d) cljs-sexpr))
+      (is (= 6 (count usages)))
+      (is (= ["y" "a" "b"] (map :str (filter (comp #(contains? % :clj) :file-type) usages))))
+      (is (= ["x" "c" "d"] (map :str (filter (comp #(contains? % :cljs) :file-type) usages))))))
+  (testing "removing duplicated usages for cljc"
+    (let [code "(def hello 123) (comment hello)"
+          usages (parser/find-usages code :cljc {})]
+      (is (= 6 (count usages)))
+      (is (= ["def" "hello" "comment" "hello"] (map :str (filter (comp #(contains? % :clj) :file-type) usages))))
+      (is (= ["hello" "hello" "def" "comment"] (map :str (filter (comp #(contains? % :cljs) :file-type) usages)))))))
 
 (deftest if-let-test
   (let [code "(if-let [] a b)"
@@ -332,7 +367,7 @@
     (is (= '[clojure.core/def user/x clojure.core/comment user/x clojure.core/def] (subvec (mapv :sym usages) 0 5)))
     (is (= '[user/y user/x] (subvec (mapv :sym usages) 6)))
     (is (not= 'user (namespace (:sym def-usage))))
-    (is (= #{:declare} (:tags def-usage))))
+    (is (= #{:declare :public} (:tags def-usage))))
   (let [code "(defn x [] #_y 1)"
         usages (parser/find-usages code :clj {})]
     (is (= 3 (count (map :sym usages)))))
@@ -397,7 +432,7 @@
     (let [code "(ns user (:require clojure.test)) (clojure.test/deftest my-test)"
           usages (parser/find-usages code :clj {})]
       (is (= 5 (count usages)))
-      (is (= '{:file-type :clj
+      (is (= '{:file-type #{:clj}
                :sym user/my-test
                :str "my-test"
                :tags #{:declare :public :unused}}
@@ -440,7 +475,7 @@
       (is (= {:tags #{:declare :public}
               :sym :foo/name
               :str ":foo/name"
-              :file-type :clj
+              :file-type #{:clj}
               :signatures {:sexprs ['[_ b]]
                            :strings ["[_ b]"]}}
              (dissoc (nth usages 4 nil) :col :row :end-row :end-col)))
@@ -602,3 +637,9 @@
                         (baz a false) =not=> nil))"
         usages (parser/find-usages code :clj {})]
     (is (= #{:scoped} (set (mapcat :tags (filter (comp #{"=>" "=not=>"} :str) usages)))))))
+
+(deftest no-arity-macros
+  (let [code "(comment)"
+        usages (parser/find-usages code :clj {})
+        [comment] usages]
+    (is (= 'clojure.core/comment (:sym comment)))))

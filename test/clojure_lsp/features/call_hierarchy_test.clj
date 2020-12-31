@@ -40,14 +40,19 @@
                  {"file://some/a.clj" (parser/find-usages a-code :clj {})
                   "file://some/b.clj" (parser/find-usages b-code :clj {})
                   "file://some/c.clj" (parser/find-usages c-code :clj {})
-                  "file://some/d.clj" (parser/find-usages d-code :clj {})}})
+                  "file://some/d.clj" (parser/find-usages d-code :clj {})}
+                 :documents
+                 {"file://some/a.clj" {:text a-code}
+                  "file://some/b.clj" {:text b-code}
+                  "file://some/c.clj" {:text c-code}
+                  "file://some/d.clj" {:text d-code}}})
   (testing "single element"
     (let [items (f.call-hierarchy/prepare "file://some/d.clj" 2 7 (parser/find-usages d-code :clj {}) project-root)]
       (is (= 1 (count items)))
       (is (= {:name "d-func"
               :kind :function
               :tags []
-              :detail "/some/d.clj"
+              :detail "some.d"
               :uri "file://some/d.clj"
               :range {:start {:line 1 :character 6} :end {:line 1 :character 12}}
               :selection-range {:start {:line 1 :character 6} :end {:line 1 :character 12}}}
@@ -71,7 +76,7 @@
               :from {:name "c-func"
                      :kind :function
                      :tags []
-                     :detail "/some/c.clj"
+                     :detail "some.c"
                      :uri "file://some/c.clj"
                      :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                      :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
@@ -83,7 +88,7 @@
               :from {:name "b-func"
                      :kind :function
                      :tags []
-                     :detail "/some/b.clj"
+                     :detail "some.b"
                      :uri "file://some/b.clj"
                      :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                      :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
@@ -92,7 +97,7 @@
               :from {:name "b-func-2"
                      :kind :function
                      :tags []
-                     :detail "/some/b.clj"
+                     :detail "some.b"
                      :uri "file://some/b.clj"
                      :range {:start {:line 4 :character 6} :end {:line 4 :character 14}}
                      :selection-range {:start {:line 4 :character 6} :end {:line 4 :character 14}}}}

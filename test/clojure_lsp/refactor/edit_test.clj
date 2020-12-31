@@ -44,3 +44,62 @@
       (is (= 'b (op-from-val (val-finder 'b) 'b)))
       (is (= 'b (op-from-val (comp z/up (val-finder 'b)) 'b))))))
 
+(deftest find-namespace-name
+  (testing "without ns on file"
+    (let [code "(foo ((x) [a] (b {c d})))"
+          zloc (-> code z/of-string (z/find-next-value z/next 'd))]
+      (is (= nil
+             (edit/find-namespace-name zloc)))))
+  (testing "with ns on file"
+    (let [code "(ns some.foo.bar (require [some.foo :as s]))\n
+                (foo ((x) [a] (b {c d})))"
+          zloc (-> code z/of-string (z/find-next-value z/next 'd))]
+      (is (= "some.foo.bar"
+             (edit/find-namespace-name zloc))))))
+
+(defn assert-function-name [code]
+  (let [zloc (-> code z/of-string (z/find-next-value z/next 'd))]
+    (is (= "foo"
+           (z/string (edit/find-function-name zloc))))))
+
+(deftest find-function-name
+  (testing "defn"
+    (testing "simple" (assert-function-name "(defn foo [] (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(defn {:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defn ^{:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defn ^:private foo [] (let [a 1] d))")))
+  (testing "defn-"
+    (testing "simple" (assert-function-name "(defn- foo [] (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(defn- {:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defn- ^{:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defn- ^:private foo [] (let [a 1] d))")))
+  (testing "def"
+    (testing "simple" (assert-function-name "(def foo (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(def {:asd :ds} foo (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(def ^{:asd :ds} foo (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(def ^:private foo (let [a 1] d))")))
+  (testing "defmacro"
+    (testing "simple" (assert-function-name "(defmacro foo [] (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(defmacro {:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defmacro ^{:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defmacro ^:private foo [] (let [a 1] d))")))
+  (testing "defmulti"
+    (testing "simple" (assert-function-name "(defmulti foo [] (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(defmulti {:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defmulti ^{:asd :ds} foo [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defmulti ^:private foo [] (let [a 1] d))")))
+  (testing "defonce"
+    (testing "simple" (assert-function-name "(defonce foo (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(defonce {:asd :ds} foo (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defonce ^{:asd :ds} foo (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defonce ^:private foo (let [a 1] d))")))
+  (testing "s/def"
+    (testing "simple" (assert-function-name "(s/def foo :- s/String (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(s/def {:asd :ds} foo :- s/String (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(s/def ^{:asd :ds} foo :- s/String (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(s/def ^:private foo :- s/String (let [a 1] d))")))
+  (testing "s/defn"
+    (testing "simple" (assert-function-name "(s/defn foo :- s/String [] (let [a 1] d))"))
+    (testing "with map" (assert-function-name "(s/defn {:asd :ds} foo :- s/String [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(s/defn ^{:asd :ds} foo :- s/String [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(s/defn ^:private foo :- s/String [] (let [a 1] d))"))))

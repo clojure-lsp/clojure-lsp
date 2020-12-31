@@ -11,7 +11,7 @@
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
-(def version 4)
+(def version 5)
 
 (defn make-spec [project-root]
   (let [lsp-db (io/file (str project-root) ".lsp" (str "sqlite." version ".db"))]

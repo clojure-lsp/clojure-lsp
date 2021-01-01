@@ -1,0 +1,21 @@
+{:remove-surrounding-whitespace? true
+ :remove-trailing-whitespace? true
+ :remove-consecutive-blank-lines? false
+ :insert-missing-whitespace? true
+ :align-associative? false
+ :indents {#"^reg-" [[:inner 0]]
+           #"^:(require|import)" [[:block 0]]}
+ :test-code
+ (comment
+   (:require
+    [])
+   (:require []
+             [])
+   (:clj
+    [])
+   (reg-event-fx
+    :foo
+    (fn [{db :db} _]))
+   (reg-sub
+    :foo
+    (fn [db [_]])))}

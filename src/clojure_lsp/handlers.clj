@@ -21,7 +21,8 @@
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z])
+    [rewrite-clj.zip :as z]
+    [trptcolin.versioneer.core :as version])
   (:import
     [java.net URL JarURLConnection]))
 
@@ -275,12 +276,14 @@
                                :version v})))
 
 (defn server-info []
-  (let [db @db/db]
+  (let [db @db/db
+        server-version (version/get-version "clojure-lsp" "clojure-lsp")]
     {:type :info
      :message (with-out-str (pprint/pprint {:project-root (:project-root db)
                                             :project-settings (:project-settings db)
                                             :client-settings (:client-settings db)
-                                            :port (:port db)}))}))
+                                            :port (:port db)
+                                            :version server-version}))}))
 
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)

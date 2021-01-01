@@ -1,21 +1,21 @@
 (ns clojure-lsp.crawler
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
-   [clojure-lsp.feature.references :as f.references]
-   [clojure-lsp.shared :as shared]
-   [clojure-lsp.window :as window]
-   [clojure.core.async :as async]
-   [clojure.edn :as edn]
-   [clojure.java.io :as io]
-   [clojure.java.shell :as shell]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [clojure.tools.logging :as log]
-   [digest :as digest])
+    [clojure-lsp.db :as db]
+    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+    [clojure-lsp.feature.references :as f.references]
+    [clojure-lsp.shared :as shared]
+    [clojure-lsp.window :as window]
+    [clojure.core.async :as async]
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [digest :as digest])
   (:import
-   [java.util.jar JarFile]
-   [java.nio.file Paths]))
+    [java.util.jar JarFile]
+    [java.nio.file Paths]))
 
 (defn ^:private file->uri [file]
   (str (.toUri (.toPath file))))
@@ -47,11 +47,12 @@
         declarations (f.diagnostic/usages->declarations usages)
         excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
         declared-refers (->> declarations
-                              (filter (comp #(contains? % :refer) :tags))
-                              (remove (comp excludes :ns)))]
+                             (filter (comp #(contains? % :refer) :tags))
+                             (remove (comp excludes :ns)))]
     (process-unused usages declared-refers)))
 
 (defn crawl-jars [jars dependency-scheme]
+  (log/info "Crawing" (count jars) "jars...")
   (let [jar-dependency-scheme? (= "jar" dependency-scheme)
         xf (comp
              (mapcat (fn [jar-file]
@@ -88,17 +89,18 @@
       (window/show-message "Jars scanned async successfully" :info))))
 
 (defn crawl-source-dirs [dirs]
+  (log/info "Crawing" (count dirs) "source dirs...")
   (let [xf (comp
-            (mapcat file-seq)
-            (filter #(.isFile %))
-            (map file->uri)
-            (filter (fn [uri]
-                      (or (string/ends-with? uri ".clj")
-                          (string/ends-with? uri ".cljc")
-                          (string/ends-with? uri ".cljs"))))
-            (map (juxt identity (fn [uri]
-                                  (f.references/safe-find-references uri (slurp uri) false false))))
-            (remove (comp nil? second)))
+             (mapcat file-seq)
+             (filter #(.isFile %))
+             (map file->uri)
+             (filter (fn [uri]
+                       (or (string/ends-with? uri ".clj")
+                           (string/ends-with? uri ".cljc")
+                           (string/ends-with? uri ".cljs"))))
+             (map (juxt identity (fn [uri]
+                                   (f.references/safe-find-references uri (slurp uri) false false))))
+             (remove (comp nil? second)))
         output-chan (async/chan)]
     (async/pipeline-blocking 5 output-chan xf (async/to-chan! dirs) true (fn [e] (log/warn "Could not crawl source dirs, exception: " e)))
     (async/<!! (async/into {} output-chan))))
@@ -150,55 +152,66 @@
         (.isDirectory e) :directory
         :else :unkown))
 
+(defn ^:private determine-project-dependencies
+  [root-path
+   {:keys [project-hash classpath]}
+   {:keys [source-paths dependency-scheme
+           ignore-classpath-directories async-scan-jars-on-startup?]}]
+  (let [loaded (db/read-deps root-path)
+        use-cp-cache (= (:project-hash loaded) project-hash)
+        classpath (if use-cp-cache
+                    (:classpath loaded)
+                    classpath)
+        classpath-entries-by-type (->> classpath
+                                       reverse
+                                       (map io/file)
+                                       (map #(vector (get-cp-entry-type %) %))
+                                       (group-by first)
+                                       (reduce-kv (fn [m k v]
+                                                    (assoc m k (map second v))) {}))
+        jars (:file classpath-entries-by-type)
+        source-paths (mapv #(to-file root-path %) source-paths)
+        source-envs-chan (async/go (crawl-source-dirs source-paths))
+        file-envs-chan (async/go (when-not ignore-classpath-directories
+                                   (crawl-source-dirs (:directory classpath-entries-by-type))))
+        jar-envs-chan (async/go
+                        (cond
+                          use-cp-cache
+                          (:jar-envs loaded)
+
+                          async-scan-jars-on-startup?
+                          (do (crawl-jars-async jars dependency-scheme root-path project-hash classpath)
+                              {})
+
+                          :else
+                          (crawl-jars jars dependency-scheme)))]
+    (db/save-deps root-path project-hash classpath (async/<!! jar-envs-chan))
+    (if use-cp-cache
+      (log/info "skipping clj-kondo classpath scan due to project hash match")
+      (do
+        (log/info "starting clj-kondo project classpath scan (this takes awhile)")
+        (let [results (f.diagnostic/run-kondo-on-paths! classpath)]
+          (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
+    (merge (async/<!! source-envs-chan)
+           (async/<!! file-envs-chan)
+           (async/<!! jar-envs-chan))))
+
+(defn ^:private determine-non-project-dependencies [root-path settings]
+  (let [source-paths (mapv #(to-file root-path %) (get settings :source-paths))
+        kondo-source-chan (async/go (f.diagnostic/run-kondo-on-paths! source-paths))
+        crawler-output-chan (async/go (crawl-source-dirs source-paths))]
+    (log/info "clj-kondo scanned source paths in"
+              (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))
+    (async/<!! crawler-output-chan)))
+
 (defn determine-dependencies [project-root]
   (let [root-path (shared/uri->path project-root)
         settings (:settings @db/db)
-        source-paths (mapv #(to-file root-path %) (get settings :source-paths))
-        dependency-scheme (get settings :dependency-scheme)
-        ignore-directories? (get settings :ignore-classpath-directories)
         project-specs (or (get settings :project-specs) default-project-specs)
-        project (get-project-from root-path project-specs)
-        async-scan-jars-on-startup? (get settings :async-scan-jars-on-startup? false)]
+        project (get-project-from root-path project-specs)]
     (if (some? project)
-      (let [project-hash (:project-hash project)
-            loaded (db/read-deps root-path)
-            use-cp-cache (= (:project-hash loaded) project-hash)
-            classpath (if use-cp-cache
-                        (:classpath loaded)
-                        (:classpath project))
-            classpath-entries-by-type (->> classpath
-                                           reverse
-                                           (map io/file)
-                                           (map #(vector (get-cp-entry-type %) %))
-                                           (group-by first)
-                                           (reduce-kv (fn [m k v]
-                                                        (assoc m k (map second v))) {}))
-            jars (:file classpath-entries-by-type)
-            source-envs (crawl-source-dirs source-paths)
-            file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))
-            jar-envs (cond
-                       use-cp-cache
-                       (:jar-envs loaded)
-
-                       async-scan-jars-on-startup?
-                       (do (crawl-jars-async jars dependency-scheme root-path project-hash classpath)
-                           {})
-
-                       :else
-                       (crawl-jars jars dependency-scheme))]
-        (db/save-deps root-path project-hash classpath jar-envs)
-        (if use-cp-cache
-          (log/info "skipping classpath scan due to project hash match")
-          (do
-            (log/info "starting clj-kondo project classpath scan (this takes awhile)")
-            (let [results (f.diagnostic/run-kondo-on-paths! classpath)]
-              (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
-        (merge source-envs file-envs jar-envs))
-      (let [kondo-source-chan (async/go (f.diagnostic/run-kondo-on-paths! source-paths))
-            crawler-output-chan (async/go (crawl-source-dirs source-paths))]
-        (log/info "clj-kondo scanned source paths in"
-                  (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))
-        (async/<!! crawler-output-chan)))))
+      (determine-project-dependencies root-path project settings)
+      (determine-non-project-dependencies root-path settings))))
 
 (defn find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]

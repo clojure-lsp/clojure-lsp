@@ -81,7 +81,7 @@
     (async/pipeline-blocking 5 output-chan xf (async/to-chan! jars) true (fn [e] (log/error "Error crawling jars" e)))
     (async/<!! (async/into {} output-chan))))
 
-(defn crawl-jars-async [jars dependency-scheme root-path project-hash classpath]
+(defn crawl-jars-async! [jars dependency-scheme root-path project-hash classpath]
   (async/go
     (let [jar-envs (crawl-jars jars dependency-scheme)]
       (db/save-deps root-path project-hash classpath jar-envs)
@@ -152,7 +152,15 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private determine-project-dependencies
+(defn start-clj-kondo-scan! [use-cp-cache classpath]
+  (if use-cp-cache
+    (log/info "skipping clj-kondo classpath scan due to project hash match")
+    (do
+      (log/info "starting clj-kondo project classpath scan (this takes awhile)")
+      (let [results (f.diagnostic/run-kondo-on-paths! classpath)]
+        (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms"))))))
+
+(defn ^:private determine-project-dependencies!
   [root-path
    {:keys [project-hash classpath]}
    {:keys [source-paths dependency-scheme
@@ -180,23 +188,19 @@
                           (:jar-envs loaded)
 
                           async-scan-jars-on-startup?
-                          (do (crawl-jars-async jars dependency-scheme root-path project-hash classpath)
+                          (do (crawl-jars-async! jars dependency-scheme root-path project-hash classpath)
                               {})
 
                           :else
-                          (crawl-jars jars dependency-scheme)))]
-    (db/save-deps root-path project-hash classpath (async/<!! jar-envs-chan))
-    (if use-cp-cache
-      (log/info "skipping clj-kondo classpath scan due to project hash match")
-      (do
-        (log/info "starting clj-kondo project classpath scan (this takes awhile)")
-        (let [results (f.diagnostic/run-kondo-on-paths! classpath)]
-          (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
+                          (crawl-jars jars dependency-scheme)))
+        jar-envs (async/<!! jar-envs-chan)]
+    (db/save-deps root-path project-hash classpath jar-envs)
+    (start-clj-kondo-scan! use-cp-cache classpath)
     (merge (async/<!! source-envs-chan)
            (async/<!! file-envs-chan)
-           (async/<!! jar-envs-chan))))
+           jar-envs)))
 
-(defn ^:private determine-non-project-dependencies [root-path settings]
+(defn ^:private determine-non-project-dependencies! [root-path settings]
   (let [source-paths (mapv #(to-file root-path %) (get settings :source-paths))
         kondo-source-chan (async/go (f.diagnostic/run-kondo-on-paths! source-paths))
         crawler-output-chan (async/go (crawl-source-dirs source-paths))]
@@ -210,8 +214,8 @@
         project-specs (or (get settings :project-specs) default-project-specs)
         project (get-project-from root-path project-specs)]
     (if (some? project)
-      (determine-project-dependencies root-path project settings)
-      (determine-non-project-dependencies root-path settings))))
+      (determine-project-dependencies! root-path project settings)
+      (determine-non-project-dependencies! root-path settings))))
 
 (defn find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]

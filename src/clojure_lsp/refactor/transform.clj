@@ -270,13 +270,16 @@
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
         single-unused?  (when (and single-require? (z/vector? first-node))
-                         (contains? unused-ns (-> first-node
-                                                       z/down
-                                                       z/leftmost
-                                                       z/sexpr)))]
+                          (contains? unused-ns (-> first-node
+                                                   z/down
+                                                   z/leftmost
+                                                   z/sexpr)))]
     (if single-unused?
       (z/remove first-node)
-      (z/map #(remove-unused-require % unused-ns) nodes))))
+      (let [removed (z/map #(remove-unused-require % unused-ns) nodes)]
+        (if (= :vector (z/tag removed))
+          (z/up removed)
+          removed)))))
 
 (defn clean-ns
   [zloc uri]

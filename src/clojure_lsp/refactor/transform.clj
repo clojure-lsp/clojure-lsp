@@ -10,7 +10,8 @@
    [rewrite-clj.custom-zipper.core :as cz]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]))
+   [rewrite-clj.zip.subedit :as zsub]
+   [clojure-lsp.feature.references :as f.references]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -294,8 +295,9 @@
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
-        unused-aliases (crawler/find-unused-aliases uri)
-        unused-refers (crawler/find-unused-refers uri)
+        usages (f.references/safe-find-references uri (slurp uri) false false)
+        unused-aliases (crawler/find-unused-aliases usages)
+        unused-refers (crawler/find-unused-refers usages)
         removed-nodes (->> require-loc
                            z/remove
                            (remove-unused-requires (set/union unused-aliases unused-refers)))

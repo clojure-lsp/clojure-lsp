@@ -32,18 +32,16 @@
          set
          (set/difference (set (map :ns declarations))))))
 
-(defn find-unused-aliases [uri]
-  (let [usages (f.references/safe-find-references uri (slurp uri) false false)
-        declarations (f.diagnostic/usages->declarations usages)
+(defn find-unused-aliases [usages]
+  (let [declarations (f.diagnostic/usages->declarations usages)
         excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
         declared-aliases (->> declarations
                               (filter (comp #(contains? % :alias) :tags))
                               (remove (comp excludes :ns)))]
     (process-unused usages declared-aliases)))
 
-(defn find-unused-refers [uri]
-  (let [usages (f.references/safe-find-references uri (slurp uri) false false)
-        declarations (f.diagnostic/usages->declarations usages)
+(defn find-unused-refers [usages]
+  (let [declarations (f.diagnostic/usages->declarations usages)
         excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
         declared-refers (->> declarations
                               (filter (comp #(contains? % :refer) :tags))

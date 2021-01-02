@@ -1,6 +1,8 @@
 (ns clojure-lsp.crawler-test
-  (:require [clojure-lsp.crawler :as crawler]
-            [clojure.test :refer :all]))
+  (:require
+   [clojure-lsp.crawler :as crawler]
+   [clojure-lsp.feature.references :as f.references]
+   [clojure.test :refer :all]))
 
 (def unused-alias-code
   "(ns foo.bar
@@ -10,9 +12,9 @@
 
 (deftest find-unused-aliases-test
   (testing "When there is unused aliases"
-    (with-redefs [slurp (constantly unused-alias-code)]
+    (let [usages (f.references/safe-find-references "file://a.clj" unused-alias-code false false)]
       (is (= #{'foo.baz}
-             (crawler/find-unused-aliases "file://a.clj"))))))
+             (crawler/find-unused-aliases usages))))))
 
 (def unused-refer-code
   "(ns foo.bar
@@ -39,14 +41,14 @@
 
 (deftest find-unused-refers-test
   (testing "When there is a unused refer"
-    (with-redefs [slurp (constantly unused-refer-code)]
+    (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-code false false)]
       (is (= #{'foo.baz}
-             (crawler/find-unused-refers "file://a.clj")))))
+             (crawler/find-unused-refers usages)))))
   (testing "When there is a unused refer but used refers on other require"
-    (with-redefs [slurp (constantly unused-refer-with-used-refers-on-other-require-code)]
+    (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-with-used-refers-on-other-require-code false false)]
       (is (= #{'foo.baz}
-             (crawler/find-unused-refers "file://a.clj")))))
+             (crawler/find-unused-refers usages)))))
   (testing "When there is a unused refer but used refers on same require"
-    (with-redefs [slurp (constantly unused-refer-with-used-refers-on-same-require-code)]
+    (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-with-used-refers-on-same-require-code false false)]
       (is (= #{}
-             (crawler/find-unused-refers "file://a.clj"))))))
+             (crawler/find-unused-refers usages))))))

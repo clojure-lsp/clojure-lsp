@@ -33,7 +33,7 @@
 
 (def unused-refer-with-used-refers-on-same-require-code
   "(ns foo.bar
-     (:require [foo.baz :refer [other another]]
+     (:require [foo.baz :refer [other another some-other]]
                [foo.bah :as bah]))
    (def zas
      (bah/some)
@@ -42,13 +42,13 @@
 (deftest find-unused-refers-test
   (testing "When there is a unused refer"
     (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-code false false)]
-      (is (= #{'foo.baz}
+      (is (= #{'foo.baz/other}
              (crawler/find-unused-refers usages)))))
   (testing "When there is a unused refer but used refers on other require"
     (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-with-used-refers-on-other-require-code false false)]
-      (is (= #{'foo.baz}
+      (is (= #{'foo.baz/other}
              (crawler/find-unused-refers usages)))))
   (testing "When there is a unused refer but used refers on same require"
     (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-with-used-refers-on-same-require-code false false)]
-      (is (= #{}
+      (is (= #{'foo.baz/other 'foo.baz/some-other}
              (crawler/find-unused-refers usages))))))

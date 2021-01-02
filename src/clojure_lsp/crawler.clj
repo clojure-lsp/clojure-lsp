@@ -22,31 +22,34 @@
 (defn ^:private to-file [path child]
   (.toFile (.resolve path child)))
 
-(defn ^:private process-unused
-  [usages declarations]
-  (let [ensure-sym (fn [s] (when-not (string? s) s))]
-    (->> usages
-         (remove (comp #(or (contains? % :declare)
-                            (contains? % :refer)) :tags))
-         (map #(some-> % :sym ensure-sym namespace symbol))
-         set
-         (set/difference (set (map :ns declarations))))))
-
 (defn find-unused-aliases [usages]
   (let [declarations (f.diagnostic/usages->declarations usages)
         excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
         declared-aliases (->> declarations
                               (filter (comp #(contains? % :alias) :tags))
-                              (remove (comp excludes :ns)))]
-    (process-unused usages declared-aliases)))
+                              (remove (comp excludes :ns)))
+        ensure-sym (fn [s] (when-not (string? s) s))]
+    (->> usages
+         (remove (comp #(or (contains? % :declare)
+                            (contains? % :refer)) :tags))
+         (map #(some-> % :sym ensure-sym namespace symbol))
+         set
+         (set/difference (set (map :ns declared-aliases))))))
 
 (defn find-unused-refers [usages]
   (let [declarations (f.diagnostic/usages->declarations usages)
         excludes (-> (get-in @db/db [:settings :linters :unused-namespace :exclude] #{}) set)
         declared-refers (->> declarations
                               (filter (comp #(contains? % :refer) :tags))
-                              (remove (comp excludes :ns)))]
-    (process-unused usages declared-refers)))
+                              (remove (comp excludes :ns)))
+        ensure-sym (fn [s] (when-not (string? s) s))]
+    (->> usages
+         (remove (comp #(or (contains? % :declare)
+                            (contains? % :refer)) :tags))
+         (filter #(some-> % :sym ensure-sym namespace))
+         (map #(some-> % :sym ensure-sym))
+         set
+         (set/difference (set (map :sym declared-refers))))))
 
 (defn crawl-jars [jars dependency-scheme]
   (let [jar-dependency-scheme? (= "jar" dependency-scheme)

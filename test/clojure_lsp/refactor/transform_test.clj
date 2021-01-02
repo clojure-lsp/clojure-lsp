@@ -230,6 +230,12 @@
                          "   baz))"
                          "(defn func []"
                          "  (f/some))")))
+  (testing "with refer as single require"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some]]))")
+                   (code "(ns foo.bar)")))
   (testing "in any form"
     (let [to-clean (code "(ns foo.bar"
                          " (:require"
@@ -277,7 +283,26 @@
                          ""
                          "(defn func []"
                          "  b/some"
-                         "  (some))"))))
+                         "  (some))")))
+  (testing "unused refer from multiple refers"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some other] ]))"
+                           "(some)")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some] ]))"
+                           "(some)")))
+  (testing "unused refer and alias"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some] ]"
+                           "   [baz :as b]))")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [baz :as b]))"))))
 
 (deftest add-missing-libspec
   (reset! db/db {:file-envs

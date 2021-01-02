@@ -184,18 +184,14 @@
                                    (crawl-source-dirs (:directory classpath-entries-by-type))))
         jar-envs-chan (async/go
                         (cond
-                          use-cp-cache
-                          (:jar-envs loaded)
-
-                          async-scan-jars-on-startup?
-                          (do (crawl-jars-async! jars dependency-scheme root-path project-hash classpath)
-                              {})
-
-                          :else
-                          (crawl-jars jars dependency-scheme)))
+                          use-cp-cache (:jar-envs loaded)
+                          async-scan-jars-on-startup? {}
+                          :else (crawl-jars jars dependency-scheme)))
         jar-envs (async/<!! jar-envs-chan)]
     (db/save-deps root-path project-hash classpath jar-envs)
     (start-clj-kondo-scan! use-cp-cache classpath)
+    (when start-clj-kondo-scan!
+      (crawl-jars-async! jars dependency-scheme root-path project-hash classpath))
     (merge (async/<!! source-envs-chan)
            (async/<!! file-envs-chan)
            jar-envs)))

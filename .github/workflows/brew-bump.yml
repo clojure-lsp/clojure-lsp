@@ -1,0 +1,12 @@
+name: Brew bump
+
+on:
+  push:
+    tags:
+      - '*'
+
+- name: Update Homebrew formula
+  uses: dawidd6/action-homebrew-bump-formula@v3
+  with:
+    token: ${{secrets.BREW_GITHUB_TOKEN}}
+    formula: clojure-lsp

@@ -47,8 +47,6 @@ nix-shell -p clojure-lsp
 
 </details>
 
-## Troubleshooting
-
 ## [Troubleshooting](docs/troubleshooting.md)
 
 ## Capabilities

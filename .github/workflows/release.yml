@@ -143,21 +143,3 @@ jobs:
           file: clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
-
-  brew-bump:
-    name: Bump brew formula
-    needs: release
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v1
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: dawidd6/action-homebrew-bump-formula@v3
-        with:
-          token: ${{secrets.BREW_GITHUB_TOKEN}}
-          tag: ${{ steps.latest-tag.outputs.tag }}
-          formula: clojure-lsp

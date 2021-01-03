@@ -143,3 +143,14 @@ jobs:
           file: clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
+
+  brew-bump:
+    name: Bump brew formula
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          token: ${{secrets.BREW_GITHUB_TOKEN}}
+          formula: clojure-lsp

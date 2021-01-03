@@ -26,19 +26,26 @@ You will get:
 
 ## Installation
 
-### Manually
+<details>
+<summary><b>Manually</b></summary>
 
 - You need `java` on your $PATH.
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
 - Place it in your $PATH with a chmod 755
 - Follow the documentation for your editor's language client. See [Clients](#clients) below.
 
-### Nix
+</details>
+
+<details>
+<summary><b>Nix</b></summary>
+
 `clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):
 
 ```bash
 nix-shell -p clojure-lsp
 ```
+
+</details>
 
 ## Troubleshooting
 
@@ -46,7 +53,7 @@ See [troubleshooting.md](docs/troubleshooting.md).
 
 ## Capabilities
 
-Bellow are all the currently supported LSP capabilities and their implementation status:
+Below are all the currently supported LSP capabilities and their implementation status:
 
 <details>
 <summary><b>Supported LSP capabilities</b></summary>
@@ -148,6 +155,8 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | √    | unwind-thread       |                                               |                                      |
 
 See Vim client section for an example.
+
+Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io/lsp-mode/)  with the `lsp-clojure-` prefix.
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
 
@@ -303,7 +312,7 @@ See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test
 
 ### Project
 
-LSP will also look for project specific settings in a file called '.lsp/config.edn'. It will search from your root folder up the directory structure so you can have multiple projects share the settings.
+`clojure-lsp` will also look for project specific settings in a file called `.lsp/config.edn`. It will search from your root folder up the directory structure so you can have multiple projects share the same settings.
 
 ```clojure
 {:macro-defs {korma.core/defentity [:declaration :elements]}
@@ -402,6 +411,8 @@ Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completio
 ```
 
 In `lsp-mode`, `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
+
+For more `lsp-mode` clojure settings, check [here](https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/)
 </details>
 
 <details>

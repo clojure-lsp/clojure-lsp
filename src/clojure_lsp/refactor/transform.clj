@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.edit :as edit]
    [clojure.set :as set]
@@ -253,30 +254,67 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
+(defn ^:private safe-remove-node
+  [node]
+  (let [removed-node (-> node z/remove)]
+    (if (z/list? removed-node)
+      (z/down removed-node)
+      (z/up removed-node))))
+
+(defn ^:private remove-unused-refers
+  [node unused-refers]
+  (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr set)
+        unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
+        removed-refers (set/difference node-refers unused-refers-symbol)]
+    (if (empty? removed-refers)
+      (safe-remove-node node)
+      (-> node
+          z/down
+          z/rightmost
+          (z/replace (n/vector-node (vec removed-refers)))
+          z/up))))
+
 (defn ^:private remove-unused-require
-  [node unused-aliases]
-  (if (z/vector? node)
-    (let [alias-node (-> node z/down z/leftmost)]
-      (if (contains? unused-aliases (z/sexpr alias-node))
-        (let [removed-node (-> node z/remove)]
-          (if (z/list? removed-node)
-            (z/down removed-node)
-            (z/up removed-node)))
-        node))
+  [node unused-aliases unused-refers]
+  (cond
+    (not (z/vector? node))
+    node
+
+    (contains? unused-aliases (-> node z/down z/leftmost z/sexpr))
+    (safe-remove-node node)
+
+    (contains? (->> unused-refers (map (comp symbol namespace)) set)
+               (-> node z/down z/leftmost z/sexpr))
+    (remove-unused-refers node unused-refers)
+
+    :else
     node))
 
 (defn ^:private remove-unused-requires
-  [unused-ns nodes]
+  [unused-aliases unused-refers nodes]
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
+        first-node-ns   (when (and single-require?
+                                   (z/vector? first-node))
+                          (-> first-node z/down z/leftmost z/sexpr))
+        first-node-refers (when (and single-require?
+                                     (z/vector? first-node))
+                            (->> (-> first-node
+                                     z/down
+                                     (z/find-next-value ':refer)
+                                     z/right
+                                     z/sexpr)
+                                 (map #(symbol (str first-node-ns) (str %)))
+                                 set))
         single-unused?  (when (and single-require? (z/vector? first-node))
-                         (contains? unused-ns (-> first-node
-                                                       z/down
-                                                       z/leftmost
-                                                       z/sexpr)))]
+                          (or (contains? unused-aliases first-node-ns)
+                              (set/subset? first-node-refers unused-refers)))]
     (if single-unused?
       (z/remove first-node)
-      (z/map #(remove-unused-require % unused-ns) nodes))))
+      (let [removed (z/map #(remove-unused-require % unused-aliases unused-refers) nodes)]
+        (if (= :vector (z/tag removed))
+          (z/up removed)
+          removed)))))
 
 (defn clean-ns
   [zloc uri]
@@ -291,11 +329,12 @@
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
-        unused-aliases (crawler/find-unused-aliases uri)
-        unused-refers (crawler/find-unused-refers uri)
+        usages (f.references/safe-find-references uri (slurp uri) false false)
+        unused-aliases (crawler/find-unused-aliases usages)
+        unused-refers (crawler/find-unused-refers usages)
         removed-nodes (->> require-loc
                            z/remove
-                           (remove-unused-requires (set/union unused-aliases unused-refers)))
+                           (remove-unused-requires unused-aliases unused-refers))
         requires (->> removed-nodes
                       z/node
                       n/children

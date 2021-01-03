@@ -10,6 +10,8 @@
     [clojure.test :refer :all]
     [rewrite-clj.zip :as z]))
 
+(defn code [& strings] (string/join "\n" strings))
+
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]
     (is (= 'b (z/sexpr zloc)))
@@ -149,121 +151,158 @@
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= (str "(def foo (let [a 1]\n          (fn [bar] a 2)))") (z/root-string loc))))))
 
-(def ns-to-clean
-  (str "(ns foo.bar\n"
-       " (:require\n"
-       "   [foo  :as f] [bar :as b] baz [z] ))\n"
-       "(s/defn func []\n"
-       "  (f/some))"))
-
-(def first-require-ns-to-clean
-  (str "(ns foo.bar\n"
-       " (:require\n"
-       "   [foo  :as f] [bar :as b] baz [z] ))\n"
-       "(defn func []\n"
-       "  (b/some))"))
-
-(def single-require-ns-to-clean
-  (str "(ns foo.bar\n"
-       " (:require\n"
-       "   [foo  :as f] ))\n"
-       "(defn func []\n"
-       "  (b/some))"))
-
-(def require-with-refer-ns-to-clean
-  (str "(ns foo.bar\n"
-       " (:require\n"
-       "   [foo  :as f] [bar :refer [some]] baz [z] ))\n"
-       "(defn func []\n"
-       "  (f/some))"))
-
-(def ns-to-clean-with-spaces
-  (str "(ns foo.bar\n"
-       " (:require\n"
-       "   [foo  :as f] [bar :refer [some]] baz [z] ))\n"
-       "\n"
-       "(defn func []\n"
-       "  (f/some))"))
+(defn test-clean-ns
+  ([db input-code expected-code]
+   (test-clean-ns db input-code expected-code true))
+  ([db input-code expected-code in-form]
+   (with-redefs [slurp (constantly input-code)]
+     (reset! db/db db)
+     (let [zloc (when in-form
+                  (-> (z/of-string input-code) z/down z/right z/right))
+           [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
+       (is (some? range))
+       (is (= expected-code
+              (z/root-string loc)))))))
 
 (deftest clean-ns-test
-  (with-redefs [slurp (constantly ns-to-clean)]
-    (testing "without keep-require-at-start?"
-      (reset! db/db {:settings {:keep-require-at-start? false}})
-      (let [zloc (-> (z/of-string ns-to-clean) z/down z/right z/right)
-            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
-        (is (some? range))
-        (is (= (str "(ns foo.bar\n"
-                    " (:require\n"
-                    "   [foo  :as f]\n"
-                    "   [z]\n"
-                    "   baz))\n"
-                    "(s/defn func []\n"
-                    "  (f/some))")
-               (z/root-string loc)))))
-    (testing "with keep-require-at-start?"
-      (reset! db/db {:settings {:keep-require-at-start? true}})
-      (let [zloc (-> (z/of-string ns-to-clean) z/down z/right z/right)
-            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
-        (is (some? range))
-        (is (= (str "(ns foo.bar\n"
-                    " (:require [foo  :as f]\n"
-                    "           [z]\n"
-                    "           baz))\n"
-                    "(s/defn func []\n"
-                    "  (f/some))")
-               (z/root-string loc))))))
-  (with-redefs [slurp (constantly first-require-ns-to-clean)]
-    (testing "with first require as unused"
-      (reset! db/db {})
-      (let [zloc (-> (z/of-string first-require-ns-to-clean) z/down z/right z/right)
-            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
-        (is (some? range))
-        (is (= (str "(ns foo.bar\n"
-                    " (:require\n"
-                    "   [bar :as b]\n"
-                    "   [z]\n"
-                    "   baz))\n"
-                    "(defn func []\n"
-                    "  (b/some))")
-               (z/root-string loc))))))
-  (with-redefs [slurp (constantly single-require-ns-to-clean)]
-    (testing "with single unused require on ns"
-      (reset! db/db {})
-      (let [zloc (-> (z/of-string single-require-ns-to-clean) z/down z/right z/right)
-            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
-        (is (some? range))
-        (is (= (str "(ns foo.bar)\n"
-                    "(defn func []\n"
-                    "  (b/some))")
-               (z/root-string loc))))))
-  (with-redefs [slurp (constantly require-with-refer-ns-to-clean)]
-    (testing "with refer at require"
-      (reset! db/db {})
-      (let [zloc (-> (z/of-string require-with-refer-ns-to-clean) z/down z/right z/right)
-            [{:keys [loc range]}] (transform/clean-ns zloc "file://a.clj")]
-        (is (some? range))
-        (is (= (str "(ns foo.bar\n"
-                    " (:require\n"
-                    "   [foo  :as f]\n"
-                    "   [z]\n"
-                    "   baz))\n"
-                    "(defn func []\n"
-                    "  (f/some))")
-               (z/root-string loc))))))
-  (with-redefs [slurp (constantly ns-to-clean-with-spaces)]
-    (testing "clearing in any form"
-      (reset! db/db {:documents {"file://a.clj" {:text ns-to-clean-with-spaces}}})
-      (let [[{:keys [loc range]}] (transform/clean-ns nil "file://a.clj")]
-        (is (some? range))
-        (is (= (str "(ns foo.bar\n"
-                    " (:require\n"
-                    "   [foo  :as f]\n"
-                    "   [z]\n"
-                    "   baz))\n"
-                    "\n"
-                    "(defn func []\n"
-                    "  (f/some))")
-               (z/root-string loc)))))))
+  (testing "without keep-require-at-start?"
+    (test-clean-ns {:settings {:keep-require-at-start? false}}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :as b] baz [z] ))"
+                         "(s/defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]"
+                         "   [z]"
+                         "   baz))"
+                         "(s/defn func []"
+                         "  (f/some))")))
+  (testing "with keep-require-at-start?"
+    (test-clean-ns {:settings {:keep-require-at-start? true}}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :as b] baz [z] ))"
+                         "(s/defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require [foo  :as f]"
+                         "           [z]"
+                         "           baz))"
+                         "(s/defn func []"
+                         "  (f/some))")))
+  (testing "with first require as unused"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :as b] baz [z] ))"
+                         "(defn func []"
+                         "  (b/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b]"
+                         "   [z]"
+                         "   baz))"
+                         "(defn func []"
+                         "  (b/some))")))
+  (testing "with single unused require on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] ))"
+                         "(defn func []"
+                         "  (b/some))")
+                   (code "(ns foo.bar)"
+                         "(defn func []"
+                         "  (b/some))")))
+  (testing "with refer at require"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :refer [some]] baz [z] ))"
+                         "(defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]"
+                         "   [z]"
+                         "   baz))"
+                         "(defn func []"
+                         "  (f/some))")))
+  (testing "with refer as single require"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some]]))")
+                   (code "(ns foo.bar)")))
+  (testing "in any form"
+    (let [to-clean (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :refer [some]] baz [z] ))"
+                         ""
+                         "(defn func []"
+                         "  (f/some))")]
+      (test-clean-ns {:documents {"file://a.clj" {:text to-clean}}}
+                     to-clean
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [foo  :as f]"
+                           "   [z]"
+                           "   baz))"
+                           ""
+                           "(defn func []"
+                           "  (f/some))")
+                     false)))
+  (testing "with first require as a refer"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some] ] [foo :as f]))"
+                         ""
+                         "(defn func []"
+                         "  (some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some] ]))"
+                         ""
+                         "(defn func []"
+                         "  (some))")))
+  (testing "with first require as a refer with alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b :refer [some] ] [foo :as f]))"
+                         ""
+                         "(defn func []"
+                         "  b/some"
+                         "  (some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b :refer [some] ]))"
+                         ""
+                         "(defn func []"
+                         "  b/some"
+                         "  (some))")))
+  (testing "unused refer from multiple refers"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some other] ]))"
+                           "(some)")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some] ]))"
+                           "(some)")))
+  (testing "unused refer and alias"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some] ]"
+                           "   [baz :as b]))")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [baz :as b]))"))))
 
 (deftest add-missing-libspec
   (reset! db/db {:file-envs

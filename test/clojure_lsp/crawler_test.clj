@@ -1,6 +1,8 @@
 (ns clojure-lsp.crawler-test
-  (:require [clojure-lsp.crawler :as crawler]
-            [clojure.test :refer :all]))
+  (:require
+   [clojure-lsp.crawler :as crawler]
+   [clojure-lsp.feature.references :as f.references]
+   [clojure.test :refer :all]))
 
 (def unused-alias-code
   "(ns foo.bar
@@ -10,9 +12,9 @@
 
 (deftest find-unused-aliases-test
   (testing "When there is unused aliases"
-    (with-redefs [slurp (constantly unused-alias-code)]
+    (let [usages (f.references/safe-find-references "file://a.clj" unused-alias-code false false)]
       (is (= #{'foo.baz}
-             (crawler/find-unused-aliases "file://a.clj"))))))
+             (crawler/find-unused-aliases usages))))))
 
 (def unused-refer-code
   "(ns foo.bar
@@ -31,7 +33,7 @@
 
 (def unused-refer-with-used-refers-on-same-require-code
   "(ns foo.bar
-     (:require [foo.baz :refer [other another]]
+     (:require [foo.baz :refer [other another some-other]]
                [foo.bah :as bah]))
    (def zas
      (bah/some)
@@ -39,14 +41,14 @@
 
 (deftest find-unused-refers-test
   (testing "When there is a unused refer"
-    (with-redefs [slurp (constantly unused-refer-code)]
-      (is (= #{'foo.baz}
-             (crawler/find-unused-refers "file://a.clj")))))
+    (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-code false false)]
+      (is (= #{'foo.baz/other}
+             (crawler/find-unused-refers usages)))))
   (testing "When there is a unused refer but used refers on other require"
-    (with-redefs [slurp (constantly unused-refer-with-used-refers-on-other-require-code)]
-      (is (= #{'foo.baz}
-             (crawler/find-unused-refers "file://a.clj")))))
+    (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-with-used-refers-on-other-require-code false false)]
+      (is (= #{'foo.baz/other}
+             (crawler/find-unused-refers usages)))))
   (testing "When there is a unused refer but used refers on same require"
-    (with-redefs [slurp (constantly unused-refer-with-used-refers-on-same-require-code)]
-      (is (= #{}
-             (crawler/find-unused-refers "file://a.clj"))))))
+    (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-with-used-refers-on-same-require-code false false)]
+      (is (= #{'foo.baz/other 'foo.baz/some-other}
+             (crawler/find-unused-refers usages))))))

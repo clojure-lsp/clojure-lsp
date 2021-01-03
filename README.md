@@ -448,6 +448,13 @@ I tried making a client but my hello world attempt didn't seem to work. If someo
 - Full semantic tokens support
 - Outgoing only Call hierarchy support
 
-## Building local
+## Building manually
 
-For building local, run `lein bin` to generate the binary inside `target` folder or `lein uberjar` for building the jar.
+For building manually, run `lein bin` to generate the binary inside `target` folder or `lein uberjar` for building the standalone jar.
+
+## Development
+
+For `clojure-lsp` development, there are 3 possible ways of finding a bug or implementing a new feature:
+- Create a test for your bug/feature, then implement the code following the test.
+- `clojure-lsp` starts a NREPL server, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the `/tmp/clojure-lsp.out` log, it will print the NREPL port on server startup or you can get it via `server-info` custom LSP command.
+- Build `clojure-lsp` with your changes and test it manually in your client, this is the slowest option, but it makes sense final tests.

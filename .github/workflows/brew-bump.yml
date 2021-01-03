@@ -9,7 +9,8 @@ jobs:
   bump:
     name: Update Homebrew formula
     runs-on: ubuntu-latest
-    uses: dawidd6/action-homebrew-bump-formula@v3
-    with:
-      token: ${{secrets.BREW_GITHUB_TOKEN}}
-      formula: clojure-lsp
+    steps:
+      - uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          token: ${{secrets.BREW_GITHUB_TOKEN}}
+          formula: clojure-lsp

@@ -133,13 +133,16 @@ Besides LSP official capabilities, `clojure-lsp` has some extra features:
 
 It should be possible to introduce most of the refactorings [here](https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples)
 
+<details>
+  <summary><b>More details</b></summary>
+
 Calling `executeCommand` with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
 | done | command             | args                                          | notes                                |
 | ---- | ------------------- | ----                                          | -----                                |
 | √    | add-missing-libspec |                                               |                                      |
-| -    | clean-ns            |                                               | :require sort and remove unused only |
+| √    | clean-ns            |                                               | :require sort and remove unused      |
 | √    | cycle-coll          |                                               |                                      |
 | √    | cycle-privacy       |                                               |                                      |
 | √    | expand-let          |                                               |                                      |
@@ -160,9 +163,14 @@ Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
 
+</details>
+
 ## InitializationOptions
 
-It is possible to pass some options to clojure-lsp through clients' `InitializationOptions`. Options are a map with keys:
+It is possible to pass some options to clojure-lsp through clients' `InitializationOptions`. Options are a map with keys.
+
+<details>
+  <summary><b>All supported settings</b></summary>
 
 `source-paths` value is a set of project-local directories to look for clj/cljc/cljs files. Default is `#{"src", "test"}`.
 
@@ -226,6 +234,8 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
   - `:project-path` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
   - `:classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
   - `:env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE" "x.boot"}`)
+
+</details>
 
 ### macro-defs
 

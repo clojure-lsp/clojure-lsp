@@ -2,7 +2,8 @@
   (:require
    [clojure-lsp.feature.definition :as f.definition]
    [clojure-lsp.feature.refactor :as f.refactor]
-   [clojure-lsp.refactor.transform :as r.transform]))
+   [clojure-lsp.refactor.transform :as r.transform]
+   [rewrite-clj.zip :as z]))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
@@ -13,7 +14,10 @@
         line (dec row)
         character (dec col)
         has-unknow-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
-        missing-ns (when has-unknow-ns?
+        unresolved-symbol (first (filter #(= (compare "unresolved-symbol" (some-> % .getCode .get)) 0) diagnostics))
+        known-refer? (when unresolved-symbol
+                       (get r.transform/common-refers->info (z/sexpr zloc)))
+        missing-ns (when (or has-unknow-ns? known-refer?)
                      (f.refactor/call-refactor {:loc zloc
                                                 :refactoring :add-missing-libspec
                                                 :uri uri
@@ -22,7 +26,7 @@
                                                 :col col}))]
     (cond-> []
 
-      (and has-unknow-ns? missing-ns)
+      missing-ns
       (conj {:title          "Add missing namespace"
              :kind           :quick-fix
              :preferred?     true

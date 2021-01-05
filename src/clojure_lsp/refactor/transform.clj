@@ -458,7 +458,7 @@
                                         (z/find-value z/next ':refer)
                                         z/right
                                         (cz/append-child (n/spaces 1))
-                                        (z/append-child 'testing))
+                                        (z/append-child (z/sexpr zloc)))
                            (z/subedit-> ns-loc
                                         (cond->
                                             add-require? (z/append-child (n/newlines 1))

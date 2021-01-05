@@ -342,7 +342,13 @@
     (testing "we don't add existing refers"
       (reset! db/db {:file-envs {}})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [testing]])) testing") z/rightmost)]
-        (is (= nil (transform/add-missing-libspec zloc)))))))
+        (is (= nil (transform/add-missing-libspec zloc)))))
+    (testing "we can add multiple refers"
+      (reset! db/db {:file-envs {}})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest testing]])) is") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]])) (z/sexpr loc)))))))
 
 (deftest unwind-thread-test
   (let [zloc (z/of-string "(-> a b (c) d)")

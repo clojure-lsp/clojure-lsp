@@ -82,6 +82,9 @@
 
 (defn crawl-source-dirs [dirs]
   (let [xf (comp
+             (map (fn [dir]
+                    (log/info "Crawling dir" (.getPath dir))
+                    dir))
             (mapcat file-seq)
             (filter #(.isFile %))
             (map file->uri)

@@ -2,7 +2,8 @@
   (:require
    [clojure-lsp.feature.definition :as f.definition]
    [clojure-lsp.feature.refactor :as f.refactor]
-   [clojure-lsp.refactor.transform :as r.transform]))
+   [clojure-lsp.refactor.transform :as r.transform]
+   [rewrite-clj.zip :as z]))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
@@ -12,21 +13,25 @@
         inline-symbol? (r.transform/inline-symbol? def-uri definition)
         line (dec row)
         character (dec col)
-        has-unknow-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
-        missing-ns (when has-unknow-ns?
+        has-unknown-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
+        unresolved-symbol (first (filter #(= (compare "unresolved-symbol" (some-> % .getCode .get)) 0) diagnostics))
+        known-refer? (when unresolved-symbol
+                       (get r.transform/common-refers->info (z/sexpr zloc)))
+        missing-ns (when (or has-unknown-ns? known-refer?)
                      (f.refactor/call-refactor {:loc zloc
                                                 :refactoring :add-missing-libspec
                                                 :uri uri
                                                 :version 0
                                                 :row row
-                                                :col col}))]
+                                                :col col
+                                                :args {:source :code-action}}))]
     (cond-> []
 
-      (and has-unknow-ns? missing-ns)
-      (conj {:title          "Add missing namespace"
+      (:result missing-ns)
+      (conj {:title          (str "Add missing '" (-> missing-ns :code-action-data :ns-name) "' namespace")
              :kind           :quick-fix
              :preferred?     true
-             :workspace-edit missing-ns})
+             :workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-ns))})
 
       inline-symbol?
       (conj {:title   "Inline symbol"

@@ -305,19 +305,44 @@
                            "   [baz :as b]))"))))
 
 (deftest add-missing-libspec
-  (testing "simple"
-    (reset! db/db {:file-envs
-                   {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj {})}})
-    (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
-          [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
-      (is (some? range))
-      (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
-  (testing "common aliases"
-    (reset! db/db {:file-envs {}})
-    (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-          [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
-      (is (some? range))
-      (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc))))))
+  (testing "aliases"
+    (testing "known namespaces in project"
+      (reset! db/db {:file-envs
+                     {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj {})}})
+      (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
+    (testing "common ns aliases"
+      (reset! db/db {:file-envs {}})
+      (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc))))))
+  (testing "common refers"
+    (testing "when require doesn't exists"
+      (reset! db/db {:file-envs {}})
+      (let [zloc (-> (z/of-string "(ns foo) deftest") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+    (testing "when already exists another require"
+      (reset! db/db {:file-envs {}})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.set :refer [subset?]])) deftest") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.set :refer [subset?]]
+                                  [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+    (testing "when already exists that ns with another refer"
+      (reset! db/db {:file-envs {}})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :refer [deftest testing]])) (z/sexpr loc)))))
+    (testing "we don't add existing refers"
+      (reset! db/db {:file-envs {}})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [testing]])) testing") z/rightmost)]
+        (is (= nil (transform/add-missing-libspec zloc)))))))
 
 (deftest unwind-thread-test
   (let [zloc (z/of-string "(-> a b (c) d)")

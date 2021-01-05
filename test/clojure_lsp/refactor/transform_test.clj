@@ -305,12 +305,19 @@
                            "   [baz :as b]))"))))
 
 (deftest add-missing-libspec
-  (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj {})}})
-  (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
-        [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
-    (is (some? range))
-    (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
+  (testing "simple"
+    (reset! db/db {:file-envs
+                   {"file://a.clj" (parser/find-usages "(ns a (:require [foo.s :as s]))" :clj {})}})
+    (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
+          [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+      (is (some? range))
+      (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
+  (testing "common aliases"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
+          [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+      (is (some? range))
+      (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc))))))
 
 (deftest unwind-thread-test
   (let [zloc (z/of-string "(-> a b (c) d)")

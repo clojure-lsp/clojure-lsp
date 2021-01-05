@@ -11,7 +11,8 @@
    [rewrite-clj.custom-zipper.core :as cz]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]))
+   [rewrite-clj.zip.subedit :as zsub]
+   [clojure.tools.logging :as log]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -384,6 +385,13 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
+(def common-alias->info
+  {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
+   :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
+   :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
+   :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
+   :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
+
 (defn add-missing-libspec
   [zloc]
   (let [ns-str-to-add (some-> zloc z/sexpr namespace)
@@ -405,9 +413,9 @@
                                               sym)}))
                          (distinct)
                          (group-by :alias-str))
-        posibilities (get alias->info ns-str-to-add)
-        qualified-ns-to-add (cond
-                              (= 1 (count posibilities))
+        posibilities (or (get alias->info ns-str-to-add)
+                         [(get common-alias->info (keyword ns-str-to-add))])
+        qualified-ns-to-add (when (= 1 (count posibilities))
                               (-> posibilities first :alias-ns))]
     (add-known-libspec zloc ns-to-add qualified-ns-to-add)))
 

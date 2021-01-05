@@ -23,14 +23,15 @@
                                                 :uri uri
                                                 :version 0
                                                 :row row
-                                                :col col}))]
+                                                :col col
+                                                :args {:source :code-action}}))]
     (cond-> []
 
-      missing-ns
-      (conj {:title          "Add missing namespace"
+      (:result missing-ns)
+      (conj {:title          (str "Add missing '" (-> missing-ns :code-action-data :ns-name) "' namespace")
              :kind           :quick-fix
              :preferred?     true
-             :workspace-edit missing-ns})
+             :workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-ns))})
 
       inline-symbol?
       (conj {:title   "Inline symbol"

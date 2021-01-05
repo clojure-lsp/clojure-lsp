@@ -18,8 +18,8 @@
 
 (defmulti refactor (comp :refactoring))
 
-(defmethod refactor :add-missing-libspec [{:keys [loc]}]
-  (r.transform/add-missing-libspec loc))
+(defmethod refactor :add-missing-libspec [{:keys [loc args]}]
+  (r.transform/add-missing-libspec loc args))
 
 (defmethod refactor :clean-ns [{:keys [loc uri]}]
   (r.transform/clean-ns loc uri))
@@ -74,11 +74,20 @@
        (map name)
        vec))
 
+(defn refactor-client-seq-changes [uri version result]
+  (let [changes [{:text-document {:uri uri :version version}
+                  :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
+    (client-changes changes)))
+
 (defn call-refactor [{:keys [loc uri refactoring row col version] :as data}]
   (let [result (refactor data)]
     (if (or loc
             (= :clean-ns refactoring))
       (cond
+        (and (map? result)
+             (contains? result :code-action-data))
+        result
+
         (map? result)
         (let [changes (vec (for [[doc-id sub-results] result]
                              {:text-document {:uri doc-id :version version}
@@ -86,9 +95,7 @@
           (client-changes changes))
 
         (seq result)
-        (let [changes [{:text-document {:uri uri :version version}
-                        :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
-          (client-changes changes))
+        (refactor-client-seq-changes uri version result)
 
         (empty? result)
         (log/warn refactoring "made no changes" (z/string loc))

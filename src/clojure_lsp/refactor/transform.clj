@@ -392,7 +392,7 @@
    :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
    :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
 
-(defn ^:private add-missing-alias-ns [zloc]
+(defn ^:private add-missing-alias-ns [zloc source]
   (let [ns-str-to-add (some-> zloc z/sexpr namespace)
         ns-to-add (some-> ns-str-to-add symbol)
         alias->info (->> (:file-envs @db/db)
@@ -415,8 +415,12 @@
         posibilities (or (get alias->info ns-str-to-add)
                          [(get common-alias->info (keyword ns-str-to-add))])
         qualified-ns-to-add (when (= 1 (count posibilities))
-                              (-> posibilities first :alias-ns))]
-    (add-known-libspec zloc ns-to-add qualified-ns-to-add)))
+                              (-> posibilities first :alias-ns))
+        result (add-known-libspec zloc ns-to-add qualified-ns-to-add)]
+    (if (= source :code-action)
+      {:result result
+       :code-action-data {:ns-name qualified-ns-to-add}}
+      result)))
 
 (def common-refers->info
   {'deftest      'clojure.test
@@ -438,7 +442,7 @@
    'fact         'midje.sweet
    'facts        'midje.sweet})
 
-(defn ^:private add-missing-refer [zloc]
+(defn ^:private add-missing-refer [zloc source]
   (when-let [qualified-ns-to-add (get common-refers->info (z/sexpr zloc))]
     (let [refer-to-add (-> zloc z/sexpr symbol)
           ns-loc (edit/find-namespace zloc)
@@ -468,16 +472,20 @@
                                         (z/up)
                                         (cz/append-child (n/newlines 1))
                                         (cz/append-child (n/spaces (dec col)))
-                                        (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))]
-          [{:range (meta (z/node result-loc))
-            :loc result-loc}])))))
+                                        (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))
+              result [{:range (meta (z/node result-loc))
+                       :loc result-loc}]]
+          (if (= source :code-action)
+            {:result result
+             :code-action-data {:ns-name qualified-ns-to-add}}
+            result))))))
 
 (defn add-missing-libspec
-  [zloc]
+  [zloc {:keys [source]}]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (add-missing-alias-ns zloc)
-      (add-missing-refer zloc))))
+      (add-missing-alias-ns zloc source)
+      (add-missing-refer zloc source))))
 
 (defn extract-function
   [zloc fn-name usages]

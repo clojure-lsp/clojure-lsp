@@ -420,7 +420,10 @@ Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completio
 
 In `lsp-mode`, `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
 
+For a detailed guide on how to configure Emacs with LSP, check [here](https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/)
+
 For more `lsp-mode` clojure settings, check [here](https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/)
+
 </details>
 
 <details>

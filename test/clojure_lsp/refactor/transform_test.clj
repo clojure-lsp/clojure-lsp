@@ -308,6 +308,7 @@
                            "   [bar :refer [some] ]"
                            "   [baz :as b]))")
                      (code "(ns foo.bar)"))))
+
 (deftest add-missing-libspec
   (testing "aliases"
     (testing "known namespaces in project"
@@ -322,7 +323,25 @@
       (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
         (is (some? range))
-        (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc))))))
+        (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
+    (testing "with keep-require-at-start?"
+      (testing "we add first require without spaces"
+        (reset! db/db {:file-envs {}
+                       :settings {:keep-require-at-start? true}})
+        (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
+          (is (some? range))
+          (is (= (code "(ns foo "
+                       "  (:require [clojure.set :as set]))") (z/string loc)))))
+      (testing "next requires follow the same pattern"
+        (reset! db/db {:file-envs {}
+                       :settings {:keep-require-at-start? true}})
+        (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
+          (is (some? range))
+          (is (= (code "(ns foo "
+                       "  (:require [foo :as bar]"
+                       "            [clojure.set :as set]))") (z/string loc)))))))
   (testing "common refers"
     (testing "when require doesn't exists"
       (reset! db/db {:file-envs {}})
@@ -336,7 +355,7 @@
             [{:keys [loc range]}] (transform/add-missing-libspec zloc nil)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :refer [subset?]]
-                                  [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+                          [clojure.test :refer [deftest]])) (z/sexpr loc)))))
     (testing "when already exists that ns with another refer"
       (reset! db/db {:file-envs {}})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)

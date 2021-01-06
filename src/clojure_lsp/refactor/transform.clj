@@ -370,17 +370,22 @@
     (when (and ns-to-add qualified-ns-to-add need-to-add?)
       (let [add-require? (not (z/find-value ns-zip z/next :require))
             require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+            keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
             col (if require-loc
                   (:col (meta (z/node (z/rightmost require-loc))))
-                  5)
+                  (if keep-require-at-start?
+                    2
+                    5))
             result-loc (z/subedit-> ns-loc
                                     (cond->
-                                      add-require? (z/append-child (n/newlines 1))
-                                      add-require? (z/append-child (n/spaces 2))
-                                      add-require? (z/append-child (list :require)))
+                                     add-require? (z/append-child (n/newlines 1))
+                                     add-require? (z/append-child (n/spaces 2))
+                                     add-require? (z/append-child (list :require)))
                                     (z/find-value z/next :require)
                                     (z/up)
-                                    (cz/append-child (n/newlines 1))
+                                    (cond->
+                                        (or (not add-require?)
+                                            (not keep-require-at-start?)) (cz/append-child (n/newlines 1)))
                                     (cz/append-child (n/spaces (dec col)))
                                     (z/append-child [qualified-ns-to-add :as ns-to-add]))]
         [{:range (meta (z/node result-loc))

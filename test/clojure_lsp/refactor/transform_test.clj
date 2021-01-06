@@ -216,6 +216,13 @@
                    (code "(ns foo.bar)"
                          "(defn func []"
                          "  (b/some))")))
+  (testing "with multiple unused requires on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]"
+                         "   [bar :as b]))")
+                   (code "(ns foo.bar)")))
   (testing "with refer at require"
     (test-clean-ns {}
                    (code "(ns foo.bar"
@@ -300,10 +307,7 @@
                            " (:require"
                            "   [bar :refer [some] ]"
                            "   [baz :as b]))")
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [baz :as b]))"))))
-
+                     (code "(ns foo.bar)"))))
 (deftest add-missing-libspec
   (testing "aliases"
     (testing "known namespaces in project"

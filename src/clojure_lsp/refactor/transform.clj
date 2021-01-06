@@ -256,11 +256,12 @@
                        (edit/join-let))}]))))))
 
 (defn ^:private safe-remove-node
+  "Probably a bug on rewrite-clj where it's not possible
+  to remove all elements of a z/map, so we replace with whitespace
+  to remove it later.
+  https://github.com/clj-commons/rewrite-clj/issues/86"
   [node]
-  (let [removed-node (-> node z/remove)]
-    (if (z/list? removed-node)
-      (z/down removed-node)
-      (z/up removed-node))))
+  (z/replace node (n/whitespace-node " ")))
 
 (defn ^:private remove-unused-refers
   [node unused-refers]

@@ -12,6 +12,69 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
+(deftest add-import-to-namespace-test
+  (testing "when there is no :import form"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+      (is (some? range))
+      (is (= (code "(ns foo.bar "
+                   "  (:import"
+                   "    java.util.Date))") (z/root-string loc)))))
+  (testing "when there is no :import form with keep-require-at-start?"
+    (reset! db/db {:file-envs {}
+                   :settings {:keep-require-at-start? true}})
+    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+      (is (some? range))
+      (is (= (code "(ns foo.bar "
+                   "  (:import java.util.Date))") (z/root-string loc)))))
+  (testing "when there is a :import form already"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string (code "(ns foo.bar "
+                                      "  (:import "
+                                      "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+      (is (some? range))
+      (is (= (code "(ns foo.bar "
+                   "  (:import "
+                   "    java.util.Calendar"
+                   "    java.util.Date))") (z/root-string loc)))))
+  (testing "when there is a;ready that :import imported"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string (code "(ns foo.bar "
+                                      "  (:import "
+                                      "    java.util.Date)) Date.")) (z/find-value z/next 'Date.))]
+      (is (= nil
+             (transform/add-import-to-namespace zloc "java.util.Date")))))
+  (testing "when there is only a :require form"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string (code "(ns foo.bar"
+                                      "  (:require"
+                                      "    [foo.baz :as baz])) Date.")) (z/find-value z/next 'Date.))
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+      (is (some? range))
+      (is (= (code "(ns foo.bar"
+                   "  (:require"
+                   "    [foo.baz :as baz]) "
+                   "  (:import"
+                   "    java.util.Date))") (z/root-string loc)))))
+  (testing "when there is a :require form and :import form"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string (code "(ns foo.bar"
+                                      "  (:require"
+                                      "    [foo.baz :as baz])"
+                                      "  (:import"
+                                      "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+      (is (some? range))
+      (is (= (code "(ns foo.bar"
+                   "  (:require"
+                   "    [foo.baz :as baz])"
+                   "  (:import"
+                   "    java.util.Calendar"
+                   "    java.util.Date))") (z/root-string loc))))))
+
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]
     (is (= 'b (z/sexpr zloc)))

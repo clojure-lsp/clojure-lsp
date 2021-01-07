@@ -18,6 +18,9 @@
 
 (defmulti refactor (comp :refactoring))
 
+(defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
+  (r.transform/add-import-to-namespace loc (vec args)))
+
 (defmethod refactor :add-missing-libspec [{:keys [loc args]}]
   (r.transform/add-missing-libspec loc args))
 

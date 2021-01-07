@@ -361,35 +361,43 @@
     [{:range (meta (z/node result-loc))
       :loc result-loc}]))
 
-(defn add-known-libspec
-  [zloc ns-to-add qualified-ns-to-add]
+(defn ^:private add-form-to-namespace [zloc form-to-add form-type]
   (let [ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
-        need-to-add? (and (not (z/find-value ns-zip z/next qualified-ns-to-add))
-                          (not (z/find-value ns-zip z/next ns-to-add)))]
-    (when (and ns-to-add qualified-ns-to-add need-to-add?)
-      (let [add-require? (not (z/find-value ns-zip z/next :require))
-            require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+        cursor-sym (z/sexpr zloc)
+        need-to-add? (and (not (z/find-value ns-zip z/next cursor-sym))
+                          (not (z/find-value ns-zip z/next form-to-add)))]
+    (when (and form-to-add need-to-add?)
+      (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
+            form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
             keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-            col (if require-loc
-                  (:col (meta (z/node (z/rightmost require-loc))))
+            col (if form-type-loc
+                  (:col (meta (z/node (z/rightmost form-type-loc))))
                   (if keep-require-at-start?
                     2
                     5))
-            result-loc (z/subedit-> ns-loc
+            result-loc (z/subedit-> ns-zip
                                     (cond->
-                                     add-require? (z/append-child (n/newlines 1))
-                                     add-require? (z/append-child (n/spaces 2))
-                                     add-require? (z/append-child (list :require)))
-                                    (z/find-value z/next :require)
+                                        add-form-type? (z/append-child (n/newlines 1))
+                                        add-form-type? (z/append-child (n/spaces 2))
+                                        add-form-type? (z/append-child (list form-type)))
+                                    (z/find-value z/next form-type)
                                     (z/up)
                                     (cond->
-                                        (or (not add-require?)
+                                        (or (not add-form-type?)
                                             (not keep-require-at-start?)) (cz/append-child (n/newlines 1)))
                                     (cz/append-child (n/spaces (dec col)))
-                                    (z/append-child [qualified-ns-to-add :as ns-to-add]))]
+                                    (z/append-child form-to-add))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
+
+(defn add-import-to-namespace [zloc import-name]
+  (add-form-to-namespace zloc (symbol import-name) :import))
+
+(defn add-known-libspec
+  [zloc ns-to-add qualified-ns-to-add]
+  (when (and qualified-ns-to-add ns-to-add)
+    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require)))
 
 (def common-alias->info
   {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}

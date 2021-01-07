@@ -3,6 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.references :as f.references]
+   [clojure-lsp.interop :as interop]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
@@ -106,7 +107,13 @@
           (string/trim-newline)
           (string/split sep)))
     (catch Exception e
-      (log/warn e "Error while looking up classpath info in" (str root-path) (.getMessage e))
+      (let [error-message (str "Error while looking up classpath info in " root-path ". " 
+                               (.getMessage e))]
+        (log/warn e error-message)
+        (.showMessage (:client @db/db)
+                      (interop/conform-or-log ::interop/show-message
+                                              {:type :error
+                                               :message error-message})))
       [])))
 
 (defn try-project [root-path project-path command-args env]
@@ -204,3 +211,11 @@
   (->> (find-raw-project-settings project-root)
        (edn/read-string {:readers {'re re-pattern}})
        shared/keywordize-first-depth))
+
+(comment
+  (.showMessage (:client @db/db)
+                (interop/conform-or-log ::interop/show-message 
+                                        {:type :error
+                                         :message "hello world"}))
+  
+  (lookup-classpath "/home/brandon/development/clojure-test" ["cljs" "-Spath"] nil))

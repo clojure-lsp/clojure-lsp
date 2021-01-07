@@ -75,6 +75,22 @@
                    "    java.util.Calendar"
                    "    java.util.Date))") (z/root-string loc))))))
 
+(deftest add-common-import-to-namespace-test
+  (testing "when we known the import"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
+          {:keys [result code-action-data]} (transform/add-common-import-to-namespace zloc)
+          [{:keys [loc range]}] result]
+      (is (some? range))
+      (is (= 'java.util.Date (:import-name code-action-data)))
+      (is (= (code "(ns foo.bar "
+                   "  (:import"
+                   "    java.util.Date))") (z/root-string loc)))))
+  (testing "when we don't known the import"
+    (reset! db/db {:file-envs {}})
+    (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'Date.))]
+      (is (= nil (transform/add-common-import-to-namespace zloc))))))
+
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]
     (is (= 'b (z/sexpr zloc)))

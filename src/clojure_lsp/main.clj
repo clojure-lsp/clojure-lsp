@@ -2,10 +2,11 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
-   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.window :as window]
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
    [nrepl.server :as nrepl.server]
@@ -90,10 +91,6 @@
              (log/debug ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
-
-(defn ^:private execute-server-info []
-  (.showMessage (:client @db/db)
-                (interop/conform-or-log ::interop/show-message (#'handlers/server-info))))
 
 (defn ^:private execute-refactor [command args]
   (let [[doc-id line col & args] (map interop/json->clj args)]
@@ -384,7 +381,7 @@
               (log/info "Executing command" command "with args" args)
               (cond
                 (= command "server-info")
-                (execute-server-info)
+                (window/show-message (handlers/server-info))
 
                 (some #(= % command) f.refactor/available-refactors)
                 (execute-refactor command args))))))

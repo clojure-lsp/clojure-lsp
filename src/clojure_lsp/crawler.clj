@@ -4,6 +4,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.window :as window]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -110,7 +111,8 @@
           (string/trim-newline)
           (string/split sep)))
     (catch Exception e
-      (log/warn e "Error while looking up classpath info in" (str root-path) (.getMessage e))
+      (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
+      (window/show-message "Error looking up classpath info" :error)
       [])))
 
 (defn try-project [root-path project-path command-args env]
@@ -120,15 +122,22 @@
             classpath (lookup-classpath root-path command-args env)]
         {:project-hash file-hash :classpath classpath}))))
 
+(defn ^:private classpath-cmd->windows-safe-classpath-cmd
+  [classpath]
+  (if (shared/windows-os?)
+    (concat ["powershell.exe"] classpath)
+    classpath))
+
 (def ^:private default-project-specs
-  [{:project-path "project.clj"
-    :classpath-cmd ["lein" "classpath"]}
-   {:project-path "deps.edn"
-    :classpath-cmd ["clj" "-Spath"]}
-   {:project-path "build.boot"
-    :classpath-cmd ["boot" "show" "--fake-classpath"]}
-   {:project-path "shadow-cljs.edn"
-    :classpath-cmd ["shadow-cljs" "classpath"]}])
+  (->> [{:project-path "project.clj"
+         :classpath-cmd ["lein" "classpath"]}
+        {:project-path "deps.edn"
+         :classpath-cmd ["clj" "-Spath"]}
+        {:project-path "build.boot"
+         :classpath-cmd ["boot" "show" "--fake-classpath"]}
+        {:project-path "shadow-cljs.edn"
+         :classpath-cmd ["shadow-cljs" "classpath"]}]
+       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
 (defn get-project-from [root-path project-specs]
   (reduce

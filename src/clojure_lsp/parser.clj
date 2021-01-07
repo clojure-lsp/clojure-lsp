@@ -18,22 +18,6 @@
 (declare find-usages*)
 (declare parse-destructuring)
 
-(def core-refers
-  (->> cc/core-syms
-       (mapv (juxt identity (constantly 'clojure.core)))
-       (into {})))
-
-(def cljs-refers
-  (->> cc/core-syms
-       (concat cc/cljs-syms)
-       (mapv (juxt identity (constantly 'cljs.core)))
-       (into {})))
-
-(def lang-imports
-  (->> cc/java-lang-syms
-       (mapv (juxt identity #(symbol (str "java.lang." (name %)))))
-       (into {})))
-
 (def default-env
   {:ns 'user
    :refer-all-syms {}
@@ -149,15 +133,15 @@
           local-classes' (->> local-classes
                               (map (juxt identity #(symbol (str (name ns) "." %))))
                               (into {}))
-          java-classes (merge local-classes' imports lang-imports)
+          java-classes (merge local-classes' imports cc/java-lang-imports)
           java-sym (get java-classes (symbol (string/replace ident-name #"\.$" "")))
           refered (get refers ident-name)
           required-ns (get requires ident-ns)
           ctr (if (symbol? ident) symbol keyword)
-          core-clj? (and (= :clj file-type) (contains? core-refers ident))
-          core-cljs? (and (= :cljs file-type) (contains? cljs-refers ident))
-          core-clj-symbol (when core-clj? (ctr (name (get core-refers ident)) ident-name))
-          core-cljs-symbol (when core-cljs? (ctr (name (get cljs-refers ident)) ident-name))
+          core-clj? (and (= :clj file-type) (contains? cc/core-refers ident))
+          core-cljs? (and (= :cljs file-type) (contains? cc/cljs-refers ident))
+          core-clj-symbol (when core-clj? (ctr (name (get cc/core-refers ident)) ident-name))
+          core-cljs-symbol (when core-cljs? (ctr (name (get cc/cljs-refers ident)) ident-name))
           core-macro? (and (or core-clj? core-cljs?)
                            (contains? default-macro-defs (or core-clj-symbol core-cljs-symbol)))
           known-macro? (or core-macro?
@@ -195,8 +179,8 @@
               (contains? imports ident-ns)
               {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:java :method :norename}}
 
-              (contains? lang-imports ident-ns)
-              {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:java :method :norename}}
+              (contains? cc/java-lang-imports ident-ns)
+              {:sym (symbol (name (get cc/java-lang-imports ident-ns)) ident-name) :tags #{:java :method :norename}}
 
               (and (= :cljs file-type) (= 'js ident-ns))
               {:sym ident :tags #{:method :norename}}

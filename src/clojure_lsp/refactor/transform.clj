@@ -12,7 +12,8 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [clojure-lsp.clojure-core :as cc]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -393,6 +394,15 @@
 
 (defn add-import-to-namespace [zloc import-name]
   (add-form-to-namespace zloc (symbol import-name) :import))
+
+(defn add-common-import-to-namespace [zloc]
+  (let [class-with-dot (z/sexpr zloc)
+        class-name (->> class-with-dot str drop-last (string/join "") symbol)]
+    (when-let [import-name (or (get cc/java-util-imports class-name)
+                               (get cc/java-util-imports class-with-dot))]
+      (let [result (add-form-to-namespace zloc (symbol import-name) :import)]
+        {:result result
+         :code-action-data {:import-name import-name}}))))
 
 (defn add-known-libspec
   [zloc ns-to-add qualified-ns-to-add]

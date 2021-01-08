@@ -573,12 +573,12 @@
 (defn- arglists-to-signatures
   [arglists]
   (cond
-    (= 'quote (first arglists))
+    (= 'quote (nth arglists 0 nil))
     (let [sexprs (eval arglists)]
       {:sexprs (seq sexprs)
        :strings (map str sexprs)})
 
-    (string? (first arglists))
+    (string? (nth arglists 0 nil))
     {:sexprs (map (comp z/sexpr z/of-string) arglists)
      :strings arglists}
 

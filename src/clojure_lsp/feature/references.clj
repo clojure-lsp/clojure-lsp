@@ -21,12 +21,12 @@
   (let [file-types (if (= :cljc file-type)
                      #{:clj :cljs}
                      #{file-type})]
-    (->> env
-         (filter (comp #(set/subset? % file-types) :file-type))
-         (filter (comp #{:within} (partial shared/check-bounds line column)))
-         ;; Pushes keywords last
-         (sort-by (comp keyword? :sym))
-         (first))))
+    (-> (->> env
+             (filter (comp #(set/subset? % file-types) :file-type))
+             (filter (comp #{:within} (partial shared/check-bounds line column)))
+           ;; Pushes keywords last
+             (sort-by (comp keyword? :sym)))
+        (nth 0 nil))))
 
 (defn reference-usages [doc-id line column]
   (let [file-envs (:file-envs @db/db)

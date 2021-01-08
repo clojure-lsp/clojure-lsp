@@ -14,7 +14,7 @@
         line (dec row)
         character (dec col)
         has-unknown-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
-        unresolved-symbol (first (filter #(= (compare "unresolved-symbol" (some-> % .getCode .get)) 0) diagnostics))
+        unresolved-symbol (some #(= (compare "unresolved-symbol" (some-> % .getCode .get)) 0) diagnostics)
         known-refer? (when unresolved-symbol
                        (get r.transform/common-refers->info (z/sexpr zloc)))
         missing-require (when (or has-unknown-ns? known-refer?)

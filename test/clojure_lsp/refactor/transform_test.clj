@@ -380,6 +380,20 @@
                            " (:require"
                            "   [bar :refer [some] ]))"
                            "(some)")))
+  (testing "unused middle refer from multiple refers"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some other baz another] ]))"
+                           "(some)"
+                           "(another)"
+                           "(baz)")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [another baz some] ]))"
+                           "(some)"
+                           "(another)"
+                           "(baz)")))
   (testing "unused refer and alias"
       (test-clean-ns {}
                      (code "(ns foo.bar"

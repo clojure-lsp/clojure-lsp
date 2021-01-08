@@ -256,25 +256,18 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
-(defn ^:private safe-remove-node
-  "Probably a bug on rewrite-clj where it's not possible
-  to remove all elements of a z/map, so we replace with whitespace
-  to remove it later.
-  https://github.com/clj-commons/rewrite-clj/issues/86"
-  [node]
-  (z/replace node (n/whitespace-node " ")))
-
 (defn ^:private remove-unused-refers
   [node unused-refers]
   (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr set)
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
         removed-refers (set/difference node-refers unused-refers-symbol)]
     (if (empty? removed-refers)
-      (safe-remove-node node)
+      (z/remove node)
       (-> node
           z/down
           z/rightmost
-          (z/replace (n/vector-node (vec removed-refers)))
+          (z/replace (n/vector-node (interpose (n/whitespace-node " ")
+                                               (vec (sort removed-refers)))))
           z/up))))
 
 (defn ^:private remove-unused-require
@@ -284,7 +277,7 @@
     node
 
     (contains? unused-aliases (-> node z/down z/leftmost z/sexpr))
-    (safe-remove-node node)
+    (z/remove node)
 
     (contains? (->> unused-refers (map (comp symbol namespace)) set)
                (-> node z/down z/leftmost z/sexpr))
@@ -314,10 +307,7 @@
                               (set/subset? first-node-refers unused-refers)))]
     (if single-unused?
       (z/remove first-node)
-      (let [removed (z/map #(remove-unused-require % unused-aliases unused-refers) nodes)]
-        (if (= :vector (z/tag removed))
-          (z/up removed)
-          removed)))))
+      (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
 
 (defn clean-ns
   [zloc uri]

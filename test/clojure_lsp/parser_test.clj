@@ -287,10 +287,12 @@
       (is (= (repeat 6 #{:declare :param}) (map :tags [a2 b2 c2 d2 e2 f2])))))
   (testing "namespace ::keys"
     (let [code "(ns bar (:require [qux :as q]))
-                (let [{::keys [a] :qux/keys [b] ::q/keys [c] :foo/keys [d]} {}] 1)"
-          [a1 _a2 b1 _b2 c1 _c2 d1 _d2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
-      (is (= ["a" "a" "b" "b" "c" "c" "d" "d"] (mapv :str usages)))
-      (is (= [:bar/a :qux/b :qux/c :foo/d] (map :sym [a1 b1 c1 d1]))))))
+                (let [{::keys [a b] :qux/keys [c d] ::q/keys [e fn] :foo/keys [g h]} {}] 1)"
+          [a1 _a2 b1 _b2 c1 _c2 d1 _d2 e1 _e2 f1 _f2 g1 _g2 h1 _h2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
+      (is (= ["a" "a" "b" "b" "c" "c" "d" "d" "e" "e" "fn" "fn" "g" "g" "h" "h"]
+             (mapv :str usages)))
+      (is (= [:bar/a :bar/b :qux/c :qux/d :qux/e :qux/fn :foo/g :foo/h]
+             (map :sym [a1 b1 c1 d1 e1 f1 g1 h1]))))))
 
 (deftest find-references-symbols-test
   (testing "simple"

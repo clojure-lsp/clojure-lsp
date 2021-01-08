@@ -214,6 +214,9 @@
     (vswap! context update :usages conj new-usage)
     new-usage))
 
+(defn ^:private safe-keyword-namespace [ns key]
+  (keyword (namespace ns) (name key)))
+
 (defn destructure-keys [scoped key-loc scope-bounds context val-loc]
   (loop [child-loc (z/down val-loc)
          scoped scoped]
@@ -237,7 +240,7 @@
                                                                    (keyword)
 
                                                                    (and (= "keys" key-type) (qualified-ident? key-sym))
-                                                                   (keyword (namespace key-sym))
+                                                                   (safe-keyword-namespace key-sym)
 
                                                                    (and (= "syms" key-type) (simple-ident? key-sym))
                                                                    (symbol)

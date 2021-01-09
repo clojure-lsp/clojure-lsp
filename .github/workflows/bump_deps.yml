@@ -1,0 +1,16 @@
+name: Bump dependencies
+
+on: [push]
+
+jobs:
+  check-deps-and-bump:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      uses: actions/checkout@v1
+
+    - name: Check deps
+      uses: nnichols/clojure-dependency-update-action@v1
+      with:
+        github-token: ${{ secrets.github_token }}

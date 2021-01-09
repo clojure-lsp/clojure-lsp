@@ -7,12 +7,14 @@ on:
     paths-ignore:
       - '**/README.md'
       - 'docs/**'
+      - '.github/workflows/bump_deps.yml'
   pull_request:
     branches:
       - master
     paths-ignore:
       - '**/README.md'
       - 'docs/**'
+      - '.github/workflows/bump_deps.yml'
 
 jobs:
   test:

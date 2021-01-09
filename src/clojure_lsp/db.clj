@@ -32,12 +32,12 @@
   (try
     (with-open [conn (jdbc/get-connection (make-spec project-root))]
       (let [project-row
-            (->> (jdbc/execute! conn
+            (-> (jdbc/execute! conn
                                 ["select root, hash, classpath, jar_envs from project where root = ? and version = ?"
                                  (str project-root)
                                  (str version)]
                                 {:builder-fn rs/as-unqualified-lower-maps})
-                 (first))]
+                 (nth 0))]
         {:jar-envs (edn/read-string (:jar_envs project-row))
          :classpath (edn/read-string (:classpath project-row))
          :project-hash (:hash project-row)}))

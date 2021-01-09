@@ -174,7 +174,7 @@
                                            reverse
                                            (map io/file)
                                            (map #(vector (get-cp-entry-type %) %))
-                                           (group-by first)
+                                           (group-by (fn [classpath] (nth classpath 0 nil)))
                                            (reduce-kv (fn [m k v]
                                                         (assoc m k (map second v))) {}))
             jars (:file classpath-entries-by-type)

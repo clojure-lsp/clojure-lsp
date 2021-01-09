@@ -573,12 +573,12 @@
 (defn- arglists-to-signatures
   [arglists]
   (cond
-    (= 'quote (first arglists))
+    (= 'quote (nth arglists 0 nil))
     (let [sexprs (eval arglists)]
       {:sexprs (seq sexprs)
        :strings (map str sexprs)})
 
-    (string? (first arglists))
+    (string? (nth arglists 0 nil))
     {:sexprs (map (comp z/sexpr z/of-string) arglists)
      :strings arglists}
 
@@ -1128,33 +1128,20 @@
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
-(defn ^:private same-usage?
-  [a-usage b-usage]
-  (and (= (:tags a-usage) (:tags b-usage))
-       (= (:sym a-usage) (:sym b-usage))
-       (= (:row a-usage) (:row b-usage))
-       (= (:col a-usage) (:col b-usage))
-       (= (:end-row a-usage) (:end-row b-usage))
-       (= (:end-col a-usage) (:end-col b-usage))))
-
 (defn ^:private merge-by-file-types
-  "Merge usages by file-type checking clj and cljs same usages."
+  "Merge usages by file-type to avoid duplicated usages for cljc files."
   [usages]
-  (let [usages-by-file-type (group-by :file-type usages)]
-    (->> usages
-         (map (fn [{:keys [tags file-type] :as usage}]
-                (let [inverse-file-type (if (= file-type :cljs) :clj :cljs)]
-                  (cond
-                    (and tags (contains? tags :norename))
-                    (assoc usage :file-type #{file-type})
-
-                    (not-any? #(same-usage? usage %) (inverse-file-type usages-by-file-type))
-                    (assoc usage :file-type #{file-type})
-
-                    (= file-type :clj)
-                    (assoc usage :file-type #{:clj :cljs})))))
-         (remove nil?)
-         vec)))
+  (->> usages
+       (group-by (juxt :sym :tags :row :col :end-row :end-col))
+       (map (fn [[_k v]]
+              (->> (map #(assoc % :file-type #{(:file-type %)}) v)
+                   (reduce (fn [a b]
+                             (assoc b :file-type (set/union (:file-type a)
+                                                            (:file-type b))))
+                           {})
+                   )))
+       (sort-by (juxt :row :col :end-row :end-col count))
+       vec))
 
 (defn ^:private find-raw-usages
   [code-loc file-type client-macro-defs uri]

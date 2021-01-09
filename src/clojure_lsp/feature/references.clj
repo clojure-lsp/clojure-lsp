@@ -1,11 +1,12 @@
 (ns clojure-lsp.feature.references
-  (:require [clojure-lsp.shared :as shared]
-            [clojure.set :as set]
-            [clojure-lsp.db :as db]
-            [clojure-lsp.parser :as parser]
-            [clojure-lsp.feature.diagnostics :as f.diagnostic]
-            [clojure.core.async :as async]
-            [clojure.tools.logging :as log]))
+  (:require
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
+   [clojure.set :as set]
+   [clojure.tools.logging :as log]))
 
 (defn find-after-cursor [line column env file-type]
   (let [file-types (if (= :cljc file-type)
@@ -49,7 +50,8 @@
            macro-defs (get-in @db/db [:settings :macro-defs])
            excluded-unused-ns-declarations (get-in @db/db [:settings :linters :unused-namespace-declarations] #{})
            references (cond->> (parser/find-usages uri text file-type macro-defs)
-                        remove-private? (filter (fn [{:keys [tags]}] (and (:public tags) (:declare tags)))))]
+                        remove-private? (filter (comp #(and (:public %)
+                                                            (:declare %)) :tags)))]
        (when diagnose?
          (async/put! db/diagnostics-chan
                      {:uri uri

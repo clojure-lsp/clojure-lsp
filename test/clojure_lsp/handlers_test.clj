@@ -391,6 +391,7 @@
               {:label "bazz" :detail "alpaca.ns/bazz" :data "alpaca.ns/bazz"}]
              (handlers/completion "file://e.clj" 1 38))))
     (testing "complete-core-stuff"
+      (get-in @db/db [:file-envs "file://b.clj"])
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
       (is (= [{:label "frequencies" :data "clojure.core/frequencies"}]
              (handlers/completion "file://b.clj" 3 18)))
@@ -545,7 +546,8 @@
                 :data ["file://a.clj" 3 8]}
                {:range
                 {:start {:line 4 :character 6} :end {:line 4 :character 9}}
-                :data ["file://a.clj" 5 7]})
+                :data ["file://a.clj" 5 7]}
+               )
              (handlers/code-lens "file://a.clj"))))))
 
 (deftest test-code-lens-resolve

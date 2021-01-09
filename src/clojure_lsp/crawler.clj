@@ -112,7 +112,7 @@
           (string/split sep)))
     (catch Exception e
       (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
-      (window/show-message "Error looking up classpath info" :error)
+      (window/show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
       [])))
 
 (defn try-project [root-path project-path command-args env]

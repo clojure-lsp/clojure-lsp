@@ -1,6 +1,5 @@
 # Troubleshooting
 
-
 ## It doesn't seem to be working
 
 If you're downloading the release, try running it from the command line, it should start up and start reading stdin.
@@ -23,6 +22,7 @@ If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.out`, so watch that file an
 
 LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.
 
+---
 ## Go to definition doesn't work
 
 ### Double check settings
@@ -55,6 +55,7 @@ You can make sure that the definition and the usage's fully qualified symbols (u
 
 If none of that helps raise an issue or ask in clojurians slack.
 
+---
 ## Windows
 
 See https://github.com/snoe/clojure-lsp/issues/28 and https://github.com/snoe/clojure-lsp/issues/25

@@ -255,6 +255,32 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
+(defn ^:private process-clean-ns
+  [ns-loc removed-nodes col keep-at-start? form-type]
+  (let [sep (n/whitespace-node (apply str (repeat col " ")))
+        single-space (n/whitespace-node " ")
+        imports (->> removed-nodes
+                        z/node
+                        n/children
+                        (remove n/printable-only?)
+                        (sort-by (comp str n/sexpr))
+                        (map-indexed (fn [idx node]
+                                       (if (and keep-at-start?
+                                                (= idx 0))
+                                         [single-space node]
+                                         [(n/newlines 1) sep node])))
+                        (apply concat)
+                        (cons (n/keyword-node form-type)))]
+    (if (empty? (z/child-sexprs removed-nodes))
+                       (z/subedit-> ns-loc
+                                    (z/find-value z/next form-type)
+                                    (z/up)
+                                    z/remove)
+                       (z/subedit-> ns-loc
+                                    (z/find-value z/next form-type)
+                                    (z/up)
+                                    (z/replace (n/list-node imports))))))
+
 (defn ^:private remove-unused-refers
   [node unused-refers]
   (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr set)
@@ -318,35 +344,12 @@
                   (-> require-loc z/node meta :end-col)
                   (-> require-loc z/right z/node meta :col dec))
                 4)
-          sep (n/whitespace-node (apply str (repeat col " ")))
-          single-space (n/whitespace-node " ")
           unused-aliases (crawler/find-unused-aliases usages)
           unused-refers (crawler/find-unused-refers usages)
           removed-nodes (->> require-loc
                              z/remove
-                             (remove-unused-requires unused-aliases unused-refers))
-          requires (->> removed-nodes
-                        z/node
-                        n/children
-                        (remove n/printable-only?)
-                        (sort-by (comp str n/sexpr))
-                        (map-indexed (fn [idx node]
-                                       (if (and keep-at-start?
-                                                (= idx 0))
-                                         [single-space node]
-                                         [(n/newlines 1) sep node])))
-                        (apply concat)
-                        (cons (n/keyword-node :require)))
-          result-loc (if (empty? (z/child-sexprs removed-nodes))
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next :require)
-                                    (z/up)
-                                    z/remove)
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next :require)
-                                    (z/up)
-                                    (z/replace (n/list-node requires))))]
-      result-loc)
+                             (remove-unused-requires unused-aliases unused-refers))]
+      (process-clean-ns ns-loc removed-nodes col keep-at-start? :require))
     ns-loc))
 
 (defn ^:private package-import?
@@ -397,34 +400,11 @@
                   (-> import-loc z/node meta :end-col)
                   (-> import-loc z/right z/node meta :col dec))
                 4)
-          sep (n/whitespace-node (apply str (repeat col " ")))
-          single-space (n/whitespace-node " ")
           unused-imports (crawler/find-unused-imports usages)
           removed-nodes (-> import-loc
                              z/remove
-                             (edit/map-children #(remove-unused-import % col unused-imports)))
-          imports (->> removed-nodes
-                        z/node
-                        n/children
-                        (remove n/printable-only?)
-                        (sort-by (comp str n/sexpr))
-                        (map-indexed (fn [idx node]
-                                       (if (and keep-at-start?
-                                                (= idx 0))
-                                         [single-space node]
-                                         [(n/newlines 1) sep node])))
-                        (apply concat)
-                        (cons (n/keyword-node :import)))
-          result-loc (if (empty? (z/child-sexprs removed-nodes))
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next :import)
-                                    (z/up)
-                                    z/remove)
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next :import)
-                                    (z/up)
-                                    (z/replace (n/list-node imports))))]
-      result-loc)
+                             (edit/map-children #(remove-unused-import % col unused-imports)))]
+      (process-clean-ns ns-loc removed-nodes col keep-at-start? :import))
     ns-loc))
 
 (defn clean-ns

@@ -371,9 +371,12 @@
     node
 
     :else
-    (z/edit-> node
-              (z/insert-right (n/spaces (+ col (count base-package))))
-              (z/insert-right (n/newlines 1)))))
+    (if (contains? unused-imports
+                   (symbol (str base-package "." (z/string (z/right node)))))
+      node
+      (z/edit-> node
+                (z/insert-right (n/spaces (+ col (count base-package))))
+                (z/insert-right (n/newlines 1))))))
 
 (defn ^:private remove-unused-import
   [parent-node col unused-imports]

@@ -444,8 +444,7 @@
                          "Map.")
                    (code "(ns foo.bar"
                          " (:import"
-                         "  [java.util Calendar "
-                         "             Map]))"
+                         "  [java.util Calendar Map]))"
                          "Calendar."
                          "Map.")))
   (testing "unused package imports with keep-at-start?"
@@ -455,8 +454,7 @@
                          "Calendar."
                          "Map.")
                    (code "(ns foo.bar"
-                         " (:import [java.util Calendar "
-                         "                     Map]))"
+                         " (:import [java.util Calendar Map]))"
                          "Calendar."
                          "Map.")))
   (testing "unused package imports with single import"
@@ -472,6 +470,21 @@
                          "  [java.util List]"
                          "  java.util.Calendar))"
                          "Calendar."
+                         "List.")))
+  (testing "unused package imports spacing"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             Calendar"
+                         "             List]))"
+                         "Date."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
                          "List."))))
 
 (deftest add-missing-libspec

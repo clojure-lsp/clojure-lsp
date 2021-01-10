@@ -25,7 +25,7 @@ jobs:
       - name: Generate docs 
         run: |
           cp -rf README.md docs
-          mkdocs build --clean
+          docker run --rm -v ${PWD}:/docs squidfunk/mkdocs-material:6.2.4 -- build
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

@@ -352,12 +352,13 @@
     [{:range (meta (z/node result-loc))
       :loc result-loc}]))
 
-(defn ^:private add-form-to-namespace [zloc form-to-add form-type]
+(defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
   (let [ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
         cursor-sym (z/sexpr zloc)
         need-to-add? (and (not (z/find-value ns-zip z/next cursor-sym))
-                          (not (z/find-value ns-zip z/next form-to-add)))]
+                          (not (z/find-value ns-zip z/next form-to-add))
+                          (not (z/find-value ns-zip z/next form-to-check-exists)))]
     (when (and form-to-add need-to-add?)
       (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
@@ -383,21 +384,21 @@
           :loc result-loc}]))))
 
 (defn add-import-to-namespace [zloc import-name]
-  (add-form-to-namespace zloc (symbol import-name) :import))
+  (add-form-to-namespace zloc (symbol import-name) :import import-name))
 
 (defn add-common-import-to-namespace [zloc]
   (let [class-with-dot (z/sexpr zloc)
         class-name (->> class-with-dot str drop-last (string/join "") symbol)]
     (when-let [import-name (or (get cc/java-util-imports class-name)
                                (get cc/java-util-imports class-with-dot))]
-      (let [result (add-form-to-namespace zloc (symbol import-name) :import)]
+      (let [result (add-form-to-namespace zloc (symbol import-name) :import import-name)]
         {:result result
          :code-action-data {:import-name import-name}}))))
 
 (defn add-known-libspec
   [zloc ns-to-add qualified-ns-to-add]
   (when (and qualified-ns-to-add ns-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require)))
+    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
 
 (def common-alias->info
   {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}

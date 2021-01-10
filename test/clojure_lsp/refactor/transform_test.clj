@@ -40,7 +40,7 @@
                    "  (:import "
                    "    java.util.Calendar"
                    "    java.util.Date))") (z/root-string loc)))))
-  (testing "when there is a;ready that :import imported"
+  (testing "when there is already that :import imported"
     (reset! db/db {:file-envs {}})
     (let [zloc (-> (z/of-string (code "(ns foo.bar "
                                       "  (:import "

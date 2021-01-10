@@ -295,6 +295,18 @@
                    (code "(ns foo.bar)"
                          "(defn func []"
                          "  (b/some))")))
+  (testing "with single used require on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] ))"
+                         "(defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]))"
+                         "(defn func []"
+                         "  (f/some))")))
   (testing "with multiple unused requires on ns"
     (test-clean-ns {}
                    (code "(ns foo.bar"

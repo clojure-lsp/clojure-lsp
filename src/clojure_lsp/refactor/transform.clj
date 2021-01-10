@@ -1,5 +1,6 @@
 (ns clojure-lsp.refactor.transform
   (:require
+   [clojure-lsp.clojure-core :as cc]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.references :as f.references]
@@ -11,9 +12,7 @@
    [rewrite-clj.custom-zipper.core :as cz]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]
-   [clojure.tools.logging :as log]
-   [clojure-lsp.clojure-core :as cc]))
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -304,7 +303,9 @@
                                  set))
         single-unused?  (when (and single-require? (z/vector? first-node))
                           (or (contains? unused-aliases first-node-ns)
-                              (set/subset? first-node-refers unused-refers)))]
+                              (and (seq first-node-refers)
+                                   (seq unused-refers)
+                                   (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))

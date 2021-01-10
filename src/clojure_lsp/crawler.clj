@@ -52,6 +52,17 @@
          set
          (set/difference (set (map :sym declared-refers))))))
 
+(defn find-unused-imports [usages]
+  (let [excludes (-> (get-in @db/db [:settings :linters :unused-import :exclude] #{}) set)
+        declared-imports (->> usages
+                              (filter (comp #(contains? % :import) :tags))
+                              (remove (comp excludes :sym)))]
+    (->> usages
+         (filter (comp #(contains? % :java) :tags))
+         (map :sym)
+         set
+         (set/difference (set (map :sym declared-imports))))))
+
 (defn crawl-jars [jars dependency-scheme]
   (let [jar-dependency-scheme? (= "jar" dependency-scheme)
         xf (comp

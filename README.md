@@ -479,4 +479,4 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 
 You can help us keep going and improving it by **[supporting the project](https://opencollective.com/clojure-lsp)**
 
-<img src="https://opencollective.com/clojure-lsp/tiers/backer.svg">
+[![](https://opencollective.com/clojure-lsp/tiers/backer.svg)](https://opencollective.com/clojure-lsp)

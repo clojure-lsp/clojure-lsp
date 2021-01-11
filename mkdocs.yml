@@ -1,6 +1,6 @@
 site_name: Clojure LSP
 site_description: Language Server Protocol Implementation for Clojure
-site_url: https://clojure-lsp.github.io
+site_url: https://clojure-lsp.github.io/clojure-lsp
 
 repo_name: clojure-lsp/clojure-lsp
 repo_url: https://github.com/clojure-lsp/clojure-lsp
@@ -15,7 +15,32 @@ nav:
 
 theme:
   name: material
+  logo: images/logo.png
+  favicon: images/logo.png
+  icon:
+    repo: fontawesome/brands/github
   features:
     - navigation.tabs
-  hljs_languages:
-    - clojure
+
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/clojure-lsp/clojure-lsp
+
+extra_css:
+  - stylesheets/layout.css
+
+markdown_extensions:
+  - pymdownx.superfences
+  - codehilite
+  - meta
+  - toc:
+      permalink: '#'
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
+plugins:
+  - search
+  - awesome-pages
+  - git-revision-date-localized

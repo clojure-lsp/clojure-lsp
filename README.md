@@ -1,4 +1,4 @@
-<img src="https://user-images.githubusercontent.com/7820865/103157675-3da6b700-4794-11eb-9771-d2da1dd9b7a7.png" width="180" align="right">
+<img src="images/logo.png" width="180" align="right">
 
 ![CI](https://github.com/snoe/clojure-lsp/workflows/CI/badge.svg?branch=master)
 

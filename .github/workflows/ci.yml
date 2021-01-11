@@ -7,6 +7,8 @@ on:
     paths-ignore:
       - '**/README.md'
       - 'docs/**'
+      - 'images/**'
+      - 'mkdocs.yml'
       - '.github/workflows/bump_deps.yml'
   pull_request:
     branches:
@@ -14,6 +16,8 @@ on:
     paths-ignore:
       - '**/README.md'
       - 'docs/**'
+      - 'images/**'
+      - 'mkdocs.yml'
       - '.github/workflows/bump_deps.yml'
 
 jobs:

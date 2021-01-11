@@ -1,6 +1,8 @@
 <img src="images/logo.png" width="180" align="right">
 
 ![CI](https://github.com/snoe/clojure-lsp/workflows/CI/badge.svg?branch=master)
+[![Slack community](https://img.shields.io/badge/slack-chat-blue.svg)](https://clojurians.slack.com/archives/CPABC1H61) 
+
 
 # clojure-lsp
 

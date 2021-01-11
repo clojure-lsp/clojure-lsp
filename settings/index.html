@@ -1,0 +1,779 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Language Server Protocol Implementation for Clojure">
+      
+      
+      
+      
+        <link rel="canonical" href="https://clojure-lsp.github.io/settings/">
+      
+      <link rel="shortcut icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.4">
+    
+    
+      
+        <title>Settings - Clojure LSP</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.15aa0b43.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.75751829.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#settings" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="https://clojure-lsp.github.io" title="Clojure LSP" class="md-header-nav__button md-logo" aria-label="Clojure LSP">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            Clojure LSP
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              Settings
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/clojure-lsp/clojure-lsp/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clojure-lsp/clojure-lsp
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href=".." class="md-tabs__link">
+      Home
+    </a>
+  </li>
+
+      
+        
+  
+  
+    
+  
+
+
+  <li class="md-tabs__item">
+    <a href="./" class="md-tabs__link md-tabs__link--active">
+      Settings
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../clients/" class="md-tabs__link">
+      Clients
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../capabilities/" class="md-tabs__link">
+      Capabilities
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../troubleshooting/" class="md-tabs__link">
+      Troubleshooting
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="https://opencollective.com/clojure-lsp" class="md-tabs__link">
+      Support Us
+    </a>
+  </li>
+
+      
+    </ul>
+  </div>
+</nav>
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://clojure-lsp.github.io" title="Clojure LSP" class="md-nav__button md-logo" aria-label="Clojure LSP">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Clojure LSP
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/clojure-lsp/clojure-lsp/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clojure-lsp/clojure-lsp
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href=".." class="md-nav__link">
+      Home
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Settings
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
+    <a href="./" class="md-nav__link md-nav__link--active">
+      Settings
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-settings" class="md-nav__link">
+    Supported settings
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#macro-defs" class="md-nav__link">
+    macro-defs
+  </a>
+  
+    <nav class="md-nav" aria-label="macro-defs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#element-definitions" class="md-nav__link">
+    Element definitions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#element-types" class="md-nav__link">
+    Element types
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project" class="md-nav__link">
+    Project
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global" class="md-nav__link">
+    Global
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#initializationoptions" class="md-nav__link">
+    InitializationOptions
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../clients/" class="md-nav__link">
+      Clients
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../capabilities/" class="md-nav__link">
+      Capabilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../troubleshooting/" class="md-nav__link">
+      Troubleshooting
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="https://opencollective.com/clojure-lsp" class="md-nav__link">
+      Support Us
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-settings" class="md-nav__link">
+    Supported settings
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#macro-defs" class="md-nav__link">
+    macro-defs
+  </a>
+  
+    <nav class="md-nav" aria-label="macro-defs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#element-definitions" class="md-nav__link">
+    Element definitions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#element-types" class="md-nav__link">
+    Element types
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project" class="md-nav__link">
+    Project
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global" class="md-nav__link">
+    Global
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#initializationoptions" class="md-nav__link">
+    InitializationOptions
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/clojure-lsp/clojure-lsp/edit/master/docs/settings.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <h1 id="settings">Settings</h1>
+<p>Custom <code>clojure-lsp</code> settings can be configured via 3 ways: <strong>Global configuration</strong>, <strong>project configuration</strong> or <strong>LSP InitializationOptions</strong>.</p>
+<h2 id="supported-settings">Supported settings</h2>
+<p><code>source-paths</code> value is a set of project-local directories to look for clj/cljc/cljs files. Default is <code>#{"src", "test"}</code>.</p>
+<p><code>ignore-classpath-directories</code> if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into <code>resources</code> or <code>target</code> that you want lsp to ignore.</p>
+<p><code>use-metadata-for-privacy?</code> if true, will use <code>^:private</code> metadata for refactorings instead of <code>defn-</code></p>
+<p><code>keep-require-at-start?</code> if true, will keep first require at the first line instead of inserting a new line before it.</p>
+<p><code>semantic-tokens?</code> if true or not present, will enable LSP semantic tokens server support for syntax highlighting. </p>
+<p><code>show-docs-arity-on-same-line?</code> if true, will keep the arity on the same line of the function on hover, useful for Emacs users.</p>
+<p><code>auto-add-ns-to-new-files?</code> if true or not present, will automatically add the <code>ns</code> form in new files. </p>
+<p><code>document-formatting?</code> if true or not present, document formatting is provided.</p>
+<p><code>document-range-formatting?</code> if true or not present, document range formatting is provided.</p>
+<p><code>dependency-scheme</code> by default, dependencies are linked with vim's <code>zipfile://&lt;zipfile&gt;::&lt;innerfile&gt;</code> scheme, however you can use a scheme of <code>jar</code> to get urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents. <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">Similar to java clients</a></p>
+<p><code>cljfmt</code> json encoded configuration for https://github.com/weavejester/cljfmt</p>
+<pre><code class="language-clojure">:cljfmt 
+  {:indents 
+    {&quot;#.*&quot; [[&quot;block&quot;, 0]]
+     &quot;ns&quot; [[&quot;inner&quot;, 0], [&quot;inner&quot;, 1]]
+     &quot;and&quot; [[&quot;inner&quot;, 0]]
+     &quot;or&quot; [[&quot;inner&quot;, 0]]
+     &quot;are&quot; [[&quot;inner&quot;, 0]]}}
+</code></pre>
+<p><code>clj-kondo</code> (Experimental) -  <code>clojure-lsp</code> uses <a href="https://github.com/borkdude/clj-kondo">clj-kondo</a> to lint code, so you can use here any <code>clj-kondo</code> configuration or just have your config file by project at <code>.clj-kondo/config.edn</code>, for more information about <code>clj-kondo</code> available configurations, check <a href="https://github.com/borkdude/clj-kondo/blob/master/doc/config.md">here</a>.</p>
+<pre><code class="language-clojure">:clj-kondo {:linters {:missing-docstring {:level :warning}}}
+</code></pre>
+<p>~<code>linters</code>~ (Deprecated in favor of <code>clj-kondo</code>) - some initial support for disabling diagnostics currently only this one that will suppress the unused alias warning and stop the require from being cleaned by <code>clean-ns</code>:</p>
+<pre><code class="language-clojure"> :linters {:unused-namespace {:exclude [clojure.data]}
+           :unused-namespace-declarations #{&quot;test/&quot; &quot;foo/bar&quot;}}
+</code></pre>
+<p><code>project-specs</code> - value is a vector containing a map of key/value pairs, for example:</p>
+<pre><code class="language-clojure">&quot;initializationOptions&quot;: {
+    &quot;project-specs&quot;: [{
+        &quot;project-path&quot;: &quot;deps.edn&quot;,
+        &quot;classpath-cmd&quot;: [&quot;clj&quot;, &quot;-Spath&quot;]}]
+    }
+</code></pre>
+<p>Note: You may also consider configuring project specs via the (optional) <code>.lsp/config.edn</code> file, i.e.,</p>
+<pre><code class="language-clojure">{:project-specs [{:project-path &quot;deps.edn&quot;
+                  :classpath-cmd [&quot;clj&quot; &quot;-Spath&quot;]}]}
+</code></pre>
+<p>Each project-spec will add to the list of dependencies for lsp to crawl:
+  - <code>:project-path</code> is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
+  - <code>:classpath-cmd</code> is the required vector of commands to get your project's classpath string (e.g. <code>["clj", "-Spath"]</code>)
+  - <code>:env</code> optionally add environment variables to the classpath-cmd (e.g. <code>{"BOOT_FILE" "x.boot"}</code>)</p>
+<hr />
+<h2 id="macro-defs">macro-defs</h2>
+<p><code>macro-defs</code> value is a map of fully-qualified macro names to a vector of definitions of those macros' forms.</p>
+<h3 id="element-definitions">Element definitions</h3>
+<p>An element represents one or more forms within a macro-def vector. They can be defined in two ways:</p>
+<ul>
+<li>
+<p>A simple keyword, e.g. <code>:declaration</code></p>
+</li>
+<li>
+<p>A map that includes the element type and options,
+  e.g. <code>{:element :declaration, :tags ["unused" "local"], :signature ["next"]}</code></p>
+</li>
+</ul>
+<h3 id="element-types">Element types</h3>
+<p>Valid element definitions are:</p>
+<ul>
+<li>
+<p><code>:declaration</code> This marks a symbol or keyword as a definition/declaration of
+    a var in the current namespace.</p>
+<ul>
+<li>In the simplest case, this element can be specified as the keyword
+  <code>:declaration</code>.</li>
+<li>You can customize the behavior of the declaration by making it a map.</li>
+<li>e.g. <code>{:element :declaration, :tags ["unused" "local"], :signature ["next"]}</code></li>
+<li><code>tags</code> are optional.<ul>
+<li>The <code>unused</code> tag supresses the "unused declaration" diagnostic, useful
+  for <code>deftest</code> vars.</li>
+<li>The <code>local</code> tag marks the var as private.</li>
+</ul>
+</li>
+<li><code>signature</code> is optional. If the macro has <code>defn</code>-like bindings, this
+    vector of movements should point to the parameter vector or the first
+    var arg list form. Only <code>next</code> is supported right now.</li>
+<li>e.g. <code>(my-defn- my-name "docstring" [&amp; params] (count params))</code> =&gt;
+  <code>{my.ns/my-defn- [{"element": "declaration", "tags", ["local"],
+  "signature": ["next" "next"]}]}</code></li>
+</ul>
+</li>
+<li>
+<p><code>:bindings</code> This marks <code>let</code> and <code>for</code>-like bindings. <code>bound-elements</code> will have these bindings in their scope.</p>
+</li>
+<li>
+<p>e.g. <code>(my-with-open [resource ()] ....)</code> =&gt; <code>{my.ns/my-with-open [:bindings :bound-elements]}</code></p>
+</li>
+<li>
+<p><code>:function-params-and-bodies</code> This will parse function like forms that support optional var-args like <code>fn</code>.</p>
+<ul>
+<li>e.g. <code>(myfn ([a] ...) ([b] ...)) (myfn [c] ...)</code> =&gt; <code>{my.ns/myfn [:function-params-and-bodies]}</code></li>
+</ul>
+</li>
+<li>
+<p><code>:params</code> This marks a <code>defn</code> like parameter vector. <code>bound-elements</code> will have these parameters in their scope.</p>
+<ul>
+<li>e.g. <code>(myfn [c] ...)</code> =&gt; <code>{my.ns/myfn [:params :bound-elements]}</code></li>
+</ul>
+</li>
+<li>
+<p><code>:param</code> This marks a single <code>defn</code> like parameter. <code>bound-elements</code> will have these parameters in their scope.</p>
+</li>
+<li>
+<p><code>:elements</code> This will parse the rest of the elements in the macro form with the usual rules.</p>
+<ul>
+<li>e.g. <code>(myif-let [answer (expr)] answer (log "no answer") "no answer")</code> =&gt;
+  <code>{my.ns/myif-let [:bindings :bound-element :elements]}</code></li>
+</ul>
+</li>
+<li>
+<p><code>:element</code> This will parse a single element in the macro form with the usual
+    rules.</p>
+<ul>
+<li>In the simplest case, <code>:element</code> can be specified as the keyword
+  <code>:element</code>. This will always parse a single element.</li>
+<li>You can make the <code>:element</code> optional by making it a map that includes
+  a predicate <code>pred</code> which will determine whether the current form is parsed
+  as an <code>:element</code>, or if the <code>:element</code> should be skipped and the current
+  form parsed as the next defined element.</li>
+<li>For example, you can define an optional docstring element as <code>{:element
+  :element, :pred :string}</code>, or an optional metadata map as <code>{:element
+  :element, :pred :map}</code>.</li>
+<li><code>:element</code> can also describe repeated elements. For example,
+  <code>{:element :element, :pred :string, :repeat true}</code> will parse 1 or more
+  strings.</li>
+<li><code>:element</code> can also describe multiple elements of different types. This is
+  useful, for example, if you have a macro like
+  <a href="https://github.com/adzerk-oss/env#get"><code>adzerk.env/def</code></a> whose arguments
+  are pairs of declarations and values:</li>
+<li><code>(adzerk.env/def FOO :required, BAR nil, BAZ "string")</code> =&gt;
+    <code>{adzerk.env/def [{:element [:declaration :element], :repeat true}]}</code></li>
+</ul>
+</li>
+<li>
+<p><code>:bound-elements</code> This will parse the rest of the elements in the macro form with the usual rules but with any <code>bindings</code> or <code>params</code> in scope.</p>
+</li>
+<li>
+<p><code>:bound-element</code> This will parse a single element in the macro form with the usual rules but with any <code>bindings</code> or <code>params</code> in scope.</p>
+</li>
+</ul>
+<p>See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.</p>
+<hr />
+<h2 id="project">Project</h2>
+<p><code>clojure-lsp</code> will also look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your root folder up the directory structure so you can have multiple projects share the same settings.</p>
+<pre><code class="language-clojure">{:macro-defs {korma.core/defentity [:declaration :elements]}
+ :cljfmt {:indents {#re &quot;.*&quot; ns [[:inner 0] [:inner 1]]}}
+ :clj-kondo {:linters {:missing-docstring {:level :warning}}}}
+</code></pre>
+<hr />
+<h2 id="global">Global</h2>
+<p>For global settings, you just need to add the same configs to <code>~/.lsp/config.edn</code>.</p>
+<p>For an example of <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn">here</a>.</p>
+<hr />
+<h2 id="initializationoptions">InitializationOptions</h2>
+<p>This is specific for an client, where it sends on startup, check <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP spec for more information</a>.</p>
+<p>This is an <a href="https://github.com/emacs-lsp/lsp-mode/blob/master/clients/lsp-clojure.el#L205">example how Emacs <code>lsp-mode</code></a> pass custom information.</p>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href=".." class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Home
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../clients/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Clients
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../assets/javascripts/vendor.93c04032.min.js"></script>
+      <script src="../assets/javascripts/bundle.83e5331e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "..",
+          features: ['navigation.tabs'],
+          search: Object.assign({
+            worker: "../assets/javascripts/worker/search.8c7e0a7e.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

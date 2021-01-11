@@ -8,6 +8,7 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.window :as window]
    [clojure.core.async :as async]
+   [clojure.java.shell :as shell]
    [clojure.tools.logging :as log]
    [nrepl.server :as nrepl.server]
    [trptcolin.versioneer.core :as version])
@@ -430,6 +431,24 @@
         (end
           (apply #'handlers/extension method args)))))
 
+(defn process-alive?
+  [pid]
+  (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
+    (= exit 0)))
+
+(defn start-parent-process-liveness-probe!
+  [ppid server]
+  (future (run!
+           (fn [_]
+             (Thread/sleep 5000)
+             (log/info "Checking parent process" ppid "liveness")
+             (if (process-alive? ppid)
+               (log/info "Parent process" ppid "is running")
+               (do
+                 (log/info "Parent process" ppid "is not running - exiting server")
+                 (.exit server))))
+           (range))))
+
 (def server
   (proxy [ClojureExtensions LanguageServer] []
     (^CompletableFuture initialize [^InitializeParams params]
@@ -440,6 +459,8 @@
               (#'handlers/initialize (.getRootUri params)
                                      (client-capabilities params)
                                      (client-settings params))
+              (when-let [parent-process-id (.getProcessId params)]
+                (start-parent-process-liveness-probe! parent-process-id this))
               (let [settings (:settings @db/db)]
                 (CompletableFuture/completedFuture
                   (InitializeResult. (doto (ServerCapabilities.)
@@ -484,7 +505,7 @@
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct
       (CompletableFuture/completedFuture
-        {:result nil}))
+       {:result nil}))
     (exit []
       (log/info "Exit")
       (shutdown-agents)

@@ -431,7 +431,7 @@
         (end
           (apply #'handlers/extension method args)))))
 
-(defn process-alive?
+(defn ^:private process-alive?
   [pid]
   (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
     (= exit 0)))

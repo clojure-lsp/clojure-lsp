@@ -1,0 +1,21 @@
+site_name: Clojure LSP
+site_description: Language Server Protocol Implementation for Clojure
+site_url: https://clojure-lsp.github.io
+
+repo_name: clojure-lsp/clojure-lsp
+repo_url: https://github.com/clojure-lsp/clojure-lsp
+
+nav:
+  - Home: README.md
+  - Settings: settings.md
+  - Clients: clients.md
+  - Capabilities: capabilities.md
+  - Troubleshooting: troubleshooting.md
+  - Support Us: https://opencollective.com/clojure-lsp
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+  hljs_languages:
+    - clojure

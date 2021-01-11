@@ -6,10 +6,22 @@
 
 A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive-like approach of statically analyzing code.
 
-## What is this?
+<hr>
+<p align="center">
+  <a href="https://clojure-lsp.github.io/clojure-lsp"><strong>homepage</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/#installation"><strong>installation</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/settings"><strong>settings</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/clients"><strong>clients</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/capabilities"><strong>capabilities</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting"><strong>troubleshooting</strong></a> •
+  <a href="https://opencollective.com/clojure-lsp"><strong>support us</strong></a>
+</p>
+<hr>
+
+## Overview 
 
 The goal of this project is to bring great editing tools for Clojure to all editors.
-It aims to work alongside you to help you navigate, identify and fix errors, and perform refactorings.
+It aims to work alongside you to help you navigate, identify and fix errors, perform refactorings and much more!
 
 You will get:
 

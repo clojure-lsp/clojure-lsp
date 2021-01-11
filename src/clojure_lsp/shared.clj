@@ -1,6 +1,8 @@
 (ns clojure-lsp.shared
   (:require
-   [clojure.string :as string])
+    [clojure.tools.logging :as log]
+    [clojure.java.io :as java.io]
+    [clojure.string :as string])
   (:import
    [java.net URI]
    [java.nio.file Paths]
@@ -15,14 +17,24 @@
     :else :unknown))
 
 (defn uri->path [uri]
-  (Paths/get (URI. uri)))
+  (.toAbsolutePath (Paths/get (URI. uri))))
+
+(defn uri->filename [uri]
+  (if-let [[_ jar-file nested-file] (re-find #"^zipfile://(.*\.jar)::(.*)" uri)]
+    (str jar-file ":" nested-file)
+    (str (string/replace uri #"^[a-z]+://" ""))))
+
+(defn filename->uri [^String filename]
+  (if-let [[_ jar-file nested-file] (re-find #"^(.*\.jar):(.*)" filename)]
+    (str "zipfile://" jar-file "::" nested-file)
+    (str "file://" filename)))
 
 (defn uri->project-related-path [uri project-root]
   (string/replace uri project-root ""))
 
-(defn ->range [{:keys [row end-row col end-col]}]
-  {:start {:line (max 0 (dec row)) :character (max 0 (dec col))}
-   :end {:line (max 0 (dec end-row)) :character (max 0 (dec end-col))}})
+(defn ->range [{:keys [name-row name-end-row name-col name-end-col]}]
+  {:start {:line (max 0 (dec name-row)) :character (max 0 (dec name-col))}
+   :end {:line (max 0 (dec name-end-row)) :character (max 0 (dec name-end-col))}})
 
 (defn range->clj [^Range range]
   {:start {:line      (.getLine (.getStart range))

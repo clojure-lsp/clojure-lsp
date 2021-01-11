@@ -14,12 +14,15 @@
     [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.interop :as interop]
+    [clojure-lsp.queries :as q]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
+    [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
     [trptcolin.versioneer.core :as version])
@@ -70,13 +73,22 @@
                       :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
                                :new-text new-text}]}]]
         (async/put! db/edits-chan (f.refactor/client-changes changes)))))
-
-  (when-let [references (f.references/safe-find-references uri text)]
+  (when-let [result (crawler/run-kondo-on-text! text uri)]
     (swap! db/db (fn [state-db]
                    (-> state-db
                        (assoc-in [:documents uri] {:v 0 :text text})
-                       (assoc-in [:file-envs uri] references)))))
+                       (crawler/update-analysis uri (:analysis result))))))
   text)
+
+(defn did-change [uri text version]
+  ;; Ensure we are only accepting newer changes
+  (loop [state-db @db/db]
+    (when (> version (get-in state-db [:documents uri :v] -1))
+      (when-let [result (crawler/run-kondo-on-text! text uri)]
+        (when-not (compare-and-set! db/db state-db (-> state-db
+                                                       (assoc-in [:documents uri] {:v version :text text})
+                                                       (crawler/update-analysis uri (:analysis result))))
+          (recur @db/db))))))
 
 (defn initialize [project-root client-capabilities client-settings]
   (when project-root
@@ -87,11 +99,9 @@
              :client-settings client-settings
              :settings (-> (merge client-settings project-settings)
                            (update :cljfmt cljfmt.main/merge-default-options))
-             :client-capabilities client-capabilities))
-    (let [file-envs (crawler/determine-dependencies project-root)]
-      (swap! db/db assoc
-             :file-envs file-envs
-             :project-aliases (apply merge (map (comp :aliases val) file-envs))))))
+             :client-capabilities client-capabilities)
+      #_(crawler/determine-dependencies project-root)))
+  (log/error "hello"))
 
 (defn completion [doc-id line column]
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
@@ -114,23 +124,12 @@
     (f.completion/resolve-item label sym-wanted file-envs)))
 
 (defn references [doc-id line column]
-  (mapv (fn [{:keys [uri usage]}]
-          {:uri uri :range (shared/->range usage)})
-        (f.references/reference-usages doc-id line column)))
+  (mapv (fn [reference]
+          {:uri (shared/filename->uri (:filename reference)) :range (shared/->range reference)})
+        (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)))
 
 (defn did-close [uri]
-  (swap! db/db #(-> %
-                    (update :documents dissoc uri))))
-
-(defn did-change [uri text version]
-  ;; Ensure we are only accepting newer changes
-  (loop [state-db @db/db]
-    (when (> version (get-in state-db [:documents uri :v] -1))
-      (when-let [references (f.references/safe-find-references uri text)]
-        (when-not (compare-and-set! db/db state-db (-> state-db
-                                                       (assoc-in [:documents uri] {:v version :text text})
-                                                       (assoc-in [:file-envs uri] references)))
-          (recur @db/db))))))
+  (swap! db/db #(update % :documents dissoc uri)))
 
 (defn ^:private rename-alias [doc-id local-env cursor-usage cursor-name replacement]
   (for [{u-str :str :as usage} local-env
@@ -154,6 +153,29 @@
      :text-document {:version version :uri doc-id}}))
 
 (defn rename [doc-id line column new-name]
+  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)
+        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
+        can-rename? (and (not= :namespace-definitions (:bucket definition))
+                         (string/starts-with? (:filename definition) "/Users/case/dev/lsp"))] ;;nocommit
+    (when (and (seq references) can-rename?)
+      (let [changes
+              (mapv
+                (fn [r]
+                  (let [name-start (- (:name-end-col r) (count (name (:name r))))
+                        ref-doc-id (shared/filename->uri (:filename r))
+                        version (get-in @db/db [:documents ref-doc-id :v] 0)]
+                    {:range (shared/->range (assoc r :name-col name-start))
+                     :new-text new-name
+                     :text-document {:version version :uri ref-doc-id}}))
+                references)
+              doc-changes (->> changes
+                             (group-by :text-document)
+                             (remove (comp empty? val))
+                             (map (fn [[text-document edits]]
+                                    {:text-document text-document
+                                     :edits edits})))]
+          (f.refactor/client-changes doc-changes))))
+  #_
   (let [file-envs (:file-envs @db/db)
         project-root (:project-root @db/db)
         local-env (get file-envs doc-id)
@@ -188,18 +210,8 @@
           (f.refactor/client-changes doc-changes))))))
 
 (defn definition [doc-id line column]
-  (let [[cursor {:keys [uri usage]}] (f.definition/definition-usage doc-id line column)]
-    (log/info "Finding definition" doc-id "row" line "col" column "cursor" (:sym cursor))
-    (if (:sym cursor)
-      (if usage
-        {:uri uri :range (shared/->range usage) :str (:str usage)}
-        (log/warn "Could not find definition for element under cursor, I think your cursor is:" (pr-str (:str cursor)) "qualified as:" (pr-str (:sym cursor))))
-      (let [file-envs (:file-envs @db/db)
-            local-env (get file-envs doc-id)
-            file-type (shared/uri->file-type doc-id)]
-        (if-let [next-stuff (f.references/find-after-cursor line column local-env file-type)]
-          (log/warn "Could not find element under cursor, next three known elements are:" (string/join ", " (map (comp pr-str :str) next-stuff)))
-          (log/warn "Could not find element under cursor, there are no known elements after this position."))))))
+  (when-let [d (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)]
+    {:uri (shared/filename->uri (:filename d)) :range (shared/->range d) :str (:str d)}))
 
 (defn file-env-entry->document-symbol [[e kind]]
   (let [{n :str :keys [row col end-row end-col sym]} e
@@ -233,6 +245,8 @@
     {:range r}))
 
 (defn document-highlight [doc-id line column]
+  (log/warn "highlight" doc-id line column )
+  #_
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
@@ -286,16 +300,17 @@
                                             :version server-version}))}))
 
 (defn hover [doc-id line column]
-  (let [file-envs (:file-envs @db/db)
-        local-env (get file-envs doc-id)
-        cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
+  (let [filename (shared/uri->filename doc-id)
+        ana (:analysis @db/db)
         [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
-        docs (f.hover/hover-documentation (-> cursor :sym str) file-envs)]
-    (if cursor
-      {:range (shared/->range cursor)
-       :contents (if (= content-format "markdown")
-                   docs
-                   [docs])}
+        element (q/find-element-under-cursor ana filename line column)
+        definition (when element (q/find-definition ana element))]
+    (if definition
+      (let [docs (f.hover/hover-documentation definition)]
+        {:range (shared/->range element)
+         :contents (if (= content-format "markdown")
+                     docs
+                     [docs])})
       {:contents []})))
 
 (defn formatting [doc-id]
@@ -340,6 +355,8 @@
 
 (defn code-actions
   [doc-id diagnostics line character]
+  []
+  #_
   (let [db @db/db
         row (inc (int line))
         col (inc (int character))
@@ -352,6 +369,8 @@
 
 (defn code-lens
   [doc-id]
+  []
+  #_
   (let [db     @db/db
         usages (get-in db [:file-envs doc-id])]
     (->> usages
@@ -365,6 +384,8 @@
 
 (defn code-lens-resolve
   [range [doc-id row col]]
+  nil
+  #_
   {:range   range
    :command {:title   (-> doc-id
                           (f.references/reference-usages row col)
@@ -375,6 +396,7 @@
 
 (defn semantic-tokens-full
   [doc-id]
+  #_
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
         data (f.semantic-tokens/full-tokens usages)]
@@ -382,6 +404,7 @@
 
 (defn semantic-tokens-range
   [doc-id range]
+  #_
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
         data (f.semantic-tokens/range-tokens usages range)]
@@ -389,12 +412,14 @@
 
 (defn prepare-call-hierarchy
   [doc-id row col]
+  #_
   (let [{:keys [project-root file-envs]} @db/db
         local-env (get file-envs doc-id)]
     (f.call-hierarchy/prepare doc-id row col local-env project-root)))
 
 (defn call-hierarchy-incoming
   [item]
+  #_
   (let [uri (.getUri item)
         row (inc (-> item .getRange .getStart .getLine))
         col (inc (-> item .getRange .getStart .getCharacter))

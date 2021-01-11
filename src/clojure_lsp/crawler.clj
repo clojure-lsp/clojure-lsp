@@ -11,7 +11,9 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [clojure.tools.logging :as log]
-   [digest :as digest])
+   [digest :as digest]
+   [clj-kondo.core :as kondo]
+   [medley.core :as medley])
   (:import
    [java.util.jar JarFile]
    [java.nio.file Paths]))
@@ -143,47 +145,102 @@
         (.isDirectory e) :directory
         :else :unkown))
 
+(defn ^:private kondo-args [extra locals]
+  (let [root-path (shared/uri->path (:project-root @db/db))
+        user-config (get-in @db/db [:settings :clj-kondo])
+        kondo-dir (.resolve root-path ".clj-kondo")]
+    (cond-> {:cache true
+             :cache-dir ".clj-kondo/.cache"
+             }
+      (.exists (.toFile kondo-dir))
+      (assoc :cache-dir (str (.resolve kondo-dir ".cache")) :config-dir (str kondo-dir))
+
+      :always
+      (merge extra)
+
+      user-config
+      (update-in [:config] merge user-config)
+
+      :always
+      (->
+        (assoc-in [:config :output] {:analysis {} :canonical-paths true})
+        ;; TODO Duplicated linter. Remove after using clj-kondo for all linters
+        (update-in [:config :linters] merge {:unused-private-var {:level :off}}))
+
+      locals
+      (assoc-in [:config :output :analysis :locals] true))))
+
+(defn run-kondo-on-paths! [paths]
+  (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]} false)))
+
+(defn run-kondo-on-text! [text uri]
+  (with-in-str
+    text
+    (kondo/run! (kondo-args {:lint ["-"]
+                             :lang (shared/uri->file-type uri)
+                             :filename (shared/uri->filename uri)}
+                            true))))
+
+(defn normalize-analysis [analysis]
+  (reduce
+    (fn [accum [k vs]]
+      (->> vs
+           (keep
+             (fn [v]
+               (when (:col v)
+                 (let [result (cond-> v
+                                (= :namespace-usages k)
+                                (assoc :end-row (:row v)
+                                       :end-col (some-> (:alias v) name count (+ (:col v))))
+
+                                (contains? #{:namespace-usages :locals :local-usages} k)
+                                (set/rename-keys {:row :name-row :col :name-col :end-row :name-end-row :end-col :name-end-col})
+
+                                :always
+                                (assoc :bucket k))
+                       {:keys [name-row name-col name-end-row name-end-col]} result
+                       valid? (and name-row name-col name-end-row name-end-col)]
+                   (if valid?
+                     result
+                     (do
+                       (log/error "Cannot find position for:" (:name result ) (pr-str result) (some-> (:name result) meta))
+                       nil))))))
+           (into accum)))
+    []
+    analysis))
+
+(defn update-analysis [db uri new-analysis]
+  (assoc-in db [:analysis (shared/uri->filename uri)] (normalize-analysis new-analysis)))
+
+(defn project-analysis [root-path source-paths project ignore-directories?]
+  (let [project-hash (:project-hash project)
+        loaded (db/read-deps root-path)
+        use-cp-cache (= (:project-hash loaded) project-hash)
+        classpath (if use-cp-cache
+                    (:classpath loaded)
+                    (:classpath project))
+        adjusted-cp (cond->> classpath
+                      ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
+                      :always (concat source-paths))]
+    (run-kondo-on-paths! adjusted-cp)))
+
 (defn determine-dependencies [project-root]
   (let [root-path (shared/uri->path project-root)
         settings (:settings @db/db)
-        source-paths (mapv #(to-file root-path %) (get settings :source-paths))
-        dependency-scheme (get settings :dependency-scheme)
+        source-paths (mapv #(.getAbsolutePath (to-file root-path %)) (get settings :source-paths))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-specs (or (get settings :project-specs) default-project-specs)
-        project (get-project-from root-path project-specs)]
-    (if (some? project)
-      (let [project-hash (:project-hash project)
-            loaded (db/read-deps root-path)
-            use-cp-cache (= (:project-hash loaded) project-hash)
-            classpath (if use-cp-cache
-                        (:classpath loaded)
-                        (:classpath project))
-            classpath-entries-by-type (->> classpath
-                                           reverse
-                                           (map io/file)
-                                           (map #(vector (get-cp-entry-type %) %))
-                                           (group-by first)
-                                           (reduce-kv (fn [m k v]
-                                                        (assoc m k (map second v))) {}))
-            jars (:file classpath-entries-by-type)
-            jar-envs (if use-cp-cache
-                       (:jar-envs loaded)
-                       (crawl-jars jars dependency-scheme))
-            source-envs (crawl-source-dirs source-paths)
-            file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
-        (db/save-deps root-path project-hash classpath jar-envs)
-        (if use-cp-cache
-          (log/info "skipping classpath scan due to project hash match")
-          (do
-            (log/info "starting clj-kondo project classpath scan (this takes awhile)")
-            (let [results (f.diagnostic/run-kondo-on-paths! classpath)]
-              (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
-        (merge source-envs file-envs jar-envs))
-      (let [kondo-source-chan (async/go (f.diagnostic/run-kondo-on-paths! source-paths))
-            crawler-output-chan (async/go (crawl-source-dirs source-paths))]
-        (log/info "clj-kondo scanned source paths in"
-                  (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))
-        (async/<!! crawler-output-chan)))))
+        project (get-project-from root-path project-specs)
+        result (if (some? project)
+                 (project-analysis root-path source-paths project ignore-directories?)
+                 (run-kondo-on-paths! source-paths))
+        analysis (-> (:analysis result)
+                     (update :namespace-usages (fn [usages] (filterv #(string/starts-with? (:filename %) (str root-path)) usages)))
+                     (update :var-usages (fn [usages] (filterv #(string/starts-with? (:filename %) (str root-path)) usages)))
+                     (normalize-analysis))]
+    (log/spy (keys analysis))
+    (swap! db/db assoc :analysis (group-by :filename analysis))
+    nil))
 
 (defn find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]

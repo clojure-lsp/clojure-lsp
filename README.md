@@ -1,7 +1,8 @@
 <img src="images/logo.png" width="180" align="right">
 
-![CI](https://github.com/snoe/clojure-lsp/workflows/CI/badge.svg?branch=master)
-[![Slack community](https://img.shields.io/badge/slack-chat-blue.svg)](https://clojurians.slack.com/archives/CPABC1H61) 
+![CI](https://img.shields.io/github/workflow/status/clojure-lsp/clojure-lsp/CI?style=flat-square)
+[![Slack community](https://img.shields.io/badge/Slack-chat-blue?style=flat-square)](https://clojurians.slack.com/archives/CPABC1H61)
+[![Github starts](https://img.shields.io/github/stars/clojure-lsp/clojure-lsp?style=social)](https://github.com/clojure-lsp/clojure-lsp)
 
 
 # clojure-lsp

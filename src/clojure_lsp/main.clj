@@ -436,7 +436,7 @@
   (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
     (= exit 0)))
 
-(defn start-parent-process-liveness-probe!
+(defn ^:private start-parent-process-liveness-probe!
   [ppid server]
   (future (run!
            (fn [_]

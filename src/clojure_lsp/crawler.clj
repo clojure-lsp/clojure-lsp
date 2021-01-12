@@ -124,7 +124,7 @@
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]
-  (if (shared/windows-os?)
+  (if shared/windows-os?
     (into ["powershell.exe"] classpath)
     classpath))
 

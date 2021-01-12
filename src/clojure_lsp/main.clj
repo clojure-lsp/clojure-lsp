@@ -431,19 +431,14 @@
         (end
           (apply #'handlers/extension method args)))))
 
-(defn ^:private process-alive?
-  [pid]
-  (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
-    (= exit 0)))
-
 (defn ^:private start-parent-process-liveness-probe!
   [ppid server]
   (future (run!
            (fn [_]
              (Thread/sleep 5000)
-             (log/info "Checking parent process" ppid "liveness")
-             (if (process-alive? ppid)
-               (log/info "Parent process" ppid "is running")
+             (log/debug "Checking parent process" ppid "liveness")
+             (if (shared/process-alive? ppid)
+               (log/debug "Parent process" ppid "is running")
                (do
                  (log/info "Parent process" ppid "is not running - exiting server")
                  (.exit server))))

@@ -1,8 +1,9 @@
 (ns clojure-lsp.feature.code-actions
   (:require
-   [clojure-lsp.feature.definition :as f.definition]
-   [clojure-lsp.feature.refactor :as f.refactor]
-   [clojure-lsp.refactor.transform :as r.transform]))
+    [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.refactor :as f.refactor]
+    [clojure-lsp.refactor.transform :as r.transform]
+    [rewrite-clj.zip :as z]))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
@@ -12,21 +13,33 @@
         inline-symbol? (r.transform/inline-symbol? def-uri definition)
         line (dec row)
         character (dec col)
-        has-unknow-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
-        missing-ns (when has-unknow-ns?
-                     (f.refactor/call-refactor {:loc zloc
-                                                :refactoring :add-missing-libspec
-                                                :uri uri
-                                                :version 0
-                                                :row row
-                                                :col col}))]
+        has-unknown-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
+        unresolved-symbol (some #(= (compare "unresolved-symbol" (some-> % .getCode .get)) 0) diagnostics)
+        known-refer? (when unresolved-symbol
+                       (get r.transform/common-refers->info (z/sexpr zloc)))
+        missing-require (when (or has-unknown-ns? known-refer?)
+                          (f.refactor/call-refactor {:loc zloc
+                                                     :refactoring :add-missing-libspec
+                                                     :uri uri
+                                                     :version 0
+                                                     :row row
+                                                     :col col
+                                                     :args {:source :code-action}}))
+        missing-import (when unresolved-symbol
+                          (r.transform/add-common-import-to-namespace zloc))]
     (cond-> []
 
-      (and has-unknow-ns? missing-ns)
-      (conj {:title          "Add missing namespace"
+      (:result missing-require)
+      (conj {:title          (str "Add missing '" (-> missing-require :code-action-data :ns-name) "' require")
              :kind           :quick-fix
              :preferred?     true
-             :workspace-edit missing-ns})
+             :workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-require))})
+
+      (:result missing-import)
+      (conj {:title          (str "Add missing '" (-> missing-import :code-action-data :import-name) "' import")
+             :kind           :quick-fix
+             :preferred?     true
+             :workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-import))})
 
       inline-symbol?
       (conj {:title   "Inline symbol"

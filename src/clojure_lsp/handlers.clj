@@ -100,8 +100,9 @@
              :settings (-> (merge client-settings project-settings)
                            (update :cljfmt cljfmt.main/merge-default-options))
              :client-capabilities client-capabilities)
-      #_(crawler/determine-dependencies project-root)))
-  (log/error "hello"))
+      #_(crawler/determine-dependencies project-root))
+    nil)
+  )
 
 (defn completion [doc-id line column]
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
@@ -245,7 +246,8 @@
     {:range r}))
 
 (defn document-highlight [doc-id line column]
-  (log/warn "highlight" doc-id line column )
+
+  []
   #_
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)

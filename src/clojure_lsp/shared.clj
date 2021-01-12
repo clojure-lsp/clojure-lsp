@@ -8,6 +8,9 @@
    [java.nio.file Paths]
    [org.eclipse.lsp4j Range]))
 
+(defn windows-os? []
+  (.contains (System/getProperty "os.name") "Windows"))
+
 (defn uri->file-type [uri]
   (cond
     (string/ends-with? uri ".cljs") :cljs

@@ -68,6 +68,15 @@
         (z/replace (z/node zloc)))
     zloc))
 
+(defn map-children [parent-zloc f]
+  (z/subedit->> parent-zloc
+                z/down
+                (iterate (fn [zloc]
+                           (when (not (z/end? zloc))
+                             (-> zloc f z/next))))
+                (take-while identity)
+                last))
+
 (defn wrap-around [zloc tag]
   (let [node (z/node zloc)
         node-meta (meta node)]

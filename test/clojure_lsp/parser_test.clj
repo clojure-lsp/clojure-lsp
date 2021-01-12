@@ -213,21 +213,21 @@
 
 (deftest find-references-destructuring-test
   (let [code "(let [{:keys [a] b :b} {}] a b)"
-        [_ _a-kw a-param _b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
+        [_ _a-kw a-param b-param _b-kw a-usage b-usage :as usages] (parser/find-usages code :clj {})]
     (is (= 7 (count usages)))
     (is (= #{:declare :param} (:tags a-param)))
     (is (= (namespace (:sym a-usage)) (namespace (:sym a-param))))
     (is (= #{:declare :param} (:tags b-param)))
     (is (= (namespace (:sym b-usage)) (namespace (:sym b-param)))))
   (let [code "(fn [y {:keys [a] b :b}] a b)"
-        [_ _ _a-kw a-param _b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
+        [_ _ _a-kw a-param b-param _b-kw a-usage b-usage :as usages] (parser/find-usages code :clj {})]
     (is (= 8 (count usages)))
     (is (= #{:declare :param} (:tags a-param)))
     (is (= (namespace (:sym a-param)) (namespace (:sym a-usage))))
     (is (= #{:declare :param} (:tags b-param)))
     (is (= (namespace (:sym b-param)) (namespace (:sym b-usage)))))
   (let [code "(fn myname [y {:keys [a] b :b}] a b)"
-        [_ name-ref _ _a-kw a-param _b-kw b-param a-usage b-usage :as usages] (parser/find-usages code :clj {})]
+        [_ name-ref _ _a-kw a-param b-param _b-kw a-usage b-usage :as usages] (parser/find-usages code :clj {})]
     (is (= 9 (count usages)))
     (is (not= "user" (namespace (:sym name-ref))))
     (is (= #{:declare} (:tags name-ref)))
@@ -287,10 +287,12 @@
       (is (= (repeat 6 #{:declare :param}) (map :tags [a2 b2 c2 d2 e2 f2])))))
   (testing "namespace ::keys"
     (let [code "(ns bar (:require [qux :as q]))
-                (let [{::keys [a] :qux/keys [b] ::q/keys [c] :foo/keys [d]} {}] 1)"
-          [a1 _a2 b1 _b2 c1 _c2 d1 _d2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
-      (is (= ["a" "a" "b" "b" "c" "c" "d" "d"] (mapv :str usages)))
-      (is (= [:bar/a :qux/b :qux/c :foo/d] (map :sym [a1 b1 c1 d1]))))))
+                (let [{::keys [a b] :qux/keys [c d] ::q/keys [e fn] :foo/keys [g h]} {}] 1)"
+          [a1 _a2 b1 _b2 c1 _c2 d1 _d2 e1 _e2 f1 _f2 g1 _g2 h1 _h2 :as usages] (drop 5 (parser/find-usages code :clj {}))]
+      (is (= ["a" "a" "b" "b" "c" "c" "d" "d" "e" "e" "fn" "fn" "g" "g" "h" "h"]
+             (mapv :str usages)))
+      (is (= [:bar/a :bar/b :qux/c :qux/d :qux/e :qux/fn :foo/g :foo/h]
+             (map :sym [a1 b1 c1 d1 e1 f1 g1 h1]))))))
 
 (deftest find-references-symbols-test
   (testing "simple"
@@ -335,8 +337,8 @@
           usages (parser/find-usages code :cljc {})]
       (is (= 3 (count usages)))
       (is (= 'clojure.core/ns (:sym (nth usages 0 nil))))
-      (is (= 'cljs.core/ns (:sym (nth usages 2 nil))))
-      (is (= "hi" (:str (nth usages 1 nil))))))
+      (is (= 'cljs.core/ns (:sym (nth usages 1 nil))))
+      (is (= "hi" (:str (nth usages 2 nil))))))
   (testing "cljs and clj"
     (let [code       "#?(:cljs x) #?(:clj y) #?@(:clj [a b] :cljs [c d])"
           usages     (parser/find-usages code :cljc {})
@@ -352,7 +354,7 @@
           usages (parser/find-usages code :cljc {})]
       (is (= 6 (count usages)))
       (is (= ["def" "hello" "comment" "hello"] (map :str (filter (comp #(contains? % :clj) :file-type) usages))))
-      (is (= ["hello" "hello" "def" "comment"] (map :str (filter (comp #(contains? % :cljs) :file-type) usages)))))))
+      (is (= ["def""hello" "comment" "hello"] (map :str (filter (comp #(contains? % :cljs) :file-type) usages)))))))
 
 (deftest if-let-test
   (let [code "(if-let [] a b)"
@@ -405,7 +407,7 @@
     (let [code "(def GET) (GET \"/my-route/:id\" {{:keys [id]} :params} id)"
           usages (parser/find-usages code :clj {'user/GET [:_ :params :bound-elements]})]
       (is (= 7 (count usages)))
-      (is (= (:sym (nth usages 5 nil)) (:sym (nth usages 6 nil))))))
+      (is (= (:sym (nth usages 4 nil)) (:sym (nth usages 6 nil))))))
   (testing "for-like"
     (let [code "(def dofor) (dofor [a [1 2 3] :let [b a]] b)"
           usages (parser/find-usages code :clj {'user/dofor [:bindings :bound-elements]})]
@@ -582,7 +584,7 @@
   (testing "destructures param"
     (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- A \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
           usages (parser/find-usages code :clj {})
-          [_ u _ s _ a _ _ _ b _ c _ b2] usages]
+          [_ u _ s _ a _ _ b _ _ c _ b2] usages]
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))
@@ -598,7 +600,7 @@
   (testing "handles complex return type"
     (let [code "(ns user (:require [schema.core :as s])) (s/defn a :- [A] \"Docs\" [{b :b} :- Long c :- [S/Str]] b)"
           usages (parser/find-usages code :clj {})
-          [_ u _ s _ a _ _ _ b _ c _ b2] usages]
+          [_ u _ s _ a _ _ b _ _ c _ b2] usages]
       (is (= #{:declare :public} (:tags a)))
       (is (= 'user/a (:sym a)))
       (is (= "Docs" (:doc a)))

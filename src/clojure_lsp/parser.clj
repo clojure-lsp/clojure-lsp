@@ -18,22 +18,6 @@
 (declare find-usages*)
 (declare parse-destructuring)
 
-(def core-refers
-  (->> cc/core-syms
-       (mapv (juxt identity (constantly 'clojure.core)))
-       (into {})))
-
-(def cljs-refers
-  (->> cc/core-syms
-       (concat cc/cljs-syms)
-       (mapv (juxt identity (constantly 'cljs.core)))
-       (into {})))
-
-(def lang-imports
-  (->> cc/java-lang-syms
-       (mapv (juxt identity #(symbol (str "java.lang." (name %)))))
-       (into {})))
-
 (def default-env
   {:ns 'user
    :refer-all-syms {}
@@ -149,15 +133,15 @@
           local-classes' (->> local-classes
                               (map (juxt identity #(symbol (str (name ns) "." %))))
                               (into {}))
-          java-classes (merge local-classes' imports lang-imports)
+          java-classes (merge local-classes' imports cc/java-lang-imports)
           java-sym (get java-classes (symbol (string/replace ident-name #"\.$" "")))
           refered (get refers ident-name)
           required-ns (get requires ident-ns)
           ctr (if (symbol? ident) symbol keyword)
-          core-clj? (and (= :clj file-type) (contains? core-refers ident))
-          core-cljs? (and (= :cljs file-type) (contains? cljs-refers ident))
-          core-clj-symbol (when core-clj? (ctr (name (get core-refers ident)) ident-name))
-          core-cljs-symbol (when core-cljs? (ctr (name (get cljs-refers ident)) ident-name))
+          core-clj? (and (= :clj file-type) (contains? cc/core-refers ident))
+          core-cljs? (and (= :cljs file-type) (contains? cc/cljs-refers ident))
+          core-clj-symbol (when core-clj? (ctr (name (get cc/core-refers ident)) ident-name))
+          core-cljs-symbol (when core-cljs? (ctr (name (get cc/cljs-refers ident)) ident-name))
           core-macro? (and (or core-clj? core-cljs?)
                            (contains? default-macro-defs (or core-clj-symbol core-cljs-symbol)))
           known-macro? (or core-macro?
@@ -195,8 +179,8 @@
               (contains? imports ident-ns)
               {:sym (symbol (name (get imports ident-ns)) ident-name) :tags #{:java :method :norename}}
 
-              (contains? lang-imports ident-ns)
-              {:sym (symbol (name (get lang-imports ident-ns)) ident-name) :tags #{:java :method :norename}}
+              (contains? cc/java-lang-imports ident-ns)
+              {:sym (symbol (name (get cc/java-lang-imports ident-ns)) ident-name) :tags #{:java :method :norename}}
 
               (and (= :cljs file-type) (= 'js ident-ns))
               {:sym ident :tags #{:method :norename}}
@@ -230,6 +214,9 @@
     (vswap! context update :usages conj new-usage)
     new-usage))
 
+(defn ^:private safe-keyword-namespace [ns key]
+  (keyword (namespace ns) (name key)))
+
 (defn destructure-keys [scoped key-loc scope-bounds context val-loc]
   (loop [child-loc (z/down val-loc)
          scoped scoped]
@@ -253,7 +240,7 @@
                                                                    (keyword)
 
                                                                    (and (= "keys" key-type) (qualified-ident? key-sym))
-                                                                   (keyword (namespace key-sym))
+                                                                   (safe-keyword-namespace key-sym)
 
                                                                    (and (= "syms" key-type) (simple-ident? key-sym))
                                                                    (symbol)
@@ -586,12 +573,12 @@
 (defn- arglists-to-signatures
   [arglists]
   (cond
-    (= 'quote (first arglists))
+    (= 'quote (nth arglists 0 nil))
     (let [sexprs (eval arglists)]
       {:sexprs (seq sexprs)
        :strings (map str sexprs)})
 
-    (string? (first arglists))
+    (string? (nth arglists 0 nil))
     {:sexprs (map (comp z/sexpr z/of-string) arglists)
      :strings arglists}
 
@@ -1141,33 +1128,20 @@
         (recur (z/next loc))
         (vary-meta (z/skip z/prev #(z/prev %) loc) assoc ::zm/end? false)))))
 
-(defn ^:private same-usage?
-  [a-usage b-usage]
-  (and (= (:tags a-usage) (:tags b-usage))
-       (= (:sym a-usage) (:sym b-usage))
-       (= (:row a-usage) (:row b-usage))
-       (= (:col a-usage) (:col b-usage))
-       (= (:end-row a-usage) (:end-row b-usage))
-       (= (:end-col a-usage) (:end-col b-usage))))
-
 (defn ^:private merge-by-file-types
-  "Merge usages by file-type checking clj and cljs same usages."
+  "Merge usages by file-type to avoid duplicated usages for cljc files."
   [usages]
-  (let [usages-by-file-type (group-by :file-type usages)]
-    (->> usages
-         (map (fn [{:keys [tags file-type] :as usage}]
-                (let [inverse-file-type (if (= file-type :cljs) :clj :cljs)]
-                  (cond
-                    (and tags (contains? tags :norename))
-                    (assoc usage :file-type #{file-type})
-
-                    (not-any? #(same-usage? usage %) (inverse-file-type usages-by-file-type))
-                    (assoc usage :file-type #{file-type})
-
-                    (= file-type :clj)
-                    (assoc usage :file-type #{:clj :cljs})))))
-         (remove nil?)
-         vec)))
+  (->> usages
+       (group-by (juxt :sym :tags :row :col :end-row :end-col))
+       (map (fn [[_k v]]
+              (->> (map #(assoc % :file-type #{(:file-type %)}) v)
+                   (reduce (fn [a b]
+                             (assoc b :file-type (set/union (:file-type a)
+                                                            (:file-type b))))
+                           {})
+                   )))
+       (sort-by (juxt :row :col :end-row :end-col count))
+       vec))
 
 (defn ^:private find-raw-usages
   [code-loc file-type client-macro-defs uri]

@@ -4,6 +4,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.window :as window]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -84,6 +85,9 @@
 
 (defn crawl-source-dirs [dirs]
   (let [xf (comp
+             (map (fn [dir]
+                    (log/info "Crawling dir" (.getPath dir))
+                    dir))
             (mapcat file-seq)
             (filter #(.isFile %))
             (map file->uri)
@@ -109,7 +113,8 @@
           (string/trim-newline)
           (string/split sep)))
     (catch Exception e
-      (log/warn e "Error while looking up classpath info in" (str root-path) (.getMessage e))
+      (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
+      (window/show-message "Error looking up classpath info" :error)
       [])))
 
 (defn try-project [root-path project-path command-args env]
@@ -119,15 +124,22 @@
             classpath (lookup-classpath root-path command-args env)]
         {:project-hash file-hash :classpath classpath}))))
 
+(defn ^:private classpath-cmd->windows-safe-classpath-cmd
+  [classpath]
+  (if (shared/windows-os?)
+    (into ["powershell.exe"] classpath)
+    classpath))
+
 (def ^:private default-project-specs
-  [{:project-path "project.clj"
-    :classpath-cmd ["lein" "classpath"]}
-   {:project-path "deps.edn"
-    :classpath-cmd ["clj" "-Spath"]}
-   {:project-path "build.boot"
-    :classpath-cmd ["boot" "show" "--fake-classpath"]}
-   {:project-path "shadow-cljs.edn"
-    :classpath-cmd ["shadow-cljs" "classpath"]}])
+  (->> [{:project-path "project.clj"
+         :classpath-cmd ["lein" "classpath"]}
+        {:project-path "deps.edn"
+         :classpath-cmd ["clj" "-Spath"]}
+        {:project-path "build.boot"
+         :classpath-cmd ["boot" "show" "--fake-classpath"]}
+        {:project-path "shadow-cljs.edn"
+         :classpath-cmd ["shadow-cljs" "classpath"]}]
+       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
 (defn get-project-from [root-path project-specs]
   (reduce
@@ -203,6 +215,7 @@
                    (if valid?
                      result
                      (do
+                       #_
                        (log/error "Cannot find position for:" (:name result ) (pr-str result) (some-> (:name result) meta))
                        nil))))))
            (into accum)))
@@ -238,9 +251,43 @@
                      (update :namespace-usages (fn [usages] (filterv #(string/starts-with? (:filename %) (str root-path)) usages)))
                      (update :var-usages (fn [usages] (filterv #(string/starts-with? (:filename %) (str root-path)) usages)))
                      (normalize-analysis))]
-    (log/spy (keys analysis))
     (swap! db/db assoc :analysis (group-by :filename analysis))
-    nil))
+    nil)
+
+  #_
+    (if (some? project)
+      (let [project-hash (:project-hash project)
+            loaded (db/read-deps root-path)
+            use-cp-cache (= (:project-hash loaded) project-hash)
+            classpath (if use-cp-cache
+                        (:classpath loaded)
+                        (:classpath project))
+            classpath-entries-by-type (->> classpath
+                                           reverse
+                                           (map io/file)
+                                           (map #(vector (get-cp-entry-type %) %))
+                                           (group-by (fn [classpath] (nth classpath 0 nil)))
+                                           (reduce-kv (fn [m k v]
+                                                        (assoc m k (map second v))) {}))
+            jars (:file classpath-entries-by-type)
+            jar-envs (if use-cp-cache
+                       (:jar-envs loaded)
+                       (crawl-jars jars dependency-scheme))
+            source-envs (crawl-source-dirs source-paths)
+            file-envs (when-not ignore-directories? (crawl-source-dirs (:directory classpath-entries-by-type)))]
+        (db/save-deps root-path project-hash classpath jar-envs)
+        (if use-cp-cache
+          (log/info "skipping classpath scan due to project hash match")
+          (do
+            (log/info "starting clj-kondo project classpath scan (this takes awhile)")
+            (let [results (f.diagnostic/run-kondo-on-paths! classpath)]
+              (log/info "clj-kondo scanned project classpath in" (str (get-in results [:summary :duration]) "ms")))))
+        (merge source-envs file-envs jar-envs))
+      (let [kondo-source-chan (async/go (f.diagnostic/run-kondo-on-paths! source-paths))
+            crawler-output-chan (async/go (crawl-source-dirs source-paths))]
+        (log/info "clj-kondo scanned source paths in"
+                  (str (get-in (async/<!! kondo-source-chan) [:summary :duration]) "ms"))
+        (async/<!! crawler-output-chan))))
 
 (defn find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]

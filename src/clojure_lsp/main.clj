@@ -2,10 +2,11 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
-   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.window :as window]
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
    [nrepl.server :as nrepl.server]
@@ -90,10 +91,6 @@
              (log/debug ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
-
-(defn ^:private execute-server-info []
-  (.showMessage (:client @db/db)
-                (interop/conform-or-log ::interop/show-message (#'handlers/server-info))))
 
 (defn ^:private execute-refactor [command args]
   (let [[doc-id line col & args] (map interop/json->clj args)]
@@ -317,13 +314,15 @@
         (CompletableFuture/supplyAsync
           (reify Supplier
             (get [this]
+              []
+              #_
               (end
                 (try
                   (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))]
-                    (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))
+                    (log/spy (interop/conform-or-log ::interop/document-highlights (log/spy (#'handlers/document-highlight doc-id line column)))))
                   (catch Exception e
                     (log/error e)))))))))
 
@@ -384,7 +383,7 @@
               (log/info "Executing command" command "with args" args)
               (cond
                 (= command "server-info")
-                (execute-server-info)
+                (window/show-message (handlers/server-info))
 
                 (some #(= % command) f.refactor/available-refactors)
                 (execute-refactor command args))))))
@@ -445,36 +444,48 @@
                                      (client-settings params))
               (let [settings (:settings @db/db)]
                 (CompletableFuture/completedFuture
-
-                  (log/spy
-                    (InitializeResult. (doto (ServerCapabilities.)
-                                         (.setHoverProvider true)
-                                         (.setCallHierarchyProvider true)
-                                         (.setCodeActionProvider true)
-                                         (.setCodeLensProvider (CodeLensOptions. true))
-                                         (.setReferencesProvider true)
-                                         (.setRenameProvider true)
-                                         (.setDefinitionProvider true)
-                                         (.setDocumentFormattingProvider (:document-formatting? settings))
-                                         (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
-                                         (.setDocumentSymbolProvider true)
-                                         (.setDocumentHighlightProvider true)
-                                         (.setWorkspaceSymbolProvider true)
-                                         (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
-                                                                               (:semantic-tokens? settings))
-                                                                       (doto (SemanticTokensWithRegistrationOptions.)
-                                                                         (.setLegend (doto (SemanticTokensLegend.
-                                                                                             semantic-tokens/token-types-str
-                                                                                             semantic-tokens/token-modifiers)))
-                                                                         (.setRange true)
-                                                                         (.setFull true))))
-                                         (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
-                                                                       (.setCommands f.refactor/available-refactors)))
-                                         (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                                 (.setOpenClose true)
-                                                                 (.setChange TextDocumentSyncKind/Full)
-                                                                 (.setSave (SaveOptions. true))))
-                                         (.setCompletionProvider (CompletionOptions. true [])))))))))))
+                  (InitializeResult. (doto (ServerCapabilities.)
+                                       (.setDocumentHighlightProvider true)
+                                       #_
+                                       (.setHoverProvider true)
+                                       #_
+                                       (.setCallHierarchyProvider true)
+                                       #_
+                                       (.setCodeActionProvider true)
+                                       #_
+                                       (.setCodeLensProvider (CodeLensOptions. true))
+                                       #_
+                                       (.setReferencesProvider true)
+                                       #_
+                                       (.setRenameProvider true)
+                                       #_
+                                       (.setDefinitionProvider true)
+                                       #_
+                                       (.setDocumentFormattingProvider (:document-formatting? settings))
+                                       #_
+                                       (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
+                                       #_
+                                       (.setDocumentSymbolProvider true)
+                                       #_
+                                       (.setWorkspaceSymbolProvider true)
+                                       #_
+                                       (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                                                             (:semantic-tokens? settings))
+                                                                     (doto (SemanticTokensWithRegistrationOptions.)
+                                                                       (.setLegend (doto (SemanticTokensLegend.
+                                                                                           semantic-tokens/token-types-str
+                                                                                           semantic-tokens/token-modifiers)))
+                                                                       (.setRange true)
+                                                                       (.setFull true))))
+                                       #_
+                                       (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
+                                                                     (.setCommands f.refactor/available-refactors)))
+                                       (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                               (.setOpenClose true)
+                                                               (.setChange TextDocumentSyncKind/Full)
+                                                               (.setSave (SaveOptions. true))))
+                                       #_
+                                       (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
       (log/info "Initialized" params)
@@ -499,19 +510,68 @@
     (getWorkspaceService []
       (LSPWorkspaceService.))))
 
+(defn tee-system-in [system-in]
+  (let [buffer-size 1024
+        b2 (byte-array buffer-size)
+        os (java.io.PipedOutputStream.)
+        is (java.io.PipedInputStream. os)]
+    (log/warn "hello")
+
+    (async/thread
+      (try
+        (let [
+              buffer (byte-array buffer-size)]
+
+          (log/warn "thread start")
+          (loop [chs (.read system-in buffer 0 buffer-size)]
+            (when (pos? chs)
+              (log/warn "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (.write os buffer 0 chs)
+              (recur (.read system-in buffer 0 buffer-size)))))
+        (catch Exception e
+          (log/error e "in thread"))))
+    is
+
+    ))
+(defn tee-system-out [system-out]
+  (let [buffer-size 1024
+        b2 (byte-array buffer-size)
+        is (java.io.PipedInputStream. )
+        os (java.io.PipedOutputStream. is)]
+
+    (async/thread
+      (try
+        (let [
+              buffer (byte-array buffer-size)]
+
+          (loop [chs (.read is buffer 0 buffer-size)]
+            (when (pos? chs)
+              (log/warn "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (.write system-out buffer)
+              (recur (.read is buffer 0 buffer-size)))))
+        (catch Exception e
+          (log/error e "in thread"))))
+    os
+
+    ))
+
 (defn- run []
   (log/info "Starting server...")
-  (let [launcher (LSPLauncher/createServerLauncher server System/in System/out)
+  (let [is (tee-system-in System/in)
+        os (tee-system-out System/out)
+        launcher (LSPLauncher/createServerLauncher server is os)
         repl-server (nrepl.server/start-server)
         port (:port repl-server)]
     (log/info "====== LSP nrepl server started on port" port)
     (swap! db/db assoc
            :client ^LanguageClient (.getRemoteProxy launcher)
            :port port)
+    #_
     (async/go
       (loop [edit (async/<! db/edits-chan)]
         (log/info "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))
         (recur (async/<! db/edits-chan))))
+    #_
     (async/go
       (loop [diagnostic (async/<! db/diagnostics-chan)]
         (.publishDiagnostics (:client @db/db) (interop/conform-or-log ::interop/publish-diagnostics-params diagnostic))

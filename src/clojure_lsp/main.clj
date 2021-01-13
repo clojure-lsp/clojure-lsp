@@ -260,6 +260,17 @@
                      handlers/code-actions
                      (interop/conform-or-log ::interop/code-actions))))))))
 
+  (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
+    (go :resolveCodeAction
+        (CompletableFuture/supplyAsync
+          (reify Supplier
+            (get [_this]
+              (end
+                (->> unresolved
+                     j/from-java
+                     handlers/resolve-code-action
+                     (interop/conform-or-log ::interop/code-action))))))))
+
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (go :codeLens
         (CompletableFuture/supplyAsync
@@ -458,7 +469,8 @@
                   (InitializeResult. (doto (ServerCapabilities.)
                                        (.setHoverProvider true)
                                        (.setCallHierarchyProvider true)
-                                       (.setCodeActionProvider true)
+                                       (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
+                                                                 (.setResolveProvider true)))
                                        (.setCodeLensProvider (CodeLensOptions. true))
                                        (.setReferencesProvider true)
                                        (.setRenameProvider true)

@@ -352,7 +352,9 @@
         client-capabilities (get db :client-capabilities)]
     (f.code-actions/all zloc textDocument row col diagnostics client-capabilities)))
 
-
+(defn resolve-code-action [action]
+  (log/info "->>" action)
+  (f.code-actions/resolve-code-action action))
 
 (defn code-lens
   [doc-id]

@@ -4,6 +4,7 @@
         org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.24.0" :exclusions [com.google.guava/guava]}
         com.google.guava/guava {:mvn/version "30.1-jre"}
         rewrite-clj/rewrite-clj {:local/root "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"}
+        org.clojure/data.json {:mvn/version "1.0.0"}
         log4j/log4j {:mvn/version "1.2.17" :exclusions [javax.mail/mail
                                                         javax.jms/jms
                                                         com.sun.jdmk/jmxtools

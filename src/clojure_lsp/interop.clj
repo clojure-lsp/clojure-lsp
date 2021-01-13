@@ -1,12 +1,14 @@
 (ns clojure-lsp.interop
   (:require
+    [clojure.data.json :as json]
+    [clojure.java.data :as j]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [clojure.walk :as walk]
-    [medley.core :as medley]
-    [clojure.java.data :as j])
+    [medley.core :as medley])
   (:import
+    (com.google.gson JsonObject)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCall
       CallHierarchyItem
@@ -59,14 +61,19 @@
    MessageType
    WatchKind
    CompletionItemKind
-   SymbolKind
-   CodeActionKind])
+   SymbolKind])
 
 (defmethod j/from-java Either [instance]
   (j/from-java (.get instance)))
 
 (defmethod j/from-java TextDocumentIdentifier [instance]
   (document->decoded-uri instance))
+
+(defmethod j/from-java JsonObject [instance]
+  (-> instance
+      .toString
+      json/read-str
+      walk/keywordize-keys))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -237,28 +244,25 @@
 (s/def :code-action/title string?)
 
 (def code-action-kind
-  {:quick-fix CodeActionKind/QuickFix
-   :refactor CodeActionKind/Refactor
-   :refactor-extract CodeActionKind/RefactorExtract
-   :refactor-inline CodeActionKind/RefactorInline
-   :refactor-rewrite CodeActionKind/RefactorRewrite
-   :source CodeActionKind/Source
-   :source-organize-imports CodeActionKind/SourceOrganizeImports})
-
-(s/def :code-action/kind (s/and keyword?
-                                code-action-kind
-                                (s/conformer (fn [v] (get code-action-kind v)))))
+  [CodeActionKind/QuickFix
+   CodeActionKind/Refactor
+   CodeActionKind/RefactorExtract
+   CodeActionKind/RefactorInline
+   CodeActionKind/RefactorRewrite
+   CodeActionKind/Source
+   CodeActionKind/SourceOrganizeImports])
 
 (s/def :code-action/preferred? boolean?)
 
 (s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
-                                    :opt-un [:code-action/kind ::diagnostics ::workspace-edit ::command :code-action/preferred?])
+                                    :opt-un [::kind ::diagnostics ::workspace-edit ::command :code-action/preferred? ::data])
                             (s/conformer #(doto (CodeAction. (:title %1))
                                             (.setKind (:kind %1))
                                             (.setDiagnostics (:diagnostics %1))
                                             (.setIsPreferred (:preferred? %1))
                                             (.setEdit (:workspace-edit %1))
-                                            (.setCommand (:command %1))))))
+                                            (.setCommand (:command %1))
+                                            (.setData (walk/stringify-keys (:data %1)))))))
 
 (s/def ::code-actions (s/coll-of ::code-action))
 

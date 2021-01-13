@@ -8,7 +8,6 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.window :as window]
    [clojure.core.async :as async]
-   [clojure.java.shell :as shell]
    [clojure.tools.logging :as log]
    [nrepl.server :as nrepl.server]
    [trptcolin.versioneer.core :as version])
@@ -437,7 +436,7 @@
     (async/<! (async/timeout 5000))
     (log/debug "Checking parent process" ppid "liveness")
     (if (shared/process-alive? ppid)
-      (do 
+      (do
         (log/debug "Parent process" ppid "is running")
         (recur))
       (do
@@ -493,9 +492,9 @@
           (end
             (doto
              (:client @db/db)
-              (.registerCapability
-                (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                     (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
+             (.registerCapability
+               (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                    (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct
@@ -510,11 +509,27 @@
     (getWorkspaceService []
       (LSPWorkspaceService.))))
 
+(defn- dot-nrepl-port-file
+  []
+  (try
+    (slurp  ".nrepl-port")
+    (catch Exception _)))
+
+(defn- embedded-nrepl-server
+  []
+  (let [repl-server (nrepl.server/start-server)
+        port (:port repl-server)]
+    port))
+
+(defn- repl-port
+  []
+  (or (dot-nrepl-port-file)
+      (embedded-nrepl-server)))
+
 (defn- run []
   (log/info "Starting server...")
   (let [launcher (LSPLauncher/createServerLauncher server System/in System/out)
-        repl-server (nrepl.server/start-server)
-        port (:port repl-server)]
+        port (repl-port)]
     (log/info "====== LSP nrepl server started on port" port)
     (swap! db/db assoc
            :client ^LanguageClient (.getRemoteProxy launcher)

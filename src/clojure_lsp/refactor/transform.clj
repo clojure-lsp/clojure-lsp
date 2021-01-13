@@ -1,5 +1,6 @@
 (ns clojure-lsp.refactor.transform
   (:require
+   [clojure-lsp.clojure-core :as cc]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.references :as f.references]
@@ -11,9 +12,7 @@
    [rewrite-clj.custom-zipper.core :as cz]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]
-   [clojure.tools.logging :as log]
-   [clojure-lsp.clojure-core :as cc]))
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -256,6 +255,32 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
+(defn ^:private process-clean-ns
+  [ns-loc removed-nodes col keep-at-start? form-type]
+  (let [sep (n/whitespace-node (apply str (repeat col " ")))
+        single-space (n/whitespace-node " ")
+        imports (->> removed-nodes
+                        z/node
+                        n/children
+                        (remove n/printable-only?)
+                        (sort-by (comp str n/sexpr))
+                        (map-indexed (fn [idx node]
+                                       (if (and keep-at-start?
+                                                (= idx 0))
+                                         [single-space node]
+                                         [(n/newlines 1) sep node])))
+                        (apply concat)
+                        (cons (n/keyword-node form-type)))]
+    (if (empty? (z/child-sexprs removed-nodes))
+                       (z/subedit-> ns-loc
+                                    (z/find-value z/next form-type)
+                                    (z/up)
+                                    z/remove)
+                       (z/subedit-> ns-loc
+                                    (z/find-value z/next form-type)
+                                    (z/up)
+                                    (z/replace (n/list-node imports))))))
+
 (defn ^:private remove-unused-refers
   [node unused-refers]
   (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr set)
@@ -304,53 +329,99 @@
                                  set))
         single-unused?  (when (and single-require? (z/vector? first-node))
                           (or (contains? unused-aliases first-node-ns)
-                              (set/subset? first-node-refers unused-refers)))]
+                              (and (seq first-node-refers)
+                                   (seq unused-refers)
+                                   (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
 
+(defn ^:private clean-requires
+  [ns-loc usages keep-at-start?]
+  (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
+    (let [col (if require-loc
+                (if keep-at-start?
+                  (-> require-loc z/node meta :end-col)
+                  (-> require-loc z/right z/node meta :col dec))
+                4)
+          unused-aliases (crawler/find-unused-aliases usages)
+          unused-refers (crawler/find-unused-refers usages)
+          removed-nodes (->> require-loc
+                             z/remove
+                             (remove-unused-requires unused-aliases unused-refers))]
+      (process-clean-ns ns-loc removed-nodes col keep-at-start? :require))
+    ns-loc))
+
+(defn ^:private package-import?
+  [node]
+  (or (z/vector? node)
+      (z/list? node)))
+
+(defn ^:private remove-unused-package-import
+  [node base-package col unused-imports]
+  (cond
+    (string/includes? (z/string node) ".")
+    node
+
+    (contains? unused-imports
+               (symbol (str base-package "." (z/string node))))
+    (z/remove node)
+
+    (z/rightmost? node)
+    node
+
+    :else
+    (if (contains? unused-imports
+                   (symbol (str base-package "." (z/string (z/right node)))))
+      node
+      (z/edit-> node
+                (z/insert-right (n/spaces (+ col (count base-package))))
+                (z/insert-right (n/newlines 1))))))
+
+(defn ^:private remove-unused-import
+  [parent-node col unused-imports]
+  (cond
+    (package-import? parent-node)
+    (let [base-package (-> parent-node z/down z/leftmost z/string)
+          removed (edit/map-children parent-node
+                                     #(remove-unused-package-import % base-package col unused-imports))]
+      (if (= 1 (count (z/child-sexprs removed)))
+        (z/remove removed)
+        removed))
+
+    (contains? unused-imports (z/sexpr parent-node))
+    (z/remove parent-node)
+
+    :else
+    parent-node))
+
+(defn ^:private clean-imports
+  [ns-loc usages keep-at-start?]
+  (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
+    (let [col (if import-loc
+                (if keep-at-start?
+                  (-> import-loc z/node meta :end-col)
+                  (-> import-loc z/right z/node meta :col dec))
+                4)
+          unused-imports (crawler/find-unused-imports usages)
+          removed-nodes (-> import-loc
+                             z/remove
+                             (edit/map-children #(remove-unused-import % col unused-imports)))]
+      (process-clean-ns ns-loc removed-nodes col keep-at-start? :import))
+    ns-loc))
+
 (defn clean-ns
   [zloc uri]
   (let [safe-loc (or zloc (z/of-string (get-in @db/db [:documents uri :text])))
-        ns-loc (edit/find-namespace safe-loc)
-        require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
-        keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-        col (if require-loc
-              (if keep-require-at-start?
-                (-> require-loc z/node meta :end-col)
-                (-> require-loc z/right z/node meta :col dec))
-              4)
-        sep (n/whitespace-node (apply str (repeat col " ")))
-        single-space (n/whitespace-node " ")
-        usages (f.references/safe-find-references uri (slurp uri) false false)
-        unused-aliases (crawler/find-unused-aliases usages)
-        unused-refers (crawler/find-unused-refers usages)
-        removed-nodes (->> require-loc
-                           z/remove
-                           (remove-unused-requires unused-aliases unused-refers))
-        requires (->> removed-nodes
-                      z/node
-                      n/children
-                      (remove n/printable-only?)
-                      (sort-by (comp str n/sexpr))
-                      (map-indexed (fn [idx node]
-                                     (if (and keep-require-at-start?
-                                              (= idx 0))
-                                       [single-space node]
-                                       [(n/newlines 1) sep node])))
-                      (apply concat)
-                      (cons (n/keyword-node :require)))
-        result-loc (if (empty? (z/child-sexprs removed-nodes))
-                     (z/subedit-> ns-loc
-                                  (z/find-value z/next :require)
-                                  (z/up)
-                                  z/remove)
-                     (z/subedit-> ns-loc
-                                  (z/find-value z/next :require)
-                                  (z/up)
-                                  (z/replace (n/list-node requires))))]
-    [{:range (meta (z/node result-loc))
-      :loc result-loc}]))
+        ns-loc (edit/find-namespace safe-loc)]
+    (when ns-loc
+      (let [keep-at-start? (get-in @db/db [:settings :keep-require-at-start?])
+            usages (f.references/safe-find-references uri (slurp uri) false false)
+            result-loc (-> ns-loc
+                           (clean-requires usages keep-at-start?)
+                           (clean-imports usages keep-at-start?))]
+        [{:range (meta (z/node result-loc))
+          :loc result-loc}]))))
 
 (defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
   (let [ns-loc (edit/find-namespace zloc)

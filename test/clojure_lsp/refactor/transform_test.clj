@@ -295,6 +295,18 @@
                    (code "(ns foo.bar)"
                          "(defn func []"
                          "  (b/some))")))
+  (testing "with single used require on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] ))"
+                         "(defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]))"
+                         "(defn func []"
+                         "  (f/some))")))
   (testing "with multiple unused requires on ns"
     (test-clean-ns {}
                    (code "(ns foo.bar"
@@ -400,7 +412,80 @@
                            " (:require"
                            "   [bar :refer [some] ]"
                            "   [baz :as b]))")
-                     (code "(ns foo.bar)"))))
+                     (code "(ns foo.bar)")))
+  (testing "single unused full package import"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  java.util.Date))")
+                   (code "(ns foo.bar)")))
+  (testing "single unused package import"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date]))")
+                   (code "(ns foo.bar)")))
+  (testing "unused full package imports"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import "
+                         "  java.util.Date java.util.Calendar java.util.List))"
+                         "Calendar.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  java.util.Calendar))"
+                         "Calendar.")))
+  (testing "unused package imports"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import "
+                         "  [java.util Date Calendar List Map]))"
+                         "Calendar."
+                         "Map.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Calendar Map]))"
+                         "Calendar."
+                         "Map.")))
+  (testing "unused package imports with keep-at-start?"
+    (test-clean-ns {:settings {:keep-require-at-start? true}}
+                   (code "(ns foo.bar"
+                         " (:import [java.util Date Calendar List Map]))"
+                         "Calendar."
+                         "Map.")
+                   (code "(ns foo.bar"
+                         " (:import [java.util Calendar Map]))"
+                         "Calendar."
+                         "Map.")))
+  (testing "unused package imports with single import"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date List]"
+                         "  java.util.Calendar))"
+                         "Calendar."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util List]"
+                         "  java.util.Calendar))"
+                         "Calendar."
+                         "List.")))
+  (testing "unused package imports spacing"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             Calendar"
+                         "             List]))"
+                         "Date."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
+                         "List."))))
 
 (deftest add-missing-libspec
   (testing "aliases"

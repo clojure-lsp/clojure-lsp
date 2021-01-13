@@ -423,6 +423,70 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
+(def common-alias->info
+  {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
+   :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
+   :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
+   :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
+   :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
+
+(defn find-missing-alias-require [zloc]
+  (let [require-alias (some-> zloc z/sexpr namespace)
+        alias->info (->> (:file-envs @db/db)
+                         (mapcat val)
+                         (filter (fn [usage]
+                                   (or
+                                     (set/subset? #{:public :ns} (:tags usage))
+                                     (get-in usage [:tags :alias]))))
+                         (mapv (fn [{:keys [sym _tags] alias-str :str alias-ns :ns}]
+                                 {:alias-str alias-str
+                                  :label (name sym)
+                                  :detail (if alias-ns
+                                            (str alias-ns)
+                                            (name sym))
+                                  :alias-ns (if alias-ns
+                                              alias-ns
+                                              sym)}))
+                         (distinct)
+                         (group-by :alias-str))
+        posibilities (or (get alias->info require-alias)
+                         [(get common-alias->info (keyword require-alias))])]
+    (when (= 1 (count posibilities))
+      (-> posibilities first :alias-ns))))
+
+(def common-refers->info
+  {'deftest      'clojure.test
+   'testing      'clojure.test
+   'is           'clojure.test
+   'are          'clojure.test
+   'ANY          'compojure.core
+   'DELETE       'compojure.core
+   'GET          'compojure.core
+   'PATCH        'compojure.core
+   'POST         'compojure.core
+   'PUT          'compojure.core
+   'context      'compojure.core
+   'defroutes    'compojure.core
+   'defentity    'korma.core
+   'reg-event-db 're-frame.core
+   'reg-sub      're-frame.core
+   'reg-event-fx 're-frame.core
+   'fact         'midje.sweet
+   'facts        'midje.sweet})
+
+(defn find-missing-refer-require [zloc]
+  (let [refer-to-add (-> zloc z/sexpr symbol)
+        ns-loc (edit/find-namespace zloc)
+        ns-zip (zsub/subzip ns-loc)]
+    (when (not (z/find-value ns-zip z/next refer-to-add))
+      (get common-refers->info (z/sexpr zloc)))))
+
+(defn find-missing-require [zloc]
+  (let [ns-str (some-> zloc z/sexpr namespace)]
+    (if ns-str
+      (find-missing-alias-require zloc)
+      (find-missing-refer-require zloc))))
+
 (defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
   (let [ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
@@ -471,100 +535,50 @@
   (when (and qualified-ns-to-add ns-to-add)
     (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
 
-(def common-alias->info
-  {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
-   :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
-   :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
-   :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
-   :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
-
 (defn ^:private add-missing-alias-ns [zloc source]
-  (let [ns-str-to-add (some-> zloc z/sexpr namespace)
-        ns-to-add (some-> ns-str-to-add symbol)
-        alias->info (->> (:file-envs @db/db)
-                         (mapcat val)
-                         (filter (fn [usage]
-                                   (or
-                                     (set/subset? #{:public :ns} (:tags usage))
-                                     (get-in usage [:tags :alias]))))
-                         (mapv (fn [{:keys [sym _tags] alias-str :str alias-ns :ns}]
-                                 {:alias-str alias-str
-                                  :label (name sym)
-                                  :detail (if alias-ns
-                                            (str alias-ns)
-                                            (name sym))
-                                  :alias-ns (if alias-ns
-                                              alias-ns
-                                              sym)}))
-                         (distinct)
-                         (group-by :alias-str))
-        posibilities (or (get alias->info ns-str-to-add)
-                         [(get common-alias->info (keyword ns-str-to-add))])
-        qualified-ns-to-add (when (= 1 (count posibilities))
-                              (-> posibilities first :alias-ns))
-        result (add-known-libspec zloc ns-to-add qualified-ns-to-add)]
+  (let [require-alias (some-> zloc z/sexpr namespace symbol)
+        qualified-ns-to-add (find-missing-alias-require zloc)
+        result (add-known-libspec zloc require-alias qualified-ns-to-add)]
     (if (= source :code-action)
       {:result result
        :code-action-data {:ns-name qualified-ns-to-add}}
       result)))
 
-(def common-refers->info
-  {'deftest      'clojure.test
-   'testing      'clojure.test
-   'is           'clojure.test
-   'are          'clojure.test
-   'ANY          'compojure.core
-   'DELETE       'compojure.core
-   'GET          'compojure.core
-   'PATCH        'compojure.core
-   'POST         'compojure.core
-   'PUT          'compojure.core
-   'context      'compojure.core
-   'defroutes    'compojure.core
-   'defentity    'korma.core
-   'reg-event-db 're-frame.core
-   'reg-sub      're-frame.core
-   'reg-event-fx 're-frame.core
-   'fact         'midje.sweet
-   'facts        'midje.sweet})
-
 (defn ^:private add-missing-refer [zloc source]
-  (when-let [qualified-ns-to-add (get common-refers->info (z/sexpr zloc))]
+  (when-let [qualified-ns-to-add (find-missing-refer-require zloc)]
     (let [refer-to-add (-> zloc z/sexpr symbol)
           ns-loc (edit/find-namespace zloc)
-          ns-zip (zsub/subzip ns-loc)
-          need-to-add? (not (z/find-value ns-zip z/next refer-to-add))]
-      (when need-to-add?
-        (let [existing-ns-require (z/find-value ns-zip z/next qualified-ns-to-add)
-              add-require? (and (not existing-ns-require)
-                                (not (z/find-value ns-zip z/next :require)))
-              require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
-              col (if require-loc
-                    (-> require-loc z/rightmost z/node meta :col)
-                    5)
-              result-loc (if existing-ns-require
-                           (z/subedit-> ns-loc
-                                        (z/find-value z/next qualified-ns-to-add)
-                                        (z/find-value z/next ':refer)
-                                        z/right
-                                        (cz/append-child (n/spaces 1))
-                                        (z/append-child (z/sexpr zloc)))
-                           (z/subedit-> ns-loc
-                                        (cond->
-                                            add-require? (z/append-child (n/newlines 1))
-                                            add-require? (z/append-child (n/spaces 2))
-                                            add-require? (z/append-child (list :require)))
-                                        (z/find-value z/next :require)
-                                        (z/up)
-                                        (cz/append-child (n/newlines 1))
-                                        (cz/append-child (n/spaces (dec col)))
-                                        (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))
-              result [{:range (meta (z/node result-loc))
-                       :loc result-loc}]]
-          (if (= source :code-action)
-            {:result result
-             :code-action-data {:ns-name qualified-ns-to-add}}
-            result))))))
+          ns-zip (zsub/subzip ns-loc)]
+      (let [existing-ns-require (z/find-value ns-zip z/next qualified-ns-to-add)
+            add-require? (and (not existing-ns-require)
+                              (not (z/find-value ns-zip z/next :require)))
+            require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+            col (if require-loc
+                  (-> require-loc z/rightmost z/node meta :col)
+                  5)
+            result-loc (if existing-ns-require
+                         (z/subedit-> ns-loc
+                                      (z/find-value z/next qualified-ns-to-add)
+                                      (z/find-value z/next ':refer)
+                                      z/right
+                                      (cz/append-child (n/spaces 1))
+                                      (z/append-child (z/sexpr zloc)))
+                         (z/subedit-> ns-loc
+                                      (cond->
+                                       add-require? (z/append-child (n/newlines 1))
+                                       add-require? (z/append-child (n/spaces 2))
+                                       add-require? (z/append-child (list :require)))
+                                      (z/find-value z/next :require)
+                                      (z/up)
+                                      (cz/append-child (n/newlines 1))
+                                      (cz/append-child (n/spaces (dec col)))
+                                      (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))
+            result [{:range (meta (z/node result-loc))
+                     :loc result-loc}]]
+        (if (= source :code-action)
+          {:result result
+           :code-action-data {:ns-name qualified-ns-to-add}}
+          result)))))
 
 (defn add-missing-libspec
   [zloc {:keys [source]}]

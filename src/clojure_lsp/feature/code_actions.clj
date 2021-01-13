@@ -2,16 +2,27 @@
   (:require
     [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.refactor.transform :as r.transform]
-    [rewrite-clj.zip :as z])
+    [clojure-lsp.refactor.transform :as r.transform])
   (:import
    (org.eclipse.lsp4j
      CodeActionKind)))
 
-(defn resolve-code-action [{{:keys [id uri line character]} :data :as code-action}]
+(defn resolve-code-action
+  [{{:keys [id uri line character]} :data :as code-action}
+   zloc]
   (->
     (merge code-action
            (case id
+
+             "add-missing-require"
+             (let [missing-require (f.refactor/call-refactor {:loc         zloc
+                                                              :refactoring :add-missing-libspec
+                                                              :uri         uri
+                                                              :version     0
+                                                              :row         (inc line)
+                                                              :col         (inc character)
+                                                              :args        {:source :code-action}})]
+               {:workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-require))})
 
              "refactor-inline-symbol"
              {:command {:title     "Inline symbol"
@@ -46,26 +57,20 @@
         character                  (dec col)
         has-unknown-ns?            (some #(= (compare "unresolved-namespace" (:code %)) 0) diagnostics)
         unresolved-symbol          (some #(= (compare "unresolved-symbol" (:code %)) 0) diagnostics)
-        known-refer?               (when unresolved-symbol
-                                     (get r.transform/common-refers->info (z/sexpr zloc)))
-        missing-require            (when (or has-unknown-ns? known-refer?)
-                                     (f.refactor/call-refactor {:loc         zloc
-                                                                :refactoring :add-missing-libspec
-                                                                :uri         uri
-                                                                :version     0
-                                                                :row         row
-                                                                :col         col
-                                                                :args        {:source :code-action}}))
+        missing-require            (when (or has-unknown-ns? unresolved-symbol)
+                                     (r.transform/find-missing-require zloc))
         missing-import             (when unresolved-symbol
                                      (r.transform/add-common-import-to-namespace zloc))]
     (cond-> []
 
-      (:result missing-require)
-      (conj {:title          (str "Add missing '" (-> missing-require :code-action-data :ns-name) "' require")
+      missing-require
+      (conj {:title          (str "Add missing '" missing-require "' require")
              :kind           CodeActionKind/QuickFix
              :preferred?     true
-             :data           {:id "add-missing-require"}
-             :workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-require))})
+             :data           {:id "add-missing-require"
+                              :uri uri
+                              :line line
+                              :character character}})
 
       (:result missing-import)
       (conj {:title          (str "Add missing '" (-> missing-import :code-action-data :import-name) "' import")
@@ -105,4 +110,4 @@
                        :character character}})
 
       (not resolve-support?)
-      (->> (map resolve-code-action)))))
+      (->> (map #(resolve-code-action % zloc))))))

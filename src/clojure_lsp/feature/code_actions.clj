@@ -3,7 +3,6 @@
     [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.refactor.transform :as r.transform]
-    [clojure.tools.logging :as log]
     [rewrite-clj.zip :as z])
   (:import
    (org.eclipse.lsp4j
@@ -32,7 +31,8 @@
              "clean-ns"
              {:command {:title     "Clean namespace"
                         :command   "clean-ns"
-                        :arguments [uri line character]}}))
+                        :arguments [uri line character]}}
+             {}))
     (dissoc :data :diagnostics)))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
@@ -105,4 +105,4 @@
                        :character character}})
 
       (not resolve-support?)
-      #(map resolve-code-action %))))
+      (->> (map resolve-code-action)))))

@@ -4,7 +4,8 @@
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [clojure.walk :as walk]
-    [medley.core :as medley])
+    [medley.core :as medley]
+    [clojure.java.data :as j])
   (:import
     (org.eclipse.lsp4j
       CallHierarchyIncomingCall
@@ -33,11 +34,39 @@
       SymbolKind
       SymbolInformation
       TextDocumentEdit
+      TextDocumentIdentifier
       TextEdit
       VersionedTextDocumentIdentifier
+      WatchKind
       WorkspaceEdit)
     (org.eclipse.lsp4j.jsonrpc.messages Either)
     (java.net URLDecoder)))
+
+(defn ^:private enum->keyword [enum]
+  (-> enum (.name) .toLowerCase keyword))
+
+(defn learn-how-to-parse-enums [enums]
+  (-> #(defmethod j/from-java % [instance] (enum->keyword instance))
+      (map enums)))
+
+(defn document->decoded-uri [document]
+  (-> document
+      .getUri
+      URLDecoder/decode))
+
+(learn-how-to-parse-enums
+  [DiagnosticSeverity
+   MessageType
+   WatchKind
+   CompletionItemKind
+   SymbolKind
+   CodeActionKind])
+
+(defmethod j/from-java Either [instance]
+  (j/from-java (.get instance)))
+
+(defmethod j/from-java TextDocumentIdentifier [instance]
+  (document->decoded-uri instance))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -55,8 +84,8 @@
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
 (s/def :completion-item/kind (s/and keyword?
-                     completion-kind-enum
-                     (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
+                                    completion-kind-enum
+                                    (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
 (s/def ::new-text string?)
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
@@ -271,7 +300,7 @@
 
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
-(defn debeaner [inst]
+(defn ^{:deprecated "use j/from-java instead"} debeaner [inst]
   (when inst
     (->> (dissoc (bean inst) :class)
          (into {})
@@ -424,8 +453,3 @@
         (update-in [:cljfmt :indents] clean-symbol-map)
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
-
-(defn document->decoded-uri [document]
-  (-> document
-      .getUri
-      URLDecoder/decode))

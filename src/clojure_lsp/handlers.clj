@@ -24,7 +24,8 @@
     [rewrite-clj.zip :as z]
     [trptcolin.versioneer.core :as version])
   (:import
-    [java.net URL JarURLConnection]))
+    [java.net URL
+              JarURLConnection]))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -339,16 +340,19 @@
                        (update :file-envs #(apply dissoc % uris)))))))
 
 (defn code-actions
-  [doc-id diagnostics line character]
+  [{:keys [range context textDocument]}]
   (let [db @db/db
-        row (inc (int line))
-        col (inc (int character))
+        diagnostics (-> context :diagnostics)
+        row (-> range :start :line inc)
+        col (-> range :start :character inc)
         zloc (-> db
-                 (get-in [:documents doc-id])
+                 (get-in [:documents textDocument])
                  :text
                  (parser/loc-at-pos row col))
         client-capabilities (get db :client-capabilities)]
-    (f.code-actions/all zloc doc-id row col diagnostics client-capabilities)))
+    (f.code-actions/all zloc textDocument row col diagnostics client-capabilities)))
+
+
 
 (defn code-lens
   [doc-id]

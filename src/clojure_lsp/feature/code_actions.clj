@@ -13,8 +13,8 @@
         inline-symbol? (r.transform/inline-symbol? def-uri definition)
         line (dec row)
         character (dec col)
-        has-unknown-ns? (some #(= (compare "unresolved-namespace" (some-> % .getCode .get)) 0) diagnostics)
-        unresolved-symbol (some #(= (compare "unresolved-symbol" (some-> % .getCode .get)) 0) diagnostics)
+        has-unknown-ns? (some #(= (compare "unresolved-namespace" (:code %)) 0) diagnostics)
+        unresolved-symbol (some #(= (compare "unresolved-symbol" (:code %)) 0) diagnostics)
         known-refer? (when unresolved-symbol
                        (get r.transform/common-refers->info (z/sexpr zloc)))
         missing-require (when (or has-unknown-ns? known-refer?)
@@ -26,7 +26,7 @@
                                                      :col col
                                                      :args {:source :code-action}}))
         missing-import (when unresolved-symbol
-                          (r.transform/add-common-import-to-namespace zloc))]
+                         (r.transform/add-common-import-to-namespace zloc))]
     (cond-> []
 
       (:result missing-require)

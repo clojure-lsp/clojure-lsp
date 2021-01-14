@@ -423,14 +423,14 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(def common-alias->info
+(def ^:private common-alias->info
   {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
    :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
    :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
    :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
    :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
 
-(defn find-missing-alias-require [zloc]
+(defn ^:private find-missing-alias-require [zloc]
   (let [require-alias (some-> zloc z/sexpr namespace)
         alias->info (->> (:file-envs @db/db)
                          (mapcat val)
@@ -454,7 +454,7 @@
     (when (= 1 (count posibilities))
       (-> posibilities first :alias-ns))))
 
-(def common-refers->info
+(def ^:private common-refers->info
   {'deftest      'clojure.test
    'testing      'clojure.test
    'is           'clojure.test
@@ -474,7 +474,7 @@
    'fact         'midje.sweet
    'facts        'midje.sweet})
 
-(defn find-missing-refer-require [zloc]
+(defn ^:private find-missing-refer-require [zloc]
   (let [refer-to-add (-> zloc z/sexpr symbol)
         ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)]
@@ -486,6 +486,12 @@
     (if ns-str
       (find-missing-alias-require zloc)
       (find-missing-refer-require zloc))))
+
+(defn find-missing-import [zloc]
+  (let [class-with-dot (z/sexpr zloc)
+        class-name (->> class-with-dot str drop-last (string/join "") symbol)]
+    (or (get cc/java-util-imports class-name)
+        (get cc/java-util-imports class-with-dot))))
 
 (defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
   (let [ns-loc (edit/find-namespace zloc)
@@ -522,13 +528,10 @@
   (add-form-to-namespace zloc (symbol import-name) :import import-name))
 
 (defn add-common-import-to-namespace [zloc]
-  (let [class-with-dot (z/sexpr zloc)
-        class-name (->> class-with-dot str drop-last (string/join "") symbol)]
-    (when-let [import-name (or (get cc/java-util-imports class-name)
-                               (get cc/java-util-imports class-with-dot))]
-      (let [result (add-form-to-namespace zloc (symbol import-name) :import import-name)]
-        {:result result
-         :code-action-data {:import-name import-name}}))))
+  (when-let [import-name (find-missing-import zloc)]
+    (let [result (add-form-to-namespace zloc (symbol import-name) :import import-name)]
+      {:result result
+       :code-action-data {:import-name import-name}})))
 
 (defn add-known-libspec
   [zloc ns-to-add qualified-ns-to-add]

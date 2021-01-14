@@ -43,7 +43,7 @@
 
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
   (let [usage (f.definition/definition-usage uri row col)
-        references (f.references/reference-usages uri row col)]
+        references (f.references/reference-usages uri row col false)]
     (r.transform/inline-symbol usage references)))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]

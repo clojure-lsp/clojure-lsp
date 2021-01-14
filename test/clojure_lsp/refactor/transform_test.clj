@@ -598,7 +598,7 @@
       (let [zloc (z/find-value (z/of-string code) z/next 'something)
             pos (meta (z/node zloc))
             definition (f.definition/definition-usage "file://a.clj" (:row pos) (:col pos))
-            references (f.references/reference-usages "file://a.clj" (:row pos) (:col pos))
+            references (f.references/reference-usages "file://a.clj" (:row pos) (:col pos) false)
             results (transform/inline-symbol definition references)
             a-results (get results "file://a.clj")]
         (is (map? results))
@@ -617,7 +617,7 @@
       (let [zloc (z/find-value (z/of-string b-code) z/next 'a/something)
             pos (meta (z/node zloc))
             definition (f.definition/definition-usage "file://b.clj" (:row pos) (:col pos))
-            references (f.references/reference-usages "file://b.clj" (:row pos) (:col pos))
+            references (f.references/reference-usages "file://b.clj" (:row pos) (:col pos) false)
             results (transform/inline-symbol definition references)
             a-results (get results "file://a.clj")
             b-results (get results "file://b.clj")]

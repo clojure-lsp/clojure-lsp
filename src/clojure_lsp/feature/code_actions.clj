@@ -7,6 +7,11 @@
     (org.eclipse.lsp4j
       CodeActionKind)))
 
+(defn dissoc-if-nil [m k]
+  (if (k m)
+    m
+    (dissoc m k)))
+
 (defn resolve-code-action
   [{{:keys [id uri line character]} :data :as code-action}
    zloc]
@@ -15,18 +20,17 @@
            (case id
 
              "add-missing-require"
-             (let [missing-require (f.refactor/call-refactor {:loc         zloc
-                                                              :refactoring :add-missing-libspec
-                                                              :uri         uri
-                                                              :version     0
-                                                              :row         (inc line)
-                                                              :col         (inc character)
-                                                              :args        {:source :code-action}})]
-               {:workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-require))})
+             (let [missing-require-edit (f.refactor/call-refactor {:loc         zloc
+                                                                   :refactoring :add-missing-libspec
+                                                                   :uri         uri
+                                                                   :version     0
+                                                                   :row         (inc line)
+                                                                   :col         (inc character)})]
+               {:workspace-edit missing-require-edit})
 
              "add-missing-import"
-             (let [missing-import (r.transform/add-common-import-to-namespace zloc)]
-               {:workspace-edit (f.refactor/refactor-client-seq-changes uri 0 (:result missing-import))})
+             (let [missing-import-edit (r.transform/add-common-import-to-namespace zloc)]
+               {:workspace-edit missing-import-edit})
 
              "refactor-inline-symbol"
              {:command {:title     "Inline symbol"
@@ -48,7 +52,9 @@
                         :command   "clean-ns"
                         :arguments [uri line character]}}
              {}))
-    (dissoc :data :diagnostics)))
+    (dissoc-if-nil :data)
+    (dissoc-if-nil :diagnostics)
+    (dissoc-if-nil :command)))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])

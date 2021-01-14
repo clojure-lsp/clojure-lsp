@@ -327,7 +327,7 @@
 
 (defmethod extension "dependencyContents"
   [_ doc]
-  (let [{doc-id :uri} (interop/debeaner doc)
+  (let [{doc-id :uri} (interop/java->clj doc)
         url (URL. doc-id)
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)

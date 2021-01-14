@@ -1,18 +1,19 @@
 (ns clojure-lsp.refactor.transform
   (:require
-   [clojure-lsp.clojure-core :as cc]
-   [clojure-lsp.crawler :as crawler]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.references :as f.references]
-   [clojure-lsp.parser :as parser]
-   [clojure-lsp.refactor.edit :as edit]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [medley.core :as medley]
-   [rewrite-clj.custom-zipper.core :as cz]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]))
+    [clojure-lsp.crawler :as crawler]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.feature.references :as f.references]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.refactor.edit :as edit]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [medley.core :as medley]
+    [rewrite-clj.custom-zipper.core :as cz]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z]
+    [rewrite-clj.zip.subedit :as zsub]
+    [clojure.tools.logging :as log]
+    [clojure-lsp.clojure-core :as cc]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -194,8 +195,8 @@
                              (cz/insert-left (n/spaces col)))
                          (-> bindings-loc
                              (cond->
-                               first-bind (cz/append-child (n/newlines 1))
-                               first-bind (cz/append-child (n/spaces col))) ; insert let and binding backwards
+                              first-bind (cz/append-child (n/newlines 1))
+                              first-bind (cz/append-child (n/spaces col))) ; insert let and binding backwards
                              (z/append-child binding-sym) ; add binding symbol
                              (z/append-child bound-node)
                              (z/down)
@@ -423,64 +424,15 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
-  (let [ns-loc (edit/find-namespace zloc)
-        ns-zip (zsub/subzip ns-loc)
-        cursor-sym (z/sexpr zloc)
-        need-to-add? (and (not (z/find-value ns-zip z/next cursor-sym))
-                          (not (z/find-value ns-zip z/next form-to-add))
-                          (not (z/find-value ns-zip z/next form-to-check-exists)))]
-    (when (and form-to-add need-to-add?)
-      (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
-            form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
-            keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-            col (if form-type-loc
-                  (:col (meta (z/node (z/rightmost form-type-loc))))
-                  (if keep-require-at-start?
-                    2
-                    5))
-            result-loc (z/subedit-> ns-zip
-                                    (cond->
-                                        add-form-type? (z/append-child (n/newlines 1))
-                                        add-form-type? (z/append-child (n/spaces 2))
-                                        add-form-type? (z/append-child (list form-type)))
-                                    (z/find-value z/next form-type)
-                                    (z/up)
-                                    (cond->
-                                        (or (not add-form-type?)
-                                            (not keep-require-at-start?)) (cz/append-child (n/newlines 1)))
-                                    (cz/append-child (n/spaces (dec col)))
-                                    (z/append-child form-to-add))]
-        [{:range (meta (z/node result-loc))
-          :loc result-loc}]))))
-
-(defn add-import-to-namespace [zloc import-name]
-  (add-form-to-namespace zloc (symbol import-name) :import import-name))
-
-(defn add-common-import-to-namespace [zloc]
-  (let [class-with-dot (z/sexpr zloc)
-        class-name (->> class-with-dot str drop-last (string/join "") symbol)]
-    (when-let [import-name (or (get cc/java-util-imports class-name)
-                               (get cc/java-util-imports class-with-dot))]
-      (let [result (add-form-to-namespace zloc (symbol import-name) :import import-name)]
-        {:result result
-         :code-action-data {:import-name import-name}}))))
-
-(defn add-known-libspec
-  [zloc ns-to-add qualified-ns-to-add]
-  (when (and qualified-ns-to-add ns-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
-
-(def common-alias->info
+(def ^:private common-alias->info
   {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
    :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
    :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
    :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
    :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
 
-(defn ^:private add-missing-alias-ns [zloc source]
-  (let [ns-str-to-add (some-> zloc z/sexpr namespace)
-        ns-to-add (some-> ns-str-to-add symbol)
+(defn ^:private find-missing-alias-require [zloc]
+  (let [require-alias (some-> zloc z/sexpr namespace)
         alias->info (->> (:file-envs @db/db)
                          (mapcat val)
                          (filter (fn [usage]
@@ -498,17 +450,12 @@
                                               sym)}))
                          (distinct)
                          (group-by :alias-str))
-        posibilities (or (get alias->info ns-str-to-add)
-                         [(get common-alias->info (keyword ns-str-to-add))])
-        qualified-ns-to-add (when (= 1 (count posibilities))
-                              (-> posibilities first :alias-ns))
-        result (add-known-libspec zloc ns-to-add qualified-ns-to-add)]
-    (if (= source :code-action)
-      {:result result
-       :code-action-data {:ns-name qualified-ns-to-add}}
-      result)))
+        posibilities (or (get alias->info require-alias)
+                         [(get common-alias->info (keyword require-alias))])]
+    (when (= 1 (count posibilities))
+      (-> posibilities first :alias-ns))))
 
-(def common-refers->info
+(def ^:private common-refers->info
   {'deftest      'clojure.test
    'testing      'clojure.test
    'is           'clojure.test
@@ -528,50 +475,111 @@
    'fact         'midje.sweet
    'facts        'midje.sweet})
 
-(defn ^:private add-missing-refer [zloc source]
-  (when-let [qualified-ns-to-add (get common-refers->info (z/sexpr zloc))]
+(defn ^:private find-missing-refer-require [zloc]
+  (let [refer-to-add (-> zloc z/sexpr symbol)
+        ns-loc (edit/find-namespace zloc)
+        ns-zip (zsub/subzip ns-loc)]
+    (when (not (z/find-value ns-zip z/next refer-to-add))
+      (get common-refers->info (z/sexpr zloc)))))
+
+(defn find-missing-require [zloc]
+  (let [ns-str (some-> zloc z/sexpr namespace)]
+    (if ns-str
+      (find-missing-alias-require zloc)
+      (find-missing-refer-require zloc))))
+
+(defn find-missing-import [zloc]
+  (let [class-with-dot (z/sexpr zloc)
+        class-name (->> class-with-dot str drop-last (string/join "") symbol)]
+    (or (get cc/java-util-imports class-name)
+        (get cc/java-util-imports class-with-dot))))
+
+(defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
+  (let [ns-loc (edit/find-namespace zloc)
+        ns-zip (zsub/subzip ns-loc)
+        cursor-sym (z/sexpr zloc)
+        need-to-add? (and (not (z/find-value ns-zip z/next cursor-sym))
+                          (not (z/find-value ns-zip z/next form-to-add))
+                          (not (z/find-value ns-zip z/next form-to-check-exists)))]
+    (when (and form-to-add need-to-add?)
+      (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
+            form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
+            keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
+            col (if form-type-loc
+                  (:col (meta (z/node (z/rightmost form-type-loc))))
+                  (if keep-require-at-start?
+                    2
+                    5))
+            result-loc (z/subedit-> ns-zip
+                                    (cond->
+                                     add-form-type? (z/append-child (n/newlines 1))
+                                     add-form-type? (z/append-child (n/spaces 2))
+                                     add-form-type? (z/append-child (list form-type)))
+                                    (z/find-value z/next form-type)
+                                    (z/up)
+                                    (cond->
+                                     (or (not add-form-type?)
+                                         (not keep-require-at-start?)) (cz/append-child (n/newlines 1)))
+                                    (cz/append-child (n/spaces (dec col)))
+                                    (z/append-child form-to-add))]
+        [{:range (meta (z/node result-loc))
+          :loc result-loc}]))))
+
+(defn add-import-to-namespace [zloc import-name]
+  (add-form-to-namespace zloc (symbol import-name) :import import-name))
+
+(defn add-common-import-to-namespace [zloc]
+  (when-let [import-name (find-missing-import zloc)]
+    (add-form-to-namespace zloc (symbol import-name) :import import-name)))
+
+(defn add-known-libspec
+  [zloc ns-to-add qualified-ns-to-add]
+  (when (and qualified-ns-to-add ns-to-add)
+    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
+
+(defn ^:private add-missing-alias-ns [zloc]
+  (let [require-alias (some-> zloc z/sexpr namespace symbol)
+        qualified-ns-to-add (find-missing-alias-require zloc)]
+    (add-known-libspec zloc require-alias qualified-ns-to-add)))
+
+(defn ^:private add-missing-refer [zloc]
+  (when-let [qualified-ns-to-add (find-missing-refer-require zloc)]
     (let [refer-to-add (-> zloc z/sexpr symbol)
           ns-loc (edit/find-namespace zloc)
           ns-zip (zsub/subzip ns-loc)
-          need-to-add? (not (z/find-value ns-zip z/next refer-to-add))]
-      (when need-to-add?
-        (let [existing-ns-require (z/find-value ns-zip z/next qualified-ns-to-add)
-              add-require? (and (not existing-ns-require)
-                                (not (z/find-value ns-zip z/next :require)))
-              require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
-              col (if require-loc
-                    (-> require-loc z/rightmost z/node meta :col)
-                    5)
-              result-loc (if existing-ns-require
-                           (z/subedit-> ns-loc
-                                        (z/find-value z/next qualified-ns-to-add)
-                                        (z/find-value z/next ':refer)
-                                        z/right
-                                        (cz/append-child (n/spaces 1))
-                                        (z/append-child (z/sexpr zloc)))
-                           (z/subedit-> ns-loc
-                                        (cond->
-                                            add-require? (z/append-child (n/newlines 1))
-                                            add-require? (z/append-child (n/spaces 2))
-                                            add-require? (z/append-child (list :require)))
-                                        (z/find-value z/next :require)
-                                        (z/up)
-                                        (cz/append-child (n/newlines 1))
-                                        (cz/append-child (n/spaces (dec col)))
-                                        (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))
-              result [{:range (meta (z/node result-loc))
-                       :loc result-loc}]]
-          (if (= source :code-action)
-            {:result result
-             :code-action-data {:ns-name qualified-ns-to-add}}
-            result))))))
+          existing-ns-require (z/find-value ns-zip z/next qualified-ns-to-add)
+          add-require? (and (not existing-ns-require)
+                            (not (z/find-value ns-zip z/next :require)))
+          require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
+          col (if require-loc
+                (-> require-loc z/rightmost z/node meta :col)
+                5)
+          result-loc (if existing-ns-require
+                       (z/subedit-> ns-loc
+                                    (z/find-value z/next qualified-ns-to-add)
+                                    (z/find-value z/next ':refer)
+                                    z/right
+                                    (cz/append-child (n/spaces 1))
+                                    (z/append-child (z/sexpr zloc)))
+                       (z/subedit-> ns-loc
+                                    (cond->
+                                     add-require? (z/append-child (n/newlines 1))
+                                     add-require? (z/append-child (n/spaces 2))
+                                     add-require? (z/append-child (list :require)))
+                                    (z/find-value z/next :require)
+                                    (z/up)
+                                    (cz/append-child (n/newlines 1))
+                                    (cz/append-child (n/spaces (dec col)))
+                                    (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))]
+      [{:range (meta (z/node result-loc))
+        :loc result-loc}])))
 
 (defn add-missing-libspec
-  [zloc {:keys [source]}]
+  [zloc]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (add-missing-alias-ns zloc source)
-      (add-missing-refer zloc source))))
+      (add-missing-alias-ns zloc)
+      (add-missing-refer zloc))))
 
 (defn extract-function
   [zloc fn-name usages]
@@ -584,9 +592,9 @@
         fn-sym (symbol fn-name)
         {:keys [declared scoped]} (->> usages
                                        (group-by #(condp set/subset? (:tags %)
-                                               #{:declare} :declared
-                                               #{:scoped} :scoped
-                                               nil))
+                                                    #{:declare} :declared
+                                                    #{:scoped} :scoped
+                                                    nil))
                                        (medley/map-vals #(set (map :sym %))))
         used-syms (mapv (comp symbol name) (set/difference scoped declared))
         expr-edit (-> (z/of-string "")

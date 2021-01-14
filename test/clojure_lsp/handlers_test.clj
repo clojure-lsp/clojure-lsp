@@ -423,9 +423,9 @@
            :new-text "(a)"}]
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
-(deftest test-code-actions
+(deftest test-code-actions-handle
   (let [references-code   (str "(ns some-ns)\n"
-                      "(def foo)")
+                               "(def foo)")
         b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
                       "(def bar 1)\n"
                       "(defn baz []\n"
@@ -442,86 +442,28 @@
                   :file-envs {"file://a.clj" (parser/find-usages references-code :clj {})
                               "file://b.clj" (parser/find-usages b-code :clj {})
                               "file://c.clj" (parser/find-usages c-code :clj {})}}]
-    (testing "Add missing namespace"
-      (testing "when it has not unresolved-namespace diagnostic"
-        (reset! db/db db-state)
-        (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                      (handlers/code-actions "file://c.clj" [] 1 9))))
+    (testing "when it has unresolved-namespace and can find namespace"
+      (reset! db/db db-state)
+      (is (some #(= (:title %) "Add missing 'some-ns' require")
+                (handlers/code-actions
+                  {:textDocument "file://c.clj"
+                   :context {:diagnostics [{:code "unresolved-namespace"}]}
+                   :range {:start {:line 2 :character 10}}}))))
+    (testing "without workspace edit client capability"
+      (reset! db/db db-state)
+      (is (not-any? #(= (:title %) "Clean namespace")
+                    (handlers/code-actions
+                      {:textDocument "file://b.clj"
+                       :context {:diagnostics []}
+                       :range {:start {:line 1 :character 1}}}))))
 
-      (testing "when it has unresolved-namespace but cannot find namespace"
-        (reset! db/db db-state)
-        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 1 10) (Position. 1 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unresolved-namespace")]
-          (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                        (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 1 10)))))
-
-      (testing "when it has unresolved-namespace and can find namespace"
-        (reset! db/db db-state)
-        (let [unknown-ns-diagnostic (Diagnostic. (Range. (Position. 2 10) (Position. 2 16)) "Unknown namespace" DiagnosticSeverity/Error "some source" "unresolved-namespace")]
-          (is (some #(= (:title %) "Add missing 'some-ns' require")
-                    (handlers/code-actions "file://c.clj" [unknown-ns-diagnostic] 2 10)))))
-      (testing "when it has unresolved-symbol and it's a known refer"
-        (reset! db/db db-state)
-        (let [unknown-symbol-diagnostic (Diagnostic. (Range. (Position. 3 1) (Position. 3 8)) "Unresolved symbol deftest" DiagnosticSeverity/Error "some source" "unresolved-symbol")]
-          (is (some #(= (:title %) "Add missing 'clojure.test' require")
-                    (handlers/code-actions "file://c.clj" [unknown-symbol-diagnostic] 3 1)))))
-      (testing "when it has unresolved-symbol but it's not a known refer"
-        (reset! db/db db-state)
-        (let [unknown-symbol-diagnostic (Diagnostic. (Range. (Position. 3 10) (Position. 3 18)) "Unresolved symbol some-test" DiagnosticSeverity/Error "some source" "unresolved-symbol")]
-          (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                        (handlers/code-actions "file://c.clj" [unknown-symbol-diagnostic] 3 10))))))
-    (testing "Add common missing import"
-      (testing "when it has no unknown-symbol diagnostic"
-        (reset! db/db db-state)
-        (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                      (handlers/code-actions "file://c.clj" [] 4 1))))
-
-      (testing "when it has unknown-symbol but it's not a common import"
-        (reset! db/db db-state)
-        (let [unresolved-symbol-diagnostic (Diagnostic. (Range. (Position. 4 1) (Position. 4 5)) "Unresolved symbol" DiagnosticSeverity/Error "some source" "unresolved-symbol")]
-          (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                        (handlers/code-actions "file://c.clj" [unresolved-symbol-diagnostic] 4 1)))))
-      (testing "when it has unknown-symbol but it's not a common import"
-        (reset! db/db db-state)
-        (let [unresolved-symbol-diagnostic (Diagnostic. (Range. (Position. 5 1) (Position. 5 5)) "Unresolved symbol" DiagnosticSeverity/Error "some source" "unresolved-symbol")]
-          (is (some #(= (:title %) "Add missing 'java.util.Date' import")
-                    (handlers/code-actions "file://c.clj" [unresolved-symbol-diagnostic] 5 1))))))
-    (testing "Inline symbol"
-      (testing "when in not a let/def symbol"
-        (reset! db/db db-state)
-        (is (not-any? #(= (:title %) "Inline symbol")
-                      (handlers/code-actions "file://b.clj" [] 3 7))))
-      (testing "when in let/def symbol"
-        (reset! db/db db-state)
-        (is (some #(= (:title %) "Inline symbol")
-                  (handlers/code-actions "file://b.clj" [] 3 4)))))
-    (testing "Cycle privacy"
-      (testing "when non function location"
-        (reset! db/db db-state)
-        (is (not-any? #(= (:title %) "Cycle privacy")
-                      (handlers/code-actions "file://a.clj" [] 0 4))))
-      (testing "when on function location"
-        (reset! db/db db-state)
-        (is (some #(= (:title %) "Cycle privacy")
-                  (handlers/code-actions "file://a.clj" [] 1 4)))))
-    (testing "Extract function"
-      (testing "when non function location"
-        (reset! db/db db-state)
-        (is (not-any? #(= (:title %) "Extract function")
-                      (handlers/code-actions "file://a.clj" [] 0 4))))
-      (testing "when on function location"
-        (reset! db/db db-state)
-        (is (some #(= (:title %) "Extract function")
-                  (handlers/code-actions "file://a.clj" [] 1 4)))))
-    (testing "clean namespace"
-      (testing "without workspace edit client capability"
-        (reset! db/db db-state)
-        (is (not-any? #(= (:title %) "Clean namespace")
-                      (handlers/code-actions "file://b.clj" [] 1 1))))
-
-      (testing "with workspace edit client capability"
-        (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
-        (is (some #(= (:title %) "Clean namespace")
-    (handlers/code-actions "file://b.clj" [] 1 1)))))))
+    (testing "with workspace edit client capability"
+      (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
+      (is (some #(= (:title %) "Clean namespace")
+                (handlers/code-actions
+                  {:textDocument "file://b.clj"
+                   :context {:diagnostics []}
+                   :range {:start {:line 1 :character 1}}}))))))
 
 (deftest test-code-lens
   (let [references-code (str "(ns some-ns)\n"

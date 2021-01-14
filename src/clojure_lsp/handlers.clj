@@ -24,7 +24,8 @@
     [rewrite-clj.zip :as z]
     [trptcolin.versioneer.core :as version])
   (:import
-    [java.net URL JarURLConnection]))
+    [java.net URL
+              JarURLConnection]))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -60,6 +61,12 @@
            (string/replace "-" "_"))
        "."
        (name file-type)))
+
+(defn ^:private cursor-zloc [uri line character]
+  (-> @db/db
+      (get-in [:documents uri])
+      :text
+      (parser/loc-at-pos (inc line) (inc character))))
 
 (defn did-open [uri text]
   (when-let [new-ns (and (string/blank? text)
@@ -339,16 +346,20 @@
                        (update :file-envs #(apply dissoc % uris)))))))
 
 (defn code-actions
-  [doc-id diagnostics line character]
+  [{:keys [range context textDocument]}]
   (let [db @db/db
-        row (inc (int line))
-        col (inc (int character))
-        zloc (-> db
-                 (get-in [:documents doc-id])
-                 :text
-                 (parser/loc-at-pos row col))
+        diagnostics (-> context :diagnostics)
+        line (-> range :start :line)
+        character (-> range :start :character)
+        row (inc line)
+        col (inc character)
+        zloc (cursor-zloc textDocument line character)
         client-capabilities (get db :client-capabilities)]
-    (f.code-actions/all zloc doc-id row col diagnostics client-capabilities)))
+    (f.code-actions/all zloc textDocument row col diagnostics client-capabilities)))
+
+(defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
+  (let [zloc (cursor-zloc uri line character)]
+    (f.code-actions/resolve-code-action action zloc)))
 
 (defn code-lens
   [doc-id]

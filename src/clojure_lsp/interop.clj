@@ -306,7 +306,13 @@
 
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
-(defn ^{:deprecated "use j/from-java instead"} debeaner [inst]
+(defn  java->clj [inst]
+  (->> inst
+       j/from-java
+       (remove #(nil? (val %)) )
+       (into {})))
+
+(defn ^{:deprecated "use java->clj instead"} debeaner [inst]
   (when inst
     (->> (dissoc (bean inst) :class)
          (into {})

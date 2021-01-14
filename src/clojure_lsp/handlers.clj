@@ -355,8 +355,10 @@
     (f.code-actions/all zloc textDocument row col diagnostics client-capabilities)))
 
 (defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
-  (let [zloc (parser/cursor-zloc uri line character)]
-    (f.code-actions/resolve-code-action action zloc)))
+  (let [zloc (parser/cursor-zloc uri line character)
+        code-action-result (f.code-actions/resolve-code-action action zloc)]
+    (log/info code-action-result)
+    code-action-result))
 
 (defn code-lens
   [doc-id]

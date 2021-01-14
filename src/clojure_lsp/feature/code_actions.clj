@@ -9,11 +9,6 @@
     (org.eclipse.lsp4j
       CodeActionKind)))
 
-(defn ^:private dissoc-if-nil [m k]
-  (if (k m)
-    m
-    (dissoc m k)))
-
 (defn ^:private find-missing-require [uri unknown-ns-diag unresolved-symbol-diag]
   (when (or unknown-ns-diag unresolved-symbol-diag)
     (let [{{:keys [line character] :as position} :start} (or (:range unknown-ns-diag)
@@ -69,10 +64,7 @@
                         :command   "clean-ns"
                         :arguments [uri line character]}}
              {}))
-    (dissoc-if-nil :data)
-    (dissoc-if-nil :diagnostics)
-    (dissoc-if-nil :command)
-    (dissoc-if-nil :edit)))
+    (dissoc :data)))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])

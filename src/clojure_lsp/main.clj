@@ -10,8 +10,7 @@
     [clojure.core.async :as async]
     [clojure.tools.logging :as log]
     [nrepl.server :as nrepl.server]
-    [trptcolin.versioneer.core :as version]
-    [clojure.java.data :as j])
+    [trptcolin.versioneer.core :as version])
   (:import
     (clojure_lsp ClojureExtensions)
     (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
@@ -141,7 +140,7 @@
             (get [this]
               (end
                 (->> params
-                     j/from-java
+                     interop/java->clj
                      handlers/references
                      (interop/conform-or-log ::interop/references))))))))
 
@@ -252,7 +251,7 @@
             (get [_this]
               (end
                 (->> params
-                     j/from-java
+                     interop/java->clj
                      handlers/code-actions
                      (interop/conform-or-log ::interop/code-actions))))))))
 
@@ -263,7 +262,7 @@
             (get [_this]
               (end
                 (->> unresolved
-                     j/from-java
+                     interop/java->clj
                      handlers/resolve-code-action
                      (interop/conform-or-log ::interop/code-action))))))))
 

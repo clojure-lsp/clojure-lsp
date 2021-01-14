@@ -1,25 +1,11 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - '**/README.md'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
+  create:
+    tags:
+      - 2*
 
 jobs:
-  tag:
-    name: Tag new version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Bump version and push tag
-        run: "bash release"
-
   release:
     name: Create Release
     needs: tag

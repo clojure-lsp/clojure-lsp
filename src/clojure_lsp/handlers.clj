@@ -62,12 +62,6 @@
        "."
        (name file-type)))
 
-(defn ^:private cursor-zloc [uri line character]
-  (-> @db/db
-      (get-in [:documents uri])
-      :text
-      (parser/loc-at-pos (inc line) (inc character))))
-
 (defn did-open [uri text]
   (when-let [new-ns (and (string/blank? text)
                          (uri->namespace uri))]
@@ -356,12 +350,12 @@
         character (-> range :start :character)
         row (inc line)
         col (inc character)
-        zloc (cursor-zloc textDocument line character)
+        zloc (parser/cursor-zloc textDocument line character)
         client-capabilities (get db :client-capabilities)]
     (f.code-actions/all zloc textDocument row col diagnostics client-capabilities)))
 
 (defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
-  (let [zloc (cursor-zloc uri line character)]
+  (let [zloc (parser/cursor-zloc uri line character)]
     (f.code-actions/resolve-code-action action zloc)))
 
 (defn code-lens

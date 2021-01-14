@@ -1210,6 +1210,12 @@
       (z/of-string)
       (find-last-by-pos {:row row :col col :end-row row :end-col col})))
 
+(defn cursor-zloc [uri line character]
+  (-> @db/db
+      (get-in [:documents uri])
+      :text
+      (loc-at-pos (inc line) (inc character))))
+
 (defn usages-in-form [loc usages]
   (let [form-loc (if (not= :token (z/tag loc))
                    loc

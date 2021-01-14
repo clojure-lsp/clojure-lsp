@@ -441,7 +441,8 @@
       (is (some #(= (:title %) "Add missing 'some-ns' require")
                 (handlers/code-actions
                   {:textDocument "file://c.clj"
-                   :context {:diagnostics [{:code "unresolved-namespace"}]}
+                   :context {:diagnostics [{:code "unresolved-namespace"
+                                            :range {:start {:line 2 :character 10}}}]}
                    :range {:start {:line 2 :character 10}}}))))
     (testing "without workspace edit client capability"
       (reset! db/db db-state)

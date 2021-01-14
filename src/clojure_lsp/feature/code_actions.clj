@@ -2,15 +2,32 @@
   (:require
     [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.refactor.transform :as r.transform])
+    [clojure-lsp.refactor.transform :as r.transform]
+    [clojure.tools.logging :as log]
+    [clojure-lsp.parser :as parser])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))
 
-(defn dissoc-if-nil [m k]
+(defn ^:private dissoc-if-nil [m k]
   (if (k m)
     m
     (dissoc m k)))
+
+(defn ^:private find-missing-require [uri unknown-ns-diag unresolved-symbol-diag]
+  (when (or unknown-ns-diag unresolved-symbol-diag)
+    (let [{{:keys [line character] :as position} :start} (or (:range unknown-ns-diag)
+                                                             (:range unresolved-symbol-diag))
+          unknown-zloc (parser/cursor-zloc uri line character)]
+      [(r.transform/find-missing-require unknown-zloc)
+       position])))
+
+(defn ^:private find-missing-import [uri unresolved-symbol-diag]
+  (when unresolved-symbol-diag
+    (let [{{:keys [line character] :as position} :start} (:range unresolved-symbol-diag)
+          unresolved-sym-zloc (parser/cursor-zloc uri line character)]
+      [(r.transform/find-missing-import unresolved-sym-zloc)
+       position])))
 
 (defn resolve-code-action
   [{{:keys [id uri line character]} :data :as code-action}
@@ -66,12 +83,12 @@
         inline-symbol?             (r.transform/inline-symbol? def-uri definition)
         line                       (dec row)
         character                  (dec col)
-        has-unknown-ns?            (some #(= (compare "unresolved-namespace" (:code %)) 0) diagnostics)
-        unresolved-symbol          (some #(= (compare "unresolved-symbol" (:code %)) 0) diagnostics)
-        missing-require            (when (or has-unknown-ns? unresolved-symbol)
-                                     (r.transform/find-missing-require zloc))
-        missing-import             (when unresolved-symbol
-                                     (r.transform/find-missing-import zloc))]
+        unknown-ns-diag            (first (filter #(= "unresolved-namespace" (:code %)) diagnostics))
+        unresolved-symbol-diag     (first (filter #(= "unresolved-symbol" (:code %)) diagnostics))
+        [missing-require
+         missing-require-position] (find-missing-require uri unknown-ns-diag unresolved-symbol-diag)
+        [missing-import
+         missing-import-position]  (find-missing-import uri unresolved-symbol-diag)]
     (cond-> []
 
       missing-require
@@ -80,8 +97,8 @@
              :preferred? true
              :data       {:id        "add-missing-require"
                           :uri       uri
-                          :line      line
-                          :character character}})
+                          :line      (:line missing-require-position)
+                          :character (:character missing-require-position)}})
 
       missing-import
       (conj {:title      (str "Add missing '" missing-import "' import")
@@ -89,8 +106,8 @@
              :preferred? true
              :data       {:id        "add-missing-import"
                           :uri       uri
-                          :line      line
-                          :character character}})
+                          :line      (:line missing-import-position)
+                          :character (:character missing-import-position)}})
 
       inline-symbol?
       (conj {:title "Inline symbol"

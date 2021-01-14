@@ -5,13 +5,7 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
    [clojure.string :as string]
-   [clojure.test :refer [deftest is testing]])
-  (:import
-   (org.eclipse.lsp4j
-     Diagnostic
-     DiagnosticSeverity
-     Range
-     Position)))
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest did-close
   (reset! db/db {:documents {"file://a.clj" {:text "(ns a)"}

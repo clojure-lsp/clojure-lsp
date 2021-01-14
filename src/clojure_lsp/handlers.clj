@@ -120,10 +120,10 @@
   (let [file-envs (:file-envs @db/db)]
     (f.completion/resolve-item label sym-wanted file-envs)))
 
-(defn references [doc-id line column]
-  (mapv (fn [{:keys [uri usage]}]
-          {:uri uri :range (shared/->range usage)})
-        (f.references/reference-usages doc-id line column)))
+(defn references [{:keys [textDocument position]}]
+  (->> (f.references/reference-usages textDocument (-> position :line inc) (-> position :character inc))
+       (mapv (fn [{:keys [uri usage]}]
+               {:uri uri :range (shared/->range usage)}))))
 
 (defn did-close [uri]
   (swap! db/db #(-> %

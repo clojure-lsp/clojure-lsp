@@ -2,6 +2,7 @@
 
 set -v
 
-git pull ogirin HEAD
+git fetch origin
+git pull origin HEAD
 git tag $(date -u +"%Y.%m.%d-%H.%M.%S")
 git push origin HEAD --tags

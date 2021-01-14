@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    if: github.event.base_ref == 'refs/heads/master'
+    if: startsWith(github.ref, 'refs/tags/2')
     name: Create Release
     runs-on: ubuntu-latest
     steps:

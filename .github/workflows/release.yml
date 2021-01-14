@@ -1,12 +1,13 @@
 name: Release
 
 on:
-  create:
+  push:
     tags:
       - 2*
 
 jobs:
   release:
+    if: github.event.base_ref == 'refs/heads/master'
     name: Create Release
     runs-on: ubuntu-latest
     steps:

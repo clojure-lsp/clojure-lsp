@@ -26,11 +26,11 @@
                                                                    :version     0
                                                                    :row         (inc line)
                                                                    :col         (inc character)})]
-               {:workspace-edit missing-require-edit})
+               {:edit missing-require-edit})
 
              "add-missing-import"
-             (let [missing-import-edit (r.transform/add-common-import-to-namespace zloc)]
-               {:workspace-edit missing-import-edit})
+             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc))]
+               {:edit missing-import-edit})
 
              "refactor-inline-symbol"
              {:command {:title     "Inline symbol"
@@ -54,7 +54,8 @@
              {}))
     (dissoc-if-nil :data)
     (dissoc-if-nil :diagnostics)
-    (dissoc-if-nil :command)))
+    (dissoc-if-nil :command)
+    (dissoc-if-nil :edit)))
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])

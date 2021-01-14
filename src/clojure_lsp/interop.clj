@@ -243,6 +243,8 @@
 
 (s/def :code-action/title string?)
 
+(s/def :code-action/edit ::workspace-edit)
+
 (def code-action-kind
   [CodeActionKind/QuickFix
    CodeActionKind/Refactor
@@ -255,12 +257,12 @@
 (s/def :code-action/preferred? boolean?)
 
 (s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
-                                    :opt-un [::kind ::diagnostics ::workspace-edit ::command :code-action/preferred? ::data])
+                                    :opt-un [::kind ::diagnostics :code-action/edit ::command :code-action/preferred? ::data])
                             (s/conformer #(doto (CodeAction. (:title %1))
                                             (.setKind (:kind %1))
                                             (.setDiagnostics (:diagnostics %1))
                                             (.setIsPreferred (:preferred? %1))
-                                            (.setEdit (:workspace-edit %1))
+                                            (.setEdit (:edit %1))
                                             (.setCommand (:command %1))
                                             (.setData (walk/stringify-keys (:data %1)))))))
 

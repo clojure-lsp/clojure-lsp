@@ -77,6 +77,11 @@
        (map name)
        vec))
 
+(defn refactor-client-seq-changes [uri version result]
+  (let [changes [{:text-document {:uri uri :version version}
+                  :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
+    (client-changes changes)))
+
 (defn call-refactor [{:keys [loc uri refactoring row col version] :as data}]
   (let [result (refactor data)]
     (if (or loc
@@ -90,9 +95,7 @@
           (client-changes changes))
 
         (seq result)
-        (let [changes [{:text-document {:uri uri :version version}
-                        :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
-          (client-changes changes))
+        (refactor-client-seq-changes uri version result)
 
         (empty? result)
         (log/warn refactoring "made no changes" (z/string loc))

@@ -2,27 +2,43 @@
   (:require
     [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.refactor.transform :as r.transform]
-    [clojure.tools.logging :as log]
-    [clojure-lsp.parser :as parser])
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.refactor.transform :as r.transform])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))
 
-(defn ^:private find-missing-require [uri unknown-ns-diag unresolved-symbol-diag]
-  (when (or unknown-ns-diag unresolved-symbol-diag)
-    (let [{{:keys [line character] :as position} :start} (or (:range unknown-ns-diag)
-                                                             (:range unresolved-symbol-diag))
-          unknown-zloc (parser/cursor-zloc uri line character)]
-      [(r.transform/find-missing-require unknown-zloc)
-       position])))
+(defn ^:private find-missing-require [uri diagnostic]
+  (let [{{:keys [line character] :as position} :start} (:range diagnostic)
+        diagnostic-zloc                                   (parser/cursor-zloc uri line character)]
+    (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc)]
+      {:missing-require missing-require
+       :position        position})))
 
-(defn ^:private find-missing-import [uri unresolved-symbol-diag]
-  (when unresolved-symbol-diag
-    (let [{{:keys [line character] :as position} :start} (:range unresolved-symbol-diag)
-          unresolved-sym-zloc (parser/cursor-zloc uri line character)]
-      [(r.transform/find-missing-import unresolved-sym-zloc)
-       position])))
+(defn ^:private find-missing-requires [uri diagnostics]
+  (let [unknown-ns-diags        (filter #(= "unresolved-namespace" (:code %)) diagnostics)
+        unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
+    (->> (cond-> []
+
+           (seq unknown-ns-diags)
+           (into (map (partial find-missing-require uri) unknown-ns-diags))
+
+           (seq unresolved-symbol-diags)
+           (into (map (partial find-missing-require uri) unresolved-symbol-diags)))
+         (remove nil?))))
+
+(defn ^:private find-missing-import [uri diagnostic]
+  (let [{{:keys [line character] :as position} :start} (:range diagnostic)
+        diagnostic-zloc                                (parser/cursor-zloc uri line character)]
+    (when-let [missing-import (r.transform/find-missing-import diagnostic-zloc)]
+      {:missing-import missing-import
+       :position       position})))
+
+(defn ^:private find-missing-imports [uri diagnostics]
+  (let [unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
+    (->> unresolved-symbol-diags
+         (map (partial find-missing-import uri))
+         (remove nil?))))
 
 (defn resolve-code-action
   [{{:keys [id uri line character]} :data :as code-action}
@@ -75,31 +91,31 @@
         inline-symbol?             (r.transform/inline-symbol? def-uri definition)
         line                       (dec row)
         character                  (dec col)
-        unknown-ns-diag            (first (filter #(= "unresolved-namespace" (:code %)) diagnostics))
-        unresolved-symbol-diag     (first (filter #(= "unresolved-symbol" (:code %)) diagnostics))
-        [missing-require
-         missing-require-position] (find-missing-require uri unknown-ns-diag unresolved-symbol-diag)
-        [missing-import
-         missing-import-position]  (find-missing-import uri unresolved-symbol-diag)]
+        missing-requires           (find-missing-requires uri diagnostics)
+        missing-imports            (find-missing-imports uri diagnostics)]
     (cond-> []
 
-      missing-require
-      (conj {:title      (str "Add missing '" missing-require "' require")
-             :kind       CodeActionKind/QuickFix
-             :preferred? true
-             :data       {:id        "add-missing-require"
-                          :uri       uri
-                          :line      (:line missing-require-position)
-                          :character (:character missing-require-position)}})
+      (seq missing-requires)
+      (into (map (fn [{:keys [missing-require position]}]
+                   {:title      (str "Add missing '" missing-require "' require")
+                    :kind       CodeActionKind/QuickFix
+                    :preferred? true
+                    :data       {:id        "add-missing-require"
+                                 :uri       uri
+                                 :line      (:line position)
+                                 :character (:character position)}})
+                 missing-requires))
 
-      missing-import
-      (conj {:title      (str "Add missing '" missing-import "' import")
-             :kind       CodeActionKind/QuickFix
-             :preferred? true
-             :data       {:id        "add-missing-import"
-                          :uri       uri
-                          :line      (:line missing-import-position)
-                          :character (:character missing-import-position)}})
+      (seq missing-imports)
+      (into (map (fn [{:keys [missing-import position]}]
+                   {:title      (str "Add missing '" missing-import "' import")
+                    :kind       CodeActionKind/QuickFix
+                    :preferred? true
+                    :data       {:id        "add-missing-import"
+                                 :uri       uri
+                                 :line      (:line position)
+                                 :character (:character position)}})
+                 missing-imports))
 
       inline-symbol?
       (conj {:title "Inline symbol"

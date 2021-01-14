@@ -140,14 +140,10 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))]
-                    (interop/conform-or-log ::interop/references (#'handlers/references doc-id line column)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (->> params
+                     j/from-java
+                     handlers/references
+                     (interop/conform-or-log ::interop/references))))))))
 
   (^CompletableFuture completion [this ^CompletionParams params]
     (go :completion

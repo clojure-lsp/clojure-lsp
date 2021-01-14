@@ -29,17 +29,23 @@
              (sort-by (comp keyword? :sym)))
         (nth 0 nil))))
 
-(defn reference-usages [doc-id line column]
+(defn reference-usages [doc-id row col include-declaration?]
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
-        {cursor-sym :sym} (find-under-cursor line column local-env (shared/uri->file-type doc-id))]
-    (into []
-          (for [[uri usages] (:file-envs @db/db)
-                {:keys [sym tags] :as usage} usages
-                :when (and (= sym cursor-sym)
-                           (not (contains? tags :declare)))]
-            {:uri uri
-             :usage usage}))))
+        cursor (find-under-cursor row col local-env (shared/uri->file-type doc-id))]
+    (cond-> []
+
+      include-declaration?
+      (conj {:uri doc-id
+             :usage cursor})
+
+      :always
+      (into (for [[uri usages] (:file-envs @db/db)
+                  {:keys [sym tags] :as usage} usages
+                  :when (and (= sym (:sym cursor))
+                             (not (contains? tags :declare)))]
+              {:uri uri
+               :usage usage})))))
 
 (defn safe-find-references
   ([uri text]

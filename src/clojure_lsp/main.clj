@@ -314,15 +314,13 @@
         (CompletableFuture/supplyAsync
           (reify Supplier
             (get [this]
-              []
-              #_
               (end
                 (try
                   (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
                         pos (.getPosition params)
                         line (inc (.getLine pos))
                         column (inc (.getCharacter pos))]
-                    (log/spy (interop/conform-or-log ::interop/document-highlights (log/spy (#'handlers/document-highlight doc-id line column)))))
+                    (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))
                   (catch Exception e
                     (log/error e)))))))))
 
@@ -446,29 +444,17 @@
                 (CompletableFuture/completedFuture
                   (InitializeResult. (doto (ServerCapabilities.)
                                        (.setDocumentHighlightProvider true)
-                                       #_
                                        (.setHoverProvider true)
-                                       #_
                                        (.setCallHierarchyProvider true)
-                                       #_
                                        (.setCodeActionProvider true)
-                                       #_
                                        (.setCodeLensProvider (CodeLensOptions. true))
-                                       #_
                                        (.setReferencesProvider true)
-                                       #_
                                        (.setRenameProvider true)
-                                       #_
                                        (.setDefinitionProvider true)
-                                       #_
                                        (.setDocumentFormattingProvider (:document-formatting? settings))
-                                       #_
                                        (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
-                                       #_
                                        (.setDocumentSymbolProvider true)
-                                       #_
                                        (.setWorkspaceSymbolProvider true)
-                                       #_
                                        (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
                                                                              (:semantic-tokens? settings))
                                                                      (doto (SemanticTokensWithRegistrationOptions.)
@@ -477,14 +463,12 @@
                                                                                            semantic-tokens/token-modifiers)))
                                                                        (.setRange true)
                                                                        (.setFull true))))
-                                       #_
                                        (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
                                                                      (.setCommands f.refactor/available-refactors)))
                                        (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                                (.setOpenClose true)
                                                                (.setChange TextDocumentSyncKind/Full)
                                                                (.setSave (SaveOptions. true))))
-                                       #_
                                        (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
@@ -515,14 +499,9 @@
         b2 (byte-array buffer-size)
         os (java.io.PipedOutputStream.)
         is (java.io.PipedInputStream. os)]
-    (log/warn "hello")
-
     (async/thread
       (try
-        (let [
-              buffer (byte-array buffer-size)]
-
-          (log/warn "thread start")
+        (let [buffer (byte-array buffer-size)]
           (loop [chs (.read system-in buffer 0 buffer-size)]
             (when (pos? chs)
               (log/warn "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
@@ -530,20 +509,16 @@
               (recur (.read system-in buffer 0 buffer-size)))))
         (catch Exception e
           (log/error e "in thread"))))
-    is
+    is))
 
-    ))
 (defn tee-system-out [system-out]
   (let [buffer-size 1024
         b2 (byte-array buffer-size)
-        is (java.io.PipedInputStream. )
+        is (java.io.PipedInputStream.)
         os (java.io.PipedOutputStream. is)]
-
     (async/thread
       (try
-        (let [
-              buffer (byte-array buffer-size)]
-
+        (let [buffer (byte-array buffer-size)]
           (loop [chs (.read is buffer 0 buffer-size)]
             (when (pos? chs)
               (log/warn "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
@@ -551,14 +526,12 @@
               (recur (.read is buffer 0 buffer-size)))))
         (catch Exception e
           (log/error e "in thread"))))
-    os
-
-    ))
+    os))
 
 (defn- run []
   (log/info "Starting server...")
-  (let [is (tee-system-in System/in)
-        os (tee-system-out System/out)
+  (let [is (or System/in (tee-system-in System/in))
+        os (or System/out (tee-system-out System/out))
         launcher (LSPLauncher/createServerLauncher server is os)
         repl-server (nrepl.server/start-server)
         port (:port repl-server)]
@@ -566,12 +539,10 @@
     (swap! db/db assoc
            :client ^LanguageClient (.getRemoteProxy launcher)
            :port port)
-    #_
     (async/go
       (loop [edit (async/<! db/edits-chan)]
         (log/info "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))
         (recur (async/<! db/edits-chan))))
-    #_
     (async/go
       (loop [diagnostic (async/<! db/diagnostics-chan)]
         (.publishDiagnostics (:client @db/db) (interop/conform-or-log ::interop/publish-diagnostics-params diagnostic))

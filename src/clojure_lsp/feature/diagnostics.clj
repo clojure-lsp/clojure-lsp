@@ -4,6 +4,8 @@
     [clj-kondo.core :as kondo]
     [clojure.string :as string]
     [clojure-lsp.db :as db]
+    [clojure.core.async :as async]
+    [clojure.tools.logging :as log]
     [clojure.set :as set]))
 
 (defn ^:private diagnose-unknown-forward-declarations [usages]
@@ -91,11 +93,7 @@
       (merge extra)
 
       user-config
-      (update-in [:config] merge user-config)
-
-      ;; TODO Duplicated linter. Remove after using clj-kondo for all linters
-      :always
-      (update-in [:config :linters] merge {:unused-private-var {:level :off}}))))
+      (update-in [:config] merge user-config))))
 
 (defn run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]})))
@@ -116,3 +114,11 @@
         unknown-forwards (diagnose-unknown-forward-declarations usages)
         result (concat unused unknown-forwards kondo-diagnostics)]
     result))
+
+(defn notify [uri {:keys [findings]}]
+  (when (seq findings)
+    (async/put! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics (->> findings
+                                   (filter #(= (shared/uri->filename uri) (:filename %)))
+                                   (mapv kondo-finding->diagnostic))})))

@@ -175,7 +175,7 @@
 
       :always
       (->
-        (assoc-in [:config :output] {:analysis {} :canonical-paths true})
+        (assoc-in [:config :output] {:analysis {:signatures true} :canonical-paths true})
         ;; TODO Duplicated linter. Remove after using clj-kondo for all linters
         (update-in [:config :linters] merge {:unused-private-var {:level :off}}))
 
@@ -199,7 +199,7 @@
       (->> vs
            (keep
              (fn [v]
-               (when (:col v)
+               (when (or (:col v) (:name-col v))
                  (let [result (cond-> v
                                 (= :namespace-usages k)
                                 (assoc :end-row (:row v)
@@ -215,7 +215,6 @@
                    (if valid?
                      result
                      (do
-                       #_
                        (log/error "Cannot find position for:" (:name result ) (pr-str result) (some-> (:name result) meta))
                        nil))))))
            (into accum)))

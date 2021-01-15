@@ -60,15 +60,17 @@
 
 (defn find-element-under-cursor
   [analysis filename line column]
-  (find-first (fn [{:keys [name-row name-col name-end-row name-end-col] :as v}]
-                (and (<= name-row line name-end-row)
-                     (<= name-col column name-end-col)))
-              (get analysis filename)))
+  (let [local-analysis (get analysis filename)]
+    (find-first (fn [{:keys [name-row name-col name-end-row name-end-col] :as v}]
+                  (and (<= name-row line name-end-row)
+                       (<= name-col column name-end-col)))
+                local-analysis)))
+
 
 (defn find-definition-from-cursor [analysis filename line column]
   (try
     (let [{:keys [bucket] :as element} (find-element-under-cursor analysis filename line column)]
-      (when (log/spy element)
+      (when element
         (find-definition analysis element)))
     (catch Throwable e
       (log/error e "can't find definition"))))

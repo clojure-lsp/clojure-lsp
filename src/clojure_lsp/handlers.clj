@@ -8,6 +8,7 @@
     [clojure-lsp.feature.code-actions :as f.code-actions]
     [clojure-lsp.feature.completion :as f.completion]
     [clojure-lsp.feature.definition :as f.definition]
+    [clojure-lsp.feature.diagnostics :as f.diagnostic]
     [clojure-lsp.feature.document-symbol :as f.document-symbol]
     [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.feature.refactor :as f.refactor]
@@ -77,17 +78,20 @@
     (swap! db/db (fn [state-db]
                    (-> state-db
                        (assoc-in [:documents uri] {:v 0 :text text})
-                       (crawler/update-analysis uri (:analysis result))))))
-  text)
+                       (crawler/update-analysis uri (:analysis result)))))
+    (f.diagnostic/notify uri result))
+  nil)
 
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
   (loop [state-db @db/db]
     (when (> version (get-in state-db [:documents uri :v] -1))
       (when-let [result (crawler/run-kondo-on-text! text uri)]
-        (when-not (compare-and-set! db/db state-db (-> state-db
-                                                       (assoc-in [:documents uri] {:v version :text text})
-                                                       (crawler/update-analysis uri (:analysis result))))
+
+        (if (compare-and-set! db/db state-db (-> state-db
+                                                 (assoc-in [:documents uri] {:v version :text text})
+                                                 (crawler/update-analysis uri (:analysis result))))
+          (f.diagnostic/notify uri result)
           (recur @db/db))))))
 
 (defn initialize [project-root client-capabilities client-settings]
@@ -100,9 +104,8 @@
              :settings (-> (merge client-settings project-settings)
                            (update :cljfmt cljfmt.main/merge-default-options))
              :client-capabilities client-capabilities)
-      #_(crawler/determine-dependencies project-root))
-    nil)
-  )
+      (crawler/determine-dependencies project-root))
+    nil))
 
 (defn completion [doc-id line column]
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
@@ -159,23 +162,23 @@
         can-rename? (and (not= :namespace-definitions (:bucket definition))
                          (string/starts-with? (:filename definition) "/Users/case/dev/lsp"))] ;;nocommit
     (when (and (seq references) can-rename?)
-      (let [changes
-              (mapv
-                (fn [r]
-                  (let [name-start (- (:name-end-col r) (count (name (:name r))))
-                        ref-doc-id (shared/filename->uri (:filename r))
-                        version (get-in @db/db [:documents ref-doc-id :v] 0)]
-                    {:range (shared/->range (assoc r :name-col name-start))
-                     :new-text new-name
-                     :text-document {:version version :uri ref-doc-id}}))
-                references)
-              doc-changes (->> changes
+      (let [changes (mapv
+                      (fn [r]
+                        (let [name-start (- (:name-end-col r) (count (name (:name r))))
+                              ref-doc-id (shared/filename->uri (:filename r))
+                              version (get-in @db/db [:documents ref-doc-id :v] 0)]
+                          {:range (shared/->range (assoc r :name-col name-start))
+                           :new-text new-name
+                           :text-document {:version version :uri ref-doc-id}}))
+                      references)
+            doc-changes (->> changes
                              (group-by :text-document)
                              (remove (comp empty? val))
                              (map (fn [[text-document edits]]
                                     {:text-document text-document
                                      :edits edits})))]
-          (f.refactor/client-changes doc-changes))))
+        ;; TODO rename documents for namespace rename
+        (f.refactor/client-changes doc-changes))))
   #_
   (let [file-envs (:file-envs @db/db)
         project-root (:project-root @db/db)
@@ -246,9 +249,6 @@
     {:range r}))
 
 (defn document-highlight [doc-id line column]
-
-  []
-  #_
   (let [file-envs (:file-envs @db/db)
         local-env (get file-envs doc-id)
         cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
@@ -358,7 +358,6 @@
 (defn code-actions
   [doc-id diagnostics line character]
   []
-  #_
   (let [db @db/db
         row (inc (int line))
         col (inc (int character))
@@ -372,7 +371,6 @@
 (defn code-lens
   [doc-id]
   []
-  #_
   (let [db     @db/db
         usages (get-in db [:file-envs doc-id])]
     (->> usages
@@ -387,7 +385,6 @@
 (defn code-lens-resolve
   [range [doc-id row col]]
   nil
-  #_
   {:range   range
    :command {:title   (-> doc-id
                           (f.references/reference-usages row col)
@@ -398,7 +395,6 @@
 
 (defn semantic-tokens-full
   [doc-id]
-  #_
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
         data (f.semantic-tokens/full-tokens usages)]
@@ -406,7 +402,6 @@
 
 (defn semantic-tokens-range
   [doc-id range]
-  #_
   (let [db @db/db
         usages (get-in db [:file-envs doc-id])
         data (f.semantic-tokens/range-tokens usages range)]
@@ -414,14 +409,12 @@
 
 (defn prepare-call-hierarchy
   [doc-id row col]
-  #_
   (let [{:keys [project-root file-envs]} @db/db
         local-env (get file-envs doc-id)]
     (f.call-hierarchy/prepare doc-id row col local-env project-root)))
 
 (defn call-hierarchy-incoming
   [item]
-  #_
   (let [uri (.getUri item)
         row (inc (-> item .getRange .getStart .getLine))
         col (inc (-> item .getRange .getStart .getCharacter))

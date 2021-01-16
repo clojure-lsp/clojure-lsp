@@ -373,17 +373,30 @@
     Refactorings
   </a>
   
+    <nav class="md-nav" aria-label="Refactorings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#more-details" class="md-nav__link">
+    More details
+  </a>
+  
 </li>
         
       </ul>
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#more-details" class="md-nav__link">
-    More details
+        
+          <li class="md-nav__item">
+  <a href="#custom-commands" class="md-nav__link">
+    Custom commands
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -464,17 +477,30 @@
     Refactorings
   </a>
   
+    <nav class="md-nav" aria-label="Refactorings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#more-details" class="md-nav__link">
+    More details
+  </a>
+  
 </li>
         
       </ul>
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#more-details" class="md-nav__link">
-    More details
+        
+          <li class="md-nav__item">
+  <a href="#custom-commands" class="md-nav__link">
+    Custom commands
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -835,7 +861,7 @@
 <h3 id="refactorings">Refactorings<a class="headerlink" href="#refactorings" title="Permanent link">#</a></h3>
 <p>It should be possible to introduce most of the refactorings <a href="https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples">here</a></p>
 <hr />
-<h2 id="more-details">More details<a class="headerlink" href="#more-details" title="Permanent link">#</a></h2>
+<h4 id="more-details">More details<a class="headerlink" href="#more-details" title="Permanent link">#</a></h4>
 <p>Calling <code>executeCommand</code> with the following commands and additional args will notify the client with <code>applyEdit</code>.
 All commands expect the first three args to be <code>[document-uri, line, column]</code> (eg <code>["file:///home/snoe/file.clj", 13, 11]</code>)</p>
 <table>
@@ -949,6 +975,29 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <p>See Vim client section for an example.</p>
 <p>Emacs provides all those refactorings via <a href="https://emacs-lsp.github.io/lsp-mode/">lsp-mode</a>  with the <code>lsp-clojure-</code> prefix.</p>
 <p>Other clients might provide a higher level interface to <code>workspace/executeCommand</code> you need to pass the path, line and column numbers.</p>
+<h3 id="custom-commands">Custom commands<a class="headerlink" href="#custom-commands" title="Permanent link">#</a></h3>
+<p><code>clojure-lsp</code> has some custom commands:</p>
+<table>
+<thead>
+<tr>
+<th>command</th>
+<th>args</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>server-info</td>
+<td></td>
+<td>Use to retrieve server and configuration information</td>
+</tr>
+<tr>
+<td>cursor-info</td>
+<td><code>[document-uri, line, column]</code></td>
+<td>Use to retrieve debugging information for the symbol at cursor</td>
+</tr>
+</tbody>
+</table>
                 
                   
                     

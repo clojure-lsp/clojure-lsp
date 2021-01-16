@@ -82,7 +82,7 @@ Besides LSP official capabilities, `clojure-lsp` has some extra features:
 It should be possible to introduce most of the refactorings [here](https://github.com/clojure-emacs/clj-refactor.el/tree/master/examples)
 
 ---
-## More details
+#### More details
 
 Calling `executeCommand` with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
@@ -111,3 +111,13 @@ See Vim client section for an example.
 Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io/lsp-mode/)  with the `lsp-clojure-` prefix.
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
+
+### Custom commands
+
+`clojure-lsp` has some custom commands:
+
+
+| command             | args                           | notes                                                          |
+| ------------------- | ----                           | -----                                                          |
+| server-info         |                                | Use to retrieve server and configuration information           |
+| cursor-info         | `[document-uri, line, column]` | Use to retrieve debugging information for the symbol at cursor |

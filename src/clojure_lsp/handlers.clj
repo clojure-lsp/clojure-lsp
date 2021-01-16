@@ -276,6 +276,13 @@
            (sort-by :name)))
     []))
 
+(defn ^:private cursor-info [[doc-id line character]]
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs doc-id)
+        cursor (f.references/find-under-cursor (inc line) (inc character) local-env (shared/uri->file-type doc-id))]
+    {:type    :info
+     :message (with-out-str (pp/pprint cursor))}))
+
 (defn ^:private server-info []
   (let [db             @db/db
         server-version (version/get-version "clojure-lsp" "clojure-lsp")]
@@ -304,6 +311,9 @@
   (cond
     (= command "server-info")
     (producer/window-show-message (server-info))
+
+    (= command "cursor-info")
+    (producer/window-show-message (cursor-info arguments))
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [result (refactor command arguments)]

@@ -58,6 +58,14 @@
           usages (f.references/safe-find-references  "file://a.clj" code false false)]
       (is (= #{}
              (crawler/find-unused-imports usages)))))
+  (testing "When there is a used import using method"
+    (reset! db/db {})
+    (let [code (code "(ns foo.bar"
+                     "  (:import java.util.Date))"
+                     "Date/Foo")
+          usages (f.references/safe-find-references  "file://a.clj" code false false)]
+      (is (= #{}
+             (crawler/find-unused-imports usages)))))
   (testing "When there is a unused full import"
     (reset! db/db {})
     (let [code (code "(ns foo.bar"

@@ -59,7 +59,10 @@
                               (remove (comp excludes :sym)))]
     (->> usages
          (filter (comp #(contains? % :java) :tags))
-         (map :sym)
+         (map (fn [{:keys [sym]}]
+                (if-let [package (namespace sym)]
+                  (symbol package)
+                  sym)))
          set
          (set/difference (set (map :sym declared-imports))))))
 

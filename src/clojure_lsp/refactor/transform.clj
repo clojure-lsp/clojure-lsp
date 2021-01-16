@@ -480,11 +480,23 @@
       (find-missing-alias-require zloc)
       (find-missing-refer-require zloc))))
 
+(defn ^:private find-class-name [zloc]
+  (let [sexpr (z/sexpr zloc)
+        value (z/string zloc)]
+    (cond
+
+      (string/ends-with? value ".")
+      (->> value drop-last (string/join "") symbol)
+
+      (namespace sexpr)
+      (-> sexpr namespace symbol)
+
+      :else (z/sexpr zloc))))
+
 (defn find-missing-import [zloc]
-  (let [class-with-dot (z/sexpr zloc)
-        class-name (->> class-with-dot str drop-last (string/join "") symbol)]
-    (or (get cc/java-util-imports class-name)
-        (get cc/java-util-imports class-with-dot))))
+  (->> zloc
+       find-class-name
+       (get cc/java-util-imports)))
 
 (defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
   (let [ns-loc (edit/find-namespace zloc)

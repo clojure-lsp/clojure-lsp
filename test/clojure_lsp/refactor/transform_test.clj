@@ -498,6 +498,16 @@
                          "Date."
                          "List."))))
 
+(deftest find-missing-import
+  (testing "when usage is a java constructor"
+    (let [zloc (-> (z/of-string "(ns a) Date.") z/rightmost)
+          full-package (transform/find-missing-import zloc)]
+      (is (= 'java.util.Date full-package))))
+  (testing "when usage is a java constructor"
+    (let [zloc (-> (z/of-string "(ns a) Date/parse") z/rightmost)
+          full-package (transform/find-missing-import zloc)]
+      (is (= 'java.util.Date full-package)))))
+
 (deftest add-missing-libspec
   (testing "aliases"
     (testing "known namespaces in project"

@@ -35,9 +35,15 @@
        :position       position})))
 
 (defn ^:private find-missing-imports [uri diagnostics]
-  (let [unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
-    (->> unresolved-symbol-diags
-         (map (partial find-missing-import uri))
+  (let [unknown-ns-diags        (filter #(= "unresolved-namespace" (:code %)) diagnostics)
+        unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
+    (->> (cond-> []
+
+           (seq unknown-ns-diags)
+           (into (map (partial find-missing-import uri) unknown-ns-diags))
+
+           (seq unresolved-symbol-diags)
+           (into (map (partial find-missing-import uri) unresolved-symbol-diags)))
          (remove nil?))))
 
 (defn resolve-code-action

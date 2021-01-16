@@ -45,7 +45,7 @@
          :usage (f.references/find-under-cursor parent-row parent-col local-env file-type)}))))
 
 (defn incoming [uri row col project-root]
-  (->> (f.references/reference-usages uri row col false)
+  (->> (f.references/reference-usages uri row col)
        (map usage-by-uri->incoming-usage-by-uri)
        (remove nil?)
        (mapv (fn [usage-by-uri]

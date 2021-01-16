@@ -116,12 +116,20 @@
     (f.completion/resolve-item label sym-wanted file-envs)))
 
 (defn references [{:keys [textDocument position context]}]
-  (->> (f.references/reference-usages textDocument
-                                      (-> position :line inc)
-                                      (-> position :character inc)
-                                      (:includeDeclaration context))
-       (mapv (fn [{:keys [uri usage]}]
-               {:uri uri :range (shared/->range usage)}))))
+  (let [file-envs (:file-envs @db/db)
+        local-env (get file-envs textDocument)
+        row (-> position :line inc)
+        col (-> position :character inc)]
+    (cond->> (f.references/reference-usages textDocument row col)
+
+      (:includeDeclaration context)
+      (into [(or (second (f.definition/definition-usage textDocument row col))
+                 {:uri textDocument
+                  :usage (f.references/find-under-cursor row col local-env (shared/uri->file-type textDocument))})])
+
+      :always
+      (mapv (fn [{:keys [uri usage]}]
+              {:uri uri :range (shared/->range usage)})))))
 
 (defn did-close [uri]
   (swap! db/db #(-> %
@@ -387,7 +395,7 @@
   [range [doc-id row col]]
   {:range   range
    :command {:title   (-> doc-id
-                          (f.references/reference-usages row col false)
+                          (f.references/reference-usages row col)
                           count
                           (str " references"))
              :command "code-lens-references"

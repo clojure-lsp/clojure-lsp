@@ -1,7 +1,6 @@
 (ns clojure-lsp.queries
   (:require
-    [clojure.tools.logging :as log]
-    [medley.core :as medley]))
+    [clojure.tools.logging :as log]))
 
 (defn ^:private find-first [pred coll]
   (reduce
@@ -12,7 +11,7 @@
     coll))
 
 (defmulti find-definition
-  (fn [analysis element]
+  (fn [_analysis element]
     (:bucket element)))
 
 (defmethod find-definition :var-usages
@@ -23,7 +22,7 @@
               (mapcat val analysis)))
 
 (defmethod find-definition :local-usages
-  [analysis {:keys [id filename] :as element}]
+  [analysis {:keys [id filename] :as _element}]
   (find-first #(and (= :locals (:bucket %)) (= (:id %) id))
               (get analysis filename)))
 
@@ -32,7 +31,7 @@
   element)
 
 (defmulti find-references
-  (fn [analysis element]
+  (fn [_analysis element]
     (case (:bucket element)
       :locals :local
       :local-usages :local
@@ -51,7 +50,7 @@
                  (mapcat val analysis)))
 
 (defmethod find-references :local
-  [analysis {:keys [id filename] :as element}]
+  [analysis {:keys [id filename] :as _element}]
   (filter #(= (:id %) id) (get analysis filename)))
 
 (defmethod find-references :default
@@ -69,7 +68,7 @@
 
 (defn find-definition-from-cursor [analysis filename line column]
   (try
-    (let [{:keys [bucket] :as element} (find-element-under-cursor analysis filename line column)]
+    (let [element (find-element-under-cursor analysis filename line column)]
       (when element
         (find-definition analysis element)))
     (catch Throwable e
@@ -77,9 +76,8 @@
 
 (defn find-references-from-cursor [analysis filename line column]
   (try
-    (let [
-          {:keys [bucket] :as element} (find-element-under-cursor analysis filename line column)]
+    (let [element (find-element-under-cursor analysis filename line column)]
       (when element
         (find-references analysis element)))
-   (catch Throwable e
+    (catch Throwable e
       (log/error e "can't find references"))))

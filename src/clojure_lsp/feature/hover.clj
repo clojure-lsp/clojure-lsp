@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.hover
   (:require
-    [clojure.pprint :as pprint]
     [clojure-lsp.db :as db]
     [clojure.string :as string]))
 
@@ -32,10 +31,10 @@
              (string/join "\n" unindented-lines)))
          closing-code)))
 
-(defn hover-documentation [{sym-ns :ns sym-name :name :keys [fixed-arities varargs-min-arity doc filename signatures] :as definition}]
+(defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglists-str] :as _definition}]
   (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        signatures (some->> signatures (remove nil?) (map #(string/replace % #"\s+" " ")) (string/join "\n"))
+        signatures (some->> arglists-str (remove nil?) (string/join "\n"))
         sym (cond->> sym-name
               sym-ns (str sym-ns "/"))]
     (case content-format
@@ -43,8 +42,7 @@
                   :value (cond-> (str opening-code sym " " (when show-docs-arity-on-same-line? signatures) closing-code)
                            (and (not show-docs-arity-on-same-line?) signatures) (str opening-code signatures closing-code)
                            (seq doc) (str line-break (docstring->formatted-markdown doc))
-                           filename (str line-break "*" filename "*\n")
-                           #_#_:always (str line-break (with-out-str (pprint/pprint definition))))}
+                           filename (str line-break "*" filename "*\n"))}
       ;; Default to plaintext
       (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
         (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")

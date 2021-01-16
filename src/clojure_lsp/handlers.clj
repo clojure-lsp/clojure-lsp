@@ -243,18 +243,13 @@
                   e)))
          (into []))))
 
-(defn file-env-entry->document-highlight [{:keys [row end-row col end-col]}]
-  (let [r {:start {:line (dec row) :character (dec col)}
-           :end {:line (dec end-row) :character (dec end-col)}}]
-    {:range r}))
-
 (defn document-highlight [doc-id line column]
-  (let [file-envs (:file-envs @db/db)
-        local-env (get file-envs doc-id)
-        cursor (f.references/find-under-cursor line column local-env (shared/uri->file-type doc-id))
-        sym (:sym cursor)]
-    (into [] (comp (filter #(= (:sym %) sym))
-                   (map file-env-entry->document-highlight)) local-env)))
+  (let [filename (shared/uri->filename doc-id)
+        scoped-analysis (select-keys (:analysis @db/db) [filename])
+        references (q/find-references-from-cursor scoped-analysis filename line column)]
+    (mapv (fn [reference]
+            {:range (shared/->range reference)})
+          references)))
 
 (defn file-env-entry->workspace-symbol [uri [e kind]]
   (let [{:keys [row col end-row end-col sym]} e

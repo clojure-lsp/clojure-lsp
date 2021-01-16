@@ -1,7 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
     [cljfmt.core :as cljfmt]
-    [cljfmt.main :as cljfmt.main]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -34,31 +33,28 @@
   (let [project-root (:project-root @db/db)
         source-paths (get-in @db/db [:settings :source-paths])
         in-project? (string/starts-with? uri project-root)
-        file-type (shared/uri->file-type uri)]
+        file-type (shared/uri->file-type uri)
+        filename (shared/uri->filename uri)]
     (when (and in-project? (not= :unknown file-type))
       (->> source-paths
-           (map #(str project-root "/" % "/"))
+           log/spy
            (some (fn [source-path]
-                   (when (string/starts-with? uri source-path)
-                     (some-> uri
-                             (subs 0 (dec (- (count uri) (count (name file-type)))))
-                             (subs (count source-path))
+                   (when (string/starts-with? filename source-path)
+                     (some-> filename
+                             (subs 0 (dec (- (count filename) (count (name file-type)))))
+                             (subs (inc (count source-path)))
                              (string/replace #"/" ".")
                              (string/replace #"_" "-")))))))))
 
 (defn ^:private source-path-from-uri [uri]
-  (let [project-root (:project-root @db/db)
-        source-paths (get-in @db/db [:settings :source-paths])]
+  (let [source-paths (get-in @db/db [:settings :source-paths])]
     (->> source-paths
          (some (fn [source-path]
-                 (when (string/starts-with? uri (str project-root "/" source-path "/"))
+                 (when (string/starts-with? uri source-path)
                    source-path))))))
 
-(defn ^:private namespace->uri [namespace project-root source-path file-type]
-  (str project-root
-       "/"
-       source-path
-       "/"
+(defn ^:private namespace->uri [namespace source-path file-type]
+  (str source-path
        (-> namespace
            (string/replace "." "/")
            (string/replace "-" "_"))
@@ -96,15 +92,7 @@
 
 (defn initialize [project-root client-capabilities client-settings]
   (when project-root
-    (let [project-settings (crawler/find-project-settings project-root)]
-      (swap! db/db assoc
-             :project-root project-root
-             :project-settings project-settings
-             :client-settings client-settings
-             :settings (-> (merge client-settings project-settings)
-                           (update :cljfmt cljfmt.main/merge-default-options))
-             :client-capabilities client-capabilities)
-      (crawler/determine-dependencies project-root))
+    (crawler/initialize-project project-root client-capabilities client-settings)
     nil))
 
 (defn completion [doc-id line column]
@@ -160,7 +148,7 @@
   (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
         can-rename? (and (not= :namespace-definitions (:bucket definition))
-                         (string/starts-with? (:filename definition) "/Users/case/dev/lsp"))] ;;nocommit
+                         (string/starts-with? (:filename definition) (get-in @db/db [:project-settings :source-paths])))]
     (when (and (seq references) can-rename?)
       (let [changes (mapv
                       (fn [r]
@@ -299,15 +287,18 @@
 (defn hover [doc-id line column]
   (let [filename (shared/uri->filename doc-id)
         ana (:analysis @db/db)
-        [content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         element (q/find-element-under-cursor ana filename line column)
         definition (when element (q/find-definition ana element))]
-    (if definition
-      (let [docs (f.hover/hover-documentation definition)]
-        {:range (shared/->range element)
-         :contents (if (= content-format "markdown")
-                     docs
-                     [docs])})
+    (cond
+      definition
+      {:range (shared/->range element)
+       :contents (f.hover/hover-documentation definition)}
+
+      element
+      {:range (shared/->range element)
+       :contents (f.hover/hover-documentation element)}
+
+      :else
       {:contents []})))
 
 (defn formatting [doc-id]
@@ -365,9 +356,7 @@
 
 (defn code-lens
   [doc-id]
-  []
-  (let [db     @db/db
-        usages (get-in db [:file-envs doc-id])]
+  (let [usages (get-in @db/db [:file-envs doc-id])]
     (->> usages
          (filter (fn [{:keys [tags]}]
                    (and (contains? tags :declare)
@@ -375,16 +364,16 @@
                         (not (contains? tags :param)))))
          (map (fn [usage]
                 {:range (shared/->range usage)
-                 :data  [doc-id (:row usage) (:col usage)]})))))
+                 :data [doc-id (:row usage) (:col usage)]})))))
 
 (defn code-lens-resolve
   [range [doc-id row col]]
-  nil
-  {:range   range
-   :command {:title   (-> doc-id
-                          (f.references/reference-usages row col)
-                          count
-                          (str " references"))
+  {:range range
+   :command {:title (-> (q/find-references-from-cursor
+                          (:analysis @db/db)
+                          (shared/uri->filename doc-id) row col)
+                        count
+                        (str " references"))
              :command "code-lens-references"
              :arguments [doc-id row col]}})
 

@@ -322,7 +322,7 @@
               4)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
-        usages (f.references/safe-find-references uri (slurp uri) false false)
+        usages [] #_ (f.references/safe-find-references uri (slurp uri) false false)
         unused-aliases [] #_(crawler/find-unused-aliases usages)
         unused-refers [] #_ (crawler/find-unused-refers usages)
         removed-nodes (->> require-loc

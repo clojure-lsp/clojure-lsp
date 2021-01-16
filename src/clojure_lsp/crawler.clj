@@ -1,5 +1,6 @@
 (ns clojure-lsp.crawler
   (:require
+   [cljfmt.main :as cljfmt.main]
    [clj-kondo.core :as kondo]
    [clojure-lsp.db :as db]
    [clojure-lsp.shared :as shared]
@@ -149,21 +150,19 @@
                                 seq)]
         (let [adjusted-cp (cond->> classpath
                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
-                            :always (log/spy)
-                            :always (remove (set source-paths))
-                            :always (log/spy))
+                            :always (remove (set source-paths)))
               analysis (analyze-paths adjusted-cp)]
           (db/save-deps root-path project-hash classpath analysis))))))
 
-(defn determine-dependencies [project-root]
+(defn analyze-project [project-root]
   (let [root-path (shared/uri->path project-root)
         settings (:settings @db/db)
-        source-paths (mapv #(str (.getAbsolutePath (to-file root-path %))) (get settings :source-paths))]
+        source-paths (get settings :source-paths)]
     (analyze-classpath root-path source-paths settings)
     (analyze-paths source-paths)
     nil))
 
-(defn find-raw-project-settings [project-root]
+(defn ^:private find-raw-project-settings [project-root]
   (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]
     (loop [dir (shared/uri->path project-root)]
       (let [full-config-path (.resolve dir config-path)
@@ -179,7 +178,20 @@
           :else
           "{}")))))
 
-(defn find-project-settings [project-root]
+(defn ^:private find-project-settings [project-root]
   (->> (find-raw-project-settings project-root)
        (edn/read-string {:readers {'re re-pattern}})
        shared/keywordize-first-depth))
+
+(defn initialize-project [project-root client-capabilities client-settings]
+   (let [project-settings (find-project-settings project-root)
+         root-path (shared/uri->path project-root)]
+      (swap! db/db assoc
+             :project-root project-root
+             :project-settings project-settings
+             :client-settings client-settings
+             :settings (-> (merge client-settings project-settings)
+                           (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
+                           (update :cljfmt cljfmt.main/merge-default-options))
+             :client-capabilities client-capabilities)
+      (analyze-project project-root)))

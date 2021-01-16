@@ -35,9 +35,10 @@
 (defn uri->project-related-path [uri project-root]
   (string/replace uri project-root ""))
 
-(defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col]}]
-  {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
-   :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}})
+(defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
+  (when element
+    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
+     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
 
 (defn range->clj [^Range range]
   {:start {:line      (.getLine (.getStart range))

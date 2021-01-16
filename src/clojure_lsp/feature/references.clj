@@ -40,24 +40,3 @@
                            (not (contains? tags :declare)))]
             {:uri uri
              :usage usage}))))
-
-(defn safe-find-references
-  ([uri text]
-   (safe-find-references uri text true false))
-  ([uri text diagnose? remove-private?]
-   (try
-     (let [file-type (shared/uri->file-type uri)
-           macro-defs (get-in @db/db [:settings :macro-defs])
-           excluded-unused-ns-declarations (get-in @db/db [:settings :linters :unused-namespace-declarations] #{})
-           references (cond->> (parser/find-usages uri text file-type macro-defs)
-                        remove-private? (filter (comp #(and (:public %)
-                                                            (:declare %)) :tags)))]
-       (when diagnose?
-         (async/put! db/diagnostics-chan
-                     {:uri uri
-                      :diagnostics (f.diagnostic/find-diagnostics uri text references excluded-unused-ns-declarations)}))
-       references)
-     (catch Throwable e
-       (log/warn e "Cannot parse: " uri (.getMessage e))
-       ;; On purpose
-       nil))))

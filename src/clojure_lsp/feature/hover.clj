@@ -36,15 +36,24 @@
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
         signatures (some->> arglists-str (remove nil?) (string/join "\n"))
         sym (cond->> sym-name
-              sym-ns (str sym-ns "/"))]
-    (case content-format
-      "markdown" {:kind "markdown"
-                  :value (cond-> (str opening-code sym " " (when show-docs-arity-on-same-line? signatures) closing-code)
-                           (and (not show-docs-arity-on-same-line?) signatures) (str opening-code signatures closing-code)
-                           (seq doc) (str line-break (docstring->formatted-markdown doc))
-                           filename (str line-break "*" filename "*\n"))}
+              sym-ns (str sym-ns "/"))
+        markdown? (= "markdown" content-format)
+        sym-line (str sym " " (when show-docs-arity-on-same-line? signatures))
+        signatures-line (when (not show-docs-arity-on-same-line?)
+                          signatures)
+        doc-line (when (seq doc)
+                   (if markdown?
+                     (docstring->formatted-markdown doc)
+                     doc))]
+    (if markdown?
+      {:kind "markdown"
+       :value (cond-> (str opening-code sym-line closing-code)
+                signatures-line (str opening-code signatures-line closing-code)
+                doc-line (str line-break doc-line)
+                filename (str line-break "*" filename "*\n"))}
+
       ;; Default to plaintext
-      (cond-> (str sym " " (when show-docs-arity-on-same-line? signatures) "\n")
-        (and (not show-docs-arity-on-same-line?) signatures) (str signatures "\n")
-        filename (str filename "\n")
-        (seq doc) (str line-break doc "\n")))))
+      [(cond-> (str sym-line "\n")
+         signatures-line (str signatures-line "\n")
+         doc-line (str line-break doc-line)
+         filename (str line-break filename "\n"))])))

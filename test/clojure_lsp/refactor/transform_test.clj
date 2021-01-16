@@ -86,7 +86,7 @@
                    "    java.util.Date))") (z/root-string loc)))))
   (testing "when we don't known the import"
     (reset! db/db {:file-envs {}})
-    (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'Date.))]
+    (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
       (is (= nil (transform/add-common-import-to-namespace zloc))))))
 
 (deftest paredit-test

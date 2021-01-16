@@ -260,7 +260,7 @@
   [ns-loc removed-nodes col keep-at-start? form-type]
   (let [sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
-        imports (->> removed-nodes
+        forms (->> removed-nodes
                         z/node
                         n/children
                         (remove n/printable-only?)
@@ -280,7 +280,7 @@
                        (z/subedit-> ns-loc
                                     (z/find-value z/next form-type)
                                     (z/up)
-                                    (z/replace (n/list-node imports))))))
+                                    (z/replace (n/list-node forms))))))
 
 (defn ^:private remove-unused-refers
   [node unused-refers]
@@ -368,16 +368,8 @@
                (symbol (str base-package "." (z/string node))))
     (z/remove node)
 
-    (z/rightmost? node)
-    node
-
     :else
-    (if (contains? unused-imports
-                   (symbol (str base-package "." (z/string (z/right node)))))
-      node
-      (z/edit-> node
-                (z/insert-right (n/spaces (+ col (count base-package))))
-                (z/insert-right (n/newlines 1))))))
+    node))
 
 (defn ^:private remove-unused-import
   [parent-node col unused-imports]

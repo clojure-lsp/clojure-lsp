@@ -483,6 +483,19 @@
                          "  [java.util Date"
                          "             List]))"
                          "Date."
+                         "List."))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
                          "List."))))
 
 (deftest add-missing-libspec

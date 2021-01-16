@@ -138,14 +138,11 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (int (.getLine pos)))
-                        column (inc (int (.getCharacter pos)))]
-                    (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      line (inc (int (.getLine pos)))
+                      column (inc (int (.getCharacter pos)))]
+                  (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))))))))
 
   (^CompletableFuture resolveCompletionItem [this ^CompletionItem item]
     (go :resolveCompletionItem
@@ -153,12 +150,9 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [label (.getLabel item)
-                        sym-wanted (interop/json->clj (.getData item))]
-                    (interop/conform-or-log ::interop/completion-item (#'handlers/resolve-completion-item label sym-wanted)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [label (.getLabel item)
+                      sym-wanted (interop/json->clj (.getData item))]
+                  (interop/conform-or-log ::interop/completion-item (#'handlers/resolve-completion-item label sym-wanted)))))))))
 
   (^CompletableFuture rename [this ^RenameParams params]
     (go :rename
@@ -166,16 +160,13 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))
-                        new-name (.getNewName params)
-                        edit (#'handlers/rename doc-id line column new-name)]
-                    (interop/conform-or-log ::interop/workspace-edit edit))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      line (inc (.getLine pos))
+                      column (inc (.getCharacter pos))
+                      new-name (.getNewName params)
+                      edit (#'handlers/rename doc-id line column new-name)]
+                  (interop/conform-or-log ::interop/workspace-edit edit))))))))
 
   (^CompletableFuture hover [this ^HoverParams params]
     (go :hover
@@ -204,11 +195,8 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                    (interop/conform-or-log ::interop/edits (#'handlers/formatting doc-id)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
+                  (interop/conform-or-log ::interop/edits (#'handlers/formatting doc-id)))))))))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting
@@ -280,14 +268,11 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))]
-                    (interop/conform-or-log ::interop/location (#'handlers/definition doc-id line column)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      line (inc (.getLine pos))
+                      column (inc (.getCharacter pos))]
+                  (interop/conform-or-log ::interop/location (handlers/definition doc-id line column)))))))))
 
   (^CompletableFuture documentSymbol [this ^DocumentSymbolParams params]
     (go :documentSymbol
@@ -295,11 +280,8 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                    (interop/conform-or-log ::interop/document-symbols (#'handlers/document-symbol doc-id)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
+                  (interop/conform-or-log ::interop/document-symbols (#'handlers/document-symbol doc-id)))))))))
 
   (^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
     (go :documentHighlight
@@ -307,14 +289,11 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                        pos (.getPosition params)
-                        line (inc (.getLine pos))
-                        column (inc (.getCharacter pos))]
-                    (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))
-                  (catch Exception e
-                    (log/error e)))))))))
+                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                      pos (.getPosition params)
+                      line (inc (.getLine pos))
+                      column (inc (.getCharacter pos))]
+                  (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))))))))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
     (go :semanticTokensFull
@@ -388,11 +367,8 @@
           (reify Supplier
             (get [this]
               (end
-                (try
-                  (let [query (.getQuery params)]
-                    (interop/conform-or-log ::interop/workspace-symbols (#'handlers/workspace-symbols query)))
-                  (catch Exception e
-                    (log/error e))))))))))
+                (let [query (.getQuery params)]
+                  (interop/conform-or-log ::interop/workspace-symbols (#'handlers/workspace-symbols query))))))))))
 
 (defn client-settings [^InitializeParams params]
   (-> params

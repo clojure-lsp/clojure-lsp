@@ -50,12 +50,6 @@
   {:start {:line (max 0 (dec row)) :character (max 0 (dec col))}
    :end {:line (max 0 (dec end-row)) :character (max 0 (dec end-col))}})
 
-(defn range->clj [^Range range]
-  {:start {:line      (.getLine (.getStart range))
-           :character (.getCharacter (.getStart range))}
-   :end   {:line      (.getLine (.getEnd range))
-           :character (.getCharacter (.getEnd range))}})
-
 (defn keywordize-first-depth
   [m]
   (into {}

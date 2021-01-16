@@ -93,13 +93,31 @@
          (catch Throwable ex#
            (log/error ex#))))))
 
+(defmacro ^:private sync-handler
+  ([params handler]
+   `(end
+      (->> ~params
+           interop/java->clj
+           ~handler)))
+  ([params handler response-spec]
+   `(end
+      (->> ~params
+           interop/java->clj
+           ~handler
+           (interop/conform-or-log ~response-spec)))))
+
+(defmacro ^:private async-handler
+  [params handler response-spec]
+  `(CompletableFuture/supplyAsync
+     (reify Supplier
+       (get [this]
+         (sync-handler ~params ~handler ~response-spec)))))
+
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (go :didOpen
-        (end
-          (let [document (.getTextDocument params)]
-            (#'handlers/did-open (interop/document->decoded-uri document) (.getText document))))))
+        (sync-handler params handlers/did-open)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
@@ -117,68 +135,27 @@
 
   (^void didClose [_ ^DidCloseTextDocumentParams params]
     (go :didClose
-        (end (-> (.getTextDocument params)
-                 interop/document->decoded-uri
-                 handlers/did-close))))
+        (sync-handler params handlers/did-close)))
 
-  (^CompletableFuture references [this ^ReferenceParams params]
+  (^CompletableFuture references [_ ^ReferenceParams params]
     (go :references
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (->> params
-                     interop/java->clj
-                     handlers/references
-                     (interop/conform-or-log ::interop/references))))))))
+        (async-handler params handlers/references ::interop/references)))
 
-  (^CompletableFuture completion [this ^CompletionParams params]
+  (^CompletableFuture completion [_ ^CompletionParams params]
     (go :completion
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      pos (.getPosition params)
-                      line (inc (int (.getLine pos)))
-                      column (inc (int (.getCharacter pos)))]
-                  (interop/conform-or-log ::interop/completion-items (#'handlers/completion doc-id line column)))))))))
+        (async-handler params handlers/completion ::interop/completion-items)))
 
-  (^CompletableFuture resolveCompletionItem [this ^CompletionItem item]
+  (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (go :resolveCompletionItem
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [label (.getLabel item)
-                      sym-wanted (interop/json->clj (.getData item))]
-                  (interop/conform-or-log ::interop/completion-item (#'handlers/resolve-completion-item label sym-wanted)))))))))
+        (async-handler item handlers/resolve-completion-item ::interop/completion-item)))
 
-  (^CompletableFuture rename [this ^RenameParams params]
+  (^CompletableFuture rename [_ ^RenameParams params]
     (go :rename
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      pos (.getPosition params)
-                      line (inc (.getLine pos))
-                      column (inc (.getCharacter pos))
-                      new-name (.getNewName params)
-                      edit (#'handlers/rename doc-id line column new-name)]
-                  (interop/conform-or-log ::interop/workspace-edit edit))))))))
+        (async-handler params handlers/rename ::interop/workspace-edit)))
 
-  (^CompletableFuture hover [this ^HoverParams params]
+  (^CompletableFuture hover [_ ^HoverParams params]
     (go :hover
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      pos (.getPosition params)
-                      line (inc (.getLine pos))
-                      column (inc (.getCharacter pos))]
-                  (interop/conform-or-log ::interop/hover (#'handlers/hover doc-id line column)))))))))
+        (async-handler params handlers/hover ::interop/hover)))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams _params]
     (go :signatureHelp
@@ -189,14 +166,9 @@
                                (.setParameters [(ParameterInformation. "param label" "param doc")]))]
                             0 0)))))
 
-  (^CompletableFuture formatting [this ^DocumentFormattingParams params]
+  (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
     (go :formatting
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                  (interop/conform-or-log ::interop/edits (#'handlers/formatting doc-id)))))))))
+        (async-handler params handlers/formatting ::interop/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting
@@ -222,123 +194,47 @@
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (go :codeAction
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (->> params
-                     interop/java->clj
-                     handlers/code-actions
-                     (interop/conform-or-log ::interop/code-actions))))))))
+        (async-handler params handlers/code-actions ::interop/code-actions)))
 
   (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
     (go :resolveCodeAction
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (->> unresolved
-                     interop/java->clj
-                     handlers/resolve-code-action
-                     (interop/conform-or-log ::interop/code-action))))))))
+        (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (go :codeLens
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                  (interop/conform-or-log ::interop/code-lenses (#'handlers/code-lens doc-id)))))))))
+        (async-handler params handlers/code-lens ::interop/code-lenses)))
 
   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
     (go :resolveCodeLens
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (->> (.getData params)
-                     interop/json->clj
-                     (handlers/code-lens-resolve (-> params .getRange shared/range->clj))
-                     (interop/conform-or-log ::interop/code-lens))))))))
+         (async-handler params handlers/code-lens-resolve ::interop/code-lens)))
 
-  (^CompletableFuture definition [this ^DefinitionParams params]
+  (^CompletableFuture definition [_ ^DefinitionParams params]
     (go :definition
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      pos (.getPosition params)
-                      line (inc (.getLine pos))
-                      column (inc (.getCharacter pos))]
-                  (interop/conform-or-log ::interop/location (handlers/definition doc-id line column)))))))))
+        (async-handler params handlers/definition ::interop/location)))
 
-  (^CompletableFuture documentSymbol [this ^DocumentSymbolParams params]
+  (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (go :documentSymbol
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                  (interop/conform-or-log ::interop/document-symbols (#'handlers/document-symbol doc-id)))))))))
+        (async-handler params handlers/document-symbol ::interop/document-symbols)))
 
-  (^CompletableFuture documentHighlight [this ^DocumentHighlightParams params]
+  (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
     (go :documentHighlight
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      pos (.getPosition params)
-                      line (inc (.getLine pos))
-                      column (inc (.getCharacter pos))]
-                  (interop/conform-or-log ::interop/document-highlights (#'handlers/document-highlight doc-id line column)))))))))
+        (async-handler params handlers/document-highlight ::interop/document-highlights)))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
     (go :semanticTokensFull
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))]
-                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-full doc-id)))))))))
+        (async-handler params handlers/semantic-tokens-full ::interop/semantic-tokens)))
 
   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
     (go :semanticTokensRange
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      start (-> params .getRange .getStart)
-                      end (-> params .getRange .getEnd)
-                      range {:row (inc (.getLine start))
-                             :col (inc (.getCharacter start))
-                             :end-row (inc (.getLine end))
-                             :end-col (inc (.getCharacter end))}]
-                  (interop/conform-or-log ::interop/semantic-tokens (handlers/semantic-tokens-range doc-id range)))))))))
+        (async-handler params handlers/semantic-tokens-range ::interop/semantic-tokens)))
 
   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
     (go :prepareCallHierarchy
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                      pos (.getPosition params)
-                      row (inc (.getLine pos))
-                      col (inc (.getCharacter pos))]
-                  (interop/conform-or-log ::interop/call-hierarchy-items (handlers/prepare-call-hierarchy doc-id row col)))))))))
+        (async-handler params handlers/prepare-call-hierarchy ::interop/call-hierarchy-items)))
 
   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
     (go :callHierarchyIncomingCalls
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [_this]
-              (end
-                (let [item (.getItem params)]
-                  (interop/conform-or-log ::interop/call-hierarchy-incoming-calls (handlers/call-hierarchy-incoming item))))))))))
+        (async-handler params handlers/call-hierarchy-incoming ::interop/call-hierarchy-incoming-calls))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -346,12 +242,11 @@
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (go :executeCommand
         (future
-          (end
-            (-> params interop/java->clj handlers/execute-command))))
+          (sync-handler params handlers/execute-command)))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
-    (log/warn params))
+   (log/warn (interop/java->clj params)))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (go :didChangeWatchedFiles
@@ -361,14 +256,9 @@
                    (interop/conform-or-log ::interop/watched-files-changes)
                    (handlers/did-change-watched-files)))))
 
-  (^CompletableFuture symbol [this ^WorkspaceSymbolParams params]
+  (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (go :workspaceSymbol
-        (CompletableFuture/supplyAsync
-          (reify Supplier
-            (get [this]
-              (end
-                (let [query (.getQuery params)]
-                  (interop/conform-or-log ::interop/workspace-symbols (#'handlers/workspace-symbols query))))))))))
+        (async-handler params handlers/workspace-symbols ::interop/workspace-symbols))))
 
 (defn client-settings [^InitializeParams params]
   (-> params

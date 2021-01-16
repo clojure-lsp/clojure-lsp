@@ -13,7 +13,7 @@
                  :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
                              "file://b.clj" (parser/find-usages "(ns b)" :clj {})}})
   (testing "should remove references to file"
-    (handlers/did-close "file://a.clj")
+    (handlers/did-close {:textDocument "file://a.clj"})
     (is (= {:documents {"file://b.clj" {:text "(ns b)"}}
             :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
                         "file://b.clj" (parser/find-usages "(ns b)" :clj {})}}
@@ -29,7 +29,8 @@
                                  :character 1}
                          :end   {:line 2 :character 4}}
               :contents ["a/foo \n[x]\nfile://a.clj\n"]}
-             (handlers/hover "file://a.clj" 3 3))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 2 }}))))
     (testing "plain text with docs"
       (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
                                                                          "(defn foo \"Some cool docs :foo\" [x] x)\n"
@@ -38,7 +39,8 @@
                                  :character 1}
                          :end   {:line 2 :character 4}}
               :contents ["a/foo \n[x]\nfile://a.clj\n\n----\nSome cool docs :foo\n"]}
-             (handlers/hover "file://a.clj" 3 3))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 2 }}))))
     (testing "markdown content with function args"
       (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
                      :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
@@ -48,7 +50,8 @@
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
                          :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 3))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 2 }}))))
     (testing "markdown content with no function args"
       (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
                      :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
@@ -58,7 +61,8 @@
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
                          :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 2)))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 1}})))))
   (testing "with show-docs-arity-on-same-line? enabled"
     (testing "plain text"
       (reset! db/db {:settings  {:show-docs-arity-on-same-line? true}
@@ -69,7 +73,8 @@
                                  :character 1}
                          :end   {:line 2 :character 4}}
               :contents ["a/foo [x]\nfile://a.clj\n"]}
-             (handlers/hover "file://a.clj" 3 3))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 2}}))))
     (testing "markdown content with function args"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
                      :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -80,7 +85,8 @@
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
                          :value "```clojure\na/foo [x]\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 3))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 2}}))))
     (testing "markdown content with no function args"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
                      :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -91,7 +97,8 @@
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
                          :value "```clojure\na/foo []\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 2))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 1}}))))
     (testing "markdown content with docs"
       (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
                      :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
@@ -102,13 +109,14 @@
                          :end   {:line 2 :character 4}}
               :contents {:kind  "markdown"
                          :value "```clojure\na/foo []\n```\n*file://a.clj*\n\n----\n```clojure\nSome cool docstring :foo :bar\n```\n"}}
-             (handlers/hover "file://a.clj" 3 2))))))
+             (handlers/hover {:textDocument "file://a.clj"
+                              :position {:line 2 :character 1}}))))))
 
 (deftest document-symbol
   (reset! db/db {:file-envs
                  {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})}})
   (is (= 1
-         (count (handlers/document-symbol "file://a.clj")))))
+         (count (handlers/document-symbol {:textDocument "file://a.clj"})))))
 
 (deftest test-rename
   (reset! db/db {:file-envs
@@ -116,13 +124,17 @@
                   "file://b.clj" (parser/find-usages "(ns b (:require [a :as aa])) (def x aa/bar) ::aa/bar :aa/bar" :clj {})
                   "file://c.clj" (parser/find-usages "(ns c (:require [a :as aa])) (def x aa/bar) ^:xab aa/baz" :clj {})}})
   (testing "on symbol without namespace"
-    (let [changes (:changes (handlers/rename "file://a.clj" 1 13 "foo"))]
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.clj"
+                                              :position {:line 0 :character 12}
+                                              :newName "foo"}))]
       (is (= 1 (count (get changes "file://a.clj"))))
       (is (= 1 (count (get changes "file://b.clj"))))
       (is (= "foo" (get-in changes ["file://a.clj" 0 :new-text])))
       (is (= "aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
   (testing "on symbol with metadata namespace"
-    (let [changes (:changes (handlers/rename "file://a.clj" 1 33 "qux"))]
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.clj"
+                                              :position {:line 0 :character 32}
+                                              :newName "qux"}))]
       (is (= 1 (count (get changes "file://a.clj"))))
       (is (= 1 (count (get changes "file://c.clj"))))
       (is (= "qux" (get-in changes ["file://a.clj" 0 :new-text])))
@@ -134,23 +146,35 @@
              [(get-in changes ["file://c.clj" 0 :range :start :character])
               (get-in changes ["file://c.clj" 0 :range :end :character])]))))
   (testing "on ::keyword"
-    (let [changes (:changes (handlers/rename "file://a.clj" 1 17 "foo"))]
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.clj"
+                                              :position {:line 0 :character 16}
+                                              :newName "foo"}))]
       (is (= 1 (count (get changes "file://a.clj"))))
       (is (= 1 (count (get changes "file://b.clj"))))
       (is (= "::foo" (get-in changes ["file://a.clj" 0 :new-text])))
       (is (= "::aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
   (testing "on symbol with namespace adds existing namespace"
-    (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 38 "foo")
+    (is (= "foo" (get-in (handlers/rename {:textDocument "file://b.clj"
+                                              :position {:line 0 :character 37}
+                                              :newName "foo"})
                          [:changes "file://a.clj" 0 :new-text])))
-    (is (= "aa/foo" (get-in (handlers/rename "file://b.clj" 1 38 "foo")
+    (is (= "aa/foo" (get-in (handlers/rename {:textDocument "file://b.clj"
+                                              :position {:line 0 :character 37}
+                                              :newName "foo"})
                             [:changes "file://b.clj" 0 :new-text]))))
   (testing "on symbol with namespace removes passed-in namespace"
-    (is (= "foo" (get-in (handlers/rename "file://b.clj" 1 38 "aa/foo")
+    (is (= "foo" (get-in (handlers/rename {:textDocument "file://b.clj"
+                                              :position {:line 0 :character 37}
+                                              :newName "aa/foo"})
                          [:changes "file://a.clj" 0 :new-text])))
-    (is (= "aa/foo" (get-in (handlers/rename "file://b.clj" 1 38 "aa/foo")
+    (is (= "aa/foo" (get-in (handlers/rename {:textDocument "file://b.clj"
+                                              :position {:line 0 :character 37}
+                                              :newName "aa/foo"})
                             [:changes "file://b.clj" 0 :new-text]))))
   (testing "on alias changes namespaces inside file"
-    (let [changes (:changes (handlers/rename "file://b.clj" 1 25 "xx"))]
+    (let [changes (:changes (handlers/rename {:textDocument "file://b.clj"
+                                              :position {:line 0 :character 24}
+                                              :newName "xx"}))]
       (is (= 0 (count (get changes "file://a.clj"))))
       (is (= 0 (count (get changes "file://c.clj"))))
       (is (= 3 (count (get changes "file://b.clj"))))
@@ -173,18 +197,24 @@
              {:kind "rename"
               :old-uri "file:///my-project/src/foo/bar_baz.clj"
               :new-uri "file:///my-project/src/foo/baz_qux.clj"}]}
-           (handlers/rename "file:///my-project/src/foo/bar_baz.clj" 1 5 "foo.baz-qux")))
+           (handlers/rename {:textDocument "file:///my-project/src/foo/bar_baz.clj"
+                                              :position {:line 0 :character 4}
+                                              :newName "foo.baz-qux"})))
     (is (empty? (get @db/db :file-envs)))))
 
 (deftest test-rename-simple-keywords
   (reset! db/db {:file-envs
                  {"file://a.cljc" (parser/find-usages ":a (let [{:keys [a]} {}] a)" :cljc {})}})
   (testing "should not rename plain keywords"
-    (let [changes (:changes (handlers/rename "file://a.cljc" 1 1 "b"))]
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.cljc"
+                                              :position {:line 0 :character 0}
+                                              :newName "b"}))]
       (is (= nil changes))))
 
   (testing "should rename local in destructure not keywords"
-    (let [changes (:changes (handlers/rename "file://a.cljc" 1 18 "b"))]
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.cljc"
+                                              :position {:line 0 :character 17}
+                                              :newName "b"}))]
       (is (= [18 26] (mapv (comp inc :character :start :range) (get-in changes ["file://a.cljc"])))))))
 
 (deftest test-find-diagnostics
@@ -362,15 +392,18 @@
               {:label "alpaca" :detail "user"}
               {:label "alpaca" :detail "alpaca.ns"}
               {:label "alpaca.ns" :detail "alpaca.ns"}]
-             (handlers/completion "file://b.clj" 3 18))))
+             (handlers/completion {:textDocument "file://b.clj"
+                                   :position {:line 2 :character 17}}))))
     (testing "complete-ba"
       (reset! db/db db-state)
       (is (= [{:label "bases" :data "clojure.core/bases"}]
-             (handlers/completion "file://b.clj" 4 3))))
+             (handlers/completion {:textDocument "file://b.clj"
+                                   :position {:line 3 :character 2}}))))
     (testing "complete-alph"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'user/alph :str "alph"}))
       (is (= [{:label "alpha" :data "user/alpha"}]
-             (handlers/completion "file://b.clj" 3 3))))
+             (handlers/completion {:textDocument "file://b.clj"
+                                   :position {:line 2 :character 2}}))))
     (testing "complete-alpaca"
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'alpaca :str "alpaca"}))
       (is (= [{:label "alpaca" :detail "user"}
@@ -378,23 +411,28 @@
               {:label "alpaca.ns" :detail "alpaca.ns"}
               {:label "alpaca/barr" :detail "alpaca.ns" :data "alpaca.ns/barr"}
               {:label "alpaca/bazz" :detail "alpaca.ns" :data "alpaca.ns/bazz"}]
-             (handlers/completion "file://b.clj" 3 18))))
+             (handlers/completion {:textDocument "file://b.clj"
+                                   :position {:line 2 :character 17}}))))
     (testing "complete-within-refering"
       (reset! db/db db-state)
       (is (= [{:label "barr" :detail "alpaca.ns/barr" :data "alpaca.ns/barr"}
               {:label "bazz" :detail "alpaca.ns/bazz" :data "alpaca.ns/bazz"}]
-             (handlers/completion "file://e.clj" 1 38))))
+             (handlers/completion {:textDocument "file://e.clj"
+                                   :position {:line 0 :character 37}}))))
     (testing "complete-core-stuff"
       (get-in @db/db [:file-envs "file://b.clj"])
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
       (is (= [{:label "frequencies" :data "clojure.core/frequencies"}]
-             (handlers/completion "file://b.clj" 3 18)))
+             (handlers/completion {:textDocument "file://b.clj"
+                                   :position {:line 2 :character 17}})))
       (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'Sys :str "Sys"}))
       (is (= [{:label "System" :data "java.lang.System"}]
-             (handlers/completion "file://b.clj" 3 18))))
+             (handlers/completion {:textDocument "file://b.clj"
+                                   :position {:line 2 :character 17}}))))
     (testing "resolving completion item"
       (reset! db/db db-state)
-      (let [{:keys [label data documentation]} (handlers/resolve-completion-item "alpha" "user/alpha")]
+      (let [{:keys [label data documentation]} (handlers/resolve-completion-item {:label "alpha"
+                                                                                  :data  "user/alpha"})]
         (and (is (= label "alpha"))
              (is (= data "user/alpha"))
              (is (string/includes? documentation data)))))))
@@ -402,11 +440,11 @@
 (deftest test-formatting
   (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= "(a)\n(b c d)"
-         (:new-text (first (handlers/formatting "file://a.clj"))))))
+         (:new-text (first (handlers/formatting {:textDocument "file://a.clj"}))))))
 
 (deftest test-formatting-noop
   (reset! db/db {:documents {"file://a.clj" {:text "(a)\n(b c d)"}}})
-  (let [r (handlers/formatting "file://a.clj")]
+  (let [r (handlers/formatting {:textDocument "file://a.clj"})]
     (is (empty? r))
     (is (vector? r))))
 
@@ -485,7 +523,7 @@
                 {:start {:line 4 :character 6} :end {:line 4 :character 9}}
                 :data ["file://a.clj" 5 7]}
                )
-             (handlers/code-lens "file://a.clj"))))))
+             (handlers/code-lens {:textDocument "file://a.clj"}))))))
 
 (deftest test-code-lens-resolve
   (let [references-code (str "(ns some-ns)\n"
@@ -507,8 +545,8 @@
                 :command {:title   "0 references"
                           :command "code-lens-references"
                           :arguments ["file://a.clj" 1 5]}}
-               (handlers/code-lens-resolve {:start {:line 1 :character 5} :end {:line 1 :character 12}}
-                                           ["file://a.clj" 1 5]))))
+               (handlers/code-lens-resolve {:data ["file://a.clj" 1 5]
+                                            :range {:start {:line 1 :character 5} :end {:line 1 :character 12}}}))))
       (testing "some lens"
         (reset! db/db db-state)
         (is (= {:range   {:start {:line      2
@@ -518,5 +556,5 @@
                 :command {:title   "1 references"
                           :command "code-lens-references"
                           :arguments ["file://a.clj" 3 8]}}
-               (handlers/code-lens-resolve {:start {:line 2 :character 7} :end {:line 2 :character 11}}
-                                           ["file://a.clj" 3 8])))))))
+               (handlers/code-lens-resolve {:data ["file://a.clj" 3 8]
+                                            :range {:start {:line 2 :character 7} :end {:line 2 :character 11}}})))))))

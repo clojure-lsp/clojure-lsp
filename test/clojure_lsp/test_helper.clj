@@ -1,12 +1,8 @@
 (ns clojure-lsp.test-helper
   (:require
     [clojure.pprint :as pprint]
-   [clojure.test :refer [is]]))
-(defmacro assert-submap [m r]
-  `(is (submap? ~m ~r)))
-
-(defn submap? [a b]
-  )
+    [clojure.string :as string]
+    [clojure.test :refer [is]]))
 
 (defmacro assert-submaps
   "Asserts that maps are submaps of result in corresponding order and
@@ -23,3 +19,11 @@
                   (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
       (doseq [[r# m#] (map vector res# maps#)]
         (is (= m# (select-keys r# (keys m#))) (str "No superset of " m# " found"))))))
+
+(defn pos-from-text [text]
+  [(first
+     (for [[row line] (map-indexed vector (string/split-lines text))
+           [col c] (map-indexed vector line)
+           :when (= \| c)]
+       [(inc row) (inc col)]))
+   (string/replace text #"\|" "")])

@@ -18,10 +18,10 @@
 (defmulti refactor (comp :refactoring))
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
-  (r.transform/add-import-to-namespace loc (vec args)))
+  (apply r.transform/add-import-to-namespace loc (vec args)))
 
-(defmethod refactor :add-missing-libspec [{:keys [loc args]}]
-  (r.transform/add-missing-libspec loc args))
+(defmethod refactor :add-missing-libspec [{:keys [loc]}]
+  (r.transform/add-missing-libspec loc))
 
 (defmethod refactor :clean-ns [{:keys [loc uri]}]
   (r.transform/clean-ns loc uri))
@@ -43,7 +43,7 @@
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
   #_
   (let [usage (f.definition/definition-usage uri row col)
-        references (f.references/reference-usages uri row col)]
+        references (f.references/reference-usages uri row col false)]
     (r.transform/inline-symbol usage references)))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
@@ -87,9 +87,6 @@
     (if (or loc
             (= :clean-ns refactoring))
       (cond
-        (and (map? result)
-             (contains? result :code-action-data))
-        result
 
         (map? result)
         (let [changes (vec (for [[doc-id sub-results] result]

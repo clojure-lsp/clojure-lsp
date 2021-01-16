@@ -1,11 +1,14 @@
 (ns clojure-lsp.interop
   (:require
+    [clojure.data.json :as json]
+    [clojure.java.data :as j]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [clojure.walk :as walk]
     [medley.core :as medley])
   (:import
+    (com.google.gson JsonElement)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCall
       CallHierarchyItem
@@ -33,11 +36,44 @@
       SymbolKind
       SymbolInformation
       TextDocumentEdit
+      TextDocumentIdentifier
       TextEdit
       VersionedTextDocumentIdentifier
+      WatchKind
       WorkspaceEdit)
     (org.eclipse.lsp4j.jsonrpc.messages Either)
     (java.net URLDecoder)))
+
+(defn ^:private enum->keyword [enum]
+  (-> enum (.name) .toLowerCase keyword))
+
+(defn learn-how-to-parse-enums [enums]
+  (-> #(defmethod j/from-java % [instance] (enum->keyword instance))
+      (map enums)))
+
+(defn document->decoded-uri [document]
+  (-> document
+      .getUri
+      URLDecoder/decode))
+
+(learn-how-to-parse-enums
+  [DiagnosticSeverity
+   MessageType
+   WatchKind
+   CompletionItemKind
+   SymbolKind])
+
+(defmethod j/from-java Either [instance]
+  (j/from-java (.get instance)))
+
+(defmethod j/from-java TextDocumentIdentifier [instance]
+  (document->decoded-uri instance))
+
+(defmethod j/from-java JsonElement [instance]
+  (-> instance
+      .toString
+      json/read-str
+      walk/keywordize-keys))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -55,8 +91,8 @@
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
 (s/def :completion-item/kind (s/and keyword?
-                     completion-kind-enum
-                     (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
+                                    completion-kind-enum
+                                    (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
 (s/def ::new-text string?)
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
@@ -207,29 +243,28 @@
 
 (s/def :code-action/title string?)
 
-(def code-action-kind
-  {:quick-fix CodeActionKind/QuickFix
-   :refactor CodeActionKind/Refactor
-   :refactor-extract CodeActionKind/RefactorExtract
-   :refactor-inline CodeActionKind/RefactorInline
-   :refactor-rewrite CodeActionKind/RefactorRewrite
-   :source CodeActionKind/Source
-   :source-organize-imports CodeActionKind/SourceOrganizeImports})
+(s/def :code-action/edit ::workspace-edit)
 
-(s/def :code-action/kind (s/and keyword?
-                                code-action-kind
-                                (s/conformer (fn [v] (get code-action-kind v)))))
+(def code-action-kind
+  [CodeActionKind/QuickFix
+   CodeActionKind/Refactor
+   CodeActionKind/RefactorExtract
+   CodeActionKind/RefactorInline
+   CodeActionKind/RefactorRewrite
+   CodeActionKind/Source
+   CodeActionKind/SourceOrganizeImports])
 
 (s/def :code-action/preferred? boolean?)
 
 (s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
-                                    :opt-un [:code-action/kind ::diagnostics ::workspace-edit ::command :code-action/preferred?])
+                                    :opt-un [::kind ::diagnostics :code-action/edit ::command :code-action/preferred? ::data])
                             (s/conformer #(doto (CodeAction. (:title %1))
                                             (.setKind (:kind %1))
                                             (.setDiagnostics (:diagnostics %1))
                                             (.setIsPreferred (:preferred? %1))
-                                            (.setEdit (:workspace-edit %1))
-                                            (.setCommand (:command %1))))))
+                                            (.setEdit (:edit %1))
+                                            (.setCommand (:command %1))
+                                            (.setData (walk/stringify-keys (:data %1)))))))
 
 (s/def ::code-actions (s/coll-of ::code-action))
 
@@ -271,7 +306,15 @@
 
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
-(defn debeaner [inst]
+(defn  java->clj [inst]
+  (let [converted (j/from-java inst)]
+    (if (map? converted)
+      (->> converted
+           (remove #(nil? (val %)))
+           (into {}))
+      converted)))
+
+(defn ^{:deprecated "use java->clj instead"} debeaner [inst]
   (when inst
     (->> (dissoc (bean inst) :class)
          (into {})
@@ -424,8 +467,3 @@
         (update-in [:cljfmt :indents] clean-symbol-map)
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
-
-(defn document->decoded-uri [document]
-  (-> document
-      .getUri
-      URLDecoder/decode))

@@ -4,7 +4,7 @@
    [clj-kondo.core :as kondo]
    [clojure-lsp.db :as db]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.window :as window]
+   [clojure-lsp.producer :as producer]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -30,7 +30,7 @@
           (string/split sep)))
     (catch Exception e
       (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
-      (window/show-message "Error looking up classpath info" :error)
+      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
       [])))
 
 (defn ^:private valid-project-specs-with-hash [root-path project-specs]
@@ -43,7 +43,7 @@
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]
-  (if (shared/windows-os?)
+  (if shared/windows-os?
     (into ["powershell.exe"] classpath)
     classpath))
 

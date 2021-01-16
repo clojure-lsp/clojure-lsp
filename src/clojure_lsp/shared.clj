@@ -1,15 +1,36 @@
 (ns clojure-lsp.shared
   (:require
     [clojure.tools.logging :as log]
-    [clojure.java.io :as java.io]
-    [clojure.string :as string])
+    [clojure.string :as string]
+    [clojure.java.shell :as shell])
   (:import
    [java.net URI]
    [java.nio.file Paths]
    [org.eclipse.lsp4j Range]))
 
-(defn windows-os? []
+(def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))
+
+(defn windows-process-alive?
+  [pid]
+  (let [{:keys [out]} (shell/sh "tasklist" "/fi" (format "\"pid eq %s\"" pid))]
+    (string/includes? out (str pid))))
+
+(defn unix-process-alive?
+  [pid]
+  (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
+    (zero? exit)))
+
+(defn process-alive?
+  [pid]
+  (try
+    (if windows-os?
+      (windows-process-alive? pid)
+      (unix-process-alive? pid))
+    (catch Exception e
+      (log/warn "Checking if process is alive failed." e)
+      ;; Return true since the check failed. Assume the process is alive.
+      true)))
 
 (defn uri->file-type [uri]
   (cond
@@ -40,12 +61,6 @@
     {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
      :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
 
-(defn range->clj [^Range range]
-  {:start {:line      (.getLine (.getStart range))
-           :character (.getCharacter (.getStart range))}
-   :end   {:line      (.getLine (.getEnd range))
-           :character (.getCharacter (.getEnd range))}})
-
 (defn keywordize-first-depth
   [m]
   (into {}
@@ -60,3 +75,7 @@
     (< line end-row) :within
     (and (= end-row line) (>= end-col column)) :within
     :else :after))
+
+(defn position->line-column [position]
+  [(inc (:line position))
+   (inc (:character position))])

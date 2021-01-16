@@ -15,9 +15,10 @@
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
+    [clojure-lsp.producer :as producer]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
-    [clojure.pprint :as pprint]
+    [clojure.pprint :as pp]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [rewrite-clj.node :as n]
@@ -25,7 +26,7 @@
     [trptcolin.versioneer.core :as version])
   (:import
     [java.net URL
-              JarURLConnection]))
+     JarURLConnection]))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -186,9 +187,9 @@
                               (update :documents dissoc doc-id)
                               (update :file-envs dissoc doc-id)))
             (f.refactor/client-changes (concat doc-changes
-                                    [{:kind "rename"
-                                      :old-uri doc-id
-                                      :new-uri new-uri}])))
+                                               [{:kind "rename"
+                                                 :old-uri doc-id
+                                                 :new-uri new-uri}])))
           (f.refactor/client-changes doc-changes))))))
 
 (defn definition [doc-id line column]
@@ -267,27 +268,38 @@
            (sort-by :name)))
     []))
 
-(defn refactor [doc-id line column refactoring args]
-  (let [;; TODO Instead of v=0 should I send a change AND a document change
-        {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
-        loc (parser/loc-at-pos text line column)]
-    (f.refactor/call-refactor {:refactoring (keyword refactoring)
-                               :loc loc
-                               :uri doc-id
-                               :row line
-                               :col column
-                               :args args
-                               :version v})))
-
-(defn server-info []
-  (let [db @db/db
+(defn ^:private server-info []
+  (let [db             @db/db
         server-version (version/get-version "clojure-lsp" "clojure-lsp")]
-    {:type :info
-     :message (with-out-str (pprint/pprint {:project-root (:project-root db)
-                                            :project-settings (:project-settings db)
-                                            :client-settings (:client-settings db)
-                                            :port (:port db)
-                                            :version server-version}))}))
+    {:type    :info
+     :message (with-out-str (pp/pprint {:project-root     (:project-root db)
+                                        :project-settings (:project-settings db)
+                                        :client-settings  (:client-settings db)
+                                        :port             (:port db)
+                                        :version          server-version}))}))
+
+(defn ^:private refactor [refactoring [doc-id line character args]]
+  (let [row                        (inc (int line))
+        col                        (inc (int character))
+        ;; TODO Instead of v=0 should I send a change AND a document change
+        {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
+        loc                        (parser/loc-at-pos text row col)]
+    (f.refactor/call-refactor {:refactoring (keyword refactoring)
+                               :loc         loc
+                               :uri         doc-id
+                               :row         row
+                               :col         col
+                               :args        args
+                               :version     v})))
+
+(defn execute-command [{:keys [command arguments]}]
+  (cond
+    (= command "server-info")
+    (producer/window-show-message (server-info))
+
+    (some #(= % command) f.refactor/available-refactors)
+    (when-let [result (refactor command arguments)]
+      (producer/workspace-apply-edit result))))
 
 (defn hover [doc-id line column]
   (let [file-envs (:file-envs @db/db)

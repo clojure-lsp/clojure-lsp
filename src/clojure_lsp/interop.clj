@@ -8,7 +8,7 @@
     [clojure.walk :as walk]
     [medley.core :as medley])
   (:import
-    (com.google.gson JsonObject)
+    (com.google.gson JsonElement)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCall
       CallHierarchyItem
@@ -69,7 +69,7 @@
 (defmethod j/from-java TextDocumentIdentifier [instance]
   (document->decoded-uri instance))
 
-(defmethod j/from-java JsonObject [instance]
+(defmethod j/from-java JsonElement [instance]
   (-> instance
       .toString
       json/read-str
@@ -307,10 +307,12 @@
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
 (defn  java->clj [inst]
-  (->> inst
-       j/from-java
-       (remove #(nil? (val %)) )
-       (into {})))
+  (let [converted (j/from-java inst)]
+    (if (map? converted)
+      (->> converted
+           (remove #(nil? (val %)))
+           (into {}))
+      converted)))
 
 (defn ^{:deprecated "use java->clj instead"} debeaner [inst]
   (when inst

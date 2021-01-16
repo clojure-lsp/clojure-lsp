@@ -4,7 +4,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.window :as window]
+   [clojure-lsp.producer :as producer]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -123,7 +123,7 @@
           (string/split sep)))
     (catch Exception e
       (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
-      (window/show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
+      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
       [])))
 
 (defn try-project [root-path project-path command-args env]

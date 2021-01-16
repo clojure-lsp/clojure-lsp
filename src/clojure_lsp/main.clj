@@ -1,72 +1,71 @@
 (ns clojure-lsp.main
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
-    [clojure-lsp.handlers :as handlers]
-    [clojure-lsp.interop :as interop]
-    [clojure-lsp.shared :as shared]
-    [clojure-lsp.window :as window]
-    [clojure.core.async :as async]
-    [clojure.tools.logging :as log]
-    [nrepl.server :as nrepl.server]
-    [trptcolin.versioneer.core :as version])
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.interop :as interop]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
+   [clojure.tools.logging :as log]
+   [nrepl.server :as nrepl.server]
+   [trptcolin.versioneer.core :as version]
+   [clojure-lsp.producer :as producer])
   (:import
-    (clojure_lsp ClojureExtensions)
-    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
-    (org.eclipse.lsp4j
-      ApplyWorkspaceEditParams
-      CallHierarchyIncomingCallsParams
-      CallHierarchyPrepareParams
-      CodeActionParams
-      CodeAction
-      CodeActionOptions
-      CodeLens
-      CodeLensParams
-      CodeLensOptions
-      CompletionItem
-      CompletionOptions
-      CompletionParams
-      DefinitionParams
-      DidChangeConfigurationParams
-      DidChangeTextDocumentParams
-      DidChangeWatchedFilesParams
-      DidChangeWatchedFilesRegistrationOptions
-      DidCloseTextDocumentParams
-      DidOpenTextDocumentParams
-      DidSaveTextDocumentParams
-      DocumentFormattingParams
-      DocumentHighlightParams
-      DocumentRangeFormattingParams
-      DocumentSymbolParams
-      ExecuteCommandOptions
-      ExecuteCommandParams
-      FileSystemWatcher
-      HoverParams
-      InitializeParams
-      InitializeResult
-      InitializedParams
-      ParameterInformation
-      ReferenceParams
-      Registration
-      RegistrationParams
-      RenameParams
-      SaveOptions
-      SemanticTokensLegend
-      SemanticTokensParams
-      SemanticTokensRangeParams
-      SemanticTokensWithRegistrationOptions
-      ServerCapabilities
-      SignatureHelp
-      SignatureHelpParams
-      SignatureInformation
-      TextDocumentContentChangeEvent
-      TextDocumentSyncKind
-      TextDocumentSyncOptions
-      WorkspaceSymbolParams)
-    (org.eclipse.lsp4j.launch LSPLauncher)
-    (java.util.concurrent CompletableFuture)
-    (java.util.function Supplier))
+   (clojure_lsp ClojureExtensions)
+   (org.eclipse.lsp4j
+     CallHierarchyIncomingCallsParams
+     CallHierarchyPrepareParams
+     CodeActionParams
+     CodeAction
+     CodeActionOptions
+     CodeLens
+     CodeLensParams
+     CodeLensOptions
+     CompletionItem
+     CompletionOptions
+     CompletionParams
+     DefinitionParams
+     DidChangeConfigurationParams
+     DidChangeTextDocumentParams
+     DidChangeWatchedFilesParams
+     DidChangeWatchedFilesRegistrationOptions
+     DidCloseTextDocumentParams
+     DidOpenTextDocumentParams
+     DidSaveTextDocumentParams
+     DocumentFormattingParams
+     DocumentHighlightParams
+     DocumentRangeFormattingParams
+     DocumentSymbolParams
+     ExecuteCommandOptions
+     ExecuteCommandParams
+     FileSystemWatcher
+     HoverParams
+     InitializeParams
+     InitializeResult
+     InitializedParams
+     ParameterInformation
+     ReferenceParams
+     Registration
+     RegistrationParams
+     RenameParams
+     SaveOptions
+     SemanticTokensLegend
+     SemanticTokensParams
+     SemanticTokensRangeParams
+     SemanticTokensWithRegistrationOptions
+     ServerCapabilities
+     SignatureHelp
+     SignatureHelpParams
+     SignatureInformation
+     TextDocumentContentChangeEvent
+     TextDocumentSyncKind
+     TextDocumentSyncOptions
+     WorkspaceSymbolParams)
+   (org.eclipse.lsp4j.launch LSPLauncher)
+   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient)
+   (java.util.concurrent CompletableFuture)
+   (java.util.function Supplier))
   (:gen-class))
 
 (defonce formatting (atom false))
@@ -93,17 +92,6 @@
              (log/debug ~'_id duration# running#)))
          (catch Throwable ex#
            (log/error ex#))))))
-
-(defn ^:private execute-refactor [command args]
-  (let [[doc-id line col & args] (map interop/json->clj args)]
-    (when-let [result (#'handlers/refactor doc-id
-                                           (inc (int line))
-                                           (inc (int col))
-                                           command
-                                           args)]
-      (.get (.applyEdit (:client @db/db)
-                        (ApplyWorkspaceEditParams.
-                          (interop/conform-or-log ::interop/workspace-edit result)))))))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
@@ -380,15 +368,7 @@
     (go :executeCommand
         (future
           (end
-            (let [command (.getCommand params)
-                  args (.getArguments params)]
-              (log/info "Executing command" command "with args" args)
-              (cond
-                (= command "server-info")
-                (window/show-message (handlers/server-info))
-
-                (some #(= % command) f.refactor/available-refactors)
-                (execute-refactor command args))))))
+            (-> params interop/java->clj handlers/execute-command))))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
@@ -541,11 +521,11 @@
            :port port)
     (async/go
       (loop [edit (async/<! db/edits-chan)]
-        (log/info "edit applied?" (.get (.applyEdit (:client @db/db) (ApplyWorkspaceEditParams. (interop/conform-or-log ::interop/workspace-edit edit)))))
+        (producer/workspace-apply-edit edit)
         (recur (async/<! db/edits-chan))))
     (async/go
       (loop [diagnostic (async/<! db/diagnostics-chan)]
-        (.publishDiagnostics (:client @db/db) (interop/conform-or-log ::interop/publish-diagnostics-params diagnostic))
+        (producer/publish-diagnostic diagnostic)
         (recur (async/<! db/diagnostics-chan))))
     (.startListening launcher)))
 

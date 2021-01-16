@@ -22,14 +22,12 @@
   (let [lines (string/split-lines doc)
         other-lines (filter (comp not string/blank?) (rest lines))
         multi-line? (> (count other-lines) 0)]
-    (str opening-code
-         (if-not multi-line?
-           doc
-           (let [indentation (apply min (map count-whitespace other-lines))
-                 unindented-lines (cons (first lines)
-                                        (map #(drop-whitespace indentation %) (rest lines)))]
-             (string/join "\n" unindented-lines)))
-         closing-code)))
+    (if-not multi-line?
+      doc
+      (let [indentation (apply min (map count-whitespace other-lines))
+            unindented-lines (cons (first lines)
+                                   (map #(drop-whitespace indentation %) (rest lines)))]
+        (string/join "\n" unindented-lines)))))
 
 (defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglists-str] :as _definition}]
   (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
@@ -38,7 +36,7 @@
         sym (cond->> sym-name
               sym-ns (str sym-ns "/"))
         markdown? (= "markdown" content-format)
-        sym-line (str sym " " (when show-docs-arity-on-same-line? signatures))
+        sym-line (str sym (when show-docs-arity-on-same-line? (str " " signatures)))
         signatures-line (when (not show-docs-arity-on-same-line?)
                           signatures)
         doc-line (when (seq doc)
@@ -49,11 +47,11 @@
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
                 signatures-line (str opening-code signatures-line closing-code)
-                doc-line (str line-break doc-line)
-                filename (str line-break "*" filename "*\n"))}
+                doc-line (str line-break opening-code doc-line "\n```")
+                filename (str line-break "*" filename "*"))}
 
       ;; Default to plaintext
       [(cond-> (str sym-line "\n")
          signatures-line (str signatures-line "\n")
          doc-line (str line-break doc-line)
-         filename (str line-break filename "\n"))])))
+         filename (str line-break filename))])))

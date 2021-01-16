@@ -64,12 +64,14 @@
         :else :unkown))
 
 (defn ^:private kondo-args [extra locals]
-  (let [root-path (shared/uri->path (:project-root @db/db))
+  (let [
         user-config (get-in @db/db [:settings :clj-kondo])
-        kondo-dir (.resolve root-path ".clj-kondo")]
+        kondo-dir (some-> (:project-root @db/db)
+                          shared/uri->path
+                          (.resolve ".clj-kondo"))]
     (cond-> {:cache true
-             :cache-dir (str (.resolve kondo-dir ".cache"))}
-      (.exists (.toFile kondo-dir))
+             :cache-dir ".clj-kondo/.cache"}
+      (some-> kondo-dir (.toFile) (.exists))
       (assoc :cache-dir (str (.resolve kondo-dir ".cache"))
              :config-dir (str kondo-dir))
 
@@ -85,7 +87,7 @@
       locals
       (assoc-in [:config :output :analysis :locals] true))))
 
-(defn run-kondo-on-paths! [paths]
+(defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]} false)))
 
 (defn run-kondo-on-text! [text uri]
@@ -127,9 +129,12 @@
 (defn update-analysis [db uri new-analysis]
   (assoc-in db [:analysis (shared/uri->filename uri)] (normalize-analysis new-analysis)))
 
-(defn analyze-paths [paths]
+(defn ^:private analyze-paths [paths public-only?]
   (let [result (run-kondo-on-paths! paths)
-        analysis (->> (:analysis result)
+        kondo-analysis (cond-> (:analysis result)
+                           public-only? (dissoc :namespace-usages :var-usages)
+                           public-only? (update :var-definitions (fn [usages] (remove :private usages))))
+        analysis (->> kondo-analysis
                       (normalize-analysis)
                       (group-by :filename))]
     (swap! db/db update :analysis merge analysis)
@@ -151,15 +156,15 @@
         (let [adjusted-cp (cond->> classpath
                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
                             :always (remove (set source-paths)))
-              analysis (analyze-paths adjusted-cp)]
+              analysis (analyze-paths adjusted-cp true)]
           (db/save-deps root-path project-hash classpath analysis))))))
 
-(defn analyze-project [project-root]
+(defn ^:private analyze-project [project-root]
   (let [root-path (shared/uri->path project-root)
         settings (:settings @db/db)
         source-paths (get settings :source-paths)]
     (analyze-classpath root-path source-paths settings)
-    (analyze-paths source-paths)
+    (analyze-paths source-paths false)
     nil))
 
 (defn ^:private find-raw-project-settings [project-root]

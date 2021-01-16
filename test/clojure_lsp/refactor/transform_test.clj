@@ -1,7 +1,6 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
     [clojure-lsp.db :as db]
-    [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
@@ -510,6 +509,7 @@
     (is (= (z/string (:loc (first results))) "(defn foo [b]\n  (let [c 1] (b c)))"))
     (is (= (z/string (:loc (last results))) "(foo b)"))))
 
+#_
 (deftest inline-symbol
   (testing "simple let"
     (let [code "(let [something 1] something something)"

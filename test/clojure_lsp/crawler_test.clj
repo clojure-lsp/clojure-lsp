@@ -10,6 +10,7 @@
                [foo.bah :as bah]))
    (def zas (bah/some))")
 
+#_
 (deftest find-unused-aliases-test
   (testing "When there is unused aliases"
     (let [usages (f.references/safe-find-references "file://a.clj" unused-alias-code false false)]
@@ -39,6 +40,7 @@
      (bah/some)
      (another))")
 
+#_
 (deftest find-unused-refers-test
   (testing "When there is a unused refer"
     (let [usages (f.references/safe-find-references  "file://a.clj" unused-refer-code false false)]

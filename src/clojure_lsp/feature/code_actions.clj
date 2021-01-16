@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.code-actions
   (:require
-    [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.refactor.transform :as r.transform]
     [rewrite-clj.zip :as z]))
@@ -9,7 +8,7 @@
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         inside-function? (r.transform/inside-function? zloc)
         [_ {def-uri :uri
-            definition :usage}] (f.definition/definition-usage uri row col)
+            definition :usage}] [] #_ (f.definition/definition-usage uri row col)
         inline-symbol? (r.transform/inline-symbol? def-uri definition)
         line (dec row)
         character (dec col)

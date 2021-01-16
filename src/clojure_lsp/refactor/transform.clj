@@ -562,7 +562,7 @@
 (defn inline-symbol?
   [def-uri definition]
   (let [{:keys [text]} (get-in @db/db [:documents def-uri])
-        def-loc        (parser/loc-at-pos text (:row definition) (:col definition))]
+        def-loc (parser/loc-at-pos text (:row definition) (:col definition))]
     (some-> (edit/find-op def-loc)
             z/sexpr
             #{'let 'def})))

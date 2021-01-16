@@ -31,40 +31,40 @@
   element)
 
 (defmulti find-references
-  (fn [_analysis element]
+  (fn [_analysis element _include-declaration?]
     (case (:bucket element)
       :locals :local
       :local-usages :local
       (:bucket element))))
 
 (defmethod find-references :var-usages
-  [analysis element]
+  [analysis element _]
   (filter #(and (= (:name %) (:name element))
                 (= (or (:ns %) (:to %)) (:to element)))
           (mapcat val analysis)))
 
 (defmethod find-references :var-definitions
-  [analysis element]
-  (filter #(and (= (:name %) (:name element))
-                       (= (or (:ns %) (:to %)) (:ns element)))
-                 (mapcat val analysis)))
+  [analysis element include-declaration?]
+  (when include-declaration?
+    (filter #(and (= (:name %) (:name element))
+                  (= (or (:ns %) (:to %)) (:ns element)))
+            (mapcat val analysis))))
 
 (defmethod find-references :local
-  [analysis {:keys [id filename] :as _element}]
+  [analysis {:keys [id filename] :as _element} _]
   (filter #(= (:id %) id) (get analysis filename)))
 
 (defmethod find-references :default
-  [_analysis element]
+  [_analysis element _]
   [element])
 
 (defn find-element-under-cursor
   [analysis filename line column]
   (let [local-analysis (get analysis filename)]
-    (find-first (fn [{:keys [name-row name-col name-end-row name-end-col] :as v}]
+    (find-first (fn [{:keys [name-row name-col name-end-row name-end-col] :as _v}]
                   (and (<= name-row line name-end-row)
                        (<= name-col column name-end-col)))
                 local-analysis)))
-
 
 (defn find-definition-from-cursor [analysis filename line column]
   (try
@@ -74,10 +74,10 @@
     (catch Throwable e
       (log/error e "can't find definition"))))
 
-(defn find-references-from-cursor [analysis filename line column]
+(defn find-references-from-cursor [analysis filename line column include-declaration?]
   (try
     (let [element (find-element-under-cursor analysis filename line column)]
       (when element
-        (find-references analysis element)))
+        (find-references analysis element include-declaration?)))
     (catch Throwable e
       (log/error e "can't find references"))))

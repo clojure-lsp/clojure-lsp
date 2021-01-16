@@ -6,7 +6,6 @@
     [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
     [clojure-lsp.feature.code-actions :as f.code-actions]
     [clojure-lsp.feature.completion :as f.completion]
-    [clojure-lsp.feature.definition :as f.definition]
     [clojure-lsp.feature.diagnostics :as f.diagnostic]
     [clojure-lsp.feature.document-symbol :as f.document-symbol]
     [clojure-lsp.feature.hover :as f.hover]
@@ -37,7 +36,6 @@
         filename (shared/uri->filename uri)]
     (when (and in-project? (not= :unknown file-type))
       (->> source-paths
-           log/spy
            (some (fn [source-path]
                    (when (string/starts-with? filename source-path)
                      (some-> filename
@@ -118,7 +116,7 @@
 (defn references [doc-id line column]
   (mapv (fn [reference]
           {:uri (shared/filename->uri (:filename reference)) :range (shared/->range reference)})
-        (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)))
+        (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column true)))
 
 (defn did-close [uri]
   (swap! db/db #(update % :documents dissoc uri)))
@@ -145,7 +143,7 @@
      :text-document {:version version :uri doc-id}}))
 
 (defn rename [doc-id line column new-name]
-  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)
+  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column true)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
         can-rename? (and (not= :namespace-definitions (:bucket definition))
                          (string/starts-with? (:filename definition) (get-in @db/db [:project-settings :source-paths])))]
@@ -205,36 +203,22 @@
   (when-let [d (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) line column)]
     {:uri (shared/filename->uri (:filename d)) :range (shared/->range d) :str (:str d)}))
 
-(defn file-env-entry->document-symbol [[e kind]]
-  (let [{n :str :keys [row col end-row end-col sym]} e
-        symbol-kind (f.document-symbol/entry-kind->symbol-kind kind)
-        r {:start {:line (dec row) :character (dec col)}
-           :end {:line (dec end-row) :character (dec end-col)}}]
-    {:name n
-     :kind symbol-kind
-     :range r
-     :selection-range r
-     :namespace (namespace sym)}))
-
 (defn document-symbol [doc-id]
-  (let [local-env (get-in @db/db [:file-envs doc-id])
-        symbol-parent-map (->> local-env
-                               (keep #(cond (:kind %) [% (:kind %)]
-                                            (f.document-symbol/is-declaration? %) [% :declaration]
-                                            :else nil))
-                               (map file-env-entry->document-symbol)
-                               (group-by :namespace))]
-    (->> (symbol-parent-map nil)
-         (map (fn [e]
-                (if-let [children (symbol-parent-map (:name e))]
-                  (assoc e :children children)
-                  e)))
-         (into []))))
+  (let [local-analysis (get-in @db/db [:analysis (shared/uri->filename doc-id)])]
+    ;; TODO what is children? why group by namespace before?
+    (->> local-analysis
+         (filter (every-pred (complement :private)
+                             (comp #{:namespace-definitions} :bucket)))
+         (mapv (fn [e]
+                 {:name (:name e)
+                  :kind :declaration
+                  :range (shared/->range e)
+                  :select-range (shared/->range e)})))))
 
 (defn document-highlight [doc-id line column]
   (let [filename (shared/uri->filename doc-id)
         scoped-analysis (select-keys (:analysis @db/db) [filename])
-        references (q/find-references-from-cursor scoped-analysis filename line column)]
+        references (q/find-references-from-cursor scoped-analysis filename line column true)]
     (mapv (fn [reference]
             {:range (shared/->range reference)})
           references)))
@@ -291,12 +275,10 @@
         definition (when element (q/find-definition ana element))]
     (cond
       definition
-      {:range (shared/->range element)
-       :contents (f.hover/hover-documentation definition)}
+      {:contents (f.hover/hover-documentation definition)}
 
       element
-      {:range (shared/->range element)
-       :contents (f.hover/hover-documentation element)}
+      {:contents (f.hover/hover-documentation element)}
 
       :else
       {:contents []})))
@@ -368,14 +350,13 @@
 
 (defn code-lens-resolve
   [range [doc-id row col]]
-  {:range range
-   :command {:title (-> (q/find-references-from-cursor
-                          (:analysis @db/db)
-                          (shared/uri->filename doc-id) row col)
+  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) row col false)]
+    {:range range
+     :command {:title (-> references
                         count
                         (str " references"))
-             :command "code-lens-references"
-             :arguments [doc-id row col]}})
+               :command "code-lens-references"
+               :arguments [doc-id row col]}}))
 
 (defn semantic-tokens-full
   [doc-id]

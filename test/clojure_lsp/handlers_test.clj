@@ -1,121 +1,157 @@
 (ns clojure-lsp.handlers-test
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
-   [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.parser :as parser]
-   [clojure.string :as string]
-   [clojure.test :refer [deftest is testing]])
+    [clojure.core.async :as async]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.handlers :as handlers]
+    [clojure.tools.logging :as log]
+    [clojure-lsp.test-helper :as h]
+    [clojure-lsp.parser :as parser]
+    [clojure.string :as string]
+    [clojure.test :refer [deftest is testing use-fixtures]])
   (:import
-   (org.eclipse.lsp4j
-     Diagnostic
-     DiagnosticSeverity
-     Range
-     Position)))
+    (org.eclipse.lsp4j
+      Diagnostic
+      DiagnosticSeverity
+      Range
+      Position)))
+
+(use-fixtures
+  :each
+  (fn [f]
+    (reset! db/db {})
+    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))
+      (f))))
+
+(defn diagnostics-or-timeout []
+  (first (async/alts!!
+           [(async/timeout 1000)
+            db/diagnostics-chan])))
+
+(deftest did-open
+  (handlers/did-open "file:///a.clj" "(ns a) (when)")
+  (is (some? (get-in @db/db [:analysis "/a.clj"])))
+  (let [diagnostics (:diagnostics (diagnostics-or-timeout))]
+    (h/assert-submaps
+      [{:code "missing-body-in-when"}
+       {:code "invalid-arity"}]
+      diagnostics)))
 
 (deftest did-close
-  (reset! db/db {:documents {"file://a.clj" {:text "(ns a)"}
-                             "file://b.clj" {:text "(ns b)"}}
-                 :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
-                             "file://b.clj" (parser/find-usages "(ns b)" :clj {})}})
+  (handlers/did-open "file:///a.clj" "(ns a)")
+  (handlers/did-open "file:///b.clj" "(ns b)")
   (testing "should remove references to file"
-    (handlers/did-close "file://a.clj")
-    (is (= {:documents {"file://b.clj" {:text "(ns b)"}}
-            :file-envs {"file://a.clj" (parser/find-usages "(ns a)" :clj {})
-                        "file://b.clj" (parser/find-usages "(ns b)" :clj {})}}
-           @db/db))))
+    (is (= ["file:///a.clj" "file:///b.clj"] (keys (:documents @db/db))))
+    (handlers/did-close "file:///a.clj")
+    (is (= ["file:///b.clj"] (keys (:documents @db/db))))))
+
+(defn pos-from-text [text]
+  [(first
+     (for [[row line] (map-indexed vector (string/split-lines text))
+           [col c] (map-indexed vector line)
+           :when (= \| c)]
+       [(inc row) (inc col)]))
+   (string/replace text #"\|" "")])
 
 (deftest hover
-  (testing "with show-docs-arity-on-same-line? disabled"
-    (testing "plain text without docs"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                         "(defn foo [x] x)\n"
-                                                                         "(foo 1)") :clj {})}})
-      (is (= {:range    {:start {:line      2
-                                 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents ["a/foo \n[x]\nfile://a.clj\n"]}
-             (handlers/hover "file://a.clj" 3 3))))
-    (testing "plain text with docs"
-      (reset! db/db {:file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                         "(defn foo \"Some cool docs :foo\" [x] x)\n"
-                                                                         "(foo 1)") :clj {})}})
-      (is (= {:range    {:start {:line      2
-                                 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents ["a/foo \n[x]\nfile://a.clj\n\n----\nSome cool docs :foo\n"]}
-             (handlers/hover "file://a.clj" 3 3))))
-    (testing "markdown content with function args"
-      (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
-                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                                   "(defn foo [x] x)\n"
-                                                                                   "(foo 1)") :clj {})}})
-      (is (= {:range    {:start {:line 2 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents {:kind  "markdown"
-                         :value "```clojure\na/foo \n```\n```clojure\n[x]\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 3))))
-    (testing "markdown content with no function args"
-      (reset! db/db {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
-                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                                   "(defn foo [] 1)\n"
-                                                                                   "(foo)") :clj {})}})
-      (is (= {:range    {:start {:line 2 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents {:kind  "markdown"
-                         :value "```clojure\na/foo \n```\n```clojure\n[]\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 2)))))
-  (testing "with show-docs-arity-on-same-line? enabled"
-    (testing "plain text"
-      (reset! db/db {:settings  {:show-docs-arity-on-same-line? true}
-                     :file-envs {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                         "(defn foo [x] x)\n"
-                                                                         "(foo 1)") :clj {})}})
-      (is (= {:range    {:start {:line      2
-                                 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents ["a/foo [x]\nfile://a.clj\n"]}
-             (handlers/hover "file://a.clj" 3 3))))
-    (testing "markdown content with function args"
-      (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
-                     :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
-                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                                   "(defn foo [x] x)\n"
-                                                                                   "(foo 1)") :clj {})}})
-      (is (= {:range    {:start {:line 2 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents {:kind  "markdown"
-                         :value "```clojure\na/foo [x]\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 3))))
-    (testing "markdown content with no function args"
-      (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
-                     :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
-                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                                   "(defn foo [] 1)\n"
-                                                                                   "(foo)") :clj {})}})
-      (is (= {:range    {:start {:line 2 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents {:kind  "markdown"
-                         :value "```clojure\na/foo []\n```\n*file://a.clj*\n"}}
-             (handlers/hover "file://a.clj" 3 2))))
-    (testing "markdown content with docs"
-      (reset! db/db {:settings            {:show-docs-arity-on-same-line? true}
-                     :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}
-                     :file-envs           {"file://a.clj" (parser/find-usages (str "(ns a)\n"
-                                                                                   "(defn foo \"Some cool docstring :foo :bar\" [] 1)\n"
-                                                                                   "(foo)") :clj {})}})
-      (is (= {:range    {:start {:line 2 :character 1}
-                         :end   {:line 2 :character 4}}
-              :contents {:kind  "markdown"
-                         :value "```clojure\na/foo []\n```\n*file://a.clj*\n\n----\n```clojure\nSome cool docstring :foo :bar\n```\n"}}
-             (handlers/hover "file://a.clj" 3 2))))))
+  (let [start-code "```clojure"
+        end-code "```"
+        join (fn [coll] (string/join "\n" coll))]
+    (testing "with docs"
+      (let [[[row col] code] (pos-from-text (str "(ns a)\n"
+                                                 "(defn foo \"Some cool docs :foo\" [x] x)\n"
+                                                 "(|foo 1)"))
+            sym "a/foo"
+            sig "[x]"
+            doc "Some cool docs :foo"
+            filename "a.clj"]
+        (handlers/did-open "file://a.clj" code)
+        (testing "show-docs-arity-on-same-line? disabled"
+          (testing "plain"
+            (is (= (join [sym
+                          sig
+                          "" "----"
+                          doc
+                          "----"
+                          filename])
+                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+          (testing "markdown"
+            (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+            (is (= {:kind  "markdown"
+                    :value (join [start-code sym end-code
+                                  start-code sig end-code
+                                  "" "----"
+                                  start-code doc end-code
+                                  "----"
+                                  (str "*" filename "*")])}
+                   (:contents (handlers/hover "file://a.clj" row col))))))
+
+        (testing "show-docs-arity-on-same-line? enabled"
+          (testing "plain"
+            (swap! db/db merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
+            (is (= (join [(str sym " " sig)
+                          "" "----"
+                          doc
+                          "----"
+                          filename])
+                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+
+          (testing "markdown"
+            (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+            (is (= {:kind  "markdown"
+                    :value (join [start-code (str sym " " sig) end-code
+                                  "" "----"
+                                  start-code doc end-code
+                                  "----"
+                                  (str "*" filename "*")])}
+                   (:contents (handlers/hover "file://a.clj" row col))))))))
+
+    (testing "without docs"
+      (let [[[row col] code] (pos-from-text (str "(ns a)\n"
+                                                 "(defn foo [x] x)\n"
+                                                 "(|foo 1)"))
+            sym "a/foo"
+            sig "[x]"
+            filename "a.clj"]
+        (handlers/did-open "file://a.clj" code)
+        (testing "show-docs-arity-on-same-line? disabled"
+          (testing "plain"
+            (swap! db/db merge {:settings {:show-docs-arity-on-same-line? false} :client-capabilities nil})
+            (is (= (join [sym
+                          sig
+                          "" "----"
+                          filename])
+                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+          (testing "markdown"
+            (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+            (is (= {:kind  "markdown"
+                    :value (join [start-code sym end-code
+                                  start-code sig end-code
+                                  "" "----"
+                                  (str "*" filename "*")])}
+                   (:contents (handlers/hover "file://a.clj" row col))))))
+
+        (testing "show-docs-arity-on-same-line? enabled"
+          (testing "plain"
+            (swap! db/db merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
+            (is (= (join [(str sym " " sig)
+                          "" "----"
+                          filename])
+                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+
+          (testing "markdown"
+            (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+            (is (= {:kind "markdown"
+                    :value (join [start-code (str sym " " sig) end-code
+                                  "" "----"
+                                  (str "*" filename "*")])}
+                   (:contents (handlers/hover "file://a.clj" row col))))))))))
 
 (deftest document-symbol
-  (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})}})
+  (handlers/did-open "file://a.clj" "(ns a) (def bar ::bar) (def ^:m baz 1)")
   (is (= 1
          (count (handlers/document-symbol "file://a.clj")))))
 
+#_
 (deftest test-rename
   (reset! db/db {:file-envs
                  {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})
@@ -193,6 +229,7 @@
     (let [changes (:changes (handlers/rename "file://a.cljc" 1 18 "b"))]
       (is (= [18 26] (mapv (comp inc :character :start :range) (get-in changes ["file://a.cljc"])))))))
 
+#_
 (deftest test-find-diagnostics
   (testing "wrong arity"
     (testing "for argument destructuring"
@@ -334,6 +371,7 @@
         (is (empty?
                (map :message usages)))))))
 
+#_
 (deftest test-completion
   (let [db-state {:file-envs
                   {"file://a.cljc" (parser/find-usages
@@ -559,10 +597,10 @@
                              "  (+ a b (foo2)))\n"
                              "(s/defn baz []\n"
                              "  (bar 2 3))\n")
-        db-state        {:file-envs {"file://a.clj" (parser/find-usages references-code :clj {})}}]
+        ]
+    (handlers/did-open "file://a.clj" references-code)
     (testing "references"
       (testing "empty lens"
-        (reset! db/db db-state)
         (is (= {:range   {:start {:line      1
                                   :character 5}
                           :end   {:line      1
@@ -573,7 +611,6 @@
                (handlers/code-lens-resolve {:start {:line 1 :character 5} :end {:line 1 :character 12}}
                                            ["file://a.clj" 1 5]))))
       (testing "some lens"
-        (reset! db/db db-state)
         (is (= {:range   {:start {:line      2
                                   :character 7}
                           :end   {:line      2

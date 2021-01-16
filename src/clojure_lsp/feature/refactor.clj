@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.refactor
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.definition :as f.definition]
    [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
@@ -42,6 +41,7 @@
     (apply r.transform/extract-function loc (conj (vec args) usages-in-form))))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
+  #_
   (let [usage (f.definition/definition-usage uri row col)
         references (f.references/reference-usages uri row col)]
     (r.transform/inline-symbol usage references)))

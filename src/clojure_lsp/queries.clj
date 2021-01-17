@@ -1,6 +1,7 @@
 (ns clojure-lsp.queries
   (:require
-    [clojure.tools.logging :as log]))
+    [clojure.tools.logging :as log]
+    [clojure.pprint :as pprint]))
 
 (defn ^:private find-first [pred coll]
   (reduce
@@ -45,9 +46,12 @@
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
-  (when include-declaration?
+  (if include-declaration?
     (filter #(and (= (:name %) (:name element))
                   (= (or (:ns %) (:to %)) (:ns element)))
+            (mapcat val analysis))
+    (filter #(and (= (:name %) (:name element))
+                  (= (:to %) (:ns element)))
             (mapcat val analysis))))
 
 (defmethod find-references :local
@@ -81,3 +85,9 @@
         (find-references analysis element include-declaration?)))
     (catch Throwable e
       (log/error e "can't find references"))))
+
+(defn find-vars [analysis filename include-private?]
+  (filter #(and (= (:bucket %) :var-definitions)
+                (or include-private?
+                    (not (get % :private))))
+          (get analysis filename)))

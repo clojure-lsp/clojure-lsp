@@ -125,7 +125,8 @@
   (let [row (-> position :line inc)
         col (-> position :character inc)]
     (mapv (fn [reference]
-            {:uri (shared/filename->uri (:filename reference)) :range (shared/->range reference)})
+            {:uri (shared/filename->uri (:filename reference))
+             :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
 (defn did-close [{:keys [textDocument]}]
@@ -227,7 +228,7 @@
                  {:name (:name e)
                   :kind :declaration
                   :range (shared/->range e)
-                  :select-range (shared/->range e)})))))
+                  :selection-range (shared/->range e)})))))
 
 (defn document-highlight [{:keys [textDocument position]}]
   (let [line (-> position :line inc)
@@ -420,26 +421,20 @@
 
 (defn code-lens
   [{:keys [textDocument]}]
-  (let [db     @db/db
-        usages (get-in db [:file-envs textDocument])]
-    (->> usages
-         (filter (fn [{:keys [tags]}]
-                   (and (contains? tags :declare)
-                        (not (contains? tags :alias))
-                        (not (contains? tags :param)))))
-         (map (fn [usage]
-                {:range (shared/->range usage)
-                 :data  [textDocument (:row usage) (:col usage)]})))))
+  (let [analysis (get @db/db :analysis)]
+    (->> (q/find-vars analysis (shared/uri->filename textDocument) true)
+         (map (fn [var]
+                {:range (shared/->range var)
+                 :data  [textDocument (:name-row var) (:name-col var)]})))))
 
 (defn code-lens-resolve
-  [{[doc-id row col] :data range :range}]
-  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename doc-id) row col false)]
+  [{[text-document row col] :data range :range}]
+  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename text-document) row col false)]
+
     {:range range
-     :command {:title (-> references
-                        count
-                        (str " references"))
+     :command {:title (-> references count (str " references"))
                :command "code-lens-references"
-               :arguments [doc-id row col]}}))
+               :arguments [text-document row col]}}))
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]

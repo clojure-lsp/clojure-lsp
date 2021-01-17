@@ -47,20 +47,24 @@
                              (string/replace #"/" ".")
                              (string/replace #"_" "-")))))))))
 
-(defn ^:private source-path-from-uri [uri]
-  (let [source-paths (get-in @db/db [:settings :source-paths])]
-    (->> source-paths
-         (some (fn [source-path]
-                 (when (string/starts-with? uri source-path)
-                   source-path))))))
+(defn ^:private source-path-from-uri [uri source-paths project-root]
+  (->> source-paths
+       (some (fn [source-path]
+               (when (string/starts-with? (string/replace-first uri (shared/uri->filename project-root) "") (str "/" source-path))
+                 source-path)))))
 
-(defn ^:private namespace->uri [namespace source-path file-type]
-  (str source-path
-       (-> namespace
-           (string/replace "." "/")
-           (string/replace "-" "_"))
-       "."
-       (name file-type)))
+(defn ^:private namespace->uri [namespace project-root source-paths filename]
+  (let [file-type (shared/uri->file-type filename)]
+    (str project-root
+         "/"
+         (source-path-from-uri filename source-paths project-root)
+         "/"
+         (-> namespace
+             (string/replace "." "/")
+             (string/replace "-" "_"))
+         "."
+         (name file-type))))
+
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (-> textDocument :uri URLDecoder/decode)
@@ -155,19 +159,23 @@
 
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)
-        references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col true)
+        project-root (:project-root @db/db)
+        filename (shared/uri->filename textDocument)
+        references (q/find-references-from-cursor (:analysis @db/db) filename row col true)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
         source-paths (get-in @db/db [:settings :source-paths])
-        can-rename? (and (not= :namespace-definitions (:bucket definition))
-                         (or (not (seq source-paths)) (some #(string/starts-with? (:filename definition) %) source-paths)))]
+        can-rename? (or (not (seq source-paths))
+                        (some #(string/starts-with? (string/replace-first (:filename definition) (shared/uri->filename project-root) "")
+                                                    (str "/" %)) source-paths))]
     (when (and (seq references) can-rename?)
-      (let [changes (mapv
+      (let [replacement (string/replace newName #".*/([^/]*)$" "$1")
+            changes (mapv
                       (fn [r]
                         (let [name-start (- (:name-end-col r) (count (name (:name r))))
                               ref-doc-id (shared/filename->uri (:filename r))
                               version (get-in @db/db [:documents ref-doc-id :v] 0)]
                           {:range (shared/->range (assoc r :name-col name-start))
-                           :new-text (string/replace newName #".*/([^/]*)$" "$1")
+                           :new-text replacement
                            :text-document {:version version :uri ref-doc-id}}))
                       references)
             doc-changes (->> changes
@@ -176,8 +184,17 @@
                              (map (fn [[text-document edits]]
                                     {:text-document text-document
                                      :edits (mapv #(dissoc % :text-document) edits)})))]
-        ;; TODO rename documents for namespace rename
-        (f.refactor/client-changes doc-changes))))
+        (if (and (= (:bucket definition) :namespace-definitions)
+                 (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes]))
+          (let [new-uri (namespace->uri replacement project-root source-paths (:filename definition))]
+            (swap! db/db #(-> %
+                              (update :documents dissoc filename)
+                              (update :analysis dissoc filename)))
+            (f.refactor/client-changes (concat doc-changes
+                                               [{:kind "rename"
+                                                 :old-uri textDocument
+                                                 :new-uri new-uri}])))
+          (f.refactor/client-changes doc-changes)))))
   #_
   (let [file-envs (:file-envs @db/db)
         project-root (:project-root @db/db)

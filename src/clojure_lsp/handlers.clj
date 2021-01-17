@@ -343,16 +343,15 @@
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)
-        ana (:analysis @db/db)
-        element (q/find-element-under-cursor ana filename line column)
-        definition (when element (q/find-definition ana element))]
+        analysis (:analysis @db/db)
+        element (q/find-element-under-cursor analysis filename line column)
+        definition (when element (q/find-definition analysis element))]
     (cond
       definition
       {:range (shared/->range definition)
        :contents (f.hover/hover-documentation definition)}
 
       element
-
       {:range (shared/->range element)
        :contents (f.hover/hover-documentation element)}
 

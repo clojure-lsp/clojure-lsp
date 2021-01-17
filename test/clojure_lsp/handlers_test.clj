@@ -44,8 +44,7 @@
     (handlers/did-close {:textDocument "file:///a.clj"})
     (is (= ["file:///b.clj"] (keys (:documents @db/db))))))
 
-;; TODO kondo arglists
-#_(deftest hover
+(deftest hover
   (let [start-code "```clojure"
         end-code "```"
         join (fn [coll] (string/join "\n" coll))
@@ -483,47 +482,43 @@
          (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
 (deftest test-code-actions-handle
-  (let [references-code   (str "(ns some-ns)\n"
-                               "(def foo)")
-        b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
-                      "(def bar 1)\n"
-                      "(defn baz []\n"
-                      "  bar)")
-        c-code   (str "(ns another-ns)\n"
-                      "(def bar ons/bar)\n"
-                      "(def foo sns/foo)\n"
-                      "(deftest some-test)\n"
-                      "MyClass.\n"
-                      "Date.")
-        db-state {:documents {"file://a.clj" {:text references-code}
-                              "file://b.clj" {:text b-code}
-                              "file://c.clj" {:text c-code}}
-                  :file-envs {"file://a.clj" (parser/find-usages references-code :clj {})
-                              "file://b.clj" (parser/find-usages b-code :clj {})
-                              "file://c.clj" (parser/find-usages c-code :clj {})}}]
-    (testing "when it has unresolved-namespace and can find namespace"
-      (reset! db/db db-state)
-      (is (some #(= (:title %) "Add missing 'some-ns' require")
-                (handlers/code-actions
-                  {:textDocument "file://c.clj"
-                   :context {:diagnostics [{:code "unresolved-namespace"
-                                            :range {:start {:line 2 :character 10}}}]}
-                   :range {:start {:line 2 :character 10}}}))))
-    (testing "without workspace edit client capability"
-      (reset! db/db db-state)
-      (is (not-any? #(= (:title %) "Clean namespace")
-                    (handlers/code-actions
-                      {:textDocument "file://b.clj"
-                       :context {:diagnostics []}
-                       :range {:start {:line 1 :character 1}}}))))
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "(def foo)")
+                        "file://a.clj")
+  (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
+                             "(def bar 1)\n"
+                             "(defn baz []\n"
+                             "  bar)")
+                        "file://b.clj")
+  (h/load-code-and-locs (str "(ns another-ns)\n"
+                             "(def bar ons/bar)\n"
+                             "(def foo sns/foo)\n"
+                             "(deftest some-test)\n"
+                             "MyClass.\n"
+                             "Date.")
+                        "file://c.clj")
+  (testing "when it has unresolved-namespace and can find namespace"
+    (is (some #(= (:title %) "Add missing 'some-ns' require")
+              (handlers/code-actions
+                {:textDocument "file://c.clj"
+                 :context {:diagnostics [{:code "unresolved-namespace"
+                                          :range {:start {:line 2 :character 10}}}]}
+                 :range {:start {:line 2 :character 10}}}))))
+  (testing "without workspace edit client capability"
+    (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit false}}})
+    (is (not-any? #(= (:title %) "Clean namespace")
+                  (handlers/code-actions
+                    {:textDocument "file://b.clj"
+                     :context {:diagnostics []}
+                     :range {:start {:line 1 :character 1}}}))))
 
-    (testing "with workspace edit client capability"
-      (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
-      (is (some #(= (:title %) "Clean namespace")
-                (handlers/code-actions
-                  {:textDocument "file://b.clj"
-                   :context {:diagnostics []}
-                   :range {:start {:line 1 :character 1}}}))))))
+  (testing "with workspace edit client capability"
+    (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit true}}})
+    (is (some #(= (:title %) "Clean namespace")
+              (handlers/code-actions
+                {:textDocument "file://b.clj"
+                 :context {:diagnostics []}
+                 :range {:start {:line 1 :character 1}}})))))
 
 (deftest test-code-lens
   (let [references-code (str "(ns some-ns)\n"

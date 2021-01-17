@@ -9,18 +9,18 @@
 
 (defn ^:private find-missing-require [uri diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)
-        diagnostic-zloc                                   (parser/cursor-zloc uri line character)]
+        diagnostic-zloc (parser/cursor-zloc uri line character)]
     (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc)]
       {:missing-require missing-require
        :position        position})))
 
 (defn ^:private find-missing-requires [uri diagnostics]
-  (let [unknown-ns-diags        (filter #(= "unresolved-namespace" (:code %)) diagnostics)
+  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
         unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
     (->> (cond-> []
 
-           (seq unknown-ns-diags)
-           (into (map (partial find-missing-require uri) unknown-ns-diags))
+           (seq unresolved-ns-diags)
+           (into (map (partial find-missing-require uri) unresolved-ns-diags))
 
            (seq unresolved-symbol-diags)
            (into (map (partial find-missing-require uri) unresolved-symbol-diags)))
@@ -28,18 +28,18 @@
 
 (defn ^:private find-missing-import [uri diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)
-        diagnostic-zloc                                (parser/cursor-zloc uri line character)]
+        diagnostic-zloc (parser/cursor-zloc uri line character)]
     (when-let [missing-import (r.transform/find-missing-import diagnostic-zloc)]
       {:missing-import missing-import
        :position       position})))
 
 (defn ^:private find-missing-imports [uri diagnostics]
-  (let [unknown-ns-diags        (filter #(= "unresolved-namespace" (:code %)) diagnostics)
+  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
         unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
     (->> (cond-> []
 
-           (seq unknown-ns-diags)
-           (into (map (partial find-missing-import uri) unknown-ns-diags))
+           (seq unresolved-ns-diags)
+           (into (map (partial find-missing-import uri) unresolved-ns-diags))
 
            (seq unresolved-symbol-diags)
            (into (map (partial find-missing-import uri) unresolved-symbol-diags)))
@@ -89,15 +89,15 @@
 
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
-        resolve-support?           (get-in client-capabilities [:text-document :code-action :resolve-support])
-        inside-function?           (r.transform/inside-function? zloc)
-        [_ {def-uri    :uri
-            definition :usage}]    [] #_(f.definition/definition-usage uri row col)
-        inline-symbol?             (r.transform/inline-symbol? def-uri definition)
-        line                       (dec row)
-        character                  (dec col)
-        missing-requires           (find-missing-requires uri diagnostics)
-        missing-imports            (find-missing-imports uri diagnostics)]
+        resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
+        inside-function? (r.transform/inside-function? zloc)
+        [_ {def-uri :uri
+            definition :usage}] [] #_(f.definition/definition-usage uri row col)
+        inline-symbol? (r.transform/inline-symbol? def-uri definition)
+        line (dec row)
+        character (dec col)
+        missing-requires (find-missing-requires uri diagnostics)
+        missing-imports (find-missing-imports uri diagnostics)]
     (cond-> []
 
       (seq missing-requires)

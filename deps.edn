@@ -19,7 +19,7 @@
         medley/medley {:mvn/version "1.3.0"}
         com.taoensso/tufte {:mvn/version "2.2.0"}
         trptcolin/versioneer {:mvn/version "0.2.0"}
-        clj-kondo/clj-kondo {:mvn/version "2020.12.13-SNAPSHOT"}}
+        clj-kondo/clj-kondo {:mvn/version "2020.12.13-20210117.170045-33"}}
  :paths ["resources" "src"]
  :aliases {:run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}}}

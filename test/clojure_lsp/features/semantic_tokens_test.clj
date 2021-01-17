@@ -9,34 +9,25 @@
   (#'semantic-tokens/usage->absolute-token usage token-type))
 
 (def refered-usage-a
-  {:row 7
-   :end-row 7
-   :col 4
-   :end-col 7
-   :file-type :clj
-   :sym 'foo.bar/match?
-   :str "baz"
-   :argc 2})
+  {:name-row 7
+   :name-end-row 7
+   :name-col 4
+   :name-end-col 7
+   :bucket :var-usages})
 
 (def refered-usage-b
-  {:row 7
-   :end-row 7
-   :col 11
-   :end-col 14
-   :file-type :clj
-   :sym 'foo.bar/match?
-   :str "baz"
-   :argc 2})
+  {:name-row 7
+   :name-end-row 7
+   :name-col 11
+   :name-end-col 14
+   :bucket :var-definitions})
 
 (def refered-usage-c
-  {:row 9
-   :end-row 9
-   :col 3
-   :end-col 6
-   :file-type :clj
-   :sym 'foo.bar/baz
-   :str "baz"
-   :argc 2})
+  {:name-row 9
+   :name-end-row 9
+   :name-col 3
+   :name-end-col 6
+   :bucket :locals})
 
 (def refered-usages
   [refered-usage-a
@@ -70,18 +61,6 @@
            (#'semantic-tokens/absolute-token->relative-token refered-tokens
                                                              2
                                                              (->token refered-usage-c :function))))))
-
-(deftest alias-reference-usage->absolute-token
-  (is (= [[19 4 2 0 -1] [19 7 4 1 -1]]
-         (#'semantic-tokens/alias-reference-usage->absolute-token
-          {:tags #{:alias-reference}
-           :end-row 20
-           :sym 'foo.bar/abcd
-           :str "ba/abcd"
-           :file-type #{:clj}
-           :col 5
-           :end-col 12
-           :row 20}))))
 
 (deftest full-tokens
   (testing "testing tokens order"

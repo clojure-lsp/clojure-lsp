@@ -1,7 +1,6 @@
 (ns clojure-lsp.queries
   (:require
-    [clojure.tools.logging :as log]
-    [clojure.pprint :as pprint]))
+    [clojure.tools.logging :as log]))
 
 (defn ^:private find-first [pred coll]
   (reduce

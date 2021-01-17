@@ -441,19 +441,17 @@
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
-  (let [db @db/db
-        usages (get-in db [:file-envs textDocument])
+  (let [usages (get-in @db/db [:analysis (shared/uri->filename textDocument)])
         data (f.semantic-tokens/full-tokens usages)]
     {:data data}))
 
 (defn semantic-tokens-range
   [{:keys [textDocument] {:keys [start end]} :range}]
-  (let [db @db/db
-        usages (get-in db [:file-envs textDocument])
-        range {:row (inc (:line start))
-               :col (inc (:character start))
-               :end-row (inc (:line end))
-               :end-col (inc (:character end))}
+  (let [usages (get-in @db/db [:analysis (shared/uri->filename textDocument)])
+        range {:name-row (inc (:line start))
+               :name-col (inc (:character start))
+               :name-end-row (inc (:line end))
+               :name-end-col (inc (:character end))}
         data (f.semantic-tokens/range-tokens usages range)]
     {:data data}))
 

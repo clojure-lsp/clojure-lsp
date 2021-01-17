@@ -1,6 +1,4 @@
-(ns clojure-lsp.feature.semantic-tokens
-  (:require
-    [clojure.string :as string]))
+(ns clojure-lsp.feature.semantic-tokens)
 
 (def token-types
   [:type
@@ -18,46 +16,29 @@
 (def token-modifier -1)
 
 (defn ^:private usage-inside-range?
-  [{usage-row :row usage-end-row :end-row}
-   {:keys [row end-row]}]
-  (and (>= usage-row row)
-       (<= usage-end-row end-row)))
+  [{usage-row :name-row usage-end-row :name-end-row}
+   {:keys [name-row name-end-row]}]
+  (and (>= usage-row name-row)
+       (<= usage-end-row name-end-row)))
 
 (defn ^:private usage->absolute-token
-  [{:keys [row col end-col]}
+  [{:keys [name-row name-col name-end-col]}
    token-type]
-  [(dec row)
-   (dec col)
-   (- end-col col)
+  [(dec name-row)
+   (dec name-col)
+   (- name-end-col name-col)
    (.indexOf token-types token-type)
    token-modifier])
-
-(defn ^:private alias-reference-usage->absolute-token
-  [{:keys [row col end-col str]}]
-  (let [slash-col (string/index-of str "/")
-        function-col (+ col (inc slash-col))
-        alias-end-col (+ col slash-col)]
-    [(usage->absolute-token {:row row :col col :end-col alias-end-col} :type)
-     (usage->absolute-token {:row row :col function-col :end-col end-col} :function)]))
 
 (defn ^:private usages->absolute-tokens
   [usages]
   (->> usages
-       (sort-by (juxt :row :col))
        (map
-         (fn [{:keys [tags] :as usage}]
+         (fn [{:keys [bucket macro] :as usage}]
            (cond
-             (contains? tags :macro)
-             [(usage->absolute-token usage :macro)]
-
-             (contains? tags :declared)
-             [(usage->absolute-token usage :function)]
-
-             (contains? tags :refered)
-             [(usage->absolute-token usage :function)]
-
-             (contains? tags :alias-reference)
-             (alias-reference-usage->absolute-token usage))))
+            (and macro
+                  (= bucket :var-usages))
+             [(usage->absolute-token usage :macro)])))
        (remove nil?)
        (mapcat identity)))
 

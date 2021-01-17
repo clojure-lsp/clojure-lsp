@@ -1158,6 +1158,7 @@
       (-> code-loc
           (find-usages* (volatile! (assoc default-env :requires (get requires file-type) :file-type file-type :macro-defs macro-defs :uri uri)) {})))))
 
+;; TODO remove (use kondo analysis)
 (defn find-usages
   ([code file-type client-macro-defs]
    (find-usages nil code file-type client-macro-defs))

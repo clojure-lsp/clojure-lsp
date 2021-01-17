@@ -642,21 +642,26 @@
         :range (meta (z/node source))}])))
 
 (defn inline-symbol?
-  [def-uri definition]
-  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
-        def-loc (parser/loc-at-pos text (:row definition) (:col definition))]
-    (some-> (edit/find-op def-loc)
-            z/sexpr
-            #{'let 'def})))
+  [definition]
+  (when definition
+    (let [def-uri (shared/filename->uri (:filename definition))
+          {:keys [text]} (get-in @db/db [:documents def-uri])
+          def-loc (parser/loc-at-pos text (:name-row definition) (:name-col definition))]
+      (some-> (edit/find-op def-loc)
+              z/sexpr
+              #{'let 'def}))))
 
 (defn inline-symbol
-  [[_ {def-uri :uri definition :usage}] references]
-  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
-        def-loc (parser/loc-at-pos text (:row definition) (:col definition))
-        op (inline-symbol? def-uri definition)]
+  [uri row col]
+  (let [definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
+        references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col false)
+        def-uri (shared/filename->uri (:filename definition))
+        {:keys [text]} (get-in @db/db [:documents def-uri])
+        def-loc (parser/loc-at-pos text (:name-row definition) (:name-col definition))
+        op (inline-symbol? definition)]
+    (println references)
     (when op
-      (let [uses (remove (comp #(contains? % :declare) :tags :usage) references)
-            val-loc (z/right def-loc)
+      (let [val-loc (z/right def-loc)
             end-pos (if (= op 'def) (meta (z/node (z/up def-loc))) (meta (z/node val-loc)))
             prev-loc (if (= op 'def) (z/left (z/up def-loc)) (z/left def-loc))
             start-pos (if prev-loc
@@ -671,4 +676,4 @@
           (fn [accum {:keys [uri usage]}]
             (update accum uri (fnil conj []) {:loc val-loc :range usage}))
           {def-uri [{:loc nil :range def-range}]}
-          uses)))))
+          references)))))

@@ -6,7 +6,8 @@
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [clojure.tools.logging :as log]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [clojure-lsp.queries :as q]))
 
 (defn client-changes [changes]
   (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
@@ -41,10 +42,7 @@
     (apply r.transform/extract-function loc (conj (vec args) usages-in-form))))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
-  #_
-  (let [usage (f.definition/definition-usage uri row col)
-        references (f.references/reference-usages uri row col false)]
-    (r.transform/inline-symbol usage references)))
+  (r.transform/inline-symbol uri row col))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc (vec args)))

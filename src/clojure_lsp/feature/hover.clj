@@ -29,10 +29,10 @@
                                    (map #(drop-whitespace indentation %) (rest lines)))]
         (string/join "\n" unindented-lines)))))
 
-(defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglists-str] :as _definition}]
+(defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}]
   (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        signatures (some->> arglists-str (remove nil?) (string/join "\n"))
+        signatures (some->> arglist-strs (remove nil?) (string/join "\n"))
         sym (cond->> sym-name
               sym-ns (str sym-ns "/"))
         markdown? (= "markdown" content-format)

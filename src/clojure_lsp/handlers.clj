@@ -355,10 +355,13 @@
         definition (when element (q/find-definition ana element))]
     (cond
       definition
-      {:contents (f.hover/hover-documentation definition)}
+      {:range (shared/->range definition)
+       :contents (f.hover/hover-documentation definition)}
 
       element
-      {:contents (f.hover/hover-documentation element)}
+
+      {:range (shared/->range element)
+       :contents (f.hover/hover-documentation element)}
 
       :else
       {:contents []})))

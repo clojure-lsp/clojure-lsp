@@ -425,7 +425,6 @@
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
   (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename text-document) row col false)]
-
     {:range range
      :command {:title (-> references count (str " references"))
                :command "code-lens-references"

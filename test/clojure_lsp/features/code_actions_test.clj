@@ -47,16 +47,6 @@
                                           11
                                           [{:code "unresolved-namespace"
                                             :range {:start {:line 1 :character 10}}}] {}))))
-
-      ;; TODO kondo
-      #_(testing "when it has unresolved-namespace and can find namespace"
-        (is (some #(= (:title %) "Add missing 'some-ns' require")
-                  (f.code-actions/all (zloc-at "file://c.clj" 3 11)
-                                      "file://c.clj"
-                                      3
-                                      11
-                                      [{:code "unresolved-namespace"
-                                        :range {:start {:line 2 :character 10}}}] {}))))
       (testing "when it has unresolved-symbol and it's a known refer"
         (is (some #(= (:title %) "Add missing 'clojure.test' require")
                   (f.code-actions/all (zloc-at "file://c.clj" 4 2)

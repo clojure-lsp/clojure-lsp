@@ -20,7 +20,7 @@
   (fn [f]
     (reset! db/db {})
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))
-      (f))))
+                    (f))))
 
 (defn diagnostics-or-timeout []
   (first (async/alts!!
@@ -52,7 +52,7 @@
                   "(defn foo \"Some cool docs :foo\" [x] x)\n"
                   "(defn bar [y] y)\n"
                   "(|foo 1)\n"
-                  "(|bar 1)" )
+                  "(|bar 1)")
         [foo-pos bar-pos] (h/load-code-and-locs code)]
     (testing "with docs"
       (let [sym "a/foo"
@@ -147,6 +147,27 @@
       (handlers/document-highlight {:textDocument "file:///a.clj"
                                     :position (h/->position bar-start)}))))
 
+(deftest references
+  (testing "simple single reference"
+    (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
+          _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" "file:///b.clj")]
+      (h/assert-submaps
+        [{:uri "file:///b.clj"
+          :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
+        (handlers/references {:textDocument "file:///a.clj"
+                              :position (h/->position bar-def-pos)}))))
+  (testing "when including declaration"
+    (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
+          _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" "file:///b.clj")]
+      (h/assert-submaps
+        [{:uri "file:///a.clj"
+          :range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
+         {:uri "file:///b.clj"
+          :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
+        (handlers/references {:textDocument "file:///a.clj"
+                              :position (h/->position bar-def-pos)
+                              :context {:includeDeclaration true}})))))
+
 (deftest test-rename
   (let [[abar-start abar-stop
          akwbar-start akwbar-stop
@@ -165,7 +186,7 @@
         (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
                 "file:///b.clj" [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
                 "file:///c.clj" [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
-             changes))))
+               changes))))
     (testing "on symbol with metadata namespace"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
                                                 :position (h/->position abaz-start)
@@ -357,3 +378,64 @@
                 {:textDocument "file://b.clj"
                  :context {:diagnostics []}
                  :range {:start {:line 1 :character 1}}})))))
+
+(deftest test-code-lens
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n"))
+  (testing "references lens"
+    (is (= '({:range
+              {:start {:line 1 :character 5} :end {:line 1 :character 8}}
+              :data ["file:///a.clj" 2 6]}
+             {:range
+              {:start {:line 2 :character 7} :end {:line 2 :character 11}}
+              :data ["file:///a.clj" 3 8]}
+             {:range
+              {:start {:line 4 :character 6} :end {:line 4 :character 9}}
+              :data ["file:///a.clj" 5 7]})
+           (handlers/code-lens {:textDocument "file:///a.clj"})))))
+
+(deftest test-code-lens-resolve
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n"))
+  (testing "references"
+    (testing "empty lens"
+      (is (= {:range   {:start {:line      0
+                                :character 5}
+                        :end   {:line      0
+                                :character 12}}
+              :command {:title   "0 references"
+                        :command "code-lens-references"
+                        :arguments ["file:///a.clj" 0 5]}}
+             (handlers/code-lens-resolve {:data ["file:///a.clj" 0 5]
+                                          :range {:start {:line 0 :character 5} :end {:line 0 :character 12}}}))))
+    (testing "some lens"
+      (is (= {:range   {:start {:line      1
+                                :character 5}
+                        :end   {:line      1
+                                :character 12}}
+              :command {:title   "1 references"
+                        :command "code-lens-references"
+                        :arguments ["file:///a.clj" 1 5]}}
+             (handlers/code-lens-resolve {:data ["file:///a.clj" 1 5]
+                                          :range {:start {:line 1 :character 5} :end {:line 1 :character 12}}})))
+      (is (= {:range   {:start {:line      2
+                                :character 7}
+                        :end   {:line      2
+                                :character 11}}
+              :command {:title   "1 references"
+                        :command "code-lens-references"
+                        :arguments ["file:///a.clj" 3 8]}}
+             (handlers/code-lens-resolve {:data ["file:///a.clj" 3 8]
+                                          :range {:start {:line 2 :character 7} :end {:line 2 :character 11}}}))))))

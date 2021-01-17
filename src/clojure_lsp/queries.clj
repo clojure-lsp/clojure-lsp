@@ -54,15 +54,18 @@
     [element]
     (filter #(and (= (:name %) (:name element))
                   (= (or (:ns %) (:to %)) (:to element))
-                  (or include-declaration? (not= :var-definitions (:bucket element))))
+                  (or include-declaration?
+                      (not= :var-definitions (:bucket %))))
             (mapcat val analysis))))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
   (filter #(and (= (:name %) (:name element))
-                  (= (or (:ns %) (:to %)) (:ns element))
-                  (or include-declaration? (not= :var-definitions (:bucket element))) )
-            (mapcat val analysis)))
+                (= (or (:ns %) (:to %))
+                   (:ns element))
+                (or include-declaration?
+                    (not= :var-definitions (:bucket %))) )
+          (mapcat val analysis)))
 
 (defmethod find-references :local
   [analysis {:keys [id filename] :as _element} include-declaration?]

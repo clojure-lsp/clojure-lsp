@@ -1,8 +1,12 @@
 (ns clojure-lsp.test-helper
   (:require
+    [clojure-lsp.handlers :as handlers]
     [clojure.pprint :as pprint]
-    [clojure.string :as string]
-    [clojure.test :refer [is]]))
+    [clojure.test :refer [is]]
+    [clojure.tools.logging :as log]))
+
+(defn assert-submap [expected actual]
+  (is (= expected (some-> actual (select-keys (keys expected)))) (str "No superset of " (pr-str actual) " found")))
 
 (defmacro assert-submaps
   "Asserts that maps are submaps of result in corresponding order and
@@ -18,12 +22,31 @@
           (format "Expected %s results, but got: %s \n--\n%s--"
                   (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
       (doseq [[r# m#] (map vector res# maps#)]
-        (is (= m# (select-keys r# (keys m#))) (str "No superset of " m# " found"))))))
+        (assert-submap m# r# (str "No superset of " m# " found"))))))
 
-(defn pos-from-text [text]
-  [(first
-     (for [[row line] (map-indexed vector (string/split-lines text))
-           [col c] (map-indexed vector line)
-           :when (= \| c)]
-       [(inc row) (inc col)]))
-   (string/replace text #"\|" "")])
+(defn positions-from-text
+  "Takes text with a pipe `|` as a placeholder for cursor positions and returns the text without
+   the pipes alone with a vector of [line column] pairs representing the cursor positions (1-based)"
+  [text]
+  (let [[_ _ text positions] (reduce
+                               (fn [[row column text positions] ch]
+                                 (cond
+                                   (= \| ch)
+                                   [row column text (conj positions [row column])]
+
+                                   (= \newline ch)
+                                   [(inc row) 1 (str text ch) positions]
+
+                                   :else
+                                   [row (inc column) (str text ch) positions]))
+                               [1 1 "" []]
+                               text)]
+
+    [text positions]))
+
+
+(defn load-code-and-locs [code & [filename]]
+  (let [[code positions] (positions-from-text code)
+        filename (or filename "file:///a.clj")]
+    (handlers/did-open {:textDocument {:uri filename :text code}})
+    positions))

@@ -154,12 +154,11 @@
      :text-document {:version version :uri doc-id}}))
 
 (defn rename [{:keys [textDocument position newName]}]
-  (let [row (-> position :line inc)
-        col (-> position :character inc)
+  (let [[row col] (shared/position->line-column position)
         references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col true)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
         can-rename? (and (not= :namespace-definitions (:bucket definition))
-                         (string/starts-with? (:filename definition) (get-in @db/db [:project-settings :source-paths])))]
+                         (some #(string/starts-with? (:filename definition) %) (get-in @db/db [:settings :source-paths])))]
     (when (and (seq references) can-rename?)
       (let [changes (mapv
                       (fn [r]

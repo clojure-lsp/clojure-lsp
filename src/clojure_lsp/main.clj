@@ -284,11 +284,8 @@
   [ppid server]
   (async/go-loop []
     (async/<! (async/timeout 5000))
-    (log/debug "Checking parent process" ppid "liveness")
     (if (shared/process-alive? ppid)
-      (do
-        (log/debug "Parent process" ppid "is running")
-        (recur))
+      (recur)
       (do
         (log/info "Parent process" ppid "is not running - exiting server")
         (.exit server)))))

@@ -1,12 +1,8 @@
 (ns clojure-lsp.feature.references
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
-   [clojure.set :as set]
-   [clojure.tools.logging :as log]))
+   [clojure.set :as set]))
 
 (defn find-after-cursor [line column env file-type]
   (let [file-types (if (= :cljc file-type)

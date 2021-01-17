@@ -6,7 +6,9 @@
     [clojure.tools.logging :as log]))
 
 (defn assert-submap [expected actual]
-  (is (= expected (some-> actual (select-keys (keys expected)))) (str "No superset of " (pr-str actual) " found")))
+  (is (= expected
+         (some-> actual (select-keys (keys expected))))
+      (str "No superset of " (pr-str actual) " found")))
 
 (defmacro assert-submaps
   "Asserts that maps are submaps of result in corresponding order and

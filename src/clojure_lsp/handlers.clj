@@ -251,34 +251,10 @@
      :selection-range r
      :namespace (namespace sym)}))
 
-(defn document-symbol [{:keys [textDocument]}]
-  (let [local-env (get-in @db/db [:file-envs textDocument])
-        symbol-parent-map (->> local-env
-                               (keep #(cond (:kind %) [% (:kind %)]
-                                            (f.document-symbol/is-declaration? %) [% :declaration]
-                                            :else nil))
-                               (map file-env-entry->document-symbol)
-                               (group-by :namespace))]
-    (->> (symbol-parent-map nil)
-         (map (fn [e]
-                (if-let [children (symbol-parent-map (:name e))]
-                  (assoc e :children children)
-                  e)))
-         (into []))))
-
 (defn file-env-entry->document-highlight [{:keys [row end-row col end-col]}]
   (let [r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
     {:range r}))
-
-(defn document-highlight
-  [{:keys [textDocument] {:keys [line character]} :position}]
-  (let [file-envs (:file-envs @db/db)
-        local-env (get file-envs textDocument)
-        cursor (f.references/find-under-cursor (inc line) (inc character) local-env (shared/uri->file-type textDocument))
-        sym (:sym cursor)]
-    (into [] (comp (filter #(= (:sym %) sym))
-                   (map file-env-entry->document-highlight)) local-env)))
 
 (defn file-env-entry->workspace-symbol [uri [e kind]]
   (let [{:keys [row col end-row end-col sym]} e

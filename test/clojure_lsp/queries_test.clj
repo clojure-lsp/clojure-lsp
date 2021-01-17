@@ -9,14 +9,19 @@
 (deftest find-element-under-cursor []
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn x [file|name] filename)\n"
+                  "|x\n"
                   "un|known")
         [[alias-r alias-c]
          [param-r param-c]
+         [x-r x-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code)
         ana (:analysis @db/db)]
     (h/assert-submap
       '{:alias f-alias}
       (q/find-element-under-cursor ana "/a.clj" alias-r alias-c))
+    (h/assert-submap
+      '{:name x}
+      (q/find-element-under-cursor ana "/a.clj" x-r x-c))
     (h/assert-submap
       '{:name filename}
       (q/find-element-under-cursor ana "/a.clj" param-r param-c))

@@ -113,22 +113,14 @@
     [element]))
 
 (defn normalize-analysis [analysis]
-  (reduce
-    (fn [accum [bucket vs]]
-      (reduce
-        (fn [coll v]
-          (when (or (:col v) (:name-col v))
-            (->> (assoc v :bucket bucket)
-                 entry->normalized-entries
-                 (filter (fn [{:keys [name-row name-col name-end-row name-end-col] :as element}]
-                           (if (and name-row name-col name-end-row name-end-col)
-                             true
-                             (log/error "Cannot find position for:" (:name element) (pr-str element) (some-> (:name element) meta)))))
-                 (into coll))))
-        accum
-        vs))
-    []
-    analysis))
+  (for [[bucket vs] analysis
+        v vs
+        element (entry->normalized-entries (assoc v :bucket bucket))
+        :let [{:keys [name-row name-col name-end-row name-end-col] :as element} element
+              valid? (and name-row name-col name-end-row name-end-col)
+              _ (when-not valid? (log/error "Cannot find position for:" (:name element) (pr-str element) (some-> (:name element) meta)))]
+        :when valid?]
+    element))
 
 (defn update-analysis [db uri new-analysis]
   (assoc-in db [:analysis (shared/uri->filename uri)] (normalize-analysis new-analysis)))

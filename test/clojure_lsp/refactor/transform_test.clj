@@ -311,7 +311,7 @@
                          "   [foo  :as f]"
                          "   [bar :as b]))")
                    (code "(ns foo.bar)")))
-  (testing "with refer at require"
+  #_(testing "with refer at require"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:require"
@@ -325,13 +325,13 @@
                          "   baz))"
                          "(defn func []"
                          "  (f/some))")))
-  (testing "with refer as single require"
+  #_(testing "with refer as single require"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:require"
                          "   [bar :refer [some]]))")
                    (code "(ns foo.bar)")))
-  (testing "in any form"
+  #_(testing "in any form"
     (let [to-clean (code "(ns foo.bar"
                          " (:require"
                          "   [foo  :as f] [bar :refer [some]] baz [z] ))"
@@ -349,7 +349,7 @@
                            "(defn func []"
                            "  (f/some))")
                      false)))
-  (testing "with first require as a refer"
+  #_(testing "with first require as a refer"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:require"
@@ -363,7 +363,7 @@
                          ""
                          "(defn func []"
                          "  (some))")))
-  (testing "with first require as a refer with alias"
+  #_(testing "with first require as a refer with alias"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:require"
@@ -379,7 +379,7 @@
                          "(defn func []"
                          "  b/some"
                          "  (some))")))
-  (testing "unused refer from multiple refers"
+  #_(testing "unused refer from multiple refers"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
@@ -389,7 +389,7 @@
                            " (:require"
                            "   [bar :refer [some] ]))"
                            "(some)")))
-  (testing "unused middle refer from multiple refers"
+  #_(testing "unused middle refer from multiple refers"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
@@ -403,26 +403,26 @@
                            "(some)"
                            "(another)"
                            "(baz)")))
-  (testing "unused refer and alias"
+  #_(testing "unused refer and alias"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer [some] ]"
                            "   [baz :as b]))")
                      (code "(ns foo.bar)")))
-  (testing "single unused full package import"
+  #_(testing "single unused full package import"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:import"
                          "  java.util.Date))")
                    (code "(ns foo.bar)")))
-  (testing "single unused package import"
+  #_(testing "single unused package import"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:import"
                          "  [java.util Date]))")
                    (code "(ns foo.bar)")))
-  (testing "unused full package imports"
+  #_(testing "unused full package imports"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:import "
@@ -432,7 +432,7 @@
                          " (:import"
                          "  java.util.Calendar))"
                          "Calendar.")))
-  (testing "unused package imports"
+  #_(testing "unused package imports"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:import "
@@ -444,7 +444,7 @@
                          "  [java.util Calendar Map]))"
                          "Calendar."
                          "Map.")))
-  (testing "unused package imports with keep-at-start?"
+  #_(testing "unused package imports with keep-at-start?"
     (test-clean-ns {:settings {:keep-require-at-start? true}}
                    (code "(ns foo.bar"
                          " (:import [java.util Date Calendar List Map]))"
@@ -454,7 +454,7 @@
                          " (:import [java.util Calendar Map]))"
                          "Calendar."
                          "Map.")))
-  (testing "unused package imports with single import"
+  #_(testing "unused package imports with single import"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:import"
@@ -468,7 +468,7 @@
                          "  java.util.Calendar))"
                          "Calendar."
                          "List.")))
-  (testing "unused package imports spacing"
+  #_(testing "unused package imports spacing"
     (test-clean-ns {}
                    (code "(ns foo.bar"
                          " (:import"

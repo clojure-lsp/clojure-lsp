@@ -1,8 +1,6 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
-    [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure.set :as set]
@@ -13,7 +11,9 @@
     [rewrite-clj.zip :as z]
     [rewrite-clj.zip.subedit :as zsub]
     [clojure.tools.logging :as log]
-    [clojure-lsp.clojure-core :as cc]))
+    [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.queries :as q]
+    [clojure-lsp.shared :as shared]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -338,16 +338,13 @@
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
 
 (defn ^:private clean-requires
-  [ns-loc usages keep-at-start?]
+  [ns-loc unused-aliases unused-refers keep-at-start?]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
     (let [col (if require-loc
                 (if keep-at-start?
                   (-> require-loc z/node meta :end-col)
                   (-> require-loc z/right z/node meta :col dec))
                 4)
-          ;; TODO kondo fix
-          unused-aliases [] #_(crawler/find-unused-aliases usages)
-          unused-refers [] #_(crawler/find-unused-refers usages)
           removed-nodes (->> require-loc
                              z/remove
                              (remove-unused-requires unused-aliases unused-refers))]
@@ -390,15 +387,13 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc usages keep-at-start?]
+  [ns-loc unused-imports keep-at-start?]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (if import-loc
                 (if keep-at-start?
                   (-> import-loc z/node meta :end-col)
                   (-> import-loc z/right z/node meta :col dec))
                 4)
-          ;; TODO kondo fix
-          unused-imports [] #_(crawler/find-unused-imports usages)
           removed-nodes (-> import-loc
                              z/remove
                              (edit/map-children #(remove-unused-import % col unused-imports)))]
@@ -411,11 +406,12 @@
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [keep-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-            ;; TODO kondo
-            usages [] #_(f.references/safe-find-references uri (slurp uri) false false)
+            unused-aliases (q/find-unused-aliases (:analysis @db/db) (shared/uri->filename uri))
+            unused-refers (q/find-unused-refers (:analysis @db/db) (shared/uri->filename uri))
+            unused-imports (q/find-unused-imports (:analysis @db/db) (shared/uri->filename uri))
             result-loc (-> ns-loc
-                           (clean-requires usages keep-at-start?)
-                           (clean-imports usages keep-at-start?))]
+                           (clean-requires unused-aliases unused-refers keep-at-start?)
+                           (clean-imports unused-imports keep-at-start?))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 

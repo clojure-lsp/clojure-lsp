@@ -1,6 +1,7 @@
 (ns clojure-lsp.queries
   (:require
-    [clojure.tools.logging :as log]))
+   [clojure.set :as set]
+   [clojure.tools.logging :as log]))
 
 (defn ^:private find-first [pred coll]
   (reduce
@@ -90,3 +91,21 @@
                 (or include-private?
                     (not (get % :private))))
           (get analysis filename)))
+
+(defn find-unused-aliases [analysis filename]
+  (let [declared-aliases (filter #(and (= (:bucket %) :namespace-usages)
+                                       (:alias %))
+                                 (get analysis filename))]
+    (->> (get analysis filename)
+         (remove #(= (:bucket %) :namespace-usages))
+         (map :to)
+         set
+         (set/difference (set (map :to declared-aliases))))))
+
+(defn find-unused-refers [_analysis _filename]
+  ;; TODO clj-kondo does not support refer analysis yet
+  #{})
+
+(defn find-unused-imports [_analysis _filename]
+  ;; TODO clj-kondo does not support import analysis yet
+  #{})

@@ -98,31 +98,35 @@
                              :filename (shared/uri->filename uri)}
                             true))))
 
+(defn entry->normalized-entries [{:keys [bucket] :as element}]
+  (cond
+    ;; We create two entries here (and maybe more for refer)
+    (= :namespace-usages bucket)
+    (cond-> [(set/rename-keys element {:to :name})]
+      (:alias element)
+      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row :alias-col :name-col :alias-end-row :name-end-row :alias-end-col :name-end-col})))
+
+    (contains? #{:locals :local-usages} bucket)
+    [(set/rename-keys element {:row :name-row :col :name-col :end-row :name-end-row :end-col :name-end-col})]
+
+    :else
+    [element]))
+
 (defn normalize-analysis [analysis]
   (reduce
-    (fn [accum [k vs]]
-      (->> vs
-           (keep
-             (fn [v]
-               (when (or (:col v) (:name-col v))
-                 (let [result (cond-> v
-                                (= :namespace-usages k)
-                                (assoc :end-row (:row v)
-                                       :end-col (some-> (:alias v) name count (+ (:col v))))
-
-                                (contains? #{:namespace-usages :locals :local-usages} k)
-                                (set/rename-keys {:row :name-row :col :name-col :end-row :name-end-row :end-col :name-end-col})
-
-                                :always
-                                (assoc :bucket k))
-                       {:keys [name-row name-col name-end-row name-end-col]} result
-                       valid? (and name-row name-col name-end-row name-end-col)]
-                   (if valid?
-                     result
-                     (do
-                       (log/error "Cannot find position for:" (:name result ) (pr-str result) (some-> (:name result) meta))
-                       nil))))))
-           (into accum)))
+    (fn [accum [bucket vs]]
+      (reduce
+        (fn [coll v]
+          (when (or (:col v) (:name-col v))
+            (->> (assoc v :bucket bucket)
+                 entry->normalized-entries
+                 (filter (fn [{:keys [name-row name-col name-end-row name-end-col] :as element}]
+                           (if (and name-row name-col name-end-row name-end-col)
+                             true
+                             (log/error "Cannot find position for:" (:name element) (pr-str element) (some-> (:name element) meta)))))
+                 (into coll))))
+        accum
+        vs))
     []
     analysis))
 

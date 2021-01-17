@@ -157,8 +157,9 @@
   (let [[row col] (shared/position->line-column position)
         references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col true)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
+        source-paths (get-in @db/db [:settings :source-paths])
         can-rename? (and (not= :namespace-definitions (:bucket definition))
-                         (some #(string/starts-with? (:filename definition) %) (get-in @db/db [:settings :source-paths])))]
+                         (or (not (seq source-paths)) (some #(string/starts-with? (:filename definition) %) source-paths)))]
     (when (and (seq references) can-rename?)
       (let [changes (mapv
                       (fn [r]
@@ -166,7 +167,7 @@
                               ref-doc-id (shared/filename->uri (:filename r))
                               version (get-in @db/db [:documents ref-doc-id :v] 0)]
                           {:range (shared/->range (assoc r :name-col name-start))
-                           :new-text newName
+                           :new-text (string/replace newName #".*/([^/]*)$" "$1")
                            :text-document {:version version :uri ref-doc-id}}))
                       references)
             doc-changes (->> changes
@@ -174,7 +175,7 @@
                              (remove (comp empty? val))
                              (map (fn [[text-document edits]]
                                     {:text-document text-document
-                                     :edits edits})))]
+                                     :edits (mapv #(dissoc % :text-document) edits)})))]
         ;; TODO rename documents for namespace rename
         (f.refactor/client-changes doc-changes))))
   #_

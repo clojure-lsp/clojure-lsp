@@ -38,25 +38,37 @@
       :local-usages :local
       (:bucket element))))
 
+(defmethod find-references :namespace-alias
+  [analysis {:keys [alias filename] :as _element} include-declaration?]
+  ;; TODO kondo alias
+  []
+  #_
+  (filter #(and (= (:alias %) alias)
+                (or include-declaration? (not= :namespace-alias (:bucket %))))
+          (get analysis filename)))
+
+
 (defmethod find-references :var-usages
-  [analysis element _]
-  (filter #(and (= (:name %) (:name element))
-                (= (or (:ns %) (:to %)) (:to element)))
-          (mapcat val analysis)))
+  [analysis element include-declaration?]
+  (if (= (:to element) :clj-kondo/unknown-namespace)
+    [element]
+    (filter #(and (= (:name %) (:name element))
+                  (= (or (:ns %) (:to %)) (:to element))
+                  (or include-declaration? (not= :var-definitions (:bucket element))))
+            (mapcat val analysis))))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
-  (if include-declaration?
-    (filter #(and (= (:name %) (:name element))
-                  (= (or (:ns %) (:to %)) (:ns element)))
-            (mapcat val analysis))
-    (filter #(and (= (:name %) (:name element))
-                  (= (:to %) (:ns element)))
-            (mapcat val analysis))))
+  (filter #(and (= (:name %) (:name element))
+                  (= (or (:ns %) (:to %)) (:ns element))
+                  (or include-declaration? (not= :var-definitions (:bucket element))) )
+            (mapcat val analysis)))
 
 (defmethod find-references :local
-  [analysis {:keys [id filename] :as _element} _]
-  (filter #(= (:id %) id) (get analysis filename)))
+  [analysis {:keys [id filename] :as _element} include-declaration?]
+  (filter #(and (= (:id %) id)
+                (or include-declaration? (not= :locals (:bucket %))))
+          (get analysis filename)))
 
 (defmethod find-references :default
   [_analysis element _]
@@ -93,9 +105,11 @@
           (get analysis filename)))
 
 (defn find-unused-aliases [analysis filename]
-  (let [declared-aliases (filter #(and (= (:bucket %) :namespace-usages)
+  (let [declared-aliases (filter #(and (= (:bucket %) :namespace-alias)
                                        (:alias %))
                                  (get analysis filename))]
+    ;; TODO kondo alias
+    ;; can't tell the difference between `(ns (:require [x :as f])) x/foo f/foo`
     (->> (get analysis filename)
          (remove #(= (:bucket %) :namespace-usages))
          (map :to)

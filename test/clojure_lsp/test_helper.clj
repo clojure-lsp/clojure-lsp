@@ -22,7 +22,7 @@
           (format "Expected %s results, but got: %s \n--\n%s--"
                   (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
       (doseq [[r# m#] (map vector res# maps#)]
-        (assert-submap m# r# (str "No superset of " m# " found"))))))
+        (assert-submap m# r#)))))
 
 (defn positions-from-text
   "Takes text with a pipe `|` as a placeholder for cursor positions and returns the text without
@@ -50,3 +50,10 @@
         filename (or filename "file:///a.clj")]
     (handlers/did-open {:textDocument {:uri filename :text code}})
     positions))
+
+(defn ->position [[row col]]
+  {:line (dec row) :character (dec col)})
+
+(defn ->range [[row col] [end-row end-col]]
+  {:start {:line (dec row) :character (dec col)}
+   :end {:line (dec end-row) :character (dec end-col)}})

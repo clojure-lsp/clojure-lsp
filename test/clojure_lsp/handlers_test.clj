@@ -28,47 +28,48 @@
             db/diagnostics-chan])))
 
 (deftest did-open
-  (handlers/did-open "file:///a.clj" "(ns a) (when)")
-  (is (some? (get-in @db/db [:analysis "/a.clj"])))
-  (let [diagnostics (:diagnostics (diagnostics-or-timeout))]
+  (let [_ (h/load-code-and-locs "(ns a) (when)")
+        diagnostics (:diagnostics (diagnostics-or-timeout))]
+    (is (some? (get-in @db/db [:analysis "/a.clj"])))
     (h/assert-submaps
       [{:code "missing-body-in-when"}
        {:code "invalid-arity"}]
       diagnostics)))
 
 (deftest did-close
-  (handlers/did-open "file:///a.clj" "(ns a)")
-  (handlers/did-open "file:///b.clj" "(ns b)")
+  (h/load-code-and-locs "(ns a)")
+  (h/load-code-and-locs "(ns b)" "file:///b.clj")
   (testing "should remove references to file"
     (is (= ["file:///a.clj" "file:///b.clj"] (keys (:documents @db/db))))
-    (handlers/did-close "file:///a.clj")
+    (handlers/did-close {:textDocument "file:///a.clj"})
     (is (= ["file:///b.clj"] (keys (:documents @db/db))))))
 
 
 
-#_
 (deftest hover
   (let [start-code "```clojure"
         end-code "```"
-        join (fn [coll] (string/join "\n" coll))]
+        join (fn [coll] (string/join "\n" coll))
+        code (str "(ns a)\n"
+                  "(defn foo \"Some cool docs :foo\" [x] x)\n"
+                  "(defn bar [y] y)\n"
+                  "(|foo 1)\n"
+                  "(|bar 1)" )
+        [foo-pos bar-pos] (h/load-code-and-locs code)]
     (testing "with docs"
-      (let [[[row col] code] (h/pos-from-text (str "(ns a)\n"
-                                                   "(defn foo \"Some cool docs :foo\" [x] x)\n"
-                                                   "(|foo 1)"))
-            sym "a/foo"
+      (let [sym "a/foo"
             sig "[x]"
             doc "Some cool docs :foo"
-            filename "a.clj"]
-        (handlers/did-open "file://a.clj" code)
+            filename "/a.clj"]
         (testing "show-docs-arity-on-same-line? disabled"
           (testing "plain"
-            (is (= (join [sym
-                          sig
-                          "" "----"
-                          doc
-                          "----"
-                          filename])
-                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+            (is (= [(join [sym
+                           sig
+                           "" "----"
+                           doc
+                           "----"
+                           filename])]
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position foo-pos)})))))
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
@@ -78,17 +79,17 @@
                                   start-code doc end-code
                                   "----"
                                   (str "*" filename "*")])}
-                   (:contents (handlers/hover "file://a.clj" row col))))))
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position foo-pos)}))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
-            (is (= (join [(str sym " " sig)
-                          "" "----"
-                          doc
-                          "----"
-                          filename])
-                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+            (is (= [(join [(str sym " " sig)
+                           "" "----"
+                           doc
+                           "----"
+                           filename])]
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position foo-pos)})))))
 
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
@@ -98,24 +99,20 @@
                                   start-code doc end-code
                                   "----"
                                   (str "*" filename "*")])}
-                   (:contents (handlers/hover "file://a.clj" row col))))))))
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position foo-pos)}))))))))
 
     (testing "without docs"
-      (let [[[row col] code] (h/pos-from-text (str "(ns a)\n"
-                                                 "(defn foo [x] x)\n"
-                                                 "(|foo 1)"))
-            sym "a/foo"
-            sig "[x]"
-            filename "a.clj"]
-        (handlers/did-open "file://a.clj" code)
+      (let [sym "a/bar"
+            sig "[y]"
+            filename "/a.clj"]
         (testing "show-docs-arity-on-same-line? disabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? false} :client-capabilities nil})
-            (is (= (join [sym
-                          sig
-                          "" "----"
-                          filename])
-                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+            (is (= [(join [sym
+                           sig
+                           "" "----"
+                           filename])]
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position bar-pos)})))))
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
@@ -123,15 +120,15 @@
                                   start-code sig end-code
                                   "" "----"
                                   (str "*" filename "*")])}
-                   (:contents (handlers/hover "file://a.clj" row col))))))
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position bar-pos)}))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
-            (is (= (join [(str sym " " sig)
-                          "" "----"
-                          filename])
-                   (first (:contents (handlers/hover "file://a.clj" row col))))))
+            (is (= [(join [(str sym " " sig)
+                           "" "----"
+                           filename])]
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position bar-pos)})))))
 
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
@@ -139,97 +136,92 @@
                     :value (join [start-code (str sym " " sig) end-code
                                   "" "----"
                                   (str "*" filename "*")])}
-                   (:contents (handlers/hover "file://a.clj" row col))))))))))
+                   (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position bar-pos)}))))))))))
 
 (deftest document-symbol
-  (handlers/did-open "file://a.clj" "(ns a) (def bar ::bar) (def ^:m baz 1)")
-  (is (= 1
-         (count (handlers/document-symbol {:textDocument "file://a.clj"})))))
+  (h/load-code-and-locs "(ns a) (def bar ::bar) (def ^:m baz 1)")
+  (is (= 1 (count (handlers/document-symbol {:textDocument "file:///a.clj"})))))
 
-#_
 (deftest test-rename
-  (reset! db/db {:file-envs
-                 {"file://a.clj" (parser/find-usages "(ns a) (def bar ::bar) (def ^:m baz 1)" :clj {})
-                  "file://b.clj" (parser/find-usages "(ns b (:require [a :as aa])) (def x aa/bar) ::aa/bar :aa/bar" :clj {})
-                  "file://c.clj" (parser/find-usages "(ns c (:require [a :as aa])) (def x aa/bar) ^:xab aa/baz" :clj {})}})
-  (testing "on symbol without namespace"
-    (let [changes (:changes (handlers/rename {:textDocument "file://a.clj"
-                                              :position {:line 0 :character 12}
-                                              :newName "foo"}))]
-      (is (= 1 (count (get changes "file://a.clj"))))
-      (is (= 1 (count (get changes "file://b.clj"))))
-      (is (= "foo" (get-in changes ["file://a.clj" 0 :new-text])))
-      (is (= "aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
-  (testing "on symbol with metadata namespace"
-    (let [changes (:changes (handlers/rename {:textDocument "file://a.clj"
-                                              :position {:line 0 :character 32}
-                                              :newName "qux"}))]
-      (is (= 1 (count (get changes "file://a.clj"))))
-      (is (= 1 (count (get changes "file://c.clj"))))
-      (is (= "qux" (get-in changes ["file://a.clj" 0 :new-text])))
-      (is (= [32 35]
-             [(get-in changes ["file://a.clj" 0 :range :start :character])
-              (get-in changes ["file://a.clj" 0 :range :end :character])]))
-      (is (= "aa/qux" (get-in changes ["file://c.clj" 0 :new-text])))
-      (is (= [50 56]
-             [(get-in changes ["file://c.clj" 0 :range :start :character])
-              (get-in changes ["file://c.clj" 0 :range :end :character])]))))
-  (testing "on ::keyword"
-    (let [changes (:changes (handlers/rename {:textDocument "file://a.clj"
-                                              :position {:line 0 :character 16}
-                                              :newName "foo"}))]
-      (is (= 1 (count (get changes "file://a.clj"))))
-      (is (= 1 (count (get changes "file://b.clj"))))
-      (is (= "::foo" (get-in changes ["file://a.clj" 0 :new-text])))
-      (is (= "::aa/foo" (get-in changes ["file://b.clj" 0 :new-text])))))
-  (testing "on symbol with namespace adds existing namespace"
-    (is (= "foo" (get-in (handlers/rename {:textDocument "file://b.clj"
-                                              :position {:line 0 :character 37}
-                                              :newName "foo"})
-                         [:changes "file://a.clj" 0 :new-text])))
-    (is (= "aa/foo" (get-in (handlers/rename {:textDocument "file://b.clj"
-                                              :position {:line 0 :character 37}
-                                              :newName "foo"})
-                            [:changes "file://b.clj" 0 :new-text]))))
-  (testing "on symbol with namespace removes passed-in namespace"
-    (is (= "foo" (get-in (handlers/rename {:textDocument "file://b.clj"
-                                              :position {:line 0 :character 37}
-                                              :newName "aa/foo"})
-                         [:changes "file://a.clj" 0 :new-text])))
-    (is (= "aa/foo" (get-in (handlers/rename {:textDocument "file://b.clj"
-                                              :position {:line 0 :character 37}
-                                              :newName "aa/foo"})
-                            [:changes "file://b.clj" 0 :new-text]))))
-  (testing "on alias changes namespaces inside file"
-    (let [changes (:changes (handlers/rename {:textDocument "file://b.clj"
-                                              :position {:line 0 :character 24}
-                                              :newName "xx"}))]
-      (is (= 0 (count (get changes "file://a.clj"))))
-      (is (= 0 (count (get changes "file://c.clj"))))
-      (is (= 3 (count (get changes "file://b.clj"))))
-      (is (= "xx" (get-in changes ["file://b.clj" 0 :new-text])))
-      (is (= "xx/bar" (get-in changes ["file://b.clj" 1 :new-text])))))
-  (testing "on a namespace"
-    (reset! db/db {:project-root "file:///my-project"
-                   :settings {:source-paths #{"src" "test"}}
-                   :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                   :file-envs {"file:///my-project/src/foo/bar_baz.clj" (parser/find-usages "(ns foo.bar-baz)" :clj {})}})
-    (is (= {:document-changes
-            [{:text-document {:version 0
-                              :uri "file:///my-project/src/foo/bar_baz.clj"}
-              :edits [{:range
-                       {:start {:line 0 :character 4}
-                        :end {:line 0 :character 15}}
-                       :new-text "foo.baz-qux"
-                       :text-document {:version 0
-                                       :uri "file:///my-project/src/foo/bar_baz.clj"}}]}
-             {:kind "rename"
-              :old-uri "file:///my-project/src/foo/bar_baz.clj"
-              :new-uri "file:///my-project/src/foo/baz_qux.clj"}]}
-           (handlers/rename {:textDocument "file:///my-project/src/foo/bar_baz.clj"
-                                              :position {:line 0 :character 4}
-                                              :newName "foo.baz-qux"})))
-    (is (empty? (get @db/db :file-envs)))))
+  (let [[abar-start abar-stop
+         akwbar-start akwbar-stop
+         abaz-start abaz-stop] (h/load-code-and-locs "(ns a) (def |bar| ::|bar|) (def ^:m |baz| 1)" "file:///a.clj")
+        [balias-start balias-stop
+         ba1-start ba1-stop
+         bbar-start bbar-stop
+         ba2-start ba2-stop
+         bkwbar-start bkwbar-stop] (h/load-code-and-locs "(ns b (:require [a :as |aa|])) (def x |aa|/|bar|) ::|aa|/|bar| :aa/bar" "file:///b.clj")
+        [cbar-start cbar-stop
+         cbaz-start cbaz-stop] (h/load-code-and-locs "(ns c (:require [a :as aa])) (def x aa/|bar|) ^:xab aa/|baz|" "file:///c.clj")]
+    (testing "on symbol without namespace"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
+                                                :position (h/->position abar-start)
+                                                :newName "foo"}))]
+        (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
+                "file:///b.clj" [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
+                "file:///c.clj" [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
+             changes))))
+    (testing "on symbol with metadata namespace"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
+                                                :position (h/->position abaz-start)
+                                                :newName "qux"}))]
+        (is (= {"file:///a.clj" [{:new-text "qux" :range (h/->range abaz-start abaz-stop)}]
+                "file:///c.clj" [{:new-text "qux" :range (h/->range cbaz-start cbaz-stop)}]}
+               changes))))
+    ;; TODO kondo (keyword analysis)
+    (testing "on ::keyword"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
+                                                :position (h/->position akwbar-start)
+                                                :newName "foo"}))]
+        (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range akwbar-start akwbar-stop)}]
+                "file:///b.clj" [{:new-text "foo" :range (h/->range bkwbar-start bkwbar-stop)}]}
+               changes))))
+    (testing "on symbol with namespace adds existing namespace"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"
+                                                :position (h/->position [(first bbar-start) (dec (second bbar-start))])
+                                                :newName "foo"}))]
+        (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
+                "file:///b.clj" [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
+                "file:///c.clj" [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
+               changes))))
+    (testing "on symbol with namespace removes passed-in namespace"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"
+                                                :position (h/->position bbar-start)
+                                                :newName "aa/foo"}))]
+        (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
+                "file:///b.clj" [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
+                "file:///c.clj" [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
+               changes))))
+    (testing "on alias changes namespaces inside file"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"
+                                                :position (h/->position balias-start)
+                                                :newName "xx"}))]
+        (is (= {"file:///b.clj" [{:new-text "xx" :range (h/->range balias-start balias-stop)}
+                                 {:new-text "xx" :range (h/->range ba1-start ba1-stop)}
+                                 {:new-text "xx" :range (h/->range ba2-start ba2-stop)}]}
+               changes))))
+    ;; TODO kondo
+    (testing "on a namespace"
+      (reset! db/db {:project-root "file:///my-project"
+                     :settings {:source-paths #{"src" "test"}}
+                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                     :file-envs {"file:///my-project/src/foo/bar_baz.clj" (parser/find-usages "(ns foo.bar-baz)" :clj {})}})
+      (is (= {:document-changes
+              [{:text-document {:version 0
+                                :uri "file:///my-project/src/foo/bar_baz.clj"}
+                :edits [{:range
+                         {:start {:line 0 :character 4}
+                          :end {:line 0 :character 15}}
+                         :new-text "foo.baz-qux"
+                         :text-document {:version 0
+                                         :uri "file:///my-project/src/foo/bar_baz.clj"}}]}
+               {:kind "rename"
+                :old-uri "file:///my-project/src/foo/bar_baz.clj"
+                :new-uri "file:///my-project/src/foo/baz_qux.clj"}]}
+             (handlers/rename {:textDocument "file:///my-project/src/foo/bar_baz.clj"
+                               :position {:line 0 :character 4}
+                               :newName "foo.baz-qux"})))
+      (is (empty? (get @db/db :file-envs))))))
 
 (deftest test-rename-simple-keywords
   (reset! db/db {:file-envs
@@ -566,7 +558,7 @@
                              "(s/defn baz []\n"
                              "  (bar 2 3))\n")
         ]
-    (handlers/did-open "file://a.clj" references-code)
+    (handlers/did-open {:textDocument {:uri "file://a.clj" :text references-code}})
     (testing "references"
       (testing "empty lens"
         (is (= {:range   {:start {:line      1

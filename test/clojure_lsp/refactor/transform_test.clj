@@ -148,6 +148,276 @@
     (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
       (is (= nil (transform/add-common-import-to-namespace zloc))))))
 
+(defn test-clean-ns
+  ([db input-code expected-code]
+   (test-clean-ns db input-code expected-code true))
+  ([db input-code expected-code in-form]
+   (reset! db/db db)
+   (h/load-code-and-locs input-code)
+   (let [zloc (when in-form
+                (-> (z/of-string input-code) z/down z/right z/right))
+         [{:keys [loc range]}] (transform/clean-ns zloc "file:///a.clj")]
+     (is (some? range))
+     (is (= expected-code
+            (z/root-string loc))))))
+
+(deftest clean-ns-test
+  (testing "without keep-require-at-start?"
+    (test-clean-ns {:settings {:keep-require-at-start? false}}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :refer [b]] baz [z] ))"
+                         "(s/defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]"
+                         "   [z]"
+                         "   baz))"
+                         "(s/defn func []"
+                         "  (f/some))")))
+  (testing "with keep-require-at-start?"
+    (test-clean-ns {:settings {:keep-require-at-start? true}}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :as b] baz [z] ))"
+                         "(s/defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require [foo  :as f]"
+                         "           [z]"
+                         "           baz))"
+                         "(s/defn func []"
+                         "  (f/some))")))
+  (testing "with first require as unused"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :as b] baz [z] ))"
+                         "(defn func []"
+                         "  (b/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b]"
+                         "   [z]"
+                         "   baz))"
+                         "(defn func []"
+                         "  (b/some))")))
+  (testing "with single unused require on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] ))"
+                         "(defn func []"
+                         "  (b/some))")
+                   (code "(ns foo.bar)"
+                         "(defn func []"
+                         "  (b/some))")))
+  (testing "with single used require on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] ))"
+                         "(defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]))"
+                         "(defn func []"
+                         "  (f/some))")))
+  (testing "with multiple unused requires on ns"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]"
+                         "   [bar :as b]))")
+                   (code "(ns foo.bar)")))
+  (testing "with refer at require"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :refer [some]] baz [z] ))"
+                         "(defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f]"
+                         "   [z]"
+                         "   baz))"
+                         "(defn func []"
+                         "  (f/some))")))
+  (testing "with refer as single require"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some]]))")
+                   (code "(ns foo.bar)")))
+  (testing "in any form"
+    (let [to-clean (code "(ns foo.bar"
+                         " (:require"
+                         "   [foo  :as f] [bar :refer [some]] baz [z] ))"
+                         ""
+                         "(defn func []"
+                         "  (f/some))")]
+      (test-clean-ns {:documents {"file://a.clj" {:text to-clean}}}
+                     to-clean
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [foo  :as f]"
+                           "   [z]"
+                           "   baz))"
+                           ""
+                           "(defn func []"
+                           "  (f/some))")
+                     false)))
+  (testing "with first require as a refer"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some] ] [foo :as f]))"
+                         ""
+                         "(defn func []"
+                         "  (some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some] ]))"
+                         ""
+                         "(defn func []"
+                         "  (some))")))
+  (testing "with first require as a refer with alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b :refer [some] ] [foo :as f]))"
+                         ""
+                         "(defn func []"
+                         "  b/some"
+                         "  (some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b :refer [some] ]))"
+                         ""
+                         "(defn func []"
+                         "  b/some"
+                         "  (some))")))
+  (testing "unused refer from multiple refers"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some other] ]))"
+                           "(some)")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some] ]))"
+                           "(some)")))
+  (testing "unused middle refer from multiple refers"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some other baz another] ]))"
+                           "(some)"
+                           "(another)"
+                           "(baz)")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [another baz some] ]))"
+                           "(some)"
+                           "(another)"
+                           "(baz)")))
+  (testing "unused refer and alias"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [bar :refer [some] ]"
+                           "   [baz :as b]))")
+                     (code "(ns foo.bar)")))
+  (testing "single unused full package import"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  java.util.Date))")
+                   (code "(ns foo.bar)")))
+  (testing "single unused package import"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date]))")
+                   (code "(ns foo.bar)")))
+  (testing "unused full package imports"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import "
+                         "  java.util.Date java.util.Calendar java.util.List))"
+                         "Calendar.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  java.util.Calendar))"
+                         "Calendar.")))
+  (testing "unused package imports"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import "
+                         "  [java.util Date Calendar List Map]))"
+                         "Calendar."
+                         "Map.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Calendar Map]))"
+                         "Calendar."
+                         "Map.")))
+  (testing "unused package imports with keep-at-start?"
+    (test-clean-ns {:settings {:keep-require-at-start? true}}
+                   (code "(ns foo.bar"
+                         " (:import [java.util Date Calendar List Map]))"
+                         "Calendar."
+                         "Map.")
+                   (code "(ns foo.bar"
+                         " (:import [java.util Calendar Map]))"
+                         "Calendar."
+                         "Map.")))
+  (testing "unused package imports with single import"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date List]"
+                         "  java.util.Calendar))"
+                         "Calendar."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util List]"
+                         "  java.util.Calendar))"
+                         "Calendar."
+                         "List.")))
+  (testing "unused package imports spacing"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             Calendar"
+                         "             List]))"
+                         "Date."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
+                         "List."))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
+                         "List.")
+                   (code "(ns foo.bar"
+                         " (:import"
+                         "  [java.util Date"
+                         "             List]))"
+                         "Date."
+                         "List."))))
+
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]
     (is (= 'b (z/sexpr zloc)))

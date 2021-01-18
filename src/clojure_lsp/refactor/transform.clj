@@ -406,9 +406,10 @@
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [keep-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-            unused-aliases (q/find-all-unused-aliases (:analysis @db/db))
-            unused-refers (q/find-unused-refers (:analysis @db/db) (shared/uri->filename uri))
-            unused-imports (q/find-unused-imports (:analysis @db/db) (shared/uri->filename uri))
+            filename (shared/uri->filename uri)
+            unused-aliases (q/find-unused-aliases (:findings @db/db) filename)
+            unused-refers (q/find-unused-refers (:findings @db/db) filename)
+            unused-imports (q/find-unused-imports (:findings @db/db) filename)
             result-loc (-> ns-loc
                            (clean-requires unused-aliases unused-refers keep-at-start?)
                            (clean-imports unused-imports keep-at-start?))]

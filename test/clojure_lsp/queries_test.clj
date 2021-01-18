@@ -86,33 +86,68 @@
       {:alias 'f-alias :name-row alias-r :name-col alias-c}
       (q/find-definition-from-cursor ana "/a.clj" alias-r alias-c))))
 
-
 (deftest find-unused-aliases
-  (testing "with single unused-alias"
-    (reset! db/db {})
-    (let [code (str "(ns a (:require [x :as f]))")
-          _ (h/load-code-and-locs code)
-          analysis (:analysis @db/db)]
-      (h/assert-submaps
-        [{:alias 'f,
-          :from 'a,
-          :to 'x}]
-        (q/find-all-unused-aliases analysis))))
-  (testing "with used require via alias"
-    (reset! db/db {})
-    (let [code (str "(ns a (:require [x :as f])) f/foo")
-          _ (h/load-code-and-locs code)
-          analysis (:analysis @db/db)]
-      (h/assert-submaps
-        []
-        (q/find-all-unused-aliases analysis))))
-  ;; TODO We can't known x/foo is using a full namespace and not the alias
-  #_(testing "with used require via full-ns"
-    (let [code (str "(ns a (:require [x :as f])) x/foo")
-          _ (h/load-code-and-locs code)
-          analysis (:analysis @db/db)]
-      (h/assert-submaps
-        [{:alias 'f,
-          :from 'a,
-          :to 'x}]
-        (q/find-all-unused-aliases analysis)))))
+  (testing "used require via alias"
+    (h/load-code-and-locs "(ns a (:require [x :as f])) f/foo")
+    (is (= '#{}
+           (q/find-unused-aliases (:findings @db/db) "/a.clj"))))
+  (testing "used require via full-ns"
+    (h/load-code-and-locs "(ns a (:require [x :as f])) x/foo")
+    (is (= '#{}
+           (q/find-unused-aliases (:findings @db/db) "/a.clj"))))
+  (testing "full-ns require"
+    (h/load-code-and-locs "(ns a (:require [x] y)) foo")
+    (is (= '#{}
+           (q/find-unused-aliases (:findings @db/db) "/a.clj"))))
+  (testing "single unused-alias"
+    (h/load-code-and-locs "(ns a (:require [x :as f]))")
+    (is (= '#{x}
+           (q/find-unused-aliases (:findings @db/db) "/a.clj"))))
+  (testing "used and unused aliases"
+    (h/load-code-and-locs "(ns a (:require [x :as f] [foo] x [bar :as b] [y :refer [m]] [z :refer [o i]])) o")
+    (is (= '#{y bar}
+           (q/find-unused-aliases (:findings @db/db) "/a.clj")))))
+
+(deftest find-unused-refers
+  (testing "used require via refer"
+    (h/load-code-and-locs "(ns a (:require [x :refer [foo]])) foo")
+    (is (= '#{}
+           (q/find-unused-refers (:findings @db/db) "/a.clj"))))
+  (testing "multiple used refers"
+    (h/load-code-and-locs "(ns a (:require [x :refer [foo bar baz]])) foo bar baz")
+    (is (= '#{}
+           (q/find-unused-refers (:findings @db/db) "/a.clj"))))
+  (testing "single unused refer"
+    (h/load-code-and-locs "(ns a (:require [x :refer [foo]]))")
+    (is (= '#{x/foo}
+           (q/find-unused-refers (:findings @db/db) "/a.clj"))))
+  (testing "multiple unused refer"
+    (h/load-code-and-locs "(ns a (:require [x :refer [foo bar]]))")
+    (is (= '#{x/foo x/bar}
+           (q/find-unused-refers (:findings @db/db) "/a.clj"))))
+  (testing "multiple unused refer and used"
+    (h/load-code-and-locs "(ns a (:require [x :refer [foo bar baz]])) bar")
+    (is (= '#{x/foo x/baz}
+           (q/find-unused-refers (:findings @db/db) "/a.clj")))))
+
+(deftest find-unused-imports
+  (testing "single used full import"
+    (h/load-code-and-locs "(ns a (:import java.util.Date)) Date.")
+    (is (= '#{}
+           (q/find-unused-imports (:findings @db/db) "/a.clj"))))
+  (testing "single unused full import"
+    (h/load-code-and-locs "(ns a (:import java.util.Date))")
+    (is (= '#{java.util.Date}
+           (q/find-unused-imports (:findings @db/db) "/a.clj"))))
+  (testing "multiple unused full imports"
+    (h/load-code-and-locs "(ns a (:import java.util.Date java.util.Calendar java.time.LocalDateTime))")
+    (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
+           (q/find-unused-imports (:findings @db/db) "/a.clj"))))
+  (testing "multiple unused package imports"
+    (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalDateTime]))")
+    (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
+           (q/find-unused-imports (:findings @db/db) "/a.clj"))))
+  (testing "multiple unused and used imports"
+    (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) LocalTime.")
+    (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
+           (q/find-unused-imports (:findings @db/db) "/a.clj")))))

@@ -120,18 +120,20 @@
                 (:alias %))
           (mapcat val analysis)))
 
-(defn find-all-unused-aliases [analysis]
-  (let [declared-aliases (find-all-aliases analysis)
-        alias-usages (remove #(or (= (:bucket %) :namespace-usages)
-                                  (= (:bucket %) :namespace-alias))
-                             (mapcat val analysis))]
-    (log/info "->>" declared-aliases)
-    (elements-difference (juxt :to) declared-aliases alias-usages)))
+(defn find-unused-aliases [findings filename]
+  (->> (get findings filename)
+       (filter (comp #(= % :unused-namespace) :type))
+       (map :ns)
+       set))
 
-(defn find-unused-refers [_analysis _filename]
-  ;; TODO clj-kondo does not support refer analysis yet
-  #{})
+(defn find-unused-refers [findings filename]
+  (->> (get findings filename)
+       (filter (comp #(= % :unused-referred-var) :type))
+       (map #(symbol (-> % :ns str) (-> % :refer str)))
+       set))
 
-(defn find-unused-imports [_analysis _filename]
-  ;; TODO clj-kondo does not support import analysis yet
-  #{})
+(defn find-unused-imports [findings filename]
+  (->> (get findings filename)
+       (filter (comp #(= % :unused-import) :type))
+       (map :class)
+       set))

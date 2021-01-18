@@ -259,9 +259,10 @@
             {:range (shared/->range reference)})
           references)))
 
+;; TODO kondo, fix it
 (defn file-env-entry->document-symbol [[e kind]]
   (let [{n :str :keys [row col end-row end-col sym]} e
-        symbol-kind (f.document-symbol/entry-kind->symbol-kind kind)
+        symbol-kind (f.document-symbol/element->symbol-kind kind)
         r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
     {:name n
@@ -270,20 +271,23 @@
      :selection-range r
      :namespace (namespace sym)}))
 
+;; TODO kondo, fix it
 (defn file-env-entry->document-highlight [{:keys [row end-row col end-col]}]
   (let [r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
     {:range r}))
 
+;; TODO kondo, fix it
 (defn file-env-entry->workspace-symbol [uri [e kind]]
   (let [{:keys [row col end-row end-col sym]} e
-        symbol-kind (f.document-symbol/entry-kind->symbol-kind kind)
+        symbol-kind (f.document-symbol/element->symbol-kind kind)
         r {:start {:line (dec row) :character (dec col)}
            :end {:line (dec end-row) :character (dec end-col)}}]
     {:name (str sym)
      :kind symbol-kind
      :location {:uri uri :range r}}))
 
+;; TODO kondo, fix it
 (defn workspace-symbols [{:keys [query]}]
   (if (seq query)
     (let [file-envs (:file-envs @db/db)]
@@ -450,12 +454,10 @@
 
 (defn prepare-call-hierarchy
   [{:keys [textDocument position]}]
-  (let [{:keys [project-root file-envs]} @db/db
-        local-env (get file-envs textDocument)]
+  (let [project-root (:project-root @db/db)]
     (f.call-hierarchy/prepare textDocument
                               (inc (:line position))
                               (inc (:character position))
-                              local-env
                               project-root)))
 
 (defn call-hierarchy-incoming

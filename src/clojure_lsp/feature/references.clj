@@ -4,6 +4,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]))
 
+;; TODO remove (use kondo)
 (defn find-under-cursor [line column env file-type]
   (let [file-types (if (= :cljc file-type)
                      #{:clj :cljs}

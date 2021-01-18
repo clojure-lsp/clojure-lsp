@@ -5,9 +5,10 @@
        (or (get-in e [:tags :local])
          (get-in e [:tags :public]))))
 
-(defn entry-kind->symbol-kind [k]
-  (case k
-    :module :namespace
-    :function :function
-    :declaration :variable
-    :null))
+(defn element->symbol-kind [el]
+  (cond
+    (#{:namespace-usages} (:bucket el)) :namespace
+    (or (:macro el)
+        (:fixed-arities el)) :function
+    (#{:var-definitions :var-usages} (:bucket el)) :variable
+    :else :null))

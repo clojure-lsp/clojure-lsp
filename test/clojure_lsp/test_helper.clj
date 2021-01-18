@@ -1,9 +1,19 @@
 (ns clojure-lsp.test-helper
   (:require
+    [clojure-lsp.db :as db]
     [clojure-lsp.handlers :as handlers]
+    [clojure.core.async :as async]
     [clojure.pprint :as pprint]
-    [clojure.test :refer [is]]
+    [clojure.test :refer [is use-fixtures]]
     [clojure.tools.logging :as log]))
+
+(defn reset-db-after-test []
+  (use-fixtures
+    :each
+    (fn [f]
+      (reset! db/db {})
+      (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))
+                      (f)))))
 
 (defn assert-submap [expected actual]
   (is (= expected

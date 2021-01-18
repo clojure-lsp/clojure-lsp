@@ -22,11 +22,6 @@
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))
       (f))))
 
-(defn diagnostics-or-timeout []
-  (first (async/alts!!
-           [(async/timeout 500)
-            db/diagnostics-chan])))
-
 (deftest test-rename
   (let [[abar-start abar-stop
          akwbar-start akwbar-stop

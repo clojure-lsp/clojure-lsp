@@ -659,7 +659,6 @@
         {:keys [text]} (get-in @db/db [:documents def-uri])
         def-loc (parser/loc-at-pos text (:name-row definition) (:name-col definition))
         op (inline-symbol? definition)]
-    (println references)
     (when op
       (let [val-loc (z/right def-loc)
             end-pos (if (= op 'def) (meta (z/node (z/up def-loc))) (meta (z/node val-loc)))

@@ -115,13 +115,17 @@
                     (not (get % :private))))
           (get analysis filename)))
 
+(defn find-all-aliases [analysis]
+  (filter #(and (= (:bucket %) :namespace-alias)
+                (:alias %))
+          (mapcat val analysis)))
+
 (defn find-all-unused-aliases [analysis]
-  (let [declared-aliases (filter #(and (= (:bucket %) :namespace-alias)
-                                       (:alias %))
-                                 (mapcat val analysis))
+  (let [declared-aliases (find-all-aliases analysis)
         alias-usages (remove #(or (= (:bucket %) :namespace-usages)
                                   (= (:bucket %) :namespace-alias))
                              (mapcat val analysis))]
+    (log/info "->>" declared-aliases)
     (elements-difference (juxt :to) declared-aliases alias-usages)))
 
 (defn find-unused-refers [_analysis _filename]

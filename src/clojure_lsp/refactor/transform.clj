@@ -416,20 +416,21 @@
           :loc result-loc}]))))
 
 (def ^:private common-alias->info
-  {:string {:to 'clojure.string}
-   :set    {:to 'clojure.set}
-   :walk   {:to 'clojure.walk}
-   :pprint {:to 'clojure.pprint}
-   :async  {:to 'clojure.core.async}})
+  {'string {:to 'clojure.string}
+   'set    {:to 'clojure.set}
+   'walk   {:to 'clojure.walk}
+   'pprint {:to 'clojure.pprint}
+   'async  {:to 'clojure.core.async}})
 
-(defn ^:private find-missing-alias-require [uri zloc]
+(defn ^:private find-missing-alias-require [zloc]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        alias->info (->> (q/find-all-unused-aliases (:analysis @db/db))
+        alias->info (->> (q/find-all-aliases (:analysis @db/db))
                          (group-by :alias))
-        posibilities (or (get alias->info require-alias)
-                         [(get common-alias->info (keyword require-alias))])]
+        posibilities (or (some->> (get alias->info require-alias)
+                                  (medley/distinct-by (juxt :to)))
+                         [(get common-alias->info require-alias)])]
     (when (= 1 (count posibilities))
-      (-> posibilities first :to))))
+      (some-> posibilities first :to name symbol))))
 
 (def ^:private common-refers->info
   {'deftest      'clojure.test
@@ -458,10 +459,10 @@
     (when (not (z/find-value ns-zip z/next refer-to-add))
       (get common-refers->info (z/sexpr zloc)))))
 
-(defn find-missing-require [uri zloc]
+(defn find-missing-require [zloc]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (find-missing-alias-require uri zloc)
+      (find-missing-alias-require zloc)
       (find-missing-refer-require zloc))))
 
 (defn ^:private find-class-name [zloc]
@@ -525,9 +526,9 @@
   (when (and qualified-ns-to-add ns-to-add)
     (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
 
-(defn ^:private add-missing-alias-ns [uri zloc]
+(defn ^:private add-missing-alias-ns [zloc]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        qualified-ns-to-add (find-missing-alias-require uri zloc)]
+        qualified-ns-to-add (find-missing-alias-require zloc)]
     (add-known-libspec zloc require-alias qualified-ns-to-add)))
 
 (defn ^:private add-missing-refer [zloc]
@@ -563,10 +564,10 @@
         :loc result-loc}])))
 
 (defn add-missing-libspec
-  [uri zloc]
+  [zloc]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (add-missing-alias-ns uri zloc)
+      (add-missing-alias-ns zloc)
       (add-missing-refer zloc))))
 
 (defn extract-function

@@ -1,13 +1,11 @@
 (ns clojure-lsp.feature.refactor
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.references :as f.references]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [clojure.tools.logging :as log]
-   [rewrite-clj.zip :as z]
-   [clojure-lsp.queries :as q]))
+   [rewrite-clj.zip :as z]))
 
 (defn client-changes [changes]
   (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
@@ -21,8 +19,8 @@
 (defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
   (apply r.transform/add-import-to-namespace loc (vec args)))
 
-(defmethod refactor :add-missing-libspec [{:keys [uri loc]}]
-  (r.transform/add-missing-libspec uri loc))
+(defmethod refactor :add-missing-libspec [{:keys [loc]}]
+  (r.transform/add-missing-libspec loc))
 
 (defmethod refactor :clean-ns [{:keys [loc uri]}]
   (r.transform/clean-ns loc uri))

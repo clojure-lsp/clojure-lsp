@@ -13,7 +13,7 @@
 (defn ^:private find-missing-require [uri diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)
         diagnostic-zloc (parser/cursor-zloc uri line character)]
-    (when-let [missing-require (r.transform/find-missing-require uri diagnostic-zloc)]
+    (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc)]
       {:missing-require missing-require
        :position        position})))
 

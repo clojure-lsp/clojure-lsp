@@ -438,18 +438,16 @@
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
-  (let [usages (get-in @db/db [:analysis (shared/uri->filename textDocument)])
-        data (f.semantic-tokens/full-tokens usages)]
+  (let [data (f.semantic-tokens/full-tokens textDocument)]
     {:data data}))
 
 (defn semantic-tokens-range
   [{:keys [textDocument] {:keys [start end]} :range}]
-  (let [usages (get-in @db/db [:analysis (shared/uri->filename textDocument)])
-        range {:name-row (inc (:line start))
+  (let [range {:name-row (inc (:line start))
                :name-col (inc (:character start))
                :name-end-row (inc (:line end))
                :name-end-col (inc (:character end))}
-        data (f.semantic-tokens/range-tokens usages range)]
+        data (f.semantic-tokens/range-tokens textDocument range)]
     {:data data}))
 
 (defn prepare-call-hierarchy

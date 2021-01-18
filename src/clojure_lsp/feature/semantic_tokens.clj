@@ -1,4 +1,7 @@
-(ns clojure-lsp.feature.semantic-tokens)
+(ns clojure-lsp.feature.semantic-tokens
+  (:require
+    [clojure-lsp.db :as db]
+    [clojure-lsp.shared :as shared]))
 
 (def token-types
   [:type
@@ -15,13 +18,13 @@
 
 (def token-modifier -1)
 
-(defn ^:private usage-inside-range?
-  [{usage-row :name-row usage-end-row :name-end-row}
+(defn ^:private element-inside-range?
+  [{element-row :name-row element-end-row :name-end-row}
    {:keys [name-row name-end-row]}]
-  (and (>= usage-row name-row)
-       (<= usage-end-row name-end-row)))
+  (and (>= element-row name-row)
+       (<= element-end-row name-end-row)))
 
-(defn ^:private usage->absolute-token
+(defn ^:private element->absolute-token
   [{:keys [name-row name-col name-end-col]}
    token-type]
   [(dec name-row)
@@ -30,15 +33,15 @@
    (.indexOf token-types token-type)
    token-modifier])
 
-(defn ^:private usages->absolute-tokens
-  [usages]
-  (->> usages
+(defn ^:private elements->absolute-tokens
+  [elements]
+  (->> elements
        (map
-         (fn [{:keys [bucket macro] :as usage}]
+         (fn [{:keys [bucket macro] :as element}]
            (cond
             (and macro
                   (= bucket :var-usages))
-             [(usage->absolute-token usage :macro)])))
+             [(element->absolute-token element :macro)])))
        (remove nil?)
        (mapcat identity)))
 
@@ -65,17 +68,18 @@
        token-type
        token-modifier])))
 
-(defn full-tokens
-  [usages]
-  (let [absolute-tokens (usages->absolute-tokens usages)]
+(defn full-tokens [uri]
+  (let [elements (get-in @db/db [:analysis (shared/uri->filename uri)])
+        absolute-tokens (elements->absolute-tokens elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))
 
 (defn range-tokens
-  [usages range]
-  (let [range-usages (filter #(usage-inside-range? % range) usages)
-        absolute-tokens (usages->absolute-tokens range-usages)]
+  [uri range]
+  (let [elements (get-in @db/db [:analysis (shared/uri->filename uri)])
+        range-elements (filter #(element-inside-range? % range) elements)
+        absolute-tokens (elements->absolute-tokens range-elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))

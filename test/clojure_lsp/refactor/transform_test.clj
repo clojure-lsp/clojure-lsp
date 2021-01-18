@@ -14,6 +14,67 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
+(deftest add-missing-libspec
+  (testing "aliases"
+     (testing "known namespaces in project"
+      (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
+      (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj"zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
+    (testing "common ns aliases"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
+    (testing "with keep-require-at-start?"
+      (testing "we add first require without spaces"
+        (reset! db/db {:settings {:keep-require-at-start? true}})
+        (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
+              [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+          (is (some? range))
+          (is (= (code "(ns foo "
+                       "  (:require [clojure.set :as set]))") (z/string loc)))))
+      (testing "next requires follow the same pattern"
+        (reset! db/db {:settings {:keep-require-at-start? true}})
+        (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
+              [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+          (is (some? range))
+          (is (= (code "(ns foo "
+                       "  (:require [foo :as bar]"
+                       "            [clojure.set :as set]))") (z/string loc)))))))
+  (testing "common refers"
+    (testing "when require doesn't exists"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo) deftest") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+    (testing "when already exists another require"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.set :refer [subset?]])) deftest") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.set :refer [subset?]]
+                          [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+    (testing "when already exists that ns with another refer"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :refer [deftest testing]])) (z/sexpr loc)))))
+    (testing "we don't add existing refers"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [testing]])) testing") z/rightmost)]
+        (is (= nil (transform/add-missing-libspec "file:///a.clj" zloc)))))
+    (testing "we can add multiple refers"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest testing]])) is") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec "file:///a.clj" zloc)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]])) (z/sexpr loc)))))))
+
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]
     (is (= 'b (z/sexpr zloc)))

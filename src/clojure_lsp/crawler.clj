@@ -63,7 +63,7 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private kondo-args [extra extra-analysis]
+(defn ^:private kondo-args [extra locals]
   (let [user-config (get-in @db/db [:settings :clj-kondo])
         kondo-dir (some-> (:project-root @db/db)
                           shared/uri->path
@@ -81,12 +81,11 @@
       (update-in [:config] merge user-config)
 
       :always
-      (assoc-in [:config :output] {:analysis {:arglists true} :canonical-paths true})
+      (assoc-in [:config :output] {:analysis {:arglists true}
+                                   :canonical-paths true})
 
-      extra-analysis
-      (->
-        (assoc-in [:config :output :analysis :locals] true)
-        (assoc-in [:config :output :analysis :arglists] true)))))
+      locals
+      (assoc-in [:config :output :analysis :locals] true))))
 
 (defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]} false)))
@@ -125,6 +124,9 @@
 
 (defn update-analysis [db uri new-analysis]
   (assoc-in db [:analysis (shared/uri->filename uri)] (normalize-analysis new-analysis)))
+
+(defn update-findings [db uri new-findings]
+  (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn ^:private analyze-paths [paths public-only?]
   (let [result (run-kondo-on-paths! paths)

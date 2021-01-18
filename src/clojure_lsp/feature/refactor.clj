@@ -21,8 +21,8 @@
 (defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
   (apply r.transform/add-import-to-namespace loc (vec args)))
 
-(defmethod refactor :add-missing-libspec [{:keys [loc]}]
-  (r.transform/add-missing-libspec loc))
+(defmethod refactor :add-missing-libspec [{:keys [uri loc]}]
+  (r.transform/add-missing-libspec uri loc))
 
 (defmethod refactor :clean-ns [{:keys [loc uri]}]
   (r.transform/clean-ns loc uri))

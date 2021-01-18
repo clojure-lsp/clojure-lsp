@@ -3,7 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.queries :as q]
     [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest is]]
+    [clojure.test :refer [deftest is testing]]
     [clojure.tools.logging :as log]))
 
 (deftest find-element-under-cursor []
@@ -85,3 +85,34 @@
     (h/assert-submap
       {:alias 'f-alias :name-row alias-r :name-col alias-c}
       (q/find-definition-from-cursor ana "/a.clj" alias-r alias-c))))
+
+
+(deftest find-unused-aliases
+  (testing "with single unused-alias"
+    (reset! db/db {})
+    (let [code (str "(ns a (:require [x :as f]))")
+          _ (h/load-code-and-locs code)
+          analysis (:analysis @db/db)]
+      (h/assert-submaps
+        [{:alias 'f,
+          :from 'a,
+          :to 'x}]
+        (q/find-all-unused-aliases analysis))))
+  (testing "with used require via alias"
+    (reset! db/db {})
+    (let [code (str "(ns a (:require [x :as f])) f/foo")
+          _ (h/load-code-and-locs code)
+          analysis (:analysis @db/db)]
+      (h/assert-submaps
+        []
+        (q/find-all-unused-aliases analysis))))
+  ;; TODO We can't known x/foo is using a full namespace and not the alias
+  #_(testing "with used require via full-ns"
+    (let [code (str "(ns a (:require [x :as f])) x/foo")
+          _ (h/load-code-and-locs code)
+          analysis (:analysis @db/db)]
+      (h/assert-submaps
+        [{:alias 'f,
+          :from 'a,
+          :to 'x}]
+        (q/find-all-unused-aliases analysis)))))

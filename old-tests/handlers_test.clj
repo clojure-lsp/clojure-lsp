@@ -146,27 +146,3 @@
         (and (is (= label "alpha"))
              (is (= data "user/alpha"))
              (is (string/includes? documentation data)))))))
-
-(deftest test-code-actions-handle
-  (h/load-code-and-locs (str "(ns some-ns)\n"
-                             "(def foo)")
-                        "file://a.clj")
-  (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
-                             "(def bar 1)\n"
-                             "(defn baz []\n"
-                             "  bar)")
-                        "file://b.clj")
-  (h/load-code-and-locs (str "(ns another-ns)\n"
-                             "(def bar ons/bar)\n"
-                             "(def foo sns/foo)\n"
-                             "(deftest some-test)\n"
-                             "MyClass.\n"
-                             "Date.")
-                        "file://c.clj")
-  (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add missing 'some-ns' require")
-              (handlers/code-actions
-                {:textDocument "file://c.clj"
-                 :context {:diagnostics [{:code "unresolved-namespace"
-                                          :range {:start {:line 2 :character 10}}}]}
-                 :range {:start {:line 2 :character 10}}})))))

@@ -11,6 +11,14 @@
     nil
     coll))
 
+(defn ^:private elements-difference
+  "Return the difference between a-els and b-els
+   applying the predicate-fn to compare."
+  [predicate-fn e1s e2s]
+  (filter (fn [e1]
+            (not (some #(= (predicate-fn e1) (predicate-fn %)) e2s)))
+          e1s))
+
 (defmulti find-definition
   (fn [_analysis element]
     (:bucket element)))
@@ -107,17 +115,14 @@
                     (not (get % :private))))
           (get analysis filename)))
 
-(defn find-unused-aliases [analysis filename]
+(defn find-all-unused-aliases [analysis]
   (let [declared-aliases (filter #(and (= (:bucket %) :namespace-alias)
                                        (:alias %))
-                                 (get analysis filename))]
-    ;; TODO kondo alias
-    ;; can't tell the difference between `(ns (:require [x :as f])) x/foo f/foo`
-    (->> (get analysis filename)
-         (remove #(= (:bucket %) :namespace-usages))
-         (map :to)
-         set
-         (set/difference (set (map :to declared-aliases))))))
+                                 (mapcat val analysis))
+        alias-usages (remove #(or (= (:bucket %) :namespace-usages)
+                                  (= (:bucket %) :namespace-alias))
+                             (mapcat val analysis))]
+    (elements-difference (juxt :to) declared-aliases alias-usages)))
 
 (defn find-unused-refers [_analysis _filename]
   ;; TODO clj-kondo does not support refer analysis yet

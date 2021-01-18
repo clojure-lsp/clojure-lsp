@@ -38,7 +38,14 @@
                                           2
                                           10
                                           [] {}))))
-
+      (testing "when it has unresolved-namespace and can find namespace"
+        (is (some #(= (:title %) "Add missing 'some-ns' require")
+                  (f.code-actions/all (zloc-at "file://c.clj" 3 11)
+                                      "file://c.clj"
+                                      3
+                                      11
+                                      [{:code "unresolved-namespace"
+                                        :range {:start {:line 2 :character 10}}}] {}))))
       (testing "when it has unresolved-namespace but cannot find namespace"
         (is (not-any? #(string/starts-with? (:title %) "Add missing")
                       (f.code-actions/all (zloc-at "file://c.clj" 2 11)

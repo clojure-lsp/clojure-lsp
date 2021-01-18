@@ -364,6 +364,13 @@
                              "MyClass.\n"
                              "Date.")
                         "file://c.clj")
+  (testing "when it has unresolved-namespace and can find namespace"
+    (is (some #(= (:title %) "Add missing 'some-ns' require")
+              (handlers/code-actions
+                {:textDocument "file://c.clj"
+                 :context {:diagnostics [{:code "unresolved-namespace"
+                                          :range {:start {:line 2 :character 10}}}]}
+                 :range {:start {:line 2 :character 10}}}))))
   (testing "without workspace edit client capability"
     (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit false}}})
     (is (not-any? #(= (:title %) "Clean namespace")

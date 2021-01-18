@@ -81,7 +81,8 @@
       (swap! db/db (fn [state-db]
                      (-> state-db
                          (assoc-in [:documents uri] {:v 0 :text text})
-                         (crawler/update-analysis uri (:analysis result)))))
+                         (crawler/update-analysis uri (:analysis result))
+                         (crawler/update-findings uri (:findings result)))))
       (f.diagnostic/notify uri result)))
   nil)
 
@@ -93,7 +94,8 @@
 
         (if (compare-and-set! db/db state-db (-> state-db
                                                  (assoc-in [:documents uri] {:v version :text text})
-                                                 (crawler/update-analysis uri (:analysis result))))
+                                                 (crawler/update-analysis uri (:analysis result))
+                                                 (crawler/update-findings uri (:findings result))))
           (f.diagnostic/notify uri result)
           (recur @db/db))))))
 

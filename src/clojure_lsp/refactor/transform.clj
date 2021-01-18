@@ -406,7 +406,7 @@
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [keep-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-            unused-aliases (q/find-unused-aliases (:analysis @db/db) (shared/uri->filename uri))
+            unused-aliases (q/find-all-unused-aliases (:analysis @db/db))
             unused-refers (q/find-unused-refers (:analysis @db/db) (shared/uri->filename uri))
             unused-imports (q/find-unused-imports (:analysis @db/db) (shared/uri->filename uri))
             result-loc (-> ns-loc
@@ -416,35 +416,20 @@
           :loc result-loc}]))))
 
 (def ^:private common-alias->info
-  {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
-   :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
-   :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
-   :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
-   :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
+  {:string {:to 'clojure.string}
+   :set    {:to 'clojure.set}
+   :walk   {:to 'clojure.walk}
+   :pprint {:to 'clojure.pprint}
+   :async  {:to 'clojure.core.async}})
 
-(defn ^:private find-missing-alias-require [zloc]
-  (let [require-alias (some-> zloc z/sexpr namespace)
-        alias->info (->> (:file-envs @db/db)
-                         (mapcat val)
-                         (filter (fn [usage]
-                                   (or
-                                     (set/subset? #{:public :ns} (:tags usage))
-                                     (get-in usage [:tags :alias]))))
-                         (mapv (fn [{:keys [sym _tags] alias-str :str alias-ns :ns}]
-                                 {:alias-str alias-str
-                                  :label (name sym)
-                                  :detail (if alias-ns
-                                            (str alias-ns)
-                                            (name sym))
-                                  :alias-ns (if alias-ns
-                                              alias-ns
-                                              sym)}))
-                         (distinct)
-                         (group-by :alias-str))
+(defn ^:private find-missing-alias-require [uri zloc]
+  (let [require-alias (some-> zloc z/sexpr namespace symbol)
+        alias->info (->> (q/find-all-unused-aliases (:analysis @db/db))
+                         (group-by :alias))
         posibilities (or (get alias->info require-alias)
                          [(get common-alias->info (keyword require-alias))])]
     (when (= 1 (count posibilities))
-      (-> posibilities first :alias-ns))))
+      (-> posibilities first :to))))
 
 (def ^:private common-refers->info
   {'deftest      'clojure.test
@@ -473,10 +458,10 @@
     (when (not (z/find-value ns-zip z/next refer-to-add))
       (get common-refers->info (z/sexpr zloc)))))
 
-(defn find-missing-require [zloc]
+(defn find-missing-require [uri zloc]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (find-missing-alias-require zloc)
+      (find-missing-alias-require uri zloc)
       (find-missing-refer-require zloc))))
 
 (defn ^:private find-class-name [zloc]
@@ -540,9 +525,9 @@
   (when (and qualified-ns-to-add ns-to-add)
     (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
 
-(defn ^:private add-missing-alias-ns [zloc]
+(defn ^:private add-missing-alias-ns [uri zloc]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        qualified-ns-to-add (find-missing-alias-require zloc)]
+        qualified-ns-to-add (find-missing-alias-require uri zloc)]
     (add-known-libspec zloc require-alias qualified-ns-to-add)))
 
 (defn ^:private add-missing-refer [zloc]
@@ -578,10 +563,10 @@
         :loc result-loc}])))
 
 (defn add-missing-libspec
-  [zloc]
+  [uri zloc]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (add-missing-alias-ns zloc)
+      (add-missing-alias-ns uri zloc)
       (add-missing-refer zloc))))
 
 (defn extract-function

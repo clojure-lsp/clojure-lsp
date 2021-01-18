@@ -9,7 +9,7 @@
 
 (defn ^:private ->token
   [usage token-type]
-  (#'semantic-tokens/usage->absolute-token usage token-type))
+  (#'semantic-tokens/element->absolute-token usage token-type))
 
 (def refered-usage-a
   {:name-row 7
@@ -44,7 +44,7 @@
 
 (deftest usage->absolute-token
   (is (= [6 3 3 1 -1]
-         (#'semantic-tokens/usage->absolute-token refered-usage-a
+         (#'semantic-tokens/element->absolute-token refered-usage-a
                                                   :function))))
 
 (deftest absolute-token->relative-token

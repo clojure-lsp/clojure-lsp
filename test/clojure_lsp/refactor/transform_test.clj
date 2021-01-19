@@ -608,6 +608,7 @@
       (is (= (z/string loc) "a")))))
 
 (deftest extract-function-test
+  (reset! db/db {})
   (let [code "(defn a [b] (let [c 1] (b c)))"
         zloc (z/find-value (z/of-string code) z/next 'let)
         _ (h/load-code-and-locs code)
@@ -617,3 +618,25 @@
                   "foo")]
     (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
     (is (= "(foo b)" (z/string (:loc (last results)))))))
+
+(deftest inline-symbol
+  (testing "simple let"
+    (reset! db/db {})
+    (h/load-code-and-locs "(let [something 1] something something)")
+    (let [results (transform/inline-symbol "file:///a.clj" 1 7)
+          a-results (get results "file:///a.clj")]
+      (is (map? results))
+      (is (= 1 (count results)))
+      (is (= 3 (count a-results)))
+      (is (= [nil "1" "1"] (map (comp z/string :loc) a-results)))))
+  (testing "def in another file"
+    (reset! db/db {})
+    (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
+          _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" "file:///b.clj")
+          results (transform/inline-symbol "file:///a.clj" pos-l pos-c)
+          a-results (get results "file:///a.clj")
+          b-results (get results "file:///b.clj")]
+      (is (map? results))
+      (is (= 2 (count results)))
+      (is (= [nil] (map (comp z/string :loc) a-results)))
+      (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results))))))

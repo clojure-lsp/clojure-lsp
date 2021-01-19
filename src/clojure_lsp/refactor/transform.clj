@@ -644,8 +644,8 @@
   (let [definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
         references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col false)
         def-uri (shared/filename->uri (:filename definition))
-        {:keys [text]} (get-in @db/db [:documents def-uri])
-        def-loc (parser/loc-at-pos text (:name-row definition) (:name-col definition))
+        def-text (get-in @db/db [:documents def-uri :text])
+        def-loc (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
         op (inline-symbol? definition)]
     (when op
       (let [val-loc (z/right def-loc)
@@ -660,7 +660,7 @@
                        :end-row (:end-row end-pos)
                        :end-col (:end-col end-pos)}]
         (reduce
-          (fn [accum {:keys [uri usage]}]
-            (update accum uri (fnil conj []) {:loc val-loc :range usage}))
+          (fn [accum {:keys [filename] :as element}]
+            (update accum (shared/filename->uri filename) (fnil conj []) {:loc val-loc :range element}))
           {def-uri [{:loc nil :range def-range}]}
           references)))))

@@ -1,19 +1,19 @@
 (ns clojure-lsp.refactor.transform
   (:require
+    [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.db :as db]
     [clojure-lsp.parser :as parser]
+    [clojure-lsp.queries :as q]
     [clojure-lsp.refactor.edit :as edit]
+    [clojure-lsp.shared :as shared]
     [clojure.set :as set]
     [clojure.string :as string]
+    [clojure.tools.logging :as log]
     [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]
-    [clojure.tools.logging :as log]
-    [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.shared :as shared]))
+    [rewrite-clj.zip.subedit :as zsub]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]

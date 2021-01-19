@@ -1216,10 +1216,3 @@
       (get-in [:documents uri])
       :text
       (loc-at-pos (inc line) (inc character))))
-
-(defn usages-in-form [loc usages]
-  (let [form-loc (if (not= :token (z/tag loc))
-                   loc
-                   (z/up loc))
-        form-pos (-> form-loc z/node meta)]
-    (filter #(in-range? form-pos %) usages)))

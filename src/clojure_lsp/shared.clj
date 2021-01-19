@@ -1,12 +1,12 @@
 (ns clojure-lsp.shared
   (:require
-    [clojure.tools.logging :as log]
+    [clojure-lsp.db :as db]
+    [clojure.java.shell :as shell]
     [clojure.string :as string]
-    [clojure.java.shell :as shell])
+    [clojure.tools.logging :as log])
   (:import
    [java.net URI]
-   [java.nio.file Paths]
-   [org.eclipse.lsp4j Range]))
+   [java.nio.file Paths]))
 
 (def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))
@@ -49,9 +49,12 @@
     (str (string/replace uri #"^[a-z]+://" ""))))
 
 (defn filename->uri [^String filename]
-  (if-let [[_ jar-file nested-file] (re-find #"^(.*\.jar):(.*)" filename)]
-    (str "zipfile://" jar-file "::" nested-file)
-    (str "file://" filename)))
+  (let [jar-scheme? (= "jar" (get-in @db/db [:settings :dependency-scheme]))]
+    (if-let [[_ jar-file nested-file] (re-find #"^(.*\.jar):(.*)" filename)]
+      (if jar-scheme?
+        (str "jar:file:///" jar-file "!/" nested-file)
+        (str "zipfile://" jar-file "::" nested-file))
+      (str "file://" filename))))
 
 (defn uri->project-related-path [uri project-root]
   (string/replace uri project-root ""))

@@ -606,3 +606,14 @@
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn ^:private a [])") z/next 'a)
                               transform/cycle-privacy)]
       (is (= (z/string loc) "a")))))
+
+(deftest extract-function-test
+  (let [code "(defn a [b] (let [c 1] (b c)))"
+        zloc (z/find-value (z/of-string code) z/next 'let)
+        _ (h/load-code-and-locs code)
+        results (transform/extract-function
+                  zloc
+                  "file:///a.clj"
+                  "foo")]
+    (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
+    (is (= "(foo b)" (z/string (:loc (last results)))))))

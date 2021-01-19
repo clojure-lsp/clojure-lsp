@@ -572,21 +572,20 @@
       (add-missing-refer zloc))))
 
 (defn extract-function
-  [zloc fn-name usages]
-  (let [expr-loc (if (not= :token (z/tag zloc))
+  [zloc uri fn-name]
+  (let [{:keys [row col]} (meta (z/node zloc))
+        expr-loc (if (not= :token (z/tag zloc))
                    zloc
                    (z/up (edit/find-op zloc)))
         expr-node (z/node expr-loc)
         form-loc (edit/to-top expr-loc)
-        form-pos (meta (z/node form-loc))
+        {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
         fn-sym (symbol fn-name)
-        {:keys [declared scoped]} (->> usages
-                                       (group-by #(condp set/subset? (:tags %)
-                                                    #{:declare} :declared
-                                                    #{:scoped} :scoped
-                                                    nil))
-                                       (medley/map-vals #(set (map :sym %))))
-        used-syms (mapv (comp symbol name) (set/difference scoped declared))
+        used-syms (->> (q/find-locals-until-cursor (:analysis @db/db)
+                                                   (shared/uri->filename uri)
+                                                   row
+                                                   col)
+                       (mapv (comp symbol name :name)))
         expr-edit (-> (z/of-string "")
                       (z/replace `(~fn-sym ~@used-syms)))
         defn-edit (-> (z/of-string "(defn)\n\n")
@@ -596,11 +595,13 @@
                       (cz/append-child (n/spaces 2))
                       (z/append-child expr-node))]
     [{:loc defn-edit
-      :range (assoc form-pos :end-row (:row form-pos)
-                    :end-col (:col form-pos))}
+      :range (assoc form-pos
+                    :end-row form-row
+                    :end-col form-col)}
      {:loc (z/of-string "\n\n")
-      :range (assoc form-pos :end-row (:row form-pos)
-                    :end-col (:col form-pos))}
+      :range (assoc form-pos
+                    :end-row form-row
+                    :end-col form-col)}
      {:loc expr-edit
       :range (meta expr-node)}]))
 

@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.refactor
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [clojure.tools.logging :as log]
@@ -35,9 +34,7 @@
   (r.transform/expand-let loc))
 
 (defmethod refactor :extract-function [{:keys [loc uri args]}]
-  (let [usages (get-in @db/db [:file-envs uri])
-        usages-in-form (parser/usages-in-form loc usages)]
-    (apply r.transform/extract-function loc (conj (vec args) usages-in-form))))
+  (apply r.transform/extract-function loc uri [args]))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
   (r.transform/inline-symbol uri row col))

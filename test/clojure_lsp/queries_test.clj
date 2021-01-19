@@ -151,3 +151,17 @@
     (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) LocalTime.")
     (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
            (q/find-unused-imports (:findings @db/db) "/a.clj")))))
+
+(deftest find-locals-until-cursor
+  (testing "inside let"
+    (let [[[let-pos-r let-pos-c]]
+          (h/load-code-and-locs "(ns a) (let [b 1] |(+ 2 b))")]
+      (h/assert-submaps
+        [{:name 'b}]
+        (q/find-locals-until-cursor (:analysis @db/db) "/a.clj" let-pos-r let-pos-c))))
+  (testing "inside defn"
+    (let [[[let-pos-r let-pos-c]]
+          (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))) (defn other [c] c)")]
+      (h/assert-submaps
+        [{:name 'b}]
+        (q/find-locals-until-cursor (:analysis @db/db) "/a.clj" let-pos-r let-pos-c)))))

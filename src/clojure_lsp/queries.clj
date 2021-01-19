@@ -1,7 +1,17 @@
 (ns clojure-lsp.queries
   (:require
-   [clojure.set :as set]
    [clojure.tools.logging :as log]))
+
+(defn ^:private inside?
+  [start-l start-c
+   check-l check-c
+   end-l end-c]
+  (and (or (< start-l check-l)
+           (and (= start-l check-l)
+                (<= start-c check-c)))
+       (or (< check-l end-l)
+           (and (= check-l end-l)
+                (<= check-c end-c)))))
 
 (defn ^:private find-first [pred coll]
   (reduce
@@ -18,6 +28,15 @@
   (filter (fn [e1]
             (not (some #(= (predicate-fn e1) (predicate-fn %)) e2s)))
           e1s))
+
+(defn find-locals-until-cursor
+  [analysis filename line column]
+  (filter (fn [{:keys [name-row name-col scope-end-row scope-end-col bucket]}]
+            (and (= :locals bucket)
+                 (inside? name-row name-col
+                          line column
+                          scope-end-row scope-end-col)))
+          (get analysis filename)))
 
 (defmulti find-definition
   (fn [_analysis element]
@@ -89,6 +108,7 @@
   [analysis filename line column]
   (let [local-analysis (get analysis filename)]
     (find-first (fn [{:keys [name-row name-col name-end-row name-end-col] :as _v}]
+                  ;; TODO Probably should use q/inside? instead
                   (and (<= name-row line name-end-row)
                        (<= name-col column name-end-col)))
                 local-analysis)))

@@ -1,13 +1,13 @@
-(ns clojure-lsp.feature.document-symbol)
+(ns clojure-lsp.feature.document-symbol
+  (:require
+    [clojure.tools.logging :as log]))
 
-(defn is-declaration? [e]
-  (and (get-in e [:tags :declare])
-       (or (get-in e [:tags :local])
-         (get-in e [:tags :public]))))
+(defn declaration? [e]
+  (#{:namespace-definitions :var-definitions} (:bucket e)))
 
 (defn element->symbol-kind [el]
   (cond
-    (#{:namespace-usages} (:bucket el)) :namespace
+    (#{:namespace-usages :namespace-definitions} (:bucket el)) :namespace
     (or (:macro el)
         (:fixed-arities el)) :function
     (#{:var-definitions :var-usages} (:bucket el)) :variable

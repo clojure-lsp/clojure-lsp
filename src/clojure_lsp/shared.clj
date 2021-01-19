@@ -64,6 +64,11 @@
     {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
      :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
 
+(defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
+  (when element
+    {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
+     :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
+
 (defn keywordize-first-depth
   [m]
   (into {}

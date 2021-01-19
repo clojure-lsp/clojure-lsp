@@ -238,16 +238,15 @@
        :range (shared/->range d)})))
 
 (defn document-symbol [{:keys [textDocument]}]
-  (let [local-analysis (get-in @db/db [:analysis (shared/uri->filename textDocument)])]
-    ;; TODO what is children? why group by namespace before?
-    (->> local-analysis
-         (filter (every-pred (complement :private)
-                             (comp #{:namespace-definitions} :bucket)))
-         (mapv (fn [e]
-                 {:name (:name e)
-                  :kind :declaration
-                  :range (shared/->range e)
-                  :selection-range (shared/->range e)})))))
+  ;; TODO return all possible symbol hierarchy of the current ns
+  (->> (get-in @db/db [:analysis (shared/uri->filename textDocument)])
+       (filter (every-pred (complement :private)
+                           (comp #{:namespace-definitions} :bucket)))
+       (mapv (fn [e]
+               {:name            (-> e :name name)
+                :kind            (f.document-symbol/element->symbol-kind e)
+                :range           (shared/->scope-range e)
+                :selection-range (shared/->scope-range e)}))))
 
 (defn document-highlight [{:keys [textDocument position]}]
   (let [line (-> position :line inc)
@@ -259,48 +258,17 @@
             {:range (shared/->range reference)})
           references)))
 
-;; TODO kondo, fix it
-(defn file-env-entry->document-symbol [[e kind]]
-  (let [{n :str :keys [row col end-row end-col sym]} e
-        symbol-kind (f.document-symbol/element->symbol-kind kind)
-        r {:start {:line (dec row) :character (dec col)}
-           :end {:line (dec end-row) :character (dec end-col)}}]
-    {:name n
-     :kind symbol-kind
-     :range r
-     :selection-range r
-     :namespace (namespace sym)}))
-
-;; TODO kondo, fix it
-(defn file-env-entry->document-highlight [{:keys [row end-row col end-col]}]
-  (let [r {:start {:line (dec row) :character (dec col)}
-           :end {:line (dec end-row) :character (dec end-col)}}]
-    {:range r}))
-
-;; TODO kondo, fix it
-(defn file-env-entry->workspace-symbol [uri [e kind]]
-  (let [{:keys [row col end-row end-col sym]} e
-        symbol-kind (f.document-symbol/element->symbol-kind kind)
-        r {:start {:line (dec row) :character (dec col)}
-           :end {:line (dec end-row) :character (dec end-col)}}]
-    {:name (str sym)
-     :kind symbol-kind
-     :location {:uri uri :range r}}))
-
-;; TODO kondo, fix it
-(defn workspace-symbols [{:keys [query]}]
-  (if (seq query)
-    (let [file-envs (:file-envs @db/db)]
-      (->> file-envs
-           (mapcat (fn [[uri env]]
-                     (->> env
-                          (keep #(cond (:kind %) [% (:kind %)]
-                                       (f.document-symbol/is-declaration? %) [% :declaration]
-                                       :else nil))
-                          (filter #(.contains (str (:sym (first %))) query))
-                          (map (partial file-env-entry->workspace-symbol uri)))))
-           (sort-by :name)))
-    []))
+(defn workspace-symbols [{:keys [_query]}]
+  (->> (get-in @db/db [:analysis])
+       vals
+       flatten
+       (filter #(and (string/starts-with? (shared/filename->uri (:filename %)) "file://")
+                     (f.document-symbol/declaration? %)))
+       (mapv (fn [element]
+               {:name (-> element :name name)
+                :kind (f.document-symbol/element->symbol-kind element)
+                :location {:uri (shared/filename->uri (:filename element))
+                           :range (shared/->scope-range element)}}))))
 
 (defn server-info []
   (let [db @db/db

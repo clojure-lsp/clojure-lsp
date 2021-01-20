@@ -17,7 +17,6 @@
 (defn ^:private count-whitespace [s]
   (- (count s) (count (string/triml s))))
 
-
 (defn ^:private docstring->formatted-markdown [doc]
   (let [lines (string/split-lines doc)
         other-lines (filter (comp not string/blank?) (rest lines))

@@ -25,7 +25,8 @@
     [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [trptcolin.versioneer.core :as version])
+    [trptcolin.versioneer.core :as version]
+    [clojure-lsp.clojure-core :as cc])
   (:import
    [java.net URL
              URLDecoder
@@ -106,26 +107,10 @@
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)
-        col (-> position :character inc)
-        {:keys [text]} (get-in @db/db [:documents textDocument])
-        file-envs (:file-envs @db/db)
-        local-env (get file-envs textDocument)
-        remote-envs (dissoc file-envs textDocument)
-        cursor-loc (try
-                     (parser/loc-at-pos text row (dec col))
-                     (catch Exception e
-                       (log/error (.getMessage e))))
-        cursor-usage (loop [try-column col]
-                       (if-let [usage (f.references/find-under-cursor row try-column local-env (shared/uri->file-type textDocument))]
-                         usage
-                         (when (pos? try-column)
-                           (recur (dec try-column)))))]
-    (f.completion/completion textDocument row col file-envs remote-envs cursor-loc cursor-usage)))
+        col (-> position :character inc)]
+    (f.completion/completion textDocument row col)))
 
-(defn resolve-completion-item
-  [{:keys [label data]}]
-  (let [file-envs (:file-envs @db/db)]
-    (f.completion/resolve-item label data file-envs)))
+(def resolve-completion-item f.completion/resolve-item)
 
 (defn references [{:keys [textDocument position context]}]
   (let [row (-> position :line inc)

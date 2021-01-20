@@ -1,120 +1,115 @@
 (ns clojure-lsp.feature.completion
   (:require
     [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.db :as db]
     [clojure-lsp.feature.hover :as f.hover]
-    [clojure-lsp.refactor.transform :as r.transform]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
-    [clojure.set :as set]
-    [clojure.string :as string]))
+    [clojure.string :as string]
+    [clojure.tools.logging :as log]
+    [rewrite-clj.zip :as z]))
+
+(defn ^:private remove-keys [pred m]
+  (apply dissoc m (filter pred (keys m))))
 
 (defn ^:private matches-cursor? [cursor-value s]
   (when (and s (string/starts-with? s cursor-value))
     s))
 
-(defn completion [uri line column file-envs remote-envs cursor-loc cursor-usage]
-  (let [local-env (get file-envs uri)
-        {cursor-value :str cursor-file-type :file-type} cursor-usage
-        [cursor-ns _] (if-let [idx (some-> cursor-value (string/index-of "/"))]
-                        [(subs cursor-value 0 idx) (subs cursor-value (inc idx))]
-                        [cursor-value nil])
-        matches? (partial matches-cursor? cursor-value)
-        namespaces-and-aliases (->> file-envs
-                                    (mapcat val)
-                                    (filter (fn [{:keys [file-type tags] :as _usage}]
-                                              (and
-                                                (= cursor-file-type file-type)
-                                                (or
-                                                  (set/subset? #{:public :ns} tags)
-                                                  (:alias tags)))))
-                                    (mapv (fn [{:keys [sym] alias-str :str alias-ns :ns :as _usage}]
-                                            [alias-str {:label (name sym)
-                                                        :detail (if alias-ns
-                                                                  (str alias-ns)
-                                                                  (name sym))
-                                                        :alias-str alias-str
-                                                        :alias-ns alias-ns}]))
-                                    (distinct)
-                                    (reduce (fn [m [k v]]
-                                              (update m k (fnil conj []) v))
-                                            {}))
-        remotes-by-ns (->> (for [[_ usages] remote-envs
-                                 usage usages
-                                 :when (and (set/subset? #{:ns :public} (:tags usage))
-                                            (= cursor-file-type (:file-type usage)))]
-                             [(:sym usage) usages])
-                           (into {}))]
-    (when cursor-value
-      (if (contains? (:tags cursor-usage) :refer)
-        ;; If the cursor is within a :refer then the sole
-        ;; completions should be symbols within the namespace
-        ;; that's being referred
-        (->> (get remotes-by-ns (:ns cursor-usage))
-             (filter #(every? (:tags %) [:declare :public]))
-             (filter (comp matches? :str))
-             (map (fn [candidate]
-                    {:label (:str candidate)
-                     :detail (str (:sym candidate))
-                     :data (str (:sym candidate))})))
-        ;; Otherwise, completions could come from various sources
-        (concat
-          (->> local-env
-               (filter (comp :declare :tags))
-               (filter (comp matches? :str))
-               (remove (fn [usage]
-                         (when-let [scope-bounds (:scope-bounds usage)]
-                           (not= :within (shared/check-bounds line column scope-bounds)))))
-               (mapv (fn [{:keys [sym kind]}]
-                       (cond-> {:label (name sym)
-                                :data (str sym)}
-                         kind (assoc :kind kind))))
-               (sort-by :label))
-          (->> namespaces-and-aliases
-               (filter (comp matches? key))
-               (mapcat val)
-               (mapv (fn [{:keys [alias-str alias-ns] :as info}]
-                       (let [require-edit (some-> cursor-loc
-                                                  (r.transform/add-known-libspec (symbol alias-str) alias-ns)
-                                                  (r.transform/result))]
-                         (cond-> (dissoc info :alias-ns :alias-str)
-                           require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))
-               (sort-by :label))
-          (->> (for [[alias-str matches] namespaces-and-aliases
-                     :when (= alias-str cursor-ns)
-                     {:keys [alias-ns]} matches
-                     :let [usages (get remotes-by-ns alias-ns)]
-                     usage usages
-                     :when (and (get-in usage [:tags :public])
-                                (not (get-in usage [:tags :ns]))
-                                (= cursor-file-type (:file-type usage)))
-                     :let [require-edit (some-> cursor-loc
-                                                (r.transform/add-known-libspec (symbol alias-str) alias-ns)
-                                                (r.transform/result))]]
-                 (cond-> {:label (str alias-str "/" (name (:sym usage)))
-                          :detail (name alias-ns)
-                          :data (str (:sym usage))}
-                   require-edit (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))
-               (sort-by :label))
-          (->> cc/core-syms
-               (filter (comp matches? str))
-               (map (fn [sym] {:label (str sym)
-                               :data (str "clojure.core/" sym)}))
-               (sort-by :label))
-          (when (or (contains? cursor-file-type :cljc)
-                    (contains? cursor-file-type :cljs))
-            (->> cc/cljs-syms
-                 (filter (comp matches? str))
-                 (map (fn [sym] {:label (str sym)
-                                 :data (str "cljs.core/" sym)}))
-                 (sort-by :label)))
-          (when (or (contains? cursor-file-type :cljc)
-                    (contains? cursor-file-type :clj))
-            (->> cc/java-lang-syms
-                 (filter (comp matches? str))
-                 (map (fn [sym] {:label (str sym)
-                                 :data (str "java.lang." sym)}))
-                 (sort-by :label))))))))
+;; TODO improve to use better kinds
+(defn element->completion-item-kind [{:keys [bucket]}]
+  (cond
+    (#{:namespace-definitions
+       :namespace-usages} bucket)
+    :module
 
-(defn resolve-item [label sym-wanted file-envs]
-  {:label label
-   :data sym-wanted
-   :documentation (f.hover/hover-documentation sym-wanted file-envs)})
+    (#{:var-definitions} bucket)
+    :function
+
+    (#{:var-usages} bucket)
+    :variable
+
+    (#{:locals :localusages} bucket)
+    :value
+
+    :else
+    :text))
+
+(defn completion [uri row col]
+  (let [filename (shared/uri->filename uri)
+        file-type (shared/uri->file-type uri)
+        consider-cljs? (#{:cljc :cljs} file-type)
+        consider-core? (#{:cljc :clj} file-type)
+        {:keys [text]} (get-in @db/db [:documents uri])
+        analysis (get @db/db :analysis)
+        ns-elements (get analysis filename)
+        other-ns-elements (->> (dissoc analysis filename)
+                               (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))
+                               (mapcat val))
+        cursor-loc (try
+                     (parser/loc-at-pos text row (dec col))
+                     (catch Exception e
+                       (log/error (.getMessage e) "It was not possible to find cursor location for completion")))
+        cursor-element (loop [try-column col]
+                         (if-let [usage (first (q/find-references-from-cursor (:analysis @db/db) filename row col true))]
+                           usage
+                           (when (pos? try-column)
+                             (recur (dec try-column)))))
+        cursor-value (if cursor-loc
+                       (z/sexpr cursor-loc)
+                       (:name cursor-element))
+        matches-fn (partial matches-cursor? cursor-value)]
+    (concat
+      (->> ns-elements
+           (filter #(and (not (#{:var-usages :local-usages} (:bucket %)))
+                         (matches-fn (:name %))))
+           (remove #(= :clj-kondo/unknown-namespace (:to %)))
+           (map (fn [element]
+                  {:label  (-> element :name name)
+                   :kind   (element->completion-item-kind element)
+                   :tags   (when (:deprecated element)
+                             [1])
+                   :data element
+                   :detail (some-> element :ns name)}))
+           (sort-by :label))
+      (->> other-ns-elements
+           (filter #(and (not (#{:var-usages :local-usages} (:bucket %)))
+                         (matches-fn (:name %))))
+           (remove #(= :clj-kondo/unknown-namespace (:to %)))
+           (map (fn [element]
+                  {:label  (-> element :name name)
+                   :kind   (element->completion-item-kind element)
+                   :tags   (when (:deprecated element)
+                             [1])
+                   :data element
+                   :detail (some-> element :ns name)}))
+           (sort-by :label))
+      (->> cc/core-syms
+           (filter (comp matches-fn str))
+           (map (fn [sym] {:label (str sym)
+                           :detail "clojure.core"}))
+           (sort-by :label))
+      (when consider-cljs?
+        (->> cc/cljs-syms
+             (filter (comp matches-fn str))
+             (map (fn [sym] {:label (str sym)
+                             :detail "cljs.core"}))
+             (sort-by :label)))
+      (when consider-core?
+        (concat
+          (->> cc/java-lang-syms
+               (filter (comp matches-fn str))
+               (map (fn [sym] {:label  (str sym)
+                               :detail "java.lang"}))
+               (sort-by :label))
+          (->> cc/java-util-syms
+               (filter (comp matches-fn str))
+               (map (fn [sym] {:label  (str sym)
+                               :detail "java.util"}))
+               (sort-by :label)))))))
+
+(defn resolve-item [{:keys [data] :as item}]
+  (if data
+    (assoc item :documentation (f.hover/hover-documentation data))
+    item))

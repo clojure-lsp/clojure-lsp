@@ -202,6 +202,23 @@
                 "file:///b.clj" [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
                 "file:///c.clj" [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
+    ;; TODO kondo (keyword analysis)
+    #_(testing "on ::keyword"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
+                                                :position (h/->position akwbar-start)
+                                                :newName "foo"}))]
+        (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range akwbar-start akwbar-stop)}]
+                "file:///b.clj" [{:new-text "foo" :range (h/->range bkwbar-start bkwbar-stop)}]}
+               changes))))
+    ;; TODO kondo alias change on rename
+    #_(testing "on alias changes namespaces inside file"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"
+                                                :position (h/->position balias-start)
+                                                :newName "xx"}))]
+        (is (= {"file:///b.clj" [{:new-text "xx" :range (h/->range balias-start balias-stop)}
+                                 {:new-text "xx" :range (h/->range ba1-start ba1-stop)}
+                                 {:new-text "xx" :range (h/->range ba2-start ba2-stop)}]}
+               changes))))
     (testing "on a namespace"
       (reset! db/db {:project-root "file:///my-project"
                      :settings {:source-paths #{"/my-project/src" "/my-project/test"}}
@@ -220,6 +237,22 @@
              (handlers/rename {:textDocument "file:///my-project/src/foo/bar_baz.clj"
                                :position {:line 0 :character 4}
                                :newName "foo.baz-qux"}))))))
+
+;; TODO kondo (keyword analysis)
+#_(deftest test-rename-simple-keywords
+  (reset! db/db {:file-envs
+                 {"file://a.cljc" (parser/find-usages ":a (let [{:keys [a]} {}] a)" :cljc {})}})
+  (testing "should not rename plain keywords"
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.cljc"
+                                              :position {:line 0 :character 0}
+                                              :newName "b"}))]
+      (is (= nil changes))))
+
+  (testing "should rename local in destructure not keywords"
+    (let [changes (:changes (handlers/rename {:textDocument "file://a.cljc"
+                                              :position {:line 0 :character 17}
+                                              :newName "b"}))]
+      (is (= [18 26] (mapv (comp inc :character :start :range) (get-in changes ["file://a.cljc"])))))))
 
 (deftest test-find-diagnostics
   (testing "wrong arity"

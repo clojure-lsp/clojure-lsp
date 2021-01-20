@@ -10,6 +10,8 @@
 
 (h/reset-db-after-test)
 
+(defn code [& strings] (clojure.string/join "\n" strings))
+
 (defn diagnostics-or-timeout []
   (first (async/alts!!
            [(async/timeout 1000)
@@ -202,7 +204,7 @@
                changes))))
     (testing "on a namespace"
       (reset! db/db {:project-root "file:///my-project"
-                     :settings {:source-paths #{"src" "test"}}
+                     :settings {:source-paths #{"/my-project/src" "/my-project/test"}}
                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
       (h/load-code-and-locs "(ns foo.bar-baz)" "file:///my-project/src/foo/bar_baz.clj")
       (is (= {:document-changes
@@ -424,8 +426,8 @@
                                 :character 12}}
               :command {:title   "1 references"
                         :command "code-lens-references"
-                        :arguments ["file:///a.clj" 1 5]}}
-             (handlers/code-lens-resolve {:data ["file:///a.clj" 1 5]
+                        :arguments ["file:///a.clj" 2 6]}}
+             (handlers/code-lens-resolve {:data ["file:///a.clj" 2 6]
                                           :range {:start {:line 1 :character 5} :end {:line 1 :character 12}}})))
       (is (= {:range   {:start {:line      2
                                 :character 7}

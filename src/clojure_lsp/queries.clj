@@ -53,6 +53,12 @@
   (fn [_analysis element]
     (:bucket element)))
 
+(defmethod find-definition :namespace-usages
+  [analysis element]
+  (find-first #(and (= (:bucket %) :namespace-definitions)
+                    (= (:name %) (:name element)))
+              (mapcat val analysis)))
+
 (defmethod find-definition :var-usages
   [analysis element]
   (find-first #(and (= (:bucket %) :var-definitions)
@@ -75,6 +81,15 @@
       :locals :local
       :local-usages :local
       (:bucket element))))
+
+(defmethod find-references :namespace-definitions
+  [analysis {:keys [name] :as element} include-declaration?]
+  (concat
+    (when include-declaration?
+      [element])
+    (filter #(and (= (:name %) name)
+                  (= :namespace-usages (:bucket %)))
+            (mapcat val analysis))))
 
 (defmethod find-references :namespace-alias
   [analysis {:keys [alias filename] :as _element} include-declaration?]

@@ -39,7 +39,7 @@
 (defmethod refactor :extract-function [{:keys [loc uri args]}]
   (let [usages (get-in @db/db [:file-envs uri])
         usages-in-form (parser/usages-in-form loc usages)]
-    (apply r.transform/extract-function loc (conj (vec args) usages-in-form))))
+    (apply r.transform/extract-function loc (conj [args] usages-in-form))))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
   (let [usage (f.definition/definition-usage uri row col)

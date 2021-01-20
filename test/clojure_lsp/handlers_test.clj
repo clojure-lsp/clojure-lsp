@@ -1,26 +1,14 @@
 (ns clojure-lsp.handlers-test
   (:require
-    [clojure.core.async :as async]
     [clojure-lsp.db :as db]
-    [clojure.tools.logging :as log]
-    [clojure-lsp.test-helper :as h]
-    [clojure-lsp.parser :as parser]
     [clojure-lsp.handlers :as handlers]
+    [clojure-lsp.test-helper :as h]
+    [clojure.core.async :as async]
     [clojure.string :as string]
-    [clojure.test :refer [deftest is testing use-fixtures]])
-  (:import
-    (org.eclipse.lsp4j
-      Diagnostic
-      DiagnosticSeverity
-      Range
-      Position)))
+    [clojure.test :refer [deftest is testing]]
+    [clojure.tools.logging :as log]))
 
-(use-fixtures
-  :each
-  (fn [f]
-    (reset! db/db {})
-    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))
-                    (f))))
+(h/reset-db-after-test)
 
 (defn diagnostics-or-timeout []
   (first (async/alts!!
@@ -147,71 +135,7 @@
       (handlers/document-highlight {:textDocument "file:///a.clj"
                                     :position (h/->position bar-start)}))))
 
-#_(deftest test-completion
-  (h/load-code-and-locs (str "(ns alpaca.ns (:require [user :as alpaca]))\n"
-                             "(def barr)\n"
-                             "(def bazz)") "file://a.cljc")
-  (h/load-code-and-locs (str "(ns user)\n"
-                             "(def alpha)\n"
-                             "alp\n"
-                             "ba") "file:///b.clj")
-  (h/load-code-and-locs (str "(ns alpaca.ns)\n"
-                             "(def baff)\n") "file:///c.cljs")
-  (h/load-code-and-locs (str "(ns d (:require [alpaca.ns :as alpaca]))")
-                        "file:///d.clj")
-  (h/load-code-and-locs (str "(ns e (:require [alpaca.ns :refer [ba]]))")
-                        "file:///e.clj")
-  (testing "complete-a"
-    (h/assert-submaps
-      [{:label "alpha" :data "user/alpha"}
-       {:label "alpaca" :detail "user"}
-       {:label "alpaca" :detail "alpaca.ns"}
-       {:label "alpaca.ns" :detail "alpaca.ns"}]
-      (handlers/completion {:textDocument "file:///b.clj"
-                            :position {:line 2 :character 17}})))
-  ;; (testing "complete-ba"
-  ;;   (reset! db/db db-state)
-  ;;   (is (= [{:label "bases" :data "clojure.core/bases"}]
-  ;;          (handlers/completion {:textDocument "file://b.clj"
-  ;;                                :position {:line 3 :character 2}}))))
-  ;; (testing "complete-alph"
-  ;;   (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'user/alph :str "alph"}))
-  ;;   (is (= [{:label "alpha" :data "user/alpha"}]
-  ;;          (handlers/completion {:textDocument "file://b.clj"
-  ;;                                :position {:line 2 :character 2}}))))
-  ;; (testing "complete-alpaca"
-  ;;   (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'alpaca :str "alpaca"}))
-  ;;   (is (= [{:label "alpaca" :detail "user"}
-  ;;           {:label "alpaca" :detail "alpaca.ns"}
-  ;;           {:label "alpaca.ns" :detail "alpaca.ns"}
-  ;;           {:label "alpaca/barr" :detail "alpaca.ns" :data "alpaca.ns/barr"}
-  ;;           {:label "alpaca/bazz" :detail "alpaca.ns" :data "alpaca.ns/bazz"}]
-  ;;          (handlers/completion {:textDocument "file://b.clj"
-  ;;                                :position {:line 2 :character 17}}))))
-  ;; (testing "complete-within-refering"
-  ;;   (reset! db/db db-state)
-  ;;   (is (= [{:label "barr" :detail "alpaca.ns/barr" :data "alpaca.ns/barr"}
-  ;;           {:label "bazz" :detail "alpaca.ns/bazz" :data "alpaca.ns/bazz"}]
-  ;;          (handlers/completion {:textDocument "file://e.clj"
-  ;;                                :position {:line 0 :character 37}}))))
-  ;; (testing "complete-core-stuff"
-  ;;   (get-in @db/db [:file-envs "file://b.clj"])
-  ;;   (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'freq :str "freq"}))
-  ;;   (is (= [{:label "frequencies" :data "clojure.core/frequencies"}]
-  ;;          (handlers/completion {:textDocument "file://b.clj"
-  ;;                                :position {:line 2 :character 17}})))
-  ;;   (reset! db/db (update-in db-state [:file-envs "file://b.clj" 4] merge {:sym 'Sys :str "Sys"}))
-  ;;   (is (= [{:label "System" :data "java.lang.System"}]
-  ;;          (handlers/completion {:textDocument "file://b.clj"
-  ;;                                :position {:line 2 :character 17}}))))
-  ;; (testing "resolving completion item"
-  ;;   (reset! db/db db-state)
-  ;;   (let [{:keys [label data documentation]} (handlers/resolve-completion-item {:label "alpha"
-  ;;                                                                               :data  "user/alpha"})]
-  ;;     (and (is (= label "alpha"))
-  ;;          (is (= data "user/alpha"))
-  ;;          (is (string/includes? documentation data)))))
-  )
+
 
 (deftest references
   (testing "simple single reference"

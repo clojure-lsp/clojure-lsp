@@ -578,13 +578,16 @@
                    zloc
                    (z/up (edit/find-op zloc)))
         expr-node (z/node expr-loc)
+        expr-meta (meta expr-node)
         form-loc (edit/to-top expr-loc)
         {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
         fn-sym (symbol fn-name)
-        used-syms (->> (q/find-locals-until-cursor (:analysis @db/db)
-                                                   (shared/uri->filename uri)
-                                                   row
-                                                   col)
+        used-syms (->> (q/find-local-usages-under-form (:analysis @db/db)
+                                                       (shared/uri->filename uri)
+                                                       row
+                                                       col
+                                                       (:end-row expr-meta)
+                                                       (:end-col expr-meta))
                        (mapv (comp symbol name :name)))
         expr-edit (-> (z/of-string "")
                       (z/replace `(~fn-sym ~@used-syms)))
@@ -603,7 +606,7 @@
                     :end-row form-row
                     :end-col form-col)}
      {:loc expr-edit
-      :range (meta expr-node)}]))
+      :range expr-meta}]))
 
 (defn inside-function? [zloc]
   (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))

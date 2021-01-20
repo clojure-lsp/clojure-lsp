@@ -608,16 +608,31 @@
       (is (= (z/string loc) "a")))))
 
 (deftest extract-function-test
-  (reset! db/db {})
-  (let [code "(defn a [b] (let [c 1] (b c)))"
-        zloc (z/find-value (z/of-string code) z/next 'let)
-        _ (h/load-code-and-locs code)
-        results (transform/extract-function
-                  zloc
-                  "file:///a.clj"
-                  "foo")]
-    (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
-    (is (= "(foo b)" (z/string (:loc (last results)))))))
+  (testing "simple extract"
+    (reset! db/db {})
+    (let [code "(defn a [b] (let [c 1] (b c)))"
+          zloc (z/find-value (z/of-string code) z/next 'let)
+          _ (h/load-code-and-locs code)
+          results (transform/extract-function
+                    zloc
+                    "file:///a.clj"
+                    "foo")]
+      (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
+      (is (= "(foo b)" (z/string (:loc (last results)))))))
+  (testing "multiple locals extract"
+    (reset! db/db {})
+    (let [code (code "(let [a 1 b 2 c 3]"
+                     "  (+ 1 a))")
+          zloc (-> (z/of-string code)
+                   (z/find-value z/next '+)
+                   z/up)
+          _ (h/load-code-and-locs code)
+          results (transform/extract-function
+                    zloc
+                    "file:///a.clj"
+                    "foo")]
+      (is (= "(defn foo [a]\n  (+ 1 a))" (z/string (:loc (first results)))))
+      (is (= "(foo a)" (z/string (:loc (last results))))))))
 
 (deftest inline-symbol
   (testing "simple let"

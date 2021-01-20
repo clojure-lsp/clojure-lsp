@@ -152,16 +152,18 @@
     (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
            (q/find-unused-imports (:findings @db/db) "/a.clj")))))
 
-(deftest find-locals-until-cursor
+(deftest find-local-usages-under-cursor
   (testing "inside let"
-    (let [[[let-pos-r let-pos-c]]
-          (h/load-code-and-locs "(ns a) (let [b 1] |(+ 2 b))")]
+    (let [[[sum-pos-r sum-pos-c]
+           [sum-end-pos-r sum-end-pos-c]]
+          (h/load-code-and-locs "(ns a) (let [a 2 b 1] |(+ 2 b)| (- 2 a))")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-locals-until-cursor (:analysis @db/db) "/a.clj" let-pos-r let-pos-c))))
+        (q/find-local-usages-under-form (:analysis @db/db) "/a.clj" sum-pos-r sum-pos-c sum-end-pos-r sum-end-pos-c))))
   (testing "inside defn"
-    (let [[[let-pos-r let-pos-c]]
-          (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))) (defn other [c] c)")]
+    (let [[[let-pos-r let-pos-c]
+           [let-end-pos-r let-end-pos-c]]
+          (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))|) (defn other [c] c)")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-locals-until-cursor (:analysis @db/db) "/a.clj" let-pos-r let-pos-c)))))
+        (q/find-local-usages-under-form (:analysis @db/db) "/a.clj" let-pos-r let-pos-c let-end-pos-r let-end-pos-c)))))

@@ -2,7 +2,7 @@
   (:require
    [clojure.tools.logging :as log]))
 
-(defn ^:private inside?
+(defn inside?
   [start-l start-c
    check-l check-c
    end-l end-c]
@@ -29,14 +29,25 @@
             (not (some #(= (predicate-fn e1) (predicate-fn %)) e2s)))
           e1s))
 
-(defn find-locals-until-cursor
-  [analysis filename line column]
-  (filter (fn [{:keys [name-row name-col scope-end-row scope-end-col bucket]}]
-            (and (= :locals bucket)
-                 (inside? name-row name-col
-                          line column
-                          scope-end-row scope-end-col)))
-          (get analysis filename)))
+(defn find-local-usages-under-form
+  [analysis filename line column end-line end-column]
+  (let [local-analysis (get analysis filename)]
+    (->>  (filter (fn [{:keys [name-row name-col scope-end-row scope-end-col bucket]}]
+                    (and (= :locals bucket)
+                         (inside?
+                           name-row name-col
+                           line column
+                           scope-end-row scope-end-col)))
+                  local-analysis)
+          (map (fn [local]
+                 (find-first #(and (= :local-usages (:bucket %))
+                                   (= (:id local) (:id %))
+                                   (inside?
+                                     line column
+                                     (:name-row %) (:name-col %)
+                                     end-line end-column))
+                             local-analysis)))
+          (remove nil?))))
 
 (defmulti find-definition
   (fn [_analysis element]

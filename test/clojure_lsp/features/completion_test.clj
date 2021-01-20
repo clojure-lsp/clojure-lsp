@@ -22,7 +22,8 @@
                         "file:///e.clj")
   (testing "complete-a"
     (h/assert-submaps
-      [{:label "alpaca" :kind :module}
+      [{:label "alpha" :kind :function}
+       {:label "alpaca" :kind :module}
        {:label "alpaca.ns" :kind :module}
        {:label "alpaca.ns" :kind :module}
        {:label "alpaca.ns" :kind :module}]
@@ -33,7 +34,8 @@
       (f.completion/completion "file:///b.clj" 4 3)))
   (testing "complete-alpaca"
     (h/assert-submaps
-      [{:label "alpaca" :kind :module}
+      [{:label "alpha" :kind :function}
+       {:label "alpaca" :kind :module}
        {:label "alpaca.ns" :kind :module}
        {:label "alpaca.ns" :kind :module}
        {:label "alpaca.ns" :kind :module}]

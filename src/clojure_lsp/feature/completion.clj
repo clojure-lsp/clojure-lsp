@@ -44,9 +44,10 @@
     :else
     :text))
 
-(defn element->completion-item [{:keys [deprecated alias ns bucket] :as element}]
+(defn element->completion-item [{:keys [deprecated alias ns bucket arglist-strs] :as element}]
   (let [kind (element->completion-item-kind element)
-        detail (some-> ns name)
+        detail (or (when arglist-strs (string/join " " arglist-strs))
+                   (some-> ns name))
         definition? (#{:namespace-definitions :var-definitions} bucket)]
     (-> {:label  (or (some-> alias name)
                      (-> element :name name))}
@@ -58,7 +59,7 @@
 (defn valid-element-completion-item?
   [matches-fn
    cursor-uri
-   cursor-element
+   {cursor-from :from cursor-bucket :bucket :as _cursor-element}
    {:keys [bucket to ns filename lang name] :as _element}]
   (let [supported-file-types #{:cljc (shared/uri->file-type cursor-uri)}]
     (cond
@@ -70,7 +71,8 @@
       false
 
       (and (= bucket :var-definitions)
-           (not= ns (:ns cursor-element)))
+           (= cursor-bucket :var-usages)
+           (not= ns cursor-from))
       false
 
       (= :clj-kondo/unknown-namespace to)
@@ -129,7 +131,7 @@
                      (catch Exception e
                        (log/error (.getMessage e) "It was not possible to find cursor location for completion")))
         cursor-element (loop [try-column col]
-                         (if-let [usage (first (q/find-element-under-cursor analysis filename row col))]
+                         (if-let [usage (q/find-element-under-cursor analysis filename row col)]
                            usage
                            (when (pos? try-column)
                              (recur (dec try-column)))))

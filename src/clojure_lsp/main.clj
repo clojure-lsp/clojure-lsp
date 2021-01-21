@@ -359,7 +359,6 @@
 
 (defn tee-system-in [system-in]
   (let [buffer-size 1024
-        b2 (byte-array buffer-size)
         os (java.io.PipedOutputStream.)
         is (java.io.PipedInputStream. os)]
     (async/thread
@@ -376,7 +375,6 @@
 
 (defn tee-system-out [system-out]
   (let [buffer-size 1024
-        b2 (byte-array buffer-size)
         is (java.io.PipedInputStream.)
         os (java.io.PipedOutputStream. is)]
     (async/thread

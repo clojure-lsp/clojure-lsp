@@ -633,8 +633,8 @@
         :range (meta (z/node source))}])))
 
 (defn inline-symbol?
-  [{:keys [filename name-row name-col] :as element}]
-  (when element
+  [{:keys [filename name-row name-col] :as definition}]
+  (when definition
     (let [{:keys [text]} (get-in @db/db [:documents (shared/filename->uri filename)])
           loc (parser/loc-at-pos text name-row name-col)]
       (some-> (edit/find-op loc)

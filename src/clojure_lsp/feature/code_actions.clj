@@ -5,7 +5,8 @@
     [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.queries :as q]
     [clojure-lsp.db :as db]
-    [clojure-lsp.shared :as shared])
+    [clojure-lsp.shared :as shared]
+    [clojure.tools.logging :as log])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))
@@ -94,8 +95,8 @@
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function? (r.transform/inside-function? zloc)
-        definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
-        inline-symbol? (r.transform/inline-symbol? definition)
+        element (q/find-element-under-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
+        inline-symbol? (r.transform/inline-symbol? element)
         line (dec row)
         character (dec col)
         missing-requires (find-missing-requires uri diagnostics)

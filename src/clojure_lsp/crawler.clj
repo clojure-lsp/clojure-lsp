@@ -129,7 +129,9 @@
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn ^:private analyze-paths [paths public-only?]
+  (log/info "Analyzing" (count paths) "paths with clj-kondo...")
   (let [result (run-kondo-on-paths! paths)
+        _ (log/info "Paths analyzed, took" (-> result :summary :duration (/ 1000) float) "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)
                            public-only? (dissoc :namespace-usages :var-usages)
                            public-only? (update :var-definitions (fn [usages] (remove :private usages))))

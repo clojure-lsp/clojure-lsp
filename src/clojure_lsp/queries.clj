@@ -1,6 +1,7 @@
 (ns clojure-lsp.queries
   (:require
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [medley.core :as medley]))
 
 (defn inside?
   [start-l start-c
@@ -156,10 +157,11 @@
       (log/error e "can't find references"))))
 
 (defn find-vars [analysis filename include-private?]
-  (filter #(and (= (:bucket %) :var-definitions)
-                (or include-private?
-                    (not (get % :private))))
-          (get analysis filename)))
+  (->> (get analysis filename)
+       (filter #(and (= (:bucket %) :var-definitions)
+                     (or include-private?
+                       (not (get % :private)))))
+       (medley/distinct-by (juxt :ns :name :row :col))))
 
 (defn find-all-aliases [analysis]
   (filter #(and (= (:bucket %) :namespace-alias)

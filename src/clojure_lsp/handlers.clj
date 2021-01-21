@@ -113,6 +113,7 @@
 (defn did-close [{:keys [textDocument]}]
   (swap! db/db #(update % :documents dissoc textDocument)))
 
+;; TODO use after kondo supports alias analysis
 #_(defn ^:private rename-alias [doc-id local-env cursor-usage cursor-name replacement]
   (for [{u-str :str :as usage} local-env
         :let [version (get-in @db/db [:documents doc-id :v] 0)
@@ -124,6 +125,7 @@
      :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
      :text-document {:version version :uri doc-id}}))
 
+;; TODO use after kondo supports keyword analysis
 #_(defn ^:private rename-name [file-envs cursor-sym replacement]
   (for [[doc-id usages] file-envs
         :let [version (get-in @db/db [:documents doc-id :v] 0)]

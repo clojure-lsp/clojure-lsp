@@ -17,7 +17,7 @@
   :jvm-opts ^:replace ["-Xmx2g" "-server"]
   :main clojure-lsp.main
   :java-source-paths ["src-java"]
-  :resource-paths ["resources" "lib/rewrite-clj-0.6.2-SNAPSHOT.jar"]
+  :resource-paths ["resources"]
   :javac-options ["-implicit:none"]
   :plugins [[me.arrdem/lein-git-version "2.0.8"]]
   :git-version {:status-to-version

@@ -88,7 +88,8 @@
       (assoc-in [:config :output :analysis :locals] true))))
 
 (defn ^:private run-kondo-on-paths! [paths]
-  (kondo/run! (kondo-args {:lint [(string/join (System/getProperty "path.separator") paths)]} false)))
+  (kondo/run! (kondo-args {:parallel true
+                           :lint [(string/join (System/getProperty "path.separator") paths)]} false)))
 
 (defn run-kondo-on-text! [text uri]
   (with-in-str

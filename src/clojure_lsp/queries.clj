@@ -14,7 +14,7 @@
            (and (= check-l end-l)
                 (<= check-c end-c)))))
 
-(defn ^:private find-first [pred coll]
+(defn find-first [pred coll]
   (reduce
     (fn [_ i]
       (when (pred i)

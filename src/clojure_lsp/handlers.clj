@@ -100,7 +100,8 @@
         col (-> position :character inc)]
     (f.completion/completion textDocument row col)))
 
-(def resolve-completion-item f.completion/resolve-item)
+(defn resolve-completion-item [item]
+  (f.completion/resolve-item item))
 
 (defn references [{:keys [textDocument position context]}]
   (let [row (-> position :line inc)

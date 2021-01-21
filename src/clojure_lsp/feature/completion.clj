@@ -8,7 +8,8 @@
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
-    [rewrite-clj.zip :as z]))
+    [rewrite-clj.zip :as z]
+    [clojure.walk :as walk]))
 
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
@@ -25,17 +26,17 @@
 (defn ^:private supports-clj-core? [uri]
   (#{:cljc :clj} (shared/uri->file-type uri)))
 
-;; TODO improve to use better kinds
-(defn element->completion-item-kind [{:keys [bucket]}]
+(defn element->completion-item-kind [{:keys [bucket fixed-arities]}]
   (cond
     (#{:namespace-definitions
        :namespace-usages} bucket)
     :module
 
-    (#{:var-definitions} bucket)
+    (and (#{:var-definitions} bucket)
+         fixed-arities)
     :function
 
-    (#{:var-usages} bucket)
+    (#{:var-definitions :var-usages} bucket)
     :variable
 
     (#{:locals :localusages} bucket)
@@ -54,7 +55,9 @@
         (cond-> detail (assoc :detail detail)
                 deprecated (assoc :tags [1])
                 kind (assoc :kind kind)
-                definition? (assoc :data element)))))
+                definition? (assoc :data (-> element
+                                             (select-keys [:ns :name :doc :filename :arglist-strs])
+                                             walk/stringify-keys))))))
 
 (defn valid-element-completion-item?
   [matches-fn
@@ -90,6 +93,19 @@
        (filter (partial valid-element-completion-item? matches-fn cursor-uri cursor-element))
        (map element->completion-item)
        (sort-by :label)))
+
+(defn with-elements-from-alias [alias matches-fn ns-elements other-elements]
+  (when-let [alias-ns (some->> ns-elements
+                               (q/find-first #(and (= (:bucket %) :namespace-usages)
+                                                   (= (-> % :alias str) alias)))
+                               :name)]
+
+    (->> other-elements
+         (filter #(and (= (:bucket %) :var-definitions)
+                       (= (:ns %) alias-ns)
+                       (matches-fn (:name %))))
+         (map element->completion-item)
+         (sort-by :label))))
 
 (defn with-clojure-core-items [matches-fn]
   (->> cc/core-syms
@@ -138,19 +154,29 @@
         cursor-value (if cursor-loc
                        (z/sexpr cursor-loc)
                        (:name cursor-element))
-        matches-fn (partial matches-cursor? cursor-value)]
-    (concat
-      (with-element-items current-ns-elements matches-fn uri cursor-element)
-      (with-element-items other-ns-elements matches-fn uri cursor-element)
-      (with-clojure-core-items matches-fn)
-      (when (supports-cljs? uri)
-        (with-clojurescript-items matches-fn))
-      (when (supports-clj-core? uri)
-        (with-java-items matches-fn)))))
+        matches-fn (partial matches-cursor? cursor-value)
+        cursor-alias (some-> cursor-loc z/sexpr namespace)]
+    (cond-> []
+
+      cursor-alias
+      (concat (with-elements-from-alias cursor-alias matches-fn current-ns-elements other-ns-elements))
+
+      (not cursor-alias)
+      (concat (with-element-items current-ns-elements matches-fn uri cursor-element)
+              (with-element-items other-ns-elements matches-fn uri cursor-element)
+              (with-clojure-core-items matches-fn))
+
+      (and (not cursor-alias)
+           (supports-cljs? uri))
+      (concat (with-clojurescript-items matches-fn))
+
+      (and (not cursor-alias)
+           (supports-clj-core? uri))
+      (concat (with-java-items matches-fn)))))
 
 (defn resolve-item [{:keys [data] :as item}]
   (if data
     (-> item
         (assoc :documentation (f.hover/hover-documentation data))
-        (dissoc :data))
+        (dissoc :data :kind))
     item))

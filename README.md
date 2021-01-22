@@ -24,7 +24,7 @@ A [Language Server](https://microsoft.github.io/language-server-protocol/) for C
 ## Overview 
 
 The goal of this project is to bring great editing tools for Clojure to all editors.
-It aims to work alongside you to help you navigate, identify and fix errors, perform refactorings and much more!
+It aims to work alongside you to help you navigate, identify and fix errors, perform refactors and much more!
 
 You will get:
 

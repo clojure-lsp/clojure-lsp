@@ -1,9 +1,6 @@
 (ns clojure-lsp.feature.refactor
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.definition :as f.definition]
-   [clojure-lsp.feature.references :as f.references]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [clojure.tools.logging :as log]
@@ -19,7 +16,7 @@
 (defmulti refactor (comp :refactoring))
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
-  (apply r.transform/add-import-to-namespace loc (vec args)))
+  (apply r.transform/add-import-to-namespace loc [args]))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc]}]
   (r.transform/add-missing-libspec loc))
@@ -37,20 +34,16 @@
   (r.transform/expand-let loc))
 
 (defmethod refactor :extract-function [{:keys [loc uri args]}]
-  (let [usages (get-in @db/db [:file-envs uri])
-        usages-in-form (parser/usages-in-form loc usages)]
-    (apply r.transform/extract-function loc (conj [args] usages-in-form))))
+  (apply r.transform/extract-function loc uri [args]))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col]}]
-  (let [usage (f.definition/definition-usage uri row col)
-        references (f.references/reference-usages uri row col false)]
-    (r.transform/inline-symbol usage references)))
+  (r.transform/inline-symbol uri row col))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
-  (apply r.transform/introduce-let loc (vec args)))
+  (apply r.transform/introduce-let loc [args]))
 
 (defmethod refactor :move-to-let [{:keys [loc args]}]
-  (apply r.transform/move-to-let loc (vec args)))
+  (apply r.transform/move-to-let loc [args]))
 
 (defmethod refactor :thread-first [{:keys [loc]}]
   (r.transform/thread-first loc))

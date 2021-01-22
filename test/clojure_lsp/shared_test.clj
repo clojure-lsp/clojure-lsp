@@ -1,10 +1,26 @@
 (ns clojure-lsp.shared-test
-  (:require [clojure-lsp.shared :as shared]
-            [clojure.test :refer [deftest testing is]]))
+  (:require
+   [clojure-lsp.db :as db]
+   [clojure-lsp.shared :as shared]
+   [clojure.test :refer [deftest testing is]]))
 
 (deftest uri->project-related-path
   (is (= "/src/my-project/some/ns.clj"
         (shared/uri->project-related-path "file://home/foo/bar/my-project/src/my-project/some/ns.clj" "file://home/foo/bar/my-project"))))
+
+(deftest filename->uri
+  (testing "when it is not a jar"
+    (reset! db/db {})
+    (is (= "file://some-project/foo/bar_baz.clj"
+           (shared/filename->uri "some-project/foo/bar_baz.clj"))))
+  (testing "when it is a jar via zipfile"
+    (reset! db/db {})
+    (is (= "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj"
+           (shared/filename->uri "/home/some/.m2/some-jar.jar:clojure/core.clj"))))
+  (testing "when it is a jar via jarfile"
+    (reset! db/db {:settings {:dependency-scheme "jar"}})
+    (is (= "jar:file:////home/some/.m2/some-jar.jar!/clojure/core.clj"
+           (shared/filename->uri "/home/some/.m2/some-jar.jar:clojure/core.clj")))))
 
 (deftest ->range-test
   (testing "should subtract 1 from row and col values"

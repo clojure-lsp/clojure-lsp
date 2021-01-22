@@ -1,19 +1,19 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure-lsp.crawler :as crawler]
+    [clojure-lsp.clojure-core :as cc]
     [clojure-lsp.db :as db]
-    [clojure-lsp.feature.references :as f.references]
     [clojure-lsp.parser :as parser]
+    [clojure-lsp.queries :as q]
     [clojure-lsp.refactor.edit :as edit]
+    [clojure-lsp.shared :as shared]
     [clojure.set :as set]
     [clojure.string :as string]
+    [clojure.tools.logging :as log]
     [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]
-    [clojure.tools.logging :as log]
-    [clojure-lsp.clojure-core :as cc]))
+    [rewrite-clj.zip.subedit :as zsub]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -338,15 +338,13 @@
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
 
 (defn ^:private clean-requires
-  [ns-loc usages keep-at-start?]
+  [ns-loc unused-aliases unused-refers keep-at-start?]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
     (let [col (if require-loc
                 (if keep-at-start?
                   (-> require-loc z/node meta :end-col)
                   (-> require-loc z/right z/node meta :col dec))
                 4)
-          unused-aliases (crawler/find-unused-aliases usages)
-          unused-refers (crawler/find-unused-refers usages)
           removed-nodes (->> require-loc
                              z/remove
                              (remove-unused-requires unused-aliases unused-refers))]
@@ -359,7 +357,7 @@
       (z/list? node)))
 
 (defn ^:private remove-unused-package-import
-  [node base-package col unused-imports]
+  [node base-package unused-imports]
   (cond
     (string/includes? (z/string node) ".")
     node
@@ -372,12 +370,12 @@
     node))
 
 (defn ^:private remove-unused-import
-  [parent-node col unused-imports]
+  [parent-node unused-imports]
   (cond
     (package-import? parent-node)
     (let [base-package (-> parent-node z/down z/leftmost z/string)
           removed (edit/map-children parent-node
-                                     #(remove-unused-package-import % base-package col unused-imports))]
+                                     #(remove-unused-package-import % base-package unused-imports))]
       (if (= 1 (count (z/child-sexprs removed)))
         (z/remove removed)
         removed))
@@ -389,17 +387,16 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc usages keep-at-start?]
+  [ns-loc unused-imports keep-at-start?]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (if import-loc
                 (if keep-at-start?
                   (-> import-loc z/node meta :end-col)
                   (-> import-loc z/right z/node meta :col dec))
                 4)
-          unused-imports (crawler/find-unused-imports usages)
           removed-nodes (-> import-loc
                              z/remove
-                             (edit/map-children #(remove-unused-import % col unused-imports)))]
+                             (edit/map-children #(remove-unused-import % unused-imports)))]
       (process-clean-ns ns-loc removed-nodes col keep-at-start? :import))
     ns-loc))
 
@@ -409,43 +406,32 @@
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [keep-at-start? (get-in @db/db [:settings :keep-require-at-start?])
-            usages (f.references/safe-find-references uri (slurp uri) false false)
+            filename (shared/uri->filename uri)
+            unused-aliases (q/find-unused-aliases (:findings @db/db) filename)
+            unused-refers (q/find-unused-refers (:findings @db/db) filename)
+            unused-imports (q/find-unused-imports (:findings @db/db) filename)
             result-loc (-> ns-loc
-                           (clean-requires usages keep-at-start?)
-                           (clean-imports usages keep-at-start?))]
+                           (clean-requires unused-aliases unused-refers keep-at-start?)
+                           (clean-imports unused-imports keep-at-start?))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
 (def ^:private common-alias->info
-  {:string {:alias-str "string" :label "clojure.string" :detail "clojure.string" :alias-ns 'clojure.string}
-   :set    {:alias-str "set" :label "clojure.set" :detail "clojure.set" :alias-ns 'clojure.set}
-   :walk   {:alias-str "walk" :label "clojure.walk" :detail "clojure.walk" :alias-ns 'clojure.walk}
-   :pprint {:alias-str "pprint" :label "clojure.pprint" :detail "clojure.pprint" :alias-ns 'clojure.pprint}
-   :async  {:alias-str "async" :label "clojure.core.async" :detail "clojure.core.async" :alias-ns 'clojure.core.async}})
+  {'string {:to 'clojure.string}
+   'set    {:to 'clojure.set}
+   'walk   {:to 'clojure.walk}
+   'pprint {:to 'clojure.pprint}
+   'async  {:to 'clojure.core.async}})
 
 (defn ^:private find-missing-alias-require [zloc]
-  (let [require-alias (some-> zloc z/sexpr namespace)
-        alias->info (->> (:file-envs @db/db)
-                         (mapcat val)
-                         (filter (fn [usage]
-                                   (or
-                                     (set/subset? #{:public :ns} (:tags usage))
-                                     (get-in usage [:tags :alias]))))
-                         (mapv (fn [{:keys [sym _tags] alias-str :str alias-ns :ns}]
-                                 {:alias-str alias-str
-                                  :label (name sym)
-                                  :detail (if alias-ns
-                                            (str alias-ns)
-                                            (name sym))
-                                  :alias-ns (if alias-ns
-                                              alias-ns
-                                              sym)}))
-                         (distinct)
-                         (group-by :alias-str))
-        posibilities (or (get alias->info require-alias)
-                         [(get common-alias->info (keyword require-alias))])]
+  (let [require-alias (some-> zloc z/sexpr namespace symbol)
+        alias->info (->> (q/find-all-aliases (:analysis @db/db))
+                         (group-by :alias))
+        posibilities (or (some->> (get alias->info require-alias)
+                                  (medley/distinct-by (juxt :to)))
+                         [(get common-alias->info require-alias)])]
     (when (= 1 (count posibilities))
-      (-> posibilities first :alias-ns))))
+      (some-> posibilities first :to name symbol))))
 
 (def ^:private common-refers->info
   {'deftest      'clojure.test
@@ -586,21 +572,23 @@
       (add-missing-refer zloc))))
 
 (defn extract-function
-  [zloc fn-name usages]
-  (let [expr-loc (if (not= :token (z/tag zloc))
+  [zloc uri fn-name]
+  (let [{:keys [row col]} (meta (z/node zloc))
+        expr-loc (if (not= :token (z/tag zloc))
                    zloc
                    (z/up (edit/find-op zloc)))
         expr-node (z/node expr-loc)
+        expr-meta (meta expr-node)
         form-loc (edit/to-top expr-loc)
-        form-pos (meta (z/node form-loc))
+        {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
         fn-sym (symbol fn-name)
-        {:keys [declared scoped]} (->> usages
-                                       (group-by #(condp set/subset? (:tags %)
-                                                    #{:declare} :declared
-                                                    #{:scoped} :scoped
-                                                    nil))
-                                       (medley/map-vals #(set (map :sym %))))
-        used-syms (mapv (comp symbol name) (set/difference scoped declared))
+        used-syms (->> (q/find-local-usages-under-form (:analysis @db/db)
+                                                       (shared/uri->filename uri)
+                                                       row
+                                                       col
+                                                       (:end-row expr-meta)
+                                                       (:end-col expr-meta))
+                       (mapv (comp symbol name :name)))
         expr-edit (-> (z/of-string "")
                       (z/replace `(~fn-sym ~@used-syms)))
         defn-edit (-> (z/of-string "(defn)\n\n")
@@ -610,13 +598,15 @@
                       (cz/append-child (n/spaces 2))
                       (z/append-child expr-node))]
     [{:loc defn-edit
-      :range (assoc form-pos :end-row (:row form-pos)
-                    :end-col (:col form-pos))}
+      :range (assoc form-pos
+                    :end-row form-row
+                    :end-col form-col)}
      {:loc (z/of-string "\n\n")
-      :range (assoc form-pos :end-row (:row form-pos)
-                    :end-col (:col form-pos))}
+      :range (assoc form-pos
+                    :end-row form-row
+                    :end-col form-col)}
      {:loc expr-edit
-      :range (meta expr-node)}]))
+      :range expr-meta}]))
 
 (defn inside-function? [zloc]
   (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
@@ -643,21 +633,24 @@
         :range (meta (z/node source))}])))
 
 (defn inline-symbol?
-  [def-uri definition]
-  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
-        def-loc        (parser/loc-at-pos text (:row definition) (:col definition))]
-    (some-> (edit/find-op def-loc)
-            z/sexpr
-            #{'let 'def})))
+  [{:keys [filename name-row name-col] :as definition}]
+  (when definition
+    (let [{:keys [text]} (get-in @db/db [:documents (shared/filename->uri filename)])
+          loc (parser/loc-at-pos text name-row name-col)]
+      (some-> (edit/find-op loc)
+              z/sexpr
+              #{'let 'def}))))
 
 (defn inline-symbol
-  [[_ {def-uri :uri definition :usage}] references]
-  (let [{:keys [text]} (get-in @db/db [:documents def-uri])
-        def-loc (parser/loc-at-pos text (:row definition) (:col definition))
-        op (inline-symbol? def-uri definition)]
+  [uri row col]
+  (let [definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
+        references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col false)
+        def-uri (shared/filename->uri (:filename definition))
+        def-text (get-in @db/db [:documents def-uri :text])
+        def-loc (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
+        op (inline-symbol? definition)]
     (when op
-      (let [uses (remove (comp #(contains? % :declare) :tags :usage) references)
-            val-loc (z/right def-loc)
+      (let [val-loc (z/right def-loc)
             end-pos (if (= op 'def) (meta (z/node (z/up def-loc))) (meta (z/node val-loc)))
             prev-loc (if (= op 'def) (z/left (z/up def-loc)) (z/left def-loc))
             start-pos (if prev-loc
@@ -669,7 +662,7 @@
                        :end-row (:end-row end-pos)
                        :end-col (:end-col end-pos)}]
         (reduce
-          (fn [accum {:keys [uri usage]}]
-            (update accum uri (fnil conj []) {:loc val-loc :range usage}))
+          (fn [accum {:keys [filename] :as element}]
+            (update accum (shared/filename->uri filename) (fnil conj []) {:loc val-loc :range element}))
           {def-uri [{:loc nil :range def-range}]}
-          uses)))))
+          references)))))

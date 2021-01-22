@@ -4,7 +4,8 @@
     [clojure-lsp.feature.code-actions :as f.code-actions]
     [clojure-lsp.parser :as parser]
     [clojure.string :as string]
-    [clojure.test :refer [deftest testing is]]))
+    [clojure.test :refer [deftest testing is]]
+    [clojure-lsp.test-helper :as h]))
 
 (defn zloc-at [file row col]
   (-> @db/db
@@ -13,26 +14,22 @@
       (parser/loc-at-pos row col)))
 
 (deftest test-code-actions-without-resolve-support
-  (let [references-code   (str "(ns some-ns)\n"
-                               "(def foo)")
-        b-code   (str "(ns other-ns (:require [some-ns :as sns]))\n"
-                      "(def bar 1)\n"
-                      "(defn baz []\n"
-                      "  bar)")
-        c-code   (str "(ns another-ns)\n"
-                      "(def bar ons/bar)\n"
-                      "(def foo sns/foo)\n"
-                      "(deftest some-test)\n"
-                      "MyClass.\n"
-                      "Date.\n"
-                      "Date/parse")
-        db-state {:documents {"file://a.clj" {:text references-code}
-                              "file://b.clj" {:text b-code}
-                              "file://c.clj" {:text c-code}}
-                  :file-envs {"file://a.clj" (parser/find-usages references-code :clj {})
-                              "file://b.clj" (parser/find-usages b-code :clj {})
-                              "file://c.clj" (parser/find-usages c-code :clj {})}}]
-    (reset! db/db db-state)
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "(def foo)")
+                        "file://a.clj")
+  (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
+                             "(def bar 1)\n"
+                             "(defn baz []\n"
+                             "  bar)")
+                        "file://b.clj")
+  (h/load-code-and-locs (str "(ns another-ns)\n"
+                             "(def bar ons/bar)\n"
+                             "(def foo sns/foo)\n"
+                             "(deftest some-test)\n"
+                             "MyClass.\n"
+                             "Date.\n"
+                             "Date/parse")
+                        "file://c.clj")
     (testing "Add missing namespace"
       (testing "when it has not unresolved-namespace diagnostic"
         (is (not-any? #(string/starts-with? (:title %) "Add missing")
@@ -41,16 +38,6 @@
                                           2
                                           10
                                           [] {}))))
-
-      (testing "when it has unresolved-namespace but cannot find namespace"
-        (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                      (f.code-actions/all (zloc-at "file://c.clj" 2 11)
-                                          "file://c.clj"
-                                          2
-                                          11
-                                          [{:code "unresolved-namespace"
-                                            :range {:start {:line 1 :character 10}}}] {}))))
-
       (testing "when it has unresolved-namespace and can find namespace"
         (is (some #(= (:title %) "Add missing 'some-ns' require")
                   (f.code-actions/all (zloc-at "file://c.clj" 3 11)
@@ -59,6 +46,14 @@
                                       11
                                       [{:code "unresolved-namespace"
                                         :range {:start {:line 2 :character 10}}}] {}))))
+      (testing "when it has unresolved-namespace but cannot find namespace"
+        (is (not-any? #(string/starts-with? (:title %) "Add missing")
+                      (f.code-actions/all (zloc-at "file://c.clj" 2 11)
+                                          "file://c.clj"
+                                          2
+                                          11
+                                          [{:code "unresolved-namespace"
+                                            :range {:start {:line 1 :character 10}}}] {}))))
       (testing "when it has unresolved-symbol and it's a known refer"
         (is (some #(= (:title %) "Add missing 'clojure.test' require")
                   (f.code-actions/all (zloc-at "file://c.clj" 4 2)
@@ -163,10 +158,10 @@
                                           [] {}))))
 
       (testing "with workspace edit client capability"
-        (reset! db/db (assoc-in db-state [:client-capabilities :workspace :workspace-edit] true))
+        (swap! db/db assoc-in [:client-capabilities :workspace :workspace-edit] true)
         (is (some #(= (:title %) "Clean namespace")
                   (f.code-actions/all (zloc-at "file://b.clj" 2 2)
                                       "file://b.clj"
                                       2
                                       2
-                                      [] {:workspace {:workspace-edit true}})))))))
+                                      [] {:workspace {:workspace-edit true}}))))))

@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
-    [clojure.string :as string]))
+    [clojure-lsp.db :as db]
+    [clojure-lsp.shared :as shared]))
 
 (def token-types
   [:type
@@ -17,47 +18,30 @@
 
 (def token-modifier -1)
 
-(defn ^:private usage-inside-range?
-  [{usage-row :row usage-end-row :end-row}
-   {:keys [row end-row]}]
-  (and (>= usage-row row)
-       (<= usage-end-row end-row)))
+(defn ^:private element-inside-range?
+  [{element-row :name-row element-end-row :name-end-row}
+   {:keys [name-row name-end-row]}]
+  (and (>= element-row name-row)
+       (<= element-end-row name-end-row)))
 
-(defn ^:private usage->absolute-token
-  [{:keys [row col end-col]}
+(defn ^:private element->absolute-token
+  [{:keys [name-row name-col name-end-col]}
    token-type]
-  [(dec row)
-   (dec col)
-   (- end-col col)
+  [(dec name-row)
+   (dec name-col)
+   (- name-end-col name-col)
    (.indexOf token-types token-type)
    token-modifier])
 
-(defn ^:private alias-reference-usage->absolute-token
-  [{:keys [row col end-col str]}]
-  (let [slash-col (string/index-of str "/")
-        function-col (+ col (inc slash-col))
-        alias-end-col (+ col slash-col)]
-    [(usage->absolute-token {:row row :col col :end-col alias-end-col} :type)
-     (usage->absolute-token {:row row :col function-col :end-col end-col} :function)]))
-
-(defn ^:private usages->absolute-tokens
-  [usages]
-  (->> usages
-       (sort-by (juxt :row :col))
+(defn ^:private elements->absolute-tokens
+  [elements]
+  (->> elements
        (map
-         (fn [{:keys [tags] :as usage}]
+         (fn [{:keys [bucket macro] :as element}]
            (cond
-             (contains? tags :macro)
-             [(usage->absolute-token usage :macro)]
-
-             (contains? tags :declared)
-             [(usage->absolute-token usage :function)]
-
-             (contains? tags :refered)
-             [(usage->absolute-token usage :function)]
-
-             (contains? tags :alias-reference)
-             (alias-reference-usage->absolute-token usage))))
+            (and macro
+                  (= bucket :var-usages))
+             [(element->absolute-token element :macro)])))
        (remove nil?)
        (mapcat identity)))
 
@@ -84,17 +68,18 @@
        token-type
        token-modifier])))
 
-(defn full-tokens
-  [usages]
-  (let [absolute-tokens (usages->absolute-tokens usages)]
+(defn full-tokens [uri]
+  (let [elements (get-in @db/db [:analysis (shared/uri->filename uri)])
+        absolute-tokens (elements->absolute-tokens elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))
 
 (defn range-tokens
-  [usages range]
-  (let [range-usages (filter #(usage-inside-range? % range) usages)
-        absolute-tokens (usages->absolute-tokens range-usages)]
+  [uri range]
+  (let [elements (get-in @db/db [:analysis (shared/uri->filename uri)])
+        range-elements (filter #(element-inside-range? % range) elements)
+        absolute-tokens (elements->absolute-tokens range-elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))

@@ -284,11 +284,8 @@
   [ppid server]
   (async/go-loop []
     (async/<! (async/timeout 5000))
-    (log/debug "Checking parent process" ppid "liveness")
     (if (shared/process-alive? ppid)
-      (do
-        (log/debug "Parent process" ppid "is running")
-        (recur))
+      (recur)
       (do
         (log/info "Parent process" ppid "is not running - exiting server")
         (.exit server)))))
@@ -308,6 +305,7 @@
               (let [settings (:settings @db/db)]
                 (CompletableFuture/completedFuture
                   (InitializeResult. (doto (ServerCapabilities.)
+                                       (.setDocumentHighlightProvider true)
                                        (.setHoverProvider true)
                                        (.setCallHierarchyProvider true)
                                        (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
@@ -319,7 +317,6 @@
                                        (.setDocumentFormattingProvider (:document-formatting? settings))
                                        (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
                                        (.setDocumentSymbolProvider true)
-                                       (.setDocumentHighlightProvider true)
                                        (.setWorkspaceSymbolProvider true)
                                        (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
                                                                              (:semantic-tokens? settings))
@@ -360,6 +357,38 @@
     (getWorkspaceService []
       (LSPWorkspaceService.))))
 
+(defn tee-system-in [system-in]
+  (let [buffer-size 1024
+        os (java.io.PipedOutputStream.)
+        is (java.io.PipedInputStream. os)]
+    (async/thread
+      (try
+        (let [buffer (byte-array buffer-size)]
+          (loop [chs (.read system-in buffer 0 buffer-size)]
+            (when (pos? chs)
+              (log/warn "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (.write os buffer 0 chs)
+              (recur (.read system-in buffer 0 buffer-size)))))
+        (catch Exception e
+          (log/error e "in thread"))))
+    is))
+
+(defn tee-system-out [system-out]
+  (let [buffer-size 1024
+        is (java.io.PipedInputStream.)
+        os (java.io.PipedOutputStream. is)]
+    (async/thread
+      (try
+        (let [buffer (byte-array buffer-size)]
+          (loop [chs (.read is buffer 0 buffer-size)]
+            (when (pos? chs)
+              (log/warn "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (.write system-out buffer)
+              (recur (.read is buffer 0 buffer-size)))))
+        (catch Exception e
+          (log/error e "in thread"))))
+    os))
+
 (defn- dot-nrepl-port-file
   []
   (try
@@ -379,7 +408,9 @@
 
 (defn- run []
   (log/info "Starting server...")
-  (let [launcher (LSPLauncher/createServerLauncher server System/in System/out)
+  (let [is (or System/in (tee-system-in System/in))
+        os (or System/out (tee-system-out System/out))
+        launcher (LSPLauncher/createServerLauncher server is os)
         port (repl-port)]
     (log/info "====== LSP nrepl server started on port" port)
     (swap! db/db assoc

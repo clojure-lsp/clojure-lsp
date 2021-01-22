@@ -8,8 +8,9 @@
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
+    [clojure.walk :as walk]
     [rewrite-clj.zip :as z]
-    [clojure.walk :as walk]))
+    [rewrite-clj.node :as n]))
 
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
@@ -134,6 +135,12 @@
                          :detail "java.util"}))
          (sort-by :label))))
 
+(defn ^:private safe-parse-cursor [text row col]
+  (try
+    (parser/loc-at-pos text row (dec col))
+    (catch Exception e
+      (log/warn (.getMessage e) "It was not possible to find cursor location for completion"))))
+
 (defn completion [uri row col]
   (let [filename (shared/uri->filename uri)
         {:keys [text]} (get-in @db/db [:documents uri])
@@ -142,10 +149,7 @@
         other-ns-elements (->> (dissoc analysis filename)
                                (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))
                                (mapcat val))
-        cursor-loc (try
-                     (parser/loc-at-pos text row (dec col))
-                     (catch Exception e
-                       (log/error (.getMessage e) "It was not possible to find cursor location for completion")))
+        cursor-loc     (safe-parse-cursor text row col)
         cursor-element (loop [try-column col]
                          (if-let [usage (q/find-element-under-cursor analysis filename row col)]
                            usage

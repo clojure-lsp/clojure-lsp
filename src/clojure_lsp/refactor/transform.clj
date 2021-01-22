@@ -357,7 +357,7 @@
       (z/list? node)))
 
 (defn ^:private remove-unused-package-import
-  [node base-package col unused-imports]
+  [node base-package unused-imports]
   (cond
     (string/includes? (z/string node) ".")
     node
@@ -370,12 +370,12 @@
     node))
 
 (defn ^:private remove-unused-import
-  [parent-node col unused-imports]
+  [parent-node unused-imports]
   (cond
     (package-import? parent-node)
     (let [base-package (-> parent-node z/down z/leftmost z/string)
           removed (edit/map-children parent-node
-                                     #(remove-unused-package-import % base-package col unused-imports))]
+                                     #(remove-unused-package-import % base-package unused-imports))]
       (if (= 1 (count (z/child-sexprs removed)))
         (z/remove removed)
         removed))
@@ -396,7 +396,7 @@
                 4)
           removed-nodes (-> import-loc
                              z/remove
-                             (edit/map-children #(remove-unused-import % col unused-imports)))]
+                             (edit/map-children #(remove-unused-import % unused-imports)))]
       (process-clean-ns ns-loc removed-nodes col keep-at-start? :import))
     ns-loc))
 

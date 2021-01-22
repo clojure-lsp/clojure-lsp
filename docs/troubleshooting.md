@@ -37,23 +37,11 @@ Usually there's an option to search for a project file, so for a lein project yo
 
 There are a couple reasons why go to definition could fail. First, start tailing `/tmp/clojure-lsp.out`.
 
-If there's a parse error in either the definition or usage files then lsp can't add anything from those files into the index, there will be a `Cannot parse: <file>` log for that situation. Please raise an issue if you run have a file that cannot be parsed.
-
-Otherwise, the logs will generally explain why go to definition failed.
-
-If the logs explain the symbol under the cursor is not found (and you disagree), there could be a bug or your client is not properly synchronizing the file's contents. Please raise an issue if this happens.
+The logs will generally explain why go to definition failed.
 
 ### The definition is still not found
 
-If the logs explain that a definition could not be found, there could be reasons:
-
-You can check the definition by going to the definition and invoking lsp's `Hover` action, the definition should have a tag of `:declare` and if it's in another file from the usage it also needs a `:public` tag.
-
-If the definition is declared with an unknown macro then you could use `macro-defs` to let lsp learn about it.
-
-You can make sure that the definition and the usage's fully qualified symbols (using `Hover`) are the same.
-
-If none of that helps raise an issue or ask in clojurians slack.
+Raise an issue or ask in clojurians slack.
 
 ---
 ## Windows

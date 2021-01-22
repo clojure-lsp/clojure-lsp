@@ -16,7 +16,7 @@
 (defmulti refactor (comp :refactoring))
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
-  (apply r.transform/add-import-to-namespace loc (vec args)))
+  (apply r.transform/add-import-to-namespace loc [args]))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc]}]
   (r.transform/add-missing-libspec loc))
@@ -40,10 +40,10 @@
   (r.transform/inline-symbol uri row col))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
-  (apply r.transform/introduce-let loc (vec args)))
+  (apply r.transform/introduce-let loc [args]))
 
 (defmethod refactor :move-to-let [{:keys [loc args]}]
-  (apply r.transform/move-to-let loc (vec args)))
+  (apply r.transform/move-to-let loc [args]))
 
 (defmethod refactor :thread-first [{:keys [loc]}]
   (r.transform/thread-first loc))

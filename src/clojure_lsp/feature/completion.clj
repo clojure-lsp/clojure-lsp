@@ -9,8 +9,7 @@
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [clojure.walk :as walk]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.node :as n]))
+    [rewrite-clj.zip :as z]))
 
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))

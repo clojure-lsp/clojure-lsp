@@ -210,14 +210,14 @@
         (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range akwbar-start akwbar-stop)}]
                 "file:///b.clj" [{:new-text "foo" :range (h/->range bkwbar-start bkwbar-stop)}]}
                changes))))
-    ;; TODO kondo alias change on rename
-    #_(testing "on alias changes namespaces inside file"
+    (testing "on alias changes namespaces inside file"
       (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"
                                                 :position (h/->position balias-start)
                                                 :newName "xx"}))]
         (is (= {"file:///b.clj" [{:new-text "xx" :range (h/->range balias-start balias-stop)}
-                                 {:new-text "xx" :range (h/->range ba1-start ba1-stop)}
-                                 {:new-text "xx" :range (h/->range ba2-start ba2-stop)}]}
+                                 {:new-text "xx/bar" :range (h/->range ba1-start bbar-stop)}
+                                 ;; TODO kondo (keyword analysis)
+                                 #_{:new-text "xx" :range (h/->range ba2-start ba2-stop)}]}
                changes))))
     (testing "on a namespace"
       (reset! db/db {:project-root "file:///my-project"

@@ -114,17 +114,18 @@
 (defn did-close [{:keys [textDocument]}]
   (swap! db/db #(update % :documents dissoc textDocument)))
 
-;; TODO use after kondo supports alias analysis
-#_(defn ^:private rename-alias [doc-id local-env cursor-usage cursor-name replacement]
-  (for [{u-str :str :as usage} local-env
-        :let [version (get-in @db/db [:documents doc-id :v] 0)
-              [u-prefix u-ns u-name] (parser/ident-split u-str)
-              alias? (= usage cursor-usage)]
-        :when (and (#{"::" ""} u-prefix)
-                   (or (= u-ns cursor-name) alias?))]
-    {:range (shared/->range usage)
-     :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
-     :text-document {:version version :uri doc-id}}))
+(defn ^:private rename-alias [references replacement]
+  (mapv
+    (fn [element]
+      (let [alias? (= :namespace-alias (:bucket element))
+            ref-doc-id (shared/filename->uri (:filename element))
+            [u-prefix _ u-name] (when-not alias?
+                                  (parser/ident-split (:name element)))
+            version (get-in @db/db [:documents ref-doc-id :v] 0)]
+        {:range (shared/->range element)
+         :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
+         :text-document {:version version :uri ref-doc-id}}))
+    references))
 
 ;; TODO use after kondo supports keyword analysis
 #_(defn ^:private rename-name [file-envs cursor-sym replacement]
@@ -141,21 +142,23 @@
   (let [[row col] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)
         references (q/find-references-from-cursor (:analysis @db/db) filename row col true)
-        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions} :bucket) references))
+        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias} :bucket) references))
         source-paths (get-in @db/db [:settings :source-paths])
         can-rename? (or (not (seq source-paths))
                         (some #(string/starts-with? (:filename definition) %) source-paths))]
     (when (and (seq references) can-rename?)
       (let [replacement (string/replace newName #".*/([^/]*)$" "$1")
-            changes (mapv
-                      (fn [r]
-                        (let [name-start (- (:name-end-col r) (count (name (:name r))))
-                              ref-doc-id (shared/filename->uri (:filename r))
-                              version (get-in @db/db [:documents ref-doc-id :v] 0)]
-                          {:range (shared/->range (assoc r :name-col name-start))
-                           :new-text replacement
-                           :text-document {:version version :uri ref-doc-id}}))
-                      references)
+            changes (if (= :namespace-alias (:bucket definition))
+                      (rename-alias references replacement)
+                      (mapv
+                        (fn [r]
+                          (let [name-start (- (:name-end-col r) (count (name (:name r))))
+                                ref-doc-id (shared/filename->uri (:filename r))
+                                version (get-in @db/db [:documents ref-doc-id :v] 0)]
+                            {:range (shared/->range (assoc r :name-col name-start))
+                             :new-text replacement
+                             :text-document {:version version :uri ref-doc-id}}))
+                        references))
             doc-changes (->> changes
                              (group-by :text-document)
                              (remove (comp empty? val))
@@ -169,9 +172,9 @@
                                       (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
                                       (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
             (f.refactor/client-changes (concat doc-changes
-                                         [{:kind "rename"
-                                           :old-uri textDocument
-                                           :new-uri new-uri}])))
+                                               [{:kind "rename"
+                                                 :old-uri textDocument
+                                                 :new-uri new-uri}])))
           (f.refactor/client-changes doc-changes))))))
 
 (defn definition [{:keys [textDocument position]}]

@@ -93,13 +93,13 @@
             (mapcat val analysis))))
 
 (defmethod find-references :namespace-alias
-  [analysis {:keys [alias filename] :as _element} include-declaration?]
-  ;; TODO kondo alias
-  []
-  #_
-  (filter #(and (= (:alias %) alias)
-                (or include-declaration? (not= :namespace-alias (:bucket %))))
-          (get analysis filename)))
+  [analysis {:keys [alias filename] :as element} include-declaration?]
+  (concat
+    (when include-declaration?
+      [element])
+    (filter #(and (= :var-usages (:bucket %))
+                  (= (:alias %) alias))
+            (get analysis filename))))
 
 
 (defmethod find-references :var-usages

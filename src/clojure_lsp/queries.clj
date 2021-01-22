@@ -22,14 +22,6 @@
     nil
     coll))
 
-(defn ^:private elements-difference
-  "Return the difference between a-els and b-els
-   applying the predicate-fn to compare."
-  [predicate-fn e1s e2s]
-  (filter (fn [e1]
-            (not (some #(= (predicate-fn e1) (predicate-fn %)) e2s)))
-          e1s))
-
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
   (let [local-analysis (get analysis filename)]

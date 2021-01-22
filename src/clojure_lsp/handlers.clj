@@ -338,6 +338,7 @@
   [{:keys [textDocument]}]
   (let [analysis (get @db/db :analysis)]
     (->> (q/find-vars analysis (shared/uri->filename textDocument) true)
+         (filter #(not= 'clojure.test/deftest (:defined-by %)))
          (map (fn [var]
                 {:range (shared/->range var)
                  :data  [textDocument (:name-row var) (:name-col var)]})))))

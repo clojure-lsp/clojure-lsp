@@ -549,15 +549,9 @@ If the definition lives under a different source dir, you can defiine <code>src-
 Usually there's an option to search for a project file, so for a lein project you would have your client search for <code>project.clj</code>.</p>
 <h3 id="check-the-logs">Check the logs<a class="headerlink" href="#check-the-logs" title="Permanent link">#</a></h3>
 <p>There are a couple reasons why go to definition could fail. First, start tailing <code>/tmp/clojure-lsp.out</code>.</p>
-<p>If there's a parse error in either the definition or usage files then lsp can't add anything from those files into the index, there will be a <code>Cannot parse: &lt;file&gt;</code> log for that situation. Please raise an issue if you run have a file that cannot be parsed.</p>
-<p>Otherwise, the logs will generally explain why go to definition failed.</p>
-<p>If the logs explain the symbol under the cursor is not found (and you disagree), there could be a bug or your client is not properly synchronizing the file's contents. Please raise an issue if this happens.</p>
+<p>The logs will generally explain why go to definition failed.</p>
 <h3 id="the-definition-is-still-not-found">The definition is still not found<a class="headerlink" href="#the-definition-is-still-not-found" title="Permanent link">#</a></h3>
-<p>If the logs explain that a definition could not be found, there could be reasons:</p>
-<p>You can check the definition by going to the definition and invoking lsp's <code>Hover</code> action, the definition should have a tag of <code>:declare</code> and if it's in another file from the usage it also needs a <code>:public</code> tag.</p>
-<p>If the definition is declared with an unknown macro then you could use <code>macro-defs</code> to let lsp learn about it.</p>
-<p>You can make sure that the definition and the usage's fully qualified symbols (using <code>Hover</code>) are the same.</p>
-<p>If none of that helps raise an issue or ask in clojurians slack.</p>
+<p>Raise an issue or ask in clojurians slack.</p>
 <hr />
 <h2 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">#</a></h2>
 <p>See https://github.com/snoe/clojure-lsp/issues/28 and https://github.com/snoe/clojure-lsp/issues/25</p>
@@ -569,7 +563,7 @@ Usually there's an option to search for a project file, so for a lein project yo
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 20, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 22, 2021</span>
     
   </small>
 </div>

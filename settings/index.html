@@ -332,26 +332,12 @@
     Supported settings
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#macro-defs" class="md-nav__link">
-    macro-defs
-  </a>
-  
-    <nav class="md-nav" aria-label="macro-defs">
+    <nav class="md-nav" aria-label="Supported settings">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#element-definitions" class="md-nav__link">
-    Element definitions
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#element-types" class="md-nav__link">
-    Element types
+  <a href="#lint" class="md-nav__link">
+    Lint
   </a>
   
 </li>
@@ -470,26 +456,12 @@
     Supported settings
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#macro-defs" class="md-nav__link">
-    macro-defs
-  </a>
-  
-    <nav class="md-nav" aria-label="macro-defs">
+    <nav class="md-nav" aria-label="Supported settings">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#element-definitions" class="md-nav__link">
-    Element definitions
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#element-types" class="md-nav__link">
-    Element types
+  <a href="#lint" class="md-nav__link">
+    Lint
   </a>
   
 </li>
@@ -543,7 +515,7 @@
 <p><code>source-paths</code> value is a set of project-local directories to look for clj/cljc/cljs files. Default is <code>#{"src", "test"}</code>.</p>
 <p><code>ignore-classpath-directories</code> if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into <code>resources</code> or <code>target</code> that you want lsp to ignore.</p>
 <p><code>use-metadata-for-privacy?</code> if true, will use <code>^:private</code> metadata for refactorings instead of <code>defn-</code></p>
-<p><code>keep-require-at-start?</code> if true, will keep first require at the first line instead of inserting a new line before it.</p>
+<p><code>keep-require-at-start?</code> if true, will keep first require/import at the first line instead of inserting a new line before it when using <code>clean-ns</code> refactoring.</p>
 <p><code>semantic-tokens?</code> if true or not present, will enable LSP semantic tokens server support for syntax highlighting. </p>
 <p><code>show-docs-arity-on-same-line?</code> if true, will keep the arity on the same line of the function on hover, useful for Emacs users.</p>
 <p><code>auto-add-ns-to-new-files?</code> if true or not present, will automatically add the <code>ns</code> form in new files. </p>
@@ -558,13 +530,6 @@
      <span class="s">&quot;and&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]]</span>
      <span class="s">&quot;or&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]]</span>
      <span class="s">&quot;are&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]]}}</span>
-</code></pre></div>
-<p><code>clj-kondo</code> (Experimental) -  <code>clojure-lsp</code> uses <a href="https://github.com/borkdude/clj-kondo">clj-kondo</a> to lint code, so you can use here any <code>clj-kondo</code> configuration or just have your config file by project at <code>.clj-kondo/config.edn</code>, for more information about <code>clj-kondo</code> available configurations, check <a href="https://github.com/borkdude/clj-kondo/blob/master/doc/config.md">here</a>.</p>
-<div class="highlight"><pre><span></span><code><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:missing-docstring</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:warning</span><span class="p">}}}</span>
-</code></pre></div>
-<p>~<code>linters</code>~ (Deprecated in favor of <code>clj-kondo</code>) - some initial support for disabling diagnostics currently only this one that will suppress the unused alias warning and stop the require from being cleaned by <code>clean-ns</code>:</p>
-<div class="highlight"><pre><span></span><code> <span class="ss">:linters</span> <span class="p">{</span><span class="ss">:unused-namespace</span> <span class="p">{</span><span class="ss">:exclude</span> <span class="p">[</span><span class="nv">clojure.data</span><span class="p">]}</span>
-           <span class="ss">:unused-namespace-declarations</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;test/&quot;</span> <span class="s">&quot;foo/bar&quot;</span><span class="p">}}</span>
 </code></pre></div>
 <p><code>project-specs</code> - value is a vector containing a map of key/value pairs, for example:
 <div class="highlight"><pre><span></span><code><span class="s">&quot;initializationOptions&quot;</span><span class="err">:</span> <span class="p">{</span>
@@ -581,105 +546,10 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
   - <code>:project-path</code> is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
   - <code>:classpath-cmd</code> is the required vector of commands to get your project's classpath string (e.g. <code>["clj", "-Spath"]</code>)
   - <code>:env</code> optionally add environment variables to the classpath-cmd (e.g. <code>{"BOOT_FILE" "x.boot"}</code>)</p>
-<hr />
-<h2 id="macro-defs">macro-defs<a class="headerlink" href="#macro-defs" title="Permanent link">#</a></h2>
-<p><code>macro-defs</code> value is a map of fully-qualified macro names to a vector of definitions of those macros' forms.</p>
-<h3 id="element-definitions">Element definitions<a class="headerlink" href="#element-definitions" title="Permanent link">#</a></h3>
-<p>An element represents one or more forms within a macro-def vector. They can be defined in two ways:</p>
-<ul>
-<li>
-<p>A simple keyword, e.g. <code>:declaration</code></p>
-</li>
-<li>
-<p>A map that includes the element type and options,
-  e.g. <code>{:element :declaration, :tags ["unused" "local"], :signature ["next"]}</code></p>
-</li>
-</ul>
-<h3 id="element-types">Element types<a class="headerlink" href="#element-types" title="Permanent link">#</a></h3>
-<p>Valid element definitions are:</p>
-<ul>
-<li>
-<p><code>:declaration</code> This marks a symbol or keyword as a definition/declaration of
-    a var in the current namespace.</p>
-<ul>
-<li>In the simplest case, this element can be specified as the keyword
-  <code>:declaration</code>.</li>
-<li>You can customize the behavior of the declaration by making it a map.</li>
-<li>e.g. <code>{:element :declaration, :tags ["unused" "local"], :signature ["next"]}</code></li>
-<li><code>tags</code> are optional.<ul>
-<li>The <code>unused</code> tag supresses the "unused declaration" diagnostic, useful
-  for <code>deftest</code> vars.</li>
-<li>The <code>local</code> tag marks the var as private.</li>
-</ul>
-</li>
-<li><code>signature</code> is optional. If the macro has <code>defn</code>-like bindings, this
-    vector of movements should point to the parameter vector or the first
-    var arg list form. Only <code>next</code> is supported right now.</li>
-<li>e.g. <code>(my-defn- my-name "docstring" [&amp; params] (count params))</code> =&gt;
-  <code>{my.ns/my-defn- [{"element": "declaration", "tags", ["local"],
-  "signature": ["next" "next"]}]}</code></li>
-</ul>
-</li>
-<li>
-<p><code>:bindings</code> This marks <code>let</code> and <code>for</code>-like bindings. <code>bound-elements</code> will have these bindings in their scope.</p>
-</li>
-<li>
-<p>e.g. <code>(my-with-open [resource ()] ....)</code> =&gt; <code>{my.ns/my-with-open [:bindings :bound-elements]}</code></p>
-</li>
-<li>
-<p><code>:function-params-and-bodies</code> This will parse function like forms that support optional var-args like <code>fn</code>.</p>
-<ul>
-<li>e.g. <code>(myfn ([a] ...) ([b] ...)) (myfn [c] ...)</code> =&gt; <code>{my.ns/myfn [:function-params-and-bodies]}</code></li>
-</ul>
-</li>
-<li>
-<p><code>:params</code> This marks a <code>defn</code> like parameter vector. <code>bound-elements</code> will have these parameters in their scope.</p>
-<ul>
-<li>e.g. <code>(myfn [c] ...)</code> =&gt; <code>{my.ns/myfn [:params :bound-elements]}</code></li>
-</ul>
-</li>
-<li>
-<p><code>:param</code> This marks a single <code>defn</code> like parameter. <code>bound-elements</code> will have these parameters in their scope.</p>
-</li>
-<li>
-<p><code>:elements</code> This will parse the rest of the elements in the macro form with the usual rules.</p>
-<ul>
-<li>e.g. <code>(myif-let [answer (expr)] answer (log "no answer") "no answer")</code> =&gt;
-  <code>{my.ns/myif-let [:bindings :bound-element :elements]}</code></li>
-</ul>
-</li>
-<li>
-<p><code>:element</code> This will parse a single element in the macro form with the usual
-    rules.</p>
-<ul>
-<li>In the simplest case, <code>:element</code> can be specified as the keyword
-  <code>:element</code>. This will always parse a single element.</li>
-<li>You can make the <code>:element</code> optional by making it a map that includes
-  a predicate <code>pred</code> which will determine whether the current form is parsed
-  as an <code>:element</code>, or if the <code>:element</code> should be skipped and the current
-  form parsed as the next defined element.</li>
-<li>For example, you can define an optional docstring element as <code>{:element
-  :element, :pred :string}</code>, or an optional metadata map as <code>{:element
-  :element, :pred :map}</code>.</li>
-<li><code>:element</code> can also describe repeated elements. For example,
-  <code>{:element :element, :pred :string, :repeat true}</code> will parse 1 or more
-  strings.</li>
-<li><code>:element</code> can also describe multiple elements of different types. This is
-  useful, for example, if you have a macro like
-  <a href="https://github.com/adzerk-oss/env#get"><code>adzerk.env/def</code></a> whose arguments
-  are pairs of declarations and values:</li>
-<li><code>(adzerk.env/def FOO :required, BAR nil, BAZ "string")</code> =&gt;
-    <code>{adzerk.env/def [{:element [:declaration :element], :repeat true}]}</code></li>
-</ul>
-</li>
-<li>
-<p><code>:bound-elements</code> This will parse the rest of the elements in the macro form with the usual rules but with any <code>bindings</code> or <code>params</code> in scope.</p>
-</li>
-<li>
-<p><code>:bound-element</code> This will parse a single element in the macro form with the usual rules but with any <code>bindings</code> or <code>params</code> in scope.</p>
-</li>
-</ul>
-<p>See https://github.com/snoe/clojure-lsp/blob/master/test/clojure_lsp/parser_test.clj for examples.</p>
+<h3 id="lint">Lint<a class="headerlink" href="#lint" title="Permanent link">#</a></h3>
+<p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to lint the code and retrieve the analysis to
+make most of features work, make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file, for more information about available configurations, 
+check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
 <hr />
 <h2 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> will also look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your root folder up the directory structure so you can have multiple projects share the same settings.</p>
@@ -689,7 +559,7 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
 </code></pre></div>
 <hr />
 <h2 id="global">Global<a class="headerlink" href="#global" title="Permanent link">#</a></h2>
-<p>For global settings, you just need to add the same configs to <code>~/.lsp/config.edn</code>.</p>
+<p>For global settings which should work for all the projects using <code>clojure-lsp</code>, you just need to add the same configs to <code>~/.lsp/config.edn</code>.</p>
 <p>For an example of <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn">here</a>.</p>
 <hr />
 <h2 id="initializationoptions">InitializationOptions<a class="headerlink" href="#initializationoptions" title="Permanent link">#</a></h2>
@@ -703,7 +573,7 @@ Each project-spec will add to the list of dependencies for lsp to crawl:
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 20, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 22, 2021</span>
     
   </small>
 </div>

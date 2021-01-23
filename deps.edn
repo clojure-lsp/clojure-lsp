@@ -22,4 +22,4 @@
         clj-kondo/clj-kondo {:mvn/version "2021.01.21-20210122.104321-2"}}
  :paths ["resources" "src"]
  :aliases {:run {:main-opts ["-m" "clojure-lsp.main"]
-                 :jvm-opts ["-Xmx2g" "-server"]}}}
+                 :jvm-opts ["-Xmx1500m" "-server"]}}}

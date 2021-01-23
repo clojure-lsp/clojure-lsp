@@ -14,7 +14,7 @@
 
 (defproject clojure-lsp :project/git-tag
   :dependencies ~dependencies
-  :jvm-opts ^:replace ["-Xmx2g" "-server"]
+  :jvm-opts ^:replace ["-Xmx1500m" "-server"]
   :main clojure-lsp.main
   :java-source-paths ["src-java"]
   :resource-paths ["resources"]

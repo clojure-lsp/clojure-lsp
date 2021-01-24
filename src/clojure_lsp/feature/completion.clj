@@ -7,7 +7,7 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
+    [taoensso.timbre :as log]
     [clojure.walk :as walk]
     [rewrite-clj.zip :as z]))
 

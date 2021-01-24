@@ -10,7 +10,7 @@
    [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
-   [clojure.tools.logging :as log]
+   [taoensso.timbre :as log]
    [digest :as digest])
   (:import
    [java.nio.file Paths]))

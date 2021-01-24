@@ -1,7 +1,7 @@
 (ns clojure-lsp.db
   (:require
    [clojure.edn :as edn]
-   [clojure.tools.logging :as log]
+   [taoensso.timbre :as log]
    [clojure.java.io :as io]
    [next.jdbc :as jdbc]
    [next.jdbc.result-set :as rs]

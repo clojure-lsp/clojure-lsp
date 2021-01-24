@@ -3,7 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure.java.shell :as shell]
     [clojure.string :as string]
-    [clojure.tools.logging :as log])
+    [taoensso.timbre :as log])
   (:import
    [java.net URI]
    [java.nio.file Paths]))

@@ -8,7 +8,7 @@
     [clojure-lsp.shared :as shared]
     [clojure.set :as set]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
+    [taoensso.timbre :as log]
     [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]

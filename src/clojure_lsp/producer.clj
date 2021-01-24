@@ -2,7 +2,7 @@
   (:require
     [clojure-lsp.db :as db]
     [clojure-lsp.interop :as interop]
-    [clojure.tools.logging :as log])
+    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams)))

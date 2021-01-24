@@ -3,7 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.refactor.edit :as edit]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
+    [taoensso.timbre :as log]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]))
 

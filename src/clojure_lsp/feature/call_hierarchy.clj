@@ -6,7 +6,7 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
-   [clojure.tools.logging :as log]
+   [taoensso.timbre :as log]
    [clojure-lsp.queries :as q]))
 
 (defn ^:private element-by-uri->call-hierarchy-item

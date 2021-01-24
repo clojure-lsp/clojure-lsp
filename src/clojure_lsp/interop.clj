@@ -4,7 +4,7 @@
     [clojure.java.data :as j]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
+    [taoensso.timbre :as log]
     [clojure.walk :as walk]
     [medley.core :as medley])
   (:import

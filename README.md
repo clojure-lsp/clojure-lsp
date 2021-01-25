@@ -47,7 +47,7 @@ You will get:
 - You need `java` on your $PATH.
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
 - Place it in your $PATH with a chmod 755
-- Follow the documentation for your editor's language client. See [Clients](#clients) below.
+- Follow the documentation for your editor's language client. See [Clients](//clojure-lsp.github.io/clojure-lsp/clients).
 
 ### Nix
 

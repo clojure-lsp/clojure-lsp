@@ -15,8 +15,8 @@ nav:
 
 theme:
   name: material
-  logo: images/logo.png
-  favicon: images/logo.png
+  logo: images/logo-light.svg
+  favicon: images/logo-light.svg
   icon:
     repo: fontawesome/brands/github
   features:
@@ -26,6 +26,8 @@ extra:
   social:
     - icon: fontawesome/brands/github-alt
       link: https://github.com/clojure-lsp/clojure-lsp
+    - icon: fontawesome/brands/slack
+      link: https://clojurians.slack.com/archives/CPABC1H61
 
 extra_css:
   - stylesheets/layout.css

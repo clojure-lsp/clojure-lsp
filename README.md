@@ -1,4 +1,4 @@
-<img src="images/logo.png" width="180" align="right">
+<img src="images/logo-dark.svg" width="180" align="right">
 
 ![CI](https://img.shields.io/github/workflow/status/clojure-lsp/clojure-lsp/CI?style=flat-square)
 [![Slack community](https://img.shields.io/badge/Slack-chat-blue?style=flat-square)](https://clojurians.slack.com/archives/CPABC1H61)
@@ -84,3 +84,5 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 You can help us keep going and improving it by **[supporting the project](https://opencollective.com/clojure-lsp)**
 
 [![](https://opencollective.com/clojure-lsp/tiers/backer.svg)](https://opencollective.com/clojure-lsp)
+
+Special thanks to [Eccentric-J](https://eccentric-j.com/) for the `clojure-lsp` logo

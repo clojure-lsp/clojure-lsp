@@ -1,5 +1,12 @@
 # Changelog
 
+## 2021.01.25-22.56.05
+
+- Do not remove document on `textDocument/didClose`, related to #264.
+- Fix default project-specs for shadow-cljs to use npx prefix.
+- Fix range of `textDocument/hover` for definition usages.
+- Fix `completionItem/resolve` broken after #261.
+
 ## 2021.01.25-17.22.05
 
 - Remove references code-lens from `deftest` forms

@@ -17,7 +17,6 @@
     (java.lang.management ManagementFactory)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
-    (org.apache.log4j MDC)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCallsParams
       CallHierarchyPrepareParams
@@ -402,11 +401,11 @@
           (log/error e "in thread"))))
     os))
 
-(defn- dot-nrepl-port-file
-  []
-  (try
-    (slurp  ".nrepl-port")
-    (catch Exception _)))
+;; (defn- dot-nrepl-port-file
+;;   []
+;;   (try
+;;     (slurp  ".nrepl-port")
+;;     (catch Exception _)))
 
 ;; (defn- embedded-nrepl-server
 ;;   []

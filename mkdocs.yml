@@ -12,7 +12,7 @@ nav:
   - Capabilities: capabilities.md
   - Troubleshooting: troubleshooting.md
   - Support Us: https://opencollective.com/clojure-lsp
-  - Changelog CHANGELOG.md
+  - Changelog: CHANGELOG.md
 
 theme:
   name: material

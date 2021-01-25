@@ -57,13 +57,43 @@
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 
+(defn ^:private safe-zloc-of-string [text]
+  (try
+    (z/of-string text)
+    (catch clojure.lang.ExceptionInfo e
+      (if-let [[_ token] (->> e
+                              Throwable->map
+                              :cause
+                              (re-matches #"Invalid symbol: (.*\/)."))]
+        (-> (string/replace-first text token (str token "_"))
+            z/of-string
+            (z/edit->
+              (z/find-next-value z/next (symbol (str token "_")))
+              (z/replace (n/token-node (symbol token)))))
+        (throw e)))))
+
 (defn loc-at-pos [code row col]
   (-> code
-      (z/of-string)
+      safe-zloc-of-string
       (find-last-by-pos {:row row :col col :end-row row :end-col col})))
 
-(defn cursor-zloc [uri line character]
+(defn safe-loc-at-pos [text row col]
+  (try
+    (loc-at-pos text row (dec col))
+    (catch Exception _e
+      (log/warn "It was not possible to parse cursor location, probably a not valid clojure text"))))
+
+(defn cursor-loc [uri line character]
   (-> @db/db
       (get-in [:documents uri])
       :text
       (loc-at-pos (inc line) (inc character))))
+
+(defn safe-cursor-loc [uri line character]
+  (try
+    (-> @db/db
+        (get-in [:documents uri])
+        :text
+        (loc-at-pos (inc line) (inc character)))
+    (catch Exception _
+      (log/warn "It was not possible to get cursor location at given position. Probably a not valid clojure code"))))

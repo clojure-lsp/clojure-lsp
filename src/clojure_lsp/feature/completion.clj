@@ -29,7 +29,8 @@
 (defn element->completion-item-kind [{:keys [bucket fixed-arities]}]
   (cond
     (#{:namespace-definitions
-       :namespace-usages} bucket)
+       :namespace-usages
+       :namespace-alias} bucket)
     :module
 
     (and (#{:var-definitions} bucket)
@@ -63,10 +64,10 @@
   [matches-fn
    cursor-uri
    {cursor-from :from cursor-bucket :bucket :as _cursor-element}
-   {:keys [bucket to ns filename lang name] :as _element}]
+   {:keys [bucket to ns filename lang name alias] :as _element}]
   (let [supported-file-types #{:cljc (shared/uri->file-type cursor-uri)}]
     (cond
-      (#{:var-usages :local-usages} bucket)
+      (#{:var-usages :local-usages :namespace-usages} bucket)
       false
 
       (and (= bucket :locals)
@@ -85,7 +86,8 @@
            (not (supported-file-types lang)))
       false
 
-      (matches-fn name)
+      (or (and name (matches-fn name))
+          (and alias (matches-fn alias)))
       true)))
 
 (defn with-element-items [elements matches-fn cursor-uri cursor-element]
@@ -95,11 +97,11 @@
        (sort-by :label)))
 
 (defn with-elements-from-alias [alias matches-fn ns-elements other-elements]
+  (log/info "------->" ns-elements)
   (when-let [alias-ns (some->> ns-elements
                                (q/find-first #(and (= (:bucket %) :namespace-usages)
                                                    (= (-> % :alias str) alias)))
                                :name)]
-
     (->> other-elements
          (filter #(and (= (:bucket %) :var-definitions)
                        (= (:ns %) alias-ns)
@@ -134,12 +136,6 @@
                          :detail "java.util"}))
          (sort-by :label))))
 
-(defn ^:private safe-parse-cursor [text row col]
-  (try
-    (parser/loc-at-pos text row (dec col))
-    (catch Exception e
-      (log/warn (.getMessage e) "It was not possible to find cursor location for completion"))))
-
 (defn completion [uri row col]
   (let [filename (shared/uri->filename uri)
         {:keys [text]} (get-in @db/db [:documents uri])
@@ -148,7 +144,10 @@
         other-ns-elements (->> (dissoc analysis filename)
                                (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))
                                (mapcat val))
-        cursor-loc     (safe-parse-cursor text row col)
+        external-ns-elements (->> (dissoc analysis filename)
+                                  (remove-keys #(string/starts-with? (-> % name shared/filename->uri) "file://"))
+                                  (mapcat val))
+        cursor-loc     (parser/safe-loc-at-pos text row col)
         cursor-element (loop [try-column col]
                          (if-let [usage (q/find-element-under-cursor analysis filename row col)]
                            usage
@@ -162,7 +161,8 @@
     (cond-> []
 
       cursor-alias
-      (concat (with-elements-from-alias cursor-alias matches-fn current-ns-elements other-ns-elements))
+      (concat (with-elements-from-alias cursor-alias matches-fn current-ns-elements (concat other-ns-elements
+                                                                                            external-ns-elements)))
 
       (not cursor-alias)
       (concat (with-element-items current-ns-elements matches-fn uri cursor-element)

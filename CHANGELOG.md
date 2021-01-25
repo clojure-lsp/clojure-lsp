@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Remove references code-lens from `deftest` forms
+- Fix completion for alias ns from external deps - Fixes #269
 
 ## 2021.01.22-13.04.28
 

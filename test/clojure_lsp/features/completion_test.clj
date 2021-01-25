@@ -35,7 +35,7 @@
     (h/assert-submaps
       [{:label "alpha" :kind :variable}
        {:label "alpaca" :kind :module}
-       {:label "alpaca.ns" :kind :module}
+       {:label "alpaca" :kind :module}
        {:label "alpaca.ns" :kind :module}
        {:label "alpaca.ns" :kind :module}]
       (f.completion/completion "file:///b.clj" 3 3)))
@@ -47,7 +47,7 @@
     (h/assert-submaps
       [{:label "alpha" :kind :variable}
        {:label "alpaca" :kind :module}
-       {:label "alpaca.ns" :kind :module}
+       {:label "alpaca" :kind :module}
        {:label "alpaca.ns" :kind :module}
        {:label "alpaca.ns" :kind :module}]
       (f.completion/completion "file:///b.clj" 3 3)))

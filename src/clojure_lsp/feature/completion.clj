@@ -176,9 +176,11 @@
            (supports-clj-core? uri))
       (concat (with-java-items matches-fn)))))
 
-(defn resolve-item [{:keys [data] :as item}]
-  (if data
-    (-> item
-        (assoc :documentation (f.hover/hover-documentation data))
-        (dissoc :data :kind))
-    item))
+(defn resolve-item [{:keys [kind data] :as item}]
+  (->
+    (if data
+      (-> item
+          (assoc :documentation (f.hover/hover-documentation data))
+          (dissoc :data))
+      item)
+    (assoc :kind (some-> kind .toLowerCase keyword))))

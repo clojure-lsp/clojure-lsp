@@ -69,8 +69,8 @@
 
 (deftest resolve-item-test
   (testing "When element does not contains data"
-    (is (= {:label "Some"}
-           (f.completion/resolve-item {:label "Some"}))))
+    (is (= {:label "Some" :kind :module}
+           (f.completion/resolve-item {:label "Some" :kind "Module"}))))
   (testing "When element contains data"
-    (is (= {:label "Some" :documentation ["some\n"]}
-           (f.completion/resolve-item {:label "Some" :data {:name 'some}})))))
+    (is (= {:label "Some" :documentation ["some\n"] :kind :variable}
+           (f.completion/resolve-item {:label "Some" :kind "Variable" :data {:name 'some}})))))

@@ -48,7 +48,6 @@ You will get:
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
 - Place it in your $PATH with a chmod 755
 - Follow the documentation for your editor's language client. See [Clients](//clojure-lsp.github.io/clojure-lsp/clients).
--
 ### Nix
 
 `clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):

@@ -47,16 +47,36 @@
     (into ["powershell.exe"] classpath)
     classpath))
 
-(def ^:private default-project-specs
+(defn ^:private command-exists?
+  [command]
+  (let [check-command (if shared/windows-os? "where.exe" "which")]
+    (try
+      (= (:exit (apply shell/sh check-command [command])) 0)
+      (catch Exception _
+        false))))
+
+(defn ^:private with-shadow-cljs-project-spec
+  [specs]
+  (cond
+    (command-exists? "npx")
+    (conj specs {:project-path "shadow-cljs.edn"
+                 :classpath-cmd ["npx" "shadow-cljs" "classpath"]})
+
+    :else
+    (conj specs {:project-path "shadow-cljs.edn"
+                 :classpath-cmd ["shadow-cljs" "classpath"]})))
+
+(defn ^:private default-project-specs []
   (->> [{:project-path "project.clj"
          :classpath-cmd ["lein" "classpath"]}
         {:project-path "deps.edn"
          :classpath-cmd ["clj" "-Spath"]}
         {:project-path "build.boot"
-         :classpath-cmd ["boot" "show" "--fake-classpath"]}
-        {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["shadow-cljs" "classpath"]}]
+         :classpath-cmd ["boot" "show" "--fake-classpath"]}]
+       with-shadow-cljs-project-spec
        (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
+
+(default-project-specs)
 
 (defn ^:private get-cp-entry-type [e]
   (cond (.isFile e) :file
@@ -143,7 +163,7 @@
     analysis))
 
 (defn ^:private analyze-classpath [root-path source-paths settings]
-  (let [project-specs (->> (or (get settings :project-specs) default-project-specs)
+  (let [project-specs (->> (or (get settings :project-specs) (default-project-specs))
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-hash (reduce str (map :hash project-specs))

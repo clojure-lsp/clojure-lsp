@@ -56,7 +56,6 @@
            "."
            (name file-type)))))
 
-
 (defn did-open [{:keys [textDocument]}]
   (let [uri (-> textDocument :uri URLDecoder/decode)
         text (:text textDocument)]
@@ -71,11 +70,19 @@
     (when-let [result (crawler/run-kondo-on-text! text uri)]
       (swap! db/db (fn [state-db]
                      (-> state-db
-                         (assoc-in [:documents uri] {:v 0 :text text})
+                         (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
                          (crawler/update-analysis uri (:analysis result))
                          (crawler/update-findings uri (:findings result)))))
       (f.diagnostic/notify uri result)))
   nil)
+
+(defn did-save [{:keys [textDocument]}]
+  (swap! db/db #(assoc-in % [:documents textDocument :saved-on-disk] true)))
+
+;; TODO wait for lsp4j release
+#_(defn did-delete-files [{:keys [textDocument]}]
+  (when (get-in @db/db [:documents textDocument :saved-on-disk])
+    (swap! db/db #(update % :documents dissoc textDocument))))
 
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
@@ -110,9 +117,6 @@
             {:uri (shared/filename->uri (:filename reference))
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
-
-(defn did-close [{:keys [textDocument]}]
-  (swap! db/db #(update % :documents dissoc textDocument)))
 
 (defn ^:private rename-alias [references replacement]
   (mapv

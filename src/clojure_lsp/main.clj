@@ -129,13 +129,13 @@
                 uri (interop/document->decoded-uri textDocument)]
             (#'handlers/did-change uri text version)))))
 
-  (^void didSave [_ ^DidSaveTextDocumentParams _params]
+  (^void didSave [_ ^DidSaveTextDocumentParams params]
     (go :didSave
-        (end nil)))
+        (sync-handler params handlers/did-save)))
 
-  (^void didClose [_ ^DidCloseTextDocumentParams params]
+  (^void didClose [_ ^DidCloseTextDocumentParams _params]
     (go :didClose
-        (sync-handler params handlers/did-close)))
+        nil))
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (go :references
@@ -255,6 +255,11 @@
                    (.getChanges)
                    (interop/conform-or-log ::interop/watched-files-changes)
                    (handlers/did-change-watched-files)))))
+
+  ;; TODO wait for lsp4j release
+  #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
+    (go :didSave
+        (sync-handler params handlers/did-delete-files)))
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (go :workspaceSymbol

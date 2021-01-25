@@ -26,14 +26,6 @@
        {:code "invalid-arity"}]
       diagnostics)))
 
-(deftest did-close
-  (h/load-code-and-locs "(ns a)")
-  (h/load-code-and-locs "(ns b)" "file:///b.clj")
-  (testing "should remove references to file"
-    (is (= ["file:///a.clj" "file:///b.clj"] (keys (:documents @db/db))))
-    (handlers/did-close {:textDocument "file:///a.clj"})
-    (is (= ["file:///b.clj"] (keys (:documents @db/db))))))
-
 (deftest hover
   (let [start-code "```clojure"
         end-code "```"

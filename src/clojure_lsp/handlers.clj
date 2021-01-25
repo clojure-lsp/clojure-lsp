@@ -272,7 +272,7 @@
         definition (when element (q/find-definition analysis element))]
     (cond
       definition
-      {:range (shared/->range definition)
+      {:range (shared/->range element)
        :contents (f.hover/hover-documentation definition)}
 
       element

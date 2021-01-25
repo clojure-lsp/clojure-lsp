@@ -55,7 +55,7 @@
         {:project-path "build.boot"
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["shadow-cljs" "classpath"]}]
+         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}]
        (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
 (defn ^:private get-cp-entry-type [e]

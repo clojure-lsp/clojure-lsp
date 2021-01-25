@@ -97,7 +97,6 @@
        (sort-by :label)))
 
 (defn with-elements-from-alias [alias matches-fn ns-elements other-elements]
-  (log/info "------->" ns-elements)
   (when-let [alias-ns (some->> ns-elements
                                (q/find-first #(and (= (:bucket %) :namespace-usages)
                                                    (= (-> % :alias str) alias)))

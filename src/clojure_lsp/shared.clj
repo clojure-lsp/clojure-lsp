@@ -40,7 +40,7 @@
     (string/ends-with? uri ".edn") :edn
     :else :unknown))
 
-(defn uri->path [uri]
+(defn uri->path ^java.nio.file.Path [uri]
   (.toAbsolutePath (Paths/get (URI. uri))))
 
 (defn uri->filename [uri]

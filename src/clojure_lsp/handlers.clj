@@ -15,12 +15,12 @@
     [clojure-lsp.parser :as parser]
     [clojure-lsp.producer :as producer]
     [clojure-lsp.queries :as q]
+    [taoensso.timbre :as log]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
     [clojure.set :as set]
     [clojure.string :as string]
-    [taoensso.timbre :as log]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
     [trptcolin.versioneer.core :as version])
@@ -59,7 +59,8 @@
            "."
            (name file-type)))))
 
-(defn did-open [{:keys [textDocument]}]
+(defn did-open [{:keys [textDocument] :as params}]
+  (log/info "params-parsed->" params)
   (let [uri (-> textDocument :uri URLDecoder/decode)
         text (:text textDocument)]
     (when-let [new-ns (and (string/blank? text)

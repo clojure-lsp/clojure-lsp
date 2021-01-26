@@ -8,13 +8,11 @@
     [clojure-lsp.producer :as producer]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
-    [clojure.string :as string]
     ;; [nrepl.server :as nrepl.server]
     [taoensso.timbre :as log]
     [trptcolin.versioneer.core :as version])
   (:import
     (clojure_lsp ClojureExtensions)
-    (java.lang.management ManagementFactory)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
     (org.eclipse.lsp4j
@@ -123,8 +121,9 @@
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
-    (go :didOpen
-        (sync-handler params handlers/did-open)))
+   (log/info "params->" params)
+   (go :didOpen
+       (sync-handler params handlers/did-open)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
@@ -245,7 +244,6 @@
 
 (deftype LSPWorkspaceService []
   WorkspaceService
-
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (go :executeCommand
         (future
@@ -265,8 +263,8 @@
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
-    (go :didSave
-        (sync-handler params handlers/did-delete-files)))
+                          (go :didSave
+                              (sync-handler params handlers/did-delete-files)))
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (go :workspaceSymbol
@@ -274,15 +272,14 @@
 
 (defn client-settings [^InitializeParams params]
   (-> params
-      (.getInitializationOptions)
-      (interop/json->clj)
+      interop/java->clj
       (or {})
       shared/keywordize-first-depth
       (interop/clean-client-settings)))
 
 (defn client-capabilities [^InitializeParams params]
   (some->> params
-           (.getCapabilities)
+           .getCapabilities
            (interop/conform-or-log ::interop/client-capabilities)))
 
 ;; Called from java
@@ -308,7 +305,7 @@
       (go :initialize
           (end
             (do
-              (log/info "Initializing...")
+              (log/info "Initializing..." params)
               (#'handlers/initialize (.getRootUri params)
                                      (client-capabilities params)
                                      (client-settings params))
@@ -330,7 +327,7 @@
                                        (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
                                        (.setDocumentSymbolProvider true)
                                        (.setWorkspaceSymbolProvider true)
-                                       (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                       #_(.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
                                                                              (:semantic-tokens? settings))
                                                                      (doto (SemanticTokensWithRegistrationOptions.)
                                                                        (.setLegend (doto (SemanticTokensLegend.
@@ -350,11 +347,10 @@
       (log/info "Initialized" params)
       (go :initialized
           (end
-            (doto
-             (:client @db/db)
-              (.registerCapability
-                (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                     (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
+            (let [client ^LanguageClient (:client @db/db)]
+              (.registerCapability client
+                                   (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                                        (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct

@@ -18,16 +18,19 @@
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
+    [clojure.set :as set]
     [clojure.string :as string]
     [clojure.tools.logging :as log]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [trptcolin.versioneer.core :as version]
-    [clojure.set :as set])
+    [trptcolin.versioneer.core :as version])
   (:import
    [java.net URL
              URLDecoder
              JarURLConnection]))
+
+(def full-file-range
+  (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -188,15 +191,23 @@
        :range (shared/->range d)})))
 
 (defn document-symbol [{:keys [textDocument]}]
-  ;; TODO return all possible symbol hierarchy of the current ns
-  (->> (get-in @db/db [:analysis (shared/uri->filename textDocument)])
-       (filter (every-pred (complement :private)
-                           (comp #{:namespace-definitions} :bucket)))
-       (mapv (fn [e]
-               {:name            (-> e :name name)
-                :kind            (f.document-symbol/element->symbol-kind e)
-                :range           (shared/->scope-range e)
-                :selection-range (shared/->scope-range e)}))))
+  (let [filename (shared/uri->filename textDocument)
+        local-analysis (get-in @db/db [:analysis filename])
+        namespace-definition (q/find-first (comp #{:namespace-definitions} :bucket) local-analysis)]
+    [{:name (or (some-> namespace-definition :name name)
+                filename)
+      :kind (f.document-symbol/element->symbol-kind namespace-definition)
+      :range full-file-range
+      :selection-range (if namespace-definition
+                         (shared/->scope-range namespace-definition)
+                         full-file-range)
+      :children (->> local-analysis
+                     (filter (comp #{:var-definitions} :bucket))
+                     (mapv (fn [e]
+                             {:name            (-> e :name name)
+                              :kind            (f.document-symbol/element->symbol-kind e)
+                              :range           (shared/->scope-range e)
+                              :selection-range (shared/->range e)})))}]))
 
 (defn document-highlight [{:keys [textDocument position]}]
   (let [line (-> position :line inc)
@@ -289,7 +300,7 @@
                    (get-in @db/db [:settings :cljfmt]))]
     (if (= new-text text)
       []
-      [{:range (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
+      [{:range full-file-range
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos]

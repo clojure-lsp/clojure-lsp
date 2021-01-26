@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix document-symbol after #261 - Fixes #276
+
 ## 2021.01.25-22.56.05
 
 - Do not remove document on `textDocument/didClose`, related to #264.

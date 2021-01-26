@@ -192,22 +192,14 @@
 
 (defn document-symbol [{:keys [textDocument]}]
   (let [filename (shared/uri->filename textDocument)
-        local-analysis (get-in @db/db [:analysis filename])
-        namespace-definition (q/find-first (comp #{:namespace-definitions} :bucket) local-analysis)]
-    [{:name (or (some-> namespace-definition :name name)
-                filename)
-      :kind (f.document-symbol/element->symbol-kind namespace-definition)
-      :range full-file-range
-      :selection-range (if namespace-definition
-                         (shared/->scope-range namespace-definition)
-                         full-file-range)
-      :children (->> local-analysis
-                     (filter (comp #{:var-definitions} :bucket))
-                     (mapv (fn [e]
-                             {:name            (-> e :name name)
-                              :kind            (f.document-symbol/element->symbol-kind e)
-                              :range           (shared/->scope-range e)
-                              :selection-range (shared/->range e)})))}]))
+        local-analysis (get-in @db/db [:analysis filename])]
+    (->> local-analysis
+         (filter (comp #{:var-definitions} :bucket))
+         (mapv (fn [e]
+                 {:name            (-> e :name name)
+                  :kind            (f.document-symbol/element->symbol-kind e)
+                  :range           (shared/->scope-range e)
+                  :selection-range (shared/->range e)})))))
 
 (defn document-highlight [{:keys [textDocument position]}]
   (let [line (-> position :line inc)

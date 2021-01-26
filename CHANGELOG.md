@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2021.01.26-22.35.27
 
 - Fix document-symbol after #261 - Fixes #276
 - Reduce memory usage on startup batch analyzing classpath via clj-kondo. - Fixes #268

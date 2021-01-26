@@ -1,10 +1,10 @@
 (ns clojure-lsp.crawler
   (:require
-   [cljfmt.main :as cljfmt.main]
    [clj-kondo.core :as kondo]
+   [cljfmt.main :as cljfmt.main]
    [clojure-lsp.db :as db]
-   [clojure-lsp.shared :as shared]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -87,9 +87,25 @@
       locals
       (assoc-in [:config :output :analysis :locals] true))))
 
+(def clj-kondo-analysis-batch-size 100)
+
 (defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:parallel true
                            :lint [(string/join (System/getProperty "path.separator") paths)]} false)))
+
+(defn ^:private run-kondo-on-paths-batch! [paths]
+  (let [total (count paths)
+        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
+    (log/info "Analyzing" total "paths with clj-kondo with batch size of " batch-count "...")
+    (println (->> paths (partition-all clj-kondo-analysis-batch-size)))
+    (if (<= total clj-kondo-analysis-batch-size)
+      (run-kondo-on-paths! paths)
+      (->> paths
+           (partition-all clj-kondo-analysis-batch-size)
+           (map-indexed (fn [index batch-paths]
+                          (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
+                          (run-kondo-on-paths! batch-paths)))
+           (into {})))))
 
 (defn run-kondo-on-text! [text uri]
   (with-in-str
@@ -130,9 +146,10 @@
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn ^:private analyze-paths [paths public-only?]
-  (log/info "Analyzing" (count paths) "paths with clj-kondo...")
-  (let [result (run-kondo-on-paths! paths)
-        _ (log/info "Paths analyzed, took" (-> result :summary :duration (/ 1000) float) "secs. Caching for next startups...")
+  (let [start-time (System/nanoTime)
+        result (run-kondo-on-paths-batch! paths)
+        end-time (float (/ (- (System/nanoTime) start-time) 1000000))
+        _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)
                            public-only? (dissoc :namespace-usages :var-usages)
                            public-only? (update :var-definitions (fn [usages] (remove :private usages))))

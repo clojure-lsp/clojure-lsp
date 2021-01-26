@@ -87,7 +87,7 @@
       locals
       (assoc-in [:config :output :analysis :locals] true))))
 
-(def clj-kondo-analysis-batch-size 100)
+(def clj-kondo-analysis-batch-size 50)
 
 (defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:parallel true
@@ -148,7 +148,7 @@
 (defn ^:private analyze-paths [paths public-only?]
   (let [start-time (System/nanoTime)
         result (run-kondo-on-paths-batch! paths)
-        end-time (float (/ (- (System/nanoTime) start-time) 1000000))
+        end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
         _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)
                            public-only? (dissoc :namespace-usages :var-usages)

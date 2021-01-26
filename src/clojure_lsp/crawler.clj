@@ -93,7 +93,10 @@
   (kondo/run! (kondo-args {:parallel true
                            :lint [(string/join (System/getProperty "path.separator") paths)]} false)))
 
-(defn ^:private run-kondo-on-paths-batch! [paths]
+(defn ^:private run-kondo-on-paths-batch!
+  "Run kondo on paths by partition the paths, with this we should call
+  kondo more times but we fewer paths to analyze, improving memory."
+  [paths]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (log/info "Analyzing" total "paths with clj-kondo with batch size of " batch-count "...")
@@ -147,7 +150,9 @@
 
 (defn ^:private analyze-paths [paths public-only?]
   (let [start-time (System/nanoTime)
-        result (run-kondo-on-paths-batch! paths)
+        result (if public-only?
+                 (run-kondo-on-paths-batch! paths)
+                 (run-kondo-on-paths! paths))
         end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
         _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)

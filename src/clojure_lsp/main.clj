@@ -8,13 +8,16 @@
     [clojure-lsp.producer :as producer]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
+    [clojure.string :as string]
     [clojure.tools.logging :as log]
     [nrepl.server :as nrepl.server]
     [trptcolin.versioneer.core :as version])
   (:import
     (clojure_lsp ClojureExtensions)
+    (java.lang.management ManagementFactory)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
+    (org.apache.log4j MDC)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCallsParams
       CallHierarchyPrepareParams
@@ -411,8 +414,18 @@
   (or (dot-nrepl-port-file)
       (embedded-nrepl-server)))
 
+(defn- inject-pid-for-log4j []
+  "Inject a PID context value so we can include it in log4j
+  logs."
+  (let [pid (-> (ManagementFactory/getRuntimeMXBean)
+                (.getName)
+                (string/split #"@")
+                (first))]
+    (MDC/put "PID" pid)))
+
 (defn- run []
   (log/info "Starting server...")
+  (inject-pid-for-log4j)
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
         launcher (LSPLauncher/createServerLauncher server is os)

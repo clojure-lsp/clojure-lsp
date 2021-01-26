@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix document-symbol after #261 - Fixes #276
+- Reduce memory usage on startup batch analyzing classpath via clj-kondo. - Fixes #268
 
 ## 2021.01.25-22.56.05
 

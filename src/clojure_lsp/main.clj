@@ -414,9 +414,10 @@
   (or (dot-nrepl-port-file)
       (embedded-nrepl-server)))
 
-(defn- inject-pid-for-log4j []
+(defn- inject-pid-for-log4j
   "Inject a PID context value so we can include it in log4j
   logs."
+  []
   (let [pid (-> (ManagementFactory/getRuntimeMXBean)
                 (.getName)
                 (string/split #"@")

@@ -424,8 +424,8 @@
     (MDC/put "PID" pid)))
 
 (defn- run []
-  (log/info "Starting server...")
   (inject-pid-for-log4j)
+  (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
         launcher (LSPLauncher/createServerLauncher server is os)

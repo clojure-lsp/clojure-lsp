@@ -447,5 +447,5 @@
 
 (defn -main [& args]
   (if (empty? args)
-    (run)
+    (with-out-str (run))
     (println "clojure-lsp" (version/get-version "clojure-lsp" "clojure-lsp"))))

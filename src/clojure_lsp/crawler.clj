@@ -100,7 +100,6 @@
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (log/info "Analyzing" total "paths with clj-kondo with batch size of " batch-count "...")
-    (println (->> paths (partition-all clj-kondo-analysis-batch-size)))
     (if (<= total clj-kondo-analysis-batch-size)
       (run-kondo-on-paths! paths)
       (->> paths

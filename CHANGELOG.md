@@ -1,5 +1,9 @@
 # Changelog
 
+## 2021.01.27-21.47.42 
+
+- Fix missing printlng and avoid errors for next time (this was causing issues in clients like vim coc)
+
 ## 2021.01.26-22.35.27
 
 - Fix document-symbol after #261 - Fixes #276

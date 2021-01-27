@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/</loc>
-     <lastmod>2021-01-26</lastmod>
+     <lastmod>2021-01-27</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/settings/</loc>
-     <lastmod>2021-01-26</lastmod>
+     <lastmod>2021-01-27</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/clients/</loc>
-     <lastmod>2021-01-26</lastmod>
+     <lastmod>2021-01-27</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/capabilities/</loc>
-     <lastmod>2021-01-26</lastmod>
+     <lastmod>2021-01-27</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/troubleshooting/</loc>
-     <lastmod>2021-01-26</lastmod>
+     <lastmod>2021-01-27</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/CHANGELOG/</loc>
-     <lastmod>2021-01-26</lastmod>
+     <lastmod>2021-01-27</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>

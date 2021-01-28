@@ -1,5 +1,9 @@
 # Changelog
 
+## 2021.01.28-03.03.16
+
+- Fix clj-kondo batch analysis when merging batchs - Fix #284
+
 ## 2021.01.27-21.47.42 
 
 - Fix missing printlng and avoid errors for next time (this was causing issues in clients like vim coc)

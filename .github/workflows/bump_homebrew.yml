@@ -1,12 +1,8 @@
 name: Bump Homebrew formula
 
-
-on: [push]
-
-#
-# on:
-#   push:
-#     tags: 'test-homebrew-gh-action*'
+on:
+  push:
+    tags: '2*'
 
 jobs:
   homebrew:

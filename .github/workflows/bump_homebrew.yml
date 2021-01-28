@@ -3,6 +3,7 @@ name: Bump Homebrew formula
 
 on: [push]
 
+#
 # on:
 #   push:
 #     tags: 'test-homebrew-gh-action*'

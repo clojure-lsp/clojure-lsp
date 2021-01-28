@@ -93,13 +93,20 @@
   (kondo/run! (kondo-args {:parallel true
                            :lint [(string/join (System/getProperty "path.separator") paths)]} false)))
 
+(defn ^:private deep-merge [a b]
+  (merge-with (fn [x y]
+                (cond (map? y) (deep-merge x y)
+                      (vector? y) (concat x y)
+                      :else y))
+                 a b))
+
 (defn ^:private run-kondo-on-paths-batch!
   "Run kondo on paths by partition the paths, with this we should call
   kondo more times but we fewer paths to analyze, improving memory."
   [paths]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
-    (log/info "Analyzing" total "paths with clj-kondo with batch size of " batch-count "...")
+    (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
     (if (<= total clj-kondo-analysis-batch-size)
       (run-kondo-on-paths! paths)
       (->> paths
@@ -107,7 +114,7 @@
            (map-indexed (fn [index batch-paths]
                           (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (run-kondo-on-paths! batch-paths)))
-           (into {})))))
+           (reduce deep-merge)))))
 
 (defn run-kondo-on-text! [text uri]
   (with-in-str

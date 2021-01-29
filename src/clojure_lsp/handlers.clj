@@ -60,7 +60,6 @@
            (name file-type)))))
 
 (defn did-open [{:keys [textDocument] :as params}]
-  (log/info "params-parsed->" params)
   (let [uri (-> textDocument :uri URLDecoder/decode)
         text (:text textDocument)]
     (when-let [new-ns (and (string/blank? text)

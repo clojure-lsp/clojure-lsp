@@ -121,7 +121,6 @@
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
-   (log/info "params->" params)
    (go :didOpen
        (sync-handler params handlers/did-open)))
 
@@ -305,7 +304,7 @@
       (go :initialize
           (end
             (do
-              (log/info "Initializing..." params)
+              (log/info "Initializing...")
               (#'handlers/initialize (.getRootUri params)
                                      (client-capabilities params)
                                      (client-settings params))
@@ -344,7 +343,7 @@
                                        (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
-      (log/info "Initialized" params)
+      (log/info "Initialized")
       (go :initialized
           (end
             (let [client ^LanguageClient (:client @db/db)]

@@ -2318,7 +2318,8 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.CompletionParams"
+  "name":"org.eclipse.lsp4j.CompletionParams",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.CreateFile",
@@ -2343,7 +2344,10 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.DefinitionParams"
+  "name":"org.eclipse.lsp4j.DefinitionParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.DeleteFile",
@@ -2358,6 +2362,7 @@
 {
   "name":"org.eclipse.lsp4j.Diagnostic",
   "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
@@ -2372,6 +2377,7 @@
 },
 {
   "name":"org.eclipse.lsp4j.DiagnosticSeverity",
+  "allPublicMethods":true,
   "fields":[{"name":"value"}]
 },
 {
@@ -2393,7 +2399,8 @@
   "name":"org.eclipse.lsp4j.DidChangeConfigurationParams"
 },
 {
-  "name":"org.eclipse.lsp4j.DidChangeTextDocumentParams"
+  "name":"org.eclipse.lsp4j.DidChangeTextDocumentParams",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities",
@@ -2469,7 +2476,9 @@
   "name":"org.eclipse.lsp4j.DocumentRangeFormattingParams"
 },
 {
-  "name":"org.eclipse.lsp4j.DocumentSymbol"
+  "name":"org.eclipse.lsp4j.DocumentSymbol",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.DocumentSymbolCapabilities",
@@ -2479,10 +2488,9 @@
 },
 {
   "name":"org.eclipse.lsp4j.DocumentSymbolParams",
-  "allDeclaredConstructors": true,
-  "allPublicConstructors": true,
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.DynamicRegistrationCapabilities",
@@ -2526,8 +2534,8 @@
 },
 {
   "name":"org.eclipse.lsp4j.Hover",
-  "allDeclaredConstructors": true,
-  "allPublicConstructors": true
+  "allDeclaredConstructors":true,
+  "allPublicConstructors":true
 },
 {
   "name":"org.eclipse.lsp4j.HoverCapabilities",
@@ -2537,10 +2545,9 @@
 },
 {
   "name":"org.eclipse.lsp4j.HoverParams",
-  "allDeclaredConstructors": true,
-  "allPublicConstructors": true,
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.ImplementationCapabilities",
@@ -2568,10 +2575,14 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.MarkedString"
+  "name":"org.eclipse.lsp4j.MarkedString",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.MarkupContent"
+  "name":"org.eclipse.lsp4j.MarkupContent",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.MessageParams"
@@ -2623,7 +2634,16 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.ReferenceParams"
+  "name":"org.eclipse.lsp4j.ReferenceContext",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.ReferenceParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.ReferencesCapabilities",
@@ -2662,7 +2682,8 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.RenameParams"
+  "name":"org.eclipse.lsp4j.RenameParams",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.ResourceChange",
@@ -2698,10 +2719,9 @@
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensCapabilities",
-    "allDeclaredConstructors": true,
-    "allPublicConstructors": true,
-    "allDeclaredMethods": true,
-    "allPublicMethods": true
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "allPublicConstructors":true
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensClientCapabilitiesRequests",
@@ -2936,6 +2956,10 @@
 },
 {
   "name":"org.eclipse.lsp4j.adapters.DocumentSymbolResponseAdapter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.adapters.HoverTypeAdapter$Factory",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

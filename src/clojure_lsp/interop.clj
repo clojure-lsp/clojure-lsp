@@ -44,28 +44,25 @@
     (org.eclipse.lsp4j.jsonrpc.messages Either)
     (java.net URLDecoder)))
 
-(defn ^:private enum->keyword [enum]
-  (-> enum .name .toLowerCase keyword))
-
 (defn document->decoded-uri [^TextDocumentIdentifier document]
   (-> document
       .getUri
       URLDecoder/decode))
 
 (defmethod j/from-java DiagnosticSeverity [^DiagnosticSeverity instance]
-  (enum->keyword instance))
+  (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java MessageType [^MessageType instance]
-  (enum->keyword instance))
+  (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java WatchKind [^WatchKind instance]
-  (enum->keyword instance))
+  (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java CompletionItemKind [^CompletionItemKind instance]
-  (enum->keyword instance))
+  (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java SymbolKind [^SymbolKind instance]
-  (enum->keyword instance))
+  (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java Either [^Either instance]
   (j/from-java (.get instance)))
@@ -310,7 +307,7 @@
 
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
-(defn  java->clj [inst]
+(defn java->clj [inst]
   (let [converted (j/from-java inst)]
     (if (map? converted)
       (->> converted

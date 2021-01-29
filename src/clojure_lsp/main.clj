@@ -202,8 +202,8 @@
         (async-handler params handlers/code-actions ::interop/code-actions)))
 
   (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
-    (go :resolveCodeAction
-        (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
+   (go :resolveCodeAction
+       (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (go :codeLens
@@ -326,7 +326,7 @@
                                        (.setDocumentRangeFormattingProvider (:document-range-formatting? settings))
                                        (.setDocumentSymbolProvider true)
                                        (.setWorkspaceSymbolProvider true)
-                                       #_(.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                       (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
                                                                              (:semantic-tokens? settings))
                                                                      (doto (SemanticTokensWithRegistrationOptions.)
                                                                        (.setLegend (doto (SemanticTokensLegend.

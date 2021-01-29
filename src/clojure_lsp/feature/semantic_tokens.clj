@@ -1,7 +1,10 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
     [clojure-lsp.db :as db]
-    [clojure-lsp.shared :as shared]))
+    [clojure.string :as string]
+    [clojure-lsp.shared :as shared])
+  (:import
+   [clojure.lang PersistentVector]))
 
 (def token-types
   [:type
@@ -30,7 +33,7 @@
   [(dec name-row)
    (dec name-col)
    (- name-end-col name-col)
-   (.indexOf token-types token-type)
+   (.indexOf ^PersistentVector token-types token-type)
    token-modifier])
 
 (defn ^:private elements->absolute-tokens

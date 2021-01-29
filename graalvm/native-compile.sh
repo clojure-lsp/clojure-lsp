@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# LEIN_SNAPSHOTS_IN_RELEASE=1 lein with-profiles +native-image "do" clean, uberjar
+LEIN_SNAPSHOTS_IN_RELEASE=1 lein with-profiles +native-image "do" clean, uberjar
 
 native-image \
     -jar target/*-standalone.jar \

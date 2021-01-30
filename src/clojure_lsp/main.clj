@@ -5,12 +5,13 @@
     [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
     [clojure-lsp.handlers :as handlers]
     [clojure-lsp.interop :as interop]
+    [clojure-lsp.nrepl :as nrepl]
     [clojure-lsp.producer :as producer]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
-    ;; [nrepl.server :as nrepl.server]
     [taoensso.timbre :as log]
-    [trptcolin.versioneer.core :as version])
+    [trptcolin.versioneer.core :as version]
+    borkdude.dynaload)
   (:import
     (clojure_lsp ClojureExtensions)
     (java.util.concurrent CompletableFuture)
@@ -397,46 +398,13 @@
           (log/error e "in thread"))))
     os))
 
-;; (defn- dot-nrepl-port-file
-;;   []
-;;   (try
-;;     (slurp  ".nrepl-port")
-;;     (catch Exception _)))
-
-;; (defn- embedded-nrepl-server
-;;   []
-;;   (let [repl-server (nrepl.server/start-server)
-;;         port (:port repl-server)]
-;;     port))
-
-;; (defn- repl-port
-;;   []
-;;   (or (dot-nrepl-port-file)
-;;       (embedded-nrepl-server)))
-
-#_(defn- inject-pid-for-log4j
-  "Inject a PID context value so we can include it in log4j
-  logs."
-  []
-  (let [pid (-> (ManagementFactory/getRuntimeMXBean)
-                (.getName)
-                (string/split #"@")
-                (first))]
-    (MDC/put "PID" pid)))
-
 (defn- run []
-  #_(inject-pid-for-log4j)
   (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
-        launcher (LSPLauncher/createServerLauncher server is os)
-        ;port (repl-port)
-        ]
-    ;; (log/info "====== LSP nrepl server started on port" port)
-    (swap! db/db assoc
-           :client ^LanguageClient (.getRemoteProxy launcher)
-           ;:port port
-           )
+        launcher (LSPLauncher/createServerLauncher server is os)]
+    (nrepl/setup-nrepl)
+    (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
       (loop [edit (async/<! db/edits-chan)]
         (producer/workspace-apply-edit edit)

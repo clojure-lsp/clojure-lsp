@@ -173,8 +173,8 @@
                             0 0)))))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
-    (go :formatting
-        (async-handler params handlers/formatting ::interop/edits)))
+   (go :formatting
+       (async-handler params handlers/formatting ::interop/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting

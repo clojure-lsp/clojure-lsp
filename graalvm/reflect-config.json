@@ -1,32 +1,7 @@
 [
 {
-  "name":"clojure.lang.PersistentVector",
-  "allDeclaredMethods":true,
-  "allPublicMethods":true
-},
-{
-  "name":"clojure.lang.Compiler",
-  "allPublicFields":true
-},
-{
   "name":"clojure.lang.IObj",
   "allDeclaredMethods":true,
-  "allPublicMethods":true
-},
-{
-  "name":"clojure.lang.IProxy",
-  "allDeclaredMethods":true
-},
-{
-  "name":"clojure.lang.IType",
-  "allDeclaredMethods":true
-},
-{
-  "name":"clojure.lang.LockingTransaction",
-  "allPublicMethods":true
-},
-{
-  "name":"clojure.lang.Namespace",
   "allPublicMethods":true
 },
 {
@@ -35,7 +10,8 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"clojure.lang.RT",
+  "name":"clojure.lang.PersistentVector",
+  "allDeclaredMethods":true,
   "allPublicMethods":true
 },
 {
@@ -53,6 +29,9 @@
 {
   "name":"clojure.tools.logging$eval136",
   "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"clojure.tools.logging.impl.Logger"
 },
 {
   "name":"clojure.tools.logging.impl.LoggerFactory",
@@ -88,10 +67,6 @@
   "allPublicMethods":true
 },
 {
-  "name":"java.lang.IllegalArgumentException",
-  "allPublicConstructors":true
-},
-{
   "name":"java.lang.Object",
   "allDeclaredFields":true,
   "allDeclaredMethods":true,
@@ -107,6 +82,10 @@
   "methods":[{"name":"canAccess","parameterTypes":["java.lang.Object"] }]
 },
 {
+  "name":"java.util.ArrayList",
+  "allPublicConstructors":true
+},
+{
   "name":"java.util.Properties",
   "allPublicMethods":true
 },
@@ -116,13 +95,15 @@
 },
 {
   "name":"org.eclipse.lsp4j.ApplyWorkspaceEditParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.ApplyWorkspaceEditResponse",
-  "methods":[{"name":"<init>","parameterTypes":[] }],
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.CallHierarchyCapabilities",
@@ -131,11 +112,15 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.CallHierarchyIncomingCall"
+  "name":"org.eclipse.lsp4j.CallHierarchyIncomingCallsParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.CallHierarchyIncomingCallsParams",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
+  "name":"org.eclipse.lsp4j.CallHierarchyIncomingCall",
+  "allDeclaredFields":true,
+  "allPublicMethods":true
 },
 {
   "name":"org.eclipse.lsp4j.CallHierarchyItem",
@@ -381,9 +366,9 @@
 },
 {
   "name":"org.eclipse.lsp4j.DidChangeTextDocumentParams",
-  "methods":[{"name":"<init>","parameterTypes":[] }],
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities",
@@ -393,6 +378,7 @@
 },
 {
   "name":"org.eclipse.lsp4j.DidChangeWatchedFilesParams",
+  "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
@@ -498,9 +484,20 @@
 },
 {
   "name":"org.eclipse.lsp4j.ExecuteCommandParams",
-  "methods":[{"name":"<init>","parameterTypes":[] }],
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.FileChangeType",
+  "allPublicMethods":true,
+  "fields":[{"name":"value"}]
+},
+{
+  "name":"org.eclipse.lsp4j.FileEvent",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.FileSystemWatcher",
@@ -709,7 +706,8 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.SemanticTokens"
+  "name":"org.eclipse.lsp4j.SemanticTokens",
+  "allDeclaredFields":true
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensCapabilities",
@@ -734,17 +732,17 @@
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensParams",
-  "allPublicMethods":true,
   "allDeclaredFields":true,
-  "allPublicConstructors":true,
-  "allDeclaredConstructors":true
+  "allPublicMethods":true,
+  "allDeclaredConstructors":true,
+  "allPublicConstructors":true
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensRangeParams",
-  "allPublicMethods":true,
   "allDeclaredFields":true,
-  "allPublicConstructors":true,
-  "allDeclaredConstructors":true
+  "allPublicMethods":true,
+  "allDeclaredConstructors":true,
+  "allPublicConstructors":true
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensServerFull",
@@ -783,9 +781,6 @@
 {
   "name":"org.eclipse.lsp4j.SignatureHelpParams",
   "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.eclipse.lsp4j.SignatureInformation"
 },
 {
   "name":"org.eclipse.lsp4j.SignatureInformationCapabilities",
@@ -866,9 +861,9 @@
 },
 {
   "name":"org.eclipse.lsp4j.TextDocumentPositionAndWorkDoneProgressAndPartialResultParams",
-  "methods":[{"name":"<init>","parameterTypes":[] }],
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.TextDocumentPositionAndWorkDoneProgressParams",
@@ -909,12 +904,6 @@
   "name":"org.eclipse.lsp4j.TypeHierarchyCapabilities",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.eclipse.lsp4j.VersionedTextDocumentIdentifier"
-},
-{
-  "name":"org.eclipse.lsp4j.WatchKind"
 },
 {
   "name":"org.eclipse.lsp4j.WindowClientCapabilities",

@@ -272,6 +272,7 @@
 (defn client-settings [^InitializeParams params]
   (-> params
       interop/java->clj
+      :initializationOptions
       (or {})
       shared/keywordize-first-depth
       (interop/clean-client-settings)))

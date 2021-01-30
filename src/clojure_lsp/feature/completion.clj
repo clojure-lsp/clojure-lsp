@@ -7,9 +7,9 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
-    [taoensso.timbre :as log]
     [clojure.walk :as walk]
-    [rewrite-clj.zip :as z]))
+    [rewrite-clj.zip :as z]
+    [taoensso.timbre :as log]))
 
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
@@ -183,4 +183,4 @@
           (assoc :documentation (f.hover/hover-documentation data))
           (dissoc :data))
       item)
-    (assoc :kind (some-> kind .toLowerCase keyword))))
+    (assoc :kind (some-> kind str string/lower-case keyword))))

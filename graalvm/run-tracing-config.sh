@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-lein with-profiles +native-image "do" clean, uberjar
-GRAAL_VM_DOCKER_IMAGE=springci/graalvm-ce:21.0-dev-java11
+cd /home/greg/dev/clojure-lsp
+# LEIN_SNAPSHOTS_IN_RELEASE=1 lein "do" clean, uberjar
+GRAAL_VM_DOCKER_IMAGE=springci/graalvm-ce:20.2-dev-java11
 
 jar=$(ls target/clojure-lsp-*-standalone.jar)
 

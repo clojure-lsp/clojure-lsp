@@ -1,11 +1,11 @@
 (ns clojure-lsp.db
   (:require
+   [clojure.core.async :as async]
    [clojure.edn :as edn]
-   [taoensso.timbre :as log]
    [clojure.java.io :as io]
    [next.jdbc :as jdbc]
    [next.jdbc.result-set :as rs]
-   [clojure.core.async :as async]))
+   [taoensso.timbre :as log]))
 
 (defonce db (atom {:documents {}}))
 (defonce diagnostics-chan (async/chan 1))
@@ -13,7 +13,7 @@
 
 (def version 1)
 
-(defn make-spec [project-root]
+(defn ^:private make-spec [project-root]
   (let [lsp-db (io/file (str project-root) ".lsp" "sqlite.db")]
     {:dbtype "sqlite"
      :dbname (.getAbsolutePath lsp-db)}))

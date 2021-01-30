@@ -8,6 +8,7 @@ native-image \
     -J-Dclojure.compiler.direct-linking=true \
     -J-Dclojure.spec.skip-macros=true \
     -H:+ReportExceptionStackTraces \
+    --enable-url-protocols=jar \
     -H:Log=registerResource: \
     --verbose \
     -H:IncludeResources="db/.*|static/.*|templates/.*|.*.yml|.*.xml|.*/org/sqlite/.*|org/sqlite/.*|.*.properties" \

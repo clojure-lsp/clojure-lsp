@@ -1,10 +1,5 @@
 [
 {
-  "name":"clojure.lang.IObj",
-  "allDeclaredMethods":true,
-  "allPublicMethods":true
-},
-{
   "name":"clojure.lang.PersistentArrayMap",
   "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
@@ -20,22 +15,6 @@
 },
 {
   "name":"clojure.lang.Var",
-  "allPublicMethods":true
-},
-{
-  "name":"clojure.tools.logging$eval1",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"clojure.tools.logging$eval136",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"clojure.tools.logging.impl.Logger"
-},
-{
-  "name":"clojure.tools.logging.impl.LoggerFactory",
-  "allDeclaredMethods":true,
   "allPublicMethods":true
 },
 {
@@ -56,10 +35,6 @@
 },
 {
   "name":"com.google.gson.JsonPrimitive",
-  "allPublicMethods":true
-},
-{
-  "name":"com.sun.proxy.$Proxy8",
   "allPublicMethods":true
 },
 {
@@ -779,9 +754,6 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.SignatureHelp"
-},
-{
   "name":"org.eclipse.lsp4j.SignatureHelpCapabilities",
   "allDeclaredFields":true,
   "allPublicMethods":true,
@@ -894,9 +866,6 @@
 {
   "name":"org.eclipse.lsp4j.TextDocumentRegistrationOptions",
   "allDeclaredFields":true
-},
-{
-  "name":"org.eclipse.lsp4j.TextDocumentSyncKind"
 },
 {
   "name":"org.eclipse.lsp4j.TextDocumentSyncOptions",
@@ -1027,9 +996,6 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.launch.LSPLauncher"
-},
-{
   "name":"org.eclipse.lsp4j.services.LanguageClient",
   "allDeclaredMethods":true
 },
@@ -1044,30 +1010,5 @@
 {
   "name":"org.eclipse.lsp4j.services.WorkspaceService",
   "allDeclaredMethods":true
-},
-{
-  "name":"org.slf4j.ILoggerFactory",
-  "allPublicMethods":true
-},
-{
-  "name":"org.slf4j.Logger",
-  "allPublicMethods":true
-},
-{
-  "name":"org.slf4j.LoggerFactory",
-  "allPublicMethods":true
-},
-{
-  "name":"sun.misc.Unsafe",
-  "fields":[{"name":"theUnsafe"}],
-  "methods":[{"name":"allocateInstance","parameterTypes":["java.lang.Class"] }]
-},
-{
-  "name":"sun.security.provider.NativePRNG",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.SHA",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
 }
 ]

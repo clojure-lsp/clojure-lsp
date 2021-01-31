@@ -1,0 +1,43 @@
+# All features
+
+- Find a function/var definition
+- Find all references of a function/var
+- Show all workspace/project symbols
+- Show all symbols on current file
+- Execute command
+  - Refactoring
+    - Add import to namespace
+    - Add missing namespace (available via code actions too)
+    - Extract Function (available via code actions too)
+    - Inline Symbol (available via code actions too)
+    - Clean namespace (available via code actions too)
+    - Cycle privacy of def/defn
+    - Cycle collection ({},[],())
+    - Expand let
+    - Introduce let
+    - Move expression to let
+    - Thread first expression
+    - Thread last expression
+    - Thread first all
+    - Thread last all
+    - Unwind all
+    - Unwind thread
+  - Dev
+    - Server information
+    - Cursor information
+- Rename symbols
+- Cursor hover showing symbol usages
+- Code actions
+  - Clean namespace require/imports
+  - Inline symbol
+  - Extract function
+  - Add missing require
+  - Add missing import
+  - Add known common require
+  - Add known common import
+- Code lenses on function/vars references
+- Format whole file
+- Format a code range
+- Semantic tokens (applying color on client editor for each known token)
+- Call hierarchy (Incoming only)
+- Custom message to client during any server process

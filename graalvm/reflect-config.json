@@ -559,10 +559,15 @@
 },
 {
   "name":"org.eclipse.lsp4j.MessageParams",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
+  "allDeclaredFields":true,
+  "allDeclaredMethods":true,
+  "allPublicMethods":true,
+  "allDeclaredConstructors":true
 },
 {
-  "name":"org.eclipse.lsp4j.MessageType"
+  "name":"org.eclipse.lsp4j.MessageType",
+  "allDeclaredFields":true,
+  "allPublicMethods":true
 },
 {
   "name":"org.eclipse.lsp4j.OnTypeFormattingCapabilities",
@@ -967,6 +972,10 @@
 },
 {
   "name":"org.eclipse.lsp4j.adapters.SemanticTokensFullDeltaResponseAdapter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.adapters.SymbolInformationTypeAdapter$Factory",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

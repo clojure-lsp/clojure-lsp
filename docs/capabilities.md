@@ -22,7 +22,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | client/unregisterCapability            |      |                                               |
 | workspace/workspaceFolders             |      |                                               |
 | workspace/didChangeWorkspaceFolders    |      |                                               |
-| workspace/didChangeConfiguration       | √    | Currently only log                            |
+| workspace/didChangeConfiguration       | √    | Currently does nothing but log                |
 | workspace/configuration                |      |                                               |
 | workspace/didChangeWatchedFiles        | √    |                                               |
 | workspace/symbol                       | √    |                                               |

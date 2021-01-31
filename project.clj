@@ -31,8 +31,7 @@
                     :dependencies [[pjstadig/humane-test-output "0.9.0"]]
                     :injections [(require 'pjstadig.humane-test-output)
                                  (pjstadig.humane-test-output/activate!)]}
-             :native-image {:dependencies [[ericdallo/sqlite-jni-graal-fix "0.0.2-graalvm-21.0.0"]
-                                           [org.graalvm.nativeimage/svm "21.0.0"]]}
+             :native-image {:dependencies [[ericdallo/sqlite-jni-graal-fix "0.0.2-graalvm-21.0.0"]]}
              :uberjar {:aot :all
                        :jvm-opts ["-Xmx2g"
                                   "-server"

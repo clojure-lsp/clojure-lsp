@@ -26,8 +26,8 @@ jobs:
           tag_name: ${{ steps.latest-tag.outputs.tag}}
           release_name: ${{ steps.latest-tag.outputs.tag}}
 
-  build-binary:
-    name: Build binary
+  jvm:
+    name: Build JVM binary and jar
     needs: release
     runs-on: ubuntu-latest
 
@@ -43,95 +43,35 @@ jobs:
         with:
           lein: 2.9.5
 
-      - name: Generate binary
+      - name: Generate binary and jar
         run: lein bin
 
-      - uses: actions/upload-artifact@v1
-        with:
-          name: clojure-lsp
-          path: target/clojure-lsp
-
-  upload-binary:
-    name: Upload binary to release
-    needs: build-binary
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions/download-artifact@v2
-        with:
-          name: clojure-lsp
       - name: Get latest tag
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@0.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload linux binary to release
+
+      - name: Upload JVM linux binary to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp
+          file: target/clojure-lsp
           asset_name: clojure-lsp
           tag: ${{ steps.latest-tag.outputs.tag}}
 
-      - name: Upload Windows binary to release
+      - name: Upload JVM Windows binary to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp
+          file: target/clojure-lsp
           asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
 
-  build-jar:
-    name: Build jar
-    needs: release
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v1
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-
-      - name: Install leiningen
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          lein: 2.9.5
-
-      - name: Generate jar
-        run: lein uberjar
-
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/upload-artifact@v1
-        with:
-          name: clojure-lsp.jar
-          path: target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
-
-  upload-jar:
-    name: Upload jar to release
-    needs: build-jar
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions/download-artifact@v2
-        with:
-          name: clojure-lsp.jar
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload jar to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
+          file: target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}

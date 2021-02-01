@@ -44,7 +44,9 @@
 {
   "name":"java.io.File",
   "allDeclaredFields":true,
-  "allPublicMethods":true
+  "allDeclaredConstructors":true,
+  "allPublicMethods":true,
+  "allDeclaredMethods":true
 },
 {
   "name":"java.lang.Object",

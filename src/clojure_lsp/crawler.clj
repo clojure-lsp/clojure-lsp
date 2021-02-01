@@ -60,7 +60,7 @@
          :classpath-cmd ["npx" "shadow-cljs" "classpath"]}]
        (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
-(defn ^:private get-cp-entry-type [e]
+(defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
         (.isDirectory e) :directory
         :else :unkown))

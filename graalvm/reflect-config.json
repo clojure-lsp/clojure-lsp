@@ -921,6 +921,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.WorkspaceFolder",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.WorkspaceFoldersOptions",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

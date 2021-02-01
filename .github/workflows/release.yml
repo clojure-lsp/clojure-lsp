@@ -108,7 +108,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp.jar
@@ -137,8 +142,15 @@ jobs:
           export GRAALVM_HOME="$HOME/graalvm-ce-java11-21.0.0"
           graalvm/native-compile.sh
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
+      - uses: papeloto/action-zip@v1
         with:
-          path: clojure-lsp
-          name: clojure-lsp-${{ steps.latest-tag.outputs.tag}}-linux-amd64.zip
+          files: clojure-lsp
+          dest: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
+
+      - name: Upload native image to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
+          asset_name: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}

@@ -78,11 +78,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v2
 
+      - name: Display structure of downloaded files
+        run: ls -R
+
       - name: Upload jar to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp.jar
+          file: clojure-lsp/clojure-lsp.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
 
@@ -90,7 +93,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp
+          file: clojure-lsp/clojure-lsp
           asset_name: clojure-lsp
           tag: ${{ steps.latest-tag.outputs.tag}}
 
@@ -98,7 +101,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp
+          file: clojure-lsp/clojure-lsp
           asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
 

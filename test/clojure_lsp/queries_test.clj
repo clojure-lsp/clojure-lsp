@@ -4,7 +4,7 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.test-helper :as h]
     [clojure.test :refer [deftest is testing]]
-    [clojure.tools.logging :as log]))
+    [taoensso.timbre :as log]))
 
 (deftest find-element-under-cursor []
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

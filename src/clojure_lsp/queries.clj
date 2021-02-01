@@ -1,6 +1,6 @@
 (ns clojure-lsp.queries
   (:require
-   [clojure.tools.logging :as log]
+   [taoensso.timbre :as log]
    [medley.core :as medley]))
 
 (defn inside?

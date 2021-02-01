@@ -3,7 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure.java.shell :as shell]
     [clojure.string :as string]
-    [clojure.tools.logging :as log])
+    [taoensso.timbre :as log])
   (:import
    [java.net URI]
    [java.nio.file Paths]))
@@ -40,7 +40,7 @@
     (string/ends-with? uri ".edn") :edn
     :else :unknown))
 
-(defn uri->path [uri]
+(defn uri->path ^java.nio.file.Path [uri]
   (.toAbsolutePath (Paths/get (URI. uri))))
 
 (defn uri->filename [uri]

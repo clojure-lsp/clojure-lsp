@@ -6,7 +6,7 @@
     [clojure.core.async :as async]
     [clojure.string :as string]
     [clojure.test :refer [deftest is testing]]
-    [clojure.tools.logging :as log]))
+    [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
 

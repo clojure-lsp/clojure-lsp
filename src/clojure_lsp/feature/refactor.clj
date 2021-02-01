@@ -3,7 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
-   [clojure.tools.logging :as log]
+   [taoensso.timbre :as log]
    [rewrite-clj.zip :as z]))
 
 (defn client-changes [changes]

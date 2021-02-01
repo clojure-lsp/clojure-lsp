@@ -1,6 +1,5 @@
 (ns clojure-lsp.refactor.edit
   (:require
-   [clojure.tools.logging :as log]
    [rewrite-clj.custom-zipper.core :as cz]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))

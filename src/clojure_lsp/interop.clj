@@ -4,7 +4,7 @@
     [clojure.java.data :as j]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
-    [clojure.tools.logging :as log]
+    [taoensso.timbre :as log]
     [clojure.walk :as walk]
     [medley.core :as medley])
   (:import
@@ -22,6 +22,7 @@
       DiagnosticSeverity
       DocumentHighlight
       DocumentSymbol
+      FileChangeType
       Hover
       Location
       MarkedString
@@ -44,32 +45,33 @@
     (org.eclipse.lsp4j.jsonrpc.messages Either)
     (java.net URLDecoder)))
 
-(defn ^:private enum->keyword [enum]
-  (-> enum (.name) .toLowerCase keyword))
-
-(defn learn-how-to-parse-enums [enums]
-  (-> #(defmethod j/from-java % [instance] (enum->keyword instance))
-      (map enums)))
-
-(defn document->decoded-uri [document]
+(defn document->decoded-uri [^TextDocumentIdentifier document]
   (-> document
       .getUri
       URLDecoder/decode))
 
-(learn-how-to-parse-enums
-  [DiagnosticSeverity
-   MessageType
-   WatchKind
-   CompletionItemKind
-   SymbolKind])
+(defmethod j/from-java DiagnosticSeverity [^DiagnosticSeverity instance]
+  (-> instance .name .toLowerCase keyword))
 
-(defmethod j/from-java Either [instance]
+(defmethod j/from-java MessageType [^MessageType instance]
+  (-> instance .name .toLowerCase keyword))
+
+(defmethod j/from-java WatchKind [^WatchKind instance]
+  (-> instance .name .toLowerCase keyword))
+
+(defmethod j/from-java CompletionItemKind [^CompletionItemKind instance]
+  (-> instance .name .toLowerCase keyword))
+
+(defmethod j/from-java SymbolKind [^SymbolKind instance]
+  (-> instance .name .toLowerCase keyword))
+
+(defmethod j/from-java Either [^Either instance]
   (j/from-java (.get instance)))
 
-(defmethod j/from-java TextDocumentIdentifier [instance]
+(defmethod j/from-java TextDocumentIdentifier [^TextDocumentIdentifier instance]
   (document->decoded-uri instance))
 
-(defmethod j/from-java JsonElement [instance]
+(defmethod j/from-java JsonElement [^JsonElement instance]
   (-> instance
       .toString
       json/read-str
@@ -306,7 +308,7 @@
 
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 
-(defn  java->clj [inst]
+(defn java->clj [inst]
   (let [converted (j/from-java inst)]
     (if (map? converted)
       (->> converted
@@ -327,8 +329,7 @@
                              (keyword map-key))))))
 
 (s/def ::debean (s/conformer debeaner))
-(s/def ::value-set (s/conformer (fn [value-set]
-                                  (set (map #(.getValue %) value-set)))))
+
 (s/def :capabilities/code-action ::debean)
 (s/def :capabilities/code-lens ::debean)
 (s/def :capabilities/color-provider ::debean)
@@ -347,15 +348,26 @@
 (s/def :capabilities/synchronization ::debean)
 (s/def :capabilities/type-definition ::debean)
 
+
+(s/def :capabilities/symbol-kind-value-set
+  (s/conformer (fn [value-set]
+                 (set (map (fn [^SymbolKind kind]
+                             (.getValue kind)) value-set)))))
+
 (s/def :capabilities/symbol-kind (s/and ::debean
-                                        (s/keys :opt-un [::value-set])))
+                                        (s/keys :opt-un [:capabilities/symbol-kind-value-set])))
 (s/def :capabilities/document-symbol (s/and ::debean
                                             (s/keys :opt-un [:capabilities/symbol-kind])))
 (s/def :capabilities/signature-help (s/and ::debean
                                            (s/keys :opt-un [:capabilities/signature-information])))
 
+(s/def :capabilities/completion-item-kind-value-set
+  (s/conformer (fn [value-set]
+                 (set (map (fn [^CompletionItemKind kind]
+                             (.getValue kind)) value-set)))))
+
 (s/def :capabilities/completion-item-kind (s/and ::debean
-                                                 (s/keys :opt-un [::value-set])))
+                                                 (s/keys :opt-un [:capabilities/completion-item-kind-value-set])))
 (s/def :capabilities/completion (s/and ::debean
                                        (s/keys :opt-un [:capabilities/completion-item
                                                         :capabilities/completion-item-kind])))
@@ -398,7 +410,7 @@
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
-(s/def :watched-files/type (s/conformer (fn [v] (get watched-files-type-enum (.getValue v)))))
+(s/def :watched-files/type (s/conformer (fn [^FileChangeType v] (get watched-files-type-enum (.getValue v)))))
 (s/def :watched-files/change (s/and ::debean (s/keys :req-un [::uri :watched-files/type])))
 (s/def ::watched-files-changes (s/and (s/conformer (fn [vs] (into [] vs)))
                                       (s/coll-of :watched-files/change)))

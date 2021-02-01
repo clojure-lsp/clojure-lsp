@@ -5,19 +5,17 @@
     [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
     [clojure-lsp.handlers :as handlers]
     [clojure-lsp.interop :as interop]
+    [clojure-lsp.nrepl :as nrepl]
     [clojure-lsp.producer :as producer]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
-    [clojure.string :as string]
-    [clojure.tools.logging :as log]
-    [nrepl.server :as nrepl.server]
-    [trptcolin.versioneer.core :as version])
+    [taoensso.timbre :as log]
+    [trptcolin.versioneer.core :as version]
+    borkdude.dynaload)
   (:import
     (clojure_lsp ClojureExtensions)
-    (java.lang.management ManagementFactory)
     (java.util.concurrent CompletableFuture)
     (java.util.function Supplier)
-    (org.apache.log4j MDC)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCallsParams
       CallHierarchyPrepareParams
@@ -71,6 +69,11 @@
     (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
 
+(log/merge-config! {:appenders {:println {:enabled? false}
+                                :spit (log/spit-appender {:fname "/tmp/clojure-lsp.out"})}})
+
+(log/handle-uncaught-jvm-exceptions!)
+
 (defonce formatting (atom false))
 
 (defonce status (atom {}))
@@ -119,8 +122,8 @@
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
-    (go :didOpen
-        (sync-handler params handlers/did-open)))
+   (go :didOpen
+       (sync-handler params handlers/did-open)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
@@ -170,8 +173,8 @@
                             0 0)))))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
-    (go :formatting
-        (async-handler params handlers/formatting ::interop/edits)))
+   (go :formatting
+       (async-handler params handlers/formatting ::interop/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting
@@ -200,8 +203,8 @@
         (async-handler params handlers/code-actions ::interop/code-actions)))
 
   (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
-    (go :resolveCodeAction
-        (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
+   (go :resolveCodeAction
+       (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (go :codeLens
@@ -241,7 +244,6 @@
 
 (deftype LSPWorkspaceService []
   WorkspaceService
-
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (go :executeCommand
         (future
@@ -261,8 +263,8 @@
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
-    (go :didSave
-        (sync-handler params handlers/did-delete-files)))
+                          (go :didSave
+                              (sync-handler params handlers/did-delete-files)))
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (go :workspaceSymbol
@@ -270,15 +272,15 @@
 
 (defn client-settings [^InitializeParams params]
   (-> params
-      (.getInitializationOptions)
-      (interop/json->clj)
+      interop/java->clj
+      :initializationOptions
       (or {})
       shared/keywordize-first-depth
       (interop/clean-client-settings)))
 
 (defn client-capabilities [^InitializeParams params]
   (some->> params
-           (.getCapabilities)
+           .getCapabilities
            (interop/conform-or-log ::interop/client-capabilities)))
 
 ;; Called from java
@@ -343,14 +345,13 @@
                                        (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
-      (log/info "Initialized" params)
+      (log/info "Initialized")
       (go :initialized
           (end
-            (doto
-             (:client @db/db)
-              (.registerCapability
-                (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                     (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
+            (let [client ^LanguageClient (:client @db/db)]
+              (.registerCapability client
+                                   (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                                        (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct
@@ -397,44 +398,13 @@
           (log/error e "in thread"))))
     os))
 
-(defn- dot-nrepl-port-file
-  []
-  (try
-    (slurp  ".nrepl-port")
-    (catch Exception _)))
-
-(defn- embedded-nrepl-server
-  []
-  (let [repl-server (nrepl.server/start-server)
-        port (:port repl-server)]
-    port))
-
-(defn- repl-port
-  []
-  (or (dot-nrepl-port-file)
-      (embedded-nrepl-server)))
-
-(defn- inject-pid-for-log4j
-  "Inject a PID context value so we can include it in log4j
-  logs."
-  []
-  (let [pid (-> (ManagementFactory/getRuntimeMXBean)
-                (.getName)
-                (string/split #"@")
-                (first))]
-    (MDC/put "PID" pid)))
-
 (defn- run []
-  (inject-pid-for-log4j)
   (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
-        launcher (LSPLauncher/createServerLauncher server is os)
-        port (repl-port)]
-    (log/info "====== LSP nrepl server started on port" port)
-    (swap! db/db assoc
-           :client ^LanguageClient (.getRemoteProxy launcher)
-           :port port)
+        launcher (LSPLauncher/createServerLauncher server is os)]
+    (nrepl/setup-nrepl)
+    (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (async/go
       (loop [edit (async/<! db/edits-chan)]
         (producer/workspace-apply-edit edit)

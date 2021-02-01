@@ -3,7 +3,7 @@
     [clojure-lsp.shared :as shared]
     [clojure-lsp.db :as db]
     [clojure.core.async :as async]
-    [clojure.tools.logging :as log]))
+    [taoensso.timbre :as log]))
 
 (defn ^:private kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))

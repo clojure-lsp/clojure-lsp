@@ -2,7 +2,7 @@
   (:require
     [clojure-lsp.parser :as parser]
     [clojure.test :refer [deftest is]]
-    [clojure.tools.logging :as log]
+    [taoensso.timbre :as log]
     [rewrite-clj.zip :as z]))
 
 (deftest find-loc-at-pos-test

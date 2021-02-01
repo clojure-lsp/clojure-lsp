@@ -10,12 +10,14 @@
    [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
-   [clojure.tools.logging :as log]
+   [taoensso.timbre :as log]
    [digest :as digest])
   (:import
    [java.nio.file Paths]))
 
-(defn ^:private to-file [path child]
+(defn ^:private to-file ^java.io.File
+  [^java.nio.file.Path path
+   ^String child]
   (.toFile (.resolve path child)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]}]
@@ -198,11 +200,11 @@
     nil))
 
 (defn ^:private find-raw-project-settings [project-root]
-  (let [config-path (Paths/get ".lsp" (into-array ["config.edn"]))]
+  (let [config-path (.toString (Paths/get ".lsp" (into-array ["config.edn"])))]
     (loop [dir (shared/uri->path project-root)]
       (let [full-config-path (.resolve dir config-path)
             file (.toFile full-config-path)
-            parent-dir (.getParent dir)]
+            parent-dir (.getParent ^java.nio.file.Path dir)]
         (cond
           (.exists file)
           (slurp file)

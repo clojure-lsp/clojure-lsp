@@ -25,9 +25,15 @@
                   tag)}
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.24.1"]
                              [lein-binplus "0.6.6"]]
-                   :bin {:name "clojure-lsp"}}
+                   :bin {:name "clojure-lsp"}
+                   :dependencies [[nrepl/nrepl "0.8.3"]]}
              :test {:test-selectors {:focused :focused}
                     :dependencies [[pjstadig/humane-test-output "0.9.0"]]
                     :injections [(require 'pjstadig.humane-test-output)
                                  (pjstadig.humane-test-output/activate!)]}
-             :uberjar {:aot :all}})
+             :native-image {:dependencies [[ericdallo/sqlite-jni-graal-fix "0.0.2-graalvm-21.0.0"]]}
+             :uberjar {:aot :all
+                       :jvm-opts ["-Xmx2g"
+                                  "-server"
+                                  "-Dclojure.compiler.direct-linking=true"
+                                  "-Dclojure.spec.skip-macros=true"]}})

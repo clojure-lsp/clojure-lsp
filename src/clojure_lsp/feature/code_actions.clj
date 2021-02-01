@@ -6,7 +6,7 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.db :as db]
     [clojure-lsp.shared :as shared]
-    [clojure.tools.logging :as log])
+    [taoensso.timbre :as log])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))

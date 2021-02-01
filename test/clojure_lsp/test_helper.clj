@@ -5,7 +5,7 @@
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
     [clojure.test :refer [is use-fixtures]]
-    [clojure.tools.logging :as log]))
+    [taoensso.timbre :as log]))
 
 (defn reset-db-after-test []
   (use-fixtures

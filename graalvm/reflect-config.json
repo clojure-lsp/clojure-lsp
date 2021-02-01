@@ -42,6 +42,11 @@
   "allPublicMethods":true
 },
 {
+  "name":"java.io.File",
+  "allDeclaredFields":true,
+  "allPublicMethods":true
+},
+{
   "name":"java.lang.Object",
   "allDeclaredFields":true,
   "allDeclaredMethods":true,

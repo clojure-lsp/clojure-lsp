@@ -79,13 +79,13 @@ jobs:
       - uses: actions/download-artifact@v2
 
       - name: Display structure of downloaded files
-        run: ls -R
+        run: ls -lR
 
       - name: Upload jar to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp/clojure-lsp.jar
+          file: clojure-lsp.jar/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
 

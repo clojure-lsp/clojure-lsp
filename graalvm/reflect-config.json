@@ -58,6 +58,10 @@
   "allPublicMethods":true
 },
 {
+  "name":"java.lang.reflect.Method",
+  "methods":[{"name":"canAccess","parameterTypes":["java.lang.Object"] }]
+},
+{
   "name":"java.util.ArrayList",
   "allPublicConstructors":true
 },

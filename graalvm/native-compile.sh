@@ -44,4 +44,10 @@ args=("-jar" "$CLOJURE_LSP_JAR"
       "-H:ServiceLoaderFeatureExcludeServices=javax.sound.midi.spi.MidiFileWriter"
       "$CLOJURE_LSP_XMX")
 
+CLOJURE_LSP_STATIC=${CLOJURE_LSP_STATIC:-}
+
+if [ "$CLOJURE_LSP_STATIC" = "true" ]; then
+    args+=("--static")
+fi
+
 "$GRAALVM_HOME/bin/native-image" "${args[@]}"

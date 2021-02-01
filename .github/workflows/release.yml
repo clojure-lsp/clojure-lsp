@@ -103,7 +103,7 @@ jobs:
           asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
 
-  deploy-native-linux:
+  native-linux:
     name: Deploy native linux binary
     needs: build-jvm
     runs-on: ubuntu-latest
@@ -146,7 +146,51 @@ jobs:
           asset_name: clojure-lsp-native-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
 
-  deploy-native-mac:
+  native-static-linux:
+    name: Deploy native static linux binary
+    needs: build-jvm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp.jar
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm-version: 21.0.0.java11
+
+      - name: Install native-image component
+        run: |
+          gu install native-image
+
+      - name: Build Linux native image
+        run: |
+          export CLOJURE_LSP_JAR=clojure-lsp.jar
+          export CLOJURE_LSP_XMX="-J-Xmx6g"
+          export CLOJURE_LSP_STATIC=true
+          graalvm/native-compile.sh
+
+      - uses: papeloto/action-zip@v1
+        with:
+          files: clojure-lsp
+          dest: clojure-lsp-native-static-linux-amd64.zip
+
+      - name: Upload native image to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-native-static-linux-amd64.zip
+          asset_name: clojure-lsp-native-static-linux-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag }}
+
+  native-mac:
     name: Deploy native MacOS binary
     needs: build-jvm
     runs-on: macos-latest

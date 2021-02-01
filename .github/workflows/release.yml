@@ -176,7 +176,7 @@ jobs:
         run: |
           gu install native-image
 
-      - name: Build Linux native image
+      - name: Build MacOS native image
         run: |
           export CLOJURE_LSP_JAR=clojure-lsp.jar
           export CLOJURE_LSP_XMX="-J-Xmx6g"

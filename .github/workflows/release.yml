@@ -30,7 +30,6 @@ jobs:
     name: Build JVM jar and embedded jar
     needs: release
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v1
       - name: Prepare java
@@ -68,7 +67,6 @@ jobs:
     name: Deploy JVM jar and embedded jar
     needs: build-jvm
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v1
       - name: Get latest tag
@@ -109,7 +107,6 @@ jobs:
     name: Deploy native linux binary
     needs: build-jvm
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Get latest tag
@@ -155,5 +152,57 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
-          asset_name: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
+          asset_name: clojure-lsp-native-linux-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+  deploy-native-mac:
+    name: Deploy native MacOS binary
+    needs: build-jvm
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp.jar
+
+      - name: Cache GraalVM
+        uses: actions/cache@v1
+        id: cache-graalvm
+        with:
+          path: ~/graalvm-ce-java11-21.0.0
+          key: ${{ runner.os }}-graalvm-21.0.0
+          restore-keys: |
+                ${{ runner.os }}-graalvm-21.0.0
+
+      - name: Download GraalVM
+        run: |
+          cd ~
+          if ! [ -d graalvm-ce-java11-21.0.0 ]; then
+            curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-21.0.0/graalvm-ce-java11-linux-amd64-21.0.0.tar.gz
+            tar xzf graalvm-ce-java11-linux-amd64-21.0.0.tar.gz
+          fi
+
+      - name: Build Linux native image
+        run: |
+          export CLOJURE_LSP_JAR=clojure-lsp.jar
+          export CLOJURE_LSP_XMX="-J-Xmx6g"
+          export GRAALVM_HOME="$HOME/graalvm-ce-java11-21.0.0"
+          graalvm/native-compile.sh
+
+      - uses: papeloto/action-zip@v1
+        with:
+          files: clojure-lsp
+          dest: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
+
+      - name: Upload native image to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-linux-amd64.zip
+          asset_name: clojure-lsp-native-macos-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}

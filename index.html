@@ -361,9 +361,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#building-manually" class="md-nav__link">
-    Building manually
+  <a href="#building" class="md-nav__link">
+    Building
   </a>
+  
+    <nav class="md-nav" aria-label="Building">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graavm" class="md-nav__link">
+    GraaVM
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -532,9 +545,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#building-manually" class="md-nav__link">
-    Building manually
+  <a href="#building" class="md-nav__link">
+    Building
   </a>
+  
+    <nav class="md-nav" aria-label="Building">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graavm" class="md-nav__link">
+    GraaVM
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -624,8 +650,10 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
 </code></pre></div>
 <hr />
-<h2 id="building-manually">Building manually<a class="headerlink" href="#building-manually" title="Permanent link">#</a></h2>
-<p>For building manually, run <code>lein bin</code> to generate the binary inside <code>target</code> folder or <code>lein uberjar</code> for building the standalone jar.</p>
+<h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
+<p>For building the jar manually, run <code>lein bin</code> to generate the embedded jar inside <code>target</code> folder or <code>lein uberjar</code> for building the standalone jar.</p>
+<h3 id="graavm">GraaVM<a class="headerlink" href="#graavm" title="Permanent link">#</a></h3>
+<p>To build a native image with GraalVM, first install the GraalVM 21.0.0 for Java 11, set the <code>GRAALVM_HOME</code> to the installation dir and then run from <code>clojure-lsp</code> project root <code>./graalvm/native-compile.sh</code>. The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
 <hr />
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h2>
 <p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:

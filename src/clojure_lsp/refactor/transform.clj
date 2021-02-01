@@ -8,7 +8,6 @@
     [clojure-lsp.shared :as shared]
     [clojure.set :as set]
     [clojure.string :as string]
-    [taoensso.timbre :as log]
     [medley.core :as medley]
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
@@ -273,14 +272,14 @@
                         (apply concat)
                         (cons (n/keyword-node form-type)))]
     (if (empty? (z/child-sexprs removed-nodes))
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next form-type)
-                                    (z/up)
-                                    z/remove)
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next form-type)
-                                    (z/up)
-                                    (z/replace (n/list-node forms))))))
+        (z/subedit-> ns-loc
+                     (z/find-value z/next form-type)
+                     (z/up)
+                     z/remove)
+        (z/subedit-> ns-loc
+                     (z/find-value z/next form-type)
+                     (z/up)
+                     (z/replace (n/list-node forms))))))
 
 (defn ^:private remove-unused-refers
   [node unused-refers]
@@ -421,17 +420,18 @@
    'set    {:to 'clojure.set}
    'walk   {:to 'clojure.walk}
    'pprint {:to 'clojure.pprint}
-   'async  {:to 'clojure.core.async}})
+   'async  {:to 'clojure.core.async}
+   'io     {:to 'clojure.java.io}})
 
 (defn ^:private find-missing-alias-require [zloc]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
         alias->info (->> (q/find-all-aliases (:analysis @db/db))
                          (group-by :alias))
-        posibilities (or (some->> (get alias->info require-alias)
-                                  (medley/distinct-by (juxt :to)))
-                         [(get common-alias->info require-alias)])]
-    (when (= 1 (count posibilities))
-      (some-> posibilities first :to name symbol))))
+        possibilities (or (some->> (get alias->info require-alias)
+                                   (medley/distinct-by (juxt :to)))
+                          [(get common-alias->info require-alias)])]
+    (when (= 1 (count possibilities))
+      (some-> possibilities first :to name symbol))))
 
 (def ^:private common-refers->info
   {'deftest      'clojure.test

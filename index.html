@@ -653,7 +653,7 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
 <p>For building the jar manually, run <code>lein bin</code> to generate the embedded jar inside <code>target</code> folder or <code>lein uberjar</code> for building the standalone jar.</p>
 <h3 id="graavm">GraaVM<a class="headerlink" href="#graavm" title="Permanent link">#</a></h3>
-<p>To build a native image with GraalVM, first install the GraalVM 21.0.0 for Java 11, set the <code>GRAALVM_HOME</code> to the installation dir and then run from <code>clojure-lsp</code> project root <code>./graalvm/native-compile.sh</code>. The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
+<p>To build a native image with GraalVM, first install the GraalVM 21.0.0 for Java 11, set the <code>GRAALVM_HOME</code> to the installation dir and then run from <code>clojure-lsp</code> project root <code>./graalvm/native-unix-compile.sh</code> or <code>./graalvm/native-windows-compile.bat</code>. The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
 <hr />
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h2>
 <p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:

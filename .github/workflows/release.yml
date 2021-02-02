@@ -42,7 +42,7 @@ jobs:
           lein: 2.9.5
 
       - name: Generate jar and embedded jar
-        run: lein with-profiles +native-image bin
+        run: lein bin
 
       - name: Get latest tag
         id: latest-tag
@@ -72,9 +72,6 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      - name: Display structure of downloaded files
-        run: ls -lR
-
       - name: Upload jar to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -99,9 +96,38 @@ jobs:
           asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
 
+  build-native-jvm:
+    name: Build JVM jar for native-image
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Install leiningen
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          lein: 2.9.5
+
+      - name: Generate jar
+        run: lein with-profiles +native-image uberjar
+
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v2
+        with:
+          path: target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
+          name: clojure-lsp-native.jar
+
   native-linux:
     name: Deploy native linux binary
-    needs: build-jvm
+    needs: build-native-jvm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -110,7 +136,7 @@ jobs:
         uses: WyriHaximus/github-action-get-previous-tag@v1
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp.jar
+          name: clojure-lsp-native.jar
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -123,7 +149,7 @@ jobs:
 
       - name: Build Linux native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_JAR: clojure-lsp-native.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
@@ -143,7 +169,7 @@ jobs:
 
   native-static-linux:
     name: Deploy native static linux binary
-    needs: build-jvm
+    needs: build-native-jvm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -152,7 +178,7 @@ jobs:
         uses: WyriHaximus/github-action-get-previous-tag@v1
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp.jar
+          name: clojure-lsp-native.jar
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -165,7 +191,7 @@ jobs:
 
       - name: Build static Linux native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_JAR: clojure-lsp-native.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
         run: |
@@ -186,7 +212,7 @@ jobs:
 
   native-mac:
     name: Deploy native MacOS binary
-    needs: build-jvm
+    needs: build-native-jvm
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
@@ -196,7 +222,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp.jar
+          name: clojure-lsp-native.jar
 
       - name: Install leiningen
         uses: DeLaGuardo/setup-clojure@master
@@ -214,7 +240,7 @@ jobs:
 
       - name: Build MacOS native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_JAR: clojure-lsp-native.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
@@ -234,7 +260,7 @@ jobs:
 
   native-windows:
     name: Deploy native Windows binary
-    needs: build-jvm
+    needs: build-native-jvm
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -244,7 +270,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp.jar
+          name: clojure-lsp-native.jar
 
       - name: Install leiningen
         uses: DeLaGuardo/setup-clojure@master

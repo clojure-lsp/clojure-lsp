@@ -14,9 +14,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: Get latest tag
         id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -47,9 +46,7 @@ jobs:
 
       - name: Get latest tag
         id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: WyriHaximus/github-action-get-previous-tag@v1
 
       - name: Upload jar
         uses: actions/upload-artifact@v2
@@ -71,9 +68,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: Get latest tag
         id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
       - uses: actions/download-artifact@v2
 
       - name: Display structure of downloaded files
@@ -111,9 +107,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Get latest tag
         id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: WyriHaximus/github-action-get-previous-tag@v1
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp.jar
@@ -128,10 +122,11 @@ jobs:
           gu install native-image
 
       - name: Build Linux native image
+        env:
+          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          export CLOJURE_LSP_JAR=clojure-lsp.jar
-          export CLOJURE_LSP_XMX="-J-Xmx6g"
-          graalvm/native-compile.sh
+          graalvm/native-unix-compile.sh
 
       - uses: papeloto/action-zip@v1
         with:
@@ -154,9 +149,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Get latest tag
         id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: WyriHaximus/github-action-get-previous-tag@v1
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp.jar
@@ -170,12 +163,13 @@ jobs:
         run: |
           gu install native-image
 
-      - name: Build Linux native image
+      - name: Build static Linux native image
+        env:
+          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+          CLOJURE_LSP_STATIC: true
         run: |
-          export CLOJURE_LSP_JAR=clojure-lsp.jar
-          export CLOJURE_LSP_XMX="-J-Xmx6g"
-          export CLOJURE_LSP_STATIC=true
-          graalvm/native-compile.sh
+          graalvm/native-unix-compile.sh
 
       - uses: papeloto/action-zip@v1
         with:
@@ -198,9 +192,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Get latest tag
         id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@0.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: WyriHaximus/github-action-get-previous-tag@v1
 
       - uses: actions/download-artifact@v2
         with:
@@ -221,10 +213,11 @@ jobs:
           gu install native-image
 
       - name: Build MacOS native image
+        env:
+          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          export CLOJURE_LSP_JAR=clojure-lsp.jar
-          export CLOJURE_LSP_XMX="-J-Xmx6g"
-          graalvm/native-compile.sh
+          graalvm/native-unix-compile.sh
 
       - uses: papeloto/action-zip@v1
         with:
@@ -237,4 +230,50 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: clojure-lsp-native-macos-amd64.zip
           asset_name: clojure-lsp-native-macos-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+  native-windows:
+    name: Deploy native Windows binary
+    needs: build-jvm
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp.jar
+
+      - name: Install leiningen
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          lein: 2.9.5
+
+      - name: Install MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm-version: 21.0.0.java11
+
+      - name: Install native-image component
+        run: |
+          gu.cmd install native-image
+
+      - name: Build Windows native image
+        env:
+          CLOJURE_LSP_JAR: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-standalone.jar
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+        run: |
+          .\graalvm\native-windows-compile.bat
+
+      - name: Upload native image to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-native-windows-amd64.zip
+          asset_name: clojure-lsp-native-windows-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}

@@ -64,7 +64,7 @@ For building the jar manually, run `lein bin` to generate the embedded jar insid
 
 ### GraaVM
 
-To build a native image with GraalVM, first install the GraalVM 21.0.0 for Java 11, set the `GRAALVM_HOME` to the installation dir and then run from `clojure-lsp` project root `./graalvm/native-compile.sh`. The build may take some minutes and the result will be a `./clojure-lsp` native binary.
+To build a native image with GraalVM, first install the GraalVM 21.0.0 for Java 11, set the `GRAALVM_HOME` to the installation dir and then run from `clojure-lsp` project root `./graalvm/native-unix-compile.sh` or `./graalvm/native-windows-compile.bat`. The build may take some minutes and the result will be a `./clojure-lsp` native binary.
 
 ---
 ## Development

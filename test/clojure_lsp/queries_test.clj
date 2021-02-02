@@ -6,6 +6,8 @@
     [clojure.test :refer [deftest is testing]]
     [taoensso.timbre :as log]))
 
+(h/reset-db-after-test)
+
 (deftest find-element-under-cursor []
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn x [file|name] filename)\n"
@@ -56,6 +58,34 @@
       [{:alias 'f-alias :name-row alias-r :name-col alias-c}
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
       (q/find-references-from-cursor ana "/a.clj" alias-r alias-c true))))
+
+(deftest find-references-from-cursor-cljc []
+  (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
+                  "(defn |x [|filename] |filename |f-alias/foo)\n"
+                  "|x |unknown unknown")
+        [[alias-r alias-c]
+         [x-r x-c]
+         [param-r param-c]
+         [param-use-r param-use-c]
+         [alias-use-r alias-use-c]
+         [x-use-r x-use-c]
+         [unknown-r unknown-c]] (h/load-code-and-locs code "file:///a.cljc")
+        ana (:analysis @db/db)]
+    (h/assert-submaps
+      [{:name 'x :name-row x-r :name-col x-c}
+       {:name 'x :name-row x-use-r :name-col x-use-c}]
+      (q/find-references-from-cursor ana "/a.cljc" x-r x-c true))
+    (h/assert-submaps
+      [{:name 'filename :name-row param-r :name-col param-c}
+       {:name 'filename :name-row param-use-r :name-col param-use-c}]
+      (q/find-references-from-cursor ana "/a.cljc" param-r param-c true))
+    (h/assert-submaps
+      ['{:name unknown}]
+      (q/find-references-from-cursor ana "/a.cljc" unknown-r unknown-c true))
+    (h/assert-submaps
+      [{:alias 'f-alias :name-row alias-r :name-col alias-c}
+       {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
+      (q/find-references-from-cursor ana "/a.cljc" alias-r alias-c true))))
 
 (deftest find-definition-from-cursor []
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

@@ -89,29 +89,32 @@
   (concat
     (when include-declaration?
       [element])
-    (filter #(and (= :var-usages (:bucket %))
-                  (= (:alias %) alias))
-            (get analysis filename))))
+    (->> (get analysis filename)
+         (filter #(and (= :var-usages (:bucket %))
+                       (= (:alias %) alias)))
+         (medley/distinct-by (juxt :filename :name :row :col)))))
 
 
 (defmethod find-references :var-usages
   [analysis element include-declaration?]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     [element]
-    (filter #(and (= (:name %) (:name element))
-                  (= (or (:ns %) (:to %)) (:to element))
-                  (or include-declaration?
-                      (not= :var-definitions (:bucket %))))
-            (mapcat val analysis))))
+    (->> (mapcat val analysis)
+         (filter #(and (= (:name %) (:name element))
+                       (= (or (:ns %) (:to %)) (:to element))
+                       (or include-declaration?
+                         (not= :var-definitions (:bucket %)))))
+         (medley/distinct-by (juxt :filename :name :row :col)))))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
-  (filter #(and (= (:name %) (:name element))
-                (= (or (:ns %) (:to %))
-                   (:ns element))
-                (or include-declaration?
-                    (not= :var-definitions (:bucket %))) )
-          (mapcat val analysis)))
+  (->> (mapcat val analysis)
+       (filter #(and (= (:name %) (:name element))
+                     (= (or (:ns %) (:to %))
+                       (:ns element))
+                     (or include-declaration?
+                       (not= :var-definitions (:bucket %)))))
+       (medley/distinct-by (juxt :filename :name :row :col))))
 
 (defmethod find-references :local
   [analysis {:keys [id filename] :as _element} include-declaration?]

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add clojure.java.io to known requires - #291
+- Add support for Windows GraalVM compiled native binary
+
+## 2021.02.01-20.37.52
+
+- Add native binaries for Linux and MacOS compiled with GraalVM #267 (Experimental)
+
 ## 2021.01.28-03.03.16
 
 - Fix clj-kondo batch analysis when merging batchs - Fix #284

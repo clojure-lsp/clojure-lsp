@@ -1,5 +1,10 @@
 # Changelog
 
+## 2021.02.02-14.02.23
+
+- Fix `clojure-lsp` embedded jar binary during release CI
+- Fix duplicate references on cljc files
+
 ## 2021.02.02-03.06.46
 
 - Add clojure.java.io to known requires - #291

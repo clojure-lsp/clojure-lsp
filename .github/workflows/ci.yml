@@ -6,6 +6,7 @@ on:
       - master
     paths-ignore:
       - '**/README.md'
+      - '**/CHANGELOG.md'
       - 'docs/**'
       - 'images/**'
       - 'mkdocs.yml'
@@ -15,6 +16,7 @@ on:
       - master
     paths-ignore:
       - '**/README.md'
+      - '**/CHANGELOG.md'
       - 'docs/**'
       - 'images/**'
       - 'mkdocs.yml'

@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 2021.02.02-03.06.46
 
 - Add clojure.java.io to known requires - #291
+- Add manual System/gc after first classpath scan, it should decrease memory after the first startup
 - Add support for Windows GraalVM compiled native binary
 
 ## 2021.02.01-20.37.52

@@ -188,8 +188,11 @@
         (let [adjusted-cp (cond->> classpath
                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
                             :always (remove (set source-paths)))
-              analysis (analyze-paths adjusted-cp true)]
-          (db/save-deps root-path project-hash classpath analysis))))))
+              analysis (analyze-paths adjusted-cp true)
+              start-time (System/nanoTime)]
+            (System/gc)
+            (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
+            (db/save-deps root-path project-hash classpath analysis))))))
 
 (defn ^:private analyze-project [project-root]
   (let [root-path (shared/uri->path project-root)

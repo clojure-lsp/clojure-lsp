@@ -159,7 +159,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb ./integration-test/run-all.clj ./clojure-lsp
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -209,7 +209,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb ./integration-test/run-all.clj ./clojure-lsp
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -259,7 +259,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb ./integration-test/run-all.clj ./clojure-lsp
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -317,7 +317,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb ./integration-test/run-all.clj ./clojure-lsp
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - name: Upload native image to release
         uses: svenstaro/upload-release-action@v2

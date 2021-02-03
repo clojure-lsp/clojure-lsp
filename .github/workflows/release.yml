@@ -157,6 +157,10 @@ jobs:
         run: |
           graalvm/native-unix-compile.sh
 
+      - name: Run integration tests
+        run: |
+          bb ./integration-test/run-all.clj ./clojure-lsp
+
       - uses: papeloto/action-zip@v1
         with:
           files: clojure-lsp
@@ -203,6 +207,10 @@ jobs:
         run: |
           graalvm/native-unix-compile.sh
 
+      - name: Run integration tests
+        run: |
+          bb ./integration-test/run-all.clj ./clojure-lsp
+
       - uses: papeloto/action-zip@v1
         with:
           files: clojure-lsp
@@ -248,6 +256,10 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
+
+      - name: Run integration tests
+        run: |
+          bb ./integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -302,6 +314,10 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           .\graalvm\native-windows-compile.bat
+
+      - name: Run integration tests
+        run: |
+          bb ./integration-test/run-all.clj ./clojure-lsp
 
       - name: Upload native image to release
         uses: svenstaro/upload-release-action@v2

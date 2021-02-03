@@ -24,7 +24,6 @@ on:
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -42,5 +41,11 @@ jobs:
         with:
           lein: 2.9.5
 
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
       - name: Run tests
         run: lein test
+
+      - name: Run integration tests
+        run: bb ./integration-test/run-all.clj ./clojure-lsp

@@ -138,6 +138,14 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.1.469'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
@@ -153,6 +161,10 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
+
+      - name: Run integration tests
+        run: |
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -180,6 +192,14 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.1.469'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
@@ -196,6 +216,10 @@ jobs:
           CLOJURE_LSP_STATIC: true
         run: |
           graalvm/native-unix-compile.sh
+
+      - name: Run integration tests
+        run: |
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -224,10 +248,13 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
-      - name: Install leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          cli: '1.10.1.469'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -244,6 +271,10 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
+
+      - name: Run integration tests
+        run: |
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -272,10 +303,18 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
-      - name: Install leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          cli: '1.10.1.469'
+
+      - name: Install Babashka
+        run: |
+          iwr -useb get.scoop.sh | iex
+          scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
+          scoop bucket add extras
+          scoop install babashka --independent
+          echo "$HOME\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -295,6 +334,10 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           .\graalvm\native-windows-compile.bat
+
+      - name: Run integration tests
+        run: |
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - name: Upload native image to release
         uses: svenstaro/upload-release-action@v2

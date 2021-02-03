@@ -32,7 +32,7 @@
           (string/split sep)))
     (catch Exception e
       (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
-      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
+      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly."  :warning)
       [])))
 
 (defn ^:private valid-project-specs-with-hash [root-path project-specs]
@@ -53,7 +53,7 @@
   (->> [{:project-path "project.clj"
          :classpath-cmd ["lein" "classpath"]}
         {:project-path "deps.edn"
-         :classpath-cmd ["clj" "-Spath"]}
+         :classpath-cmd ["clojure" "-Spath"]}
         {:project-path "build.boot"
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"

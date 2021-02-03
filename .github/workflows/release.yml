@@ -36,7 +36,7 @@ jobs:
         with:
           java-version: 1.8
 
-      - name: Install leiningen
+      - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
           lein: 2.9.5
@@ -138,10 +138,10 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
-      - name: Install Clojure
+      - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.1.469'
+          lein: 2.9.5
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -192,10 +192,10 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
-      - name: Install Clojure
+      - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.1.469'
+          lein: 2.9.5
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -248,10 +248,10 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
-      - name: Install Clojure
+      - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.1.469'
+          lein: 2.9.5
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -303,10 +303,10 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
-      - name: Install Clojure
+      - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.1.469'
+          lein: 2.9.5
 
       - name: Install Babashka
         run: |

@@ -138,6 +138,11 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.1.469'
+
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
@@ -186,6 +191,11 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-native.jar
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.1.469'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -238,6 +248,11 @@ jobs:
         with:
           name: clojure-lsp-native.jar
 
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.1.469'
+
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
@@ -287,6 +302,11 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-native.jar
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.1.469'
 
       - name: Install Babashka
         run: |

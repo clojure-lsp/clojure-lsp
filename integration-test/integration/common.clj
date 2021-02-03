@@ -28,7 +28,5 @@
       (.resolve "sample-test")
       str))
 
-(println "-->" root-project-path)
-
 (defn content-length [json]
   (+ 1 (.length json)))

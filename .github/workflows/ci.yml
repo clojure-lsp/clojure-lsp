@@ -46,13 +46,16 @@ jobs:
 
   integration-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        jdk: [8, 11, 15]
     steps:
       - uses: actions/checkout@v1
 
-      - name: Set up JDK 11
+      - name: Set up JDK ${{ matrix.jdk }}
         uses: actions/setup-java@v1
         with:
-          java-version: 11
+          java-version: ${{ matrix.jdk }}
 
       - name: Install Leiningen and Clojure
         uses: DeLaGuardo/setup-clojure@master

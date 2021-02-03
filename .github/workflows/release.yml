@@ -6,28 +6,9 @@ on:
       - 2*
 
 jobs:
-  release:
-    if: startsWith(github.ref, 'refs/tags/2')
-    name: Create Release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.latest-tag.outputs.tag}}
-          release_name: ${{ steps.latest-tag.outputs.tag}}
-
   build-jvm:
+    if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM jar and embedded jar
-    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -60,45 +41,9 @@ jobs:
           path: target/clojure-lsp
           name: clojure-lsp
 
-  deploy-jvm:
-    name: Deploy JVM jar and embedded jar
-    needs: build-jvm
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
-      - uses: actions/download-artifact@v2
-
-      - name: Upload jar to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp.jar/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
-          asset_name: clojure-lsp.jar
-          tag: ${{ steps.latest-tag.outputs.tag}}
-
-      - name: Upload JVM unix embbeded jar to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp/clojure-lsp
-          asset_name: clojure-lsp
-          tag: ${{ steps.latest-tag.outputs.tag}}
-
-      - name: Upload JVM Windows embedded jar to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp/clojure-lsp
-          asset_name: clojure-lsp.bat
-          tag: ${{ steps.latest-tag.outputs.tag}}
-
   build-native-jvm:
+    if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM jar for native-image
-    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -171,13 +116,11 @@ jobs:
           files: clojure-lsp
           dest: clojure-lsp-native-linux-amd64.zip
 
-      - name: Upload native image to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload
+        uses: actions/upload-artifact@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp-native-linux-amd64.zip
-          asset_name: clojure-lsp-native-linux-amd64.zip
-          tag: ${{ steps.latest-tag.outputs.tag }}
+          path: clojure-lsp-native-linux-amd64.zip
+          name: clojure-lsp-native-linux-amd64.zip
 
   native-static-linux:
     name: Deploy native static linux binary
@@ -226,15 +169,13 @@ jobs:
           files: clojure-lsp
           dest: clojure-lsp-native-static-linux-amd64.zip
 
-      - name: Upload native image to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload
+        uses: actions/upload-artifact@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp-native-static-linux-amd64.zip
-          asset_name: clojure-lsp-native-static-linux-amd64.zip
-          tag: ${{ steps.latest-tag.outputs.tag }}
+          path: clojure-lsp-native-static-linux-amd64.zip
+          name: clojure-lsp-native-static-linux-amd64.zip
 
-  native-mac:
+  native-macos:
     name: Deploy native MacOS binary
     needs: build-native-jvm
     runs-on: macos-latest
@@ -281,13 +222,11 @@ jobs:
           files: clojure-lsp
           dest: clojure-lsp-native-macos-amd64.zip
 
-      - name: Upload native image to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload
+        uses: actions/upload-artifact@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp-native-macos-amd64.zip
-          asset_name: clojure-lsp-native-macos-amd64.zip
-          tag: ${{ steps.latest-tag.outputs.tag}}
+          path: clojure-lsp-native-macos-amd64.zip
+          name: clojure-lsp-native-macos-amd64.zip
 
   native-windows:
     name: Deploy native Windows binary
@@ -337,12 +276,97 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb integration-test/run-all.clj clojure-lsp
+          bb integration-test/run-all.clj clojure-lsp.exe
 
-      - name: Upload native image to release
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-native-windows-amd64.zip
+          name: clojure-lsp-native-windows-amd64.zip
+
+  release:
+    name: Create Release
+    needs: [build-jvm, native-linux, native-macos, native-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.latest-tag.outputs.tag}}
+          release_name: ${{ steps.latest-tag.outputs.tag}}
+
+  upload-to-release:
+    name: Upload artifacts to release
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
+      - uses: actions/download-artifact@v2
+
+      - name: Upload JVM
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp-native-windows-amd64.zip
+          file: clojure-lsp.jar/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
+          asset_name: clojure-lsp.jar
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload JVM unix embbeded jar
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp/clojure-lsp
+          asset_name: clojure-lsp
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload JVM Windows embedded jar
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp/clojure-lsp
+          asset_name: clojure-lsp.bat
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload Linux native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-native-linux-amd64.zip/clojure-lsp-native-linux-amd64.zip
+          asset_name: clojure-lsp-native-linux-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag }}
+
+      - name: Upload static Linux native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-native-static-linux-amd64.zip/clojure-lsp-native-static-linux-amd64.zip
+          asset_name: clojure-lsp-native-static-linux-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag }}
+
+      - name: Upload MacOS native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip
+          asset_name: clojure-lsp-native-macos-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload Windows native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: clojure-lsp-native-windows-amd64.zip/clojure-lsp-native-windows-amd64.zip
           asset_name: clojure-lsp-native-windows-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}

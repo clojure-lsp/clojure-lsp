@@ -5,6 +5,7 @@
 /.lsp/*.db
 /integration-test/sample-test/.lsp
 /integration-test/sample-test/.cpcache
+/integration-test/sample-test/target
 /out
 /target
 /.DS_Store

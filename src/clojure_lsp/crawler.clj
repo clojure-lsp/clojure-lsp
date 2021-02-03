@@ -53,7 +53,7 @@
   (->> [{:project-path "project.clj"
          :classpath-cmd ["lein" "classpath"]}
         {:project-path "deps.edn"
-         :classpath-cmd ["clj" "-Spath"]}
+         :classpath-cmd ["clojure" "-Spath"]}
         {:project-path "build.boot"
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"

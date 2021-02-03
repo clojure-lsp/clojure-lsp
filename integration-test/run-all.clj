@@ -1,9 +1,14 @@
 #!/usr/bin/env bb
 
-(require '[clojure.test :as t]
-         '[babashka.classpath :as cp])
+(when-not (first *command-line-args*)
+  (println "First arg must be path to clojure-lsp binary")
+  (System/exit 0))
 
-(cp/add-classpath "integration-test")
+(require '[clojure.test :as t]
+         '[babashka.classpath :as cp]
+         '[clojure.java.io :as io])
+
+(cp/add-classpath (-> *file* io/file .getParent))
 
 (require '[integration.common])
 

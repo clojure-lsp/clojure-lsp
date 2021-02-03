@@ -21,7 +21,12 @@
       (str "No superset of " (pr-str actual) " found")))
 
 (def root-project-path
-  (str (.getParent (io/file *file*))))
+  (-> (io/file *file*)
+      .getParentFile
+      .getParentFile
+      .toPath
+      (.resolve "sample-test")
+      str))
 
 (defn content-length [json]
   (+ 1 (.length json)))

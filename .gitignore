@@ -3,6 +3,8 @@
 /.lein-failures
 /.nrepl-port
 /.lsp/*.db
+/integration-test/sample-test/.lsp
+/integration-test/sample-test/.cpcache
 /out
 /target
 /.DS_Store

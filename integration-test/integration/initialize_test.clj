@@ -1,4 +1,4 @@
-(ns integration.initialize
+(ns integration.initialize-test
   (:require
     [cheshire.core :as json]
     [clojure.string :as string]
@@ -9,8 +9,7 @@
   (json/generate-string
     {:jsonrpc "2.0"
      :method :initialize
-     :params {:rootPath common/root-project-path
-              :rootUri (str "file://" common/root-project-path)}
+     :params {:rootUri (str "file://" common/root-project-path)}
      :id 1}))
 
 (def initialized-request
@@ -44,7 +43,7 @@
     (binding [*in* common/*stdout*]
       (is (string/starts-with? (read-line) "Content-Length: "))
       (is "" (read-line))
-      (println (cheshire.core/parse-stream *in*))
-      #_(common/assert-submap
-        {"id" 1}
+      (common/assert-submap
+        {"id" "1"
+         "method" "client/registerCapability"}
         (cheshire.core/parse-stream *in*)))))

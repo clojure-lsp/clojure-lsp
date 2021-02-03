@@ -5,13 +5,27 @@
 
 (cp/add-classpath "integration-test")
 
+(require '[integration.common])
+
 (def namespaces
-  '[integration.common
-    integration.initialize])
+  '[integration.initialize-test])
+
+(defn timeout [timeout-ms callback]
+  (let [fut (future (callback))
+        ret (deref fut timeout-ms :timed-out)]
+    (when (= ret :timed-out)
+      (future-cancel fut))
+    ret))
 
 (apply require namespaces)
 
-(def test-results (apply t/run-tests namespaces))
+(def test-results
+  (timeout 20000
+    #(apply t/run-tests namespaces)))
+
+(when (= test-results :timed-out)
+  (println "Timeout running integration tests!")
+  (System/exit 1))
 
 (def failures-and-errors
   (let [{:keys [fail error]} test-results]

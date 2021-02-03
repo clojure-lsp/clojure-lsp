@@ -48,4 +48,6 @@ jobs:
         run: lein test
 
       - name: Run integration tests
-        run: bb ./integration-test/run-all.clj ./clojure-lsp
+        run: |
+          lein bin
+          bb ./integration-test/run-all.clj ./target/clojure-lsp

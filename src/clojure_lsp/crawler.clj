@@ -83,7 +83,8 @@
       (update-in [:config] merge user-config)
 
       :always
-      (assoc-in [:config :output] {:analysis {:arglists true}
+      (assoc-in [:config :output] {:analysis {:arglists true
+                                              :keywords true}
                                    :canonical-paths true})
 
       locals
@@ -134,7 +135,7 @@
       (:alias element)
       (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row :alias-col :name-col :alias-end-row :name-end-row :alias-end-col :name-end-col})))
 
-    (contains? #{:locals :local-usages} bucket)
+    (contains? #{:locals :local-usages :keywords} bucket)
     [(set/rename-keys element {:row :name-row :col :name-col :end-row :name-end-row :end-col :name-end-col})]
 
     :else

@@ -33,6 +33,9 @@
        :namespace-alias} bucket)
     :module
 
+    (#{:keywords} bucket)
+    :keyword
+
     (and (#{:var-definitions} bucket)
          fixed-arities)
     :function

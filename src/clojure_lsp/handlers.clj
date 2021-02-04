@@ -91,7 +91,6 @@
   (loop [state-db @db/db]
     (when (> version (get-in state-db [:documents uri :v] -1))
       (when-let [result (crawler/run-kondo-on-text! text uri)]
-
         (if (compare-and-set! db/db state-db (-> state-db
                                                  (assoc-in [:documents uri] {:v version :text text})
                                                  (crawler/update-analysis uri (:analysis result))
@@ -120,29 +119,43 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
-(defn ^:private rename-alias [references replacement]
-  (mapv
-    (fn [element]
-      (let [alias? (= :namespace-alias (:bucket element))
-            ref-doc-id (shared/filename->uri (:filename element))
-            [u-prefix _ u-name] (when-not alias?
-                                  (parser/ident-split (:name element)))
-            version (get-in @db/db [:documents ref-doc-id :v] 0)]
-        {:range (shared/->range element)
-         :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
-         :text-document {:version version :uri ref-doc-id}}))
-    references))
+(defn ^:private rename-alias [replacement reference]
+  (let [alias? (= :namespace-alias (:bucket reference))
+        ref-doc-uri (shared/filename->uri (:filename reference))
+        [u-prefix _ u-name] (when-not alias?
+                              (parser/ident-split (:name reference)))
+        version (get-in @db/db [:documents ref-doc-uri :v] 0)]
+    {:range (shared/->range reference)
+     :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
+     :text-document {:version version :uri ref-doc-uri}}))
 
-;; TODO use after kondo supports keyword analysis
-#_(defn ^:private rename-name [file-envs cursor-sym replacement]
-  (for [[doc-id usages] file-envs
-        :let [version (get-in @db/db [:documents doc-id :v] 0)]
-        {u-sym :sym u-str :str :as usage} usages
-        :when (= u-sym cursor-sym)
-        :let [[u-prefix u-ns _] (parser/ident-split u-str)]]
-    {:range (shared/->range usage)
-     :new-text (str u-prefix u-ns (when u-ns "/") replacement)
-     :text-document {:version version :uri doc-id}}))
+(defn ^:private rename-keyword [replacement reference]
+  (let [def? (:def reference)
+        ref-doc-uri (shared/filename->uri (:filename reference))
+        version (get-in @db/db [:documents ref-doc-uri :v] 0)]
+    {:range (shared/->range reference)
+     :new-text (if def? replacement (subs replacement 1))
+     :text-document {:version version :uri ref-doc-uri}}))
+
+(defn ^:private rename-changes
+  [definition references replacement]
+  (condp = (:bucket definition)
+
+    :namespace-alias
+    (mapv (partial rename-alias replacement) references)
+
+    :keywords
+    (mapv (partial rename-keyword replacement) references)
+
+    (mapv
+      (fn [r]
+        (let [name-start (- (:name-end-col r) (count (name (:name r))))
+              ref-doc-id (shared/filename->uri (:filename r))
+              version (get-in @db/db [:documents ref-doc-id :v] 0)]
+          {:range (shared/->range (assoc r :name-col name-start))
+           :new-text replacement
+           :text-document {:version version :uri ref-doc-id}}))
+      references)))
 
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)
@@ -154,17 +167,7 @@
                         (some #(string/starts-with? (:filename definition) %) source-paths))]
     (when (and (seq references) can-rename?)
       (let [replacement (string/replace newName #".*/([^/]*)$" "$1")
-            changes (if (= :namespace-alias (:bucket definition))
-                      (rename-alias references replacement)
-                      (mapv
-                        (fn [r]
-                          (let [name-start (- (:name-end-col r) (count (name (:name r))))
-                                ref-doc-id (shared/filename->uri (:filename r))
-                                version (get-in @db/db [:documents ref-doc-id :v] 0)]
-                            {:range (shared/->range (assoc r :name-col name-start))
-                             :new-text replacement
-                             :text-document {:version version :uri ref-doc-id}}))
-                        references))
+            changes (rename-changes definition references replacement)
             doc-changes (->> changes
                              (group-by :text-document)
                              (remove (comp empty? val))

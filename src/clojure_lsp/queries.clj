@@ -64,6 +64,15 @@
   (find-first #(and (= :locals (:bucket %)) (= (:id %) id))
               (get analysis filename)))
 
+(defmethod find-definition :keywords
+  [analysis element]
+  (when (:ns element)
+    (find-first #(and (= (:bucket %) :keywords)
+                      (= (:name %) (:name element))
+                      (:def %)
+                      (= (:ns %) (:ns element)))
+                (mapcat val analysis))))
+
 (defmethod find-definition :default
   [_analysis element]
   element)
@@ -102,6 +111,7 @@
     (->> (mapcat val analysis)
          (filter #(and (= (:name %) (:name element))
                        (= (or (:ns %) (:to %)) (:to element))
+                       (not= :keywords (:bucket %))
                        (or include-declaration?
                          (not= :var-definitions (:bucket %)))))
          (medley/distinct-by (juxt :filename :name :row :col)))))
@@ -111,10 +121,21 @@
   (->> (mapcat val analysis)
        (filter #(and (= (:name %) (:name element))
                      (= (or (:ns %) (:to %))
-                       (:ns element))
+                        (:ns element))
+                     (not= :keywords (:bucket %))
                      (or include-declaration?
-                       (not= :var-definitions (:bucket %)))))
+                         (not= :var-definitions (:bucket %)))))
        (medley/distinct-by (juxt :filename :name :row :col))))
+
+(defmethod find-references :keywords
+  [analysis element include-declaration?]
+  (filter #(and (= (:name %) (:name element))
+                (= :keywords (:bucket %))
+                (= (:ns %) (:ns element))
+                (not (:keys-destructuring %))
+                (or include-declaration?
+                    (not (:def %))))
+          (mapcat val analysis)))
 
 (defmethod find-references :local
   [analysis {:keys [id filename] :as _element} include-declaration?]

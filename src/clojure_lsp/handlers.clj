@@ -22,8 +22,7 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [trptcolin.versioneer.core :as version])
+    [rewrite-clj.zip :as z])
   (:import
    [java.net URL
              URLDecoder
@@ -232,14 +231,13 @@
                            :range (shared/->scope-range element)}}))))
 
 (defn server-info []
-  (let [db @db/db
-        server-version (version/get-version "clojure-lsp" "clojure-lsp")]
+  (let [db @db/db]
     {:type :info
      :message (with-out-str (pprint/pprint {:project-root (:project-root db)
                                             :project-settings (:project-settings db)
                                             :client-settings (:client-settings db)
                                             :port (:port db)
-                                            :version server-version}))}))
+                                            :version shared/clojure-lsp-version}))}))
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)

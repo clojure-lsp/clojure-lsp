@@ -10,7 +10,6 @@
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [taoensso.timbre :as log]
-    [trptcolin.versioneer.core :as version]
     borkdude.dynaload)
   (:import
     (clojure_lsp ClojureExtensions)
@@ -418,4 +417,4 @@
 (defn -main [& args]
   (if (empty? args)
     (with-out-str (run))
-    (println "clojure-lsp" (version/get-version "clojure-lsp" "clojure-lsp"))))
+    (println "clojure-lsp" shared/clojure-lsp-version)))

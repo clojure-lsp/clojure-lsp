@@ -1,12 +1,15 @@
 (ns clojure-lsp.shared
   (:require
     [clojure-lsp.db :as db]
+    [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [clojure.string :as string]
     [taoensso.timbre :as log])
   (:import
    [java.net URI]
    [java.nio.file Paths]))
+
+(def clojure-lsp-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 
 (def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))

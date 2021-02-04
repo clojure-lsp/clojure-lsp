@@ -263,7 +263,7 @@ jobs:
       - name: Run integration tests
         continue-on-error: true # Windows return the json in the same line but for some reason clients seems to accept that.
         run: |
-          bb integration-test/run-all.clj ./clojure-lsp.exe
+          bb integration-test/run-all.clj .\clojure-lsp.exe
 
       - name: Upload
         uses: actions/upload-artifact@v2

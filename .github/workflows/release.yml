@@ -64,10 +64,13 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
+      - name: Rename jar
+        run: mv target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar clojure-lsp-native.jar
+
       - name: Upload jar
         uses: actions/upload-artifact@v2
         with:
-          path: target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
+          path: clojure-lsp-native.jar
           name: clojure-lsp-native.jar
 
   native-linux:

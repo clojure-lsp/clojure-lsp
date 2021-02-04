@@ -22,6 +22,7 @@
 (deftest initialize
   (common/start-process!)
   (testing "initialize request"
+    (println "sending initialize request")
     (binding [*out* common/*stdin*]
       (println (str "Content-Length: " (common/content-length initialize-request)))
       (println "")
@@ -35,6 +36,7 @@
         (cheshire.core/parse-stream *in*))))
 
   (testing "initialized notification"
+    (println "sending initialized request")
     (binding [*out* common/*stdin*]
       (println (str "Content-Length: " (common/content-length initialized-request)))
       (println "")

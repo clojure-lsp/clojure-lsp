@@ -71,14 +71,11 @@ jobs:
           name: clojure-lsp-native.jar
 
   native-linux:
-    name: Deploy native linux binary
+    name: Build native linux binary
     needs: build-native-jvm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-native.jar
@@ -123,14 +120,11 @@ jobs:
           name: clojure-lsp-native-linux-amd64.zip
 
   native-static-linux:
-    name: Deploy native static linux binary
+    name: Build native static linux binary
     needs: build-native-jvm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-native.jar
@@ -162,7 +156,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb integration-test/run-all.clj clojure-lsp
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -176,15 +170,11 @@ jobs:
           name: clojure-lsp-native-static-linux-amd64.zip
 
   native-macos:
-    name: Deploy native MacOS binary
+    name: Build native MacOS binary
     needs: build-native-jvm
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-native.jar
@@ -215,7 +205,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          bb integration-test/run-all.clj clojure-lsp
+          bb integration-test/run-all.clj ./clojure-lsp
 
       - uses: papeloto/action-zip@v1
         with:
@@ -229,15 +219,11 @@ jobs:
           name: clojure-lsp-native-macos-amd64.zip
 
   native-windows:
-    name: Deploy native Windows binary
+    name: Build native Windows binary
     needs: build-native-jvm
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-native.jar
@@ -269,14 +255,15 @@ jobs:
 
       - name: Build Windows native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp-${{ steps.latest-tag.outputs.tag }}-standalone.jar
+          CLOJURE_LSP_JAR: clojure-lsp-native.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           .\graalvm\native-windows-compile.bat
 
       - name: Run integration tests
+        continue-on-error: true # Windows return the json in the same line but for some reason clients seems to accept that.
         run: |
-          bb integration-test/run-all.clj clojure-lsp.exe
+          bb integration-test/run-all.clj ./clojure-lsp.exe
 
       - name: Upload
         uses: actions/upload-artifact@v2

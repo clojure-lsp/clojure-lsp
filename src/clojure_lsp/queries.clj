@@ -99,9 +99,11 @@
     (when include-declaration?
       [element])
     (->> (get analysis filename)
-         (filter #(and (= :var-usages (:bucket %))
-                       (= (:alias %) alias)))
-         (medley/distinct-by (juxt :filename :name :row :col)))))
+         (filter #(or (and (= :var-usages (:bucket %))
+                           (= (:alias %) alias))
+                      (and (= :keywords (:bucket %))
+                           (= (:alias %) alias))))
+         (medley/distinct-by (juxt :filename :name :name-row :name-col)))))
 
 
 (defmethod find-references :var-usages
@@ -128,14 +130,20 @@
        (medley/distinct-by (juxt :filename :name :row :col))))
 
 (defmethod find-references :keywords
-  [analysis element include-declaration?]
-  (filter #(and (= (:name %) (:name element))
-                (= :keywords (:bucket %))
-                (= (:ns %) (:ns element))
-                (not (:keys-destructuring %))
-                (or include-declaration?
-                    (not (:def %))))
-          (mapcat val analysis)))
+  [analysis {:keys [ns filename name] :as _element} include-declaration?]
+  (if ns
+    (filter #(and (= (:name %) name)
+                  (= :keywords (:bucket %))
+                  (= (:ns %) ns)
+                  (not (:keys-destructuring %))
+                  (or include-declaration?
+                      (not (:def %))))
+            (mapcat val analysis))
+    (filter #(and (= (:name %) name)
+                  (not (:ns %))
+                  (= :keywords (:bucket %))
+                  (not (:keys-destructuring %)))
+            (get analysis filename))))
 
 (defmethod find-references :local
   [analysis {:keys [id filename] :as _element} include-declaration?]

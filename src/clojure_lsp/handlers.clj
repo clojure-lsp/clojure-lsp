@@ -119,23 +119,74 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
+(defn ^:private rename-keyword [replacement {:keys [ns alias filename] :as reference}]
+  (let [ref-doc-uri (shared/filename->uri filename)
+        version (get-in @db/db [:documents ref-doc-uri :v] 0)
+        text (cond
+
+               (and alias
+                    (string/starts-with? replacement "::"))
+               (str "::" alias "/" (subs replacement 2))
+
+               alias
+               (str "::" alias "/" replacement)
+
+               (and ns
+                    (string/includes? (str ns) ".")
+                    (string/starts-with? replacement "::"))
+               replacement
+
+               (and ns
+                    (string/includes? (str ns) "."))
+               (str "::" replacement)
+
+               ns
+               (str ":" ns "/" replacement)
+
+               :else
+               replacement)]
+
+    {:range (shared/->range reference)
+     :new-text text
+     :text-document {:version version :uri ref-doc-uri}}))
+
 (defn ^:private rename-alias [replacement reference]
   (let [alias? (= :namespace-alias (:bucket reference))
+        keyword? (= :keywords (:bucket reference))
         ref-doc-uri (shared/filename->uri (:filename reference))
         [u-prefix _ u-name] (when-not alias?
                               (parser/ident-split (:name reference)))
         version (get-in @db/db [:documents ref-doc-uri :v] 0)]
-    {:range (shared/->range reference)
-     :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
-     :text-document {:version version :uri ref-doc-uri}}))
+    (if keyword?
+      {:range (shared/->range reference)
+       :new-text (str "::" replacement "/" (:name reference))
+       :text-document {:version version :uri ref-doc-uri}}
+      {:range (shared/->range reference)
+       :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
+       :text-document {:version version :uri ref-doc-uri}})))
 
-(defn ^:private rename-keyword [replacement reference]
-  (let [def? (:def reference)
-        ref-doc-uri (shared/filename->uri (:filename reference))
-        version (get-in @db/db [:documents ref-doc-uri :v] 0)]
-    {:range (shared/->range reference)
-     :new-text (if def? replacement (subs replacement 1))
-     :text-document {:version version :uri ref-doc-uri}}))
+(defn ^:private rename-local
+  [replacement reference]
+  (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
+        ref-doc-id (shared/filename->uri (:filename reference))
+        version (get-in @db/db [:documents ref-doc-id :v] 0)]
+    (if (string/starts-with? replacement ":")
+      {:range (shared/->range (assoc reference
+                                     :name-col name-start))
+       :new-text (subs replacement 1)
+       :text-document {:version version :uri ref-doc-id}}
+      {:range (shared/->range (assoc reference :name-col name-start))
+       :new-text replacement
+       :text-document {:version version :uri ref-doc-id}})))
+
+(defn ^:private rename-other
+  [replacement reference]
+  (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
+        ref-doc-id (shared/filename->uri (:filename reference))
+        version (get-in @db/db [:documents ref-doc-id :v] 0)]
+    {:range (shared/->range (assoc reference :name-col name-start))
+     :new-text replacement
+     :text-document {:version version :uri ref-doc-id}}))
 
 (defn ^:private rename-changes
   [definition references replacement]
@@ -147,21 +198,16 @@
     :keywords
     (mapv (partial rename-keyword replacement) references)
 
-    (mapv
-      (fn [r]
-        (let [name-start (- (:name-end-col r) (count (name (:name r))))
-              ref-doc-id (shared/filename->uri (:filename r))
-              version (get-in @db/db [:documents ref-doc-id :v] 0)]
-          {:range (shared/->range (assoc r :name-col name-start))
-           :new-text replacement
-           :text-document {:version version :uri ref-doc-id}}))
-      references)))
+    :locals
+    (mapv (partial rename-local replacement) references)
+
+    (mapv (partial rename-other replacement) references)))
 
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)
         references (q/find-references-from-cursor (:analysis @db/db) filename row col true)
-        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias} :bucket) references))
+        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias :keywords} :bucket) references))
         source-paths (get-in @db/db [:settings :source-paths])
         can-rename? (or (not (seq source-paths))
                         (some #(string/starts-with? (:filename definition) %) source-paths))]

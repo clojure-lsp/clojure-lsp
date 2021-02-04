@@ -15,8 +15,6 @@ fi
 
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}
 
-"$GRAALVM_HOME/bin/gu" install native-image
-
 args=("-jar" "$CLOJURE_LSP_JAR"
       "-H:Name=clojure-lsp"
       "-J-Dclojure.compiler.direct-linking=true"

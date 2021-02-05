@@ -20,7 +20,7 @@ jobs:
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          lein: 2.9.1
 
       - name: Generate jar and embedded jar
         run: lein with-profile native-image bin
@@ -57,7 +57,7 @@ jobs:
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          lein: 2.9.1
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -106,7 +106,7 @@ jobs:
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          lein: 2.9.1
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -157,7 +157,7 @@ jobs:
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          lein: 2.9.1
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -206,7 +206,7 @@ jobs:
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.5
+          lein: 2.9.1
 
       - name: Install Babashka
         run: |

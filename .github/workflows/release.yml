@@ -82,10 +82,8 @@ jobs:
         run: |
           bb integration-test/run-all.clj ./clojure-lsp
 
-      - uses: papeloto/action-zip@v1
-        with:
-          files: clojure-lsp
-          dest: clojure-lsp-native-linux-amd64.zip
+      - name: Zip binary
+        run: zip clojure-lsp-native-linux-amd64.zip clojure-lsp
 
       - name: Upload
         uses: actions/upload-artifact@v2
@@ -133,10 +131,8 @@ jobs:
         run: |
           bb integration-test/run-all.clj ./clojure-lsp
 
-      - uses: papeloto/action-zip@v1
-        with:
-          files: clojure-lsp
-          dest: clojure-lsp-native-static-linux-amd64.zip
+      - name: Zip binary
+        run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
 
       - name: Upload
         uses: actions/upload-artifact@v2
@@ -182,10 +178,8 @@ jobs:
         run: |
           bb integration-test/run-all.clj ./clojure-lsp
 
-      - uses: papeloto/action-zip@v1
-        with:
-          files: clojure-lsp
-          dest: clojure-lsp-native-macos-amd64.zip
+      - name: Zip binary
+        run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
 
       - name: Upload
         uses: actions/upload-artifact@v2

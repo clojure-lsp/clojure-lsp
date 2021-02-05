@@ -23,16 +23,19 @@ jobs:
           lein: 2.9.5
 
       - name: Generate jar and embedded jar
-        run: lein bin
+        run: lein with-profile native-image bin
 
       - name: Get latest tag
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
+      - name: Rename jar
+        run: mv target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar clojure-lsp.jar
+
       - name: Upload jar
         uses: actions/upload-artifact@v2
         with:
-          path: target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
+          path: clojure-lsp.jar
           name: clojure-lsp.jar
 
       - name: Upload embedded jar
@@ -40,38 +43,6 @@ jobs:
         with:
           path: target/clojure-lsp
           name: clojure-lsp
-
-  build-native-jvm:
-    if: startsWith(github.ref, 'refs/tags/2')
-    name: Build JVM jar for native-image
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-
-      - name: Install leiningen
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          lein: 2.9.5
-
-      - name: Generate jar
-        run: lein with-profiles +native-image uberjar
-
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
-      - name: Rename jar
-        run: mv target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar clojure-lsp-native.jar
-
-      - name: Upload jar
-        uses: actions/upload-artifact@v2
-        with:
-          path: clojure-lsp-native.jar
-          name: clojure-lsp-native.jar
 
   native-linux:
     name: Build native linux binary
@@ -81,7 +52,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp-native.jar
+          name: clojure-lsp.jar
 
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
@@ -102,7 +73,7 @@ jobs:
 
       - name: Build Linux native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp-native.jar
+          CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
@@ -130,7 +101,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp-native.jar
+          name: clojure-lsp.jar
 
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
@@ -151,7 +122,7 @@ jobs:
 
       - name: Build static Linux native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp-native.jar
+          CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
         run: |
@@ -181,7 +152,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp-native.jar
+          name: clojure-lsp.jar
 
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
@@ -202,7 +173,7 @@ jobs:
 
       - name: Build MacOS native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp-native.jar
+          CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
@@ -230,7 +201,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp-native.jar
+          name: clojure-lsp.jar
 
       - name: Install Leiningen
         uses: DeLaGuardo/setup-clojure@master
@@ -259,7 +230,7 @@ jobs:
 
       - name: Build Windows native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp-native.jar
+          CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           .\graalvm\native-windows-compile.bat
@@ -310,7 +281,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clojure-lsp.jar/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar
+          file: clojure-lsp.jar/clojure-lsp.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
 

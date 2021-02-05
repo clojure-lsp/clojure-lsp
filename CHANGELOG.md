@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+## 2021.02.04-02.08.58
+
+ - Fix --version on graalvm native compiled binaries
+
+## 2021.02.04-01.09.21
+
+- Add integration tests to release process
+
 ## 2021.02.02-14.02.23
 
 - Fix `clojure-lsp` embedded jar binary during release CI

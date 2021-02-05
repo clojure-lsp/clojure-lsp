@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2021.02.05-03.05.34
+
+- Add support for keyword analysis (definition, references, completion, rename, hover)
+- Reduce jar and binaries size excluding some dependencies (Need to fix a lein issue yet)
+
 ## 2021.02.04-02.08.58
 
  - Fix --version on graalvm native compiled binaries

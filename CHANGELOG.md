@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve completion removing the necessity to call completion/resolveItem
+
 ## 2021.02.05-03.05.34
 
 - Add support for keyword analysis (definition, references, completion, rename, hover)

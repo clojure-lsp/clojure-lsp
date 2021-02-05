@@ -1,10 +1,10 @@
 (ns clojure-lsp.features.completion-test
   (:require
+    [clojure-lsp.db :as db]
     [clojure-lsp.feature.completion :as f.completion]
     [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
-    [clojure.test :refer [deftest testing is]]
-    [clojure-lsp.db :as db]))
+    [clojure.test :refer [deftest testing]]))
 
 (h/reset-db-after-test)
 
@@ -22,7 +22,7 @@
   (h/load-code-and-locs (code "(ns alpaca.ns)"
                               "(def baff)") "file:///c.cljs")
   (h/load-code-and-locs (code "(ns d (:require [alpaca.ns :as alpaca])) frequen"
-                              "(def bar 123)"
+                              "(def bar \"some good docs\"123)"
                               "(defn barbaz [a b] 123)"
                               "(def some 123)")
                         "file:///d.clj")
@@ -31,6 +31,8 @@
                               "Syste"
                               "d-alias/b")
                         "file:///e.clj")
+
+  (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-a"
     (h/assert-submaps
       [{:label "alpha" :kind :variable}
@@ -56,7 +58,10 @@
       [{:label "frequencies", :detail "clojure.core"}]
       (f.completion/completion "file:///d.clj" 1 49))
     (h/assert-submaps
-      [{:label "bar", :kind :variable}
+      [{:label "bar"
+        :kind :variable
+        :documentation {:kind "markdown"
+                        :value "```clojure\nd/bar\n```\n\n----\n```clojure\nsome good docs\n```\n----\n*/d.clj*"}}
        {:label "barbaz", :kind :function}]
       (f.completion/completion "file:///e.clj" 4 10)))
   (testing "complete-core-stuff"
@@ -66,11 +71,3 @@
     (h/assert-submaps
       [{:label "System", :detail "java.lang"}]
       (f.completion/completion "file:///e.clj" 3 6))))
-
-(deftest resolve-item-test
-  (testing "When element does not contains data"
-    (is (= {:label "Some" :kind :module}
-           (f.completion/resolve-item {:label "Some" :kind "Module"}))))
-  (testing "When element contains data"
-    (is (= {:label "Some" :documentation ["some\n"] :kind :variable}
-           (f.completion/resolve-item {:label "Some" :kind "Variable" :data {:name 'some}})))))

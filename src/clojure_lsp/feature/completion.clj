@@ -7,7 +7,6 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
-    [clojure.walk :as walk]
     [rewrite-clj.zip :as z]
     [taoensso.timbre :as log]))
 
@@ -76,9 +75,7 @@
         (cond-> detail (assoc :detail detail)
                 deprecated (assoc :tags [1])
                 kind (assoc :kind kind)
-                definition? (assoc :data (-> element
-                                             (select-keys [:ns :name :doc :filename :arglist-strs])
-                                             walk/stringify-keys))))))
+                definition? (assoc :documentation (f.hover/hover-documentation element))))))
 
 (defn valid-element-completion-item?
   [matches-fn
@@ -208,12 +205,3 @@
       (and (not cursor-alias)
            (supports-clj-core? uri))
       (concat (with-java-items matches-fn)))))
-
-(defn resolve-item [{:keys [kind data] :as item}]
-  (->
-    (if data
-      (-> item
-          (assoc :documentation (f.hover/hover-documentation data))
-          (dissoc :data))
-      item)
-    (assoc :kind (some-> kind str string/lower-case keyword))))

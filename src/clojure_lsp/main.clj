@@ -150,10 +150,6 @@
     (go :completion
         (async-handler params handlers/completion ::interop/completion-items)))
 
-  (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
-    (go :resolveCompletionItem
-        (async-handler item handlers/resolve-completion-item ::interop/completion-item)))
-
   (^CompletableFuture rename [_ ^RenameParams params]
     (go :rename
         (async-handler params handlers/rename ::interop/workspace-edit)))
@@ -341,7 +337,7 @@
                                                                (.setOpenClose true)
                                                                (.setChange TextDocumentSyncKind/Full)
                                                                (.setSave (SaveOptions. true))))
-                                       (.setCompletionProvider (CompletionOptions. true []))))))))))
+                                       (.setCompletionProvider (CompletionOptions. false []))))))))))
 
     (^void initialized [^InitializedParams params]
       (log/info "Initialized")

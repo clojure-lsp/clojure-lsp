@@ -14,10 +14,25 @@
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
 
+(defn ^:private keyword-element->keyword-str [{:keys [name alias ns]}]
+  (let [kw (cond
+             alias
+             (keyword (str alias) (str name))
+
+             ns
+             (keyword (str ns) (str name))
+
+             :else
+             (keyword name))]
+    (if alias
+      (str ":" kw)
+      (str kw))))
+
 (defn ^:private matches-cursor? [cursor-value s]
   (when (and s
              cursor-value
-             (string/starts-with? s (name cursor-value)))
+             (or (string/starts-with? s (name cursor-value))
+                 (string/starts-with? s (str cursor-value))))
     s))
 
 (defn ^:private supports-cljs? [uri]
@@ -32,6 +47,9 @@
        :namespace-usages
        :namespace-alias} bucket)
     :module
+
+    (#{:keywords} bucket)
+    :keyword
 
     (and (#{:var-definitions} bucket)
          fixed-arities)
@@ -51,8 +69,10 @@
         detail (or (when arglist-strs (string/join " " arglist-strs))
                    (some-> ns name))
         definition? (#{:namespace-definitions :var-definitions} bucket)]
-    (-> {:label  (or (some-> alias name)
-                     (-> element :name name))}
+    (-> {:label  (if (= bucket :keywords)
+                   (keyword-element->keyword-str element)
+                   (or (some-> alias name)
+                       (-> element :name name)))}
         (cond-> detail (assoc :detail detail)
                 deprecated (assoc :tags [1])
                 kind (assoc :kind kind)
@@ -63,8 +83,8 @@
 (defn valid-element-completion-item?
   [matches-fn
    cursor-uri
-   {cursor-from :from cursor-bucket :bucket :as _cursor-element}
-   {:keys [bucket to ns filename lang name alias] :as _element}]
+   {cursor-from :from cursor-bucket :bucket :as cursor-element}
+   {:keys [bucket to ns filename lang name alias] :as element}]
   (let [supported-file-types #{:cljc (shared/uri->file-type cursor-uri)}]
     (cond
       (#{:var-usages :local-usages :namespace-usages} bucket)
@@ -85,6 +105,19 @@
       (and lang
            (not (supported-file-types lang)))
       false
+
+      (and (= bucket :keywords)
+           (= filename (:filename cursor-element))
+           (parser/same-range? cursor-element element)) ;; is the same keyword
+      false
+
+      (and (= bucket :keywords)
+           (or (matches-fn (keyword-element->keyword-str element))
+               (and ns
+                    (matches-fn (str ns)))
+               (and alias
+                    (matches-fn (str alias)))))
+      true
 
       (or (and name (matches-fn name))
           (and alias (matches-fn alias)))

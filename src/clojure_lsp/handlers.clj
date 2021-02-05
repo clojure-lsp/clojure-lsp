@@ -10,19 +10,19 @@
     [clojure-lsp.feature.document-symbol :as f.document-symbol]
     [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.feature.refactor :as f.refactor]
+    [clojure-lsp.feature.rename :as f.rename]
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.producer :as producer]
     [clojure-lsp.queries :as q]
-    [taoensso.timbre :as log]
     [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
-    [clojure.set :as set]
     [clojure.string :as string]
     [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z])
+    [rewrite-clj.zip :as z]
+    [taoensso.timbre :as log])
   (:import
    [java.net URL
              URLDecoder
@@ -46,17 +46,6 @@
                              (subs (inc (count source-path)))
                              (string/replace #"/" ".")
                              (string/replace #"_" "-")))))))))
-
-(defn ^:private namespace->uri [namespace source-paths filename]
-  (let [file-type (shared/uri->file-type filename)]
-    (shared/filename->uri
-      (str (first (filter #(string/starts-with? filename %) source-paths))
-           "/"
-           (-> namespace
-               (string/replace "." "/")
-               (string/replace "-" "_"))
-           "."
-           (name file-type)))))
 
 (defn did-open [{:keys [textDocument] :as params}]
   (let [uri (-> textDocument :uri URLDecoder/decode)
@@ -91,7 +80,6 @@
   (loop [state-db @db/db]
     (when (> version (get-in state-db [:documents uri :v] -1))
       (when-let [result (crawler/run-kondo-on-text! text uri)]
-
         (if (compare-and-set! db/db state-db (-> state-db
                                                  (assoc-in [:documents uri] {:v version :text text})
                                                  (crawler/update-analysis uri (:analysis result))
@@ -120,68 +108,9 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
-(defn ^:private rename-alias [references replacement]
-  (mapv
-    (fn [element]
-      (let [alias? (= :namespace-alias (:bucket element))
-            ref-doc-id (shared/filename->uri (:filename element))
-            [u-prefix _ u-name] (when-not alias?
-                                  (parser/ident-split (:name element)))
-            version (get-in @db/db [:documents ref-doc-id :v] 0)]
-        {:range (shared/->range element)
-         :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
-         :text-document {:version version :uri ref-doc-id}}))
-    references))
-
-;; TODO use after kondo supports keyword analysis
-#_(defn ^:private rename-name [file-envs cursor-sym replacement]
-  (for [[doc-id usages] file-envs
-        :let [version (get-in @db/db [:documents doc-id :v] 0)]
-        {u-sym :sym u-str :str :as usage} usages
-        :when (= u-sym cursor-sym)
-        :let [[u-prefix u-ns _] (parser/ident-split u-str)]]
-    {:range (shared/->range usage)
-     :new-text (str u-prefix u-ns (when u-ns "/") replacement)
-     :text-document {:version version :uri doc-id}}))
-
 (defn rename [{:keys [textDocument position newName]}]
-  (let [[row col] (shared/position->line-column position)
-        filename (shared/uri->filename textDocument)
-        references (q/find-references-from-cursor (:analysis @db/db) filename row col true)
-        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias} :bucket) references))
-        source-paths (get-in @db/db [:settings :source-paths])
-        can-rename? (or (not (seq source-paths))
-                        (some #(string/starts-with? (:filename definition) %) source-paths))]
-    (when (and (seq references) can-rename?)
-      (let [replacement (string/replace newName #".*/([^/]*)$" "$1")
-            changes (if (= :namespace-alias (:bucket definition))
-                      (rename-alias references replacement)
-                      (mapv
-                        (fn [r]
-                          (let [name-start (- (:name-end-col r) (count (name (:name r))))
-                                ref-doc-id (shared/filename->uri (:filename r))
-                                version (get-in @db/db [:documents ref-doc-id :v] 0)]
-                            {:range (shared/->range (assoc r :name-col name-start))
-                             :new-text replacement
-                             :text-document {:version version :uri ref-doc-id}}))
-                        references))
-            doc-changes (->> changes
-                             (group-by :text-document)
-                             (remove (comp empty? val))
-                             (map (fn [[text-document edits]]
-                                    {:text-document text-document
-                                     :edits (mapv #(dissoc % :text-document) edits)})))]
-        (if (and (= (:bucket definition) :namespace-definitions)
-                 (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes]))
-          (let [new-uri (namespace->uri replacement source-paths (:filename definition))]
-            (swap! db/db (fn [db] (-> db
-                                      (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
-                                      (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
-            (f.refactor/client-changes (concat doc-changes
-                                               [{:kind "rename"
-                                                 :old-uri textDocument
-                                                 :new-uri new-uri}])))
-          (f.refactor/client-changes doc-changes))))))
+  (let [[row col] (shared/position->line-column position)]
+    (f.rename/rename textDocument newName row col)))
 
 (defn definition [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)]

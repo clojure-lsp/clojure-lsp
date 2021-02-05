@@ -167,15 +167,21 @@
 
 (deftest test-rename
   (let [[abar-start abar-stop
-         akwbar-start akwbar-stop
-         abaz-start abaz-stop] (h/load-code-and-locs "(ns a) (def |bar| ::|bar|) (def ^:m |baz| 1)" "file:///a.clj")
+         akw-start akwbar-start akwbar-stop
+         abaz-start abaz-stop] (h/load-code-and-locs (code "(ns a.aa)"
+                                                           "(def |bar| |::|bar|)"
+                                                           "(def ^:m |baz| 1)") "file:///a.clj")
         [balias-start balias-stop
-         ba1-start ba1-stop
+         ba1-start _ba1-stop
          bbar-start bbar-stop
-         ba2-start ba2-stop
-         bkwbar-start bkwbar-stop] (h/load-code-and-locs "(ns b (:require [a :as |aa|])) (def x |aa|/|bar|) ::|aa|/|bar| :aa/bar" "file:///b.clj")
+         ba2-kw-start ba2-kw-stop] (h/load-code-and-locs (code "(ns b.bb (:require [a.aa :as |aa|]))"
+                                                               "(def x |aa|/|bar|)"
+                                                               "|::aa/bar|"
+                                                               ":aa/bar") "file:///b.clj")
         [cbar-start cbar-stop
-         cbaz-start cbaz-stop] (h/load-code-and-locs "(ns c (:require [a :as aa])) (def x aa/|bar|) ^:xab aa/|baz|" "file:///c.clj")]
+         cbaz-start cbaz-stop] (h/load-code-and-locs (code "(ns c.cc (:require [a.aa :as aa]))"
+                                                           "(def x aa/|bar|)"
+                                                           "^:xab aa/|baz|") "file:///c.clj")]
     (testing "on symbol without namespace"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
                                                 :position (h/->position abar-start)
@@ -207,13 +213,12 @@
                 "file:///b.clj" [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
                 "file:///c.clj" [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
-    ;; TODO kondo (keyword analysis)
-    #_(testing "on ::keyword"
+    (testing "on ::keyword"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
                                                 :position (h/->position akwbar-start)
-                                                :newName "foo"}))]
-        (is (= {"file:///a.clj" [{:new-text "foo" :range (h/->range akwbar-start akwbar-stop)}]
-                "file:///b.clj" [{:new-text "foo" :range (h/->range bkwbar-start bkwbar-stop)}]}
+                                                :newName "::foo"}))]
+        (is (= {"file:///a.clj" [{:new-text "::foo" :range (h/->range akw-start akwbar-stop)}]
+                "file:///b.clj" [{:new-text "::aa/foo" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on alias changes namespaces inside file"
       (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"
@@ -221,8 +226,7 @@
                                                 :newName "xx"}))]
         (is (= {"file:///b.clj" [{:new-text "xx" :range (h/->range balias-start balias-stop)}
                                  {:new-text "xx/bar" :range (h/->range ba1-start bbar-stop)}
-                                 ;; TODO kondo (keyword analysis)
-                                 #_{:new-text "xx" :range (h/->range ba2-start ba2-stop)}]}
+                                 {:new-text "::xx/bar" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on a namespace"
       (reset! db/db {:project-root "file:///my-project"
@@ -243,21 +247,25 @@
                                :position {:line 0 :character 4}
                                :newName "foo.baz-qux"}))))))
 
-;; TODO kondo (keyword analysis)
-#_(deftest test-rename-simple-keywords
-  (reset! db/db {:file-envs
-                 {"file://a.cljc" (parser/find-usages ":a (let [{:keys [a]} {}] a)" :cljc {})}})
-  (testing "should not rename plain keywords"
-    (let [changes (:changes (handlers/rename {:textDocument "file://a.cljc"
-                                              :position {:line 0 :character 0}
-                                              :newName "b"}))]
-      (is (= nil changes))))
+(deftest test-rename-simple-keywords
+  (let [[a-start a-stop
+         a-binding-start a-binding-stop
+         a-local-usage-start a-local-usage-stop] (h/load-code-and-locs "|:a| (let [{:keys [:|a|]} {}] |a|)" "file:///a.cljc")]
+    (testing "should not rename plain keywords"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///a.cljc"
+                                                :position (h/->position a-start)
+                                                :newName ":b"}))]
+        (is (= {"file:///a.cljc" [{:new-text ":b" :range (h/->range a-start a-stop)}
+                                  {:new-text ":b" :range (h/->range a-start a-stop)}]}
+               changes))))
 
-  (testing "should rename local in destructure not keywords"
-    (let [changes (:changes (handlers/rename {:textDocument "file://a.cljc"
-                                              :position {:line 0 :character 17}
-                                              :newName "b"}))]
-      (is (= [18 26] (mapv (comp inc :character :start :range) (get-in changes ["file://a.cljc"])))))))
+    (testing "should rename local in destructure not keywords"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///a.cljc"
+                                                :position (h/->position a-binding-start)
+                                                :newName ":b"}))]
+        (is (= {"file:///a.cljc" [{:new-text "b" :range (h/->range a-binding-start a-binding-stop)}
+                                  {:new-text "b" :range (h/->range a-local-usage-start a-local-usage-stop)}]}
+               changes))))))
 
 (deftest test-find-diagnostics
   (testing "wrong arity"

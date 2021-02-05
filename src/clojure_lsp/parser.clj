@@ -33,6 +33,13 @@
            (if (= r row) (>= c col) true)
            (if (= er end-row) (< ec end-col) true))))
 
+(defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as a-pos}
+                   {r :name-row c :name-col er :name-end-row ec :name-end-col :as b-pos}]
+  (and (= r name-row)
+       (= er name-end-row)
+       (= c name-col)
+       (= ec name-end-col)))
+
 ;; From rewrite-cljs
 (defn find-forms
   "Find last node (if more than one node) that is in range of pos and

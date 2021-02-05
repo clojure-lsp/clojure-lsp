@@ -29,7 +29,8 @@
                     :dependencies [[pjstadig/humane-test-output "0.9.0"]]
                     :injections [(require 'pjstadig.humane-test-output)
                                  (pjstadig.humane-test-output/activate!)]}
-             :native-image {:dependencies [[ericdallo/sqlite-jni-graal-fix "0.0.2-graalvm-21.0.0"]]
+             :native-image {:dependencies [[ericdallo/sqlite-jni-graal-fix "0.0.3-graalvm-21.0.0"
+                                            :exclusions [org.graalvm.nativeimage/svm]]]
                             :jvm-opts ["-Xmx2g"
                                        "-server"
                                        "-Dclojure.compiler.direct-linking=true"

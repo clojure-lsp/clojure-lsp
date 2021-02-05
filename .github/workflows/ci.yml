@@ -7,6 +7,7 @@ on:
     paths-ignore:
       - '**/README.md'
       - '**/CHANGELOG.md'
+      - 'resources/CLOJURE_LSP_VERSION'
       - 'docs/**'
       - 'images/**'
       - 'mkdocs.yml'
@@ -17,6 +18,7 @@ on:
     paths-ignore:
       - '**/README.md'
       - '**/CHANGELOG.md'
+      - 'resources/CLOJURE_LSP_VERSION'
       - 'docs/**'
       - 'images/**'
       - 'mkdocs.yml'

@@ -91,6 +91,61 @@
              {}))
     (dissoc :data)))
 
+(defn ^:private missing-require-actions
+  [uri missing-requires]
+  (map (fn [{:keys [missing-require position]}]
+         {:title      (str "Add missing '" missing-require "' require")
+          :kind       CodeActionKind/QuickFix
+          :preferred? true
+          :data       {:id        "add-missing-require"
+                       :uri       uri
+                       :line      (:line position)
+                       :character (:character position)}})
+       missing-requires))
+
+(defn ^:private missing-import-actions [uri missing-imports]
+  (map (fn [{:keys [missing-import position]}]
+         {:title      (str "Add missing '" missing-import "' import")
+          :kind       CodeActionKind/QuickFix
+          :preferred? true
+          :data       {:id        "add-missing-import"
+                       :uri       uri
+                       :line      (:line position)
+                       :character (:character position)}})
+       missing-imports))
+
+(defn ^:private inline-symbol-action [uri line character]
+  {:title "Inline symbol"
+   :kind  CodeActionKind/RefactorInline
+   :data  {:id        "refactor-inline-symbol"
+           :uri       uri
+           :line      line
+           :character character}})
+
+(defn ^:private cycle-privacy-action [uri line character]
+  {:title "Cycle privacy"
+   :kind  CodeActionKind/RefactorRewrite
+   :data  {:id        "refactor-cycle-privacy"
+           :uri       uri
+           :line      line
+           :character character}})
+
+(defn ^:private extract-function-action [uri line character]
+  {:title "Extract function"
+   :kind  CodeActionKind/RefactorExtract
+   :data  {:id        "refactor-extract-function"
+           :uri       uri
+           :line      line
+           :character character}})
+
+(defn ^:private clean-ns-action [uri line character]
+  {:title "Clean namespace"
+   :kind  CodeActionKind/SourceOrganizeImports
+   :data  {:id        "clean-ns"
+           :uri       uri
+           :line      line
+           :character character}})
+
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
@@ -104,56 +159,20 @@
     (cond-> []
 
       (seq missing-requires)
-      (into (map (fn [{:keys [missing-require position]}]
-                   {:title      (str "Add missing '" missing-require "' require")
-                    :kind       CodeActionKind/QuickFix
-                    :preferred? true
-                    :data       {:id        "add-missing-require"
-                                 :uri       uri
-                                 :line      (:line position)
-                                 :character (:character position)}})
-                 missing-requires))
+      (into (missing-require-actions uri missing-requires))
 
       (seq missing-imports)
-      (into (map (fn [{:keys [missing-import position]}]
-                   {:title      (str "Add missing '" missing-import "' import")
-                    :kind       CodeActionKind/QuickFix
-                    :preferred? true
-                    :data       {:id        "add-missing-import"
-                                 :uri       uri
-                                 :line      (:line position)
-                                 :character (:character position)}})
-                 missing-imports))
+      (into (missing-import-actions uri missing-imports))
 
       inline-symbol?
-      (conj {:title "Inline symbol"
-             :kind  CodeActionKind/RefactorInline
-             :data  {:id        "refactor-inline-symbol"
-                     :uri       uri
-                     :line      line
-                     :character character}})
+      (conj (inline-symbol-action uri line character))
 
       inside-function?
-      (conj {:title "Cycle privacy"
-             :kind  CodeActionKind/RefactorRewrite
-             :data  {:id        "refactor-cycle-privacy"
-                     :uri       uri
-                     :line      line
-                     :character character}}
-            {:title "Extract function"
-             :kind  CodeActionKind/RefactorExtract
-             :data  {:id        "refactor-extract-function"
-                     :uri       uri
-                     :line      line
-                     :character character}})
+      (conj (cycle-privacy-action uri line character)
+            (extract-function-action uri line character))
 
       workspace-edit-capability?
-      (conj {:title "Clean namespace"
-             :kind  CodeActionKind/SourceOrganizeImports
-             :data  {:id        "clean-ns"
-                     :uri       uri
-                     :line      line
-                     :character character}})
+      (conj (clean-ns-action uri line character))
 
       (not resolve-support?)
       (->> (map #(resolve-code-action % zloc))))))

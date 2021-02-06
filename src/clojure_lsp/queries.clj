@@ -25,12 +25,13 @@
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
   (let [local-analysis (get analysis filename)]
-    (->>  (filter (fn [{:keys [name-row name-col scope-end-row scope-end-col bucket]}]
+    (->>  (filter (fn [{:keys [name-row name-col name-end-row name-end-col scope-end-row scope-end-col bucket] :as a}]
                     (and (= :locals bucket)
                          (inside?
                            name-row name-col
                            line column
-                           scope-end-row scope-end-col)))
+                           (or scope-end-row name-end-row)
+                           (or scope-end-col name-end-col))))
                   local-analysis)
           (map (fn [local]
                  (find-first #(and (= :local-usages (:bucket %))

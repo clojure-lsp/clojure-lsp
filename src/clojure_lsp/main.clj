@@ -24,7 +24,6 @@
       CodeLens
       CodeLensParams
       CodeLensOptions
-      CompletionItem
       CompletionOptions
       CompletionParams
       DefinitionParams

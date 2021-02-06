@@ -162,7 +162,8 @@
      :message (with-out-str (pprint/pprint {:project-root (:project-root db)
                                             :project-settings (:project-settings db)
                                             :client-settings (:client-settings db)
-                                            :port (:port db)
+                                            :port (or (:port db)
+                                                      "NREPL only available on :debug profile compiled binary")
                                             :version shared/clojure-lsp-version}))}))
 
 (defn ^:private cursor-info [[doc-id line character]]
@@ -229,13 +230,11 @@
 
 (defn range-formatting [doc-id format-pos]
   (let [{:keys [text]} (get-in @db/db [:documents doc-id])
+        cljfmt-settings (get-in @db/db [:settings :cljfmt])
         forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]
             {:range (shared/->range (-> form-loc z/node meta))
-             :new-text (n/string
-                         (cljfmt/reformat-form
-                           (z/node form-loc)
-                           (get-in @db/db [:settings :cljfmt])))})
+             :new-text (n/string (cljfmt/reformat-form (z/node form-loc) cljfmt-settings))})
           forms)))
 
 (defmulti extension (fn [method _] method))

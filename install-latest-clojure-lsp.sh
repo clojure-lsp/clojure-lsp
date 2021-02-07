@@ -39,7 +39,7 @@ CURL_CMD="curl -Ls"
 
 # Get version of an executable
 get_exec_version() {
-    $1 --version
+    $1 --version | awk '{print $NF}'
 }
 
 # Get the latest Github release tag

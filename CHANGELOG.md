@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2021.02.07-22.51.26
+
+- Fix install-latest-clojure-lsp.sh script - #304
+- Fix clojure-lsp re-analysing classpath when project contains a keyword starting with a number - #305 
+- Allow clj-kondo to pick up config correctly in mono repos - #303
+
 ## 2021.02.07-03.04.31
 
 - Make release's native binaries executable by default - #299

@@ -57,6 +57,16 @@ You will get:
 nix-shell -p clojure-lsp
 ```
 
+### Windows
+
+`clojure-lsp` is available as a native executable in the [Clojure Scoop bucket](https://github.com/littleli/scoop-clojure). You need to [install Scoop](https://github.com/littleli/scoop-clojure/wiki/Getting-started#installation) if you don't have it already.
+
+Issue following command to download the `clojure-lsp` executable.
+
+```bash
+scoop install clojure-lsp
+```
+
 ---
 ## Building
 

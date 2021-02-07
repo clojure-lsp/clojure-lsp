@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-- Improve completion removing the necessity to call completion/resolveItem
+## 2021.02.07-03.04.31
+
+- Make release's native binaries executable by default - #299
+- Improve completion removing the necessity to call completion/resolveItem - #292
 - New code action: Add suggested alias to namespaces - #302
 
 ## 2021.02.05-03.05.34

@@ -16,10 +16,10 @@
 (defn ^:private keyword-element->keyword-str [{:keys [name alias ns]}]
   (let [kw (cond
              alias
-             (keyword (str alias) (str name))
+             (keyword (str alias) name)
 
              ns
-             (keyword (str ns) (str name))
+             (keyword (str ns) name)
 
              :else
              (keyword name))]

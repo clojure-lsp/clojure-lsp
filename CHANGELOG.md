@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Improve completion removing the necessity to call completion/resolveItem
+- New code action: Add suggested alias to namespaces - #302
 
 ## 2021.02.05-03.05.34
 

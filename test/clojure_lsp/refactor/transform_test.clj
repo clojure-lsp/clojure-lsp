@@ -1,17 +1,29 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
     [clojure-lsp.db :as db]
-    [clojure-lsp.parser :as parser]
     [clojure-lsp.refactor.edit :as edit]
     [clojure-lsp.refactor.transform :as transform]
+    [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
     [clojure.test :refer :all]
-    [rewrite-clj.zip :as z]
-    [clojure-lsp.test-helper :as h]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.shared :as shared]))
+    [rewrite-clj.zip :as z]))
 
 (defn code [& strings] (string/join "\n" strings))
+
+(deftest resolve-best-alias-suggestion
+  (testing "alias not exists"
+    (is (= #{"foo"} (#'transform/resolve-best-alias-suggestions "foo" '#{bar})))
+    (is (= #{"string"} (#'transform/resolve-best-alias-suggestions "clojure.string" '#{foo bar})))
+    (is (= #{"json"} (#'transform/resolve-best-alias-suggestions "clojure.data.json" '#{foo bar}))))
+  (testing "alias already exists"
+    (is (= #{"foo"} (#'transform/resolve-best-alias-suggestions "foo" '#{foo bar})))
+    (is (= #{"string" "clojure.string"} (#'transform/resolve-best-alias-suggestions "clojure.string" '#{foo bar string})))
+    (is (= #{"json" "data.json"} (#'transform/resolve-best-alias-suggestions "clojure.data.json" '#{foo bar json})))
+    (is (= #{"impl" "edn.impl"} (#'transform/resolve-best-alias-suggestions "clojure.data.edn.impl" '#{foo bar json impl edn.impl}))))
+  (testing "core ns"
+    (is (= #{"medley"} (#'transform/resolve-best-alias-suggestions "medley.core" '#{})))
+    (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{})))
+    (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{bar})))))
 
 (deftest add-missing-libspec
   (testing "aliases"

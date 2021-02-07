@@ -4,8 +4,11 @@
     [clojure-lsp.handlers :as handlers]
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
+    [clojure.string :as string]
     [clojure.test :refer [is use-fixtures]]
     [taoensso.timbre :as log]))
+
+(defn code [& strings] (string/join "\n" strings))
 
 (defn reset-db-after-test []
   (use-fixtures

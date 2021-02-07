@@ -12,7 +12,8 @@
     [rewrite-clj.custom-zipper.core :as cz]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]))
+    [rewrite-clj.zip.subedit :as zsub]
+    [taoensso.timbre :as log]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -570,6 +571,62 @@
     (if ns-str
       (add-missing-alias-ns zloc)
       (add-missing-refer zloc))))
+
+(defn ^:private resolve-best-alias-suggestion
+  [ns-str all-aliases drop-core?]
+  (if-let [dot-index (string/last-index-of ns-str ".")]
+    (let [suggestion (subs ns-str (inc dot-index))]
+      (if (and drop-core?
+               (= "core" suggestion))
+        (resolve-best-alias-suggestion (subs ns-str 0 dot-index) all-aliases drop-core?)
+        suggestion))
+    ns-str))
+
+(defn ^:private resolve-best-alias-suggestions
+  [ns-str all-aliases]
+  (let [alias (resolve-best-alias-suggestion ns-str all-aliases true)]
+    (if (contains? all-aliases (symbol alias))
+      (if-let [dot-index (string/last-index-of ns-str ".")]
+        (let [ns-without-alias (subs ns-str 0 dot-index)
+              second-alias-suggestion (resolve-best-alias-suggestion ns-without-alias all-aliases false)]
+          (if (= second-alias-suggestion alias)
+            #{alias}
+            (conj #{alias}
+                  (str second-alias-suggestion "." alias))))
+        #{alias})
+      #{alias})))
+
+(defn find-alias-suggestion [zloc]
+  (when-let [ns-str (some-> zloc z/sexpr namespace)]
+    (let [analysis (:analysis @db/db)
+          ns-definitions (q/find-all-ns-definitions analysis)
+          all-aliases (->> (q/find-all-aliases analysis)
+                           (map :alias)
+                           set)]
+      (when (contains? ns-definitions (symbol ns-str))
+        (->> (resolve-best-alias-suggestions ns-str all-aliases)
+             (map (fn [suggestion]
+                    {:ns ns-str
+                     :alias suggestion})))))))
+
+(defn add-alias-suggestion [zloc chosen-alias]
+  (->> (find-alias-suggestion zloc)
+       (filter (comp #(= chosen-alias %) :alias))
+       (map (fn [{:keys [ns alias]}]
+              (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))
+                                                                  (symbol? (z/sexpr %))
+                                                                  (= ns (-> % z/sexpr namespace))))]
+                (concat (add-known-libspec zloc (symbol alias) (symbol ns))
+                        (->> ns-usages-nodes
+                             (map (fn [node]
+                                    (z/replace node (-> (str alias "/" (-> node z/sexpr name))
+                                                        symbol
+                                                        n/token-node
+                                                        (with-meta (meta (z/node  node)))))))
+                             (map (fn [loc]
+                                    {:range (meta (z/node loc))
+                                     :loc loc})))))))
+       flatten))
 
 (defn extract-function
   [zloc uri fn-name]

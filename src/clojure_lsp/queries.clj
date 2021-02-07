@@ -188,6 +188,12 @@
                        (not (get % :private)))))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
+(defn find-all-ns-definitions [analysis]
+  (->> (mapcat val analysis)
+       (filter (comp #(= % :namespace-definitions) :bucket))
+       (map :name)
+       set))
+
 (defn find-all-aliases [analysis]
   (filter #(and (= (:bucket %) :namespace-alias)
                 (:alias %))

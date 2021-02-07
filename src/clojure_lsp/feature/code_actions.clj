@@ -1,22 +1,38 @@
 (ns clojure-lsp.feature.code-actions
   (:require
+    [clojure-lsp.db :as db]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.parser :as parser]
-    [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.queries :as q]
-    [clojure-lsp.db :as db]
+    [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
     [taoensso.timbre :as log])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))
 
+(defn ^:private find-alias-suggestion [uri diagnostic]
+  (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
+    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
+      (->> (r.transform/find-alias-suggestion diagnostic-zloc)
+           (map (fn [{:keys [ns alias]}]
+               {:ns ns
+                :alias alias
+                :position position}))))))
+
+(defn ^:private find-alias-suggestions [uri diagnostics]
+  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)]
+    (->> unresolved-ns-diags
+         (map (partial find-alias-suggestion uri))
+         flatten
+         (remove nil?))))
+
 (defn ^:private find-missing-require [uri diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
       (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc)]
         {:missing-require missing-require
-         :position        position}))))
+         :position position}))))
 
 (defn ^:private find-missing-requires [uri diagnostics]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
@@ -35,7 +51,7 @@
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
       (when-let [missing-import (r.transform/find-missing-import diagnostic-zloc)]
         {:missing-import missing-import
-         :position       position}))))
+         :position position}))))
 
 (defn ^:private find-missing-imports [uri diagnostics]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
@@ -50,7 +66,7 @@
          (remove nil?))))
 
 (defn resolve-code-action
-  [{{:keys [id uri line character]} :data :as code-action}
+  [{{:keys [id uri line character chosen-alias]} :data :as code-action}
    zloc]
   (->
     (merge code-action
@@ -68,6 +84,10 @@
              "add-missing-import"
              (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc))]
                {:edit missing-import-edit})
+
+             "add-alias-suggestion-require"
+             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-alias))]
+               {:edit alias-suggestion-edit})
 
              "refactor-inline-symbol"
              {:command {:title     "Inline symbol"
@@ -90,6 +110,19 @@
                         :arguments [uri line character]}}
              {}))
     (dissoc :data)))
+
+(defn ^:private alias-suggestion-actions
+  [uri alias-suggestions]
+  (map (fn [{:keys [ns alias position]}]
+         {:title      (str "Add require '" ns "' as '" alias "'")
+          :kind       CodeActionKind/QuickFix
+          :preferred? true
+          :data       {:id "add-alias-suggestion-require"
+                       :uri uri
+                       :line (:line position)
+                       :character (:character position)
+                       :chosen-alias alias}})
+       alias-suggestions))
 
 (defn ^:private missing-require-actions
   [uri missing-requires]
@@ -155,7 +188,8 @@
         line (dec row)
         character (dec col)
         missing-requires (find-missing-requires uri diagnostics)
-        missing-imports (find-missing-imports uri diagnostics)]
+        missing-imports (find-missing-imports uri diagnostics)
+        alias-suggestions (find-alias-suggestions uri diagnostics)]
     (cond-> []
 
       (seq missing-requires)
@@ -163,6 +197,9 @@
 
       (seq missing-imports)
       (into (missing-import-actions uri missing-imports))
+
+      (seq alias-suggestions)
+      (into (alias-suggestion-actions uri alias-suggestions))
 
       inline-symbol?
       (conj (inline-symbol-action uri line character))

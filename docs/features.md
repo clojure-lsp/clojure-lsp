@@ -27,13 +27,13 @@ Above you can find all available features that clojure-lsp provide with examples
 
 | Name                            | Example                                                         |
 |---------------------------------|-----------------------------------------------------------------|
-| Clean namespace require/imports | <img src="/images/features/clean-ns.gif" width=360>             |
-| Inline symbol                   | <img src="/images/features/inline-symbol.gif" width=360>        |
-| Extract function                | <img src="/images/features/extract-function.gif" width=360>     |
-| Add missing require             | <img src="/images/features/add-missing-require.gif" width=360>  |
-| Add known common require        | <img src="/images/features/add-common-require.gif" width=360>   |
-| Add known common import         | <img src="/images/features/add-common-import.gif" width=360>    |
-| Add suggested alias require     | <img src="/images/features/add-alias-suggestion.gif" width=360> |
+| Clean namespace require/imports | <img src="images/features/clean-ns.gif" width=360>             |
+| Inline symbol                   | <img src="images/features/inline-symbol.gif" width=360>        |
+| Extract function                | <img src="images/features/extract-function.gif" width=360>     |
+| Add missing require             | <img src="images/features/add-missing-require.gif" width=360>  |
+| Add known common require        | <img src="images/features/add-common-require.gif" width=360>   |
+| Add known common import         | <img src="images/features/add-common-import.gif" width=360>    |
+| Add suggested alias require     | <img src="images/features/add-alias-suggestion.gif" width=360> |
 
 ### Code lenses showing symbol references
 

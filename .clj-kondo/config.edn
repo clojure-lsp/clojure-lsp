@@ -2,5 +2,8 @@
                                       rewrite-clj.node
                                       digest]}}
  :lint-as {rewrite-clj.zip/edit->            clojure.core/->
+           rewrite-clj.zip/edit->>           clojure.core/->>
+           rewrite-clj.zip/subedit->         clojure.core/->
+           rewrite-clj.zip/subedit->>        clojure.core/->>
            rewrite-clj.zip.subedit/edit->    clojure.core/->
            rewrite-clj.zip.subedit/subedit-> clojure.core/->}}

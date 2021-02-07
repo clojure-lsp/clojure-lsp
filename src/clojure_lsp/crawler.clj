@@ -65,16 +65,21 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private kondo-args [extra locals]
+(defn ^:private kondo-args [extra locals specific-file?]
   (let [user-config (get-in @db/db [:settings :clj-kondo])
         kondo-dir (some-> (:project-root @db/db)
                           shared/uri->path
-                          (.resolve ".clj-kondo"))]
+                          (.resolve ".clj-kondo"))
+        config-exists? (some-> kondo-dir (.toFile) (.exists))]
     (cond-> {:cache true
              :cache-dir ".clj-kondo/.cache"}
-      (some-> kondo-dir (.toFile) (.exists))
-      (assoc :cache-dir (str (.resolve kondo-dir ".cache"))
-             :config-dir (str kondo-dir))
+
+      config-exists?
+      (assoc :cache-dir (str (.resolve kondo-dir ".cache")))
+
+      (and (not specific-file?)
+           config-exists?)
+      (assoc :config-dir (str kondo-dir))
 
       :always
       (merge extra)
@@ -94,7 +99,9 @@
 
 (defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (kondo-args {:parallel true
-                           :lint [(string/join (System/getProperty "path.separator") paths)]} false)))
+                           :lint [(string/join (System/getProperty "path.separator") paths)]}
+                          false
+                          false)))
 
 (defn ^:private deep-merge [a b]
   (merge-with (fn [x y]
@@ -125,6 +132,7 @@
     (kondo/run! (kondo-args {:lint ["-"]
                              :lang (shared/uri->file-type uri)
                              :filename (shared/uri->filename uri)}
+                            true
                             true))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]

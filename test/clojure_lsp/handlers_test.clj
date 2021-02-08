@@ -62,7 +62,6 @@
     (alter-var-root #'db/edits-chan (constantly (async/chan 1)))
     (let [_ (h/load-code-and-locs "" "file:///project/src/foo/bar.clj")
           changes (:document-changes (edits-or-timeout))]
-      (println changes)
       (h/assert-submaps
         [{:edits [{:range {:start {:line 0, :character 0}
                            :end {:line 0, :character 0}}

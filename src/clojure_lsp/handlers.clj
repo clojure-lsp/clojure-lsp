@@ -43,7 +43,6 @@
     (when (and in-project? (not= :unknown file-type))
       (->> source-paths
            (some (fn [source-path]
-                   (println source-path)
                    (when (string/starts-with? uri (str project-root "/" source-path))
                      (some-> filename
                              (subs (+ (inc (count project-root-filename))

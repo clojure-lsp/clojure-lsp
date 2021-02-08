@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix auto add ns to check project root and source paths
+
 ## 2021.02.07-22.51.26
 
 - Fix install-latest-clojure-lsp.sh script - #304

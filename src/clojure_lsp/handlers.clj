@@ -34,20 +34,26 @@
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
         source-paths (get-in @db/db [:settings :source-paths])
-        in-project? (string/starts-with? uri project-root)
+        in-project? (when project-root
+                      (string/starts-with? uri project-root))
         file-type (shared/uri->file-type uri)
-        filename (shared/uri->filename uri)]
+        filename (shared/uri->filename uri)
+        project-root-filename (when project-root
+                                (shared/uri->filename project-root))]
     (when (and in-project? (not= :unknown file-type))
       (->> source-paths
            (some (fn [source-path]
-                   (when (string/starts-with? filename source-path)
+                   (println source-path)
+                   (when (string/starts-with? uri (str project-root "/" source-path))
                      (some-> filename
-                             (subs 0 (dec (- (count filename) (count (name file-type)))))
-                             (subs (inc (count source-path)))
+                             (subs (+ (inc (count project-root-filename))
+                                      (inc (count source-path)))
+                                   (- (count filename)
+                                      (inc (count (name file-type)))))
                              (string/replace #"/" ".")
                              (string/replace #"_" "-")))))))))
 
-(defn did-open [{:keys [textDocument] :as params}]
+(defn did-open [{:keys [textDocument]}]
   (let [uri (-> textDocument :uri URLDecoder/decode)
         text (:text textDocument)]
     (when-let [new-ns (and (string/blank? text)

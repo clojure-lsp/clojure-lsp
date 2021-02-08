@@ -17,14 +17,58 @@
            [(async/timeout 1000)
             db/diagnostics-chan])))
 
+(defn edits-or-timeout []
+  (first (async/alts!!
+          [(async/timeout 1000)
+           db/edits-chan])))
+
+(deftest uri->namespace
+  (testing "when don't have a project root"
+    (reset! db/db {})
+    (is (nil? (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
+  (testing "when it has a project root and not a source-path"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{"bla"}}
+                        :project-root "file:///user/project"})
+    (is (nil? (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
+  (testing "when it has a project root and a source-path"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{"src"}}
+                        :project-root "file:///user/project"})
+    (is (= "foo.bar"
+           (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
+  (testing "when it has a project root a source-path on mono repos"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{"src/clj" "src/cljs"}}
+                        :project-root "file:///user/project"})
+    (is (= "foo.bar"
+           (#'handlers/uri->namespace "file:///user/project/src/clj/foo/bar.clj")))))
+
 (deftest did-open
-  (let [_ (h/load-code-and-locs "(ns a) (when)")
-        diagnostics (:diagnostics (diagnostics-or-timeout))]
-    (is (some? (get-in @db/db [:analysis "/a.clj"])))
-    (h/assert-submaps
-      [{:code "missing-body-in-when"}
-       {:code "invalid-arity"}]
-      diagnostics)))
+  (reset! db/db {})
+  (testing "opening a existing file"
+    (let [_ (h/load-code-and-locs "(ns a) (when)")
+          diagnostics (:diagnostics (diagnostics-or-timeout))]
+      (is (some? (get-in @db/db [:analysis "/a.clj"])))
+      (h/assert-submaps
+        [{:code "missing-body-in-when"}
+         {:code "invalid-arity"}]
+        diagnostics)))
+  (testing "opening a new file adding the ns"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{"src"}}
+                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                        :project-root "file:///project"})
+    (alter-var-root #'db/edits-chan (constantly (async/chan 1)))
+    (let [_ (h/load-code-and-locs "" "file:///project/src/foo/bar.clj")
+          changes (:document-changes (edits-or-timeout))]
+      (println changes)
+      (h/assert-submaps
+        [{:edits [{:range {:start {:line 0, :character 0}
+                           :end {:line 0, :character 0}}
+                   :new-text "(ns foo.bar)"}]}]
+        changes)
+      (is (some? (get-in @db/db [:analysis "/project/src/foo/bar.clj"]))))))
 
 (deftest hover
   (let [start-code "```clojure"

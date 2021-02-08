@@ -155,7 +155,7 @@
         element (entry->normalized-entries (assoc v :bucket bucket))
         :let [{:keys [name-row name-col name-end-row name-end-col] :as element} element
               valid? (and name-row name-col name-end-row name-end-col)
-              _ (when-not valid? (log/debug "Cannot find position for:" (:name element) (pr-str element) (some-> (:name element) meta)))]
+              _ (when-not valid? (log/debug "Cannot find position data when analysing" (:name element) (pr-str element) (some-> (:name element) meta)))]
         :when valid?]
     element))
 

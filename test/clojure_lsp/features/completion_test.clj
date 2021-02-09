@@ -57,13 +57,14 @@
     (h/assert-submaps
       [{:label "frequencies", :detail "clojure.core"}]
       (f.completion/completion "file:///d.clj" 1 49))
-    (h/assert-submaps
-      [{:label "bar"
-        :kind :variable
-        :documentation {:kind "markdown"
-                        :value "```clojure\nd/bar\n```\n\n----\n```clojure\nsome good docs\n```\n----\n*/d.clj*"}}
-       {:label "barbaz", :kind :function}]
-      (f.completion/completion "file:///e.clj" 4 10)))
+    (testing "complete symbols from alias"
+      (h/assert-submaps
+        [{:label "d-alias/bar"
+          :kind :variable
+          :documentation {:kind "markdown"
+                          :value "```clojure\nd/bar\n```\n\n----\n```clojure\nsome good docs\n```\n----\n*/d.clj*"}}
+         {:label "d-alias/barbaz", :kind :function}]
+        (f.completion/completion "file:///e.clj" 4 10))))
   (testing "complete-core-stuff"
     (h/assert-submaps
       [{:label "frequencies", :detail "clojure.core"}]

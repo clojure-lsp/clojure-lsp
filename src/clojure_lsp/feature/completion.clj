@@ -13,7 +13,7 @@
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
 
-(defn ^:private keyword-element->keyword-str [{:keys [name alias ns]}]
+(defn ^:private keyword-element->str [{:keys [name alias ns]}]
   (let [kw (cond
              alias
              (keyword (str alias) name)
@@ -63,15 +63,29 @@
     :else
     :text))
 
-(defn element->completion-item [{:keys [deprecated alias ns bucket arglist-strs] :as element}]
+(defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias]
+  (cond
+
+    (= :keywords bucket)
+    (keyword-element->str element)
+
+    (#{:namespace-alias :namespace-usages} bucket)
+    (some-> alias name)
+
+    cursor-alias
+    (str cursor-alias "/" (-> element :name name))
+
+    :else
+    (-> element :name name)))
+
+(defn ^:private element->completion-item
+  [{:keys [deprecated ns bucket arglist-strs] :as element}
+   alias]
   (let [kind (element->completion-item-kind element)
         detail (or (when arglist-strs (string/join " " arglist-strs))
                    (some-> ns name))
         definition? (#{:namespace-definitions :var-definitions} bucket)]
-    (-> {:label  (if (= bucket :keywords)
-                   (keyword-element->keyword-str element)
-                   (or (some-> alias name)
-                       (-> element :name name)))}
+    (-> {:label (element->label element alias)}
         (cond-> detail (assoc :detail detail)
                 deprecated (assoc :tags [1])
                 kind (assoc :kind kind)
@@ -109,7 +123,7 @@
       false
 
       (and (= bucket :keywords)
-           (or (matches-fn (keyword-element->keyword-str element))
+           (or (matches-fn (keyword-element->str element))
                (and ns
                     (matches-fn (str ns)))
                (and alias
@@ -123,7 +137,7 @@
 (defn with-element-items [elements matches-fn cursor-uri cursor-element]
   (->> elements
        (filter (partial valid-element-completion-item? matches-fn cursor-uri cursor-element))
-       (map element->completion-item)
+       (map #(element->completion-item % nil))
        (sort-by :label)))
 
 (defn with-elements-from-alias [alias matches-fn ns-elements other-elements]
@@ -135,7 +149,7 @@
          (filter #(and (= (:bucket %) :var-definitions)
                        (= (:ns %) alias-ns)
                        (matches-fn (:name %))))
-         (map element->completion-item)
+         (map #(element->completion-item % alias))
          (sort-by :label))))
 
 (defn with-clojure-core-items [matches-fn]

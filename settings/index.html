@@ -547,57 +547,94 @@
                 
                 
                 <h1 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h1>
-<p>Custom <code>clojure-lsp</code> settings can be configured via 3 ways: <strong>Global configuration</strong>, <strong>project configuration</strong> or <strong>LSP InitializationOptions</strong>.</p>
+<p><code>clojure-lsp</code> settings are picked up on server start and can be configured via 3 ways: <strong>Global configuration</strong>, <strong>project configuration</strong> or <strong>LSP InitializationOptions</strong>.</p>
 <h2 id="supported-settings">Supported settings<a class="headerlink" href="#supported-settings" title="Permanent link">#</a></h2>
-<p><code>source-paths</code> value is a set of project-local directories to look for clj/cljc/cljs files. Default is <code>#{"src", "test"}</code>.</p>
-<p><code>ignore-classpath-directories</code> if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into <code>resources</code> or <code>target</code> that you want lsp to ignore.</p>
-<p><code>use-metadata-for-privacy?</code> if true, will use <code>^:private</code> metadata for refactorings instead of <code>defn-</code></p>
-<p><code>keep-require-at-start?</code> if true, will keep first require/import at the first line instead of inserting a new line before it when using <code>clean-ns</code> refactoring.</p>
-<p><code>semantic-tokens?</code> if true or not present, will enable LSP semantic tokens server support for syntax highlighting. </p>
-<p><code>show-docs-arity-on-same-line?</code> if true, will keep the arity on the same line of the function on hover, useful for Emacs users.</p>
-<p><code>auto-add-ns-to-new-files?</code> if true or not present, will automatically add the <code>ns</code> form in new files. </p>
-<p><code>document-formatting?</code> if true or not present, document formatting is provided.</p>
-<p><code>document-range-formatting?</code> if true or not present, document range formatting is provided.</p>
-<p><code>dependency-scheme</code> by default, dependencies are linked with vim's <code>zipfile://&lt;zipfile&gt;::&lt;innerfile&gt;</code> scheme, however you can use a scheme of <code>jar</code> to get urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents. <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">Similar to java clients</a></p>
-<p><code>cljfmt</code> json encoded configuration for https://github.com/weavejester/cljfmt</p>
-<div class="highlight"><pre><span></span><code><span class="ss">:cljfmt</span> 
-  <span class="p">{</span><span class="ss">:indents</span> 
-    <span class="p">{</span><span class="s">&quot;#.*&quot;</span> <span class="p">[[</span><span class="s">&quot;block&quot;</span>, <span class="mi">0</span><span class="p">]]</span>
-     <span class="s">&quot;ns&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]</span>, <span class="p">[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">1</span><span class="p">]]</span>
-     <span class="s">&quot;and&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]]</span>
-     <span class="s">&quot;or&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]]</span>
-     <span class="s">&quot;are&quot;</span> <span class="p">[[</span><span class="s">&quot;inner&quot;</span>, <span class="mi">0</span><span class="p">]]}}</span>
-</code></pre></div>
-<p><code>project-specs</code> - value is a vector containing a map of key/value pairs, for example:
-<div class="highlight"><pre><span></span><code><span class="s">&quot;initializationOptions&quot;</span><span class="err">:</span> <span class="p">{</span>
-    <span class="s">&quot;project-specs&quot;</span><span class="err">:</span> <span class="p">[{</span>
-        <span class="s">&quot;project-path&quot;</span><span class="err">:</span> <span class="s">&quot;deps.edn&quot;</span>,
-        <span class="s">&quot;classpath-cmd&quot;</span><span class="err">:</span> <span class="p">[</span><span class="s">&quot;clj&quot;</span>, <span class="s">&quot;-Spath&quot;</span><span class="p">]}]</span>
-    <span class="p">}</span>
-</code></pre></div>
-Note: You may also consider configuring project specs via the (optional) <code>.lsp/config.edn</code> file, i.e.,
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:project-specs</span> <span class="p">[{</span><span class="ss">:project-path</span> <span class="s">&quot;deps.edn&quot;</span>
-                  <span class="ss">:classpath-cmd</span> <span class="p">[</span><span class="s">&quot;clj&quot;</span> <span class="s">&quot;-Spath&quot;</span><span class="p">]}]}</span>
-</code></pre></div>
-Each project-spec will add to the list of dependencies for lsp to crawl:
-  - <code>:project-path</code> is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
-  - <code>:classpath-cmd</code> is the required vector of commands to get your project's classpath string (e.g. <code>["clj", "-Spath"]</code>)
-  - <code>:env</code> optionally add environment variables to the classpath-cmd (e.g. <code>{"BOOT_FILE" "x.boot"}</code>)</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>description</th>
+<th>default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source-paths</code></td>
+<td>project-local directories to look for clj/cljc/cljs files</td>
+<td><code>#{"src" "test"}</code></td>
+</tr>
+<tr>
+<td><code>ignore-classpath-directories</code></td>
+<td>will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into <code>resources</code> or <code>target</code> that you want lsp to ignore.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>use-metadata-for-privacy?</code></td>
+<td>Whether to use <code>^:private</code> metadata for refactorings instead of <code>defn-</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>keep-require-at-start?</code></td>
+<td>Whether to keep first require/import at the first line instead of inserting a new line before it when using <code>clean-ns</code> refactoring.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>semantic-tokens?</code></td>
+<td>Whether to enable LSP semantic tokens server support for syntax highlighting.  (Experimental)</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>show-docs-arity-on-same-line?</code></td>
+<td>Whether to keep the arity on the same line of the function on hover, useful for Emacs users.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>auto-add-ns-to-new-files?</code></td>
+<td>Whether to automatically add the <code>ns</code> form in new blank files.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>document-formatting?</code></td>
+<td>if true or not present, document formatting is provided.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>document-range-formatting?</code></td>
+<td>if true or not present, document range formatting is provided.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>dependency-scheme</code></td>
+<td>How the dependencies should be linked, <code>jar</code> will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents. <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">Similar to java clients</a></td>
+<td><code>zip</code></td>
+</tr>
+<tr>
+<td><code>cljfmt</code></td>
+<td>Used for formatting, json encoded configuration for <a href="https://github.com/weavejester/cljfmt">cljfmt</a></td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>project-specs</code></td>
+<td>A vector containing a map of key/value pairs, defining how <code>clojure-lsp</code> should find your project classpath</td>
+<td>Check the default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60">here</a></td>
+</tr>
+</tbody>
+</table>
 <h3 id="lint">Lint<a class="headerlink" href="#lint" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to lint the code and retrieve the analysis to
 make most of features work, make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file, for more information about available configurations, 
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
 <hr />
 <h2 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h2>
-<p><code>clojure-lsp</code> will also look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your root folder up the directory structure so you can have multiple projects share the same settings.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:macro-defs</span> <span class="p">{</span><span class="nv">korma.core/defentity</span> <span class="p">[</span><span class="ss">:declaration</span> <span class="ss">:elements</span><span class="p">]}</span>
- <span class="ss">:cljfmt</span> <span class="p">{</span><span class="ss">:indents</span> <span class="p">{</span><span class="o">#</span><span class="nv">re</span> <span class="s">&quot;.*&quot;</span> <span class="kd">ns </span><span class="p">[[</span><span class="ss">:inner</span> <span class="mi">0</span><span class="p">]</span> <span class="p">[</span><span class="ss">:inner</span> <span class="mi">1</span><span class="p">]]}}</span>
- <span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:missing-docstring</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:warning</span><span class="p">}}}}</span>
-</code></pre></div>
+<p><code>clojure-lsp</code> will look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your project root folder up the directory structure so you can have multiple projects share the same settings.</p>
+<p>Example:
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:cljfmt</span> <span class="p">{</span><span class="ss">:indents</span> <span class="p">{</span><span class="o">#</span><span class="nv">re</span> <span class="s">&quot;.*&quot;</span> <span class="kd">ns </span><span class="p">[[</span><span class="ss">:inner</span> <span class="mi">0</span><span class="p">]</span> <span class="p">[</span><span class="ss">:inner</span> <span class="mi">1</span><span class="p">]]}}</span>
+ <span class="ss">:auto-add-ns-to-new-files?</span> <span class="nv">false</span><span class="p">}</span>
+</code></pre></div></p>
 <hr />
 <h2 id="global">Global<a class="headerlink" href="#global" title="Permanent link">#</a></h2>
 <p>For global settings which should work for all the projects using <code>clojure-lsp</code>, you just need to add the same configs to <code>~/.lsp/config.edn</code>.</p>
-<p>For an example of <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn">here</a>.</p>
+<p>For an example of a global <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn">here</a>.</p>
 <hr />
 <h2 id="initializationoptions">InitializationOptions<a class="headerlink" href="#initializationoptions" title="Permanent link">#</a></h2>
 <p>This is specific for an client, where it sends on startup, check <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP spec for more information</a>.</p>
@@ -610,7 +647,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 8, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 9, 2021</span>
     
   </small>
 </div>

@@ -1,59 +1,24 @@
 # Settings 
 
-Custom `clojure-lsp` settings can be configured via 3 ways: **Global configuration**, **project configuration** or **LSP InitializationOptions**.
+`clojure-lsp` settings are picked up on server start and can be configured via 3 ways: **Global configuration**, **project configuration** or **LSP InitializationOptions**.
 
 ## Supported settings
 
-`source-paths` value is a set of project-local directories to look for clj/cljc/cljs files. Default is `#{"src", "test"}`.
+| name                            | description                                                                                                                                                                                                                                                                                                                                                                                                          | default           |
+|---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `source-paths`                  | project-local directories to look for clj/cljc/cljs files                                                                                                                                                                                                                                                                                                                                                            | `#{"src" "test"}` |
+| `ignore-classpath-directories`  | will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.                                                                                                                                                                                                             | `false`           |
+| `use-metadata-for-privacy?`     | Whether to use `^:private` metadata for refactorings instead of `defn-`                                                                                                                                                                                                                                                                                                                                              | `false`           |
+| `keep-require-at-start?`        | Whether to keep first require/import at the first line instead of inserting a new line before it when using `clean-ns` refactoring.                                                                                                                                                                                                                                                                                  | `false`           |
+| `semantic-tokens?`              | Whether to enable LSP semantic tokens server support for syntax highlighting.  (Experimental)                                                                                                                                                                                                                                                                                                                        | `false`           |
+| `show-docs-arity-on-same-line?` | Whether to keep the arity on the same line of the function on hover, useful for Emacs users.                                                                                                                                                                                                                                                                                                                         | `false`           |
+| `auto-add-ns-to-new-files?`     | Whether to automatically add the `ns` form in new blank files.                                                                                                                                                                                                                                                                                                                                                       | `true`            |
+| `document-formatting?`          | if true or not present, document formatting is provided.                                                                                                                                                                                                                                                                                                                                                             | `true`            |
+| `document-range-formatting?`    | if true or not present, document range formatting is provided.                                                                                                                                                                                                                                                                                                                                                       | `true`            |
+| `dependency-scheme`             | How the dependencies should be linked, `jar` will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of `clojure/dependencyContents` with the jar uri and the server will return the jar entry's contents. [Similar to java clients](https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298) | `zip`             |
+| `cljfmt`                        | Used for formatting, json encoded configuration for [cljfmt](https://github.com/weavejester/cljfmt)                                                                                                                                                                                                                                                                                                                  | `{}`              |
+| `project-specs`                 | A vector containing a map of key/value pairs, defining how `clojure-lsp` should find your project classpath                                                                                                                                                                                                                                                                                                          | Check the default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60)                  |
 
-`ignore-classpath-directories` if true, will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.
-
-`use-metadata-for-privacy?` if true, will use `^:private` metadata for refactorings instead of `defn-`
-
-`keep-require-at-start?` if true, will keep first require/import at the first line instead of inserting a new line before it when using `clean-ns` refactoring.
-
-`semantic-tokens?` if true or not present, will enable LSP semantic tokens server support for syntax highlighting. 
-
-`show-docs-arity-on-same-line?` if true, will keep the arity on the same line of the function on hover, useful for Emacs users.
-
-`auto-add-ns-to-new-files?` if true or not present, will automatically add the `ns` form in new files. 
-
-`document-formatting?` if true or not present, document formatting is provided.
-
-`document-range-formatting?` if true or not present, document range formatting is provided.
-
-`dependency-scheme` by default, dependencies are linked with vim's `zipfile://<zipfile>::<innerfile>` scheme, however you can use a scheme of `jar` to get urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of `clojure/dependencyContents` with the jar uri and the server will return the jar entry's contents. [Similar to java clients](https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298)
-
-`cljfmt` json encoded configuration for https://github.com/weavejester/cljfmt
-
-```clojure
-:cljfmt 
-  {:indents 
-    {"#.*" [["block", 0]]
-     "ns" [["inner", 0], ["inner", 1]]
-     "and" [["inner", 0]]
-     "or" [["inner", 0]]
-     "are" [["inner", 0]]}}
-```
-
-`project-specs` - value is a vector containing a map of key/value pairs, for example:
-```clojure
-"initializationOptions": {
-    "project-specs": [{
-        "project-path": "deps.edn",
-        "classpath-cmd": ["clj", "-Spath"]}]
-    }
-```
-Note: You may also consider configuring project specs via the (optional) `.lsp/config.edn` file, i.e.,
-```clojure
-{:project-specs [{:project-path "deps.edn"
-                  :classpath-cmd ["clj" "-Spath"]}]}
-```
-Each project-spec will add to the list of dependencies for lsp to crawl:
-  - `:project-path` is the required filename used by your build tool (project.clj, build.boot, deps.edn, package.json, etc)
-  - `:classpath-cmd` is the required vector of commands to get your project's classpath string (e.g. `["clj", "-Spath"]`)
-  - `:env` optionally add environment variables to the classpath-cmd (e.g. `{"BOOT_FILE" "x.boot"}`)
-  
 ### Lint
 
 `clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to lint the code and retrieve the analysis to
@@ -63,12 +28,12 @@ check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kon
 ---
 ## Project
 
-`clojure-lsp` will also look for project specific settings in a file called `.lsp/config.edn`. It will search from your root folder up the directory structure so you can have multiple projects share the same settings.
+`clojure-lsp` will look for project specific settings in a file called `.lsp/config.edn`. It will search from your project root folder up the directory structure so you can have multiple projects share the same settings.
 
+Example:
 ```clojure
-{:macro-defs {korma.core/defentity [:declaration :elements]}
- :cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
- :clj-kondo {:linters {:missing-docstring {:level :warning}}}}
+{:cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
+ :auto-add-ns-to-new-files? false}
 ```
 
 ---
@@ -76,7 +41,7 @@ check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kon
 
 For global settings which should work for all the projects using `clojure-lsp`, you just need to add the same configs to `~/.lsp/config.edn`.
 
-For an example of `config.edn`, check [here](https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn).
+For an example of a global `config.edn`, check [here](https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn).
 
 ---
 ## InitializationOptions

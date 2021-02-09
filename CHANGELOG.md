@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 2021.02.09-18.28.06
+
 - Fix auto add ns to check project root and source paths
+- Add alias on copmletion items - Fix completion items for Calva client
 
 ## 2021.02.07-22.51.26
 

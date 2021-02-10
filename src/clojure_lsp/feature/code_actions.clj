@@ -94,6 +94,11 @@
                         :command   "inline-symbol"
                         :arguments [uri line character]}}
 
+             "refactor-move-to-let"
+             {:command {:title     "Move to let"
+                        :command   "move-to-let"
+                        :arguments [uri line character "new-binding"]}}
+
              "refactor-cycle-privacy"
              {:command {:title     "Cycle privacy"
                         :command   "cycle-privacy"
@@ -155,6 +160,14 @@
            :line      line
            :character character}})
 
+(defn ^:private move-to-let-action [uri line character]
+  {:title "Move to let"
+   :kind  CodeActionKind/RefactorExtract
+   :data  {:id        "refactor-move-to-let"
+           :uri       uri
+           :line      line
+           :character character}})
+
 (defn ^:private cycle-privacy-action [uri line character]
   {:title "Cycle privacy"
    :kind  CodeActionKind/RefactorRewrite
@@ -182,7 +195,8 @@
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
-        inside-function? (r.transform/inside-function? zloc)
+        inside-function? (r.transform/find-function-form zloc)
+        inside-let? (r.transform/find-let-form zloc)
         definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
         inline-symbol? (r.transform/inline-symbol? definition)
         line (dec row)
@@ -203,6 +217,9 @@
 
       inline-symbol?
       (conj (inline-symbol-action uri line character))
+
+      inside-let?
+      (conj (move-to-let-action uri line character))
 
       inside-function?
       (conj (cycle-privacy-action uri line character)

@@ -170,12 +170,15 @@
         (recur next-loc (or marked? exists?))
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
+(defn find-let-form [zloc]
+  (some-> zloc
+          (edit/find-ops-up 'let)
+          z/up))
+
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
   [zloc binding-name]
-  (when-let [let-top-loc (some-> zloc
-                                 (edit/find-ops-up 'let)
-                                 z/up)]
+  (when-let [let-top-loc (find-let-form zloc)]
     (let [let-loc (z/down (zsub/subzip let-top-loc))
           bound-string (z/string zloc)
           bound-node (z/node zloc)
@@ -665,12 +668,12 @@
      {:loc expr-edit
       :range expr-meta}]))
 
-(defn inside-function? [zloc]
+(defn find-function-form [zloc]
   (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
 
 (defn cycle-privacy
   [zloc]
-  (when-let [oploc (inside-function? zloc)]
+  (when-let [oploc (find-function-form zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
                              (not (get-in @db/db [:settings :use-metadata-for-privacy?])))

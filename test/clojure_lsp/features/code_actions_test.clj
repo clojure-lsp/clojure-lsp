@@ -170,6 +170,27 @@
                                   5
                                   [] {})))))
 
+(deftest move-to-let-code-action
+  (h/load-code-and-locs (h/code "(let [a 1"
+                                "      b 2]"
+                                "  (+ 1 2))"
+                                "(+ 1 2)")
+                        "file:///b.clj")
+  (testing "when not inside a let form"
+    (is (not-any? #(= (:title %) "Move to let")
+                  (f.code-actions/all (zloc-at "file:///b.clj" 4 1)
+                                      "file:///b.clj"
+                                      4
+                                      1
+                                      [] {}))))
+  (testing "when inside let form"
+    (is (some #(= (:title %) "Move to let")
+              (f.code-actions/all (zloc-at "file:///b.clj" 3 3)
+                                  "file:///b.clj"
+                                  3
+                                  3
+                                  [] {})))))
+
 (deftest cycle-privacy-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")

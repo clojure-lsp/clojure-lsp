@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2021.02.10-03.01.19
+
+- Fix config passed to clj-kondo during analysis - Fixes #308
+
 ## 2021.02.09-18.28.06
 
 - Fix auto add ns to check project root and source paths

@@ -1,6 +1,6 @@
-{:linters {:unresolved-var {:exclude [rewrite-clj.zip
-                                      rewrite-clj.node
-                                      digest]}}
+{:hooks {:analyze-call {rewrite-clj.potemkin.clojure/import-vars-with-mods
+                        hooks.rewrite-clj.potemkin.import-vars-with-mods/import-vars-with-mods}}
+ :linters {:unresolved-var {:exclude [digest]}}
  :lint-as {rewrite-clj.zip/edit->            clojure.core/->
            rewrite-clj.zip/edit->>           clojure.core/->>
            rewrite-clj.zip/subedit->         clojure.core/->

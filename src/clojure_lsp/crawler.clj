@@ -2,6 +2,7 @@
   (:require
    [clj-kondo.core :as kondo]
    [cljfmt.main :as cljfmt.main]
+   [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
@@ -10,8 +11,8 @@
    [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
-   [taoensso.timbre :as log]
-   [digest :as digest])
+   [digest :as digest]
+   [taoensso.timbre :as log])
   (:import
    [java.nio.file Paths]))
 
@@ -65,43 +66,10 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private kondo-args [extra locals specific-file?]
-  (let [user-config (get-in @db/db [:settings :clj-kondo])
-        kondo-dir (some-> (:project-root @db/db)
-                          shared/uri->path
-                          (.resolve ".clj-kondo"))
-        config-exists? (some-> kondo-dir (.toFile) (.exists))]
-    (cond-> {:cache true
-             :cache-dir ".clj-kondo/.cache"}
-
-      config-exists?
-      (assoc :cache-dir (str (.resolve kondo-dir ".cache")))
-
-      (and (not specific-file?)
-           config-exists?)
-      (assoc :config-dir (str kondo-dir))
-
-      :always
-      (merge extra)
-
-      user-config
-      (update-in [:config] merge user-config)
-
-      :always
-      (assoc-in [:config :output] {:analysis {:arglists true
-                                              :keywords true}
-                                   :canonical-paths true})
-
-      locals
-      (assoc-in [:config :output :analysis :locals] true))))
-
 (def clj-kondo-analysis-batch-size 50)
 
 (defn ^:private run-kondo-on-paths! [paths]
-  (kondo/run! (kondo-args {:parallel true
-                           :lint [(string/join (System/getProperty "path.separator") paths)]}
-                          false
-                          false)))
+  (kondo/run! (config/kondo-for-paths paths)))
 
 (defn ^:private deep-merge [a b]
   (merge-with (fn [x y]
@@ -129,11 +97,7 @@
 (defn run-kondo-on-text! [text uri]
   (with-in-str
     text
-    (kondo/run! (kondo-args {:lint ["-"]
-                             :lang (shared/uri->file-type uri)
-                             :filename (shared/uri->filename uri)}
-                            true
-                            true))))
+    (kondo/run! (config/kondo-for-single-file uri))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond

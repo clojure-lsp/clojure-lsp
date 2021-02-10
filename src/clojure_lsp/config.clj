@@ -13,7 +13,7 @@
                      :canonical-paths true}}})
 
 (defn kondo-for-single-file [uri]
-  {:cache false
+  {:cache true
    :lint ["-"]
    :lang (shared/uri->file-type uri)
    :filename (shared/uri->filename uri)

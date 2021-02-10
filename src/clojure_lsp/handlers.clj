@@ -1,6 +1,7 @@
 (ns clojure-lsp.handlers
   (:require
     [cljfmt.core :as cljfmt]
+    [clojure-lsp.code-lens :as f.code-lens]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -276,20 +277,11 @@
 
 (defn code-lens
   [{:keys [textDocument]}]
-  (let [analysis (get @db/db :analysis)]
-    (->> (q/find-vars analysis (shared/uri->filename textDocument) true)
-         (filter #(not= 'clojure.test/deftest (:defined-by %)))
-         (map (fn [var]
-                {:range (shared/->range var)
-                 :data  [textDocument (:name-row var) (:name-col var)]})))))
+  (f.code-lens/reference-code-lens textDocument))
 
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
-  (let [references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename text-document) row col false)]
-    {:range range
-     :command {:title (-> references count (str " references"))
-               :command "code-lens-references"
-               :arguments [text-document row col]}}))
+  (f.code-lens/resolve-code-lens text-document row col range))
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]

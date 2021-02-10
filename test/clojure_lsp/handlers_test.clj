@@ -28,18 +28,19 @@
     (is (nil? (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
   (testing "when it has a project root and not a source-path"
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"bla"}}
+                                   :source-paths #{"file:///user/project/bla"}}
                         :project-root "file:///user/project"})
     (is (nil? (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
   (testing "when it has a project root and a source-path"
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"src"}}
+                                   :source-paths #{"/user/project/src"}}
                         :project-root "file:///user/project"})
     (is (= "foo.bar"
            (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
   (testing "when it has a project root a source-path on mono repos"
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"src/clj" "src/cljs"}}
+                                   :source-paths #{"/user/project/src/clj"
+                                                   "/user/project/src/cljs"}}
                         :project-root "file:///user/project"})
     (is (= "foo.bar"
            (#'handlers/uri->namespace "file:///user/project/src/clj/foo/bar.clj")))))
@@ -56,7 +57,7 @@
         diagnostics)))
   (testing "opening a new file adding the ns"
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"src"}}
+                                   :source-paths #{"/project/src"}}
                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                         :project-root "file:///project"})
     (alter-var-root #'db/edits-chan (constantly (async/chan 1)))

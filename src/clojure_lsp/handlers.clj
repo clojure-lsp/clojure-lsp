@@ -37,20 +37,22 @@
         in-project? (when project-root
                       (string/starts-with? uri project-root))
         file-type (shared/uri->file-type uri)
-        filename (shared/uri->filename uri)
-        project-root-filename (when project-root
-                                (shared/uri->filename project-root))]
+        filename (shared/uri->filename uri)]
     (when (and in-project? (not= :unknown file-type))
       (->> source-paths
            (some (fn [source-path]
-                   (when (string/starts-with? uri (str project-root "/" source-path))
+                   (when (string/starts-with? filename source-path)
                      (some-> filename
-                             (subs (+ (inc (count project-root-filename))
-                                      (inc (count source-path)))
+                             (subs (inc (count source-path))
                                    (- (count filename)
                                       (inc (count (name file-type)))))
                              (string/replace #"/" ".")
                              (string/replace #"_" "-")))))))))
+
+(defn initialize [project-root client-capabilities client-settings]
+  (when project-root
+    (crawler/initialize-project project-root client-capabilities client-settings)
+    nil))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (-> textDocument :uri URLDecoder/decode)
@@ -92,10 +94,12 @@
           (f.diagnostic/notify uri result)
           (recur @db/db))))))
 
-(defn initialize [project-root client-capabilities client-settings]
-  (when project-root
-    (crawler/initialize-project project-root client-capabilities client-settings)
-    nil))
+(defn did-change-watched-files [changes]
+  (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
+    (swap! db/db (fn [db]
+                   (-> db
+                       (update :documents #(apply dissoc % uris))
+                       (update :file-envs #(apply dissoc % uris)))))))
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)
@@ -253,13 +257,6 @@
         entry (.getJarEntry connection)]
     (with-open [stream (.getInputStream jar entry)]
       (slurp stream))))
-
-(defn did-change-watched-files [changes]
-  (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
-    (swap! db/db (fn [db]
-                   (-> db
-                       (update :documents #(apply dissoc % uris))
-                       (update :file-envs #(apply dissoc % uris)))))))
 
 (defn code-actions
   [{:keys [range context textDocument]}]

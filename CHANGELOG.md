@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix auto add ns not working for projects.
+
 ## 2021.02.10-03.01.19
 
 - Fix config passed to clj-kondo during analysis - Fixes #308

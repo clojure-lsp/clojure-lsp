@@ -362,6 +362,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#contribution" class="md-nav__link">
+    Contribution
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#building" class="md-nav__link">
     Building
   </a>
@@ -384,13 +391,6 @@
         <li class="md-nav__item">
   <a href="#development" class="md-nav__link">
     Development
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contribution" class="md-nav__link">
-    Contribution
   </a>
   
 </li>
@@ -571,6 +571,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#contribution" class="md-nav__link">
+    Contribution
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#building" class="md-nav__link">
     Building
   </a>
@@ -593,13 +600,6 @@
         <li class="md-nav__item">
   <a href="#development" class="md-nav__link">
     Development
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contribution" class="md-nav__link">
-    Contribution
   </a>
   
 </li>
@@ -637,10 +637,10 @@
 <hr>
 <p align="center">
   <a href="https://clojure-lsp.github.io/clojure-lsp"><strong>homepage</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/features/"><strong>features</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/#installation"><strong>installation</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/settings"><strong>settings</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/clients"><strong>clients</strong></a> •
-  <a href="https://clojure-lsp.github.io/clojure-lsp/capabilities"><strong>capabilities</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting"><strong>troubleshooting</strong></a> •
   <a href="https://opencollective.com/clojure-lsp"><strong>support us</strong></a>
 </p>
@@ -661,6 +661,7 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <li><strong>Refactorings</strong></li>
 <li><strong>Code lens</strong></li>
 <li><strong>Semantic tokens (syntax highlighting)</strong></li>
+<li><strong>Call hierarchy</strong></li>
 </ul>
 <hr />
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
@@ -681,21 +682,29 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <div class="highlight"><pre><span></span><code>scoop install clojure-lsp
 </code></pre></div>
 <hr />
+<h2 id="contribution">Contribution<a class="headerlink" href="#contribution" title="Permanent link">#</a></h2>
+<p>Contributions to <code>clojure-lsp</code> are very welcome! You can open an issue or a PR and we'd love to help.</p>
+<hr />
 <h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
 <p>For building the jar manually, run <code>lein bin</code> to generate the embedded jar inside <code>target</code> folder or <code>lein uberjar</code> for building the standalone jar.</p>
 <h3 id="graavm">GraaVM<a class="headerlink" href="#graavm" title="Permanent link">#</a></h3>
 <p>Every release the native binaries (Windows, Linux and MacOS) are compiled with <strong>GraalVM</strong> and uploaded.</p>
-<p>To build a native image with GraalVM, first install the GraalVM 21.0.0 for Java 11, set the <code>GRAALVM_HOME</code> to the installation dir and then run from <code>clojure-lsp</code> project root <code>./graalvm/native-unix-compile.sh</code> or <code>./graalvm/native-windows-compile.bat</code>. The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
+<p>To build a native image with GraalVM:</p>
+<ul>
+<li>Install the GraalVM 21.0.0 for Java 11 and set the <code>GRAALVM_HOME</code> to the installation dir </li>
+<li>Install <code>native-image</code> with <code>$GRAALVM_HOME/bin/gu install native-image</code> </li>
+<li>Run from <code>clojure-lsp</code> project root <code>./graalvm/native-unix-compile.sh</code> or <code>./graalvm/native-windows-compile.bat</code>. </li>
+</ul>
+<p>The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
 <hr />
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h2>
-<p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:
-- Create a test for your bug/feature, then implement the code following the test.
-- <code>clojure-lsp</code> starts a NREPL server if built with <code>lein with-profile :debug bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.out</code> log, it will print the NREPL port on server startup or you can get it via <code>server-info</code> custom LSP command.
-- Build <code>clojure-lsp</code> with your changes and test it manually in your client, this is the slowest option, but it makes sense for final tests.
-- For debugging purposes, there is two custom commands <code>server-info</code> and <code>cursor-info</code>.</p>
-<hr />
-<h2 id="contribution">Contribution<a class="headerlink" href="#contribution" title="Permanent link">#</a></h2>
-<p>Contributions to <code>clojure-lsp</code> are very welcome! You can open an issue or a PR and we'd love to help.</p>
+<p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:</p>
+<ul>
+<li>Create a test for your bug/feature, then implement the code following the test.</li>
+<li><code>clojure-lsp</code> starts a NREPL server if built with <code>lein with-profile :debug bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.out</code> log, it will print the NREPL port on server startup or you can get it via <code>server-info</code> custom LSP command.</li>
+<li>Build <code>clojure-lsp</code> with your changes and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
+<li>For debugging purposes, there is two custom commands <code>server-info</code> and <code>cursor-info</code>.</li>
+</ul>
 <hr />
 <h2 id="support-the-project">Support the project<a class="headerlink" href="#support-the-project" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> has more than 8.000 lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva) and vim.</p>

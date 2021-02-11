@@ -44,6 +44,18 @@ Project-local `.lsp/settings.json` would have content like:
    "macro-defs": {"project.macros/dofor": ["bindings", "bound-elements"]}}}
 ```
 
+Further refactoring mappings include being able to invoke the
+`(coc-codeaction-*)` function to provide actions such as `move to
+let`, `change coll to map` and so on.
+
+```
+nmap <silent> <Leader>cr            <Plug>(coc-rename)
+nmap <silent> <Leader>cf            <Plug>(coc-references)
+xmap <silent> <Leader>c             <Plug>(coc-codeaction-selected)
+nmap <silent> <Leader>c             <Plug>(coc-codeaction-line)
+nmap <silent> gd                    <Plug>(coc-definition)
+```
+
 ---
 ## Emacs
 

@@ -27,6 +27,9 @@
 (defmethod refactor :cycle-coll [{:keys [loc]}]
   (r.transform/cycle-coll loc))
 
+(defmethod refactor :change-coll [{:keys [loc args]}]
+  (apply r.transform/change-coll loc [args]))
+
 (defmethod refactor :cycle-privacy [{:keys [loc]}]
   (r.transform/cycle-privacy loc))
 

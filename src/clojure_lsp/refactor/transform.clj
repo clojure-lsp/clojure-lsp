@@ -23,6 +23,30 @@
                 (dissoc :loc))))
         zip-edits))
 
+(defn find-other-colls [zloc]
+  (let [sexpr (z/sexpr zloc)]
+    (cond
+      (map? sexpr) [:vector :set :list]
+      (vector? sexpr) [:set :list :map]
+      (set? sexpr) [:list :map :vector]
+      (list? sexpr) [:map :vector :set])))
+
+(defn change-coll
+  "Change collection to specified collection"
+  [zloc coll]
+  (let [sexpr (z/sexpr zloc)]
+    (if (coll? sexpr)
+      (let [node (z/node zloc)
+            coerce-to-next (fn [sexpr children]
+                             (case (keyword coll)
+                               :map (n/map-node children)
+                               :vector (n/vector-node children)
+                               :set (n/set-node children)
+                               :list (n/list-node children)))]
+        [{:range (meta node)
+          :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
+      [])))
+
 (defn cycle-coll
   "Cycles collection between vector, list, map and set"
   [zloc]

@@ -66,7 +66,7 @@
          (remove nil?))))
 
 (defn resolve-code-action
-  [{{:keys [id uri line character chosen-alias]} :data :as code-action}
+  [{{:keys [id uri line character chosen-alias coll]} :data :as code-action}
    zloc]
   (->
     (merge code-action
@@ -93,6 +93,11 @@
              {:command {:title     "Inline symbol"
                         :command   "inline-symbol"
                         :arguments [uri line character]}}
+
+             "refactor-change-coll"
+             {:command {:title "Change coll"
+                        :command "change-coll"
+                        :arguments [uri line character coll]}}
 
              "refactor-move-to-let"
              {:command {:title     "Move to let"
@@ -152,6 +157,17 @@
                        :character (:character position)}})
        missing-imports))
 
+(defn ^:private change-colls-actions [uri line character other-colls]
+  (map (fn [coll]
+         {:title      (str "Change coll to " (name coll))
+          :kind       CodeActionKind/Refactor
+          :data       {:id        "refactor-change-coll"
+                       :uri       uri
+                       :line      line
+                       :character character
+                       :coll (name coll)}})
+       other-colls))
+
 (defn ^:private inline-symbol-action [uri line character]
   {:title "Inline symbol"
    :kind  CodeActionKind/RefactorInline
@@ -197,6 +213,7 @@
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function? (r.transform/find-function-form zloc)
         inside-let? (r.transform/find-let-form zloc)
+        other-colls (r.transform/find-other-colls zloc)
         definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
         inline-symbol? (r.transform/inline-symbol? definition)
         line (dec row)
@@ -217,6 +234,9 @@
 
       inline-symbol?
       (conj (inline-symbol-action uri line character))
+
+      other-colls
+      (into (change-colls-actions uri line character other-colls))
 
       inside-let?
       (conj (move-to-let-action uri line character))

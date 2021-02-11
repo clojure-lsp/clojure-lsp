@@ -3,9 +3,9 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.code-actions :as f.code-actions]
     [clojure-lsp.parser :as parser]
+    [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
-    [clojure.test :refer [deftest testing is]]
-    [clojure-lsp.test-helper :as h]))
+    [clojure.test :refer [deftest testing is]]))
 
 (h/reset-db-after-test)
 
@@ -169,6 +169,33 @@
                                   4
                                   5
                                   [] {})))))
+
+(deftest change-coll-code-action
+  (h/load-code-and-locs (h/code "\"some string\""
+                                "(some-function 1 2)"
+                                "{:some :map}"
+                                "[:some :vector]"
+                                "#{:some :set}")
+                        "file:///b.clj")
+  (testing "when in not a coll"
+    (is (not-any? #(= (:title %) "Change coll to")
+                  (f.code-actions/all (zloc-at "file://b.clj" 1 1)
+                                      "file:///b.clj"
+                                      1
+                                      1
+                                      [] {}))))
+  (testing "when in a list"
+    (is (some #(= (:title %) "Change coll to map")
+              (f.code-actions/all (zloc-at "file:///b.clj" 2 1) "file:///b.clj" 2 1 [] {}))))
+  (testing "when in a map"
+    (is (some #(= (:title %) "Change coll to vector")
+              (f.code-actions/all (zloc-at "file:///b.clj" 3 1) "file:///b.clj" 3 1 [] {}))))
+  (testing "when in a vector"
+    (is (some #(= (:title %) "Change coll to set")
+              (f.code-actions/all (zloc-at "file:///b.clj" 4 1) "file:///b.clj" 4 1 [] {}))))
+  (testing "when in a set"
+    (is (some #(= (:title %) "Change coll to list")
+              (f.code-actions/all (zloc-at "file:///b.clj" 5 1) "file:///b.clj" 5 1 [] {})))))
 
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"

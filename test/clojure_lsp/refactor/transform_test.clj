@@ -619,6 +619,27 @@
                               transform/cycle-privacy)]
       (is (= (z/string loc) "a")))))
 
+(deftest change-coll-test
+  (testing "when loc is not a coll"
+    (is (= [] (-> (z/of-string "\"some string\"")
+                  (transform/change-coll "map")))))
+  (testing "when loc is a list"
+    (is (= "{some-fun 1 2}" (-> (z/of-string "(some-fun 1 2)") (transform/change-coll "map") first :loc z/string)))
+    (is (= "#{some-fun 1 2}" (-> (z/of-string "(some-fun 1 2)") (transform/change-coll "set") first :loc z/string)))
+    (is (= "[some-fun 1 2]" (-> (z/of-string "(some-fun 1 2)") (transform/change-coll "vector") first :loc z/string))))
+  (testing "when loc is a map"
+    (is (= "#{:some-fun 1}" (-> (z/of-string "{:some-fun 1}") (transform/change-coll "set") first :loc z/string)))
+    (is (= "[:some-fun 1]" (-> (z/of-string "{:some-fun 1}") (transform/change-coll "vector") first :loc z/string)))
+    (is (= "(:some-fun 1)" (-> (z/of-string "{:some-fun 1}") (transform/change-coll "list") first :loc z/string))))
+  (testing "when loc is a set"
+    (is (= "[:some-fun 1]" (-> (z/of-string "#{:some-fun 1}") (transform/change-coll "vector") first :loc z/string)))
+    (is (= "(:some-fun 1)" (-> (z/of-string "#{:some-fun 1}") (transform/change-coll "list") first :loc z/string)))
+    (is (= "{:some-fun 1}" (-> (z/of-string "#{:some-fun 1}") (transform/change-coll "map") first :loc z/string))))
+  (testing "when loc is a vector"
+    (is (= "(:some-fun 1)" (-> (z/of-string "[:some-fun 1]") (transform/change-coll "list") first :loc z/string)))
+    (is (= "{:some-fun 1}" (-> (z/of-string "[:some-fun 1]") (transform/change-coll "map") first :loc z/string)))
+    (is (= "#{:some-fun 1}" (-> (z/of-string "[:some-fun 1]") (transform/change-coll "set") first :loc z/string)))))
+
 (deftest extract-function-test
   (testing "simple extract"
     (reset! db/db {})

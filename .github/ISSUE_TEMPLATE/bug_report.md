@@ -28,5 +28,9 @@ If applicable, add screenshots to help explain your problem.
  - Editor [e.g. emacs, vim, VSCode (Calva)]
  - Version: (post the result of `clojure-lsp --version`)
 
+**Logs**
+
+Add here the content of `/tmp/clojure-lsp.out` rellevant to this bug if any exceptions/rellevant logs
+
 **Additional context**
 Add any other context about the problem here.

@@ -28,11 +28,12 @@
       (str kw))))
 
 (defn ^:private matches-cursor? [cursor-value s]
-  (when (and s
-             cursor-value
-             (or (string/starts-with? s (name cursor-value))
-                 (string/starts-with? s (str cursor-value))))
-    s))
+  (when (and s cursor-value)
+    (let [cursor-value-str (if (symbol? cursor-value)
+                             (name cursor-value)
+                             (str cursor-value))]
+      (when (string/starts-with? s cursor-value-str)
+        s))))
 
 (defn ^:private supports-cljs? [uri]
   (#{:cljc :cljs} (shared/uri->file-type uri)))
@@ -200,7 +201,8 @@
                        (z/sexpr cursor-loc)
                        (:name cursor-element))
         matches-fn (partial matches-cursor? cursor-value)
-        cursor-alias (some-> cursor-loc z/sexpr namespace)]
+        cursor-alias (when (some-> cursor-loc z/sexpr symbol?)
+                       (some-> cursor-loc z/sexpr namespace))]
     (cond-> []
 
       cursor-alias

@@ -1,7 +1,0 @@
-{:cljfmt {:indents {#re ".*" [[:block 0]]
-                    ns [[:inner 0] [:inner 1]]
-                    and [[:inner 1]]
-                    or [[:inner 1]]
-                    are [[:inner 0]]}}
- :semantic-tokens? true
- :use-metadata-for-privacy? true}

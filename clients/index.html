@@ -586,6 +586,15 @@ In windows you probably need to rename to <code>clojure-lsp.bat</code>.</p>
    <span class="s">&quot;source-paths&quot;</span><span class="err">:</span> <span class="p">[</span><span class="s">&quot;shared-src&quot;</span>, <span class="s">&quot;src&quot;</span>, <span class="s">&quot;test&quot;</span>, <span class="s">&quot;dashboard/src&quot;</span><span class="p">]</span>,
    <span class="s">&quot;macro-defs&quot;</span><span class="err">:</span> <span class="p">{</span><span class="s">&quot;project.macros/dofor&quot;</span><span class="err">:</span> <span class="p">[</span><span class="s">&quot;bindings&quot;</span>, <span class="s">&quot;bound-elements&quot;</span><span class="p">]}}}</span>
 </code></pre></div></p>
+<p>Further refactoring mappings include being able to invoke the
+<code>(coc-codeaction-*)</code> function to provide actions such as <code>move to
+let</code>, <code>change coll to map</code> and so on.</p>
+<div class="highlight"><pre><span></span><code>nmap &lt;silent&gt; &lt;Leader&gt;cr            &lt;Plug&gt;(coc-rename)
+nmap &lt;silent&gt; &lt;Leader&gt;cf            &lt;Plug&gt;(coc-references)
+xmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-selected)
+nmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-line)
+nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
+</code></pre></div>
 <hr />
 <h2 id="emacs">Emacs<a class="headerlink" href="#emacs" title="Permanent link">#</a></h2>
 <p><a href="https://emacs-lsp.github.io/lsp-mode">lsp-mode</a> has built in support for <code>clojure-lsp</code>. With <code>use-package</code>, add the following to your emacs config:</p>

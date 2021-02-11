@@ -49,3 +49,7 @@ plugins:
   - search
   - awesome-pages
   - git-revision-date-localized
+
+google_analytics:
+  - G-NZM65LSVS3
+  - auto

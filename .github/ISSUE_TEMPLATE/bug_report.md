@@ -28,25 +28,19 @@ If applicable, add screenshots to help explain your problem.
  - Editor [e.g. emacs, vim, VSCode (Calva)]
  - Version: (post the result of `clojure-lsp --version`)
 
-**Log - client <-> server**
-
-Fill the template below with the content from `/tmp/clojure-lsp.out`.
+<!-- Fill the template below with the request/response logs between client and clojure-lsp. -->
 
 <details>
- <summary><b>client <-> server</b></summary>
+ <summary><b>Log - client <-> server</b></summary>
 <pre>
 ADD HERE
 </pre>
 </details>
 
-**Log - clojure-lsp**
-
-Fill the template below with the content of `/tmp/clojure-lsp.out` rellevant to this bug if any exceptions/rellevant logs
-
-Fill the template below with the content from `/tmp/clojure-lsp.out`.
+<!-- Fill the template below with the content of `/tmp/clojure-lsp.out` rellevant to this bug if any exceptions/rellevant logs -->
 
 <details>
- <summary><b>/tmp/clojure-lsp.out</b></summary>
+ <summary><b>Log - /tmp/clojure-lsp.out</b></summary>
 <pre>
 ADD HERE
 </pre>

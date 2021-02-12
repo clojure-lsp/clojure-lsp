@@ -8,7 +8,8 @@
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
     [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log]
+    [clojure-lsp.refactor.edit :as edit]))
 
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
@@ -41,7 +42,7 @@
 (defn ^:private supports-clj-core? [uri]
   (#{:cljc :clj} (shared/uri->file-type uri)))
 
-(defn element->completion-item-kind [{:keys [bucket fixed-arities]}]
+(defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities]}]
   (cond
     (#{:namespace-definitions
        :namespace-usages
@@ -92,7 +93,7 @@
                 kind (assoc :kind kind)
                 definition? (assoc :documentation (f.hover/hover-documentation element))))))
 
-(defn valid-element-completion-item?
+(defn ^:private valid-element-completion-item?
   [matches-fn
    cursor-uri
    {cursor-from :from cursor-bucket :bucket :as cursor-element}
@@ -135,13 +136,21 @@
           (and alias (matches-fn alias)))
       true)))
 
-(defn with-element-items [elements matches-fn cursor-uri cursor-element]
+(defn ^:private with-element-items [elements matches-fn cursor-uri cursor-element]
   (->> elements
        (filter (partial valid-element-completion-item? matches-fn cursor-uri cursor-element))
        (map #(element->completion-item % nil))
        (sort-by :label)))
 
-(defn with-elements-from-alias [alias matches-fn ns-elements other-elements]
+(defn ^:private with-ns-definition-elements [matches-fn other-ns-elements]
+  (->> other-ns-elements
+       (filter #(and (= :namespace-definitions (:bucket %))
+                     (matches-fn (:name %))))
+       (map #(element->completion-item % nil))
+       (sort-by :label)))
+
+
+(defn ^:private with-elements-from-alias [alias matches-fn ns-elements other-elements]
   (when-let [alias-ns (some->> ns-elements
                                (q/find-first #(and (= (:bucket %) :namespace-usages)
                                                    (= (-> % :alias str) alias)))
@@ -153,21 +162,21 @@
          (map #(element->completion-item % alias))
          (sort-by :label))))
 
-(defn with-clojure-core-items [matches-fn]
+(defn ^:private with-clojure-core-items [matches-fn]
   (->> cc/core-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
                        :detail "clojure.core"}))
        (sort-by :label)))
 
-(defn with-clojurescript-items [matches-fn]
+(defn ^:private with-clojurescript-items [matches-fn]
   (->> cc/cljs-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
                        :detail "cljs.core"}))
        (sort-by :label)))
 
-(defn with-java-items [matches-fn]
+(defn ^:private with-java-items [matches-fn]
   (concat
     (->> cc/java-lang-syms
          (filter (comp matches-fn str))
@@ -202,22 +211,25 @@
                        (:name cursor-element))
         matches-fn (partial matches-cursor? cursor-value)
         cursor-alias (when (some-> cursor-loc z/sexpr symbol?)
-                       (some-> cursor-loc z/sexpr namespace))]
-    (cond-> []
+                       (some-> cursor-loc z/sexpr namespace))
+        inside-require? (edit/inside-require? cursor-loc)]
+    (if inside-require?
+      (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+      (cond-> []
 
-      cursor-alias
-      (concat (with-elements-from-alias cursor-alias matches-fn current-ns-elements (concat other-ns-elements
-                                                                                            external-ns-elements)))
+        cursor-alias
+        (concat (with-elements-from-alias cursor-alias matches-fn current-ns-elements (concat other-ns-elements
+                                                                                              external-ns-elements)))
 
-      (not cursor-alias)
-      (concat (with-element-items current-ns-elements matches-fn uri cursor-element)
-              (with-element-items other-ns-elements matches-fn uri cursor-element)
-              (with-clojure-core-items matches-fn))
+        (not cursor-alias)
+        (concat (with-element-items current-ns-elements matches-fn uri cursor-element)
+                (with-element-items other-ns-elements matches-fn uri cursor-element)
+                (with-clojure-core-items matches-fn))
 
-      (and (not cursor-alias)
-           (supports-cljs? uri))
-      (concat (with-clojurescript-items matches-fn))
+        (and (not cursor-alias)
+             (supports-cljs? uri))
+        (concat (with-clojurescript-items matches-fn))
 
-      (and (not cursor-alias)
-           (supports-clj-core? uri))
-      (concat (with-java-items matches-fn)))))
+        (and (not cursor-alias)
+             (supports-clj-core? uri))
+        (concat (with-java-items matches-fn))))))

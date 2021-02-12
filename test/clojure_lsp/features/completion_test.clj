@@ -32,6 +32,9 @@
                               "d-alias/b"
                               "123")
                         "file:///e.clj")
+(h/load-code-and-locs (code "(ns f (:require [alpaca.ns :refer [ba]]"
+                            "                 alp))")
+                        "file:///f.clj")
 
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-a"
@@ -74,4 +77,10 @@
      [{:label "System", :detail "java.lang"}]
      (f.completion/completion "file:///e.clj" 3 6)))
   (testing "complete non symbols doesn't blow up"
-    (is (= [] (f.completion/completion "file:///e.clj" 5 3)))))
+    (is (= [] (f.completion/completion "file:///e.clj" 5 3))))
+  (testing "complete all available namespace definitions when inside require"
+    (h/assert-submaps
+      [{:label "alpaca.ns" :kind :module}
+       {:label "alpaca.ns" :kind :module}
+       {:label "alpaca.ns" :kind :module}]
+     (f.completion/completion "file:///f.clj" 1 21))))

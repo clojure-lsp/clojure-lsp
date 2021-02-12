@@ -127,6 +127,12 @@
   (z/find zloc z/up (fn [loc]
                       (= possible-parent (z/up loc)))))
 
+
+(defn inside-require? [zloc]
+  (or (and (find-ops-up zloc 'ns)
+           (find-ops-up zloc :require))
+      (find-ops-up zloc 'require)))
+
 (defn skip-over [loc]
   (if (z/down loc)
     (->> loc

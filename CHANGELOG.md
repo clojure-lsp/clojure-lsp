@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- completion inside a require suggests all available namespaces
+
 ## 2021.02.11-12.43.06
 
 - Fix auto add ns not working for projects.

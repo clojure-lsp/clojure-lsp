@@ -105,15 +105,20 @@
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
                                   :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit :completion-item/kind ::documentation ::data])
                                 (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind documentation data]}]
-                                               (let [item (CompletionItem. label)]
+                                               (let [item (CompletionItem. label)
+                                                     with-typed-docs (fn [^CompletionItem item]
+                                                                       (if (instance? MarkupContent documentation)
+                                                                         (.setDocumentation item ^MarkupContent documentation)
+                                                                         (.setDocumentation item ^String documentation)))]
                                                  (cond-> item
                                                    filter-text (doto (.setFilterText filter-text))
                                                    kind (doto (.setKind kind))
                                                    additional-text-edits (doto (.setAdditionalTextEdits additional-text-edits))
                                                    detail (doto (.setDetail detail))
                                                    text-edit (doto (.setTextEdit text-edit))
-                                                   documentation (doto (.setDocumentation documentation))
+                                                   documentation (doto with-typed-docs)
                                                    data (doto (.setData data))))))))
+
 (s/def ::completion-items (s/coll-of ::completion-item))
 (s/def ::version (s/and integer? (s/conformer int)))
 (s/def ::uri string?)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bump clj-kondo to fix false-positive unresolved-vars
+
 ## 2021.02.12-03.13.12
 
 - Fix completion issues with graalvm native linux binaries when completing local variables.

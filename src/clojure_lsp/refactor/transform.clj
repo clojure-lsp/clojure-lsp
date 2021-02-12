@@ -37,7 +37,7 @@
   (let [sexpr (z/sexpr zloc)]
     (if (coll? sexpr)
       (let [node (z/node zloc)
-            coerce-to-next (fn [sexpr children]
+            coerce-to-next (fn [_ children]
                              (case (keyword coll)
                                :map (n/map-node children)
                                :vector (n/vector-node children)

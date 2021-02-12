@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.02.12-03.13.12
+
 - Fix completion issues with graalvm native linux binaries when completing local variables.
 - Fix completion exception when completing numbers - Fixes #310
 - Completion inside a require suggests all available namespaces

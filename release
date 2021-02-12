@@ -8,7 +8,7 @@ git fetch origin
 git pull origin HEAD
 echo "$VERSION" > resources/CLOJURE_LSP_VERSION
 sed -i "s/## Unreleased/## Unreleased\n\n## $VERSION/g" CHANGELOG.md
-git add resources/CLOJURE_LSP_VERSION
+git add resources/CLOJURE_LSP_VERSION CHANGELOG.md
 git commit -m "Release: $VERSION"
 git tag "$VERSION"
 git push origin HEAD

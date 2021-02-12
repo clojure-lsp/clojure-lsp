@@ -14,6 +14,6 @@
         cljfmt/cljfmt {:mvn/version "0.7.0" :exclusions [rewrite-cljs/rewrite-cljs]}
         medley/medley {:mvn/version "1.3.0"}
         clj-kondo/clj-kondo {:mvn/version "2021.01.21-20210207.143254-18"}}
- :paths ["resources" "src"]
+ :paths ["resources" "src" "target/classes"]
  :aliases {:run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}}}

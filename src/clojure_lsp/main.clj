@@ -67,11 +67,6 @@
     (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
 
-(log/merge-config! {:appenders {:println {:enabled? false}
-                                :spit (log/spit-appender {:fname "/tmp/clojure-lsp.out"})}})
-
-(log/handle-uncaught-jvm-exceptions!)
-
 (defonce formatting (atom false))
 
 (defonce status (atom {}))
@@ -120,8 +115,8 @@
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
-   (go :didOpen
-       (sync-handler params handlers/did-open)))
+    (go :didOpen
+        (sync-handler params handlers/did-open)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
@@ -167,8 +162,8 @@
                             0 0)))))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
-   (go :formatting
-       (async-handler params handlers/formatting ::interop/edits)))
+    (go :formatting
+        (async-handler params handlers/formatting ::interop/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting
@@ -197,8 +192,8 @@
         (async-handler params handlers/code-actions ::interop/code-actions)))
 
   (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
-   (go :resolveCodeAction
-       (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
+    (go :resolveCodeAction
+        (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (go :codeLens
@@ -409,7 +404,14 @@
         (recur (async/<! db/diagnostics-chan))))
     (.startListening launcher)))
 
+(defn ^:private setup-logging []
+  (let [log-file (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
+    (log/merge-config! {:appenders {:println {:enabled? false}
+                                    :spit (log/spit-appender {:fname log-file})}}))
+  (log/handle-uncaught-jvm-exceptions!))
+
 (defn -main [& args]
+  (setup-logging)
   (if (empty? args)
     (with-out-str (run))
     (println "clojure-lsp" shared/clojure-lsp-version)))

@@ -18,7 +18,7 @@ java.lang.IllegalStateException: Missing header Content-Length in input "{}""""
 """
 ```
 
-If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.out`, so watch that file and start your editor.
+If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.*.out`, so watch that file and start your editor.
 
 LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.
 
@@ -35,7 +35,7 @@ Usually there's an option to search for a project file, so for a lein project yo
 
 ### Check the logs
 
-There are a couple reasons why go to definition could fail. First, start tailing `/tmp/clojure-lsp.out`.
+There are a couple reasons why go to definition could fail. First, start tailing `/tmp/clojure-lsp.*.out`.
 
 The logs will generally explain why go to definition failed.
 

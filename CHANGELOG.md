@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-- completion inside a require suggests all available namespaces
+- Fix completion issues with graalvm native linux binaries when completing local variables.
+- Fix completion exception when completing numbers - Fixes #310
+- Completion inside a require suggests all available namespaces
+- Change log pattern to `/tmp/clojure-lsp.<TIMESTAMP>.out` use default temp file. Should fix issues with permissions on tmp folder. 
 
 ## 2021.02.11-12.43.06
 

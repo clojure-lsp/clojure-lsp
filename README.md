@@ -78,7 +78,7 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 
 For building the jar manually, run `lein bin` to generate the embedded jar inside `target` folder or `lein uberjar` for building the standalone jar.
 
-### GraaVM
+### GraalVM
 
 Every release the native binaries (Windows, Linux and MacOS) are compiled with __GraalVM__ and uploaded.
 

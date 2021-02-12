@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Bump clj-kondo to fix false-positive unresolved-vars
+- Prioritize project analysis on all analysis during find definition - Fixes #318
 
 ## 2021.02.12-03.13.12
 

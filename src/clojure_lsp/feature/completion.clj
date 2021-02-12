@@ -195,10 +195,10 @@
         analysis (get @db/db :analysis)
         current-ns-elements (get analysis filename)
         other-ns-elements (->> (dissoc analysis filename)
-                               (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))
+                               q/filter-project-analysis
                                (mapcat val))
         external-ns-elements (->> (dissoc analysis filename)
-                                  (remove-keys #(string/starts-with? (-> % name shared/filename->uri) "file://"))
+                                  q/filter-external-analysis
                                   (mapcat val))
         cursor-loc     (parser/safe-loc-at-pos text row col)
         cursor-element (loop [try-column col]

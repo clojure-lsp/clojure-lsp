@@ -8,7 +8,50 @@
 
 (h/reset-db-after-test)
 
-(deftest find-element-under-cursor []
+(deftest project-analysis
+  (testing "when dependency-scheme is zip"
+    (reset! db/db {})
+    (h/load-code-and-locs "(ns foo.bar)" "file:///a.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///b.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///some.jar:some-file.clj")
+    (is (= 2 (count (q/filter-project-analysis (:analysis @db/db))))))
+  (testing "when dependency-scheme is jar"
+    (swap! db/db merge {:settings {:dependency-scheme "jar"}})
+    (h/load-code-and-locs "(ns foo.bar)" "file:///a.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///b.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///some.jar:some-file.clj")
+    (is (= 2 (count (q/filter-project-analysis (:analysis @db/db)))))))
+
+(deftest external-analysis
+  (testing "when dependency-scheme is zip"
+    (reset! db/db {})
+    (h/load-code-and-locs "(ns foo.bar)" "file:///a.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///b.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///some.jar:some-file.clj")
+    (is (= 1 (count (q/filter-external-analysis (:analysis @db/db))))))
+  (testing "when dependency-scheme is jar"
+    (swap! db/db merge {:settings {:dependency-scheme "jar"}})
+    (h/load-code-and-locs "(ns foo.bar)" "file:///a.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///b.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///some.jar:some-file.clj")
+    (is (= 1 (count (q/filter-external-analysis (:analysis @db/db)))))))
+
+(deftest find-first-order-by-project-analysis
+  (testing "with pred that applies for both project and external analysis"
+    (reset! db/db {})
+    (h/load-code-and-locs "(ns foo.bar)" "file:///some.jar:some-file.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///a.clj")
+    (let [element (#'q/find-first-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
+      (is (= "/a.clj" (:filename element)))))
+  (testing "with pred that applies for both project and external analysis with multiple on project"
+    (reset! db/db {})
+    (h/load-code-and-locs "(ns foo.bar)" "file:///some.jar:some-file.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///a.clj")
+    (h/load-code-and-locs "(ns foo.bar)" "file:///b.clj")
+    (let [element (#'q/find-first-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
+      (is (= "/a.clj" (:filename element))))))
+
+(deftest find-element-under-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn x [file|name] filename)\n"
                   "|x\n"
@@ -31,7 +74,7 @@
       '{:name unknown}
       (q/find-element-under-cursor ana "/a.clj" unknown-r unknown-c))))
 
-(deftest find-references-from-cursor []
+(deftest find-references-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"
                   "|x |unknown unknown")
@@ -59,7 +102,7 @@
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
       (q/find-references-from-cursor ana "/a.clj" alias-r alias-c true))))
 
-(deftest find-references-from-cursor-cljc []
+(deftest find-references-from-cursor-cljc
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"
                   "|x |unknown unknown")
@@ -87,7 +130,7 @@
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
       (q/find-references-from-cursor ana "/a.cljc" alias-r alias-c true))))
 
-(deftest find-definition-from-cursor []
+(deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"
                   "|x |unknown unknown")
@@ -114,6 +157,16 @@
     (h/assert-submap
       {:alias 'f-alias :name-row alias-r :name-col alias-c}
       (q/find-definition-from-cursor ana "/a.clj" alias-r alias-c))))
+
+(deftest find-definition-from-cursor-when-duplicate-from-external-analysis
+  (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:some-jar.clj")
+        _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///a.clj")
+        [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+                                                      "|f/bar") "file:///b.clj")
+        ana (:analysis @db/db)]
+    (h/assert-submap
+     {:name 'bar :filename "/a.clj"}
+     (q/find-definition-from-cursor ana "/b.clj" bar-r bar-c))))
 
 (deftest find-unused-aliases
   (testing "used require via alias"

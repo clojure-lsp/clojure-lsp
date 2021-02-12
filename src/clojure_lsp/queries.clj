@@ -1,7 +1,9 @@
 (ns clojure-lsp.queries
   (:require
    [taoensso.timbre :as log]
-   [medley.core :as medley]))
+   [medley.core :as medley]
+   [clojure.string :as string]
+   [clojure-lsp.shared :as shared]))
 
 (defn inside?
   [start-l start-c
@@ -21,6 +23,21 @@
         (reduced i)))
     nil
     coll))
+
+(defn ^:private remove-keys [pred m]
+  (apply dissoc m (filter pred (keys m))))
+
+(defn filter-project-analysis [analysis]
+  (->> analysis
+       (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))))
+
+(defn filter-external-analysis [analysis]
+  (->> analysis
+       (remove-keys #(string/starts-with? (-> % name shared/filename->uri) "file://"))))
+
+(defn ^:private find-first-order-by-project-analysis [pred? analysis]
+  (or (find-first pred? (mapcat val (filter-project-analysis analysis)))
+      (find-first pred? (mapcat val (filter-external-analysis analysis)))))
 
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
@@ -49,16 +66,18 @@
 
 (defmethod find-definition :namespace-usages
   [analysis element]
-  (find-first #(and (= (:bucket %) :namespace-definitions)
-                    (= (:name %) (:name element)))
-              (mapcat val analysis)))
+  (find-first-order-by-project-analysis
+    #(and (= (:bucket %) :namespace-definitions)
+          (= (:name %) (:name element)))
+    analysis))
 
 (defmethod find-definition :var-usages
   [analysis element]
-  (find-first #(and (= (:bucket %) :var-definitions)
-                    (= (:name %) (:name element))
-                    (= (:ns %) (:to element)))
-              (mapcat val analysis)))
+  (find-first-order-by-project-analysis
+    #(and (= (:bucket %) :var-definitions)
+          (= (:name %) (:name element))
+          (= (:ns %) (:to element)))
+    analysis))
 
 (defmethod find-definition :local-usages
   [analysis {:keys [id filename] :as _element}]
@@ -68,11 +87,12 @@
 (defmethod find-definition :keywords
   [analysis element]
   (when (:ns element)
-    (find-first #(and (= (:bucket %) :keywords)
-                      (= (:name %) (:name element))
-                      (:def %)
-                      (= (:ns %) (:ns element)))
-                (mapcat val analysis))))
+    (find-first-order-by-project-analysis
+      #(and (= (:bucket %) :keywords)
+            (= (:name %) (:name element))
+            (:def %)
+            (= (:ns %) (:ns element)))
+      analysis)))
 
 (defmethod find-definition :default
   [_analysis element]

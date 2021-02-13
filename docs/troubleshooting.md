@@ -47,3 +47,7 @@ Raise an issue or ask in clojurians slack.
 ## Windows
 
 See https://github.com/snoe/clojure-lsp/issues/28 and https://github.com/snoe/clojure-lsp/issues/25
+
+## MacOS
+
+In some version of MacOS, Apple restrict the binary to run, to fix that run: `xattr -d com.apple.quarantine /path/to/clojure-lsp`

@@ -31,7 +31,7 @@ call %GRAALVM_HOME%\bin\native-image.cmd ^
 
 if %errorlevel% neq 0 exit /b %errorlevel%
 
-dir
-
-rem graalvm ignores -H:Name for some reason and use rem.exe as the binary name
-ren "rem.exe" "clojure-lsp.exe"
+rem graalvm sometimes ignores -H:Name for some reason and use rem.exe as the binary name
+if (Test-Path "rem.exe" -PathType leaf) {
+  ren "rem.exe" "clojure-lsp.exe"
+}

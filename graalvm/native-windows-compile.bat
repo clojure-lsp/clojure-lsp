@@ -29,9 +29,5 @@ call %GRAALVM_HOME%\bin\native-image.cmd ^
       "-H:ServiceLoaderFeatureExcludeServices=javax.sound.midi.spi.MidiFileWriter" ^
       "%CLOJURE_LSP_XMX%"
 
-if %errorlevel% neq 0 exit /b %errorlevel%
-
-rem graalvm sometimes ignores -H:Name for some reason and use rem.exe as the binary name
-if (Test-Path "rem.exe" -PathType leaf) {
-  ren "rem.exe" "clojure-lsp.exe"
-}
+rem graalvm ignores -H:Name for some reason and use rem.exe as the binary name
+ren "rem.exe" "clojure-lsp.exe"

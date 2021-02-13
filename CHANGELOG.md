@@ -4,6 +4,7 @@
 
 - Bump clj-kondo to fix false-positive unresolved-vars
 - Prioritize project analysis on all analysis during find definition - Fixes #318
+- Compress native binaries with UPX decreasing binary size.
 
 ## 2021.02.12-03.13.12
 

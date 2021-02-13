@@ -78,6 +78,11 @@ jobs:
         run: |
           graalvm/native-unix-compile.sh
 
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp
+
       - name: Run integration tests
         run: |
           bb integration-test/run-all.clj ./clojure-lsp
@@ -126,6 +131,11 @@ jobs:
         run: |
           graalvm/native-unix-compile.sh
 
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp
+
       - name: Run integration tests
         continue-on-error: true # Not working, check #296
         run: |
@@ -173,6 +183,11 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           graalvm/native-unix-compile.sh
+
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp
 
       - name: Run integration tests
         run: |
@@ -229,10 +244,19 @@ jobs:
         run: |
           .\graalvm\native-windows-compile.bat
 
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp.exe
+
       - name: Run integration tests
         continue-on-error: true # Windows return the json in the same line but for some reason clients seems to accept that.
         run: |
           bb integration-test/run-all.clj .\clojure-lsp.exe
+
+      - name: Zip binary
+        run: |
+          jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
 
       - name: Upload
         uses: actions/upload-artifact@v2

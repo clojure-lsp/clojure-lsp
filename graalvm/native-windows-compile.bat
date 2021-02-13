@@ -33,6 +33,3 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 rem graalvm ignores -H:Name for some reason and use rem.exe as the binary name
 ren "rem.exe" "clojure-lsp.exe"
-
-echo Creating zip archive
-jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe

@@ -113,13 +113,32 @@
     :else
     [element]))
 
+(defn ^:private macro-expanded-element? [{:keys [name to row col] :as _element}]
+  (and (not row)
+       (not col)
+       (or (= '-> name)
+           (= '->> name)
+           (= 'fn* name)
+           (= 'let* name)
+           (= 'let name)
+           (= 'if name)
+           (= 'new name))
+       (= 'clojure.core to)))
+
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col] :as element}]
+  (and name-row
+       name-col
+       name-end-row
+       name-end-col))
+
 (defn normalize-analysis [analysis]
   (for [[bucket vs] analysis
         v vs
         element (entry->normalized-entries (assoc v :bucket bucket))
-        :let [{:keys [name-row name-col name-end-row name-end-col] :as element} element
-              valid? (and name-row name-col name-end-row name-end-col)
-              _ (when-not valid? (log/debug "Cannot find position data when analysing" (:name element) (pr-str element) (some-> (:name element) meta)))]
+        :let [valid? (valid-element? element)
+              _ (when (and (not valid?)
+                           (not (macro-expanded-element? element)))
+                  (log/debug "Cannot find position data when analysing" (:name element) (pr-str element) (some-> (:name element) meta)))]
         :when valid?]
     element))
 

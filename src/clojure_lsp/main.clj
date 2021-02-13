@@ -69,12 +69,9 @@
 
 (defonce formatting (atom false))
 
-(defonce status (atom {}))
-
 (defmacro go [id & body]
   `(let [~'_start-time (System/nanoTime)
          ~'_id ~id]
-     (swap! status update ~id (fnil conj #{}) ~'_start-time)
      (do ~@body)))
 
 (defmacro end [expr]
@@ -84,11 +81,9 @@
        (log/error ex#))
      (finally
        (try
-         (swap! status update ~'_id disj ~'_start-time)
-         (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)
-               running# (filter (comp seq val) @status)]
-           (when (or (> duration# 100) (seq running#))
-             (log/debug ~'_id duration# running#)))
+         (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
+           (when (or (> duration# 100))
+             (log/debug ~'_id (format "%sms" duration#))))
          (catch Throwable ex#
            (log/error ex#))))))
 
@@ -334,13 +329,14 @@
                                        (.setCompletionProvider (CompletionOptions. false []))))))))))
 
     (^void initialized [^InitializedParams params]
-      (log/info "Initialized")
       (go :initialized
           (end
-            (let [client ^LanguageClient (:client @db/db)]
-              (.registerCapability client
-                                   (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                                        (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))]))))))
+            (do
+              (log/info "Initialized!")
+              (let [client ^LanguageClient (:client @db/db)]
+                (.registerCapability client
+                                     (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                                          (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))])))))))
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct

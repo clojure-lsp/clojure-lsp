@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removing false positive logs from invalid analysis from clj-kondo macro expand analysis
+
 ## 2021.02.13-18.04.19
 
 - Bump clj-kondo to fix false-positive unresolved-vars

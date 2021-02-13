@@ -28,6 +28,3 @@ call %GRAALVM_HOME%\bin\native-image.cmd ^
       "-H:ServiceLoaderFeatureExcludeServices=javax.sound.midi.spi.SoundbankReader" ^
       "-H:ServiceLoaderFeatureExcludeServices=javax.sound.midi.spi.MidiFileWriter" ^
       "%CLOJURE_LSP_XMX%"
-
-rem graalvm ignores -H:Name for some reason and use rem.exe as the binary name
-ren "rem.exe" "clojure-lsp.exe"

@@ -254,7 +254,7 @@
     (go :workspaceSymbol
         (async-handler params handlers/workspace-symbols ::interop/workspace-symbols))))
 
-(defn client-settings [^InitializeParams params]
+(defn ^:private client-settings [^InitializeParams params]
   (-> params
       interop/java->clj
       :initializationOptions
@@ -262,7 +262,7 @@
       shared/keywordize-first-depth
       (interop/clean-client-settings)))
 
-(defn client-capabilities [^InitializeParams params]
+(defn ^:private client-capabilities [^InitializeParams params]
   (some->> params
            .getCapabilities
            (interop/conform-or-log ::interop/client-capabilities)))

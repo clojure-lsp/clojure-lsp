@@ -25,7 +25,7 @@
 (apply require namespaces)
 
 (def test-results
-  (timeout 20000
+  (timeout 60000
     #(apply t/run-tests namespaces)))
 
 (when (= test-results :timed-out)

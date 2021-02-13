@@ -29,7 +29,7 @@
              URLDecoder
              JarURLConnection]))
 
-(def full-file-range
+(def ^:private full-file-range
   (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defn ^:private uri->namespace [uri]
@@ -166,7 +166,7 @@
                 :location {:uri (shared/filename->uri (:filename element))
                            :range (shared/->scope-range element)}}))))
 
-(defn server-info []
+(defn ^:private server-info []
   (let [db @db/db]
     {:type :info
      :message (with-out-str (pprint/pprint {:project-root (:project-root db)

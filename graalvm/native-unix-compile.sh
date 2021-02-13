@@ -17,6 +17,7 @@ CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}
 
 args=("-jar" "$CLOJURE_LSP_JAR"
       "-H:Name=clojure-lsp"
+      "-J-Dborkdude.dynaload.aot=true"
       "-J-Dclojure.compiler.direct-linking=true"
       "-J-Dclojure.spec.skip-macros=true"
       "-H:+ReportExceptionStackTraces"

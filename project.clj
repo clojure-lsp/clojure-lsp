@@ -33,6 +33,7 @@
                                             :exclusions [org.graalvm.nativeimage/svm]]]
                             :jvm-opts ["-Xmx2g"
                                        "-server"
+                                       "-Dborkdude.dynaload.aot=true"
                                        "-Dclojure.compiler.direct-linking=true"
                                        "-Dclojure.spec.skip-macros=true"]}
              :uberjar {:aot :all

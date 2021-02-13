@@ -254,7 +254,7 @@
     (go :workspaceSymbol
         (async-handler params handlers/workspace-symbols ::interop/workspace-symbols))))
 
-(defn ^:private client-settings [^InitializeParams params]
+(defn client-settings [^InitializeParams params]
   (-> params
       interop/java->clj
       :initializationOptions

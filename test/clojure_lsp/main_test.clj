@@ -11,10 +11,10 @@
     (let [params (InitializeParams.)]
       (.setInitializationOptions params nil)
       (is (= #{"src" "test"}
-             (get (main/client-settings params) :source-paths)))))
+             (get (#'main/client-settings params) :source-paths)))))
   (testing "document-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
-      (is (= true (:document-formatting? (main/client-settings params))))))
+      (is (= true (:document-formatting? (#'main/client-settings params))))))
   (testing "document-range-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
-      (is (= true (:document-range-formatting? (main/client-settings params)))))))
+      (is (= true (:document-range-formatting? (#'main/client-settings params)))))))

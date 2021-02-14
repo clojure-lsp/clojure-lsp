@@ -6,7 +6,7 @@ rem the --no-server option is not supported in GraalVM Windows.
 call %GRAALVM_HOME%\bin\native-image.cmd ^
       "-jar" "%CLOJURE_LSP_JAR%" ^
       "-H:Name=clojure-lsp" ^
-      "-J-Dborkdude.dynaload.aot=true"
+      "-J-Dborkdude.dynaload.aot=true" ^
       "-J-Dclojure.compiler.direct-linking=true" ^
       "-J-Dclojure.spec.skip-macros=true" ^
       "-H:+ReportExceptionStackTraces" ^

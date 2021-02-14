@@ -5,7 +5,7 @@
     [clojure-lsp.refactor.transform :as transform]
     [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
-    [clojure.test :refer :all]
+    [clojure.test :refer [deftest testing is]]
     [rewrite-clj.zip :as z]))
 
 (defn code [& strings] (string/join "\n" strings))

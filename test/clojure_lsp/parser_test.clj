@@ -2,8 +2,8 @@
   (:require
     [clojure-lsp.parser :as parser]
     [clojure.test :refer [deftest is]]
-    [taoensso.timbre :as log]
-    [rewrite-clj.zip :as z]))
+    [rewrite-clj.zip :as z]
+    [taoensso.timbre :as log]))
 
 (deftest find-loc-at-pos-test
   (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 1))))

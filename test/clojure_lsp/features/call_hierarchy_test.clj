@@ -1,8 +1,6 @@
 (ns clojure-lsp.features.call-hierarchy-test
   (:require
-    [clojure-lsp.db :as db]
     [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
-    [clojure-lsp.parser :as parser]
     [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
     [clojure.test :refer [deftest is testing]]))

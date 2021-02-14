@@ -1,7 +1,7 @@
 (ns clojure-lsp.main-test
   (:require
    [clojure-lsp.main :as main]
-   [clojure.test :refer :all])
+   [clojure.test :refer [deftest testing is]])
   (:import
    (org.eclipse.lsp4j
      InitializeParams)))

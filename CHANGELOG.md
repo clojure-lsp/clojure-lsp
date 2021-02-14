@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Removing false positive logs from invalid analysis from clj-kondo macro expand analysis
+- Fix call hierarchy when the reference was not open yet in the editor.
 
 ## 2021.02.13-18.04.19
 

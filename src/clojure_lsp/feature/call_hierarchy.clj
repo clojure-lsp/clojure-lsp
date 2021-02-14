@@ -2,18 +2,19 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
+   [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]
-   [clojure-lsp.queries :as q]))
+   [taoensso.timbre :as log]))
 
 (defn ^:private element-by-uri->call-hierarchy-item
   [{uri :uri {:keys [name-row name-col] value :name :as element} :element}
    project-root]
   (let [range (shared/->range element)
-        ns-zloc (-> (get-in @db/db [:documents uri :text])
+        ns-zloc (-> (f.file-management/force-get-document-text uri)
                     (parser/loc-at-pos name-row name-col)
                     edit/find-namespace-name)]
     {:name (name value)
@@ -32,7 +33,7 @@
 (defn ^:private element-by-uri->incoming-usage-by-uri
   [{:keys [name-row name-col filename]}]
   (let [uri (shared/filename->uri filename)
-        zloc (-> (get-in @db/db [:documents uri :text])
+        zloc (-> (f.file-management/force-get-document-text uri)
                  (parser/loc-at-pos name-row name-col))
         parent-zloc (edit/find-function-name zloc)]
     (when parent-zloc
@@ -45,5 +46,5 @@
        (map element-by-uri->incoming-usage-by-uri)
        (remove nil?)
        (mapv (fn [element-by-uri]
-                 {:from-ranges []
-                  :from (element-by-uri->call-hierarchy-item element-by-uri project-root)}))))
+               {:from-ranges []
+                :from (element-by-uri->call-hierarchy-item element-by-uri project-root)}))))

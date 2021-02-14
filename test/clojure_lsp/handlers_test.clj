@@ -22,29 +22,6 @@
           [(async/timeout 1000)
            db/edits-chan])))
 
-(deftest uri->namespace
-  (testing "when don't have a project root"
-    (reset! db/db {})
-    (is (nil? (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
-  (testing "when it has a project root and not a source-path"
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"file:///user/project/bla"}}
-                        :project-root "file:///user/project"})
-    (is (nil? (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
-  (testing "when it has a project root and a source-path"
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"/user/project/src"}}
-                        :project-root "file:///user/project"})
-    (is (= "foo.bar"
-           (#'handlers/uri->namespace "file:///user/project/src/foo/bar.clj"))))
-  (testing "when it has a project root a source-path on mono repos"
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{"/user/project/src/clj"
-                                                   "/user/project/src/cljs"}}
-                        :project-root "file:///user/project"})
-    (is (= "foo.bar"
-           (#'handlers/uri->namespace "file:///user/project/src/clj/foo/bar.clj")))))
-
 (deftest did-open
   (reset! db/db {})
   (testing "opening a existing file"

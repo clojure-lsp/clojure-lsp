@@ -13,7 +13,7 @@
                               [(:uri text-document) edits])
                             changes))}))
 
-(defmulti refactor (comp :refactoring))
+(defmulti refactor :refactoring)
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
   (apply r.transform/add-import-to-namespace loc [args]))

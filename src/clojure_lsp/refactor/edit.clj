@@ -31,23 +31,35 @@
       (contains? (set op-syms) (z/sexpr op-loc)) op-loc
       :else (recur (z/leftmost (z/up op-loc))))))
 
+(def var-definition-macros
+  '#{defn
+     defn-
+     def
+     defmacro
+     defmulti
+     defonce
+     deftype
+     defrecord
+     s/def
+     s/defn})
+
 (defn find-function-name [loc]
-  (let [function-loc (find-ops-up loc 'defn 'defn- 'def 'defmacro 'defmulti 'defonce 's/def 's/defn)]
+  (let [function-loc (apply find-ops-up loc var-definition-macros)]
     (cond
-      (and function-loc
-           (= :map (-> function-loc z/next z/tag)))
+      (not function-loc)
+      nil
+
+      (= :map (-> function-loc z/next z/tag))
       (-> function-loc z/next z/right)
 
-      (and function-loc
-           (= :meta (-> function-loc z/next z/tag))
+      (and (= :meta (-> function-loc z/next z/tag))
            (= :map (-> function-loc z/next z/next z/tag)))
       (-> function-loc z/next z/down z/rightmost)
 
-      (and function-loc
-           (= :meta (-> function-loc z/next z/tag)))
+      (= :meta (-> function-loc z/next z/tag))
       (-> function-loc z/next z/next z/next)
 
-      function-loc
+      :else
       (z/next function-loc))))
 
 (defn single-child?

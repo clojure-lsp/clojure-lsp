@@ -102,4 +102,16 @@
     (testing "simple" (assert-function-name "(s/defn foo :- s/String [] (let [a 1] d))"))
     (testing "with map" (assert-function-name "(s/defn {:asd :ds} foo :- s/String [] (let [a 1] d))"))
     (testing "with meta map" (assert-function-name "(s/defn ^{:asd :ds} foo :- s/String [] (let [a 1] d))"))
-    (testing "with meta" (assert-function-name "(s/defn ^:private foo :- s/String [] (let [a 1] d))"))))
+    (testing "with meta" (assert-function-name "(s/defn ^:private foo :- s/String [] (let [a 1] d))")))
+  (testing "deftype"
+    (testing "simple" (assert-function-name "(deftype foo [] Some (^void bar [] (let [a 1] d)))"))
+    (testing "Implementing nothing" (assert-function-name "(deftype foo [] (^void bar [] (let [a 1] d)))"))
+    (testing "with map" (assert-function-name "(deftype {:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
+    (testing "with meta map" (assert-function-name "(deftype ^{:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
+    (testing "with meta" (assert-function-name "(deftype ^:private foo [] Some (^void bar [] (let [a 1] d)))")))
+  (testing "defrecord"
+    (testing "simple" (assert-function-name "(defrecord foo [] Some (^void bar [] (let [a 1] d)))"))
+    (testing "Implementing nothing" (assert-function-name "(defrecord foo [] (^void bar [] (let [a 1] d)))"))
+    (testing "with map" (assert-function-name "(defrecord {:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
+    (testing "with meta map" (assert-function-name "(defrecord ^{:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
+    (testing "with meta" (assert-function-name "(defrecord ^:private foo [] Some (^void bar [] (let [a 1] d)))"))))

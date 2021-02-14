@@ -82,8 +82,7 @@
      (finally
        (try
          (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
-           (when (or (> duration# 100))
-             (log/debug ~'_id (format "%sms" duration#))))
+           (log/debug ~'_id (format "%sms" duration#)))
          (catch Throwable ex#
            (log/error ex#))))))
 
@@ -254,7 +253,7 @@
     (go :workspaceSymbol
         (async-handler params handlers/workspace-symbols ::interop/workspace-symbols))))
 
-(defn client-settings [^InitializeParams params]
+(defn ^:private client-settings [^InitializeParams params]
   (-> params
       interop/java->clj
       :initializationOptions

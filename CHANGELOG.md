@@ -5,6 +5,7 @@
 - Removing false positive logs from invalid analysis from clj-kondo macro expand analysis
 - Fix call hierarchy when the reference was not open yet in the editor.
 - Smart re-analyze variable/function references when arguments of the definition were updated.
+- Rollback Macos native image compress until it works for MacOS Big Sur - #322
 
 ## 2021.02.13-18.04.19
 

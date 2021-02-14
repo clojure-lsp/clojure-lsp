@@ -11,9 +11,6 @@
     [taoensso.timbre :as log]
     [clojure-lsp.refactor.edit :as edit]))
 
-(defn ^:private remove-keys [pred m]
-  (apply dissoc m (filter pred (keys m))))
-
 (defn ^:private keyword-element->str [{:keys [name alias ns]}]
   (let [kw (cond
              alias

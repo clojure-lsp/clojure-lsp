@@ -7,7 +7,6 @@
     [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
     [clojure-lsp.feature.code-actions :as f.code-actions]
     [clojure-lsp.feature.completion :as f.completion]
-    [clojure-lsp.feature.diagnostics :as f.diagnostic]
     [clojure-lsp.feature.document-symbol :as f.document-symbol]
     [clojure-lsp.feature.file-management :as f.file-management]
     [clojure-lsp.feature.hover :as f.hover]
@@ -53,16 +52,7 @@
     (swap! db/db #(update % :documents dissoc textDocument))))
 
 (defn did-change [uri text version]
-  ;; Ensure we are only accepting newer changes
-  (loop [state-db @db/db]
-    (when (> version (get-in state-db [:documents uri :v] -1))
-      (when-let [result (crawler/run-kondo-on-text! text uri)]
-        (if (compare-and-set! db/db state-db (-> state-db
-                                                 (assoc-in [:documents uri] {:v version :text text})
-                                                 (crawler/update-analysis uri (:analysis result))
-                                                 (crawler/update-findings uri (:findings result))))
-          (f.diagnostic/notify uri result)
-          (recur @db/db))))))
+  (f.file-management/did-change uri text version))
 
 (defn did-change-watched-files [changes]
   (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]

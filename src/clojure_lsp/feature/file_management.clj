@@ -4,9 +4,11 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [taoensso.timbre :as log]))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root (:project-root @db/db)
@@ -42,6 +44,49 @@
                        (crawler/update-analysis uri (:analysis result))
                        (crawler/update-findings uri (:findings result)))))
     (f.diagnostic/notify uri result)))
+
+(defn ^:private find-changed-var-definitions [old-analysis new-analysis]
+  (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)
+        new-var-def (filter #(= :var-definitions (:bucket %)) new-analysis)]
+    (->> old-var-def
+         (filter (fn [{:keys [name fixed-arities]}]
+                   (let [var-def (first (filter #(= name (:name %)) new-var-def))]
+                     (not (= fixed-arities (:fixed-arities var-def)))))))))
+
+(defn ^:private find-references-uris [analysis elements]
+  (->> elements
+       (map #(q/find-references analysis % false))
+       flatten
+       (map (comp shared/filename->uri :filename))))
+
+(defn ^:private notify-references [old-analysis new-analysis]
+  (let [changed-var-definitions (find-changed-var-definitions old-analysis new-analysis)
+        references-uri (find-references-uris (:analysis @db/db) changed-var-definitions)]
+    (mapv
+      (fn [uri]
+        (when-let [text (get-in @db/db [:documents uri :text])]
+          (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
+            (swap! db/db (fn [db] (-> db
+                                      (crawler/update-analysis uri (:analysis new-analysis))
+                                      (crawler/update-findings uri (:findings new-analysis)))))
+            (f.diagnostic/notify uri new-analysis))))
+      references-uri)))
+
+(defn did-change [uri text version]
+  ;; Ensure we are only accepting newer changes
+  (loop [state-db @db/db]
+    (when (> version (get-in state-db [:documents uri :v] -1))
+      (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
+        (let [filename (shared/uri->filename uri)
+              old-analysis (get-in @db/db [:analysis filename])]
+          (if (compare-and-set! db/db state-db (-> state-db
+                                                   (assoc-in [:documents uri] {:v version :text text})
+                                                   (crawler/update-analysis uri (:analysis new-analysis))
+                                                   (crawler/update-findings uri (:findings new-analysis))))
+            (do
+              (f.diagnostic/notify uri new-analysis)
+              (notify-references old-analysis (get-in @db/db [:analysis filename])))
+            (recur @db/db)))))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

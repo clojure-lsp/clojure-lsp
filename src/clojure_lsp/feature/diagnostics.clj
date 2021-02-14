@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
-    [clojure-lsp.shared :as shared]
     [clojure-lsp.db :as db]
+    [clojure-lsp.shared :as shared]
     [clojure.core.async :as async]
     [taoensso.timbre :as log]))
 
@@ -20,7 +20,7 @@
 
 (defn notify [uri {:keys [findings]}]
   (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (->> findings
-                                   (filter #(= (shared/uri->filename uri) (:filename %)))
-                                   (mapv kondo-finding->diagnostic))}))
+              {:uri uri
+               :diagnostics (->> findings
+                                 (filter #(= (shared/uri->filename uri) (:filename %)))
+                                 (mapv kondo-finding->diagnostic))}))

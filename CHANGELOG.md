@@ -4,8 +4,6 @@
 
 ## 2021.02.14-19.46.47
 
-## 2021.02.14-19.35.01
-
 - Removing false positive logs from invalid analysis from clj-kondo macro expand analysis
 - Fix call hierarchy when the reference was not open yet in the editor.
 - Smart re-analyze variable/function references when arguments of the definition were updated.

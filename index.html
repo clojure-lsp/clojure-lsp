@@ -198,6 +198,18 @@
 
 
   <li class="md-tabs__item">
+    <a href="installation/" class="md-tabs__link">
+      Installation
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
     <a href="https://opencollective.com/clojure-lsp" class="md-tabs__link">
       Support Us
     </a>
@@ -332,40 +344,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    Installation
-  </a>
-  
-    <nav class="md-nav" aria-label="Installation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#manually" class="md-nav__link">
-    Manually
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nix" class="md-nav__link">
-    Nix
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#windows" class="md-nav__link">
-    Windows
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#contribution" class="md-nav__link">
     Contribution
   </a>
@@ -490,6 +468,19 @@
 
 
   <li class="md-nav__item">
+    <a href="installation/" class="md-nav__link">
+      Installation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
     <a href="https://opencollective.com/clojure-lsp" class="md-nav__link">
       Support Us
     </a>
@@ -537,40 +528,6 @@
   <a href="#overview" class="md-nav__link">
     Overview
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    Installation
-  </a>
-  
-    <nav class="md-nav" aria-label="Installation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#manually" class="md-nav__link">
-    Manually
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nix" class="md-nav__link">
-    Nix
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#windows" class="md-nav__link">
-    Windows
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -642,7 +599,7 @@
 <p align="center">
   <a href="https://clojure-lsp.github.io/clojure-lsp"><strong>homepage</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/features/"><strong>features</strong></a> •
-  <a href="https://clojure-lsp.github.io/clojure-lsp/#installation"><strong>installation</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/installation/"><strong>installation</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/settings"><strong>settings</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/clients"><strong>clients</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting"><strong>troubleshooting</strong></a> •
@@ -667,24 +624,6 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <li><strong>Semantic tokens (syntax highlighting)</strong></li>
 <li><strong>Call hierarchy</strong></li>
 </ul>
-<hr />
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
-<h3 id="manually">Manually<a class="headerlink" href="#manually" title="Permanent link">#</a></h3>
-<ul>
-<li>You need <code>java</code> on your $PATH.</li>
-<li>Grab the latest <code>clojure-lsp</code> from github <a href="https://github.com/snoe/clojure-lsp/releases/latest">LATEST</a></li>
-<li>Place it in your $PATH with a chmod 755</li>
-<li>Follow the documentation for your editor's language client. See <a href="//clojure-lsp.github.io/clojure-lsp/clients">Clients</a>.</li>
-</ul>
-<h3 id="nix">Nix<a class="headerlink" href="#nix" title="Permanent link">#</a></h3>
-<p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
-<div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
-</code></pre></div>
-<h3 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">#</a></h3>
-<p><code>clojure-lsp</code> is available as a native executable in the <a href="https://github.com/littleli/scoop-clojure">Clojure Scoop bucket</a>. You need to <a href="https://github.com/littleli/scoop-clojure/wiki/Getting-started#installation">install Scoop</a> if you don't have it already.</p>
-<p>Issue following command to download the <code>clojure-lsp</code> executable.</p>
-<div class="highlight"><pre><span></span><code>scoop install clojure-lsp
-</code></pre></div>
 <hr />
 <h2 id="contribution">Contribution<a class="headerlink" href="#contribution" title="Permanent link">#</a></h2>
 <p>Contributions to <code>clojure-lsp</code> are very welcome! You can open an issue or a PR and we'd love to help.</p>

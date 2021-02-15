@@ -11,14 +11,14 @@
       
       
       
-        <link rel="canonical" href="https://clojure-lsp.github.io/clojure-lsp/clients/">
+        <link rel="canonical" href="https://clojure-lsp.github.io/clojure-lsp/installation/">
       
       <link rel="shortcut icon" href="../images/logo-light.svg">
       <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.4">
     
     
       
-        <title>Clients - Clojure LSP</title>
+        <title>Installation - Clojure LSP</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#clients" class="md-skip">
+        <a href="#installation" class="md-skip">
           Skip to content
         </a>
       
@@ -99,7 +99,7 @@
         <div class="md-header-nav__topic">
           <span class="md-ellipsis">
             
-              Clients
+              Installation
             
           </span>
         </div>
@@ -165,15 +165,13 @@
         
   
   
-    
-  
 
 
   
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link md-tabs__link--active">
+      <a href=".." class="md-tabs__link">
         Home
       </a>
     </li>
@@ -195,10 +193,12 @@
         
   
   
+    
+  
 
 
   <li class="md-tabs__item">
-    <a href="../installation/" class="md-tabs__link">
+    <a href="./" class="md-tabs__link md-tabs__link--active">
       Installation
     </a>
   </li>
@@ -278,14 +278,12 @@
       
 
 
-  
-
 
   
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1" checked>
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1" >
     
     <label class="md-nav__link" for="nav-1">
       Home
@@ -330,84 +328,11 @@
           
 
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="__toc">
-        Clients
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-    
-    <a href="./" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../clients/" class="md-nav__link">
       Clients
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#vim" class="md-nav__link">
-    Vim
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#emacs" class="md-nav__link">
-    Emacs
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#oni" class="md-nav__link">
-    Oni
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#intellij-cursive" class="md-nav__link">
-    Intellij / Cursive
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#visual-studio-code" class="md-nav__link">
-    Visual Studio Code
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#atom" class="md-nav__link">
-    Atom
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
         
@@ -460,11 +385,90 @@
       
 
 
+  
 
-  <li class="md-nav__item">
-    <a href="../installation/" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Installation
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
+    <a href="./" class="md-nav__link md-nav__link--active">
       Installation
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#native-binary-recommended" class="md-nav__link">
+    Native binary (recommended)
+  </a>
+  
+    <nav class="md-nav" aria-label="Native binary (recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manually" class="md-nav__link">
+    Manually
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#script" class="md-nav__link">
+    Script
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embedded-jar-legacy-executable" class="md-nav__link">
+    Embedded jar (Legacy executable)
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nix" class="md-nav__link">
+    Nix
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#windows" class="md-nav__link">
+    Windows
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
     
@@ -519,43 +523,49 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#vim" class="md-nav__link">
-    Vim
+  <a href="#native-binary-recommended" class="md-nav__link">
+    Native binary (recommended)
+  </a>
+  
+    <nav class="md-nav" aria-label="Native binary (recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manually" class="md-nav__link">
+    Manually
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#script" class="md-nav__link">
+    Script
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embedded-jar-legacy-executable" class="md-nav__link">
+    Embedded jar (Legacy executable)
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#emacs" class="md-nav__link">
-    Emacs
+  <a href="#nix" class="md-nav__link">
+    Nix
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#oni" class="md-nav__link">
-    Oni
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#intellij-cursive" class="md-nav__link">
-    Intellij / Cursive
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#visual-studio-code" class="md-nav__link">
-    Visual Studio Code
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#atom" class="md-nav__link">
-    Atom
+  <a href="#windows" class="md-nav__link">
+    Windows
   </a>
   
 </li>
@@ -572,101 +582,35 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/clojure-lsp/clojure-lsp/edit/master/docs/clients.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/clojure-lsp/clojure-lsp/edit/master/docs/installation.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="clients">Clients<a class="headerlink" href="#clients" title="Permanent link">#</a></h1>
-<p>Clients are either editors with built in LSP support like Oni, or an appropriate plugin.
-<em>Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.</em></p>
-<p>In general, make sure to configure the client to use stdio and a server launch command like <code>['/usr/local/bin/clojure-lsp']</code>.
-If that fails, you may need to have your client launch inside a shell, so use someting like <code>['bash', '-c', '/usr/local/bin/clojure-lsp']</code>.
-In windows you probably need to rename to <code>clojure-lsp.bat</code>.</p>
-<hr />
-<h2 id="vim">Vim<a class="headerlink" href="#vim" title="Permanent link">#</a></h2>
-<p>I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well.</p>
-<p>See my <a href="https://github.com/snoe/dotfiles/blob/master/home/.vimrc">nvim/init.vim</a> and <a href="https://github.com/snoe/dotfiles/blob/master/home/.vim/coc-settings.json">coc-settings.json</a></p>
-<p>LanguageClient-neovim can be configure with:</p>
-<p>Refactorings:
-<div class="highlight"><pre><span></span><code><span class="k">function</span><span class="p">!</span> Expand<span class="p">(</span>exp<span class="p">)</span> abort
-    <span class="k">let</span> <span class="k">l</span>:result <span class="p">=</span> expand<span class="p">(</span><span class="k">a</span>:exp<span class="p">)</span>
-    <span class="k">return</span> <span class="k">l</span>:result <span class="p">==</span># <span class="s1">&#39;&#39;</span> ? <span class="s1">&#39;&#39;</span> : <span class="s2">&quot;file://&quot;</span> . <span class="k">l</span>:result
-<span class="k">endfunction</span>
-
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crcc :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;cycle-coll&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crth :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;thread-first&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crtt :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;thread-last&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crtf :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;thread-first-all&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crtl :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;thread-last-all&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crml :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;move-to-let&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> input<span class="p">(</span><span class="s1">&#39;Binding name: &#39;</span><span class="p">)</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> cril :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;introduce-let&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> input<span class="p">(</span><span class="s1">&#39;Binding name: &#39;</span><span class="p">)</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> crel :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;expand-let&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-<span class="nb">nnoremap</span> <span class="p">&lt;</span><span class="k">silent</span><span class="p">&gt;</span> cram :<span class="k">call</span> LanguageClient#workspace_executeCommand<span class="p">(</span><span class="s1">&#39;add-missing-libspec&#39;</span><span class="p">,</span> [Expand<span class="p">(</span><span class="s1">&#39;%:p&#39;</span><span class="p">),</span> line<span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span><span class="p">,</span> <span class="k">col</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="p">-</span> <span class="m">1</span>]<span class="p">)&lt;</span>CR<span class="p">&gt;</span>
-</code></pre></div></p>
-<p><code>initializationOptions</code> can be sent by setting:
-<code>let g:LanguageClient_settingsPath=".lsp/settings.json"</code></p>
-<p>Project-local <code>.lsp/settings.json</code> would have content like:
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="s">&quot;initializationOptions&quot;</span><span class="err">:</span> <span class="p">{</span>
-   <span class="s">&quot;source-paths&quot;</span><span class="err">:</span> <span class="p">[</span><span class="s">&quot;shared-src&quot;</span>, <span class="s">&quot;src&quot;</span>, <span class="s">&quot;test&quot;</span>, <span class="s">&quot;dashboard/src&quot;</span><span class="p">]</span>,
-   <span class="s">&quot;macro-defs&quot;</span><span class="err">:</span> <span class="p">{</span><span class="s">&quot;project.macros/dofor&quot;</span><span class="err">:</span> <span class="p">[</span><span class="s">&quot;bindings&quot;</span>, <span class="s">&quot;bound-elements&quot;</span><span class="p">]}}}</span>
-</code></pre></div></p>
-<p>Further refactoring mappings include being able to invoke the
-<code>(coc-codeaction-*)</code> function to provide actions such as <code>move to
-let</code>, <code>change coll to map</code> and so on.</p>
-<div class="highlight"><pre><span></span><code>nmap &lt;silent&gt; &lt;Leader&gt;cr            &lt;Plug&gt;(coc-rename)
-nmap &lt;silent&gt; &lt;Leader&gt;cf            &lt;Plug&gt;(coc-references)
-xmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-selected)
-nmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-line)
-nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
-</code></pre></div>
-<hr />
-<h2 id="emacs">Emacs<a class="headerlink" href="#emacs" title="Permanent link">#</a></h2>
-<p><a href="https://emacs-lsp.github.io/lsp-mode">lsp-mode</a> has built in support for <code>clojure-lsp</code>. With <code>use-package</code>, add the following to your emacs config:</p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-mode</span>
-  <span class="nb">:ensure</span> <span class="no">t</span>
-  <span class="nb">:hook</span> <span class="p">((</span><span class="nv">clojure-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">)</span>
-         <span class="p">(</span><span class="nv">clojurec-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">)</span>
-         <span class="p">(</span><span class="nv">clojurescript-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">))</span>
-  <span class="nb">:config</span>
-  <span class="c1">;; add paths to your local installation of project mgmt tools, like lein</span>
-  <span class="p">(</span><span class="nv">setenv</span> <span class="s">&quot;PATH&quot;</span> <span class="p">(</span><span class="nf">concat</span>
-                   <span class="s">&quot;/usr/local/bin&quot;</span> <span class="nv">path-separator</span>
-                   <span class="p">(</span><span class="nv">getenv</span> <span class="s">&quot;PATH&quot;</span><span class="p">)))</span>
-  <span class="p">(</span><span class="nb">dolist</span> <span class="p">(</span><span class="nv">m</span> <span class="o">&#39;</span><span class="p">(</span><span class="nv">clojure-mode</span>
-               <span class="nv">clojurec-mode</span>
-               <span class="nv">clojurescript-mode</span>
-               <span class="nv">clojurex-mode</span><span class="p">))</span>
-     <span class="p">(</span><span class="nv">add-to-list</span> <span class="ss">&#39;lsp-language-id-configuration</span> <span class="o">`</span><span class="p">(</span><span class="o">,</span><span class="nv">m</span> <span class="o">.</span> <span class="s">&quot;clojure&quot;</span><span class="p">)))</span>
-  <span class="p">(</span><span class="k">setq</span> <span class="nv">lsp-clojure-server-command</span> <span class="o">&#39;</span><span class="p">(</span><span class="s">&quot;bash&quot;</span> <span class="s">&quot;-c&quot;</span> <span class="s">&quot;clojure-lsp&quot;</span><span class="p">)))</span> <span class="c1">;; Optional: In case `clojure-lsp` is not in your PATH</span>
-</code></pre></div>
-<p>Optionally you can add <code>lsp-ui</code> for UI feedback and <code>company-mode</code> for completion:</p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-ui</span>
-  <span class="nb">:ensure</span> <span class="no">t</span>
-  <span class="nb">:commands</span> <span class="nv">lsp-ui-mode</span><span class="p">)</span>
-
-<span class="p">(</span><span class="nb">use-package</span> <span class="nv">company-lsp</span>
-  <span class="nb">:ensure</span> <span class="no">t</span>
-  <span class="nb">:commands</span> <span class="nv">company-lsp</span><span class="p">)</span>
-</code></pre></div>
-<p>In <code>lsp-mode</code>, <code>lsp-clojure-server-command</code> variable is available to override the command to start the <code>clojure-lsp</code> server, might be necessary to do this on a Windows environment.</p>
-<p>For a detailed guide on how to configure Emacs with LSP, check <a href="https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/">here</a></p>
-<p>For more <code>lsp-mode</code> clojure settings, check <a href="https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/">here</a></p>
-<hr />
-<h2 id="oni">Oni<a class="headerlink" href="#oni" title="Permanent link">#</a></h2>
-<p>Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni</p>
-<hr />
-<h2 id="intellij-cursive">Intellij / Cursive<a class="headerlink" href="#intellij-cursive" title="Permanent link">#</a></h2>
-<p>https://github.com/gtache/intellij-lsp tested only briefly.</p>
-<hr />
-<h2 id="visual-studio-code">Visual Studio Code<a class="headerlink" href="#visual-studio-code" title="Permanent link">#</a></h2>
+                <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
+<p>Below are all available <code>clojure-lsp</code> installation methods, after installed, follow the documentation for your editor's language client. See <a href="//clojure-lsp.github.io/clojure-lsp/clients">Clients</a>.</p>
+<h2 id="native-binary-recommended">Native binary (recommended)<a class="headerlink" href="#native-binary-recommended" title="Permanent link">#</a></h2>
+<p><code>clojure-lsp</code> builds using GraalVM a native executable for each OS: Linux, MacOS and Windows. </p>
+<h3 id="manually">Manually<a class="headerlink" href="#manually" title="Permanent link">#</a></h3>
+<p>The binaries are available on <a href="https://github.com/clojure-lsp/clojure-lsp/releases">Github releases</a> as <code>clojure-lsp-native-&lt;os&gt;-&lt;arch&gt;.zip</code>, after downloading you just need to unzip it.</p>
+<h3 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h3>
+<p>You can install it running <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh">./install-latest-clojure-lsp.sh</a></p>
+<h2 id="embedded-jar-legacy-executable">Embedded jar (Legacy executable)<a class="headerlink" href="#embedded-jar-legacy-executable" title="Permanent link">#</a></h2>
+<p>In Github releases you will find a <code>clojure-lsp</code> file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead. </p>
 <ul>
-<li>Proof of concept: in the client-vscode directory in this repo.</li>
-<li><a href="https://github.com/BetterThanTomorrow/calva">Calva</a> extension includes clojure-lsp support.</li>
+<li>You need <code>java</code> on your $PATH.</li>
+<li>Grab the latest <code>clojure-lsp</code> from github <a href="https://github.com/snoe/clojure-lsp/releases/latest">LATEST</a></li>
+<li>Place it in your $PATH with a chmod 755</li>
 </ul>
-<hr />
-<h2 id="atom">Atom<a class="headerlink" href="#atom" title="Permanent link">#</a></h2>
-<p>I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.</p>
+<h2 id="nix">Nix<a class="headerlink" href="#nix" title="Permanent link">#</a></h2>
+<p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
+<div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
+</code></pre></div>
+<h2 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">#</a></h2>
+<p><code>clojure-lsp</code> is available as a native executable in the <a href="https://github.com/littleli/scoop-clojure">Clojure Scoop bucket</a>. You need to <a href="https://github.com/littleli/scoop-clojure/wiki/Getting-started#installation">install Scoop</a> if you don't have it already.</p>
+<p>Issue following command to download the <code>clojure-lsp</code> executable.</p>
+<div class="highlight"><pre><span></span><code>scoop install clojure-lsp
+</code></pre></div>
                 
                   
                     
@@ -698,7 +642,7 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../settings/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../features/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -707,19 +651,19 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Settings
+                Features
               </div>
             </div>
           </a>
         
         
-          <a href="../troubleshooting/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../CHANGELOG/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Troubleshooting
+                Changelog
               </div>
             </div>
             <div class="md-footer-nav__button md-icon">

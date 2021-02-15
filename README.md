@@ -13,7 +13,7 @@ A [Language Server](https://microsoft.github.io/language-server-protocol/) for C
 <p align="center">
   <a href="https://clojure-lsp.github.io/clojure-lsp"><strong>homepage</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/features/"><strong>features</strong></a> •
-  <a href="https://clojure-lsp.github.io/clojure-lsp/#installation"><strong>installation</strong></a> •
+  <a href="https://clojure-lsp.github.io/clojure-lsp/installation/"><strong>installation</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/settings"><strong>settings</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/clients"><strong>clients</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting"><strong>troubleshooting</strong></a> •
@@ -39,34 +39,6 @@ You will get:
 - **Code lens**
 - **Semantic tokens (syntax highlighting)**
 - **Call hierarchy**
-
----
-## Installation
-
-### Manually
-
-- You need `java` on your $PATH.
-- Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
-- Place it in your $PATH with a chmod 755
-- Follow the documentation for your editor's language client. See [Clients](//clojure-lsp.github.io/clojure-lsp/clients).
-
-### Nix
-
-`clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):
-
-```bash
-nix-shell -p clojure-lsp
-```
-
-### Windows
-
-`clojure-lsp` is available as a native executable in the [Clojure Scoop bucket](https://github.com/littleli/scoop-clojure). You need to [install Scoop](https://github.com/littleli/scoop-clojure/wiki/Getting-started#installation) if you don't have it already.
-
-Issue following command to download the `clojure-lsp` executable.
-
-```bash
-scoop install clojure-lsp
-```
 
 ---
 ## Contribution

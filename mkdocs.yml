@@ -51,5 +51,5 @@ plugins:
   - git-revision-date-localized
 
 google_analytics:
-  - G-NZM65LSVS3
+  - UA-189476519-1
   - auto

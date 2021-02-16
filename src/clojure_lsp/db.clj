@@ -13,8 +13,17 @@
 
 (def version 1)
 
+(defn ^:private get-sqlite-db-file [project-root]
+  (let [configured (some-> (get-in @db [:settings :sqlite-db-path])
+                           io/file)
+        default (io/file (str project-root) ".lsp" "sqlite.db")
+        file (or configured default)]
+    (if (.isAbsolute file)
+      file
+      (io/file (str project-root) file))))
+
 (defn ^:private make-spec [project-root]
-  (let [lsp-db (io/file (str project-root) ".lsp" "sqlite.db")]
+  (let [lsp-db (get-sqlite-db-file project-root)]
     {:dbtype "sqlite"
      :dbname (.getAbsolutePath lsp-db)}))
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow find all references across the project of simple keywords
+
 ## 2021.02.14-19.46.47
 
 - Removing false positive logs from invalid analysis from clj-kondo macro expand analysis

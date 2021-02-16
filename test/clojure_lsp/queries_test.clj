@@ -75,32 +75,44 @@
       (q/find-element-under-cursor ana "/a.clj" unknown-r unknown-c))))
 
 (deftest find-references-from-cursor
-  (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
-                  "(defn |x [|filename] |filename |f-alias/foo)\n"
-                  "|x |unknown unknown")
+  (let [a-code (h/code "(ns a.b.c (:require [d.e.f :as |f-alias]))"
+                       "(defn |x [|filename] |filename |f-alias/foo)"
+                       "|x |unknown unknown")
         [[alias-r alias-c]
          [x-r x-c]
          [param-r param-c]
          [param-use-r param-use-c]
          [alias-use-r alias-use-c]
          [x-use-r x-use-c]
-         [unknown-r unknown-c]] (h/load-code-and-locs code)
+         [unknown-r unknown-c]] (h/load-code-and-locs a-code)
+        [[a-foo-kw-r a-foo-kw-c]] (h/load-code-and-locs "|:foo-kw" "file:///b.clj")
+        [[b-foo-kw-r b-foo-kw-c]
+         [c-foo-kw-r c-foo-kw-c]
+         [d-foo-kw-r d-foo-kw-c]] (h/load-code-and-locs (h/code "|:foo-kw"
+                                                                "(let [{:keys [|foo-kw]} {|:foo-kw 1}]"
+                                                                "  foo-kw)") "file:///c.clj")
         ana (:analysis @db/db)]
     (h/assert-submaps
-      [{:name 'x :name-row x-r :name-col x-c}
-       {:name 'x :name-row x-use-r :name-col x-use-c}]
-      (q/find-references-from-cursor ana "/a.clj" x-r x-c true))
+     [{:name 'x :name-row x-r :name-col x-c}
+      {:name 'x :name-row x-use-r :name-col x-use-c}]
+     (q/find-references-from-cursor ana "/a.clj" x-r x-c true))
     (h/assert-submaps
-      [{:name 'filename :name-row param-r :name-col param-c}
-       {:name 'filename :name-row param-use-r :name-col param-use-c}]
-      (q/find-references-from-cursor ana "/a.clj" param-r param-c true))
+     [{:name 'filename :name-row param-r :name-col param-c}
+      {:name 'filename :name-row param-use-r :name-col param-use-c}]
+     (q/find-references-from-cursor ana "/a.clj" param-r param-c true))
     (h/assert-submaps
-      ['{:name unknown}]
-      (q/find-references-from-cursor ana "/a.clj" unknown-r unknown-c true))
+     ['{:name unknown}]
+     (q/find-references-from-cursor ana "/a.clj" unknown-r unknown-c true))
     (h/assert-submaps
-      [{:alias 'f-alias :name-row alias-r :name-col alias-c}
-       {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
-      (q/find-references-from-cursor ana "/a.clj" alias-r alias-c true))))
+     [{:alias 'f-alias :name-row alias-r :name-col alias-c}
+      {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
+     (q/find-references-from-cursor ana "/a.clj" alias-r alias-c true))
+    (h/assert-submaps
+      [{:name "foo-kw" :name-row a-foo-kw-r :name-col a-foo-kw-c}
+       {:name "foo-kw" :name-row b-foo-kw-r :name-col b-foo-kw-c}
+       {:name "foo-kw" :name-row d-foo-kw-r :name-col d-foo-kw-c}
+       {:name "foo-kw" :name-row c-foo-kw-r :name-col c-foo-kw-c}]
+     (q/find-references-from-cursor ana "/c.clj" b-foo-kw-r b-foo-kw-c true))))
 
 (deftest find-references-from-cursor-cljc
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

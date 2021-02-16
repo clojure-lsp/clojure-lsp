@@ -151,20 +151,20 @@
        (medley/distinct-by (juxt :filename :name :row :col))))
 
 (defmethod find-references :keywords
-  [analysis {:keys [ns filename name] :as _element} include-declaration?]
-  (if ns
-    (filter #(and (= (:name %) name)
-                  (= :keywords (:bucket %))
-                  (= (:ns %) ns)
-                  (not (:keys-destructuring %))
-                  (or include-declaration?
-                      (not (:def %))))
-            (mapcat val analysis))
-    (filter #(and (= (:name %) name)
-                  (not (:ns %))
-                  (= :keywords (:bucket %))
-                  (not (:keys-destructuring %)))
-            (get analysis filename))))
+  [analysis {:keys [ns name] :as _element} include-declaration?]
+  (let [project-analysis (filter-project-analysis analysis)]
+    (if ns
+      (filter #(and (= :keywords (:bucket %))
+                    (= (:name %) name)
+                    (= (:ns %) ns)
+                    (not (:keys-destructuring %))
+                    (or include-declaration?
+                        (not (:def %))))
+              (mapcat val project-analysis))
+      (filter #(and (= :keywords (:bucket %))
+                    (= (:name %) name)
+                    (not (:ns %)))
+              (mapcat val project-analysis)))))
 
 (defmethod find-references :local
   [analysis {:keys [id filename] :as _element} include-declaration?]

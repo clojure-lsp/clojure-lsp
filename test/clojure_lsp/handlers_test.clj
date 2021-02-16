@@ -269,16 +269,14 @@
                                :newName "foo.baz-qux"}))))))
 
 (deftest test-rename-simple-keywords
-  (let [[a-start a-stop
+  (let [[a-start _a-stop
          a-binding-start a-binding-stop
          a-local-usage-start a-local-usage-stop] (h/load-code-and-locs "|:a| (let [{:keys [:|a|]} {}] |a|)" "file:///a.cljc")]
     (testing "should not rename plain keywords"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.cljc"
                                                 :position (h/->position a-start)
                                                 :newName ":b"}))]
-        (is (= {"file:///a.cljc" [{:new-text ":b" :range (h/->range a-start a-stop)}
-                                  {:new-text ":b" :range (h/->range a-start a-stop)}]}
-               changes))))
+        (is (= nil changes))))
 
     (testing "should rename local in destructure not keywords"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.cljc"

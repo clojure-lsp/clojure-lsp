@@ -59,6 +59,18 @@
         (str "zipfile://" jar-file "::" nested-file))
       (str "file://" filename))))
 
+
+(defn relative-filename->filename [filename source-paths]
+  (let [file-type (uri->file-type filename)]
+    (filename->uri
+      (str (first (filter #(string/starts-with? filename %) source-paths))
+           "/"
+           (-> namespace
+               (string/replace "." "/")
+               (string/replace "-" "_"))
+           "."
+           (name file-type)))))
+
 (defn uri->project-related-path [uri project-root]
   (string/replace uri project-root ""))
 
@@ -77,15 +89,6 @@
   (into {}
         (for [[k v] m]
           [(keyword k) v])))
-
-(defn check-bounds
-  [line column {:keys [row end-row col end-col] :as _usage}]
-  (cond
-    (< line row) :before
-    (and (= line row) (< column col)) :before
-    (< line end-row) :within
-    (and (= end-row line) (>= end-col column)) :within
-    :else :after))
 
 (defn position->line-column [position]
   [(inc (:line position))

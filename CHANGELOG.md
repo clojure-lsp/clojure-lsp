@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Allow find all references across the project of simple keywords
+- Allow specify custom sqlite.db location with `sqlite-db-path`, default to `<project>/.lsp/sqlite.db`
 
 ## 2021.02.14-19.46.47
 

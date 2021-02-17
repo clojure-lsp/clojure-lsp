@@ -4,10 +4,6 @@
 
 ## 2021.02.17-17.00.45
 
-## 2021.02.17-16.08.47
-
-## 2021.02.17-15.51.50
-
 - Allow find all references across the project of simple keywords
 - Allow specify custom sqlite.db location with `sqlite-db-path`, default to `<project>/.lsp/sqlite.db`
 

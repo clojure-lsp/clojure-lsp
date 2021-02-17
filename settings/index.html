@@ -666,6 +666,11 @@
 <td>A vector containing a map of key/value pairs, defining how <code>clojure-lsp</code> should find your project classpath</td>
 <td>Check the default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60">here</a></td>
 </tr>
+<tr>
+<td><code>sqlite-db-path</code></td>
+<td>Where to store the project's analysis cache, used to speed up next <code>clojure-lsp</code> startup. A path relative to project root or an absolute path.</td>
+<td><code>.lsp/sqlite.db</code></td>
+</tr>
 </tbody>
 </table>
 <h3 id="lint">Lint<a class="headerlink" href="#lint" title="Permanent link">#</a></h3>
@@ -680,7 +685,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 16, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 17, 2021</span>
     
   </small>
 </div>

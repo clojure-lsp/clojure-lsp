@@ -47,8 +47,11 @@
   (.toAbsolutePath (Paths/get (URI. uri))))
 
 (defn uri->filename [uri]
-  (if-let [[_ jar-file nested-file] (re-find #"^zipfile://(.*\.jar)::(.*)" uri)]
-    (str jar-file ":" nested-file)
+  (if-let [[_ jar-file nested-file] (re-find #"^zipfile:/?/?(.*\.jar)::(.*)" uri)]
+    (str (when-not (string/starts-with? jar-file "/") "/")
+         jar-file
+         ":"
+         nested-file)
     (str (string/replace uri #"^[a-z]+://" ""))))
 
 (defn filename->uri [^String filename]

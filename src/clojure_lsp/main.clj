@@ -402,8 +402,9 @@
 (defn ^:private setup-logging []
   (let [log-file (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
     (log/merge-config! {:appenders {:println {:enabled? false}
-                                    :spit (log/spit-appender {:fname log-file})}}))
-  (log/handle-uncaught-jvm-exceptions!))
+                                    :spit (log/spit-appender {:fname log-file})}})
+    (log/handle-uncaught-jvm-exceptions!)
+    (swap! db/db assoc :log-file log-file)))
 
 (defn -main [& args]
   (setup-logging)

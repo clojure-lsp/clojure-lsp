@@ -133,7 +133,8 @@
                                             :client-settings (:client-settings db)
                                             :port (or (:port db)
                                                       "NREPL only available on :debug profile compiled binary")
-                                            :version shared/clojure-lsp-version}))}))
+                                            :version shared/clojure-lsp-version
+                                            :log-file (:log-file db)}))}))
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)

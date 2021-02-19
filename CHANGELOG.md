@@ -4,6 +4,7 @@
 
 - Fix duplicated symbols for cljc files on textDocument/documentSymbols - Fixes #328
 - Add namespace require when completing a unimported namespace - Fixes #309
+- Fix completion not working for cljc files
 
 ## 2021.02.19-00.19.27
 

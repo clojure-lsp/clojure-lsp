@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.02.19-00.19.27
+
 - Fix completion of invalid clojure core (e.g. `foo/`) - Fixes #270
 
 ## 2021.02.17-17.00.45

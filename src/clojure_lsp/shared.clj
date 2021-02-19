@@ -43,6 +43,14 @@
     (string/ends-with? uri ".edn") :edn
     :else :unknown))
 
+(defn uri->available-langs [uri]
+  (cond
+    (string/ends-with? uri ".cljs") #{:cljs}
+    (string/ends-with? uri ".cljc") #{:clj :cljs}
+    (string/ends-with? uri ".clj") #{:clj}
+    (string/ends-with? uri ".edn") #{:edn}
+    :else #{}))
+
 (defn uri->path ^java.nio.file.Path [uri]
   (.toAbsolutePath (Paths/get (URI. uri))))
 

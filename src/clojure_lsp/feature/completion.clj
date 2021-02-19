@@ -79,7 +79,7 @@
    cursor-uri
    {cursor-from :from cursor-bucket :bucket :as cursor-element}
    {:keys [bucket to ns filename lang name alias] :as element}]
-  (let [supported-file-types #{:cljc (shared/uri->file-type cursor-uri)}]
+  (let [supported-file-types (shared/uri->available-langs cursor-uri)]
     (cond
       (#{:var-usages :local-usages :namespace-usages} bucket)
       false

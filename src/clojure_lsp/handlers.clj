@@ -22,7 +22,8 @@
     [clojure.string :as string]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log])
+    [taoensso.timbre :as log]
+    [medley.core :as medley])
   (:import
    [java.net
     URL
@@ -97,6 +98,7 @@
                          full-file-range)
       :children (->> local-analysis
                      (filter (comp #{:var-definitions} :bucket))
+                     (medley/distinct-by (juxt :filename :name :name-row :name-col))
                      (mapv (fn [e]
                              {:name            (-> e :name name)
                               :kind            (f.document-symbol/element->symbol-kind e)

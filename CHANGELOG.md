@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix duplicated symbols for cljc files on textDocument/documentSymbols - Fixes #328
+- Add namespace require when completing a unimported namespace - Fixes #309
+
 ## 2021.02.19-00.19.27
 
 - Fix completion of invalid clojure core (e.g. `foo/`) - Fixes #270

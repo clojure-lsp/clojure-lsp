@@ -140,21 +140,31 @@
                    (:contents (handlers/hover {:textDocument "file:///a.clj" :position (h/->position bar-pos)}))))))))))
 
 (deftest document-symbol
-  (h/load-code-and-locs "(ns a) (def bar ::bar) (def ^:m baz 1)")
-  (h/assert-submaps
-    [{:name "a"
-      :kind :namespace
-      :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
-      :selection-range {:start {:line 0 :character 0} :end {:line 0 :character 5}}
-      :children [{:name "bar"
-                  :kind :variable
-                  :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
-                  :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
-                 {:name "baz"
-                  :kind :variable
-                  :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                  :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}}]}]
-    (handlers/document-symbol {:textDocument "file:///a.clj"})))
+  (let [code "(ns a) (def bar ::bar) (def ^:m baz 1)"
+        result [{:name "a"
+                 :kind :namespace
+                 :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
+                 :selection-range {:start {:line 0 :character 0} :end {:line 0 :character 5}}
+                 :children [{:name "bar"
+                             :kind :variable
+                             :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
+                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
+                            {:name "baz"
+                             :kind :variable
+                             :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
+                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}}]}]]
+    (testing "clj files"
+      (h/load-code-and-locs code)
+      (h/assert-submaps result
+                        (handlers/document-symbol {:textDocument "file:///a.clj"})))
+    (testing "cljs files"
+      (h/load-code-and-locs code "file:///b.cljs")
+      (h/assert-submaps result
+                        (handlers/document-symbol {:textDocument "file:///b.cljs"})))
+    (testing "cljc files"
+      (h/load-code-and-locs code "file:///c.cljc")
+      (h/assert-submaps result
+                        (handlers/document-symbol {:textDocument "file:///c.cljc"})))))
 
 (deftest document-highlight
   (let [[bar-start] (h/load-code-and-locs "(ns a) (def |bar ::bar) (def ^:m baz 1)")]

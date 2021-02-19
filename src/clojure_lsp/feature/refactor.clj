@@ -83,7 +83,6 @@
     (if (or loc
             (= :clean-ns refactoring))
       (cond
-
         (map? result)
         (let [changes (vec (for [[doc-id sub-results] result]
                              {:text-document {:uri doc-id :version version}

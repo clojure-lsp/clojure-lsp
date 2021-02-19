@@ -32,34 +32,39 @@
                               "d-alias/b"
                               "123")
                         "file:///e.clj")
-(h/load-code-and-locs (code "(ns f (:require [alpaca.ns :refer [ba]]"
-                            "                 alp))")
+  (h/load-code-and-locs (code "(ns f (:require [alpaca.ns :refer [ba]]"
+                              "                 alp))")
                         "file:///f.clj")
+  (h/load-code-and-locs (code "(ns g (:require [alpaca.ns :as ba :refer [baq]]))"
+                              "(defn bar [baz] ba)")
+                        "file:///g.clj")
 
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-a"
     (h/assert-submaps
-     [{:label "alpha" :kind :variable}
-      {:label "alpaca" :kind :module}
-      {:label "alpaca" :kind :module}
-      {:label "alpaca.ns" :kind :module}
-      {:label "alpaca.ns" :kind :module}]
+     [{:label "alpaca" :kind :module :detail "user"}
+      {:label "alpaca" :kind :module :detail "alpaca.ns"}
+      {:label "alpha" :kind :variable}
+      {:label "ba" :detail "alpaca.ns"}]
      (f.completion/completion "file:///b.clj" 3 3)))
   (testing "complete-ba"
     (h/assert-submaps
-     [{:label "bases" :detail "clojure.core"}]
+     [ {:label "ba" :kind :module}
+       {:label "ba/baff"}
+       {:label "ba/barr"}
+       {:label "ba/bazz"}
+      {:label "bases" :detail "clojure.core/bases"}]
      (f.completion/completion "file:///b.clj" 4 3)))
   (testing "complete-alpaca"
     (h/assert-submaps
-     [{:label "alpha" :kind :variable}
-      {:label "alpaca" :kind :module}
-      {:label "alpaca" :kind :module}
-      {:label "alpaca.ns" :kind :module}
-      {:label "alpaca.ns" :kind :module}]
+     [{:label "alpaca" :kind :module :detail "user"}
+      {:label "alpaca" :kind :module :detail "alpaca.ns"}
+      {:label "alpha" :kind :variable}
+      {:label "ba" :detail "alpaca.ns"}]
      (f.completion/completion "file:///b.clj" 3 3)))
   (testing "complete-core-stuff"
     (h/assert-submaps
-     [{:label "frequencies", :detail "clojure.core"}]
+     [{:label "frequencies", :detail "clojure.core/frequencies"}]
      (f.completion/completion "file:///d.clj" 1 49))
     (testing "complete symbols from alias"
       (h/assert-submaps
@@ -71,16 +76,27 @@
        (f.completion/completion "file:///e.clj" 4 10))))
   (testing "complete-core-stuff"
     (h/assert-submaps
-     [{:label "frequencies", :detail "clojure.core"}]
+     [{:label "frequencies", :detail "clojure.core/frequencies"}]
      (f.completion/completion "file:///d.clj" 1 49))
     (h/assert-submaps
-     [{:label "System", :detail "java.lang"}]
+     [{:label "System", :detail "java.lang.System"}]
      (f.completion/completion "file:///e.clj" 3 6)))
   (testing "complete non symbols doesn't blow up"
-    (is (= [] (f.completion/completion "file:///e.clj" 6 3))))
+    (is (= nil (f.completion/completion "file:///e.clj" 6 3))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
       [{:label "alpaca.ns" :kind :module}
-       {:label "alpaca.ns" :kind :module}
-       {:label "alpaca.ns" :kind :module}]
-     (f.completion/completion "file:///f.clj" 1 21))))
+       {:label "alpaca.ns" :kind :module} ]
+     (f.completion/completion "file:///f.clj" 1 21)))
+  (testing "complete locals"
+    (h/assert-submaps
+      [{:label "ba" :kind :module}
+       {:label "ba/baff"}
+       {:label "ba/barr"}
+       {:label "ba/bazz"}
+       {:label "bar"}
+       {:label "bases" :detail "clojure.core/bases"}
+       {:label "baz"}
+       ;; TODO should complete local refer
+       #_{:label "baq"}]
+      (f.completion/completion "file:///g.clj" 2 18))))

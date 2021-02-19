@@ -33,8 +33,8 @@
            (if (= r row) (>= c col) true)
            (if (= er end-row) (< ec end-col) true))))
 
-(defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as a-pos}
-                   {r :name-row c :name-col er :name-end-row ec :name-end-col :as b-pos}]
+(defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as _a-pos}
+                   {r :name-row c :name-col er :name-end-row ec :name-end-col :as _b-pos}]
   (and (= r name-row)
        (= er name-end-row)
        (= c name-col)
@@ -72,11 +72,16 @@
                               Throwable->map
                               :cause
                               (re-matches #"Invalid symbol: (.*\/)."))]
-        (-> (string/replace-first text token (str token "_"))
-            z/of-string
-            (z/edit->
-              (z/find-next-value z/next (symbol (str token "_")))
-              (z/replace (n/token-node (symbol token)))))
+        (let [token-pattern (re-pattern (str token "(\\s|\\n|\\))"))]
+          (if-let [[_ extra-token] (re-find token-pattern text)]
+            (-> text
+                (string/replace-first token-pattern (str token "_" extra-token))
+                z/of-string
+                (z/edit->
+                  (z/find-next-value z/next (symbol (str token "_")))
+                  (z/replace (n/token-node (symbol token))))
+                z/up)
+            (throw e)))
         (throw e)))))
 
 (defn loc-at-pos [code row col]

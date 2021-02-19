@@ -77,7 +77,7 @@
      [{:label "System", :detail "java.lang"}]
      (f.completion/completion "file:///e.clj" 3 6)))
   (testing "complete non symbols doesn't blow up"
-    (is (= [] (f.completion/completion "file:///e.clj" 5 3))))
+    (is (= [] (f.completion/completion "file:///e.clj" 6 3))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
       [{:label "alpaca.ns" :kind :module}

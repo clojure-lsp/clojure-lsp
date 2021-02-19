@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix completion of invalid clojure core (e.g. `foo/`) - Fixes #270
+
 ## 2021.02.17-17.00.45
 
 - Allow find all references across the project of simple keywords

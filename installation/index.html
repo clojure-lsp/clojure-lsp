@@ -459,6 +459,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#arch-linux" class="md-nav__link">
+    Arch Linux
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#windows" class="md-nav__link">
     Windows
   </a>
@@ -564,6 +571,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#arch-linux" class="md-nav__link">
+    Arch Linux
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#windows" class="md-nav__link">
     Windows
   </a>
@@ -590,13 +604,13 @@
                 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
 <p>Below are all available <code>clojure-lsp</code> installation methods, after installed, follow the documentation for your editor's language client. See <a href="//clojure-lsp.github.io/clojure-lsp/clients">Clients</a>.</p>
 <h2 id="native-binary-recommended">Native binary (recommended)<a class="headerlink" href="#native-binary-recommended" title="Permanent link">#</a></h2>
-<p><code>clojure-lsp</code> builds using GraalVM a native executable for each OS: Linux, MacOS and Windows. </p>
+<p><code>clojure-lsp</code> builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.</p>
 <h3 id="manually">Manually<a class="headerlink" href="#manually" title="Permanent link">#</a></h3>
 <p>The binaries are available on <a href="https://github.com/clojure-lsp/clojure-lsp/releases">Github releases</a> as <code>clojure-lsp-native-&lt;os&gt;-&lt;arch&gt;.zip</code>, after downloading you just need to unzip it.</p>
 <h3 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h3>
 <p>You can install it running <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh">./install-latest-clojure-lsp.sh</a></p>
 <h2 id="embedded-jar-legacy-executable">Embedded jar (Legacy executable)<a class="headerlink" href="#embedded-jar-legacy-executable" title="Permanent link">#</a></h2>
-<p>In Github releases you will find a <code>clojure-lsp</code> file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead. </p>
+<p>In Github releases you will find a <code>clojure-lsp</code> file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.</p>
 <ul>
 <li>You need <code>java</code> on your $PATH.</li>
 <li>Grab the latest <code>clojure-lsp</code> from github <a href="https://github.com/snoe/clojure-lsp/releases/latest">LATEST</a></li>
@@ -606,6 +620,13 @@
 <p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
 </code></pre></div>
+<h2 id="arch-linux">Arch Linux<a class="headerlink" href="#arch-linux" title="Permanent link">#</a></h2>
+<p><code>clojure-lsp</code> is
+<a href="https://aur.archlinux.org/packages/clojure-lsp-bin/">available</a> in the <a href="https://aur.archlinux.org">Arch User Repository</a>. It can be installed using your favorite <a href="https://aur.archlinux.org">AUR</a> helper such as
+<a href="https://github.com/Jguer/yay">yay</a>, <a href="https://github.com/archlinuxfr/yaourt">yaourt</a>, <a href="https://github.com/oshazard/apacman">apacman</a> and <a href="https://github.com/rmarquis/pacaur">pacaur</a>. Here is an example using <code>yay</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="err">yay -S clojure-lsp-bin</span>
+</code></pre></div>
+
 <h2 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> is available as a native executable in the <a href="https://github.com/littleli/scoop-clojure">Clojure Scoop bucket</a>. You need to <a href="https://github.com/littleli/scoop-clojure/wiki/Getting-started#installation">install Scoop</a> if you don't have it already.</p>
 <p>Issue following command to download the <code>clojure-lsp</code> executable.</p>

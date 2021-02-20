@@ -4,7 +4,7 @@ Below are all available `clojure-lsp` installation methods, after installed, fol
 
 ## Native binary (recommended)
 
-`clojure-lsp` builds using GraalVM a native executable for each OS: Linux, MacOS and Windows. 
+`clojure-lsp` builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.
 
 ### Manually
 
@@ -16,7 +16,7 @@ You can install it running [./install-latest-clojure-lsp.sh](https://github.com/
 
 ## Embedded jar (Legacy executable)
 
-In Github releases you will find a `clojure-lsp` file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead. 
+In Github releases you will find a `clojure-lsp` file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.
 
 - You need `java` on your $PATH.
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
@@ -29,6 +29,14 @@ In Github releases you will find a `clojure-lsp` file that runs a embedded jar. 
 ```bash
 nix-shell -p clojure-lsp
 ```
+
+## Arch Linux
+
+`clojure-lsp` is
+[available](https://aur.archlinux.org/packages/clojure-lsp-bin/) in the [Arch User Repository](https://aur.archlinux.org). It can be installed using your favorite [AUR](https://aur.archlinux.org) helper such as
+[yay](https://github.com/Jguer/yay), [yaourt](https://github.com/archlinuxfr/yaourt), [apacman](https://github.com/oshazard/apacman) and [pacaur](https://github.com/rmarquis/pacaur). Here is an example using `yay`:
+
+    yay -S clojure-lsp-bin
 
 ## Windows
 

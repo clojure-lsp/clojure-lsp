@@ -232,13 +232,18 @@
                              (recur (dec try-column)))))
         cursor-value (if cursor-loc
                        (z/sexpr cursor-loc)
-                       (:name cursor-element))
+                       (or (:name cursor-element)
+                           ""))
         matches-fn (partial matches-cursor? cursor-value)
         inside-require? (edit/inside-require? cursor-loc)
-        simple-cursor? (simple-ident? cursor-value)
+        simple-cursor? (or (simple-ident? cursor-value)
+                           (string/blank? (str cursor-value)))
         cursor-value-or-ns (if (qualified-ident? cursor-value)
                              (namespace cursor-value)
-                             (some-> cursor-value name))]
+                             (if (or (symbol? cursor-value)
+                                     (keyword? cursor-value))
+                               (name cursor-value)
+                               (str cursor-value)))]
     (if inside-require?
       (->> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
            (into #{})
@@ -249,9 +254,8 @@
         (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn analysis))
 
         simple-cursor?
-        (->
-          (into (with-element-items matches-fn uri cursor-element current-ns-elements))
-          (into (with-clojure-core-items matches-fn)))
+        (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements))
+            (into (with-clojure-core-items matches-fn)))
 
         (and simple-cursor?
              (supports-cljs? uri))
@@ -262,6 +266,5 @@
         (into (with-java-items matches-fn))
 
         :always
-        (->>
-          (sort-by :label)
-          not-empty)))))
+        (->> (sort-by :label)
+             not-empty)))))

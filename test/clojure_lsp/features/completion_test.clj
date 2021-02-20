@@ -37,7 +37,8 @@
                               "                 alp))")
                         "file:///f.clj")
   (h/load-code-and-locs (code "(ns g (:require [alpaca.ns :as ba :refer [baq]]))"
-                              "(defn bar [baz] ba)")
+                              "(defn bar [baz] ba)"
+                              "")
                         "file:///g.clj")
 
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
@@ -90,7 +91,7 @@
      [{:label "System", :detail "java.lang.System"}]
      (f.completion/completion "file:///e.clj" 3 6)))
   (testing "complete non symbols doesn't blow up"
-    (is (= nil (f.completion/completion "file:///e.clj" 6 3))))
+    (is (= nil (f.completion/completion "file:///e.clj" 5 3))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
      [{:label "alpaca.ns" :kind :module}
@@ -107,4 +108,6 @@
       {:label "baz"}
        ;; TODO should complete local refer
       #_{:label "baq"}]
-     (f.completion/completion "file:///g.clj" 2 18))))
+     (f.completion/completion "file:///g.clj" 2 18)))
+  (testing "complete without prefix return all available completions"
+    (is (< 100 (count (f.completion/completion "file:///g.clj" 3 1))))))

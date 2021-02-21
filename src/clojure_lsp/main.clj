@@ -57,6 +57,7 @@
       SemanticTokensWithRegistrationOptions
       ServerCapabilities
       SignatureHelp
+      SignatureHelpOptions
       SignatureHelpParams
       SignatureInformation
       TextDocumentContentChangeEvent
@@ -115,12 +116,12 @@
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
         (end
-          (let [textDocument (.getTextDocument params)
-                version (.getVersion textDocument)
-                changes (.getContentChanges params)
-                text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
-                uri (interop/document->decoded-uri textDocument)]
-            (#'handlers/did-change uri text version)))))
+         (let [textDocument (.getTextDocument params)
+               version (.getVersion textDocument)
+               changes (.getContentChanges params)
+               text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
+               uri (interop/document->decoded-uri textDocument)]
+           (#'handlers/did-change uri text version)))))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (go :didSave
@@ -146,14 +147,9 @@
     (go :hover
         (async-handler params handlers/hover ::interop/hover)))
 
-  (^CompletableFuture signatureHelp [_ ^SignatureHelpParams _params]
+  (^CompletableFuture signatureHelp [_ ^SignatureHelpParams params]
     (go :signatureHelp
-        (CompletableFuture/completedFuture
-          (end
-            (SignatureHelp. [(doto (SignatureInformation. "sign-label")
-                               (.setDocumentation "docs")
-                               (.setParameters [(ParameterInformation. "param label" "param doc")]))]
-                            0 0)))))
+        (async-handler params handlers/signature-help ::interop/signature-help)))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
     (go :formatting
@@ -162,24 +158,24 @@
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (go :rangeFormatting
         (end
-          (let [result (when (compare-and-set! formatting false true)
-                         (try
-                           (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
-                                 range (.getRange params)
-                                 start (.getStart range)
-                                 end (.getEnd range)]
-                             (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
-                                                                      doc-id
-                                                                      {:row (inc (.getLine start))
-                                                                       :col (inc (.getCharacter start))
-                                                                       :end-row (inc (.getLine end))
-                                                                       :end-col (inc (.getCharacter end))})))
-                           (catch Exception e
-                             (log/error e))
-                           (finally
-                             (reset! formatting false))))]
-            (CompletableFuture/completedFuture
-              result)))))
+         (let [result (when (compare-and-set! formatting false true)
+                        (try
+                          (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                                range (.getRange params)
+                                start (.getStart range)
+                                end (.getEnd range)]
+                            (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
+                                                                     doc-id
+                                                                     {:row (inc (.getLine start))
+                                                                      :col (inc (.getCharacter start))
+                                                                      :end-row (inc (.getLine end))
+                                                                      :end-col (inc (.getCharacter end))})))
+                          (catch Exception e
+                            (log/error e))
+                          (finally
+                            (reset! formatting false))))]
+           (CompletableFuture/completedFuture
+            result)))))
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (go :codeAction
@@ -300,6 +296,7 @@
                   (InitializeResult. (doto (ServerCapabilities.)
                                        (.setDocumentHighlightProvider true)
                                        (.setHoverProvider true)
+                                       (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                        (.setCallHierarchyProvider true)
                                        (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
                                                                  (.setResolveProvider true)))

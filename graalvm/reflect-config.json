@@ -766,6 +766,18 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.SignatureHelp",
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.SignatureInformation",
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.ParameterInformation",
+  "allDeclaredFields":true
+},
+{
   "name":"org.eclipse.lsp4j.SignatureHelpCapabilities",
   "allDeclaredFields":true,
   "allPublicMethods":true,

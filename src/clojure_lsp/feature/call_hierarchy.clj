@@ -35,7 +35,7 @@
   (let [uri (shared/filename->uri filename)
         zloc (-> (f.file-management/force-get-document-text uri)
                  (parser/loc-at-pos name-row name-col))
-        parent-zloc (edit/find-function-name zloc)]
+        parent-zloc (edit/find-function-definition-name zloc)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri

@@ -57,12 +57,12 @@
       (is (= "some.foo.bar"
              (edit/find-namespace-name zloc))))))
 
-(defn assert-function-name [code]
+(defn ^:private assert-function-name [code]
   (let [zloc (-> code z/of-string (z/find-next-value z/next 'd))]
     (is (= "foo"
-           (z/string (edit/find-function-name zloc))))))
+           (z/string (edit/find-function-definition-name zloc))))))
 
-(deftest find-function-name
+(deftest find-function-definition-name
   (testing "defn"
     (testing "simple" (assert-function-name "(defn foo [] (let [a 1] d))"))
     (testing "with map" (assert-function-name "(defn {:asd :ds} foo [] (let [a 1] d))"))
@@ -115,3 +115,9 @@
     (testing "with map" (assert-function-name "(defrecord {:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
     (testing "with meta map" (assert-function-name "(defrecord ^{:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
     (testing "with meta" (assert-function-name "(defrecord ^:private foo [] Some (^void bar [] (let [a 1] d)))"))))
+
+(deftest find-function-usage-name
+  (let [zloc (-> "(defn foo [] (let [a 1] d))" z/of-string (z/find-next-value z/next 'd))]
+    (is (= "let" (z/string (edit/find-function-usage-name zloc)))))
+  (let [zloc (-> "(defn foo [] (let [a 1] (and 1 d)))" z/of-string (z/find-next-value z/next 'd))]
+    (is (= "and" (z/string (edit/find-function-usage-name zloc))))))

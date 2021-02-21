@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Implement support for textDocument/signatureHelp - Fixes #324
+
 ## 2021.02.19-23.08.40
 
 - Fix duplicated symbols for cljc files on textDocument/documentSymbols - Fixes #328

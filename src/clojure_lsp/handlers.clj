@@ -13,6 +13,7 @@
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.rename :as f.rename]
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
+    [clojure-lsp.feature.signature-help :as f.signature-help]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.producer :as producer]
@@ -20,10 +21,10 @@
     [clojure-lsp.shared :as shared]
     [clojure.pprint :as pprint]
     [clojure.string :as string]
+    [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log]
-    [medley.core :as medley])
+    [taoensso.timbre :as log])
   (:import
    [java.net
     URL
@@ -189,6 +190,10 @@
 
       :else
       {:contents []})))
+
+(defn signature-help [{:keys [textDocument position _context]}]
+  (let [[line column] (shared/position->line-column position)]
+    (f.signature-help/signature-help textDocument line column)))
 
 (defn formatting [{:keys [textDocument]}]
   (let [{:keys [text]} (get-in @db/db [:documents textDocument])

@@ -29,11 +29,14 @@
       MarkupContent
       MessageParams
       MessageType
+      ParameterInformation
       Position
       PublishDiagnosticsParams
       Range
       RenameFile
       SemanticTokens
+      SignatureHelp
+      SignatureInformation
       SymbolKind
       SymbolInformation
       TextDocumentEdit
@@ -151,6 +154,43 @@
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))
+
+(s/def :signature-help/documentation ::documentation)
+
+(s/def :signature-help/parameter (s/and (s/keys :req-un [::label]
+                                                :opt-un [:signature-help/documentation])
+                                        (s/conformer (fn [{:keys [label documentation]}]
+                                                       (let [parameter (ParameterInformation. label)
+                                                             with-typed-docs (fn [^ParameterInformation parameter]
+                                                                               (if (instance? MarkupContent documentation)
+                                                                                 (.setDocumentation parameter ^MarkupContent documentation)
+                                                                                 (.setDocumentation parameter ^String documentation)))]
+                                                         (cond-> parameter
+                                                           documentation (doto with-typed-docs)))))))
+
+(s/def :signature-help/parameters (s/coll-of :signature-help/parameter))
+
+(s/def :signature-help/signature-information (s/and (s/keys :req-un [::label]
+                                                            :opt-un [:signature-help/documentation :signature-help/parameters :signature-help/active-parameter])
+                                                    (s/conformer (fn [{:keys [label documentation parameters active-parameter]}]
+                                                                   (let [info (SignatureInformation. label)
+                                                                         with-typed-docs (fn [^SignatureInformation info]
+                                                                                           (if (instance? MarkupContent documentation)
+                                                                                             (.setDocumentation info ^MarkupContent documentation)
+                                                                                             (.setDocumentation info ^String documentation)))]
+                                                                     (cond-> info
+                                                                       :always (doto (.setParameters parameters)
+                                                                                 (.setActiveParameter active-parameter))
+                                                                       documentation (doto with-typed-docs)))))))
+
+(s/def :signature-help/signatures (s/coll-of :signature-help/signature-information))
+
+(s/def ::signature-help (s/and (s/keys :req-un [:signature-help/signatures]
+                                       :opt-un [:signature-help/active-signature :signature-help/active-parameter])
+                               (s/conformer #(doto (SignatureHelp.)
+                                               (.setSignatures (:signatures %))
+                                               (.setActiveSignature (some-> % :active-signature int))
+                                               (.setActiveParameter (some-> % :active-parameter int))))))
 
 (def symbol-kind-enum
   {:file 1 :module 2 :namespace 3 :package 4 :class 5 :method 6 :property 7 :field 8 :constructor 9
@@ -334,25 +374,26 @@
                              (string/lower-case map-key)
                              (keyword map-key))))))
 
-(s/def ::debean (s/conformer debeaner))
+(s/def ::legacy-debean (s/conformer debeaner))
+(s/def ::debean (s/conformer java->clj))
 
-(s/def :capabilities/code-action ::debean)
-(s/def :capabilities/code-lens ::debean)
-(s/def :capabilities/color-provider ::debean)
-(s/def :capabilities/completion-item ::debean)
-(s/def :capabilities/definition ::debean)
-(s/def :capabilities/document-highlight ::debean)
-(s/def :capabilities/document-link ::debean)
-(s/def :capabilities/formatting ::debean)
-(s/def :capabilities/implementation ::debean)
-(s/def :capabilities/on-type-formatting ::debean)
-(s/def :capabilities/publish-diagnostics ::debean)
-(s/def :capabilities/range-formatting ::debean)
-(s/def :capabilities/references ::debean)
-(s/def :capabilities/rename ::debean)
+(s/def :capabilities/code-action ::legacy-debean)
+(s/def :capabilities/code-lens ::legacy-debean)
+(s/def :capabilities/color-provider ::legacy-debean)
+(s/def :capabilities/completion-item ::legacy-debean)
+(s/def :capabilities/definition ::legacy-debean)
+(s/def :capabilities/document-highlight ::legacy-debean)
+(s/def :capabilities/document-link ::legacy-debean)
+(s/def :capabilities/formatting ::legacy-debean)
+(s/def :capabilities/implementation ::legacy-debean)
+(s/def :capabilities/on-type-formatting ::legacy-debean)
+(s/def :capabilities/publish-diagnostics ::legacy-debean)
+(s/def :capabilities/range-formatting ::legacy-debean)
+(s/def :capabilities/references ::legacy-debean)
+(s/def :capabilities/rename ::legacy-debean)
 (s/def :capabilities/signature-information ::debean)
-(s/def :capabilities/synchronization ::debean)
-(s/def :capabilities/type-definition ::debean)
+(s/def :capabilities/synchronization ::legacy-debean)
+(s/def :capabilities/type-definition ::legacy-debean)
 
 
 (s/def :capabilities/symbol-kind-value-set
@@ -360,9 +401,9 @@
                  (set (map (fn [^SymbolKind kind]
                              (.getValue kind)) value-set)))))
 
-(s/def :capabilities/symbol-kind (s/and ::debean
+(s/def :capabilities/symbol-kind (s/and ::legacy-debean
                                         (s/keys :opt-un [:capabilities/symbol-kind-value-set])))
-(s/def :capabilities/document-symbol (s/and ::debean
+(s/def :capabilities/document-symbol (s/and ::legacy-debean
                                             (s/keys :opt-un [:capabilities/symbol-kind])))
 (s/def :capabilities/signature-help (s/and ::debean
                                            (s/keys :opt-un [:capabilities/signature-information])))
@@ -372,14 +413,14 @@
                  (set (map (fn [^CompletionItemKind kind]
                              (.getValue kind)) value-set)))))
 
-(s/def :capabilities/completion-item-kind (s/and ::debean
+(s/def :capabilities/completion-item-kind (s/and ::legacy-debean
                                                  (s/keys :opt-un [:capabilities/completion-item-kind-value-set])))
-(s/def :capabilities/completion (s/and ::debean
+(s/def :capabilities/completion (s/and ::legacy-debean
                                        (s/keys :opt-un [:capabilities/completion-item
                                                         :capabilities/completion-item-kind])))
-(s/def :capabilities/hover (s/and ::debean
+(s/def :capabilities/hover (s/and ::legacy-debean
                                   (s/keys :opt-un [:capabilities/content-format])))
-(s/def :capabilities/text-document (s/and ::debean
+(s/def :capabilities/text-document (s/and ::legacy-debean
                                           (s/keys :opt-un [:capabilities/hover
                                                            :capabilities/completion
                                                            :capabilities/definition
@@ -400,24 +441,24 @@
                                                            :capabilities/signature-help
                                                            :capabilities/implementation])))
 
-(s/def :capabilities/workspace-edit ::debean)
-(s/def :capabilities/did-change-configuration ::debean)
-(s/def :capabilities/did-change-watched-files ::debean)
-(s/def :capabilities/execute-command ::debean)
-(s/def :capabilities/symbol (s/and ::debean
+(s/def :capabilities/workspace-edit ::legacy-debean)
+(s/def :capabilities/did-change-configuration ::legacy-debean)
+(s/def :capabilities/did-change-watched-files ::legacy-debean)
+(s/def :capabilities/execute-command ::legacy-debean)
+(s/def :capabilities/symbol (s/and ::legacy-debean
                                    (s/keys :opt-un [:capabilities/symbol-kind])))
-(s/def :capabilities/workspace (s/and ::debean
+(s/def :capabilities/workspace (s/and ::legacy-debean
                                       (s/keys :opt-un [:capabilities/workspace-edit
                                                        :capabilities/did-change-configuration
                                                        :capabilities/did-change-watched-files
                                                        :capabilities/execute-command
                                                        :capabilities/symbol])))
-(s/def ::client-capabilities (s/and ::debean
+(s/def ::client-capabilities (s/and ::legacy-debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
 (s/def :watched-files/type (s/conformer (fn [^FileChangeType v] (get watched-files-type-enum (.getValue v)))))
-(s/def :watched-files/change (s/and ::debean (s/keys :req-un [::uri :watched-files/type])))
+(s/def :watched-files/change (s/and ::legacy-debean (s/keys :req-un [::uri :watched-files/type])))
 (s/def ::watched-files-changes (s/and (s/conformer (fn [vs] (into [] vs)))
                                       (s/coll-of :watched-files/change)))
 

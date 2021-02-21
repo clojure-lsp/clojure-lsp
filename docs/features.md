@@ -45,6 +45,10 @@ Above you can find all available features that clojure-lsp provide with examples
 
 ![](images/features/format-buffer.gif)
 
+### Signature help
+
+![](images/features/signature-help.gif)
+
 ### Semantic tokens
 
 Experimental: apply color on client editor for each known token

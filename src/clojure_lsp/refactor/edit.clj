@@ -43,7 +43,7 @@
      s/def
      s/defn})
 
-(defn find-function-name [loc]
+(defn find-function-definition-name [loc]
   (let [function-loc (apply find-ops-up loc var-definition-macros)]
     (cond
       (not function-loc)
@@ -61,6 +61,11 @@
 
       :else
       (z/next function-loc))))
+
+(defn find-function-usage-name [zloc]
+  (when-let [function-form (z/find-tag zloc z/up :list)]
+    (-> function-form
+        z/down)))
 
 (defn single-child?
   [zloc]

@@ -112,14 +112,13 @@
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
-        (future
+        (end
           (let [textDocument (.getTextDocument params)
                 version (.getVersion textDocument)
                 changes (.getContentChanges params)
                 text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
                 uri (interop/document->decoded-uri textDocument)]
-            (handlers/did-change uri text version)))
-        (CompletableFuture/completedFuture 0)))
+            (handlers/did-change uri text version)))))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (go :didSave

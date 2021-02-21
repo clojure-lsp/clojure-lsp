@@ -65,6 +65,7 @@
     (mapv
       (fn [uri]
         (when-let [text (get-in @db/db [:documents uri :text])]
+          (log/debug "Analyzing reference" uri)
           (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
             (swap! db/db (fn [db] (-> db
                                       (crawler/update-analysis uri (:analysis new-analysis))
@@ -74,19 +75,22 @@
 
 (defn did-change [uri text version]
   ;; Ensure we are only accepting newer changes
-  (loop [state-db @db/db]
-    (when (> version (get-in state-db [:documents uri :v] -1))
-      (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
-        (let [filename (shared/uri->filename uri)
-              old-analysis (get-in @db/db [:analysis filename])]
-          (if (compare-and-set! db/db state-db (-> state-db
-                                                   (assoc-in [:documents uri] {:v version :text text})
-                                                   (crawler/update-analysis uri (:analysis new-analysis))
-                                                   (crawler/update-findings uri (:findings new-analysis))))
-            (do
-              (f.diagnostic/notify uri new-analysis)
-              (notify-references old-analysis (get-in @db/db [:analysis filename])))
-            (recur @db/db)))))))
+  (async/go
+    (let [notify-references? (get-in @db/db [:settings :notify-references-on-file-change] false)]
+      (loop [state-db @db/db]
+        (when (> version (get-in state-db [:documents uri :v] -1))
+          (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
+            (let [filename (shared/uri->filename uri)
+                  old-analysis (get-in @db/db [:analysis filename])]
+              (if (compare-and-set! db/db state-db (-> state-db
+                                                       (assoc-in [:documents uri] {:v version :text text})
+                                                       (crawler/update-analysis uri (:analysis new-analysis))
+                                                       (crawler/update-findings uri (:findings new-analysis))))
+                (do
+                  (f.diagnostic/notify uri new-analysis)
+                  (when notify-references?
+                    (notify-references old-analysis (get-in @db/db [:analysis filename]))))
+                (recur @db/db)))))))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

@@ -6,6 +6,7 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.refactor.edit :as edit]
     [clojure-lsp.shared :as shared]
+    [edamame.core :as edamame]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
     [taoensso.timbre :as log])
@@ -21,17 +22,25 @@
        (remove n/whitespace-or-comment?)
        (drop 1)))
 
-;; TODO Use it when we return parameters
-;; (defn ^:private get-active-parameter-index [arglist-nodes cursor-row cursor-col]
-;;   (let [selected-arg (->> arglist-nodes
-;;                           reverse
-;;                           (filter (fn [node]
-;;                                     (let [{:keys [row col]} (meta node)]
-;;                                       (or (< row cursor-row)
-;;                                           (and (= row cursor-row)
-;;                                                (<= col cursor-col))))))
-;;                           first)]
-;;     (max (.indexOf ^PersistentVector arglist-nodes selected-arg) 0)))
+(defn ^:private get-active-parameter-index
+  [signatures active-signature arglist-nodes cursor-row cursor-col]
+  (let [params-count (-> (nth signatures active-signature)
+                         :parameters
+                         count)
+        selected-arg (->> arglist-nodes
+                          reverse
+                          (filter (fn [node]
+                                    (let [{:keys [row col]} (meta node)]
+                                      (or (< row cursor-row)
+                                          (and (= row cursor-row)
+                                               (<= col cursor-col))))))
+                          first)]
+    (if selected-arg
+      (let [index (.indexOf ^PersistentVector (vec arglist-nodes) selected-arg)]
+        (if (> index (dec params-count))
+          (dec params-count)
+          index))
+      0)))
 
 (defn ^:private get-active-signature-index [{:keys [fixed-arities arglist-strs]} arglist-nodes]
   (let [arities (vec (sort-by max (if fixed-arities
@@ -47,9 +56,22 @@
         (.indexOf ^PersistentVector arities (apply max arities))
         (.indexOf ^PersistentVector arities (apply min arities))))))
 
+(defn ^:private arglist-str->parameters [arglist-str]
+  (let [parameters (edamame/parse-string arglist-str {:auto-resolve #(symbol (str ":" %))})
+        rest-args? (some #(= '& %) parameters)
+        available-params (filter (complement #(= '& %)) parameters)
+        params-count (dec (count available-params))]
+    (->> available-params
+         (map-indexed (fn [index arg]
+                        (let [last-arg? (= index params-count)]
+                          (if (and rest-args? last-arg?)
+                            {:label (format "& %s" arg)}
+                            {:label (str arg)})))))))
+
 (defn ^:private definition->signature-informations [{:keys [arglist-strs] :as definition}]
-  (map (fn [arg]
-         (-> {:label (format "(%s %s)" (-> definition :name str) arg)}
+  (map (fn [arglist-str]
+         (-> {:label (format "(%s %s)" (-> definition :name str) arglist-str)
+              :parameters (arglist-str->parameters arglist-str)}
              (shared/assoc-some :documentation (:doc definition))))
        arglist-strs))
 
@@ -62,7 +84,9 @@
       (let [arglist-nodes (function-loc->arglist-nodes function-loc)
             function-meta (meta (z/node function-loc))
             definition (q/find-definition-from-cursor (:analysis @db/db) filename (:row function-meta) (:col function-meta))
-            signatures (definition->signature-informations definition)]
+            signatures (definition->signature-informations definition)
+            active-signature (get-active-signature-index definition arglist-nodes)]
         (when (seq signatures)
           {:signatures signatures
-           :active-signature (get-active-signature-index definition arglist-nodes)})))))
+           :active-parameter (get-active-parameter-index signatures active-signature arglist-nodes row col)
+           :active-signature active-signature})))))

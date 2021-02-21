@@ -26,19 +26,31 @@
                                  (h/code "(defn bar [a b] 1)"
                                          "(defn foo [a b] (|bar| |1 |2) |)"))]
     (testing "before function name"
-      (is (= {:signatures [{:label "(bar [a b])"}]
+      (is (= {:signatures [{:label "(bar [a b])"
+                            :parameters [{:label "a"}
+                                         {:label "b"}]}]
+              :active-parameter 0
               :active-signature 0}
              (f.signature-help/signature-help "file:///a.clj" before-r before-c))))
     (testing "after function name"
-      (is (= {:signatures [{:label "(bar [a b])"}]
+      (is (= {:signatures [{:label "(bar [a b])"
+                            :parameters [{:label "a"}
+                                         {:label "b"}]}]
+              :active-parameter 0
               :active-signature 0}
              (f.signature-help/signature-help "file:///a.clj" after-r after-c))))
     (testing "on first arg"
-      (is (= {:signatures [{:label "(bar [a b])"}]
+      (is (= {:signatures [{:label "(bar [a b])"
+                            :parameters [{:label "a"}
+                                         {:label "b"}]}]
+              :active-parameter 0
               :active-signature 0}
              (f.signature-help/signature-help "file:///a.clj" first-arg-r first-arg-c))))
     (testing "on second arg"
-      (is (= {:signatures [{:label "(bar [a b])"}]
+      (is (= {:signatures [{:label "(bar [a b])"
+                            :parameters [{:label "a"}
+                                         {:label "b"}]}]
+              :active-parameter 1
               :active-signature 0}
              (f.signature-help/signature-help "file:///a.clj" second-arg-r second-arg-c))))
     (testing "outside function"
@@ -59,28 +71,58 @@
                                      "(bar| 1 2 3)"
                                      "(bar| 1 2 3 4)"))]
       (testing "zero arity"
-        (is (= {:signatures [{:label "(bar [a b])"}
-                             {:label "(bar [a b c])"}]
+        (is (= {:signatures [{:label "(bar [a b])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}]}
+                             {:label "(bar [a b c])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}
+                                           {:label "c"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" zero-r zero-c))))
       (testing "one arity"
-        (is (= {:signatures [{:label "(bar [a b])"}
-                             {:label "(bar [a b c])"}]
+        (is (= {:signatures [{:label "(bar [a b])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}]}
+                             {:label "(bar [a b c])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}
+                                           {:label "c"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" one-r one-c))))
       (testing "two arity"
-        (is (= {:signatures [{:label "(bar [a b])"}
-                             {:label "(bar [a b c])"}]
+        (is (= {:signatures [{:label "(bar [a b])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}]}
+                             {:label "(bar [a b c])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}
+                                           {:label "c"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" two-r two-c))))
       (testing "three arity"
-        (is (= {:signatures [{:label "(bar [a b])"}
-                             {:label "(bar [a b c])"}]
+        (is (= {:signatures [{:label "(bar [a b])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}]}
+                             {:label "(bar [a b c])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}
+                                           {:label "c"}]}]
+                :active-parameter 0
                 :active-signature 1}
                (f.signature-help/signature-help "file:///a.clj" three-r three-c))))
       (testing "four arity"
-        (is (= {:signatures [{:label "(bar [a b])"}
-                             {:label "(bar [a b c])"}]
+        (is (= {:signatures [{:label "(bar [a b])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}]}
+                             {:label "(bar [a b c])"
+                              :parameters [{:label "a"}
+                                           {:label "b"}
+                                           {:label "c"}]}]
+                :active-parameter 0
                 :active-signature 1}
                (f.signature-help/signature-help "file:///a.clj" four-r four-c))))))
   (testing "With & rest arity only"
@@ -92,15 +134,21 @@
                                      "(bar| 1)"
                                      "(bar| 1 2)"))]
       (testing "zero arity"
-        (is (= {:signatures [{:label "(bar [& rest])"}]
+        (is (= {:signatures [{:label "(bar [& rest])"
+                              :parameters [{:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" zero-r zero-c))))
       (testing "one arity"
-        (is (= {:signatures [{:label "(bar [& rest])"}]
+        (is (= {:signatures [{:label "(bar [& rest])"
+                              :parameters [{:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" one-r one-c))))
       (testing "two arity"
-        (is (= {:signatures [{:label "(bar [& rest])"}]
+        (is (= {:signatures [{:label "(bar [& rest])"
+                              :parameters [{:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" two-r two-c))))))
   (testing "With fixed arities and & rest arity"
@@ -116,27 +164,83 @@
                                      "(bar| 1 2 3)"
                                      "(bar| 1 2 3 4)"))]
       (testing "zero arity"
-        (is (= {:signatures [{:label "(bar [a])"}
-                             {:label "(bar [a & rest])"}]
+        (is (= {:signatures [{:label "(bar [a])"
+                              :parameters [{:label "a"}]}
+                             {:label "(bar [a & rest])"
+                              :parameters [{:label "a"}
+                                           {:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" zero-r zero-c))))
       (testing "one arity"
-        (is (= {:signatures [{:label "(bar [a])"}
-                             {:label "(bar [a & rest])"}]
+        (is (= {:signatures [{:label "(bar [a])"
+                              :parameters [{:label "a"}]}
+                             {:label "(bar [a & rest])"
+                              :parameters [{:label "a"}
+                                           {:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 0}
                (f.signature-help/signature-help "file:///a.clj" one-r one-c))))
       (testing "two arity"
-        (is (= {:signatures [{:label "(bar [a])"}
-                             {:label "(bar [a & rest])"}]
+        (is (= {:signatures [{:label "(bar [a])"
+                              :parameters [{:label "a"}]}
+                             {:label "(bar [a & rest])"
+                              :parameters [{:label "a"}
+                                           {:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 1}
                (f.signature-help/signature-help "file:///a.clj" two-r two-c))))
       (testing "three arity"
-        (is (= {:signatures [{:label "(bar [a])"}
-                             {:label "(bar [a & rest])"}]
+        (is (= {:signatures [{:label "(bar [a])"
+                              :parameters [{:label "a"}]}
+                             {:label "(bar [a & rest])"
+                              :parameters [{:label "a"}
+                                           {:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 1}
                (f.signature-help/signature-help "file:///a.clj" three-r three-c))))
       (testing "four arity"
-        (is (= {:signatures [{:label "(bar [a])"}
-                             {:label "(bar [a & rest])"}]
+        (is (= {:signatures [{:label "(bar [a])"
+                              :parameters [{:label "a"}]}
+                             {:label "(bar [a & rest])"
+                              :parameters [{:label "a"}
+                                           {:label "& rest"}]}]
+                :active-parameter 0
                 :active-signature 1}
                (f.signature-help/signature-help "file:///a.clj" four-r four-c)))))))
+
+(deftest signature-help-active-parameter
+  (let [[[first-arg-r first-arg-c]
+         [second-arg-r second-arg-c]
+         [third-arg-r third-arg-c]
+         [end-function-r end-function-c]] (h/load-code-and-locs
+                                       (h/code "(defn bar [a & more] 1)"
+                                               "(defn foo [a b] (bar |1 |2 {:a| 2} |))"))]
+    (testing "on first arg"
+      (is (= {:signatures [{:label "(bar [a & more])"
+                            :parameters [{:label "a"}
+                                         {:label "& more"}]}]
+              :active-parameter 0
+              :active-signature 0}
+             (f.signature-help/signature-help "file:///a.clj" first-arg-r first-arg-c))))
+    (testing "on second arg"
+      (is (= {:signatures [{:label "(bar [a & more])"
+                            :parameters [{:label "a"}
+                                         {:label "& more"}]}]
+              :active-parameter 1
+              :active-signature 0}
+             (f.signature-help/signature-help "file:///a.clj" second-arg-r second-arg-c))))
+    (testing "on third arg"
+      (is (= {:signatures [{:label "(bar [a & more])"
+                            :parameters [{:label "a"}
+                                         {:label "& more"}]}]
+              :active-parameter 1
+              :active-signature 0}
+             (f.signature-help/signature-help "file:///a.clj" third-arg-r third-arg-c))))
+    (testing "on end of the function"
+      (is (= {:signatures [{:label "(bar [a & more])"
+                            :parameters [{:label "a"}
+                                         {:label "& more"}]}]
+              :active-parameter 1
+              :active-signature 0}
+             (f.signature-help/signature-help "file:///a.clj" end-function-r end-function-c))))))

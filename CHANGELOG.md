@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Implement support for textDocument/signatureHelp - Fixes #324
+- Improve didChange performance changing to be async
+- Disable notify-references on didChange with a flag `notify-references-on-change`.
 
 ## 2021.02.19-23.08.40
 

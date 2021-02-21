@@ -54,9 +54,14 @@
 
 (defn find-last-by-pos
   [zloc pos]
-  (last (find-forms zloc (fn [loc]
-                           (in-range?
-                            (-> loc z/node meta) pos)))))
+  (let [forms (find-forms zloc (fn [loc]
+                                 (in-range?
+                                  (-> loc z/node meta) pos)))
+        disconsider-reader-macro? (and (some #(= '? (z/sexpr %)) forms)
+                                    (> (count forms) 1))]
+    (if disconsider-reader-macro?
+      (last (filter (complement (comp #(= '? %) z/sexpr)) forms))
+      (last forms))))
 
 (defn find-top-forms-in-range
   [code pos]
@@ -88,6 +93,8 @@
   (-> code
       safe-zloc-of-string
       (find-last-by-pos {:row row :col col :end-row row :end-col col})))
+
+(loc-at-pos "1\n#?(:clj \"clojure\" :cljs \"clojurescript\")\n2" 1 1)
 
 (defn safe-loc-at-pos [text row col]
   (try

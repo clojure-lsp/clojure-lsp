@@ -11,7 +11,6 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (deftest test-completion
-  (reset! db/db {})
   (h/load-code-and-locs (code "(ns alpaca.ns (:require [user :as alpaca]))"
                               "alpaca/"
                               "(def barr)"
@@ -111,3 +110,26 @@
      (f.completion/completion "file:///g.clj" 2 18)))
   (testing "complete without prefix return all available completions"
     (is (< 100 (count (f.completion/completion "file:///g.clj" 3 1))))))
+
+(deftest completing-with-reader-macros
+  (let [[[before-reader-r before-reader-c]
+         [after-reader-r after-reader-c]] (h/load-code-and-locs
+                                              (h/code "(ns foo)"
+                                                      "(def some-function 1)"
+                                                      "some-fun|"
+                                                      "1"
+                                                      "#?(:clj \"clojure\" :cljs \"clojurescript\")"
+                                                      "1"
+                                                      "some-fun|") "file:///a.cljc")]
+    (testing "before reader macro"
+      (h/assert-submaps
+        [{:label         "some-function"
+          :kind          :variable
+          :documentation ["foo/some-function\n\n----\n/a.cljc"]}]
+        (f.completion/completion "file:///a.cljc" before-reader-r before-reader-c)))
+    (testing "after reader macro"
+      (h/assert-submaps
+        [{:label         "some-function"
+          :kind          :variable
+          :documentation ["foo/some-function\n\n----\n/a.cljc"]}]
+        (f.completion/completion "file:///a.cljc" after-reader-r after-reader-c)))))

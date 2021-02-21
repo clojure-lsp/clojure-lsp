@@ -45,7 +45,6 @@
       InitializeParams
       InitializeResult
       InitializedParams
-      ParameterInformation
       ReferenceParams
       Registration
       RegistrationParams
@@ -56,10 +55,8 @@
       SemanticTokensRangeParams
       SemanticTokensWithRegistrationOptions
       ServerCapabilities
-      SignatureHelp
       SignatureHelpOptions
       SignatureHelpParams
-      SignatureInformation
       TextDocumentContentChangeEvent
       TextDocumentSyncKind
       TextDocumentSyncOptions
@@ -115,13 +112,14 @@
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
-        (end
-         (let [textDocument (.getTextDocument params)
-               version (.getVersion textDocument)
-               changes (.getContentChanges params)
-               text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
-               uri (interop/document->decoded-uri textDocument)]
-           (#'handlers/did-change uri text version)))))
+        (future
+          (let [textDocument (.getTextDocument params)
+                version (.getVersion textDocument)
+                changes (.getContentChanges params)
+                text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
+                uri (interop/document->decoded-uri textDocument)]
+            (handlers/did-change uri text version)))
+        (CompletableFuture/completedFuture 0)))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (go :didSave

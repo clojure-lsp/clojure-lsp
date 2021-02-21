@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.02.21-21.02.51
+
 - Implement support for textDocument/signatureHelp - Fixes #324
 - Disable notify-references on didChange with a flag `notify-references-on-change`.
 - Fix completion not working when reader macro on file - Fixes #332

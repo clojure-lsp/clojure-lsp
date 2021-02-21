@@ -81,7 +81,9 @@
       (if jar-scheme?
         (str "jar:file:///" jar-file "!/" nested-file)
         (str "zipfile://" jar-file "::" nested-file))
-      (str "file://" filename))))
+      (if (string/starts-with? filename "/")
+        (str "file://" filename)
+        (str "file:///" filename)))))
 
 (defn uri->project-related-path [uri project-root]
   (string/replace uri project-root ""))

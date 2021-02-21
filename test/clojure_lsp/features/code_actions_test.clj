@@ -154,18 +154,18 @@
                              "(def bar 1)\n"
                              "(defn baz []\n"
                              "  bar)")
-                        "file://b.clj")
+                        "file:///b.clj")
   (testing "when in not a let/def symbol"
     (is (not-any? #(= (:title %) "Inline symbol")
-                  (f.code-actions/all (zloc-at "file://b.clj" 4 8)
-                                      "file://b.clj"
+                  (f.code-actions/all (zloc-at "file:///b.clj" 4 8)
+                                      "file:///b.clj"
                                       4
                                       8
                                       [] {}))))
   (testing "when in let/def symbol"
     (is (some #(= (:title %) "Inline symbol")
-              (f.code-actions/all (zloc-at "file://b.clj" 4 5)
-                                  "file://b.clj"
+              (f.code-actions/all (zloc-at "file:///b.clj" 4 5)
+                                  "file:///b.clj"
                                   4
                                   5
                                   [] {})))))

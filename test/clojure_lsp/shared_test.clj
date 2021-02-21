@@ -9,9 +9,13 @@
         (shared/uri->project-related-path "file://home/foo/bar/my-project/src/my-project/some/ns.clj" "file://home/foo/bar/my-project"))))
 
 (deftest filename->uri
-  (testing "when it is not a jar"
+  (testing "when it is not a jar and contains slash"
     (reset! db/db {})
-    (is (= "file://some-project/foo/bar_baz.clj"
+    (is (= "file:///some-project/foo/bar_baz.clj"
+           (shared/filename->uri "/some-project/foo/bar_baz.clj"))))
+  (testing "when it is not a jar and do not contains slash"
+    (reset! db/db {})
+    (is (= "file:///some-project/foo/bar_baz.clj"
            (shared/filename->uri "some-project/foo/bar_baz.clj"))))
   (testing "when it is a jar via zipfile"
     (reset! db/db {})

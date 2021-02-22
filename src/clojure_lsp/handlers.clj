@@ -53,8 +53,8 @@
   (when (get-in @db/db [:documents textDocument :saved-on-disk])
     (swap! db/db #(update % :documents dissoc textDocument))))
 
-(defn did-change [uri text version]
-  (f.file-management/did-change uri text version))
+(defn did-change [{:keys [textDocument contentChanges]}]
+  (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument)))
 
 (defn did-change-watched-files [changes]
   (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]

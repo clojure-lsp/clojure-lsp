@@ -1,6 +1,7 @@
 (ns clojure-lsp.main
   (:require
     [clojure-lsp.db :as db]
+    [clojure-lsp.feature.file-management :as f.file-management]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
     [clojure-lsp.handlers :as handlers]
@@ -58,7 +59,6 @@
       ServerCapabilities
       SignatureHelpOptions
       SignatureHelpParams
-      TextDocumentContentChangeEvent
       TextDocumentSyncKind
       TextDocumentSyncOptions
       WorkspaceSymbolParams)
@@ -113,17 +113,13 @@
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (go :didChange
-        (end
-          (let [textDocument (.getTextDocument params)
-                version (.getVersion textDocument)
-                changes (.getContentChanges params)
-                text (.getText ^TextDocumentContentChangeEvent (.get changes 0))
-                uri (interop/document->decoded-uri textDocument)]
-            (handlers/did-change uri text version)))))
+        (sync-handler params handlers/did-change)))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
-    (go :didSave
-        (sync-handler params handlers/did-save)))
+   (go :didSave
+       (future
+         (sync-handler params handlers/did-save)))
+   (CompletableFuture/completedFuture 0))
 
   (^void didClose [_ ^DidCloseTextDocumentParams _params]
     (go :didClose
@@ -322,7 +318,7 @@
                                                                      (.setCommands f.refactor/available-refactors)))
                                        (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                                (.setOpenClose true)
-                                                               (.setChange TextDocumentSyncKind/Full)
+                                                               (.setChange TextDocumentSyncKind/Incremental)
                                                                (.setSave (SaveOptions. true))))
                                        (.setCompletionProvider (CompletionOptions. true []))))))))))
 
@@ -396,6 +392,12 @@
       (loop [diagnostic (async/<! db/diagnostics-chan)]
         (producer/publish-diagnostic diagnostic)
         (recur (async/<! db/diagnostics-chan))))
+    (async/go-loop [_change (async/<! db/current-changes-chan)]
+      (async/<! (async/timeout 200))
+      (let [last-change (last (async/into [] db/current-changes-chan))]
+        (log/info "->" last-change)
+        (f.file-management/analyze-changes last-change))
+      (recur (async/<! db/current-changes-chan)))
     (.startListening launcher)))
 
 (defn ^:private setup-logging []

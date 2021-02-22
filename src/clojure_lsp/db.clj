@@ -8,6 +8,7 @@
    [taoensso.timbre :as log]))
 
 (defonce db (atom {:documents {}}))
+(defonce current-changes-chan (async/chan 1))
 (defonce diagnostics-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 

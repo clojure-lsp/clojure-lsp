@@ -94,8 +94,6 @@
       safe-zloc-of-string
       (find-last-by-pos {:row row :col col :end-row row :end-col col})))
 
-(loc-at-pos "1\n#?(:clj \"clojure\" :cljs \"clojurescript\")\n2" 1 1)
-
 (defn safe-loc-at-pos [text row col]
   (try
     (loc-at-pos text row (dec col))

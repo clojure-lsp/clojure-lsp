@@ -77,7 +77,7 @@ nmap <silent> gd                    <Plug>(coc-definition)
                clojurescript-mode
                clojurex-mode))
      (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
-  (setq lsp-clojure-server-command '("bash" "-c" "clojure-lsp"))) ;; Optional: In case `clojure-lsp` is not in your PATH
+  (setq lsp-clojure-server-command '("/path/to/clojure-lsp"))) ;; Optional: In case `clojure-lsp` is not in your $PATH
 ```
 
 Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completion:
@@ -87,9 +87,8 @@ Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completio
   :ensure t
   :commands lsp-ui-mode)
 
-(use-package company-lsp
-  :ensure t
-  :commands company-lsp)
+(use-package company
+  :ensure t)
 ```
 
 In `lsp-mode`, `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.

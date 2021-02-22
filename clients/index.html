@@ -638,16 +638,15 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
                <span class="nv">clojurescript-mode</span>
                <span class="nv">clojurex-mode</span><span class="p">))</span>
      <span class="p">(</span><span class="nv">add-to-list</span> <span class="ss">&#39;lsp-language-id-configuration</span> <span class="o">`</span><span class="p">(</span><span class="o">,</span><span class="nv">m</span> <span class="o">.</span> <span class="s">&quot;clojure&quot;</span><span class="p">)))</span>
-  <span class="p">(</span><span class="k">setq</span> <span class="nv">lsp-clojure-server-command</span> <span class="o">&#39;</span><span class="p">(</span><span class="s">&quot;bash&quot;</span> <span class="s">&quot;-c&quot;</span> <span class="s">&quot;clojure-lsp&quot;</span><span class="p">)))</span> <span class="c1">;; Optional: In case `clojure-lsp` is not in your PATH</span>
+  <span class="p">(</span><span class="k">setq</span> <span class="nv">lsp-clojure-server-command</span> <span class="o">&#39;</span><span class="p">(</span><span class="s">&quot;/path/to/clojure-lsp&quot;</span><span class="p">)))</span> <span class="c1">;; Optional: In case `clojure-lsp` is not in your $PATH</span>
 </code></pre></div>
 <p>Optionally you can add <code>lsp-ui</code> for UI feedback and <code>company-mode</code> for completion:</p>
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-ui</span>
   <span class="nb">:ensure</span> <span class="no">t</span>
   <span class="nb">:commands</span> <span class="nv">lsp-ui-mode</span><span class="p">)</span>
 
-<span class="p">(</span><span class="nb">use-package</span> <span class="nv">company-lsp</span>
-  <span class="nb">:ensure</span> <span class="no">t</span>
-  <span class="nb">:commands</span> <span class="nv">company-lsp</span><span class="p">)</span>
+<span class="p">(</span><span class="nb">use-package</span> <span class="nv">company</span>
+  <span class="nb">:ensure</span> <span class="no">t</span><span class="p">)</span>
 </code></pre></div>
 <p>In <code>lsp-mode</code>, <code>lsp-clojure-server-command</code> variable is available to override the command to start the <code>clojure-lsp</code> server, might be necessary to do this on a Windows environment.</p>
 <p>For a detailed guide on how to configure Emacs with LSP, check <a href="https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/">here</a></p>
@@ -675,7 +674,7 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 21, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 22, 2021</span>
     
   </small>
 </div>

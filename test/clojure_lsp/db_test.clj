@@ -3,7 +3,8 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as s]
-   [clojure.test :refer [deftest testing is]]))
+   [clojure.test :refer [deftest testing is]]
+   [clojure.java.io :as io]))
 
 (h/reset-db-after-test)
 
@@ -13,15 +14,15 @@
 (deftest sqlite-db-file-setting
   (testing "when not set"
     (reset! db/db {})
-    (is (= default-db-path (#'db/get-sqlite-db-file-path project-path))))
+    (is (= (-> default-db-path io/file .getAbsolutePath) (#'db/get-sqlite-db-file-path project-path))))
   (testing "when set to relative path"
     (let [settings-path "subdir/sqlite.db"
           expected (s/join "/" [project-path settings-path])]
       (reset! db/db {:settings {:sqlite-db-path settings-path}})
-      (is (= expected
+      (is (= (-> expected io/file .getAbsolutePath)
              (#'db/get-sqlite-db-file-path project-path)))))
   (testing "when set to absolute path"
     (let [settings-path "/db-dir/sqlite.db"]
       (reset! db/db {:settings {:sqlite-db-path settings-path}})
-      (is (= settings-path
+      (is (= (-> settings-path io/file .getAbsolutePath)
              (#'db/get-sqlite-db-file-path project-path))))))

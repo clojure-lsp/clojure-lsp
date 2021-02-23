@@ -17,7 +17,7 @@
 (defn ^:private get-sqlite-db-file-path [project-root]
   (let [configured (some-> (get-in @db [:settings :sqlite-db-path])
                            io/file)
-        default (io/file (str project-root) ".lsp" "sqlite.db")
+        default (io/file ".lsp" "sqlite.db")
         file (or configured default)]
     (if (.isAbsolute file)
       (.getAbsolutePath file)

@@ -13,8 +13,6 @@ on:
       - 'mkdocs.yml'
       - '.github/workflows/bump_deps.yml'
   pull_request:
-    branches:
-      - master
     paths-ignore:
       - '**/README.md'
       - '**/CHANGELOG.md'

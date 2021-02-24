@@ -15,6 +15,9 @@
     [rewrite-clj.zip.subedit :as zsub]
     [taoensso.timbre :as log]))
 
+(def ^:private function-definition-symbols
+  '#{defn defn- def defonce defmacro defmulti s/defn s/def})
+
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
           (let [loc (:loc zip-edit)]
@@ -101,8 +104,14 @@
           :loc result-loc}])
       [])))
 
-(defn- can-thread? [zloc]
-  (= (z/tag zloc) :list))
+(def thread-invalid-symbols
+  (set/union function-definition-symbols
+             '#{-> ->> ns :require :import deftest testing comment when if}))
+
+(defn can-thread? [zloc]
+  (and (= (z/tag zloc) :list)
+       (not (contains? thread-invalid-symbols
+                       (some-> zloc z/next z/sexpr)))))
 
 (defn thread-first
   [zloc]
@@ -693,7 +702,7 @@
       :range expr-meta}]))
 
 (defn find-function-form [zloc]
-  (edit/find-ops-up zloc 'defn 'defn- 'def 'defonce 'defmacro 'defmulti 's/defn 's/def))
+  (apply edit/find-ops-up zloc function-definition-symbols))
 
 (defn cycle-privacy
   [zloc]

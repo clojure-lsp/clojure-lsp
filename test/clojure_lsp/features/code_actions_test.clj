@@ -256,6 +256,36 @@
                                   5
                                   [] {})))))
 
+(deftest thread-first-all-action
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "(def foo)"
+                                "(- (+ 1 1) 2)")
+                        "file:///a.clj")
+  (testing "when in a ns or :require"
+    (is (not-any? #(= (:title %) "Thread first all")
+                  (f.code-actions/all (zloc-at "file:///a.clj" 1 1) "file:///a.clj" 1 1 [] {}))))
+  (testing "when in a def similar location"
+    (is (not-any? #(= (:title %) "Thread first all")
+                  (f.code-actions/all (zloc-at "file:///a.clj" 2 1) "file:///a.clj" 2 1 [] {}))))
+  (testing "when on a valid function that can be threaded"
+    (is (some #(= (:title %) "Thread first all")
+              (f.code-actions/all (zloc-at "file:///a.clj" 3 1) "file:///a.clj" 3 1 [] {})))))
+
+(deftest thread-last-all-action
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "(def foo)"
+                                "(- (+ 1 1) 2)")
+                        "file:///a.clj")
+  (testing "when in a ns or :require"
+    (is (not-any? #(= (:title %) "Thread last all")
+                  (f.code-actions/all (zloc-at "file:///a.clj" 1 1) "file:///a.clj" 1 1 [] {}))))
+  (testing "when in a def similar location"
+    (is (not-any? #(= (:title %) "Thread last all")
+                  (f.code-actions/all (zloc-at "file:///a.clj" 2 1) "file:///a.clj" 2 1 [] {}))))
+  (testing "when on a valid function that can be threaded"
+    (is (some #(= (:title %) "Thread last all")
+              (f.code-actions/all (zloc-at "file:///a.clj" 3 1) "file:///a.clj" 3 1 [] {})))))
+
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")

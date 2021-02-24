@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Improve completion performance resolving the item only when documentation is requested
+- Add new thread first/last all code actions
+
 ## 2021.02.21-21.02.51
 
 - Implement support for textDocument/signatureHelp - Fixes #324

@@ -114,6 +114,16 @@
                         :command   "extract-function"
                         :arguments [uri line character "new-function"]}}
 
+             "refactor-thread-first-all"
+             {:command {:title     "Thread first all"
+                        :command   "thread-first-all"
+                        :arguments [uri line character]}}
+
+             "refactor-thread-last-all"
+             {:command {:title     "Thread last all"
+                        :command   "thread-last-all"
+                        :arguments [uri line character]}}
+
              "clean-ns"
              {:command {:title     "Clean namespace"
                         :command   "clean-ns"
@@ -208,6 +218,22 @@
            :line      line
            :character character}})
 
+(defn ^:private thread-first-all-action [uri line character]
+  {:title "Thread first all"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-thread-first-all"
+          :uri uri
+          :line line
+          :character character}})
+
+(defn ^:private thread-last-all-action [uri line character]
+  {:title "Thread last all"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-thread-last-all"
+          :uri uri
+          :line line
+          :character character}})
+
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
@@ -216,6 +242,7 @@
         other-colls (r.transform/find-other-colls zloc)
         definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
         inline-symbol? (r.transform/inline-symbol? definition)
+        can-thread? (r.transform/can-thread? zloc)
         line (dec row)
         character (dec col)
         missing-requires (find-missing-requires uri diagnostics)
@@ -244,6 +271,10 @@
       inside-function?
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
+
+      can-thread?
+      (conj (thread-first-all-action uri line character)
+            (thread-last-all-action uri line character))
 
       workspace-edit-capability?
       (conj (clean-ns-action uri line character))

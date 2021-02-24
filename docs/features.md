@@ -36,6 +36,7 @@ Above you can find all available features that clojure-lsp provide with examples
 | Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360> |
 | Move to let                        | <img src="../images/features/move-to-let.gif" width=360>          |
 | Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=360>          |
+| Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>     |
 
 ### Code lenses showing symbol references
 
@@ -66,10 +67,10 @@ Commands that client can request. Some code actions use these commands as action
 Commands that change/refactor the code, most of them are available via code actions.
 
 ##### Add import to namespace
-##### Add missing namespace (available via code actions too)
-##### Extract Function (available via code actions too)
-##### Inline Symbol (available via code actions too)
-##### Clean namespace (available via code actions too)
+##### Add missing namespace *
+##### Extract Function *
+##### Inline Symbol *
+##### Clean namespace *
 ##### Cycle privacy of def/defn
 ##### Cycle collection (#{}, {}, [], ())
 ##### Change collection to {}, (), #{}, []
@@ -78,10 +79,12 @@ Commands that change/refactor the code, most of them are available via code acti
 ##### Move expression to let
 ##### Thread first expression
 ##### Thread last expression
-##### Thread first all
-##### Thread last all
+##### Thread first all *
+##### Thread last all *
 ##### Unwind all
 ##### Unwind thread
+
+_* Available via code actions too_
 
 #### Dev
 

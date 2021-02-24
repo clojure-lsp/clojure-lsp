@@ -3,6 +3,8 @@
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]))
 
+(def change-debounce-ms 300)
+
 (defn kondo-for-paths [paths]
   {:cache true
    :parallel true

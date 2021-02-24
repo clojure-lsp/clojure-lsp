@@ -79,6 +79,8 @@ For `clojure-lsp` development, there are 3 possible ways of finding a bug or imp
 
 You can help us keep going and improving it by **[supporting the project](https://opencollective.com/clojure-lsp)**
 
+[![](https://opencollective.com/clojure-lsp/tiers/sponsor.svg)](https://opencollective.com/clojure-lsp)
+
 [![](https://opencollective.com/clojure-lsp/tiers/backer.svg)](https://opencollective.com/clojure-lsp)
 
 Special thanks to [Eccentric-J](https://eccentric-j.com/) for the `clojure-lsp` logo

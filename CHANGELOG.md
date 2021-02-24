@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.02.24-14.23.08
+
 - Improve completion performance resolving the item only when documentation is requested
 - Add new thread first/last all code actions
 

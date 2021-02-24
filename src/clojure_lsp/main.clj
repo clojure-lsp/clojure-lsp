@@ -24,6 +24,7 @@
       CodeLens
       CodeLensParams
       CodeLensOptions
+      CompletionItem
       CompletionOptions
       CompletionParams
       DefinitionParams
@@ -135,6 +136,10 @@
   (^CompletableFuture completion [_ ^CompletionParams params]
     (go :completion
         (async-handler params handlers/completion ::interop/completion-items)))
+
+(^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
+    (go :resolveCompletionItem
+        (async-handler item handlers/completion-resolve-item ::interop/completion-item)))
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (go :rename
@@ -319,7 +324,7 @@
                                                                (.setOpenClose true)
                                                                (.setChange TextDocumentSyncKind/Full)
                                                                (.setSave (SaveOptions. true))))
-                                       (.setCompletionProvider (CompletionOptions. false []))))))))))
+                                       (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
       (go :initialized

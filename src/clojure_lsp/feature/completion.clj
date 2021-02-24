@@ -9,6 +9,7 @@
     [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
     [clojure.string :as string]
+    [clojure.walk :as walk]
     [rewrite-clj.zip :as z]
     [taoensso.timbre :as log]))
 
@@ -126,16 +127,18 @@
 
                    :else
                    (string/join
-                     "\n"
-                     (cond-> []
-                       ns (conj (str (name ns) "/" (name (:name element))))
-                       arglist-strs (conj (string/join " " arglist-strs))))))]
-    (cond-> {:label (element->label element cursor-alias)}
+                    "\n"
+                    (cond-> []
+                      ns (conj (str (name ns) "/" (name (:name element))))
+                      arglist-strs (conj (string/join " " arglist-strs))))))]
+    (cond-> {:label (element->label element cursor-alias)
+             :data (walk/stringify-keys {:name (-> element :name str)
+                                         :filename (:filename element)
+                                         :name-row (:name-row element)
+                                         :name-col (:name-col element)})}
       deprecated (assoc :tags [1])
       kind (assoc :kind kind)
-      detail (assoc :detail detail)
-      definition? (assoc :documentation (f.hover/hover-documentation element))
-      )))
+      detail (assoc :detail detail))))
 
 (defn ^:private with-element-items [matches-fn cursor-uri cursor-element elements]
   (->> elements
@@ -194,12 +197,16 @@
   (->> cc/core-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
+                       :data (walk/stringify-keys {:name (str sym)
+                                                   :ns "clojure.core"})
                        :detail (str "clojure.core/" sym)}))))
 
 (defn ^:private with-clojurescript-items [matches-fn]
   (->> cc/cljs-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
+                       :data (walk/stringify-keys {:name (str sym)
+                                                   :ns "cljs.core"})
                        :detail (str "cljs.core/" sym)}))))
 
 (defn ^:private with-java-items [matches-fn]
@@ -268,3 +275,35 @@
         :always
         (->> (sort-by :label)
              not-empty)))))
+
+(defn ^:private resolve-item-by-ns
+  [{{:keys [name ns]} :data :as item}]
+  (let [analysis (:analysis @db/db)
+        definition (q/find-definition analysis {:name (symbol name)
+                                                :to (symbol ns)
+                                                :bucket :var-usages})]
+    (if definition
+      (-> item
+          (assoc :documentation (f.hover/hover-documentation definition))
+          (dissoc :data))
+      item)))
+
+(defn ^:private resolve-item-by-definition
+  [{{:keys [name filename name-row name-col]} :data :as item}]
+  (let [local-analysis (get-in @db/db [:analysis filename])
+        definition (q/find-first #(and (= :var-definitions (:bucket %))
+                                       (= name (str (:name %)))
+                                       (= name-row (:name-row %))
+                                       (= name-col (:name-col %))) local-analysis)]
+    (if definition
+      (-> item
+          (assoc :documentation (f.hover/hover-documentation definition))
+          (dissoc :data))
+      item)))
+
+(defn resolve-item [{{:keys [ns]} :data :as item}]
+  (if (:data item)
+    (if ns
+      (resolve-item-by-ns item)
+      (resolve-item-by-definition item))
+    item))

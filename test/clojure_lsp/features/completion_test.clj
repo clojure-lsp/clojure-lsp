@@ -43,8 +43,8 @@
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-a"
     (h/assert-submaps
-     [{:label "alpaca" :kind :module :detail "user"}
-      {:label "alpaca" :kind :module :detail "alpaca.ns"}
+     [{:label "alpaca" :kind :module :detail "alpaca.ns"}
+      {:label "alpaca" :kind :module :detail "user"}
       {:label "alpha" :kind :variable}
       {:label "ba" :detail "alpaca.ns"}]
      (f.completion/completion "file:///b.clj" 3 3)))
@@ -58,8 +58,8 @@
      (f.completion/completion "file:///b.clj" 4 3)))
   (testing "complete-alpaca"
     (h/assert-submaps
-     [{:label "alpaca" :kind :module :detail "user"}
-      {:label "alpaca" :kind :module :detail "alpaca.ns"}
+     [{:label "alpaca" :kind :module :detail "alpaca.ns"}
+      {:label "alpaca" :kind :module :detail "user"}
       {:label "alpha" :kind :variable}
       {:label "ba" :detail "alpaca.ns"}]
      (f.completion/completion "file:///b.clj" 3 3)))
@@ -70,9 +70,7 @@
     (testing "complete symbols from alias"
       (h/assert-submaps
        [{:label "d-alias/bar"
-         :kind :variable
-         :documentation {:kind "markdown"
-                         :value "```clojure\nd/bar\n```\n\n----\n```clojure\nsome good docs\n```\n----\n*/d.clj*"}}
+         :kind :variable}
         {:label "d-alias/barbaz", :kind :function}]
        (f.completion/completion "file:///e.clj" 4 10))))
   (testing "complete cljc files"
@@ -124,12 +122,31 @@
     (testing "before reader macro"
       (h/assert-submaps
         [{:label         "some-function"
-          :kind          :variable
-          :documentation ["foo/some-function\n\n----\n/a.cljc"]}]
+          :kind          :variable}]
         (f.completion/completion "file:///a.cljc" before-reader-r before-reader-c)))
     (testing "after reader macro"
       (h/assert-submaps
         [{:label         "some-function"
-          :kind          :variable
-          :documentation ["foo/some-function\n\n----\n/a.cljc"]}]
+          :kind          :variable}]
         (f.completion/completion "file:///a.cljc" after-reader-r after-reader-c)))))
+
+
+(deftest resolve-item-test
+  (h/load-code-and-locs "(ns a) (def foo \"Some docs\" 1)")
+  (testing "When element does not contains data"
+    (is (= {:label "Some" :kind :module}
+           (f.completion/resolve-item {:label "Some" :kind :module}))))
+  (testing "When element contains data of a element/knows the element"
+    (is (= {:label "foo" :documentation ["a/foo\n\n----\nSome docs\n----\n/a.clj"] :kind :variable}
+           (f.completion/resolve-item {:label "foo"
+                                       :kind :variable
+                                       :data {:name "foo"
+                                              :filename "/a.clj"
+                                              :name-row 1
+                                              :name-col 13}}))))
+  (testing "When element contains data of a element/knows the element"
+    (is (= {:label "foo" :documentation ["a/foo\n\n----\nSome docs\n----\n/a.clj"] :kind :function}
+           (f.completion/resolve-item {:label "foo"
+                                       :kind :function
+                                       :data {:name "foo"
+                                              :ns "a"}})))))

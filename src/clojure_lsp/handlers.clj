@@ -76,6 +76,9 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
+(defn completion-resolve-item [item]
+  (f.completion/resolve-item item))
+
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)]
     (f.rename/rename textDocument newName row col)))

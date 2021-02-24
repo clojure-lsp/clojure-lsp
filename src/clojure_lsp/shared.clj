@@ -1,6 +1,7 @@
 (ns clojure-lsp.shared
   (:require
     [clojure-lsp.db :as db]
+    [clojure.core.async :refer [<! >! put! take! go alts! chan go-loop timeout close! sliding-buffer]]
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [clojure.string :as string]
@@ -116,3 +117,14 @@
 (defn position->line-column [position]
   [(inc (:line position))
    (inc (:character position))])
+
+(defn debounce [in ms]
+  (let [out (chan)]
+    (go-loop [last-val nil]
+      (let [val (if (nil? last-val) (<! in) last-val)
+            timer (timeout ms)
+            [new-val ch] (alts! [in timer])]
+        (condp = ch
+          timer (do (>! out val) (recur nil))
+          in (recur new-val))))
+    out))

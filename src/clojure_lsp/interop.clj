@@ -74,6 +74,10 @@
 (defmethod j/from-java TextDocumentIdentifier [^TextDocumentIdentifier instance]
   (document->decoded-uri instance))
 
+(defmethod j/from-java VersionedTextDocumentIdentifier [^VersionedTextDocumentIdentifier instance]
+  {:version (.getVersion instance)
+   :uri (document->decoded-uri instance)})
+
 (defmethod j/from-java JsonElement [^JsonElement instance]
   (-> instance
       .toString

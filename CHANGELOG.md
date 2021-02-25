@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Improve clojure-lsp config search checking always home dir considering XDG_CONFIG_HOME and project root up to system root (/) - Fixes #339.
+- Handle incremental text changes on `textDocument/didChange` notifications following LSP protocol, improving performance for huge files. 
+
 ## 2021.02.24-14.23.08
 
 - Improve completion performance resolving the item only when documentation is requested

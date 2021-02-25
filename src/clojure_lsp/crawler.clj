@@ -6,15 +6,12 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
-   [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
    [digest :as digest]
-   [taoensso.timbre :as log])
-  (:import
-   [java.nio.file Paths]))
+   [taoensso.timbre :as log]))
 
 (defn ^:private to-file ^java.io.File
   [^java.nio.file.Path path
@@ -71,13 +68,6 @@
 (defn ^:private run-kondo-on-paths! [paths]
   (kondo/run! (config/kondo-for-paths paths)))
 
-(defn ^:private deep-merge [a b]
-  (merge-with (fn [x y]
-                (cond (map? y) (deep-merge x y)
-                      (vector? y) (concat x y)
-                      :else y))
-                 a b))
-
 (defn ^:private run-kondo-on-paths-batch!
   "Run kondo on paths by partition the paths, with this we should call
   kondo more times but we fewer paths to analyze, improving memory."
@@ -92,7 +82,7 @@
            (map-indexed (fn [index batch-paths]
                           (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (run-kondo-on-paths! batch-paths)))
-           (reduce deep-merge)))))
+           (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-text! [text uri]
   (with-in-str
@@ -125,7 +115,7 @@
            (= 'new name))
        (= 'clojure.core to)))
 
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col] :as element}]
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col] :as _element}]
   (and name-row
        name-col
        name-end-row
@@ -194,29 +184,8 @@
     (analyze-paths source-paths false)
     nil))
 
-(defn ^:private find-raw-project-settings [project-root]
-  (let [config-path (.toString (Paths/get ".lsp" (into-array ["config.edn"])))]
-    (loop [dir (shared/uri->path project-root)]
-      (let [full-config-path (.resolve dir config-path)
-            file (.toFile full-config-path)
-            parent-dir (.getParent ^java.nio.file.Path dir)]
-        (cond
-          (.exists file)
-          (slurp file)
-
-          parent-dir
-          (recur parent-dir)
-
-          :else
-          "{}")))))
-
-(defn ^:private find-project-settings [project-root]
-  (->> (find-raw-project-settings project-root)
-       (edn/read-string {:readers {'re re-pattern}})
-       shared/keywordize-first-depth))
-
 (defn initialize-project [project-root client-capabilities client-settings]
-   (let [project-settings (find-project-settings project-root)
+   (let [project-settings (config/resolve-config project-root)
          root-path (shared/uri->path project-root)]
       (swap! db/db assoc
              :project-root project-root

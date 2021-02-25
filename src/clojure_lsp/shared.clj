@@ -1,7 +1,7 @@
 (ns clojure-lsp.shared
   (:require
     [clojure-lsp.db :as db]
-    [clojure.core.async :refer [<! >! put! take! go alts! chan go-loop timeout close! sliding-buffer]]
+    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [clojure.string :as string]
@@ -128,3 +128,10 @@
           timer (do (>! out val) (recur nil))
           in (recur new-val))))
     out))
+
+(defn deep-merge [a b]
+  (merge-with (fn [x y]
+                (cond (map? y) (deep-merge x y)
+                      (vector? y) (concat x y)
+                      :else y))
+              a b))

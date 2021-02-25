@@ -4,6 +4,7 @@
 
 - Improve clojure-lsp config search checking always home dir considering XDG_CONFIG_HOME and project root up to system root (/) - Fixes #339.
 - Handle incremental text changes on `textDocument/didChange` notifications following LSP protocol, improving performance for huge files. 
+- Add clj-kondo version to --version and server-info
 
 ## 2021.02.24-14.23.08
 

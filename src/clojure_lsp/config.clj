@@ -8,6 +8,10 @@
 
 (def change-debounce-ms 300)
 
+(def clojure-lsp-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
+
+(def clj-kondo-version (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
+
 (defn kondo-for-paths [paths]
   {:cache true
    :parallel true

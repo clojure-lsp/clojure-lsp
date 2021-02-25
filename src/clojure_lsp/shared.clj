@@ -2,15 +2,12 @@
   (:require
     [clojure-lsp.db :as db]
     [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
-    [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [clojure.string :as string]
     [taoensso.timbre :as log])
   (:import
    [java.net URI]
    [java.nio.file Paths]))
-
-(def clojure-lsp-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 
 (defn assoc-some
   "Assoc[iate] if the value is not nil. "

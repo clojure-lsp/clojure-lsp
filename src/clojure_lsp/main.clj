@@ -404,8 +404,12 @@
     (log/handle-uncaught-jvm-exceptions!)
     (swap! db/db assoc :log-file log-file)))
 
+(defn ^:private print-version []
+  (println "clojure-lsp" config/clojure-lsp-version)
+  (println "clj-kondo" config/clj-kondo-version))
+
 (defn -main [& args]
   (setup-logging)
   (if (empty? args)
     (with-out-str (run))
-    (println "clojure-lsp" shared/clojure-lsp-version)))
+    (print-version)))

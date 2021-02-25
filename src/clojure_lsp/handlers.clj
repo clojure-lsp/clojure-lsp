@@ -2,6 +2,7 @@
   (:require
     [cljfmt.core :as cljfmt]
     [clojure-lsp.code-lens :as f.code-lens]
+    [clojure-lsp.config :as config]
     [clojure-lsp.crawler :as crawler]
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -139,7 +140,8 @@
                                             :client-settings (:client-settings db)
                                             :port (or (:port db)
                                                       "NREPL only available on :debug profile compiled binary")
-                                            :version shared/clojure-lsp-version
+                                            :server-version config/clojure-lsp-version
+                                            :clj-kondo-version config/clj-kondo-version
                                             :log-file (:log-file db)}))}))
 
 (defn ^:private cursor-info [[doc-id line character]]

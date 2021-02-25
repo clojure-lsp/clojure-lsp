@@ -941,6 +941,10 @@
                 
                 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<ul>
+<li>Improve clojure-lsp config search checking always home dir considering XDG_CONFIG_HOME and project root up to system root (/) - Fixes #339.</li>
+<li>Handle incremental text changes on <code>textDocument/didChange</code> notifications following LSP protocol, improving performance for huge files. </li>
+</ul>
 <h2 id="20210224-142308">2021.02.24-14.23.08<a class="headerlink" href="#20210224-142308" title="Permanent link">#</a></h2>
 <ul>
 <li>Improve completion performance resolving the item only when documentation is requested</li>
@@ -1112,7 +1116,7 @@
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 24, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 25, 2021</span>
     
   </small>
 </div>

@@ -66,7 +66,12 @@
 (def clj-kondo-analysis-batch-size 50)
 
 (defn ^:private run-kondo-on-paths! [paths]
-  (kondo/run! (config/kondo-for-paths paths)))
+  (let [err (java.io.StringWriter.)]
+    (binding [*err* err]
+      (let [result (kondo/run! (config/kondo-for-paths paths))]
+        (when-not (string/blank? (str err))
+          (log/error (str err)))
+        result))))
 
 (defn ^:private run-kondo-on-paths-batch!
   "Run kondo on paths by partition the paths, with this we should call
@@ -85,9 +90,14 @@
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-text! [text uri]
-  (with-in-str
-    text
-    (kondo/run! (config/kondo-for-single-file uri))))
+  (let [err (java.io.StringWriter.)]
+    (binding [*err* err]
+      (let [result (with-in-str
+                     text
+                     (kondo/run! (config/kondo-for-single-file uri)))]
+        (when-not (string/blank? (str err))
+          (log/error (str err)))
+        result))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond

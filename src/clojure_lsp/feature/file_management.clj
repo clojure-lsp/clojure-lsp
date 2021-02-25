@@ -118,7 +118,7 @@
 
 (defn did-change [uri changes version]
   (loop [state-db @db/db]
-    (let [old-text (get-in @db/db [:documents uri :text])
+    (let [old-text (get-in state-db [:documents uri :text])
           final-text (reduce (fn [old-text {new-text :text {{start-line :line
                                                              start-character :character} :start
                                                             {end-line :line

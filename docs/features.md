@@ -4,25 +4,28 @@ Above you can find all available features that clojure-lsp provide with examples
 
 ### Find a function/var definition
 
-![](images/features/find-definition.gif)
+<img src="../images/features/find-definition.gif" width=340>
 
 ### Find all references of a function, var, keyword or namespace alias
 
-![](images/features/find-references.gif)
+<img src="../images/features/find-references.gif" width=340>
 
 ### Show all workspace/project symbols
 
-![](images/features/workspace-symbols.gif)
+<img src="../images/features/workspace-symbols.gif" width=580>
 
 ### Show all symbols on current file
 
-![](images/features/document-symbols.gif)
+<img src="../images/features/document-symbols.gif" width=580>
 
 ### Rename symbols
 
-![](images/features/rename.gif)
+<img src="../images/features/rename.gif" width=340>
 
-### Cursor hover showing symbol usages
+### Document highlight on hover showing symbol usages
+
+<img src="../images/features/document-highlight.gif" width=340>
+
 ### Code actions
 
 | Name                               | Example                                                              |

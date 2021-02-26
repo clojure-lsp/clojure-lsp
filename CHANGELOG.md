@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add support to complete full qualified namespaces - Fixes #337
+
 ## 2021.02.26-13.58.48
 
 - Improve clojure-lsp config search checking always home dir considering XDG_CONFIG_HOME and project root up to system root (/) - Fixes #339.

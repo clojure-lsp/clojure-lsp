@@ -155,7 +155,7 @@
   (when-let [aliases (some->> analysis
                               (q/filter-project-analysis)
                               (mapcat val)
-                              (filter #(and (= (:bucket %) :namespace-alias))))]
+                              (filter #(= (:bucket %) :namespace-alias)))]
     (let [alias-namespaces (->> aliases
                                 (filter #(= (-> % :alias str) cursor-alias))
                                 (map :to)
@@ -192,6 +192,13 @@
                                             (r.transform/result))]
                    (cond-> completion-item
                      (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))))
+
+(defn ^:private with-elements-from-full-ns [full-ns analysis]
+  (->> (mapcat val analysis)
+       (filter #(and (= (:bucket %) :var-definitions)
+                     (= (:ns %) (symbol full-ns))
+                     (not (:private %))))
+       (mapv #(element->completion-item % full-ns))))
 
 (defn ^:private with-clojure-core-items [matches-fn]
   (->> cc/core-syms
@@ -250,13 +257,18 @@
                              (if (or (symbol? cursor-value)
                                      (keyword? cursor-value))
                                (name cursor-value)
-                               (str cursor-value)))]
+                               (str cursor-value)))
+        cursor-full-ns? (when cursor-value-or-ns
+                          (contains? (q/find-all-ns-definitions analysis) (symbol cursor-value-or-ns)))]
     (if inside-require?
       (->> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
            (into #{})
            (sort-by :label)
            not-empty)
       (cond-> #{}
+        cursor-full-ns?
+        (into (with-elements-from-full-ns cursor-value-or-ns analysis))
+
         cursor-value-or-ns
         (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn analysis))
 

@@ -12,7 +12,7 @@
 
 (deftest test-completion
   (h/load-code-and-locs (code "(ns alpaca.ns (:require [user :as alpaca]))"
-                              "alpaca/"
+                              "(alpaca/)"
                               "(def barr)"
                               "(def bazz)") "file:///a.cljc")
   (h/load-code-and-locs (code "(ns user)"
@@ -79,7 +79,7 @@
       {:label "alpaca/baff" :kind :variable}
       {:label "alpaca/barr" :kind :variable}
       {:label "alpaca/bazz" :kind :variable}]
-     (f.completion/completion "file:///a.cljc" 2 1)))
+     (f.completion/completion "file:///a.cljc" 2 8)))
   (testing "complete-core-stuff"
     (h/assert-submaps
      [{:label "frequencies", :detail "clojure.core/frequencies"}]
@@ -93,7 +93,7 @@
     (h/assert-submaps
      [{:label "alpaca.ns" :kind :module}
       {:label "alpaca.ns" :kind :module}]
-     (f.completion/completion "file:///f.clj" 1 21)))
+     (f.completion/completion "file:///f.clj" 2 21)))
   (testing "complete locals"
     (h/assert-submaps
      [{:label "ba" :kind :module}
@@ -108,6 +108,18 @@
      (f.completion/completion "file:///g.clj" 2 18)))
   (testing "complete without prefix return all available completions"
     (is (< 100 (count (f.completion/completion "file:///g.clj" 3 1))))))
+
+(deftest completing-full-ns
+  (h/load-code-and-locs
+    (h/code "(ns alpaca.ns)"
+            "(def foo 1)"))
+  (let [[[full-ns-r full-ns-c]] (h/load-code-and-locs
+                                  (h/code "(ns foo)"
+                                          "(alpaca.ns/f|)") "file:///b.clj")]
+    (testing "completing a project full ns"
+      (h/assert-submaps
+        [{:label "alpaca.ns/foo" :kind :variable}]
+        (f.completion/completion "file:///b.clj" full-ns-r full-ns-c)))))
 
 (deftest completing-with-reader-macros
   (let [[[before-reader-r before-reader-c]

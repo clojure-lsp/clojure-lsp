@@ -15,4 +15,4 @@ on:
               templatePath: 'clojure-lsp-native.rb'
               tapRepo: 'clojure-lsp/homebrew-brew'
               srcRepo: 'clojure-lsp/clojure-lsp'
-              authToken: ${{ secrets.BREW_GITHUB_TOKEN }}
+              authToken: ${{ secrets.GITHUB_TOKEN }}

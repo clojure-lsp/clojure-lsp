@@ -22,6 +22,15 @@ In Github releases you will find a `clojure-lsp` file that runs a embedded jar. 
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
 - Place it in your $PATH with a chmod 755
 
+## MacOS
+
+We have a custom tap using the native compiled binaries for users that use homebrew:
+
+```bash
+brew remove clojure-lsp # if you have old clojure-lsp installed via brew
+brew install clojure-lsp/brew/clojure-lsp-native
+```
+
 ## Nix
 
 `clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):

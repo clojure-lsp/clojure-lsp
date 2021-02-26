@@ -452,6 +452,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#macos" class="md-nav__link">
+    MacOS
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#nix" class="md-nav__link">
     Nix
   </a>
@@ -564,6 +571,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#macos" class="md-nav__link">
+    MacOS
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#nix" class="md-nav__link">
     Nix
   </a>
@@ -616,6 +630,11 @@
 <li>Grab the latest <code>clojure-lsp</code> from github <a href="https://github.com/snoe/clojure-lsp/releases/latest">LATEST</a></li>
 <li>Place it in your $PATH with a chmod 755</li>
 </ul>
+<h2 id="macos">MacOS<a class="headerlink" href="#macos" title="Permanent link">#</a></h2>
+<p>We have a custom tap using the native compiled binaries for users that use homebrew:</p>
+<div class="highlight"><pre><span></span><code>brew remove clojure-lsp <span class="c1"># if you have old clojure-lsp installed via brew</span>
+brew install clojure-lsp/brew/clojure-lsp-native
+</code></pre></div>
 <h2 id="nix">Nix<a class="headerlink" href="#nix" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp

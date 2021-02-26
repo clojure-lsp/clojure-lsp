@@ -60,6 +60,8 @@ Experimental: apply color on client editor for each known token
 
 ### Call hierarchy (Incoming only)
 
+Show all the call hierarchy of a function/variable as a lazy tree
+
 ![](images/features/call-hierarchy.png)
 
 ### Execute command

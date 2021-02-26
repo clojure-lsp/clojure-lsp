@@ -40,6 +40,8 @@ You will get:
 - **Semantic tokens (syntax highlighting)**
 - **Call hierarchy**
 
+For all available features, check the [features section](https://clojure-lsp.github.io/clojure-lsp/features/).
+
 ---
 ## Contribution
 

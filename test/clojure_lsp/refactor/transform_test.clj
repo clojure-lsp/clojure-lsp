@@ -6,7 +6,8 @@
     [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
     [clojure.test :refer [deftest testing is]]
-    [rewrite-clj.zip :as z]))
+    [rewrite-clj.zip :as z]
+    [rewrite-clj.node :as n]))
 
 (defn code [& strings] (string/join "\n" strings))
 
@@ -666,6 +667,40 @@
                     "foo")]
       (is (= "(defn foo [a]\n  (+ 1 a))" (z/string (:loc (first results)))))
       (is (= "(foo a)" (z/string (:loc (last results))))))))
+
+(deftest create-function-test
+  (testing "creating with no args"
+    (reset! db/db {})
+    (let [code "(defn a [b] (my-func))"
+          zloc (z/find-value (z/of-string code) z/next 'my-func)
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc)]
+      (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results)))))))
+  (testing "creating with no args from the function definition"
+    (reset! db/db {})
+    (let [code "(defn a [b] (my-func))"
+          zloc (z/up (z/find-value (z/of-string code) z/next 'my-func))
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc)]
+      (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results)))))))
+  (testing "creating with 1 known arg"
+    (reset! db/db {})
+    (let [code "(defn a [b] (my-func b))"
+          zloc (z/find-value (z/of-string code) z/next 'my-func)
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc)]
+      (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results)))))))
+  (testing "creating with 1 known arg and a unknown arg"
+    (reset! db/db {})
+    (let [code "(defn a [b] (my-func b (+ 1 2)))"
+          zloc (z/find-value (z/of-string code) z/next 'my-func)
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc)]
+      (is (= "(defn- my-func\n  [b arg2]\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results))))))))
 
 (deftest inline-symbol
   (testing "simple let"

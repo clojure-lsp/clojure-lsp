@@ -6,7 +6,8 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
-    [taoensso.timbre :as log])
+    [taoensso.timbre :as log]
+    [clojure.string :as string])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))
@@ -65,6 +66,15 @@
            (into (map (partial find-missing-import uri) unresolved-symbol-diags)))
          (remove nil?))))
 
+(defn ^:private find-function-to-create [uri diagnostics]
+  (when-let [{{{:keys [line character] :as position} :start} :range :as diag} (->> diagnostics
+                                                                                   (filter #(= "unresolved-symbol" (:code %)))
+                                                                                   first)]
+    (when-let [diag-loc (parser/safe-cursor-loc uri line character)]
+      (when (r.transform/can-create-function? diag-loc)
+        {:name (last (string/split (:message diag) #"Unresolved symbol: "))
+         :position position}))))
+
 (defn resolve-code-action
   [{{:keys [id uri line character chosen-alias coll]} :data :as code-action}
    zloc]
@@ -88,6 +98,11 @@
              "add-alias-suggestion-require"
              (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-alias))]
                {:edit alias-suggestion-edit})
+
+             "refactor-create-private-function"
+             {:command {:title     "Create function"
+                        :command   "create-function"
+                        :arguments [uri line character]}}
 
              "refactor-inline-symbol"
              {:command {:title     "Inline symbol"
@@ -234,10 +249,19 @@
           :line line
           :character character}})
 
+(defn ^:private create-private-function-action [uri function-to-create]
+  {:title (format "Create private function '%s'" (:name function-to-create))
+   :kind CodeActionKind/QuickFix
+   :data {:id "refactor-create-private-function"
+          :uri uri
+          :line      (:line (:position function-to-create))
+          :character (:character (:position function-to-create))}})
+
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function? (r.transform/find-function-form zloc)
+        function-to-create (find-function-to-create uri diagnostics)
         inside-let? (r.transform/find-let-form zloc)
         other-colls (r.transform/find-other-colls zloc)
         definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
@@ -258,6 +282,9 @@
 
       (seq alias-suggestions)
       (into (alias-suggestion-actions uri alias-suggestions))
+
+      function-to-create
+      (conj (create-private-function-action uri function-to-create))
 
       inline-symbol?
       (conj (inline-symbol-action uri line character))

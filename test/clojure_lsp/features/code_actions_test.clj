@@ -105,6 +105,7 @@
                                       4
                                       11
                                       [{:code "unresolved-symbol"
+                                        :message "Unresolved symbol: foo"
                                         :range {:start {:line 3 :character 15}}}] {})))))
 
 (deftest add-common-missing-import-code-action
@@ -116,7 +117,7 @@
                              "Date.\n"
                              "Date/parse")
                         "file://c.clj")
-  (testing "when it has no unknown-symbol diagnostic"
+  (testing "when it has no unresolved-symbol diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
                   (f.code-actions/all (zloc-at "file://c.clj" 5 2)
                                       "file://c.clj"
@@ -124,21 +125,23 @@
                                       2
                                       [] {}))))
 
-  (testing "when it has unknown-symbol but it's not a common import"
+  (testing "when it has unresolved-symbol but it's not a common import"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
                   (f.code-actions/all (zloc-at "file://c.clj" 5 2)
                                       "file://c.clj"
                                       5
                                       2
                                       [{:code "unresolved-symbol"
+                                        :message "Unresolved symbol: foo"
                                         :range {:start {:line 4 :character 2}}}] {}))))
-  (testing "when it has unknown-symbol and it's a common import"
+  (testing "when it has unresolved-symbol and it's a common import"
     (is (some #(= (:title %) "Add missing 'java.util.Date' import")
               (f.code-actions/all (zloc-at "file://c.clj" 6 2)
                                   "file://c.clj"
                                   6
                                   2
                                   [{:code "unresolved-symbol"
+                                    :message "Unresolved symbol: foo"
                                     :range {:start {:line 5 :character 2}}}] {}))))
   (testing "when it has unresolved-namespace and it's a common import via method"
     (is (some #(= (:title %) "Add missing 'java.util.Date' import")
@@ -255,6 +258,27 @@
                                   2
                                   5
                                   [] {})))))
+
+(deftest create-private-function-code-action
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "(def foo (+ 1 2))"
+                                "(def bar (some-func 1 2))"))
+  (testing "when not in a unresolved symbol"
+    (is (not-any? #(= (:title %) "Create private function")
+                  (f.code-actions/all (zloc-at "file:///a.clj" 1 10)
+                                      "file:///a.clj"
+                                      1
+                                      10
+                                      [] {}))))
+  (testing "when in a unresolved symbol"
+    (is (some #(= (:title %) "Create private function 'some-func'")
+              (f.code-actions/all (zloc-at "file:///a.clj" 2 10)
+                                  "file:///a.clj"
+                                  2
+                                  10
+                                  [{:code "unresolved-symbol"
+                                    :message "Unresolved symbol: some-func"
+                                    :range {:start {:line 2 :character 11}}}] {})))))
 
 (deftest thread-first-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"

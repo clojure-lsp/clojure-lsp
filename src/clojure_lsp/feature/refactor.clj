@@ -66,6 +66,9 @@
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
 
+(defmethod refactor :create-function [{:keys [loc]}]
+  (r.transform/create-function loc))
+
 (def available-refactors
   (->> refactor
        methods

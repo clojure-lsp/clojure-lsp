@@ -25,18 +25,19 @@ Above you can find all available features that clojure-lsp provide with examples
 ### Cursor hover showing symbol usages
 ### Code actions
 
-| Name                               | Example                                                           |
-|------------------------------------|-------------------------------------------------------------------|
-| Clean namespace require/imports    | <img src="../images/features/clean-ns.gif" width=360>             |
-| Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>        |
-| Extract function                   | <img src="../images/features/extract-function.gif" width=360>     |
-| Add missing require                | <img src="../images/features/add-missing-require.gif" width=360>  |
-| Add known common require           | <img src="../images/features/add-common-require.gif" width=360>   |
-| Add known common import            | <img src="../images/features/add-common-import.gif" width=360>    |
-| Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360> |
-| Move to let                        | <img src="../images/features/move-to-let.gif" width=360>          |
-| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=360>          |
-| Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>     |
+| Name                               | Example                                                              |
+|------------------------------------|----------------------------------------------------------------------|
+| Clean namespace require/imports    | <img src="../images/features/clean-ns.gif" width=360>                |
+| Add missing require                | <img src="../images/features/add-missing-require.gif" width=360>     |
+| Add known common require           | <img src="../images/features/add-common-require.gif" width=360>      |
+| Add known common import            | <img src="../images/features/add-common-import.gif" width=360>       |
+| Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
+| Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>           |
+| Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
+| Move to let                        | <img src="../images/features/move-to-let.gif" width=360>             |
+| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=360>             |
+| Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
+| Create private function            | <img src="../images/features/create-private-function.gif" width=360> |
 
 ### Code lenses showing symbol references
 
@@ -66,14 +67,15 @@ Commands that client can request. Some code actions use these commands as action
 
 Commands that change/refactor the code, most of them are available via code actions.
 
+##### Clean namespace *
 ##### Add import to namespace
 ##### Add missing namespace *
-##### Extract Function *
-##### Inline Symbol *
-##### Clean namespace *
 ##### Cycle privacy of def/defn
 ##### Cycle collection (#{}, {}, [], ())
 ##### Change collection to {}, (), #{}, []
+##### Extract Function *
+##### Create private function *
+##### Inline Symbol *
 ##### Expand let
 ##### Introduce let
 ##### Move expression to let

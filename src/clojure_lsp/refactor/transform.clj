@@ -1,19 +1,19 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure-lsp.clojure-core :as cc]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure-lsp.shared :as shared]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [medley.core :as medley]
-    [rewrite-clj.custom-zipper.core :as cz]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.clojure-core :as cc]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [medley.core :as medley]
+   [rewrite-clj.custom-zipper.core :as cz]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [rewrite-clj.zip.subedit :as zsub]
+   [taoensso.timbre :as log]))
 
 (def ^:private function-definition-symbols
   '#{defn defn- def defonce defmacro defmulti s/defn s/def})
@@ -759,3 +759,47 @@
             (update accum (shared/filename->uri filename) (fnil conj []) {:loc val-loc :range element}))
           {def-uri [{:loc nil :range def-range}]}
           references)))))
+
+(defn can-create-function? [zloc]
+  (and zloc
+       (#{:list :token} (z/tag zloc))))
+
+(defn create-function [zloc]
+  (when (can-create-function? zloc)
+    (let [fn-form (if (= :token (z/tag zloc))
+                    (z/up zloc)
+                    zloc)
+            fn-name (z/value (z/down fn-form))
+            privacy-meta? (get-in @db/db [:settings :use-metadata-for-privacy?] false)
+            new-fn-str (if privacy-meta?
+                        (format "(defn ^:private %s)" (symbol fn-name))
+                        (format "(defn- %s)\n\n" (symbol fn-name)))
+            args (->> fn-form
+                    z/node
+                    n/children
+                    (drop 1)
+                    (filter (complement n/whitespace?))
+                    (map-indexed (fn [index node]
+                                    (if (and (= :token (n/tag node))
+                                            (symbol? (n/sexpr node)))
+                                    (n/sexpr node)
+                                    (symbol (str "arg" (inc index))))))
+                    vec)
+            expr-loc (z/up (edit/find-op zloc))
+            form-loc (edit/to-top expr-loc)
+            {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
+            defn-edit (-> (z/of-string new-fn-str)
+                        (cz/append-child (n/newlines 1))
+                        (cz/append-child (n/spaces 2))
+                        (z/append-child args)
+                        (cz/append-child (n/newlines 1))
+                        (cz/append-child (n/spaces 2)))]
+
+        [{:loc defn-edit
+        :range (assoc form-pos
+                        :end-row form-row
+                        :end-col form-col)}
+        {:loc (z/of-string "\n\n")
+        :range (assoc form-pos
+                        :end-row form-row
+                        :end-col form-col)}])))

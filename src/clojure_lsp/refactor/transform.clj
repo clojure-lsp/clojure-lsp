@@ -15,9 +15,6 @@
    [rewrite-clj.zip.subedit :as zsub]
    [taoensso.timbre :as log]))
 
-(def ^:private function-definition-symbols
-  '#{defn defn- def defonce defmacro defmulti s/defn s/def})
-
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
           (let [loc (:loc zip-edit)]
@@ -105,7 +102,7 @@
       [])))
 
 (def thread-invalid-symbols
-  (set/union function-definition-symbols
+  (set/union edit/function-definition-symbols
              '#{-> ->> ns :require :import deftest testing comment when if}))
 
 (defn can-thread? [zloc]
@@ -205,7 +202,7 @@
 
 (defn find-let-form [zloc]
   (some-> zloc
-          (edit/find-ops-up 'let)
+          (edit/find-ops-up "let")
           z/up))
 
 (defn move-to-let
@@ -269,7 +266,7 @@
   "Expand the scope of the next let up the tree."
   [zloc]
   (let [let-loc (some-> zloc
-                        (edit/find-ops-up 'let)
+                        (edit/find-ops-up "let")
                         z/up)]
     (when let-loc
       (let [bind-node (-> let-loc z/down z/right z/node)
@@ -676,7 +673,7 @@
       :range expr-meta}]))
 
 (defn find-function-form [zloc]
-  (apply edit/find-ops-up zloc function-definition-symbols))
+  (apply edit/find-ops-up zloc (mapv str edit/function-definition-symbols)))
 
 (defn cycle-privacy
   [zloc]
@@ -702,9 +699,9 @@
 (defn inline-symbol?
   [{:keys [filename name-row name-col] :as definition}]
   (when definition
-    (let [{:keys [text]} (get-in @db/db [:documents (shared/filename->uri filename)])
-          loc (parser/loc-at-pos text name-row name-col)]
-      (some-> (edit/find-op loc)
+    (let [{:keys [text]} (get-in @db/db [:documents (shared/filename->uri filename)])]
+      (some-> (parser/loc-at-pos text name-row name-col)
+              edit/find-op
               z/sexpr
               #{'let 'def}))))
 

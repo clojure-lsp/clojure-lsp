@@ -4,6 +4,7 @@
 
 - Add support to complete full qualified namespaces - Fixes #337
 - Add `:log-path` setting to log to a custom file.
+- Avoid exception on code actions when on cljc reader macros - Related to #346
 
 ## 2021.02.26-13.58.48
 

@@ -27,7 +27,7 @@
                       (-> code
                           z/of-string
                           finder
-                          (edit/find-ops-up ops)
+                          (edit/find-ops-up (str ops))
                           z/sexpr))]
     (testing "find top op"
       (is (= 'foo (op-from-val (val-finder 'a) 'foo)))

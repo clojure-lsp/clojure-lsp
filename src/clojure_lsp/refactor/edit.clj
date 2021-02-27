@@ -24,27 +24,18 @@
          :else (recur (z/leftmost up-loc))))))
 
 (defn find-ops-up
-  [zloc & op-syms]
+  [zloc & op-strs]
   (loop [op-loc (find-op zloc)]
     (cond
       (nil? op-loc) nil
-      (contains? (set op-syms) (z/sexpr op-loc)) op-loc
+      (contains? (set op-strs) (z/string op-loc)) op-loc
       :else (recur (z/leftmost (z/up op-loc))))))
 
-(def var-definition-macros
-  '#{defn
-     defn-
-     def
-     defmacro
-     defmulti
-     defonce
-     deftype
-     defrecord
-     s/def
-     s/defn})
+(def function-definition-symbols
+  '#{defn defn- def defmacro defmulti defonce deftype defrecord s/def s/defn})
 
 (defn find-function-definition-name [loc]
-  (let [function-loc (apply find-ops-up loc var-definition-macros)]
+  (let [function-loc (apply find-ops-up loc (mapv str function-definition-symbols))]
     (cond
       (not function-loc)
       nil
@@ -146,9 +137,9 @@
 
 
 (defn inside-require? [zloc]
-  (or (and (find-ops-up zloc 'ns)
-           (find-ops-up zloc :require))
-      (find-ops-up zloc 'require)))
+  (or (and (find-ops-up zloc "ns")
+           (find-ops-up zloc ":require"))
+      (find-ops-up zloc "require")))
 
 (defn skip-over [loc]
   (if (z/down loc)

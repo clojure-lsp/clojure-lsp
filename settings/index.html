@@ -578,15 +578,17 @@
                 <h1 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h1>
 <p><code>clojure-lsp</code> settings are picked up on server start and can be configured via 3 ways: </p>
 <ul>
+<li><strong>Project configuration</strong></li>
 <li><strong>Global configuration</strong> </li>
-<li><strong>project configuration</strong></li>
 <li><strong>LSP InitializationOptions</strong></li>
 </ul>
 <h2 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> will look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your project root folder up the directory structure so you can have multiple projects share the same settings.</p>
 <p>Example:
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:cljfmt</span> <span class="p">{</span><span class="ss">:indents</span> <span class="p">{</span><span class="o">#</span><span class="nv">re</span> <span class="s">&quot;.*&quot;</span> <span class="kd">ns </span><span class="p">[[</span><span class="ss">:inner</span> <span class="mi">0</span><span class="p">]</span> <span class="p">[</span><span class="ss">:inner</span> <span class="mi">1</span><span class="p">]]}}</span>
- <span class="ss">:auto-add-ns-to-new-files?</span> <span class="nv">false</span><span class="p">}</span>
+ <span class="ss">:auto-add-ns-to-new-files?</span> <span class="nv">false</span>
+ <span class="ss">:project-specs</span> <span class="p">[{</span><span class="ss">:project-path</span> <span class="s">&quot;deps.edn&quot;</span>
+                  <span class="ss">:classpath-cmd</span> <span class="p">[</span><span class="s">&quot;clojure&quot;</span> <span class="s">&quot;-A:dev&quot;</span> <span class="s">&quot;-Spath&quot;</span><span class="p">]}]}</span>
 </code></pre></div></p>
 <hr />
 <h2 id="global">Global<a class="headerlink" href="#global" title="Permanent link">#</a></h2>

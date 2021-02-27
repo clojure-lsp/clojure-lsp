@@ -2,8 +2,8 @@
 
 `clojure-lsp` settings are picked up on server start and can be configured via 3 ways: 
 
+- **Project configuration**
 - **Global configuration** 
-- **project configuration**
 - **LSP InitializationOptions**
 
 ## Project
@@ -13,7 +13,9 @@
 Example:
 ```clojure
 {:cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
- :auto-add-ns-to-new-files? false}
+ :auto-add-ns-to-new-files? false
+ :project-specs [{:project-path "deps.edn"
+                  :classpath-cmd ["clojure" "-A:dev" "-Spath"]}]}
 ```
 
 ---

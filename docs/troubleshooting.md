@@ -1,8 +1,10 @@
 # Troubleshooting
 
-## It doesn't seem to be working
+Check if each step below is working:
 
-If you're downloading the release, try running it from the command line, it should start up and start reading stdin.
+## Server is not initializing 
+
+Check if the executable is working running it from the command line, it should start up and start reading stdin.
 Type `{}\n\n` and you should get something like:
 
 ```
@@ -23,31 +25,36 @@ If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.*.out`, so watch that file 
 LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.
 
 ---
-## Go to definition doesn't work
 
-### Double check settings
+## Some features are not working
+
+clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to scan the classpath 
+during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.
+
+### Classpath scan error
+
+By default clojure-lsp knows how to scan most common clojure projects using following the rules below:
+
+- If the project root has a `project.clj` file, it'll run `lein classpath` to get the classpath.
+- If the project root has a `deps.edn` file, it'll run `clojure -Spath` to get the classpath.
+- If the project root has a `build.boot` file, it'll run `boot show --fake-classpath` to get the classpath.
+- If the project root has a `shadow-cljs.edn` file, it'll run `npx shadow-cljs classpath` to get the classpath.
+
+If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the[settings section](https://clojure-lsp.github.io/clojure-lsp/settings/).
+
+### Folders not being analyzed
 
 By default clojure-lsp searches `src` and `test` for clj* files to read into an index.
-If the definition lives under a different source dir, you can defiine `src-paths` in your client's `InitializationOptions`.
+If the definition lives under a different source dir, you can define the `src-paths` setting, for more details check the [settings section](https://clojure-lsp.github.io/clojure-lsp/settings/).
 
 It is also important to get your `project-root` correct in your client otherwise the source paths will not be found.
-Usually there's an option to search for a project file, so for a lein project you would have your client search for `project.clj`.
 
-### Check the logs
+### Old analysis
 
-There are a couple reasons why go to definition could fail. First, start tailing `/tmp/clojure-lsp.*.out`.
-
-The logs will generally explain why go to definition failed.
-
-### The definition is still not found
-
-Raise an issue or ask in clojurians slack.
+clojure-lsp persist the external jars analysis in a `.lsp/sqlite.db` file, if you have issues with some specific feature, 
+try to remove that file and restart the server.
 
 ---
-## Windows
-
-See https://github.com/snoe/clojure-lsp/issues/28 and https://github.com/snoe/clojure-lsp/issues/25
-
 ## MacOS
 
 In some version of MacOS, Apple restrict the binary to run, to fix that run: `xattr -d com.apple.quarantine /path/to/clojure-lsp`

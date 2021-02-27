@@ -142,7 +142,7 @@
                                                       "NREPL only available on :debug profile compiled binary")
                                             :server-version config/clojure-lsp-version
                                             :clj-kondo-version config/clj-kondo-version
-                                            :log-file (:log-file db)}))}))
+                                            :log-path (:log-path db)}))}))
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)

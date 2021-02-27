@@ -11,7 +11,8 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [digest :as digest]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.logging :as logging]))
 
 (defn ^:private to-file ^java.io.File
   [^java.nio.file.Path path
@@ -197,12 +198,14 @@
 (defn initialize-project [project-root client-capabilities client-settings]
    (let [project-settings (config/resolve-config project-root)
          root-path (shared/uri->path project-root)]
-      (swap! db/db assoc
-             :project-root project-root
-             :project-settings project-settings
-             :client-settings client-settings
-             :settings (-> (merge client-settings project-settings)
-                           (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
-                           (update :cljfmt cljfmt.main/merge-default-options))
-             :client-capabilities client-capabilities)
-      (analyze-project project-root)))
+     (when-let [log-path (:log-path project-settings)]
+       (logging/update-log-path log-path))
+     (swap! db/db assoc
+            :project-root project-root
+            :project-settings project-settings
+            :client-settings client-settings
+            :settings (-> (merge client-settings project-settings)
+                          (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
+                          (update :cljfmt cljfmt.main/merge-default-options))
+            :client-capabilities client-capabilities)
+     (analyze-project project-root)))

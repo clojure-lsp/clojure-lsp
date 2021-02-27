@@ -29,8 +29,7 @@
                     :dependencies [[pjstadig/humane-test-output "0.9.0"]]
                     :injections [(require 'pjstadig.humane-test-output)
                                  (pjstadig.humane-test-output/activate!)]}
-             :native-image {:dependencies [[ericdallo/sqlite-jni-graal-fix "0.0.3-graalvm-21.0.0"
-                                            :exclusions [org.graalvm.nativeimage/svm]]]
+             :native-image {:dependencies []
                             :jvm-opts ["-Xmx2g"
                                        "-server"
                                        "-Dborkdude.dynaload.aot=true"

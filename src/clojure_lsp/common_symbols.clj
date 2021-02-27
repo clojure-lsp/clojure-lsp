@@ -1,4 +1,4 @@
-(ns clojure-lsp.clojure-core)
+(ns clojure-lsp.common-symbols)
 
 (def java-lang-syms
   '#{Appendable,
@@ -1344,3 +1344,36 @@
   (->> java-util-syms
        (mapv (juxt identity #(symbol (str "java.util." (name %)))))
        (into {})))
+
+(def common-refers->info
+  {'deftest      'clojure.test
+   'testing      'clojure.test
+   'is           'clojure.test
+   'are          'clojure.test
+   'use-fixture  'clojure.test
+   'run-tests    'clojure.test
+   'doc          'clojure.repl
+   'ANY          'compojure.core
+   'DELETE       'compojure.core
+   'GET          'compojure.core
+   'PATCH        'compojure.core
+   'POST         'compojure.core
+   'PUT          'compojure.core
+   'context      'compojure.core
+   'defroutes    'compojure.core
+   'defentity    'korma.core
+   'reg-event-db 're-frame.core
+   'reg-sub      're-frame.core
+   'reg-event-fx 're-frame.core
+   'fact         'midje.sweet
+   'facts        'midje.sweet})
+
+(def common-alias->info
+  {'str    'clojure.string
+   'repl   'clojure.repl
+   'edn    'clojure.edn
+   'set    'clojure.set
+   'walk   'clojure.walk
+   'pprint 'clojure.pprint
+   'async  'clojure.core.async
+   'io     'clojure.java.io})

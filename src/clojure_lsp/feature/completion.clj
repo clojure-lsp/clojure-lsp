@@ -1,6 +1,6 @@
 (ns clojure-lsp.feature.completion
   (:require
-    [clojure-lsp.clojure-core :as cc]
+    [clojure-lsp.common-symbols :as common-sym]
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.parser :as parser]
@@ -201,7 +201,7 @@
        (mapv #(element->completion-item % full-ns))))
 
 (defn ^:private with-clojure-core-items [matches-fn]
-  (->> cc/core-syms
+  (->> common-sym/core-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
                        :data (walk/stringify-keys {:name (str sym)
@@ -209,7 +209,7 @@
                        :detail (str "clojure.core/" sym)}))))
 
 (defn ^:private with-clojurescript-items [matches-fn]
-  (->> cc/cljs-syms
+  (->> common-sym/cljs-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
                        :data (walk/stringify-keys {:name (str sym)
@@ -218,11 +218,11 @@
 
 (defn ^:private with-java-items [matches-fn]
   (concat
-    (->> cc/java-lang-syms
+    (->> common-sym/java-lang-syms
          (filter (comp matches-fn str))
          (map (fn [sym] {:label (str sym)
                          :detail (str "java.lang." sym)})))
-    (->> cc/java-util-syms
+    (->> common-sym/java-util-syms
          (filter (comp matches-fn str))
          (map (fn [sym] {:label (str sym)
                          :detail (str "java.util." sym)})))))

@@ -1,6 +1,6 @@
 (ns clojure-lsp.refactor.transform
   (:require
-   [clojure-lsp.clojure-core :as cc]
+   [clojure-lsp.common-symbols :as common-sym]
    [clojure-lsp.db :as db]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
@@ -452,50 +452,24 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(def ^:private common-alias->info
-  {'string {:to 'clojure.string}
-   'set    {:to 'clojure.set}
-   'walk   {:to 'clojure.walk}
-   'pprint {:to 'clojure.pprint}
-   'async  {:to 'clojure.core.async}
-   'io     {:to 'clojure.java.io}})
-
 (defn ^:private find-missing-alias-require [zloc]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
         alias->info (->> (q/find-all-aliases (:analysis @db/db))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
-                                   (medley/distinct-by (juxt :to)))
-                          [(get common-alias->info require-alias)])]
+                                   (medley/distinct-by (juxt :to))
+                                   (map :to))
+                          (->> [(get common-sym/common-alias->info require-alias)]
+                               (remove nil?)))]
     (when (= 1 (count possibilities))
-      (some-> possibilities first :to name symbol))))
-
-(def ^:private common-refers->info
-  {'deftest      'clojure.test
-   'testing      'clojure.test
-   'is           'clojure.test
-   'are          'clojure.test
-   'ANY          'compojure.core
-   'DELETE       'compojure.core
-   'GET          'compojure.core
-   'PATCH        'compojure.core
-   'POST         'compojure.core
-   'PUT          'compojure.core
-   'context      'compojure.core
-   'defroutes    'compojure.core
-   'defentity    'korma.core
-   'reg-event-db 're-frame.core
-   'reg-sub      're-frame.core
-   'reg-event-fx 're-frame.core
-   'fact         'midje.sweet
-   'facts        'midje.sweet})
+      (some-> possibilities first name symbol))))
 
 (defn ^:private find-missing-refer-require [zloc]
   (let [refer-to-add (-> zloc z/sexpr symbol)
         ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)]
     (when (not (z/find-value ns-zip z/next refer-to-add))
-      (get common-refers->info (z/sexpr zloc)))))
+      (get common-sym/common-refers->info (z/sexpr zloc)))))
 
 (defn find-missing-require [zloc]
   (let [ns-str (some-> zloc z/sexpr namespace)]
@@ -519,7 +493,7 @@
 (defn find-missing-import [zloc]
   (->> zloc
        find-class-name
-       (get cc/java-util-imports)))
+       (get common-sym/java-util-imports)))
 
 (defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
   (let [ns-loc (edit/find-namespace zloc)

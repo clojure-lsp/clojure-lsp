@@ -3,6 +3,8 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [datalevin.lmdb :as l]
+   [datalevin.binding.graal]
+   [datalevin.binding.java]
    [taoensso.timbre :as log]))
 
 (defonce db (atom {:documents {}}))

@@ -23,18 +23,18 @@
       (.getAbsolutePath (io/file (str project-root) file)))))
 
 (defn make-db [project-root]
-  (l/open-lmdb (get-db-file-path project-root)))
+  (l/open-kv (get-db-file-path project-root)))
 
 (defn save-deps [project-root project-hash classpath analysis]
   (let [db (make-db project-root)]
     (l/open-dbi db table)
-    (l/transact db [[:del table :project-analysis]])
-    (l/transact db [[:put table :project-analysis {:version version
-                                                   :project-root (str project-root)
-                                                   :project-hash project-hash
-                                                   :classpath classpath
-                                                   :analysis analysis}]])
-    (l/close db)))
+    (l/transact-kv db [[:del table :project-analysis]])
+    (l/transact-kv db [[:put table :project-analysis {:version      version
+                                                      :project-root (str project-root)
+                                                      :project-hash project-hash
+                                                      :classpath    classpath
+                                                      :analysis     analysis}]])
+    (l/close-kv db)))
 
 (defn read-deps [project-root]
   (let [db (make-db project-root)]

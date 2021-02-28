@@ -13,6 +13,11 @@ then
     CLOJURE_LSP_JAR=$(ls target/clojure-lsp-*-standalone.jar)
 fi
 
+cd graalvm/c/
+gcc -Wall -g -c dtlv.c -o dtlv.o
+ar rcs libdtlv.a dtlv.o
+cd ../../
+
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}
 
 args=("-jar" "$CLOJURE_LSP_JAR"

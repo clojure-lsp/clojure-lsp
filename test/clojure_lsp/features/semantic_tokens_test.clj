@@ -82,7 +82,8 @@
     (h/load-code-and-locs
       (code "(ns some.ns (:require [clojure.test :refer [deftest]]))"
             "(deftest some-test 1)"))
-    (is (= [1 1 7 2 -1]
+    (is (= [0 44 7 2 -1
+            1 1 7 2 -1]
            (semantic-tokens/full-tokens "file:///a.clj"))))
   (testing "testing macro core tokens"
     (h/load-code-and-locs (code "(comment 1)"))

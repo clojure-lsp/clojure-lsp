@@ -38,6 +38,7 @@
 (defn ^:private elements->absolute-tokens
   [elements]
   (->> elements
+       (sort-by (juxt :name-row :name-col))
        (map
          (fn [{:keys [bucket macro] :as element}]
            (cond

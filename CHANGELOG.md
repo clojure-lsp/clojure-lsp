@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bump clj-kondo
+
 ## 2021.02.27-23.35.55
 
 - Add support to complete full qualified namespaces - Fixes #337

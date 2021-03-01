@@ -15,13 +15,13 @@
     [clojure-lsp.feature.rename :as f.rename]
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.feature.signature-help :as f.signature-help]
+    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
     [clojure-lsp.interop :as interop]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.producer :as producer]
     [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
     [clojure.pprint :as pprint]
-    [clojure.string :as string]
     [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]
@@ -120,17 +120,8 @@
             {:range (shared/->range reference)})
           references)))
 
-(defn workspace-symbols [{:keys [_query]}]
-  (->> (get-in @db/db [:analysis])
-       vals
-       flatten
-       (filter #(and (string/starts-with? (shared/filename->uri (:filename %)) "file://")
-                     (f.document-symbol/declaration? %)))
-       (mapv (fn [element]
-               {:name (-> element :name name)
-                :kind (f.document-symbol/element->symbol-kind element)
-                :location {:uri (shared/filename->uri (:filename element))
-                           :range (shared/->scope-range element)}}))))
+(defn workspace-symbols [{:keys [query]}]
+  (f.workspace-symbols/workspace-symbols query))
 
 (defn ^:private server-info []
   (let [db @db/db]

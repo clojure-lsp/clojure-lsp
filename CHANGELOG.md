@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Bump clj-kondo
+- Bump clj-kondo fixing issues on require form not being analyzed.
+- Fix textDocument/workspaceSymbols to use the query sent by client.
 
 ## 2021.02.27-23.35.55
 

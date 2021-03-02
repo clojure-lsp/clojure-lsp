@@ -1,0 +1,27 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  bump-homebrew-formula:
+    name: Bump Homebrew formula
+    runs-on: macOS-latest
+    steps:
+      - name: Bump Homebrew formula
+        run: |
+          git config --global user.name Clojure LSP Bot"
+          git config --global user.email ercdll1337+clojure-lsp@gmail.com"
+          mkdir ~/.ssh && touch ~/.ssh/id_rsa
+          echo "${{ secrets.CLOJURE_LSP_BOT_TOKEN }}" >> ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          git clone git@github.com:clojure-lsp/homebrew-brew.git
+          cd homebrew-brew
+          ls -la && pwd
+          sed -i "s@_url_@${{ env.URL }}@" ./clojure-lsp-native.rb
+          sed -i "s@_sha256_@${{ env.SHA256 }}@" ./clojure-lsp-native.rb
+          sed -i "s@_version_@${{ env.VERSION }}@" ./clojure-lsp-native.rb
+          cat clojure-lsp-native.rb
+          git add .
+          git commit -m Bump to version: ${{ env.VERSION }}"
+          git push

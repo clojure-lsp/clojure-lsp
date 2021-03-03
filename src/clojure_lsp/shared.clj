@@ -87,12 +87,16 @@
   (string/replace uri project-root ""))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
-  (when element
-    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
-     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
+  (try
+    (when (and element (or name-row row))
+      {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
+       :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}})
+    (catch Exception e
+      (log/warn "error in ->range, element = " (pr-str element))
+      (throw e))))
 
 (defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
-  (when element
+  (when (and element (or row name-row))
     {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
      :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
 

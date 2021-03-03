@@ -379,8 +379,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#lint" class="md-nav__link">
-    Lint
+  <a href="#diagnostics-linter" class="md-nav__link">
+    Diagnostics (linter)
   </a>
   
 </li>
@@ -547,8 +547,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#lint" class="md-nav__link">
-    Lint
+  <a href="#diagnostics-linter" class="md-nav__link">
+    Diagnostics (linter)
   </a>
   
 </li>
@@ -665,7 +665,7 @@
 </tr>
 <tr>
 <td><code>project-specs</code></td>
-<td>A vector containing a map of key/value pairs, defining how <code>clojure-lsp</code> should find your project classpath</td>
+<td>A vector of a map with <code>project-path</code> and <code>classpath-cmd</code>, defining how <code>clojure-lsp</code> should find your project classpath. the <code>project-path</code> should be a file and the <code>classpath-cmd</code> the command to run to get the classpath</td>
 <td>Check the default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60">here</a></td>
 </tr>
 <tr>
@@ -680,10 +680,13 @@
 </tr>
 </tbody>
 </table>
-<h3 id="lint">Lint<a class="headerlink" href="#lint" title="Permanent link">#</a></h3>
-<p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to lint the code and retrieve the analysis to
-make most of features work, make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file, for more information about available configurations, 
-check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
+<h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
+<p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
+make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
+that can be retrieved in <code>clojure-lsp --version</code>, but make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file. </p>
+<p>For more information about available configurations, 
+check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a>
+For more information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
                 
                   
                     
@@ -692,7 +695,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 1, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 3, 2021</span>
     
   </small>
 </div>

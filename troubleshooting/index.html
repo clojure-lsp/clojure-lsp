@@ -405,8 +405,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#old-analysis" class="md-nav__link">
-    Old analysis
+  <a href="#wrong-diagnosticslint" class="md-nav__link">
+    Wrong diagnostics/lint
   </a>
   
 </li>
@@ -554,8 +554,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#old-analysis" class="md-nav__link">
-    Old analysis
+  <a href="#wrong-diagnosticslint" class="md-nav__link">
+    Wrong diagnostics/lint
   </a>
   
 </li>
@@ -590,9 +590,10 @@
                 
                 
                 <h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h1>
-<p>Check if each step below is working:</p>
+<p>Below are the common issues ordered by the most important to specific ones:</p>
 <h2 id="server-is-not-initializing">Server is not initializing<a class="headerlink" href="#server-is-not-initializing" title="Permanent link">#</a></h2>
-<p>Check if the executable is working running it from the command line, it should start up and start reading stdin.
+<p>Make sure you have the <a href="https://clojure-lsp.github.io/clojure-lsp/installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>
+<p>Check if the executable is working running it from the command line, it should start up and start reading from stdin.
 Type <code>{}\n\n</code> and you should get something like:</p>
 <div class="highlight"><pre><span></span><code>$ clojure-lsp
 {}
@@ -612,7 +613,7 @@ java.lang.IllegalStateException: Missing header Content-Length in input &quot;{}
 <p>clojure-lsp uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to scan the classpath 
 during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.</p>
 <h3 id="classpath-scan-error">Classpath scan error<a class="headerlink" href="#classpath-scan-error" title="Permanent link">#</a></h3>
-<p>By default clojure-lsp knows how to scan most common clojure projects using following the rules below:</p>
+<p>By default clojure-lsp knows how to scan most common clojure projects using the following rules:</p>
 <ul>
 <li>If the project root has a <code>project.clj</code> file, it'll run <code>lein classpath</code> to get the classpath.</li>
 <li>If the project root has a <code>deps.edn</code> file, it'll run <code>clojure -Spath</code> to get the classpath.</li>
@@ -623,10 +624,14 @@ during server initialize for most features work, so make sure you don't see any 
 <h3 id="folders-not-being-analyzed">Folders not being analyzed<a class="headerlink" href="#folders-not-being-analyzed" title="Permanent link">#</a></h3>
 <p>By default clojure-lsp searches <code>src</code> and <code>test</code> for clj* files to read into an index.
 If the definition lives under a different source dir, you can define the <code>src-paths</code> setting, for more details check the <a href="https://clojure-lsp.github.io/clojure-lsp/settings/">settings section</a>.</p>
-<p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found.</p>
-<h3 id="old-analysis">Old analysis<a class="headerlink" href="#old-analysis" title="Permanent link">#</a></h3>
-<p>clojure-lsp persist the external jars analysis in a <code>.lsp/sqlite.db</code> file, if you have issues with some specific feature, 
-try to remove that file and restart the server.</p>
+<p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.</p>
+<h3 id="wrong-diagnosticslint">Wrong diagnostics/lint<a class="headerlink" href="#wrong-diagnosticslint" title="Permanent link">#</a></h3>
+<ul>
+<li>clojure-lsp persist the external jars analysis in a <code>.lsp/sqlite.db</code> file, if you have issues with some specific feature, 
+try to remove that file and restart the server.</li>
+<li>clojure-lsp use clj-kondo to lint and cache in a <code>.clj-kondo/.cache</code> dir, try to remove that file as well if you think it's not linting correctly</li>
+<li>If you have issues with macros, <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">double check your clj-kondo config</a>.</li>
+</ul>
 <hr />
 <h2 id="macos">MacOS<a class="headerlink" href="#macos" title="Permanent link">#</a></h2>
 <p>In some version of MacOS, Apple restrict the binary to run, to fix that run: <code>xattr -d com.apple.quarantine /path/to/clojure-lsp</code></p>
@@ -638,7 +643,7 @@ try to remove that file and restart the server.</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 1, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 3, 2021</span>
     
   </small>
 </div>

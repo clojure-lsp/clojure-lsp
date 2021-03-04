@@ -104,7 +104,6 @@
   "Handle a TextDocumentContentChangeEvent"
   [old-text change]
   (let [new-text (:text change)]
-    ;; there's also rangeLength but it's deprecated
     (if-let [r (:range change)] 
       (let [{{start-line :line
               start-character :character} :start
@@ -114,7 +113,6 @@
       ;; If range and rangeLength are omitted the new text is considered to be
       ;; the full content of the document.
       new-text)))
-
 
 (defn analyze-changes [{:keys [uri text version]}]
   (let [notify-references? (get-in @db/db [:settings :notify-references-on-file-change] false)]
@@ -135,8 +133,7 @@
 (defn did-change [uri changes version]
   (loop [state-db @db/db]
     (let [old-text (get-in state-db [:documents uri :text])
-          final-text (reduce (fn [old-text change]
-                               (handle-change old-text change)) old-text changes)]
+          final-text (reduce handle-change old-text changes)]
 
       (if (compare-and-set! db/db state-db (-> state-db
                                                (assoc-in [:documents uri :v] version)

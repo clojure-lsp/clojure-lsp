@@ -139,7 +139,7 @@
         :let [valid? (valid-element? element)
               _ (when (and (not valid?)
                            (not (macro-expanded-element? element)))
-                  (log/debug "Cannot find position data when analysing" (:name element) (pr-str element) (some-> (:name element) meta)))]
+                  (log/debug "Invalid clj-kondo analysis. Cannot find position data for" (:name element) (pr-str element) (some-> (:name element) meta)))]
         :when valid?]
     element))
 

@@ -18,9 +18,17 @@
                  :info    3)
      :source "clj-kondo"}))
 
+(defn ^:private valid-finding? [{:keys [row col end-row end-col] :as finding}]
+  (or (and row
+           col
+           end-row
+           end-col)
+      (log/warn "Invalid clj-kondo finding. Cannot find position data for" finding)))
+
 (defn notify [uri {:keys [findings]}]
   (async/put! db/diagnostics-chan
               {:uri uri
                :diagnostics (->> findings
                                  (filter #(= (shared/uri->filename uri) (:filename %)))
+                                 (filter valid-finding?)
                                  (mapv kondo-finding->diagnostic))}))

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix clojure-lsp lint crash when analyzing specific macros with clj-kondo hooks.
+- Fix didChange for Nvim client.
 
 ## 2021.03.01-19.18.54
 

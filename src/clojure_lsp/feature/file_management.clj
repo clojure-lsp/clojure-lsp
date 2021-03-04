@@ -100,6 +100,20 @@
                          (subs original end-offset (count original))]]
     (string/join [prefix replacement suffix])))
 
+(defn ^:private handle-change 
+  "Handle a TextDocumentContentChangeEvent"
+  [old-text change]
+  (let [new-text (:text change)]
+    (if-let [r (:range change)] 
+      (let [{{start-line :line
+              start-character :character} :start
+             {end-line :line
+              end-character :character} :end} r]
+        (replace-text old-text new-text start-line start-character end-line end-character))
+      ;; If range and rangeLength are omitted the new text is considered to be
+      ;; the full content of the document.
+      new-text)))
+
 (defn analyze-changes [{:keys [uri text version]}]
   (let [notify-references? (get-in @db/db [:settings :notify-references-on-file-change] false)]
     (loop [state-db @db/db]
@@ -119,11 +133,8 @@
 (defn did-change [uri changes version]
   (loop [state-db @db/db]
     (let [old-text (get-in state-db [:documents uri :text])
-          final-text (reduce (fn [old-text {new-text :text {{start-line :line
-                                                             start-character :character} :start
-                                                            {end-line :line
-                                                             end-character :character} :end} :range}]
-                               (replace-text old-text new-text start-line start-character end-line end-character)) old-text changes)]
+          final-text (reduce handle-change old-text changes)]
+
       (if (compare-and-set! db/db state-db (-> state-db
                                                (assoc-in [:documents uri :v] version)
                                                (assoc-in [:documents uri :text] final-text)))

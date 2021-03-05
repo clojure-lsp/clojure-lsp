@@ -756,6 +756,9 @@
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
 make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
 that can be retrieved in <code>clojure-lsp --version</code>, but make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file. </p>
+<p>You can disable clj-kondo diagnostics with:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}}}</span>
+</code></pre></div>
 <p>For more information about available configurations, 
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
 <h4 id="clojure-lsp">clojure-lsp<a class="headerlink" href="#clojure-lsp" title="Permanent link">#</a></h4>

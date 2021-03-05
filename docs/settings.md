@@ -60,6 +60,12 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
 that can be retrieved in `clojure-lsp --version`, but make sure you have it properly configured in your `.clj-kondo/config.edn` file. 
 
+You can disable clj-kondo diagnostics with:
+
+```clojure
+{:linters {:clj-kondo {:level :off}}}
+```
+
 For more information about available configurations, 
 check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 

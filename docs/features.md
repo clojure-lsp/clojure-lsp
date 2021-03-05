@@ -112,7 +112,7 @@ During some process, `clojure-lsp` send messages to client informing some procce
 Most linters come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp uses under the hood to lint the code and retrieve the analysis to
 make most of features work.
 
-Below you can find the custom linters implemented on clojure-lsp:
+Below you can find the custom linters implemented on clojure-lsp side:
 
 ### unused-public-var
 

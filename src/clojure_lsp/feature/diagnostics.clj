@@ -4,7 +4,6 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.set :as set]
    [taoensso.timbre :as log]))
 
 (defn ^:private kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
@@ -40,19 +39,20 @@
                :info    3)
    :source "clojure-lsp"})
 
-(def default-public-vars-to-exclude
-  '#{clojure.test/deftest})
+(def default-public-vars-defined-by-to-exclude
+  '#{clojure.test/deftest
+     state-flow.cljtest/defflow})
 
 (defn ^:private exclude-public-var? [settings var]
   (let [excluded-syms (get-in settings [:linters :unused-public-var :exclude] #{})
         excluded-vars (filter qualified-ident? excluded-syms)
         excluded-ns (filter simple-ident? excluded-syms)]
-    (not (or (-> excluded-ns
+    (not (or (contains? default-public-vars-defined-by-to-exclude (:defined-by var))
+             (-> excluded-ns
                  set
                  (contains? (:ns var)))
              (-> excluded-vars
                  set
-                 (set/union default-public-vars-to-exclude)
                  (contains? (symbol (-> var :ns str) (-> var :name str))))))))
 
 (defn ^:private lint-public-vars [uri analysis settings]
@@ -64,10 +64,16 @@
                          #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
            (mapv (partial unused-public-var->diagnostic settings))))))
 
-(defn notify [uri db]
+(defn ^:private find-diagnostics [uri db]
   (let [settings (get db :settings)]
-    (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (into
-                               (kondo-findings->diagnostics uri (:findings db))
-                               (lint-public-vars uri (:analysis db) settings))})))
+    (cond-> []
+      (not (= :off (get-in settings [:linters :clj-kondo :level])))
+      (concat (kondo-findings->diagnostics uri (:findings db)))
+
+      (not (= :off (get-in settings [:linters :unused-public-var :level])))
+      (concat (lint-public-vars uri (:analysis db) settings)))))
+
+(defn lint-project [uri db]
+  (async/put! db/diagnostics-chan
+              {:uri uri
+               :diagnostics (find-diagnostics uri db)}))

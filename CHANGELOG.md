@@ -5,6 +5,7 @@
 - Fix clojure-lsp lint crash when analyzing specific macros with clj-kondo hooks.
 - Fix didChange for Nvim client.
 - Add new clojure-lsp linter: unused-public-var - Fixes #359
+- Add option to disable clj-kondo linter, check settings documentation for more details.
 
 ## 2021.03.01-19.18.54
 

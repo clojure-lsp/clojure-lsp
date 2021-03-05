@@ -12,6 +12,7 @@ on:
       - 'images/**'
       - 'mkdocs.yml'
       - '.github/workflows/bump_deps.yml'
+      - '.github/workflows/bump_homebrew.yml'
   pull_request:
     paths-ignore:
       - '**/README.md'
@@ -21,6 +22,7 @@ on:
       - 'images/**'
       - 'mkdocs.yml'
       - '.github/workflows/bump_deps.yml'
+      - '.github/workflows/bump_homebrew.yml'
 
 jobs:
   unit-test:

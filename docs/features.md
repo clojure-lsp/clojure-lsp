@@ -107,8 +107,15 @@ Return debug information about the element at point.
 
 During some process, `clojure-lsp` send messages to client informing some proccess, warning or error.
 
-
 ## Diagnostics (linter)
 
-`clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to
-make most of features work. For more information, check the [diagnostics settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#diagnostics-linter).
+Most linters come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp uses under the hood to lint the code and retrieve the analysis to
+make most of features work.
+
+Below you can find the custom linters implemented on clojure-lsp:
+
+### unused-public-var
+
+![](images/features/unused-public-var.png)
+
+For more information on how to configure it, check the [diagnostics settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#diagnostics-linter).

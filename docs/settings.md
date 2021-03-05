@@ -37,6 +37,7 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 | name                            | description                                                                                                                                                                                                                                                                                                                                                                                                          | default                                                                                                              |
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
 | `source-paths`                  | project-local directories to look for clj/cljc/cljs files                                                                                                                                                                                                                                                                                                                                                            | `#{"src" "test"}`                                                                                                    |
+| `linter`                        | clojure-lsp custom linters, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                         | `{:unused-public-ns {:level :info}}`                                                                                 |
 | `ignore-classpath-directories`  | will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.                                                                                                                                                                                                             | `false`                                                                                                              |
 | `use-metadata-for-privacy?`     | Whether to use `^:private` metadata for refactorings instead of `defn-`                                                                                                                                                                                                                                                                                                                                              | `false`                                                                                                              |
 | `keep-require-at-start?`        | Whether to keep first require/import at the first line instead of inserting a new line before it when using `clean-ns` refactoring.                                                                                                                                                                                                                                                                                  | `false`                                                                                                              |
@@ -47,11 +48,13 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 | `document-range-formatting?`    | if true or not present, document range formatting is provided.                                                                                                                                                                                                                                                                                                                                                       | `true`                                                                                                               |
 | `dependency-scheme`             | How the dependencies should be linked, `jar` will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of `clojure/dependencyContents` with the jar uri and the server will return the jar entry's contents. [Similar to java clients](https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298) | `zip`                                                                                                                |
 | `cljfmt`                        | Used for formatting, json encoded configuration for [cljfmt](https://github.com/weavejester/cljfmt)                                                                                                                                                                                                                                                                                                                  | `{}`                                                                                                                 |
-| `project-specs`                 | A vector of a map with `project-path` and `classpath-cmd`, defining how `clojure-lsp` should find your project classpath. the `project-path` should be a file and the `classpath-cmd` the command to run to get the classpath                                                                                                                                                                                                                                                                                                          | Check the default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60) |
+| `project-specs`                 | A vector of a map with `project-path` and `classpath-cmd`, defining how `clojure-lsp` should find your project classpath. the `project-path` should be a file and the `classpath-cmd` the command to run to get the classpath                                                                                                                                                                                        | Check the default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60) |
 | `sqlite-db-path`                | Where to store the project's analysis cache, used to speed up next `clojure-lsp` startup. A path relative to project root or an absolute path.                                                                                                                                                                                                                                                                       | `.lsp/sqlite.db`                                                                                                     |
-| `log-path`                      | A absolute path to a file where clojure-lsp should log.                                                                                                                                                                                                                                                                                                                                                                     | A JVM tmp path, usually `/tmp/clojure-lsp.*.out`                                                                     |
+| `log-path`                      | A absolute path to a file where clojure-lsp should log.                                                                                                                                                                                                                                                                                                                                                              | A JVM tmp path, usually `/tmp/clojure-lsp.*.out`                                                                     |
 
-### Diagnostics (linter)
+### Diagnostics (linter) 
+
+#### clj-kondo
 
 `clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to
 make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
@@ -59,4 +62,27 @@ that can be retrieved in `clojure-lsp --version`, but make sure you have it prop
 
 For more information about available configurations, 
 check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
-For more information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.github.io/clojure-lsp/troubleshooting/)
+
+#### clojure-lsp
+
+At the moment clojure-lsp has only the custom linters below:
+
+##### unused-public-var
+
+This linter reports public functions/vars not used over the project.
+
+It has the possible key/values:
+
+- `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:info`.
+- `:exclude` a whole namespace with `#{my-ns}` or a specific var `#{my-ns/foo}`.
+
+Example:
+
+```clojure
+{:linters {:unused-public-var {:level :warning
+                               :exclude #{my-ns/foo 
+                                          my-ns/bar 
+                                          other-ns}}}}
+```
+
+For information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.github.io/clojure-lsp/troubleshooting/)

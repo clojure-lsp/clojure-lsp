@@ -43,7 +43,7 @@
                        (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
                        (crawler/update-analysis uri (:analysis result))
                        (crawler/update-findings uri (:findings result)))))
-    (f.diagnostic/notify uri result)))
+    (f.diagnostic/notify uri @db/db)))
 
 (defn ^:private find-changed-var-definitions [old-analysis new-analysis]
   (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)
@@ -70,7 +70,7 @@
             (swap! db/db (fn [db] (-> db
                                       (crawler/update-analysis uri (:analysis new-analysis))
                                       (crawler/update-findings uri (:findings new-analysis)))))
-            (f.diagnostic/notify uri new-analysis))))
+            (f.diagnostic/notify uri @db/db))))
       references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -125,7 +125,7 @@
                                                      (crawler/update-analysis uri (:analysis new-analysis))
                                                      (crawler/update-findings uri (:findings new-analysis))))
               (do
-                (f.diagnostic/notify uri new-analysis)
+                (f.diagnostic/notify uri @db/db)
                 (when notify-references?
                   (notify-references old-analysis (get-in @db/db [:analysis filename]))))
               (recur @db/db))))))))

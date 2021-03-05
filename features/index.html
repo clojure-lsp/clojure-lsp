@@ -679,6 +679,19 @@
     Diagnostics (linter)
   </a>
   
+    <nav class="md-nav" aria-label="Diagnostics (linter)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unused-public-var" class="md-nav__link">
+    unused-public-var
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1026,6 +1039,19 @@
     Diagnostics (linter)
   </a>
   
+    <nav class="md-nav" aria-label="Diagnostics (linter)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unused-public-var" class="md-nav__link">
+    unused-public-var
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1156,8 +1182,12 @@
 <h3 id="custom-message-to-client-during-any-server-process">Custom message to client during any server process<a class="headerlink" href="#custom-message-to-client-during-any-server-process" title="Permanent link">#</a></h3>
 <p>During some process, <code>clojure-lsp</code> send messages to client informing some proccess, warning or error.</p>
 <h2 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h2>
-<p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
-make most of features work. For more information, check the <a href="https://clojure-lsp.github.io/clojure-lsp/settings/#diagnostics-linter">diagnostics settings section</a>.</p>
+<p>Most linters come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp uses under the hood to lint the code and retrieve the analysis to
+make most of features work.</p>
+<p>Below you can find the custom linters implemented on clojure-lsp:</p>
+<h3 id="unused-public-var">unused-public-var<a class="headerlink" href="#unused-public-var" title="Permanent link">#</a></h3>
+<p><img alt="" src="../images/features/unused-public-var.png" /></p>
+<p>For more information on how to configure it, check the <a href="https://clojure-lsp.github.io/clojure-lsp/settings/#diagnostics-linter">diagnostics settings section</a>.</p>
                 
                   
                     
@@ -1166,7 +1196,7 @@ make most of features work. For more information, check the <a href="https://clo
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 4, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 5, 2021</span>
     
   </small>
 </div>

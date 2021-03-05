@@ -383,6 +383,39 @@
     Diagnostics (linter)
   </a>
   
+    <nav class="md-nav" aria-label="Diagnostics (linter)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clj-kondo" class="md-nav__link">
+    clj-kondo
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clojure-lsp" class="md-nav__link">
+    clojure-lsp
+  </a>
+  
+    <nav class="md-nav" aria-label="clojure-lsp">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unused-public-var" class="md-nav__link">
+    unused-public-var
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -551,6 +584,39 @@
     Diagnostics (linter)
   </a>
   
+    <nav class="md-nav" aria-label="Diagnostics (linter)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clj-kondo" class="md-nav__link">
+    clj-kondo
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clojure-lsp" class="md-nav__link">
+    clojure-lsp
+  </a>
+  
+    <nav class="md-nav" aria-label="clojure-lsp">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unused-public-var" class="md-nav__link">
+    unused-public-var
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -612,6 +678,11 @@
 <td><code>source-paths</code></td>
 <td>project-local directories to look for clj/cljc/cljs files</td>
 <td><code>#{"src" "test"}</code></td>
+</tr>
+<tr>
+<td><code>linter</code></td>
+<td>clojure-lsp custom linters, check the diagnostics settings section below</td>
+<td><code>{:unused-public-ns {:level :info}}</code></td>
 </tr>
 <tr>
 <td><code>ignore-classpath-directories</code></td>
@@ -681,12 +752,28 @@
 </tbody>
 </table>
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
+<h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
 make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
 that can be retrieved in <code>clojure-lsp --version</code>, but make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file. </p>
 <p>For more information about available configurations, 
-check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a>
-For more information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
+check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
+<h4 id="clojure-lsp">clojure-lsp<a class="headerlink" href="#clojure-lsp" title="Permanent link">#</a></h4>
+<p>At the moment clojure-lsp has only the custom linters below:</p>
+<h5 id="unused-public-var">unused-public-var<a class="headerlink" href="#unused-public-var" title="Permanent link">#</a></h5>
+<p>This linter reports public functions/vars not used over the project.</p>
+<p>It has the possible key/values:</p>
+<ul>
+<li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:info</code>.</li>
+<li><code>:exclude</code> a whole namespace with <code>#{my-ns}</code> or a specific var <code>#{my-ns/foo}</code>.</li>
+</ul>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:unused-public-var</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:warning</span>
+                               <span class="ss">:exclude</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/foo</span> 
+                                          <span class="nv">my-ns/bar</span> 
+                                          <span class="nv">other-ns</span><span class="p">}}}}</span>
+</code></pre></div>
+<p>For information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
                 
                   
                     
@@ -695,7 +782,7 @@ For more information on how to troubleshoot the linter, check the <a href="https
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 4, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 5, 2021</span>
     
   </small>
 </div>

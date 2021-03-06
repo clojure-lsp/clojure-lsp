@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix incremental didChange, debouncing distincting by uri, fixing some inconsistent file changes
+when multiple files are changed at same time (rename, iedit, etc).
+
 ## 2021.03.05-13.35.47
 
 - Fix clojure-lsp lint crash when analyzing specific macros with clj-kondo hooks.

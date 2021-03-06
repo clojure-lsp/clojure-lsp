@@ -9,6 +9,7 @@
 
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
+  (h/load-code-and-locs "(ns some-ns) (defn -main [& _args] 1)" "file:///b.clj")
   (testing "when linter level is :off"
     (swap! db/db merge {:settings {:linters {:unused-public-var {:level :off}}}})
     (is (= []
@@ -58,7 +59,12 @@
     (swap! db/db merge {:settings {:linters {:unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
      []
-     (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db))))
+     (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
+  (testing "excluding specific syms"
+    (swap! db/db merge {})
+    (h/assert-submaps
+      []
+     (#'f.diagnostic/find-diagnostics "file:///b.clj" @db/db))))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")

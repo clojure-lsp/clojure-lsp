@@ -43,11 +43,15 @@
   '#{clojure.test/deftest
      state-flow.cljtest/defflow})
 
+(def default-public-vars-name-to-exclude
+  '#{-main})
+
 (defn ^:private exclude-public-var? [settings var]
   (let [excluded-syms (get-in settings [:linters :unused-public-var :exclude] #{})
         excluded-vars (filter qualified-ident? excluded-syms)
         excluded-ns (filter simple-ident? excluded-syms)]
     (not (or (contains? default-public-vars-defined-by-to-exclude (:defined-by var))
+             (contains? default-public-vars-name-to-exclude (:name var))
              (-> excluded-ns
                  set
                  (contains? (:ns var)))

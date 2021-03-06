@@ -4,6 +4,7 @@
 
 - Fix incremental didChange, debouncing distincting by uri, fixing some inconsistent file changes
 when multiple files are changed at same time (rename, iedit, etc).
+- Make unused-public-var ignore -main public functions.
 
 ## 2021.03.05-13.35.47
 

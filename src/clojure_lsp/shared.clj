@@ -102,15 +102,6 @@
         (for [[k v] m]
           [(keyword k) v])))
 
-(defn check-bounds
-  [line column {:keys [row end-row col end-col] :as _usage}]
-  (cond
-    (< line row) :before
-    (and (= line row) (< column col)) :before
-    (< line end-row) :within
-    (and (= end-row line) (>= end-col column)) :within
-    :else :after))
-
 (defn position->line-column [position]
   [(inc (:line position))
    (inc (:character position))])

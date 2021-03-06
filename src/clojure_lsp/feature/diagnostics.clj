@@ -4,7 +4,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure.set :as set]))
 
 (defn ^:private kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
   (let [expression? (not= row (:end-row finding))
@@ -48,9 +49,11 @@
 
 (defn ^:private exclude-public-var? [settings var]
   (let [excluded-syms (get-in settings [:linters :unused-public-var :exclude] #{})
+        excluded-defined-by-syms (get-in settings [:linters :unused-public-var :exclude-when-defined-by] #{})
         excluded-vars (filter qualified-ident? excluded-syms)
         excluded-ns (filter simple-ident? excluded-syms)]
-    (not (or (contains? default-public-vars-defined-by-to-exclude (:defined-by var))
+    (not (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
+                        (:defined-by var))
              (contains? default-public-vars-name-to-exclude (:name var))
              (-> excluded-ns
                  set

@@ -81,6 +81,7 @@ It has the possible key/values:
 
 - `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:info`.
 - `:exclude` a whole namespace with `#{my-ns}` or a specific var `#{my-ns/foo}`.
+- `:exclude-when-defined-by` excludes this linter when your var is defined by a macro for example, like `#{my-ns/deftest}`.
 
 Example:
 
@@ -88,7 +89,8 @@ Example:
 {:linters {:unused-public-var {:level :warning
                                :exclude #{my-ns/foo 
                                           my-ns/bar 
-                                          other-ns}}}}
+                                          other-ns}
+                               :exclude-when-defined-by #{my-ns/defflow}}}}
 ```
 
 For information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.github.io/clojure-lsp/troubleshooting/)

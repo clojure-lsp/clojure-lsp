@@ -31,7 +31,7 @@ jobs:
           git config --global user.name "Clojure LSP Bot"
           git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
           mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/homebrew-brew.git
           cd homebrew-brew
           sed -i .rb 's/sha256 ".*"/sha256 "${{ env.SHA256 }}"/g' clojure-lsp-native.rb

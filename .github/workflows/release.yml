@@ -279,7 +279,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
         with:
           tag_name: ${{ steps.latest-tag.outputs.tag}}
           release_name: ${{ steps.latest-tag.outputs.tag}}
@@ -299,7 +299,7 @@ jobs:
       - name: Upload JVM
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp.jar/clojure-lsp.jar
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
@@ -307,7 +307,7 @@ jobs:
       - name: Upload JVM unix embbeded jar
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp/clojure-lsp
           asset_name: clojure-lsp
           tag: ${{ steps.latest-tag.outputs.tag}}
@@ -315,7 +315,7 @@ jobs:
       - name: Upload JVM Windows embedded jar
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp/clojure-lsp
           asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
@@ -323,7 +323,7 @@ jobs:
       - name: Upload Linux native binary
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-linux-amd64.zip/clojure-lsp-native-linux-amd64.zip
           asset_name: clojure-lsp-native-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
@@ -331,7 +331,7 @@ jobs:
       - name: Upload static Linux native binary
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-static-linux-amd64.zip/clojure-lsp-native-static-linux-amd64.zip
           asset_name: clojure-lsp-native-static-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
@@ -339,7 +339,7 @@ jobs:
       - name: Upload MacOS native binary
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip
           asset_name: clojure-lsp-native-macos-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}
@@ -347,7 +347,7 @@ jobs:
       - name: Upload Windows native binary
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-windows-amd64.zip/clojure-lsp-native-windows-amd64.zip
           asset_name: clojure-lsp-native-windows-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}

@@ -769,12 +769,14 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <ul>
 <li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:info</code>.</li>
 <li><code>:exclude</code> a whole namespace with <code>#{my-ns}</code> or a specific var <code>#{my-ns/foo}</code>.</li>
+<li><code>:exclude-when-defined-by</code> excludes this linter when your var is defined by a macro for example, like <code>#{my-ns/deftest}</code>.</li>
 </ul>
 <p>Example:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:unused-public-var</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:warning</span>
                                <span class="ss">:exclude</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/foo</span> 
                                           <span class="nv">my-ns/bar</span> 
-                                          <span class="nv">other-ns</span><span class="p">}}}}</span>
+                                          <span class="nv">other-ns</span><span class="p">}</span>
+                               <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}}}}</span>
 </code></pre></div>
 <p>For information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
                 

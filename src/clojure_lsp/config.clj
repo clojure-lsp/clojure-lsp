@@ -6,6 +6,7 @@
     [clojure.string :as string]
     [taoensso.timbre :as log]))
 
+(def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
 
 (def clojure-lsp-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))

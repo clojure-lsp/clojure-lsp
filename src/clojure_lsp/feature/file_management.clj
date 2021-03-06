@@ -63,15 +63,15 @@
   (let [changed-var-definitions (find-changed-var-definitions old-analysis new-analysis)
         references-uri (find-references-uris (:analysis @db/db) changed-var-definitions)]
     (mapv
-      (fn [uri]
-        (when-let [text (get-in @db/db [:documents uri :text])]
-          (log/debug "Analyzing reference" uri)
-          (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
-            (swap! db/db (fn [db] (-> db
-                                      (crawler/update-analysis uri (:analysis new-analysis))
-                                      (crawler/update-findings uri (:findings new-analysis)))))
-            (f.diagnostic/lint-project uri @db/db))))
-      references-uri)))
+     (fn [uri]
+       (when-let [text (get-in @db/db [:documents uri :text])]
+         (log/debug "Analyzing reference" uri)
+         (when-let [new-analysis (crawler/run-kondo-on-text! text uri)]
+           (swap! db/db (fn [db] (-> db
+                                     (crawler/update-analysis uri (:analysis new-analysis))
+                                     (crawler/update-findings uri (:findings new-analysis)))))
+           (f.diagnostic/lint-project uri @db/db))))
+     references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -100,11 +100,11 @@
                          (subs original end-offset (count original))]]
     (string/join [prefix replacement suffix])))
 
-(defn ^:private handle-change 
+(defn ^:private handle-change
   "Handle a TextDocumentContentChangeEvent"
   [old-text change]
   (let [new-text (:text change)]
-    (if-let [r (:range change)] 
+    (if-let [r (:range change)]
       (let [{{start-line :line
               start-character :character} :start
              {end-line :line
@@ -131,18 +131,14 @@
               (recur @db/db))))))))
 
 (defn did-change [uri changes version]
-  (loop [state-db @db/db]
-    (let [old-text (get-in state-db [:documents uri :text])
-          final-text (reduce handle-change old-text changes)]
-
-      (if (compare-and-set! db/db state-db (-> state-db
-                                               (assoc-in [:documents uri :v] version)
-                                               (assoc-in [:documents uri :text] final-text)))
-
-        (async/put! db/current-changes-chan {:uri uri
-                                             :text final-text
-                                             :version version})
-        (recur @db/db)))))
+  (let [old-text (get-in @db/db [:documents uri :text])
+        final-text (reduce handle-change old-text changes)]
+    (swap! db/db (fn [state-db] (-> state-db
+                                    (assoc-in [:documents uri :v] version)
+                                    (assoc-in [:documents uri :text] final-text))))
+    (async/put! db/current-changes-chan {:uri uri
+                                         :text final-text
+                                         :version version})))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

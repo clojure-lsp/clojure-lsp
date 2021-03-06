@@ -1,10 +1,10 @@
 (ns clojure-lsp.shared
   (:require
-    [clojure-lsp.db :as db]
-    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
-    [clojure.java.shell :as shell]
-    [clojure.string :as string]
-    [taoensso.timbre :as log])
+   [clojure-lsp.db :as db]
+   [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
+   [clojure.java.shell :as shell]
+   [clojure.string :as string]
+   [taoensso.timbre :as log])
   (:import
    [java.net URI]
    [java.nio.file Paths]))
@@ -19,7 +19,7 @@
        (if (next kvs)
          (recur ret (first kvs) (second kvs) (nnext kvs))
          (throw (IllegalArgumentException.
-                  "assoc-some expects even number of arguments after map/vector, found odd number")))
+                 "assoc-some expects even number of arguments after map/vector, found odd number")))
        ret))))
 
 (def windows-os?
@@ -115,15 +115,23 @@
   [(inc (:line position))
    (inc (:character position))])
 
-(defn debounce [in ms]
+(defn debounce-by
+  "Debounce in channel with ms miliseconds distincting by by-fn."
+  [in ms by-fn]
   (let [out (chan)]
     (go-loop [last-val nil]
       (let [val (if (nil? last-val) (<! in) last-val)
             timer (timeout ms)
-            [new-val ch] (alts! [in timer])]
-        (condp = ch
-          timer (do (>! out val) (recur nil))
-          in (recur new-val))))
+            [new-val ch] (alts! [in timer])
+            different? (and new-val
+                            (not (= (by-fn val) (by-fn new-val))))]
+        (cond
+          different? (do (>! out val)
+                         (>! out new-val)
+                         (recur nil))
+          (= ch timer) (do (>! out val)
+                           (recur nil))
+          (= ch in) (recur new-val))))
     out))
 
 (defn deep-merge [a b]

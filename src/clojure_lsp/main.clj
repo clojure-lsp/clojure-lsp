@@ -389,12 +389,13 @@
     (go-loop [edit (<! db/edits-chan)]
       (producer/workspace-apply-edit edit)
       (recur (<! db/edits-chan)))
-    (go-loop [diagnostic (<! db/diagnostics-chan)]
-      (producer/publish-diagnostic diagnostic)
-      (recur (<! db/diagnostics-chan)))
-    (let [debounced-chan (shared/debounce db/current-changes-chan config/change-debounce-ms)]
+    (let [debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms (constantly nil))
+          debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
       (go-loop []
-        (f.file-management/analyze-changes (<! debounced-chan))
+        (producer/publish-diagnostic (<! debounced-diags))
+        (recur))
+      (go-loop []
+        (f.file-management/analyze-changes (<! debounced-changes))
         (recur)))
     (.startListening launcher)))
 

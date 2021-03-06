@@ -2,7 +2,7 @@ name: Update Homebrew Formula
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   bump-homebrew-formula:

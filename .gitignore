@@ -15,4 +15,4 @@
 /.clj-kondo/.cache
 /.clj-kondo/cache
 /.calva/output-window
-clojure-lsp
+/clojure-lsp

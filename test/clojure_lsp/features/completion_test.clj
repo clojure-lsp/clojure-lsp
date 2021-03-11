@@ -1,10 +1,10 @@
 (ns clojure-lsp.features.completion-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.completion :as f.completion]
-    [clojure-lsp.test-helper :as h]
-    [clojure.string :as string]
-    [clojure.test :refer [deftest testing is]]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.completion :as f.completion]
+   [clojure-lsp.test-helper :as h]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest testing is]]))
 
 (h/reset-db-after-test)
 
@@ -111,37 +111,36 @@
 
 (deftest completing-full-ns
   (h/load-code-and-locs
-    (h/code "(ns alpaca.ns)"
-            "(def foo 1)"))
+   (h/code "(ns alpaca.ns)"
+           "(def foo 1)"))
   (let [[[full-ns-r full-ns-c]] (h/load-code-and-locs
-                                  (h/code "(ns foo)"
-                                          "(alpaca.ns/f|)") "file:///b.clj")]
+                                 (h/code "(ns foo)"
+                                         "(alpaca.ns/f|)") "file:///b.clj")]
     (testing "completing a project full ns"
       (h/assert-submaps
-        [{:label "alpaca.ns/foo" :kind :variable}]
-        (f.completion/completion "file:///b.clj" full-ns-r full-ns-c)))))
+       [{:label "alpaca.ns/foo" :kind :variable}]
+       (f.completion/completion "file:///b.clj" full-ns-r full-ns-c)))))
 
 (deftest completing-with-reader-macros
   (let [[[before-reader-r before-reader-c]
          [after-reader-r after-reader-c]] (h/load-code-and-locs
-                                              (h/code "(ns foo)"
-                                                      "(def some-function 1)"
-                                                      "some-fun|"
-                                                      "1"
-                                                      "#?(:clj \"clojure\" :cljs \"clojurescript\")"
-                                                      "1"
-                                                      "some-fun|") "file:///a.cljc")]
+                                           (h/code "(ns foo)"
+                                                   "(def some-function 1)"
+                                                   "some-fun|"
+                                                   "1"
+                                                   "#?(:clj \"clojure\" :cljs \"clojurescript\")"
+                                                   "1"
+                                                   "some-fun|") "file:///a.cljc")]
     (testing "before reader macro"
       (h/assert-submaps
-        [{:label         "some-function"
-          :kind          :variable}]
-        (f.completion/completion "file:///a.cljc" before-reader-r before-reader-c)))
+       [{:label         "some-function"
+         :kind          :variable}]
+       (f.completion/completion "file:///a.cljc" before-reader-r before-reader-c)))
     (testing "after reader macro"
       (h/assert-submaps
-        [{:label         "some-function"
-          :kind          :variable}]
-        (f.completion/completion "file:///a.cljc" after-reader-r after-reader-c)))))
-
+       [{:label         "some-function"
+         :kind          :variable}]
+       (f.completion/completion "file:///a.cljc" after-reader-r after-reader-c)))))
 
 (deftest resolve-item-test
   (h/load-code-and-locs "(ns a) (def foo \"Some docs\" 1)")
@@ -162,3 +161,28 @@
                                        :kind :function
                                        :data {:name "foo"
                                               :ns "a"}})))))
+
+(deftest completing-refers
+  (h/load-code-and-locs
+   (h/code "(ns some-ns)"
+           "(def foob 1)"
+           "(defn barb [] foo)") "file:///a.clj")
+  (h/load-code-and-locs
+   (h/code "(ns alpaca.ns)"
+           "(def foo 1)"
+           "(defn bar [] foo)") "file:///b.clj")
+  (let [[[refer-vec-r refer-vec-c]] (h/load-code-and-locs
+                                     (h/code "(ns foo"
+                                             "  (:require [alpaca.ns :refer [|]]))") "file:///c.clj")
+        [[ba-refer-r ba-refer-c]] (h/load-code-and-locs
+                                     (h/code "(ns foo"
+                                             "  (:require [alpaca.ns :refer [ba|]]))") "file:///d.clj")]
+    (testing "completing all available refers"
+      (h/assert-submaps
+        [{:label "bar" :kind :function}
+         {:label "foo" :kind :variable}]
+       (f.completion/completion "file:///c.clj" refer-vec-r refer-vec-c)))
+    (testing "completing specific refer"
+      (h/assert-submaps
+        [{:label "bar" :kind :function}]
+       (f.completion/completion "file:///d.clj" ba-refer-r ba-refer-c)))))

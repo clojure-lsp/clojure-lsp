@@ -151,6 +151,14 @@
                      (matches-fn (:name %))))
        (map #(element->completion-item % nil))))
 
+(defn ^:private with-refer-elements [matches-fn cursor-loc other-ns-elements]
+  (let [refer-ns (z/sexpr (edit/find-refer-ns cursor-loc))]
+    (->> other-ns-elements
+         (filter #(and (= :var-definitions (:bucket %))
+                       (= refer-ns (:ns %))
+                       (matches-fn (:name %))))
+         (map #(element->completion-item % nil)))))
+
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn analysis]
   (when-let [aliases (some->> analysis
                               (q/filter-project-analysis)
@@ -244,12 +252,15 @@
                            usage
                            (when (pos? try-column)
                              (recur (dec try-column)))))
-        cursor-value (if cursor-loc
-                       (z/sexpr cursor-loc)
-                       (or (:name cursor-element)
-                           ""))
+        cursor-value (if (= :vector (z/tag cursor-loc))
+                       ""
+                       (if cursor-loc
+                         (z/sexpr cursor-loc)
+                         (or (:name cursor-element)
+                             "")))
         matches-fn (partial matches-cursor? cursor-value)
         inside-require? (edit/inside-require? cursor-loc)
+        inside-refer? (edit/inside-refer? cursor-loc)
         simple-cursor? (or (simple-ident? cursor-value)
                            (string/blank? (str cursor-value)))
         cursor-value-or-ns (if (qualified-ident? cursor-value)
@@ -260,11 +271,20 @@
                                (str cursor-value)))
         cursor-full-ns? (when cursor-value-or-ns
                           (contains? (q/find-all-ns-definitions analysis) (symbol cursor-value-or-ns)))]
-    (if inside-require?
+    (cond
+      inside-refer?
+      (->> (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
+           (into #{})
+           (sort-by :label)
+           not-empty)
+
+      inside-require?
       (->> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
            (into #{})
            (sort-by :label)
            not-empty)
+
+      :else
       (cond-> #{}
         cursor-full-ns?
         (into (with-elements-from-full-ns cursor-value-or-ns analysis))

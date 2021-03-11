@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix completion inside refers, re-add support for it - Fixes #364
+
 ## 2021.03.06-17.05.35
 
 - Fix incremental didChange, debouncing distincting by uri, fixing some inconsistent file changes

@@ -96,13 +96,6 @@
                        (with-meta node-meta)))
         (z/insert-child node))))
 
-(defn wrap-meta [zloc metadata]
-  (let [node (z/node zloc)
-        node-meta (meta node)]
-    (-> zloc
-        (z/replace (-> (n/meta-node (z/node metadata) (z/sexpr zloc))
-                       (with-meta node-meta))))))
-
 (defn parent-let? [zloc]
   (let [parent-op (-> zloc z/leftmost)]
     (when (= 'let (-> parent-op z/sexpr))
@@ -131,24 +124,23 @@
           (z/up))) ; move to let-form
     let-loc))
 
-(defn inside? [zloc possible-parent]
-  (z/find zloc z/up (fn [loc]
-                      (= possible-parent (z/up loc)))))
-
-
 (defn inside-require? [zloc]
   (or (and (find-ops-up zloc "ns")
            (find-ops-up zloc ":require"))
       (find-ops-up zloc "require")))
 
-(defn skip-over [loc]
-  (if (z/down loc)
-    (->> loc
-         z/down
-         z/rightmost
-         (z/skip z/up z/rightmost?)
-         z/right)
-    (z/next loc)))
+(defn inside-refer? [zloc]
+  (and (inside-require? zloc)
+       (or (and (= :vector (z/tag zloc))
+                (= :refer (-> zloc z/left z/value)))
+           (and (= :token (z/tag zloc))
+                (= :refer (-> zloc z/up z/left z/value))))))
+
+(defn find-refer-ns [zloc]
+  (when (inside-refer? zloc)
+    (if (= :vector (z/tag zloc))
+      (z/leftmost zloc)
+      (z/leftmost (z/up zloc)))))
 
 (defn find-namespace [zloc]
   (-> zloc
@@ -168,12 +160,6 @@
 (defn back-to-mark-or-nil
   [zloc marker]
   (z/find zloc z/prev (fn [loc] (contains? (get (z/node loc) ::markers) marker))))
-
-(defn back-to-mark
-  [zloc marker]
-  (if-let [mloc (back-to-mark-or-nil zloc marker)]
-    mloc
-    zloc))
 
 (defn mark-position
   [zloc marker]

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix completion inside refers, re-add support for it - Fixes #364
+- Change range of expression functions clj-kondo diagnostics to avoid collision with function signature.
 
 ## 2021.03.06-17.05.35
 

@@ -1,14 +1,22 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [taoensso.timbre :as log]
-   [clojure.set :as set]))
+   [clojure.set :as set]
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
-(defn ^:private kondo-finding->diagnostic [{:keys [type message level row col] :as finding}]
-  (let [expression? (not= row (:end-row finding))
+(defn ^:private kondo-finding->diagnostic
+  [{:keys [type message level row col end-row] :as finding}
+   text]
+  (let [start-char (-> (parser/loc-at-pos text row col)
+                       z/string
+                       (nth 0 nil))
+        expression? (or (not= row end-row)
+                        (identical? \( start-char))
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   expression? (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
@@ -24,11 +32,11 @@
   (or (and row col)
       (log/warn "Invalid clj-kondo finding. Cannot find position data for" finding)))
 
-(defn ^:private kondo-findings->diagnostics [uri findings]
+(defn ^:private kondo-findings->diagnostics [uri findings text]
   (->> (get findings (shared/uri->filename uri))
        (filter #(= (shared/uri->filename uri) (:filename %)))
        (filter valid-finding?)
-       (mapv kondo-finding->diagnostic)))
+       (mapv #(kondo-finding->diagnostic % text))))
 
 (defn ^:private unused-public-var->diagnostic [settings var]
   {:range (shared/->range var)
@@ -75,7 +83,7 @@
   (let [settings (get db :settings)]
     (cond-> []
       (not (= :off (get-in settings [:linters :clj-kondo :level])))
-      (concat (kondo-findings->diagnostics uri (:findings db)))
+      (concat (kondo-findings->diagnostics uri (:findings db) (get-in db [:documents uri :text])))
 
       (not (= :off (get-in settings [:linters :unused-public-var :level])))
       (concat (lint-public-vars uri (:analysis db) settings)))))

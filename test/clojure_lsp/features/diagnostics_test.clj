@@ -68,6 +68,7 @@
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")
+  (h/load-code-and-locs "(ns other-ns) (assert )" "file:///b.clj")
   (testing "when linter level is :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
@@ -87,4 +88,12 @@
              :code "unused-private-var"
              :severity 2
              :source "clj-kondo"}]
-           (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))))
+           (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db))))
+  (testing "when inside expression?"
+    (swap! db/db merge {:settings {}})
+    (is (= [{:range {:start {:line 0 :character 14} :end {:line 0 :character 14}}
+             :message "clojure.core/assert is called with 0 args but expects 1 or 2"
+             :code "invalid-arity"
+             :severity 1
+             :source "clj-kondo"}]
+           (#'f.diagnostic/find-diagnostics "file:///b.clj" @db/db)))))

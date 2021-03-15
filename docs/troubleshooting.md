@@ -2,7 +2,7 @@
 
 Below are the common issues ordered by the most important to specific ones:
 
-## Server is not initializing 
+## Server is not initializing
 
 Make sure you have the [most recent version of `clojure-lsp`](https://clojure-lsp.github.io/clojure-lsp/installation/#native-binary-recommended)
 
@@ -26,11 +26,48 @@ If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.*.out`, so watch that file 
 
 LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.
 
+For example, if you are using [neovim](https://neovim.io/) with
+[CoC](https://github.com/neoclide/coc.nvim), first ensure that
+`trace.server` is set to `verbose` in your `coc-settings.json` file,
+e.g.,
+
+```json
+  "languageserver": {
+    "clojure-lsp": {
+      "command": "clojure-lsp",
+      "filetypes": ["clojure"],
+      "disableDiagnostics": true,
+      "rootPatterns": ["deps.edn", "project.clj"],
+      "additionalSchemes": ["jar", "zipfile"],
+      "trace.server": "verbose",
+      "initializationOptions": {
+        "project-specs": [{
+          "project-path": "deps.edn",
+          "classpath-cmd": ["clj", "-Spath"]
+        }],
+        "use-metadata-for-privacy?": true,
+        "ignore-classpath-directories": true
+      }
+    }
+  }
+```
+
+Then, once vim has loaded (and clojure-lsp has initialised), you can
+issue this command:
+
+`:CocCommand workspace.showOutput`
+
+This will show the JSON request/response bodies that go between vim
+and clojure-lsp. Please capture that information if you need help in
+tracking down the problem you are experiencing (either by reporting
+github issues, or talking with someone in Slack/Discord or
+whatever...)
+
 ---
 
 ## Some features are not working
 
-clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to scan the classpath 
+clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to scan the classpath
 during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.
 
 ### Classpath scan error
@@ -53,7 +90,7 @@ It is also important to get your `project-root` correct in your client otherwise
 
 ### Wrong diagnostics/lint
 
-- clojure-lsp persist the external jars analysis in a `.lsp/sqlite.db` file, if you have issues with some specific feature, 
+- clojure-lsp persist the external jars analysis in a `.lsp/sqlite.db` file, if you have issues with some specific feature,
 try to remove that file and restart the server.
 - clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that file as well if you think it's not linting correctly
 - If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).

@@ -608,9 +608,40 @@ java.lang.IllegalStateException: Missing header Content-Length in input &quot;{}
 </code></pre></div>
 <p>If that is ok, clojure-lsp logs to <code>/tmp/clojure-lsp.*.out</code>, so watch that file and start your editor.</p>
 <p>LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.</p>
+<p>For example, if you are using <a href="https://neovim.io/">neovim</a> with
+<a href="https://github.com/neoclide/coc.nvim">CoC</a>, first ensure that
+<code>trace.server</code> is set to <code>verbose</code> in your <code>coc-settings.json</code> file,
+e.g.,</p>
+<div class="highlight"><pre><span></span><code>  <span class="nt">&quot;languageserver&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;clojure-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="s2">&quot;clojure-lsp&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;filetypes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;clojure&quot;</span><span class="p">],</span>
+      <span class="nt">&quot;disableDiagnostics&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="nt">&quot;rootPatterns&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;deps.edn&quot;</span><span class="p">,</span> <span class="s2">&quot;project.clj&quot;</span><span class="p">],</span>
+      <span class="nt">&quot;additionalSchemes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;jar&quot;</span><span class="p">,</span> <span class="s2">&quot;zipfile&quot;</span><span class="p">],</span>
+      <span class="nt">&quot;trace.server&quot;</span><span class="p">:</span> <span class="s2">&quot;verbose&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;project-specs&quot;</span><span class="p">:</span> <span class="p">[{</span>
+          <span class="nt">&quot;project-path&quot;</span><span class="p">:</span> <span class="s2">&quot;deps.edn&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;classpath-cmd&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;clj&quot;</span><span class="p">,</span> <span class="s2">&quot;-Spath&quot;</span><span class="p">]</span>
+        <span class="p">}],</span>
+        <span class="nt">&quot;use-metadata-for-privacy?&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;ignore-classpath-directories&quot;</span><span class="p">:</span> <span class="kc">true</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div>
+<p>Then, once vim has loaded (and clojure-lsp has initialised), you can
+issue this command:</p>
+<p><code>:CocCommand workspace.showOutput</code></p>
+<p>This will show the JSON request/response bodies that go between vim
+and clojure-lsp. Please capture that information if you need help in
+tracking down the problem you are experiencing (either by reporting
+github issues, or talking with someone in Slack/Discord or
+whatever...)</p>
 <hr />
 <h2 id="some-features-are-not-working">Some features are not working<a class="headerlink" href="#some-features-are-not-working" title="Permanent link">#</a></h2>
-<p>clojure-lsp uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to scan the classpath 
+<p>clojure-lsp uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to scan the classpath
 during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.</p>
 <h3 id="classpath-scan-error">Classpath scan error<a class="headerlink" href="#classpath-scan-error" title="Permanent link">#</a></h3>
 <p>By default clojure-lsp knows how to scan most common clojure projects using the following rules:</p>
@@ -627,7 +658,7 @@ If the definition lives under a different source dir, you can define the <code>s
 <p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.</p>
 <h3 id="wrong-diagnosticslint">Wrong diagnostics/lint<a class="headerlink" href="#wrong-diagnosticslint" title="Permanent link">#</a></h3>
 <ul>
-<li>clojure-lsp persist the external jars analysis in a <code>.lsp/sqlite.db</code> file, if you have issues with some specific feature, 
+<li>clojure-lsp persist the external jars analysis in a <code>.lsp/sqlite.db</code> file, if you have issues with some specific feature,
 try to remove that file and restart the server.</li>
 <li>clojure-lsp use clj-kondo to lint and cache in a <code>.clj-kondo/.cache</code> dir, try to remove that file as well if you think it's not linting correctly</li>
 <li>If you have issues with macros, <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">double check your clj-kondo config</a>.</li>

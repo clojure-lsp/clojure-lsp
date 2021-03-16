@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix server not analyzing after a wrong code on cljs files - #367
+- Rollback incremental didChange adding a new `:text-document-sync-kind` setting with `:full` as default.
 
 ## 2021.03.14-23.22.46
 

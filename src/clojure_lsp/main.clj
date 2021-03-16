@@ -395,7 +395,9 @@
         (producer/publish-diagnostic (<! debounced-diags))
         (recur))
       (go-loop []
-        (f.file-management/analyze-changes (<! debounced-changes))
+        (try
+          (f.file-management/analyze-changes (<! debounced-changes))
+          (catch Exception e (log/error e "in analyze go-loop")))
         (recur)))
     (.startListening launcher)))
 

@@ -397,7 +397,8 @@
       (go-loop []
         (try
           (f.file-management/analyze-changes (<! debounced-changes))
-          (catch Exception e (log/error e "in analyze go-loop")))
+          (catch Exception e
+            (log/error e "Error during analyzing buffer file changes")))
         (recur)))
     (.startListening launcher)))
 

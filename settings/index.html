@@ -725,6 +725,11 @@
 <td><code>true</code></td>
 </tr>
 <tr>
+<td><code>text-document-sync-kind</code></td>
+<td>The sync kind during document changes, if client should send whole buffer or just related changes. Should be <code>:full</code> or <code>:incremental</code></td>
+<td><code>:full</code></td>
+</tr>
+<tr>
 <td><code>dependency-scheme</code></td>
 <td>How the dependencies should be linked, <code>jar</code> will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents. <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">Similar to java clients</a></td>
 <td><code>zip</code></td>

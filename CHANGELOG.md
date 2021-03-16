@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix server not analyzing after a wrong code on cljs files - #367
+
 ## 2021.03.14-23.22.46
 
 - Fix completion inside refers, re-add support for it - Fixes #364

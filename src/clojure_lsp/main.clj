@@ -320,7 +320,10 @@
                                                                       (.setCommands f.refactor/available-refactors)))
                                         (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
                                                                 (.setOpenClose true)
-                                                                (.setChange TextDocumentSyncKind/Incremental)
+                                                                (.setChange (case (:text-document-sync-kind settings)
+                                                                              :full TextDocumentSyncKind/Full
+                                                                              :incremental TextDocumentSyncKind/Incremental
+                                                                              TextDocumentSyncKind/Full))
                                                                 (.setSave (SaveOptions. true))))
                                         (.setCompletionProvider (CompletionOptions. true []))))))))))
 

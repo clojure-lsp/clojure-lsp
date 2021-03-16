@@ -124,7 +124,7 @@
            (= 'let name)
            (= 'if name)
            (= 'new name))
-       (= 'clojure.core to)))
+       (#{'clojure.core 'cljs.core} to)))
 
 (defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col] :as _element}]
   (and name-row

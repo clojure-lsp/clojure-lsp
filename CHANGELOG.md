@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add support for diagnostic tags: deprecated and unnecessary
+
 ## 2021.03.16-20.28.06
 
 - Fix server not analyzing after a wrong code on cljs files - #367

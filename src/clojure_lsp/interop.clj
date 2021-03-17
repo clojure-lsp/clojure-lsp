@@ -240,8 +240,9 @@
 (s/def ::code (s/conformer name))
 
 (s/def ::diagnostic (s/and (s/keys :req-un [::range ::message]
-                                   :opt-un [::severity ::code ::source ::message])
-                           (s/conformer #(Diagnostic. (:range %1) (:message %1) (:severity %1) (:source %1) (:code %1)))))
+                                   :opt-un [::severity ::code ::tag ::source ::message])
+                           (s/conformer #(doto (Diagnostic. (:range %1) (:message %1) (:severity %1) (:source %1) (:code %1))
+                                           (.setTags (:tags %1))))))
 (s/def ::diagnostics (s/coll-of ::diagnostic))
 (s/def ::publish-diagnostics-params (s/and (s/keys :req-un [::uri ::diagnostics])
                                            (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))

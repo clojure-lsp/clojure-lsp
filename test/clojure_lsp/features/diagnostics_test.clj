@@ -20,6 +20,7 @@
      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
        :message "Unused public var 'some-ns/foo'"
        :code "unused-public-var"
+       :tags [1]
        :severity 3
        :source "clojure-lsp"}]
      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
@@ -29,6 +30,7 @@
      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
        :message "Unused public var 'some-ns/foo'"
        :code "unused-public-var"
+       :tags [1]
        :severity 2
        :source "clojure-lsp"}]
      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
@@ -38,6 +40,7 @@
      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
        :message "Unused public var 'some-ns/foo'"
        :code "unused-public-var"
+       :tags [1]
        :severity 1
        :source "clojure-lsp"}]
      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
@@ -47,6 +50,7 @@
      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
        :message "Unused public var 'some-ns/foo'"
        :code "unused-public-var"
+       :tags [1]
        :severity 3
        :source "clojure-lsp"}]
      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
@@ -75,25 +79,28 @@
            (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db))))
   (testing "when linter level is not :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :error}}}})
-    (is (= [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
-             :message "Unused private var some-ns/foo"
-             :code "unused-private-var"
-             :severity 2
-             :source "clj-kondo"}]
-           (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db))))
+    (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
+                        :message "Unused private var some-ns/foo"
+                        :code "unused-private-var"
+                        :tags [1]
+                        :severity 2
+                        :source "clj-kondo"}]
+                      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
   (testing "when linter is not specified"
     (swap! db/db merge {:settings {}})
-    (is (= [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
-             :message "Unused private var some-ns/foo"
-             :code "unused-private-var"
-             :severity 2
-             :source "clj-kondo"}]
-           (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db))))
+    (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
+                        :message "Unused private var some-ns/foo"
+                        :code "unused-private-var"
+                        :tags [1]
+                        :severity 2
+                        :source "clj-kondo"}]
+                      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
   (testing "when inside expression?"
     (swap! db/db merge {:settings {}})
-    (is (= [{:range {:start {:line 0 :character 14} :end {:line 0 :character 14}}
-             :message "clojure.core/assert is called with 0 args but expects 1 or 2"
-             :code "invalid-arity"
-             :severity 1
-             :source "clj-kondo"}]
-           (#'f.diagnostic/find-diagnostics "file:///b.clj" @db/db)))))
+    (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 14}}
+                        :message "clojure.core/assert is called with 0 args but expects 1 or 2"
+                        :code "invalid-arity"
+                        :tags []
+                        :severity 1
+                        :source "clj-kondo"}]
+                      (#'f.diagnostic/find-diagnostics "file:///b.clj" @db/db))))

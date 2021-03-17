@@ -9,6 +9,18 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(def unnecessary-diagnostic-types
+  #{:redefined-var
+    :redundant-do
+    :redundant-expression
+    :redundant-let
+    :unused-binding
+    :unreachable-code
+    :unused-import
+    :unused-namespace
+    :unused-private-var
+    :unused-referred-var})
+
 (defn ^:private kondo-finding->diagnostic
   [{:keys [type message level row col end-row] :as finding}
    text]
@@ -20,6 +32,9 @@
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   expression? (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
+     :tags (cond-> []
+             (unnecessary-diagnostic-types type) (conj 1)
+             (#{:deprecated-var} type) (conj 2))
      :message message
      :code (name type)
      :severity (case level
@@ -42,6 +57,7 @@
   {:range (shared/->range var)
    :message (format "Unused public var '%s/%s'" (:ns var) (:name var))
    :code "unused-public-var"
+   :tags [1]
    :severity (case (get-in settings [:linters :unused-public-var :level] :info)
                :error   1
                :warning 2

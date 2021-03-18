@@ -16,6 +16,7 @@
 (defn kondo-for-paths [paths]
   {:cache true
    :parallel true
+   :copy-hooks true
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:analysis {:arglists true
                                 :locals false
@@ -25,6 +26,7 @@
 (defn kondo-for-single-file [uri]
   {:cache true
    :lint ["-"]
+   :copy-hooks true
    :lang (shared/uri->file-type uri)
    :filename (shared/uri->filename uri)
    :config {:output {:analysis {:arglists true

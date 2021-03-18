@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- Add support for diagnostic tags: deprecated and unnecessary
+- Add support for diagnostic tags: deprecated and unnecessary.
 - Fix wrong textDocument/documentHighlight for function local-usages.
+- Use new clj-kondo `copy-hooks` flag to copy hooks during lint.
 
 ## 2021.03.16-20.28.06
 

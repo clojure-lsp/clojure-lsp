@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add support for diagnostic tags: deprecated and unnecessary
+- Fix wrong textDocument/documentHighlight for function local-usages.
 
 ## 2021.03.16-20.28.06
 

@@ -52,4 +52,4 @@
     (f.file-management/analyze-changes {:uri uri
                                         :version (:v document)
                                         :text (:text document)})
-    (log/info (format "Resolving macro as %. Saving configuration on %s" resolved-full-symbol-str kondo-config-path))))
+    (log/info (format "Resolving macro as %s. Saving setting on %s" resolved-full-symbol-str kondo-config-path))))

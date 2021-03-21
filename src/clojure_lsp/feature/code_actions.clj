@@ -2,12 +2,13 @@
   (:require
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.refactor :as f.refactor]
+    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.queries :as q]
     [clojure-lsp.refactor.transform :as r.transform]
     [clojure-lsp.shared :as shared]
-    [taoensso.timbre :as log]
-    [clojure.string :as string])
+    [clojure.string :as string]
+    [taoensso.timbre :as log])
   (:import
     (org.eclipse.lsp4j
       CodeActionKind)))
@@ -143,6 +144,12 @@
              {:command {:title     "Clean namespace"
                         :command   "clean-ns"
                         :arguments [uri line character]}}
+
+             "resolve-macro-as"
+             {:command {:title "Resolve macro as..."
+                        :command "resolve-macro-as"
+                        :arguments [uri line character]}}
+
              {}))
     (dissoc :data)))
 
@@ -257,6 +264,14 @@
           :line      (:line (:position function-to-create))
           :character (:character (:position function-to-create))}})
 
+(defn ^:private resolve-macro-as-action [uri row col macro-sym]
+  {:title (format "Resolve macro '%s' as..." (str macro-sym))
+   :kind CodeActionKind/QuickFix
+   :data {:id "resolve-macro-as"
+          :uri uri
+          :line row
+          :character col}})
+
 (defn all [zloc uri row col diagnostics client-capabilities]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
@@ -267,6 +282,7 @@
         definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
         inline-symbol? (r.transform/inline-symbol? definition)
         can-thread? (r.transform/can-thread? zloc)
+        macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col)
         line (dec row)
         character (dec col)
         missing-requires (find-missing-requires uri diagnostics)
@@ -285,6 +301,9 @@
 
       function-to-create
       (conj (create-private-function-action uri function-to-create))
+
+      macro-sym
+      (conj (resolve-macro-as-action uri row col macro-sym))
 
       inline-symbol?
       (conj (inline-symbol-action uri line character))

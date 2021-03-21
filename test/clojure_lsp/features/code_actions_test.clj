@@ -343,3 +343,15 @@
                                   2
                                   2
                                   [] {:workspace {:workspace-edit true}})))))
+
+(deftest resolve-macro-as-code-actions
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "(defmacro foo [name & body] @body)"
+                                "(foo my-fn)"
+                                "(+ 1 2)"))
+  (testing "when inside a macro usage"
+    (is (some #(= (:title %) "Resolve macro 'some-ns/foo' as...")
+              (f.code-actions/all (zloc-at "file:///a.clj" 3 7) "file:///a.clj" 3 7 [] {}))))
+  (testing "when not inside a macro usage"
+    (is (not-any? #(= (:title %) "Resolve macro 'some-ns/foo' as...")
+                  (f.code-actions/all (zloc-at "file:///a.clj" 4 4) "file:///a.clj" 4 4 [] {})))))

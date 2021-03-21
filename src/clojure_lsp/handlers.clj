@@ -13,6 +13,7 @@
     [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.feature.rename :as f.rename]
+    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
     [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
     [clojure-lsp.feature.signature-help :as f.signature-help]
     [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
@@ -164,6 +165,9 @@
 
     (= command "cursor-info")
     (producer/window-show-message (cursor-info arguments))
+
+    (= command "resolve-macro-as")
+    (apply f.resolve-macro/resolve-macro-as! arguments)
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [result (refactor command arguments)]

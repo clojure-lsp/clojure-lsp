@@ -13,19 +13,19 @@
 
 (defn ^:private find-function-name-position [uri row col]
   (some-> (get-in @db/db [:documents uri :text])
-          (parser/loc-at-pos (inc row) (inc col))
+          (parser/loc-at-pos row col)
           edit/find-function-usage-name
           z/node
           meta))
 
-(defn ^:private full-symbol-to-resolve [uri row col]
-  (let [filename (shared/uri->filename uri)
-        analysis (:analysis @db/db)
-        {macro-name-row :row macro-name-col :col} (find-function-name-position uri row col)
-        element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)
-        definition (q/find-definition analysis element)]
-    (when (:macro definition)
-      (symbol (-> definition :ns name) (-> definition :name name)))))
+(defn find-full-macro-symbol-to-resolve [uri row col]
+  (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position uri row col)]
+    (let [filename (shared/uri->filename uri)
+          analysis (:analysis @db/db)
+          element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)
+          definition (q/find-definition analysis element)]
+      (when (:macro definition)
+        (symbol (-> definition :ns name) (-> definition :name name))))))
 
 (defn ^:private update-macro-resolve-for-config
   [resolved-full-symbol full-symbol config-loc]
@@ -35,7 +35,7 @@
       (str "\n")))
 
 (defn resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path]
-  (let [full-symbol (full-symbol-to-resolve uri row col)
+  (let [full-symbol (find-full-macro-symbol-to-resolve uri row col)
         kondo-config-file (io/file kondo-config-path)
         document (get-in @db/db [:documents uri])]
     (if (.exists kondo-config-file)
@@ -49,4 +49,5 @@
              (spit kondo-config-path))))
     (f.file-management/analyze-changes {:uri uri
                                         :version (:v document)
-                                        :text (:text document)})))
+                                        :text (:text document)})
+    (log/info (format "Resolved macro %s as %s. Saved configuration on %s" full-symbol resolved-full-symbol-str kondo-config-path))))

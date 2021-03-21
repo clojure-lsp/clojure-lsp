@@ -34,20 +34,22 @@
       (r/assoc-in [:lint-as full-symbol] resolved-full-symbol)
       (str "\n")))
 
-(defn resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path]
+(defn ^:private resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path]
   (let [full-symbol (find-full-macro-symbol-to-resolve uri row col)
-        kondo-config-file (io/file kondo-config-path)
-        document (get-in @db/db [:documents uri])]
-    (if (.exists kondo-config-file)
+        kondo-config-file (io/file kondo-config-path)]
+    (if (.exists ^java.io.File kondo-config-file)
       (->> (z/of-file kondo-config-file)
-           (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol)
-           (spit kondo-config-path))
-      (do
-        (io/make-parents kondo-config-path)
-        (->> (z/of-string "{}")
-             (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol)
-             (spit kondo-config-path))))
+           (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))
+      (->> (z/of-string "{}")
+           (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol)))))
+
+(defn resolve-macro-as!
+  [uri row col resolved-full-symbol-str kondo-config-path]
+  (let [document (get-in @db/db [:documents uri])]
+    (io/make-parents kondo-config-path)
+    (->> (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path)
+         (spit kondo-config-path))
     (f.file-management/analyze-changes {:uri uri
                                         :version (:v document)
                                         :text (:text document)})
-    (log/info (format "Resolved macro %s as %s. Saved configuration on %s" full-symbol resolved-full-symbol-str kondo-config-path))))
+    (log/info (format "Resolving macro as %. Saving configuration on %s" resolved-full-symbol-str kondo-config-path))))

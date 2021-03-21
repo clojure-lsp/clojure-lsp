@@ -12,21 +12,11 @@
 
 (defn code [& strings] (clojure.string/join "\n" strings))
 
-(defn diagnostics-or-timeout []
-  (first (async/alts!!
-           [(async/timeout 1000)
-            db/diagnostics-chan])))
-
-(defn edits-or-timeout []
-  (first (async/alts!!
-          [(async/timeout 1000)
-           db/edits-chan])))
-
 (deftest did-open
   (reset! db/db {})
   (testing "opening a existing file"
     (let [_ (h/load-code-and-locs "(ns a) (when)")
-          diagnostics (:diagnostics (diagnostics-or-timeout))]
+          diagnostics (h/diagnostics-or-timeout)]
       (is (some? (get-in @db/db [:analysis "/a.clj"])))
       (h/assert-submaps
         [{:code "missing-body-in-when"}
@@ -39,7 +29,7 @@
                         :project-root "file:///project"})
     (alter-var-root #'db/edits-chan (constantly (async/chan 1)))
     (let [_ (h/load-code-and-locs "" "file:///project/src/foo/bar.clj")
-          changes (:document-changes (edits-or-timeout))]
+          changes (:document-changes (h/edits-or-timeout))]
       (h/assert-submaps
         [{:edits [{:range {:start {:line 0, :character 0}
                            :end {:line 0, :character 0}}
@@ -320,7 +310,7 @@
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
         (h/load-code-and-locs code)
-        (let [usages (:diagnostics (diagnostics-or-timeout))]
+        (let [usages (h/diagnostics-or-timeout)]
           (is (= ["user/foo is called with 3 args but expects 1 or 2"
                   "user/baz is called with 1 arg but expects 3"
                   "user/bar is called with 0 args but expects 1 or more"
@@ -353,7 +343,7 @@
                     (foo 1)
                     (bar))"]
         (h/load-code-and-locs code)
-        (let [usages (:diagnostics (diagnostics-or-timeout))]
+        (let [usages (h/diagnostics-or-timeout)]
           (is (= ["user/foo is called with 2 args but expects 1 or 3"
                   "user/bar is called with 1 arg but expects 0"
                   "user/bar is called with 1 arg but expects 0"
@@ -371,7 +361,7 @@
                   (bar :a)
                   (bar :a :b)"]
         (h/load-code-and-locs code)
-        (let [usages (:diagnostics (diagnostics-or-timeout))]
+        (let [usages (h/diagnostics-or-timeout)]
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message usages))))))
     (testing "for schema defs"
@@ -385,7 +375,7 @@
                   (foo 1 2)
                   (foo 1)"]
         (h/load-code-and-locs code)
-        (let [usages (:diagnostics (diagnostics-or-timeout))]
+        (let [usages (h/diagnostics-or-timeout)]
           (is (= ["user/foo is called with 0 args but expects 2"
                   "user/foo is called with 1 arg but expects 2"]
                  (map :message usages)))))))
@@ -393,7 +383,7 @@
     (reset! db/db {})
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (h/load-code-and-locs "(ns foo.bar)")
-    (let [usages (:diagnostics (diagnostics-or-timeout))]
+    (let [usages (h/diagnostics-or-timeout)]
       (is (empty?
             (map :message usages))))))
 

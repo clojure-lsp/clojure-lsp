@@ -167,7 +167,7 @@
     (producer/window-show-message (cursor-info arguments))
 
     (= command "resolve-macro-as")
-    (apply f.resolve-macro/resolve-macro-as arguments)
+    (apply f.resolve-macro/resolve-macro-as! arguments)
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [result (refactor command arguments)]

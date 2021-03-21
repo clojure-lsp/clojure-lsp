@@ -66,6 +66,16 @@
     (handlers/did-open {:textDocument {:uri filename :text code}})
     positions))
 
+(defn diagnostics-or-timeout []
+  (:diagnostics (first (async/alts!!
+                        [(async/timeout 1000)
+                         db/diagnostics-chan]))))
+
+(defn edits-or-timeout []
+  (first (async/alts!!
+          [(async/timeout 1000)
+           db/edits-chan])))
+
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})
 

@@ -132,9 +132,9 @@
 (defn inside-refer? [zloc]
   (and (inside-require? zloc)
        (or (and (= :vector (z/tag zloc))
-                (= :refer (-> zloc z/left z/value)))
+                (= :refer (-> zloc z/left z/sexpr)))
            (and (= :token (z/tag zloc))
-                (= :refer (-> zloc z/up z/left z/value))))))
+                (= :refer (-> zloc z/up z/left z/sexpr))))))
 
 (defn find-refer-ns [zloc]
   (when (inside-refer? zloc)

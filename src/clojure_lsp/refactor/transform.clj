@@ -740,7 +740,7 @@
     (let [fn-form (if (= :token (z/tag zloc))
                     (z/up zloc)
                     zloc)
-            fn-name (z/value (z/down fn-form))
+            fn-name (z/string (z/down fn-form))
             privacy-meta? (get-in @db/db [:settings :use-metadata-for-privacy?] false)
             new-fn-str (if privacy-meta?
                         (format "(defn ^:private %s)" (symbol fn-name))

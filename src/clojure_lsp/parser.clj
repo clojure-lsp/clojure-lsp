@@ -100,12 +100,6 @@
     (catch Exception _e
       (log/warn "It was not possible to parse cursor location, probably a not valid clojure text"))))
 
-(defn cursor-loc [uri line character]
-  (-> @db/db
-      (get-in [:documents uri])
-      :text
-      (loc-at-pos (inc line) (inc character))))
-
 (defn safe-cursor-loc [uri line character]
   (try
     (-> @db/db

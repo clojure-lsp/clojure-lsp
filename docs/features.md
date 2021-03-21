@@ -37,11 +37,11 @@ Above you can find all available features that clojure-lsp provide with examples
 | Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
 | Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>           |
 | Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
-| Move to let                        | <img src="../images/features/move-to-let.gif" width=360>             |
-| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=360>             |
+| Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
+| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=720>             |
 | Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
 | Create private function            | <img src="../images/features/create-private-function.gif" width=360> |
-| Resolve macro as...                | <img src="../images/features/resolve-macro-as.gif" width=360> |
+| Resolve macro as...                | <img src="../images/features/resolve-macro-as.gif" width=720>        |
 
 ### Code lenses showing symbol references
 

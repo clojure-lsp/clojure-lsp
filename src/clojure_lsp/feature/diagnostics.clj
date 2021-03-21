@@ -104,7 +104,7 @@
       (not (= :off (get-in settings [:linters :unused-public-var :level])))
       (concat (lint-public-vars uri (:analysis db) settings)))))
 
-(defn lint-project [uri db]
+(defn lint-file [uri db]
   (async/put! db/diagnostics-chan
               {:uri uri
                :diagnostics (find-diagnostics uri db)}))

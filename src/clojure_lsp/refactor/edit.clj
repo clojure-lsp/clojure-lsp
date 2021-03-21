@@ -54,9 +54,9 @@
       (z/next function-loc))))
 
 (defn find-function-usage-name [zloc]
-  (when-let [function-form (z/find-tag zloc z/up :list)]
-    (-> function-form
-        z/down)))
+  (some-> zloc
+          (z/find-tag z/up :list)
+          z/down))
 
 (defn single-child?
   [zloc]

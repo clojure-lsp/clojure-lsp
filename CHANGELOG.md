@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add code action 'resolve macro as', it requires client to fill the chosen macro and clj-kondo config file.
+
 ## 2021.03.18-19.23.41
 
 - Add support for diagnostic tags: deprecated and unnecessary.

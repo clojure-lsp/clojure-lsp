@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.03.21-23.29.19
+
 - Add code action 'resolve macro as', it requires client to fill the chosen macro and clj-kondo config file.
 - Bump rewrite-clj to 1.0.594-alpha
 - Bump data.json to 2.0.1

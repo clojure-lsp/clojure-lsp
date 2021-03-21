@@ -41,6 +41,7 @@ Above you can find all available features that clojure-lsp provide with examples
 | Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=360>             |
 | Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
 | Create private function            | <img src="../images/features/create-private-function.gif" width=360> |
+| Resolve macro as...                | <img src="../images/features/resolve-macro-as.gif" width=360> |
 
 ### Code lenses showing symbol references
 
@@ -90,6 +91,15 @@ Commands that change/refactor the code, most of them are available via code acti
 ##### Thread last all *
 ##### Unwind all
 ##### Unwind thread
+
+#### Resolve macro as *
+
+This code action should be wrapped by the LSP client to provide the missing arguments beside the existing return by the code action: 
+
+- The macro which should resolve as e.g. `clojure.core/def`
+- The clj-kondo configuration to save the new setting. e.g `/home/user/.clj-kondo/config.edn`
+
+For an example, check how [Emacs LSP client](https://github.com/emacs-lsp/lsp-mode/commit/73b127f4cf09a443e1353aa6c40b2379b59c1bd6) handles that.
 
 _* Available via code actions too_
 

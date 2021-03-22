@@ -9,8 +9,8 @@ fi
 
 if [[ ! -f "$CLOJURE_LSP_JAR" ]]
 then
-    lein with-profiles +native-image "do" clean, uberjar
-    CLOJURE_LSP_JAR=$(ls target/clojure-lsp-*-standalone.jar)
+    clojure -X:native:uberjar
+    CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
 fi
 
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}

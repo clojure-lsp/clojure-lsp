@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-lein "do" clean, uberjar
+clojure -X:native:uberjar
 GRAAL_VM_DOCKER_IMAGE=springci/graalvm-ce:20.2-dev-java11
 
 jar=$(ls target/clojure-lsp-*-standalone.jar)

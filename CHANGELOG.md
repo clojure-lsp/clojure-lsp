@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Migrate from lein to deps.edn
+- Bump clj-kondo to 2021.03.22
 
 ## 2021.03.21-23.29.19
 

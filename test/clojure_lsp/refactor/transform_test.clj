@@ -184,9 +184,9 @@
                          "  (f/some))")
                    (code "(ns foo.bar"
                          " (:require"
+                         "   baz"
                          "   [foo  :as f]"
-                         "   [z]"
-                         "   baz))"
+                         "   [z]))"
                          "(s/defn func []"
                          "  (f/some))")))
   (testing "with keep-require-at-start?"
@@ -197,9 +197,9 @@
                          "(s/defn func []"
                          "  (f/some))")
                    (code "(ns foo.bar"
-                         " (:require [foo  :as f]"
-                         "           [z]"
-                         "           baz))"
+                         " (:require baz"
+                         "           [foo  :as f]"
+                         "           [z]))"
                          "(s/defn func []"
                          "  (f/some))")))
   (testing "with first require as unused"
@@ -212,8 +212,8 @@
                    (code "(ns foo.bar"
                          " (:require"
                          "   [bar :as b]"
-                         "   [z]"
-                         "   baz))"
+                         "   baz"
+                         "   [z]))"
                          "(defn func []"
                          "  (b/some))")))
   (testing "with single unused require on ns"
@@ -254,9 +254,9 @@
                          "  (f/some))")
                    (code "(ns foo.bar"
                          " (:require"
+                         "   baz"
                          "   [foo  :as f]"
-                         "   [z]"
-                         "   baz))"
+                         "   [z]))"
                          "(defn func []"
                          "  (f/some))")))
   (testing "with refer as single require"
@@ -276,9 +276,9 @@
                      to-clean
                      (code "(ns foo.bar"
                            " (:require"
+                           "   baz"
                            "   [foo  :as f]"
-                           "   [z]"
-                           "   baz))"
+                           "   [z]))"
                            ""
                            "(defn func []"
                            "  (f/some))")
@@ -429,7 +429,21 @@
                          "  [java.util Date"
                          "             List]))"
                          "Date."
-                         "List."))))
+                         "List."))
+    (testing "sorts according to symbols not brackets"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [zebra import1]"
+                           "  apple))"
+                           "import1."
+                           "apple.")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  apple"
+                           "  [zebra import1]))"
+                           "import1."
+                           "apple.")))))
 
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]

@@ -297,7 +297,10 @@
                         z/node
                         n/children
                         (remove n/printable-only?)
-                        (sort-by (comp str n/sexpr))
+                        (sort-by (comp (fn [sexpr]
+                                         (if (symbol? sexpr)
+                                           (str sexpr)
+                                           (str (first sexpr)))) n/sexpr))
                         (map-indexed (fn [idx node]
                                        (if (and keep-at-start?
                                                 (= idx 0))

@@ -365,6 +365,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#jar" class="md-nav__link">
+    Jar
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -553,6 +560,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#jar" class="md-nav__link">
+    Jar
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -630,7 +644,6 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <p>Contributions to <code>clojure-lsp</code> are very welcome! You can open an issue or a PR and we'd love to help.</p>
 <hr />
 <h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
-<p>For building the jar manually, run <code>lein bin</code> to generate the embedded jar inside <code>target</code> folder or <code>lein uberjar</code> for building the standalone jar.</p>
 <h3 id="graalvm">GraalVM<a class="headerlink" href="#graalvm" title="Permanent link">#</a></h3>
 <p>Every release the native binaries (Windows, Linux and MacOS) are compiled with <strong>GraalVM</strong> and uploaded.</p>
 <p>To build a native image with GraalVM:</p>
@@ -640,12 +653,14 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <li>Run from <code>clojure-lsp</code> project root <code>./graalvm/native-unix-compile.sh</code> or <code>./graalvm/native-windows-compile.bat</code>. </li>
 </ul>
 <p>The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
+<h3 id="jar">Jar<a class="headerlink" href="#jar" title="Permanent link">#</a></h3>
+<p>Run <code>clojure -X:prod-jar</code> for building the jar.</p>
 <hr />
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h2>
 <p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:</p>
 <ul>
-<li>Create a test for your bug/feature, then implement the code following the test.</li>
-<li><code>clojure-lsp</code> starts a NREPL server if built with <code>lein with-profile :debug bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>server-info</code> custom LSP command.</li>
+<li>Create a test for your bug/feature, then implement the code following the test (TDD).</li>
+<li><code>clojure-lsp</code> starts a NREPL server if built with <code>clj -X:debug-jar &amp;&amp; clj -X:bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>server-info</code> custom LSP command.</li>
 <li>Build <code>clojure-lsp</code> with your changes and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
 <li>For debugging purposes, there is two custom commands <code>server-info</code> and <code>cursor-info</code>.</li>
 </ul>
@@ -664,7 +679,7 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 21, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 23, 2021</span>
     
   </small>
 </div>

@@ -260,6 +260,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name": "org.eclipse.lsp4j.adapters.CompletionItemTextEditTypeAdapter",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.CompletionOptions",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

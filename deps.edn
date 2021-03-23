@@ -18,7 +18,7 @@
         clj-fuzzy/clj-fuzzy {:mvn/version "0.4.1"}
         clj-kondo/clj-kondo {:mvn/version "2021.03.04-20210318.185536-12"}}
  :paths ["resources" "src"]
- :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.732"}}
+ :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.829"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.0.206"}}

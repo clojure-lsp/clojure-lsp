@@ -9,7 +9,7 @@ fi
 
 if [[ ! -f "$CLOJURE_LSP_JAR" ]]
 then
-    clojure -X:native:uberjar
+    clojure -X:prod-jar
     CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
 fi
 

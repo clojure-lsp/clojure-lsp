@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Migrate from lein to deps.edn
+
 ## 2021.03.21-23.29.19
 
 - Add code action 'resolve macro as', it requires client to fill the chosen macro and clj-kondo config file.

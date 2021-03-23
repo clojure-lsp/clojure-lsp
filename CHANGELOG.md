@@ -4,6 +4,7 @@
 
 - Migrate from lein to deps.edn
 - Bump clj-kondo to 2021.03.22
+- Fix clean-ns sorting according to symbols not brackets - Fixes #380
 
 ## 2021.03.21-23.29.19
 

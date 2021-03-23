@@ -40,6 +40,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Run tests
         run: make test
@@ -59,6 +61,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -67,4 +71,4 @@ jobs:
         run: make prod-bin
 
       - name: Run integration tests
-        run: bb integration-test/run-all.clj ./target/clojure-lsp
+        run: bb integration-test/run-all.clj ./clojure-lsp

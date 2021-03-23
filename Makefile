@@ -1,15 +1,15 @@
 all: debug-bin
 
 debug-bin:
-	clj -X:debug-jar
-	clj -X:bin
+	clojure -X:debug-jar
+	clojure -X:bin
 
 prod-bin:
-	clj -X:prod-jar
-	clj -X:bin
+	clojure -X:prod-jar
+	clojure -X:bin
 
 test:
-	clj -M:test
+	clojure -M:test
 
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs

@@ -19,6 +19,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Generate jar and embedded jar
         run: make prod-bin
@@ -51,6 +53,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -101,6 +105,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -153,6 +159,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -204,6 +212,8 @@ jobs:
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: |

@@ -4,6 +4,8 @@
    [clojure-lsp.test-helper :as h]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]))
 
+(h/reset-db-after-test)
+
 (deftest workspace-symbols
   (h/load-code-and-locs (h/code "(ns foo.bar.ns (:require [clojure.string :as string]))"
                                 "(defonce my-atom (atom {}))"

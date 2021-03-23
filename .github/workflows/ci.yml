@@ -38,13 +38,13 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Run tests
-        run: lein test
+        run: make test
 
   integration-test:
     runs-on: ubuntu-latest
@@ -59,16 +59,16 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
       - name: Generate embedded binary
-        run: lein bin
+        run: make prod-bin
 
       - name: Run integration tests
-        run: bb integration-test/run-all.clj ./target/clojure-lsp
+        run: bb integration-test/run-all.clj ./clojure-lsp

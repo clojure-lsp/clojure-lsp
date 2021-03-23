@@ -17,20 +17,17 @@ jobs:
         with:
           java-version: 1.8
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Generate jar and embedded jar
-        run: lein with-profile native-image bin
+        run: make prod-bin
 
       - name: Get latest tag
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
-
-      - name: Rename jar
-        run: mv target/clojure-lsp-${{ steps.latest-tag.outputs.tag}}-standalone.jar clojure-lsp.jar
 
       - name: Upload jar
         uses: actions/upload-artifact@v2
@@ -41,7 +38,7 @@ jobs:
       - name: Upload embedded jar
         uses: actions/upload-artifact@v2
         with:
-          path: target/clojure-lsp
+          path: clojure-lsp
           name: clojure-lsp
 
   native-linux:
@@ -54,10 +51,10 @@ jobs:
         with:
           name: clojure-lsp.jar
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -106,10 +103,10 @@ jobs:
         with:
           name: clojure-lsp.jar
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -160,10 +157,10 @@ jobs:
         with:
           name: clojure-lsp.jar
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -213,10 +210,10 @@ jobs:
         with:
           name: clojure-lsp.jar
 
-      - name: Install Leiningen
+      - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          lein: 2.9.1
+          cli: '1.10.3.814'
 
       - name: Install Babashka
         run: |

@@ -103,13 +103,16 @@
       (mapv (partial unused-public-var->diagnostic settings) (vals unused-vars)))))
 
 (defn ^:private find-diagnostics [uri db]
-  (let [settings (get db :settings)]
-    (cond-> []
-      (not (= :off (get-in settings [:linters :clj-kondo :level])))
-      (into (kondo-findings->diagnostics uri (:findings db)))
+  (let [#_#_start-time (System/nanoTime)
+        settings (get db :settings)
+        diagnostics (cond-> []
+                      (not (= :off (get-in settings [:linters :clj-kondo :level])))
+                      (into (kondo-findings->diagnostics uri (:findings db)))
 
-      (not (= :off (get-in settings [:linters :unused-public-var :level])))
-      (into (lint-public-vars uri (:analysis db) settings)))))
+                      (not (= :off (get-in settings [:linters :unused-public-var :level])))
+                      (into (lint-public-vars uri (:analysis db) settings)))]
+    #_(log/info "Find diagnostics took: " (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds " uri)
+    diagnostics))
 
 (defn lint-file [uri db]
   (async/put! db/diagnostics-chan

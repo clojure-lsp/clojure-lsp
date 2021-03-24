@@ -45,11 +45,8 @@
 
 (defn resolve-macro-as!
   [uri row col resolved-full-symbol-str kondo-config-path]
-  (let [document (get-in @db/db [:documents uri])]
-    (io/make-parents kondo-config-path)
-    (->> (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path)
-         (spit kondo-config-path))
-    (f.file-management/analyze-changes {:uri uri
-                                        :version (:v document)
-                                        :text (:text document)})
-    (log/info (format "Resolving macro as %s. Saving setting on %s" resolved-full-symbol-str kondo-config-path))))
+  (io/make-parents kondo-config-path)
+  (->> (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path)
+       (spit kondo-config-path))
+  (f.file-management/reanalyze-uri uri)
+  (log/info (format "Resolving macro as %s. Saving setting on %s" resolved-full-symbol-str kondo-config-path)))

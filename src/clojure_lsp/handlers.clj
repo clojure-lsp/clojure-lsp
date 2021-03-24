@@ -62,8 +62,7 @@
   (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
     (swap! db/db (fn [db]
                    (-> db
-                       (update :documents #(apply dissoc % uris))
-                       (update :file-envs #(apply dissoc % uris)))))))
+                       (update :documents #(apply dissoc % uris)))))))
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)

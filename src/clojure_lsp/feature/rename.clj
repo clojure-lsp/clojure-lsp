@@ -19,30 +19,31 @@
            "."
            (name file-type)))))
 
-(defn ^:private rename-keyword [replacement {:keys [ns alias filename] :as reference}]
+(defn ^:private rename-keyword [replacement {:keys [ns alias name filename
+                                                    name-col name-end-col] :as reference}]
   (let [ref-doc-uri (shared/filename->uri filename)
         version (get-in @db/db [:documents ref-doc-uri :v] 0)
+        ;; Extracts the name of the keyword
+        ;; Maybe have the replacement analyzed by clj-kondo instead?
+        replacement-name (string/replace replacement #":+(.+/)?" "")
+        ;; Infers if the qualified keyword is of the ::kw-name kind
+        ;; So the same-ns style or the full qualified name can be preserved
+        ;; The 2 accounts for the 2 colons in same-namespace qualified keyword
+        qualified-same-ns? (= (- name-end-col name-col)
+                              (+ 2 (count name)))
         text (cond
 
-               (and alias
-                    (string/starts-with? replacement "::"))
-               (str "::" alias "/" (subs replacement 2))
-
                alias
-               (str "::" alias "/" replacement)
+               (str "::" alias "/" replacement-name)
 
-               (and ns
-                    (string/includes? (str ns) ".")
-                    (string/starts-with? replacement "::"))
-               replacement
-
-               (and ns
-                    (string/includes? (str ns) "."))
-               (str "::" replacement)
+               qualified-same-ns?
+               (str "::" replacement-name)
 
                ns
-               (str ":" ns "/" replacement)
+               (str ":" ns "/" replacement-name)
 
+               ;; There shouldn't be another case, since renaming
+               ;; unqualified keywords is currently disallowed
                :else
                replacement)]
 

@@ -28,7 +28,7 @@
                                  :full true}
         :codeLensProvider {:resolveProvider true}
         :textDocumentSync {:openClose true
-                           :change 2
+                           :change 1
                            :save {:includeText true}}
         :completionProvider {:resolveProvider true
                              :triggerCharacters []}

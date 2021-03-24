@@ -10,7 +10,7 @@
 
 (cp/add-classpath (-> *file* io/file .getParent))
 
-(require '[integration.common])
+(require '[integration.helper])
 
 (def namespaces
   '[integration.initialize-test])

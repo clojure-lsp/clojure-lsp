@@ -1,12 +1,10 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.set :as set]
-   [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
 (def unnecessary-diagnostic-types
@@ -22,13 +20,8 @@
     :unused-referred-var})
 
 (defn ^:private kondo-finding->diagnostic
-  [{:keys [type message level row col end-row] :as finding}
-   text]
-  (let [start-char (-> (parser/loc-at-pos text row col)
-                       z/string
-                       (nth 0 nil))
-        expression? (or (not= row end-row)
-                        (identical? \( start-char))
+  [{:keys [type message level row col end-row] :as finding}]
+  (let [expression? (not= row end-row)
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   expression? (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
@@ -47,11 +40,11 @@
   (or (and row col)
       (log/warn "Invalid clj-kondo finding. Cannot find position data for" finding)))
 
-(defn ^:private kondo-findings->diagnostics [uri findings text]
+(defn ^:private kondo-findings->diagnostics [uri findings]
   (->> (get findings (shared/uri->filename uri))
        (filter #(= (shared/uri->filename uri) (:filename %)))
        (filter valid-finding?)
-       (mapv #(kondo-finding->diagnostic % text))))
+       (mapv kondo-finding->diagnostic)))
 
 (defn ^:private unused-public-var->diagnostic [settings var]
   {:range (shared/->range var)
@@ -88,21 +81,35 @@
 
 (defn ^:private lint-public-vars [uri analysis settings]
   (when (not (= :off (get-in settings [:linters :unused-public-var :level])))
-    (let [filename (shared/uri->filename uri)]
-      (->> (q/find-vars analysis filename false)
-           (filter (partial exclude-public-var? settings))
-           (filter (comp #(= (count %) 0)
-                         #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
-           (mapv (partial unused-public-var->diagnostic settings))))))
+    (let [filename (shared/uri->filename uri)
+          public-vars (->>
+                        (q/find-vars analysis filename false)
+                        (filter (partial exclude-public-var? settings))
+                        (map (juxt (juxt :ns :name) identity))
+                        (into {}))
+          unused-vars (reduce
+                        (fn [without-reference element]
+                          (let [element-key [(or (:ns element) (:to element)) (:name element)]]
+                            (if (and (not= :keywords (:bucket element))
+                                     (not= :var-definitions (:bucket element))
+                                     (contains? without-reference element-key))
+                              (let [next-accum (dissoc without-reference element-key)]
+                                (if (empty? next-accum)
+                                  (reduced next-accum)
+                                  next-accum))
+                              without-reference)))
+                        public-vars
+                        (mapcat val analysis))]
+      (mapv (partial unused-public-var->diagnostic settings) (vals unused-vars)))))
 
 (defn ^:private find-diagnostics [uri db]
   (let [settings (get db :settings)]
     (cond-> []
       (not (= :off (get-in settings [:linters :clj-kondo :level])))
-      (concat (kondo-findings->diagnostics uri (:findings db) (get-in db [:documents uri :text])))
+      (into (kondo-findings->diagnostics uri (:findings db)))
 
       (not (= :off (get-in settings [:linters :unused-public-var :level])))
-      (concat (lint-public-vars uri (:analysis db) settings)))))
+      (into (lint-public-vars uri (:analysis db) settings)))))
 
 (defn lint-file [uri db]
   (async/put! db/diagnostics-chan

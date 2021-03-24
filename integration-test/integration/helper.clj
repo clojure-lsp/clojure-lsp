@@ -71,13 +71,11 @@
     (println params)))
 
 (defn await-response! [request-id]
-  (loop [response (get @responses request-id)
-         tries 0]
+  (loop [response (get @responses request-id)]
     (if response
       (do
         (swap! responses dissoc request-id)
         response)
-      (when-not (> tries 10)
+      (do
         (Thread/sleep 500)
-        (recur (get @responses request-id)
-               (inc tries))))))
+        (recur (get @responses request-id))))))

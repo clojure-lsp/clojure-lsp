@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bump clj-kondo 2021.03.22-20210324.110254-3 - Fixes #382
+
 ## 2021.03.24-00.41.55
 
 - Migrate from lein to deps.edn

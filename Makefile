@@ -2,6 +2,7 @@ all: debug-bin
 
 debug-bin:
 	clojure -X:debug-jar
+	rm -f ./clojure-lsp
 	clojure -X:bin
 
 prod-bin:

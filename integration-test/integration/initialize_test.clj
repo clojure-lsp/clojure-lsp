@@ -2,12 +2,13 @@
   (:require
     [clojure.test :refer [deftest testing]]
     [integration.fixture :as fixture]
+    [integration.lsp :as lsp]
     [integration.helper :as h]))
 
 (h/clean-after-test)
 
 (deftest initialize
-  (h/start-process!)
+  (lsp/start-process!)
   (testing "initialize request with default config"
     (h/assert-submap
       {:capabilities
@@ -36,7 +37,7 @@
         :definitionProvider true
         :documentHighlightProvider true}}
 
-      (h/request! (fixture/initialize-request))))
+      (lsp/request! (fixture/initialize-request))))
 
   (testing "initialized notification"
-    (h/notify! (fixture/initialized-notification))))
+    (lsp/notify! (fixture/initialized-notification))))

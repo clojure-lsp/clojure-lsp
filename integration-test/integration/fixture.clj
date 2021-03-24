@@ -1,15 +1,16 @@
 (ns integration.fixture
   (:require
     [cheshire.core :as json]
+    [clojure.java.io :as io]
     [integration.helper :as h]
-    [clojure.java.io :as io]))
+    [integration.lsp :as lsp]))
 
 (defn ^:private lsp-json-rpc [method params]
   (json/generate-string
     {:jsonrpc "2.0"
      :method method
      :params params
-     :id (h/inc-request-id)}))
+     :id (lsp/inc-request-id)}))
 
 (defn initialize-request []
   (lsp-json-rpc :initialize

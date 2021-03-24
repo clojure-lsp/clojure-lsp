@@ -1,23 +1,9 @@
 (ns integration.helper
   (:require
-    [babashka.process :as p]
-    [cheshire.core :as json]
-    [clojure.core.async :as async]
-    [clojure.java.io :as io]
-    [clojure.test :refer [use-fixtures is]]))
-
-(def ^:dynamic *clojure-lsp-process* nil)
-(def ^:dynamic *clojure-lsp-listener* nil)
-(def ^:dynamic *stdin* nil)
-(def ^:dynamic *stdout* nil)
-
-(defonce server-responses (atom {}))
-(defonce server-requests (atom {}))
-(defonce server-notifications (atom []))
-(defonce client-request-id (atom 0))
-
-(defn inc-request-id []
-  (swap! client-request-id inc))
+   [clojure.java.io :as io]
+   [clojure.pprint :as pprint]
+   [clojure.test :refer [is use-fixtures]]
+   [integration.lsp :as lsp]))
 
 (def root-project-path
   (-> (io/file *file*)
@@ -27,108 +13,27 @@
       (.resolve "sample-test")
       str))
 
-(def ^:private ESC \u001b)
-
-(def ^:private colors
-  {:black     (str ESC "[30m")
-   :red-bg    (str ESC "[41m")
-   :red       (str ESC "[31m")
-   :green     (str ESC "[32m")
-   :yellow    (str ESC "[33m")
-   :blue      (str ESC "[34m")
-   :magenta   (str ESC "[35m")
-   :cyan      (str ESC "[36m")
-   :white     (str ESC "[37m")
-   :underline (str ESC "[4m")
-   :reset     (str ESC "[m")})
-
-(defn ^:private colored [color string]
-  (str (get colors color) string (:reset colors)))
-
-(defn ^:private content-length [json]
-  (+ 1 (.length json)))
-
-(defn ^:private keyname [key] (str (namespace key) "/" (name key)))
-
-(defn ^:private listen-output! []
-  (async/thread
-    (try
-      (loop []
-        (binding [*in* *stdout*]
-          (let [_content-length (read-line)
-                {:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-            (cond
-              (and id method)
-              (do
-                (println (colored :magenta "Received request:") (colored :yellow json))
-                (swap! server-responses assoc id json))
-
-              id
-              (do
-                (println (colored :green "Received response:") (colored :yellow json))
-                (swap! server-responses assoc id json))
-
-              :else
-              (do
-                (println (colored :blue "Received notification:") (colored :yellow json))
-                (swap! server-notifications conj json)))))
-        (recur))
-      (catch Exception _))))
-
-(defn start-process! []
-  (let [clojure-lsp-binary (first *command-line-args*)]
-    (alter-var-root #'*clojure-lsp-process* (constantly (p/process [clojure-lsp-binary])))
-    (alter-var-root #'*stdin* (constantly (io/writer (:in *clojure-lsp-process*))))
-    (alter-var-root #'*stdout* (constantly (io/reader (:out *clojure-lsp-process*))))
-    (alter-var-root #'*clojure-lsp-listener* (constantly (listen-output!)))))
-
-(defn ^:private clean! []
-  (reset! server-responses {})
-  (reset! client-request-id 0)
-  (when *clojure-lsp-listener*
-    (async/close! *clojure-lsp-listener*))
-  (when *clojure-lsp-process*
-    (p/destroy *clojure-lsp-process*)))
-
 (defn clean-after-test []
-  (use-fixtures :each (fn [f] (clean!) (f)))
-  (use-fixtures :once (fn [f] (f) (clean!))))
+  (use-fixtures :each (fn [f] (lsp/clean!) (f)))
+  (use-fixtures :once (fn [f] (f) (lsp/clean!))))
 
 (defn assert-submap [expected actual]
   (is (= expected
          (some-> actual (select-keys (keys expected))))
       (str "No superset of " (pr-str actual) " found")))
 
-(defn notify! [params]
-  (println (colored :blue "Sending notification:") (colored :yellow params))
-  (binding [*out* *stdin*]
-    (println (str "Content-Length: " (content-length params)))
-    (println "")
-    (println params)))
+(defmacro assert-submaps
+  "Asserts that maps are submaps of result in corresponding order and
+  that the number of maps corresponds to the number of
+  results. Returns true if all assertions passed (useful for REPL).
 
-(defn request! [params]
-  (println (colored :cyan "Sending request:") (colored :yellow params))
-  (binding [*out* *stdin*]
-    (println (str "Content-Length: " (content-length params)))
-    (println "")
-    (println params))
-  (loop [response (get @server-responses @client-request-id)]
-    (if response
-      (do
-        (swap! server-responses dissoc @client-request-id)
-        (:result response))
-      (do
-        (Thread/sleep 500)
-        (recur (get @server-responses @client-request-id))))))
-
-(defn await-notification [method]
-  (loop []
-    (let [method-str (keyname method)
-          notification (first (filter #(= method-str (:method %)) @server-notifications))]
-      (if notification
-        (do
-          (swap! server-notifications remove #(= method-str (:method %)))
-          (:params notification))
-        (do
-          (Thread/sleep 500)
-          (recur))))))
+   taken from kondo"
+  [maps result]
+  `(let [maps# ~maps
+         res# ~result]
+     (and
+      (is (= (count maps#) (count res#))
+          (format "Expected %s results, but got: %s \n--\n%s--"
+                  (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
+      (doseq [[r# m#] (map vector res# maps#)]
+        (assert-submap m# r#)))))

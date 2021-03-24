@@ -14,7 +14,7 @@
 
 (def namespaces
   '[integration.initialize-test
-    integration.did-open-test])
+    integration.diagnostics-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

@@ -1,16 +1,31 @@
 (ns integration.helper
   (:require
-    [babashka.process :refer [process]]
+    [babashka.process :as p]
     [cheshire.core :as json]
     [clojure.core.async :as async]
     [clojure.java.io :as io]
-    [clojure.test :refer [is]]))
+    [clojure.test :refer [use-fixtures is]]))
 
-(def ^:dynamic *clojure-lsp-process*)
-(def ^:dynamic *stdin*)
-(def ^:dynamic *stdout*)
+(def ^:dynamic *clojure-lsp-process* nil)
+(def ^:dynamic *clojure-lsp-listener* nil)
+(def ^:dynamic *stdin* nil)
+(def ^:dynamic *stdout* nil)
 
-(def responses (atom {}))
+(defonce server-responses (atom {}))
+(defonce server-requests (atom {}))
+(defonce server-notifications (atom []))
+(defonce client-request-id (atom 0))
+
+(defn inc-request-id []
+  (swap! client-request-id inc))
+
+(def root-project-path
+  (-> (io/file *file*)
+      .getParentFile
+      .getParentFile
+      .toPath
+      (.resolve "sample-test")
+      str))
 
 (def ^:private ESC \u001b)
 
@@ -33,49 +48,87 @@
 (defn ^:private content-length [json]
   (+ 1 (.length json)))
 
-(defn ^:private listen-responses! []
+(defn ^:private keyname [key] (str (namespace key) "/" (name key)))
+
+(defn ^:private listen-output! []
   (async/thread
-    (binding [*in* *stdout*]
-      (loop [_content-length (read-line)
-             json (cheshire.core/parse-stream *in*)]
-        (println (colored :green "Received response:") json)
-        (swap! responses assoc (get json "id") json)
-        (recur (read-line)
-               (cheshire.core/parse-stream *in*))))))
+    (try
+      (loop []
+        (binding [*in* *stdout*]
+          (let [_content-length (read-line)
+                {:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+            (cond
+              (and id method)
+              (do
+                (println (colored :magenta "Received request:") (colored :yellow json))
+                (swap! server-responses assoc id json))
+
+              id
+              (do
+                (println (colored :green "Received response:") (colored :yellow json))
+                (swap! server-responses assoc id json))
+
+              :else
+              (do
+                (println (colored :blue "Received notification:") (colored :yellow json))
+                (swap! server-notifications conj json)))))
+        (recur))
+      (catch Exception _))))
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]
-    (alter-var-root #'integration.helper/*clojure-lsp-process* (constantly (process [clojure-lsp-binary])))
-    (alter-var-root #'integration.helper/*stdin* (constantly (io/writer (:in *clojure-lsp-process*))))
-    (alter-var-root #'integration.helper/*stdout* (constantly (io/reader (:out *clojure-lsp-process*)))))
-  (listen-responses!))
+    (alter-var-root #'*clojure-lsp-process* (constantly (p/process [clojure-lsp-binary])))
+    (alter-var-root #'*stdin* (constantly (io/writer (:in *clojure-lsp-process*))))
+    (alter-var-root #'*stdout* (constantly (io/reader (:out *clojure-lsp-process*))))
+    (alter-var-root #'*clojure-lsp-listener* (constantly (listen-output!)))))
+
+(defn ^:private clean! []
+  (reset! server-responses {})
+  (reset! client-request-id 0)
+  (when *clojure-lsp-listener*
+    (async/close! *clojure-lsp-listener*))
+  (when *clojure-lsp-process*
+    (p/destroy *clojure-lsp-process*)))
+
+(defn clean-after-test []
+  (use-fixtures :each (fn [f] (clean!) (f)))
+  (use-fixtures :once (fn [f] (f) (clean!))))
 
 (defn assert-submap [expected actual]
   (is (= expected
          (some-> actual (select-keys (keys expected))))
       (str "No superset of " (pr-str actual) " found")))
 
-(def root-project-path
-  (-> (io/file *file*)
-      .getParentFile
-      .getParentFile
-      .toPath
-      (.resolve "sample-test")
-      str))
-
-(defn request! [params]
-  (println (colored :cyan "Sending request:") params)
+(defn notify! [params]
+  (println (colored :blue "Sending notification:") (colored :yellow params))
   (binding [*out* *stdin*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
     (println params)))
 
-(defn await-response! [request-id]
-  (loop [response (get @responses request-id)]
+(defn request! [params]
+  (println (colored :cyan "Sending request:") (colored :yellow params))
+  (binding [*out* *stdin*]
+    (println (str "Content-Length: " (content-length params)))
+    (println "")
+    (println params))
+  (loop [response (get @server-responses @client-request-id)]
     (if response
       (do
-        (swap! responses dissoc request-id)
-        response)
+        (swap! server-responses dissoc @client-request-id)
+        (:result response))
       (do
         (Thread/sleep 500)
-        (recur (get @responses request-id))))))
+        (recur (get @server-responses @client-request-id))))))
+
+(defn await-notification [method]
+  (loop []
+    (let [method-str (keyname method)
+          notification (first (filter #(= method-str (:method %)) @server-notifications))]
+      (if notification
+        (do
+          (swap! server-notifications remove #(= method-str (:method %)))
+          (:params notification))
+        (do
+          (Thread/sleep 500)
+          (recur))))))

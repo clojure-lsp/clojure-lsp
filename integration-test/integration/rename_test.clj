@@ -55,7 +55,7 @@
   (testing "Renaming local keywords"
     (h/assert-submap
       {:changes
-       {(keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/a.clj")
+       {(keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 12 :character 15} :end {:line 12 :character 21}}
           :newText "your-key"}
          {:range {:start {:line 13 :character 7} :end {:line 13 :character 13}}

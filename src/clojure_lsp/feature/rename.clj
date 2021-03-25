@@ -1,12 +1,13 @@
 (ns clojure-lsp.feature.rename
   (:require
-    [clojure-lsp.shared :as shared]
     [clojure-lsp.db :as db]
-    [clojure.string :as string]
+    [clojure-lsp.feature.refactor :as f.refactor]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.queries :as q]
-    [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure.set :as set]))
+    [clojure-lsp.shared :as shared]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [taoensso.timbre :as log]))
 
 (defn ^:private namespace->uri [namespace source-paths filename]
   (let [file-type (shared/uri->file-type filename)]

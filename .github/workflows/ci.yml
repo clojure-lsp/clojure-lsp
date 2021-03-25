@@ -71,4 +71,4 @@ jobs:
         run: make prod-bin
 
       - name: Run integration tests
-        run: bb integration-test/run-all.clj ./clojure-lsp
+        run: make integration-test

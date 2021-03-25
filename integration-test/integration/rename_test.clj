@@ -17,14 +17,14 @@
   (testing "Renaming from the function defintion"
     (h/assert-submap
       {:changes
-       {(keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/b.clj")
+       {(keyword (h/source-path->uri "rename/b.clj"))
         [{:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
          {:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
           :newText "your-func"}]
-        (keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/a.clj")
+        (keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 3 :character 6} :end {:line 3 :character 13}}
           :newText "your-func"}
          {:range {:start {:line 6 :character 1} :end {:line 6 :character 8}}
@@ -36,14 +36,14 @@
   (testing "Renaming from the function usage on other ns"
     (h/assert-submap
       {:changes
-       {(keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/b.clj")
+       {(keyword (h/source-path->uri "rename/b.clj"))
         [{:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
          {:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
           :newText "your-func"}]
-        (keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/a.clj")
+        (keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 3 :character 6} :end {:line 3 :character 13}}
           :newText "your-func"}
          {:range {:start {:line 6 :character 1} :end {:line 6 :character 8}}
@@ -65,7 +65,7 @@
   (testing "Renaming require alias"
     (h/assert-submap
       {:changes
-       {(keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/a.clj")
+       {(keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 1 :character 36} :end {:line 1 :character 37}}
           :newText "spec"}
          {:range {:start {:line 10 :character 1} :end {:line 10 :character 6}}
@@ -75,14 +75,14 @@
   (testing "Renaming require refer"
     (h/assert-submap
       {:changes
-       {(keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/b.clj")
+       {(keyword (h/source-path->uri "rename/b.clj"))
         [{:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
          {:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
           :newText "your-func"}]
-        (keyword "file:///home/greg/dev/clojure-lsp/integration-test/sample-test/src/rename/a.clj")
+        (keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 3 :character 6} :end {:line 3 :character 13}}
           :newText "your-func"}
          {:range {:start {:line 6 :character 1} :end {:line 6 :character 8}}

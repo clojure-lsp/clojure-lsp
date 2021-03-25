@@ -2,6 +2,7 @@
   (:require
    [clojure.java.io :as io]
    [clojure.pprint :as pprint]
+   [clojure.string :as str]
    [clojure.test :refer [is use-fixtures]]
    [integration.lsp :as lsp]))
 
@@ -12,6 +13,23 @@
       .toPath
       (.resolve "sample-test")
       str))
+
+(defn source-path->file [source-path]
+  (->> source-path
+       (str "integration-test/sample-test/src/")
+       io/as-relative-path
+       io/file))
+
+(defn file->uri [file]
+  (let [path (.getAbsolutePath file)]
+    (if (str/starts-with? path "/")
+      (str "file://" path)
+      (str "file:///" path))))
+
+(defn source-path->uri [source-path]
+  (-> source-path
+      source-path->file
+      file->uri))
 
 (defn clean-after-test []
   (use-fixtures :each (fn [f] (lsp/clean!) (f)))

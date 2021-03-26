@@ -18,8 +18,8 @@
 
 (defn definition-request [path row col]
   (lsp-json-rpc :textDocument/definition
-                  {:textDocument {:uri (h/file->uri (h/source-path->file path))}
-                   :position {:line row :character col}}))
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}}))
 
 (defn formatting-full-request [path]
   (lsp-json-rpc :textDocument/formatting
@@ -44,6 +44,11 @@
 (defn document-symbol-request [path]
   (lsp-json-rpc :textDocument/documentSymbol
                 {:textDocument {:uri (h/file->uri (h/source-path->file path))}}))
+
+(defn document-highlight-request [path row col]
+  (lsp-json-rpc :textDocument/documentHighlight
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}}))
 
 (defn initialized-notification []
   (lsp-json-rpc :initialized {}))

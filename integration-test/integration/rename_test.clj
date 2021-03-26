@@ -13,6 +13,8 @@
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "rename/a.clj"))
   (lsp/notify! (fixture/did-open-notification "rename/b.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming from the function defintion"
     (h/assert-submap
@@ -81,18 +83,18 @@
   (testing "Renaming single-name-namespace'd keywords"
     (h/assert-submap
       {:changes
-       {(keyword (h/source-path->uri "rename_single_a.clj"))
+       {(keyword (h/source-path->uri "rename/single_a.clj"))
         [{:range {:start {:line 2 :character 0} :end {:line 2 :character 7}}
           :newText "::click-now"}
          {:range {:start {:line 4 :character 0} :end {:line 4 :character 22}}
-          :newText ":rename-single-a/click-now"}]
+          :newText ":rename.single-a/click-now"}]
 
-        (keyword (h/source-path->uri "rename_single_b.clj"))
+        (keyword (h/source-path->uri "rename/single_b.clj"))
         [{:range {:start {:line 3 :character 0} :end {:line 3 :character 9}}
           :newText "::a/click-now"}
          {:range {:start {:line 5 :character 0} :end {:line 5 :character 22}}
-          :newText ":rename-single-a/click-now"}]}}
-      (lsp/request! (fixture/rename-request "rename_single_a.clj" "::click-now" 2 0))))
+          :newText ":rename.single-a/click-now"}]}}
+      (lsp/request! (fixture/rename-request "rename/single_a.clj" "::click-now" 2 0))))
 
   (testing "Renaming require alias"
     (h/assert-submap

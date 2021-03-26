@@ -12,3 +12,7 @@
 
 (let [{:keys [:my-key]} {:my-key 1}]
   (+ 1 my-key))
+
+::click
+
+:rename.a/click

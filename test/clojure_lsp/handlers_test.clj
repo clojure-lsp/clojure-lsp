@@ -163,8 +163,6 @@
       (handlers/document-highlight {:textDocument "file:///a.clj"
                                     :position (h/->position bar-start)}))))
 
-
-
 (deftest references
   (testing "simple single reference"
     (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
@@ -202,7 +200,17 @@
         [cbar-start cbar-stop
          cbaz-start cbaz-stop] (h/load-code-and-locs (code "(ns c.cc (:require [a.aa :as aa]))"
                                                            "(def x aa/|bar|)"
-                                                           "^:xab aa/|baz|") "file:///c.clj")]
+                                                           "^:xab aa/|baz|") "file:///c.clj")
+        [d-name-kw-start d-name-kw-stop] (h/load-code-and-locs (code "(ns d.dd)"
+                                                                     "(def name |::name|)") "file:///d.clj")
+        [kw-aliased-start kw-aliased-stop
+         kw-unaliased-start kw-unaliased-stop] (h/load-code-and-locs (code "(ns e.ee (:require [d.dd :as dd]))"
+                                                                           "(def name |::dd/name|)"
+                                                                           "(def other-name |:d.dd/name|)") "file:///e.clj")
+        [main-uname-kw-start main-uname-kw-end] (h/load-code-and-locs (code "(ns main (:require [user :as u]))"
+                                                                            "(def name |::u/name|)") "file:///main.clj")
+        [uname-kw-start uname-kw-end] (h/load-code-and-locs (code "(ns user)"
+                                                                  "(def name |::name|)") "file:///user.clj")]
     (testing "on symbol without namespace"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
                                                 :position (h/->position abar-start)
@@ -240,6 +248,21 @@
                                                 :newName "::foo"}))]
         (is (= {"file:///a.clj" [{:new-text "::foo" :range (h/->range akw-start akwbar-stop)}]
                 "file:///b.clj" [{:new-text "::aa/foo" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
+               changes))))
+    (testing "on single-name-namespace'd keyword"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///main.clj"
+                                                :position (h/->position main-uname-kw-start)
+                                                :newName "::full-name"}))]
+        (is (= {"file:///main.clj" [{:new-text "::u/full-name" :range (h/->range main-uname-kw-start main-uname-kw-end)}]
+                "file:///user.clj" [{:new-text "::full-name" :range (h/->range uname-kw-start uname-kw-end)}]}
+               changes))))
+    (testing "on qualified keyword without alias"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///d.clj"
+                                                :position (h/->position d-name-kw-start)
+                                                :newName "::other-name"}))]
+        (is (= {"file:///d.clj" [{:new-text "::other-name" :range (h/->range d-name-kw-start d-name-kw-stop)}]
+                "file:///e.clj" [{:new-text "::dd/other-name" :range (h/->range kw-aliased-start kw-aliased-stop)}
+                                 {:new-text ":d.dd/other-name" :range (h/->range kw-unaliased-start kw-unaliased-stop)}]}
                changes))))
     (testing "on alias changes namespaces inside file"
       (let [changes (:changes (handlers/rename {:textDocument "file:///b.clj"

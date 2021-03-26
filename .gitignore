@@ -1,7 +1,7 @@
 /.idea
 /.lein-repl-history
 /.lein-failures
-/.nrepl-port
+.nrepl-port
 /.lsp/*.db
 /integration-test/sample-test/.lsp
 /integration-test/sample-test/.cpcache

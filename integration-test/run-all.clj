@@ -13,7 +13,12 @@
 (require '[integration.helper])
 
 (def namespaces
-  '[integration.initialize-test])
+  '[integration.initialize-test
+    integration.definition-test
+    integration.diagnostics-test
+    integration.formatting-test
+    integration.rename-test
+    integration.document-symbol-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

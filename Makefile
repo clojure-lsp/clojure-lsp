@@ -12,6 +12,9 @@ prod-bin:
 test:
 	clojure -M:test
 
+integration-test:
+	bb integration-test/run-all.clj ./clojure-lsp
+
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs
 	docker login docker.pkg.github.com
@@ -20,4 +23,4 @@ local-webpage:
 clean:
 	rm -f clojure-lsp clojure-lsp.jar docs/README.md
 
-.PHONY: all test local-webpage clean
+.PHONY: all debug-bin prod-bin test integration-test local-webpage clean

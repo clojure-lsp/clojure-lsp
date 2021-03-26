@@ -846,6 +846,12 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.ShowDocumentCapabilities",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.TextDocumentClientCapabilities",
   "allDeclaredFields":true,
   "allPublicMethods":true,
@@ -919,6 +925,18 @@
 },
 {
   "name":"org.eclipse.lsp4j.WindowClientCapabilities",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.WindowShowMessageRequestActionItemCapabilities",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.WindowShowMessageRequestCapabilities",
   "allDeclaredFields":true,
   "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

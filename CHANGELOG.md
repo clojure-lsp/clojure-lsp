@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Bump clj-kondo 2021.03.22-20210324.110254-3 - Fixes #382
+- [graalvm] Fixes Unable to invoke no-args constructor for class org.eclipse.lsp4j.ShowDocumentCapabilities error.
 
 ## 2021.03.24-00.41.55
 

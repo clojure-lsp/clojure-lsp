@@ -16,6 +16,11 @@
   (lsp-json-rpc :initialize
                 {:rootUri (h/file->uri (io/file h/root-project-path))}))
 
+(defn definition-request [path row col]
+  (lsp-json-rpc :textDocument/definition
+                  {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                   :position {:line row :character col}}))
+
 (defn formatting-full-request [path]
   (lsp-json-rpc :textDocument/formatting
                 {:textDocument {:uri (h/source-path->uri path)}
@@ -23,11 +28,10 @@
                            :insertSpaces true}}))
 
 (defn rename-request [path new-name row col]
-  (let [file (h/source-path->file path)]
-    (lsp-json-rpc :textDocument/rename
-                  {:textDocument {:uri (h/file->uri file)}
-                   :position {:line row :character col}
-                   :newName new-name})))
+  (lsp-json-rpc :textDocument/rename
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}
+                 :newName new-name}))
 
 (defn formatting-range-request [path start-row start-col end-row end-col]
   (lsp-json-rpc :textDocument/rangeFormatting

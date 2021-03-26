@@ -2,8 +2,8 @@
   (:require
     [clojure.test :refer [deftest testing]]
     [integration.fixture :as fixture]
-    [integration.lsp :as lsp]
-    [integration.helper :as h]))
+    [integration.helper :as h]
+    [integration.lsp :as lsp]))
 
 (h/clean-after-test)
 
@@ -30,12 +30,7 @@
          :source "clojure-lsp"
          :message "Unused public var 'diagnostics.unused-public-var/bar'"
          :tags [1]}]}
-      (lsp/await-notification :textDocument/publishDiagnostics))))
-
-(deftest kondo-diagnostics
-  (lsp/start-process!)
-  (lsp/request! (fixture/initialize-request))
-  (lsp/notify! (fixture/initialized-notification))
+      (lsp/await-notification :textDocument/publishDiagnostics)))
 
   (testing "When a private var is unused"
     (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))

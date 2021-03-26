@@ -41,6 +41,10 @@
                  :range {:start {:line start-row :character start-col}
                          :end {:line end-row :character end-col}}}))
 
+(defn document-symbol-request [path]
+  (lsp-json-rpc :textDocument/documentSymbol
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}}))
+
 (defn initialized-notification []
   (lsp-json-rpc :initialized {}))
 

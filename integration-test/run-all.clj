@@ -18,7 +18,7 @@
     integration.diagnostics-test
     integration.formatting-test
     integration.rename-test
-    ])
+    integration.document-symbol-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

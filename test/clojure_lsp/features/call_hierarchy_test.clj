@@ -44,7 +44,7 @@
   (testing "single element"
     (let [items (f.call-hierarchy/prepare "file:///some/d.clj" 2 7 project-root)]
       (is (= 1 (count items)))
-      (is (= {:name "d-func"
+      (is (= {:name "d-func []"
               :kind :function
               :tags []
               :detail "some.d"
@@ -62,7 +62,7 @@
     (let [items (f.call-hierarchy/incoming "file:///some/d.clj" 2 7 project-root)]
       (is (= 1 (count items)))
       (is (= {:from-ranges []
-              :from {:name "c-func"
+              :from {:name "c-func []"
                      :kind :function
                      :tags []
                      :detail "some.c"
@@ -74,7 +74,7 @@
     (let [items (f.call-hierarchy/incoming "file:///some/c.clj" 3 7 project-root)]
       (is (= 2 (count items)))
       (is (= {:from-ranges []
-              :from {:name "b-func"
+              :from {:name "b-func []"
                      :kind :function
                      :tags []
                      :detail "some.b"
@@ -83,7 +83,7 @@
                      :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
              (first items)))
       (is (= {:from-ranges []
-              :from {:name "b-func-2"
+              :from {:name "b-func-2 []"
                      :kind :function
                      :tags []
                      :detail "some.b"

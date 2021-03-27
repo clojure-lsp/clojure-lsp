@@ -1,26 +1,29 @@
 (ns clojure-lsp.feature.call-hierarchy
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.document-symbol :as f.document-symbol]
-   [clojure-lsp.feature.file-management :as f.file-management]
-   [clojure-lsp.parser :as parser]
-   [clojure-lsp.queries :as q]
-   [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+    [clojure-lsp.db :as db]
+    [clojure-lsp.feature.document-symbol :as f.document-symbol]
+    [clojure-lsp.feature.file-management :as f.file-management]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.queries :as q]
+    [clojure-lsp.refactor.edit :as edit]
+    [clojure-lsp.shared :as shared]
+    [clojure.string :as string]
+    [rewrite-clj.zip :as z]
+    [taoensso.timbre :as log]))
 
 (defn ^:private element-by-uri->call-hierarchy-item
-  [{uri :uri {:keys [name-row name-col] value :name :as element} :element}
+  [{uri :uri {:keys [name-row name-col arglist-strs deprecated] value :name :as element} :element}
    project-root]
   (let [range (shared/->range element)
-        ns-zloc (-> (f.file-management/force-get-document-text uri)
+        ns-name (-> (f.file-management/force-get-document-text uri)
                     (parser/loc-at-pos name-row name-col)
                     edit/find-namespace-name)]
-    {:name (name value)
+    {:name (if arglist-strs
+             (str (name value) " " (some->> arglist-strs (remove nil?) (string/join "\n")))
+             (name value))
      :kind (f.document-symbol/element->symbol-kind element)
-     :tags [] ;; TODO whether usage is deprecated
-     :detail (or ns-zloc
+     :tags (cond-> [] deprecated (conj 1))
+     :detail (or ns-name
                  (shared/uri->project-related-path uri project-root))
      :uri uri
      :range range

@@ -65,6 +65,12 @@
 (defn uri->path ^java.nio.file.Path [uri]
   (.toAbsolutePath (Paths/get (URI. uri))))
 
+(defn plain-uri? [uri]
+  (when uri
+    (or (string/starts-with? uri "file:/")
+        (string/starts-with? uri "jar:file:/")
+        (string/starts-with? uri "zipfile:/"))))
+
 (defn uri->filename [uri]
   (if-let [[_ jar-file nested-file] (re-find #"^zipfile:/?/?(.*\.jar)::(.*)" uri)]
     (str (when-not (string/starts-with? jar-file "/") "/")

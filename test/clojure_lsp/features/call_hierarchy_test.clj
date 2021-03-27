@@ -19,6 +19,7 @@
   (code "(ns some.b"
         "  (:require [some.c :as c]))"
         "(defn b-func []"
+        "  (c/c-func)"
         "  (c/c-func))"
         "(defn b-func-2 []"
         "  (c/c-func))"))
@@ -44,12 +45,12 @@
   (testing "single element"
     (let [items (f.call-hierarchy/prepare "file:///some/d.clj" 2 7 project-root)]
       (is (= 1 (count items)))
-      (is (= {:name "d-func []"
-              :kind :function
-              :tags []
-              :detail "some.d"
-              :uri "file:///some/d.clj"
-              :range {:start {:line 1 :character 6} :end {:line 1 :character 12}}
+      (is (= {:name            "d-func []"
+              :kind            :function
+              :tags            []
+              :detail          "some.d"
+              :uri             "file:///some/d.clj"
+              :range           {:start {:line 1 :character 6} :end {:line 1 :character 12}}
               :selection-range {:start {:line 1 :character 6} :end {:line 1 :character 12}}}
              (first items))))))
 
@@ -59,38 +60,44 @@
   (h/load-code-and-locs c-code "file:///some/c.clj")
   (h/load-code-and-locs d-code "file:///some/d.clj")
   (testing "from first element"
-    (let [items (f.call-hierarchy/incoming "file:///some/d.clj" 2 7 project-root)]
-      (is (= 1 (count items)))
-      (is (= {:from-ranges []
-              :from {:name "c-func []"
-                     :kind :function
-                     :tags []
-                     :detail "some.c"
-                     :uri "file:///some/c.clj"
-                     :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-                     :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
-             (first items)))))
-  (testing "for multiple element"
-    (let [items (f.call-hierarchy/incoming "file:///some/c.clj" 3 7 project-root)]
-      (is (= 2 (count items)))
-      (is (= {:from-ranges []
-              :from {:name "b-func []"
-                     :kind :function
-                     :tags []
-                     :detail "some.b"
-                     :uri "file:///some/b.clj"
-                     :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-                     :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
-             (first items)))
-      (is (= {:from-ranges []
-              :from {:name "b-func-2 []"
-                     :kind :function
-                     :tags []
-                     :detail "some.b"
-                     :uri "file:///some/b.clj"
-                     :range {:start {:line 4 :character 6} :end {:line 4 :character 14}}
-                     :selection-range {:start {:line 4 :character 6} :end {:line 4 :character 14}}}}
-             (second items))))))
+    (h/assert-submaps
+      [{:from-ranges []
+        :from {:name "c-func []"
+               :kind :function
+               :tags []
+               :detail "some.c"
+               :uri "file:///some/c.clj"
+               :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
+               :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
+      (f.call-hierarchy/incoming "file:///some/d.clj" 2 7 project-root)))
+
+  (testing "for multiple elements"
+    (h/assert-submaps
+      [{:from-ranges []
+        :from {:name "b-func []"
+               :kind :function
+               :tags []
+               :detail "some.b"
+               :uri "file:///some/b.clj"
+               :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
+               :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
+       {:from-ranges []
+        :from {:name "b-func []"
+               :kind :function
+               :tags []
+               :detail "some.b"
+               :uri "file:///some/b.clj"
+               :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
+               :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
+       {:from-ranges []
+        :from {:name "b-func-2 []"
+               :kind :function
+               :tags []
+               :detail "some.b"
+               :uri "file:///some/b.clj"
+               :range {:start {:line 5 :character 6} :end {:line 5 :character 14}}
+               :selection-range {:start {:line 5 :character 6} :end {:line 5 :character 14}}}}]
+      (f.call-hierarchy/incoming "file:///some/c.clj" 3 7 project-root))))
 
 (deftest outgoing
   (h/load-code-and-locs a-code "file:///some/a.clj")
@@ -108,5 +115,24 @@
              :uri "file:///some/b.clj"
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/outgoing "file:///some/a.clj" 3 7 project-root))))
+      (f.call-hierarchy/outgoing "file:///some/a.clj" 3 7 project-root)))
 
+  (testing "for multiple elements"
+    (h/assert-submaps
+      [{:from-ranges []
+        :to {:name "c-func []"
+             :kind :function
+             :tags []
+             :detail "some.c"
+             :uri "file:///some/c.clj"
+             :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
+             :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
+       {:from-ranges []
+        :to {:name "c-func []"
+             :kind :function
+             :tags []
+             :detail "some.c"
+             :uri "file:///some/c.clj"
+             :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
+             :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
+      (f.call-hierarchy/outgoing "file:///some/b.clj" 3 7 project-root))))

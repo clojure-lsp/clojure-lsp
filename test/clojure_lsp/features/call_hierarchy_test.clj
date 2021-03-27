@@ -91,3 +91,22 @@
                      :range {:start {:line 4 :character 6} :end {:line 4 :character 14}}
                      :selection-range {:start {:line 4 :character 6} :end {:line 4 :character 14}}}}
              (second items))))))
+
+(deftest outgoing
+  (h/load-code-and-locs a-code "file:///some/a.clj")
+  (h/load-code-and-locs b-code "file:///some/b.clj")
+  (h/load-code-and-locs c-code "file:///some/c.clj")
+  (h/load-code-and-locs d-code "file:///some/d.clj")
+
+  (testing "from first element"
+    (h/assert-submaps
+      [{:from-ranges []
+        :to {:name "b-func []"
+             :kind :function
+             :tags []
+             :detail "some.b"
+             :uri "file:///some/b.clj"
+             :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
+             :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
+      (f.call-hierarchy/outgoing "file:///some/a.clj" 3 7 project-root))))
+

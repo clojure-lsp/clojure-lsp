@@ -14,7 +14,7 @@
 (defn ^:private find-function-name-position [uri row col]
   (some-> (get-in @db/db [:documents uri :text])
           (parser/loc-at-pos row col)
-          edit/find-function-usage-name
+          edit/find-function-usage-name-loc
           z/node
           meta))
 

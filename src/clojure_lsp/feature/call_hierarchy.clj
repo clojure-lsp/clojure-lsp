@@ -15,16 +15,18 @@
   [{uri :uri {:keys [name-row name-col arglist-strs deprecated] value :name :as element} :element}
    project-root]
   (let [range (shared/->range element)
-        ns-name (-> (f.file-management/force-get-document-text uri)
-                    (parser/loc-at-pos name-row name-col)
-                    edit/find-namespace-name)]
+        project-file? (string/starts-with? uri "file://")
+        detail (if project-file?
+                 (-> (f.file-management/force-get-document-text uri)
+                     (parser/loc-at-pos name-row name-col)
+                     edit/find-namespace-name)
+                 (shared/uri->project-related-path uri project-root))]
     {:name (if arglist-strs
-             (str (name value) " " (some->> arglist-strs (remove nil?) (string/join "\n")))
+             (str (name value) " " (some->> arglist-strs (remove nil?) (string/join " ")))
              (name value))
      :kind (f.document-symbol/element->symbol-kind element)
      :tags (cond-> [] deprecated (conj 1))
-     :detail (or ns-name
-                 (shared/uri->project-related-path uri project-root))
+     :detail detail
      :uri uri
      :range range
      :selection-range range}))
@@ -33,21 +35,50 @@
   (let [cursor-element (q/find-element-under-cursor (:analysis @db/db) (shared/uri->filename uri) row col)]
     [(element-by-uri->call-hierarchy-item {:uri uri :element cursor-element} project-root)]))
 
-(defn ^:private element-by-uri->incoming-usage-by-uri
+(defn ^:private element->incoming-usage-by-uri
   [{:keys [name-row name-col filename]}]
   (let [uri (shared/filename->uri filename)
         zloc (-> (f.file-management/force-get-document-text uri)
                  (parser/loc-at-pos name-row name-col))
-        parent-zloc (edit/find-function-definition-name zloc)]
+        parent-zloc (edit/find-function-definition-name-loc zloc)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
          :element (q/find-element-under-cursor (:analysis @db/db) filename parent-row parent-col)}))))
 
+(defn ^:private element->outgoing-usage-by-uri
+  [element]
+  (let [definition (q/find-definition (:analysis @db/db) element)
+        definition-uri (shared/filename->uri (:filename definition))]
+    {:uri definition-uri
+     :element definition}))
+
 (defn incoming [uri row col project-root]
   (->> (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col false)
-       (map element-by-uri->incoming-usage-by-uri)
+       (map element->incoming-usage-by-uri)
        (remove nil?)
        (mapv (fn [element-by-uri]
                {:from-ranges []
                 :from (element-by-uri->call-hierarchy-item element-by-uri project-root)}))))
+
+(defn outgoing [uri row col project-root]
+  (let [analysis (:analysis @db/db)
+        filename (shared/uri->filename uri)
+        zloc (-> (f.file-management/force-get-document-text uri)
+                 (parser/loc-at-pos row col))
+        {parent-row :row parent-col :col} (some-> (edit/find-function-definition-name-loc zloc)
+                                                  z/node
+                                                  meta)]
+    (when (and parent-row parent-col)
+      (let [definition (q/find-element-under-cursor analysis filename parent-row parent-col)]
+        (->> (q/find-var-usages-under-form analysis
+                                           filename
+                                           (:name-row definition)
+                                           (:name-col definition)
+                                           (:end-row definition)
+                                           (:end-col definition))
+             (map element->outgoing-usage-by-uri)
+             (remove nil?)
+             (mapv (fn [element-by-uri]
+                     {:from-ranges []
+                      :to (element-by-uri->call-hierarchy-item element-by-uri project-root)})))))))

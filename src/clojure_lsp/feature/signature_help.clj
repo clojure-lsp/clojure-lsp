@@ -79,7 +79,7 @@
   (let [filename (shared/uri->filename uri)
         zloc (-> (f.file-management/force-get-document-text uri)
                  (parser/loc-at-pos row col))
-        function-loc (edit/find-function-usage-name zloc)]
+        function-loc (edit/find-function-usage-name-loc zloc)]
     (when function-loc
       (let [arglist-nodes (function-loc->arglist-nodes function-loc)
             function-meta (meta (z/node function-loc))

@@ -1,13 +1,18 @@
 all: debug-bin
 
-debug-bin:
+clean:
+	rm -f clojure-lsp clojure-lsp.jar docs/README.md
+
+debug-bin: clean
 	clojure -X:debug-jar
-	rm -f ./clojure-lsp
 	clojure -X:bin
 
 prod-bin:
 	clojure -X:prod-jar
 	clojure -X:bin
+
+prod-native:
+	./graalvm/native-unix-compile.sh
 
 test:
 	clojure -M:test
@@ -20,7 +25,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-clean:
-	rm -f clojure-lsp clojure-lsp.jar docs/README.md
-
-.PHONY: all debug-bin prod-bin test integration-test local-webpage clean
+.PHONY: all debug-bin prod-bin prod-native test integration-test local-webpage clean

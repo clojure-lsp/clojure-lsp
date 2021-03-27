@@ -59,11 +59,21 @@ Above you can find all available features that clojure-lsp provide with examples
 
 Experimental: apply color on client editor for each known token
 
-### Call hierarchy (Incoming only)
+### Call hierarchy
 
-Show all the call hierarchy of a function/variable as a lazy tree
+Show the incoming or outgoing call hierarchy of a function/variable as a lazy tree
 
-![](images/features/call-hierarchy.png)
+##### Incoming
+
+Show functions that call the current one recursively
+
+![](images/features/call-hierarchy-incoming.png)
+
+##### Outgoing
+
+Show functions that the current one call, recursively
+
+![](images/features/call-hierarchy-outgoing.png)
 
 ### Execute command
 

@@ -68,7 +68,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/linkedEditingRange        |      |                                               |
 | textDocument/prepareCallHierarchy      | √    |                                               |
 | callHierarchy/incomingCalls            | √    |                                               |
-| callHierarchy/outgoingCalls            |      |                                               |
+| callHierarchy/outgoingCalls            | √    |                                               |
 | textDocument/moniker                   |      |                                               |
 
 

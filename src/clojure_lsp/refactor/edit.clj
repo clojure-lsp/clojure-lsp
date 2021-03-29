@@ -34,7 +34,7 @@
 (def function-definition-symbols
   '#{defn defn- def defmacro defmulti defonce deftype defrecord s/def s/defn})
 
-(defn find-function-definition-name [loc]
+(defn find-function-definition-name-loc [loc]
   (let [function-loc (apply find-ops-up loc (mapv str function-definition-symbols))]
     (cond
       (not function-loc)
@@ -53,7 +53,7 @@
       :else
       (z/next function-loc))))
 
-(defn find-function-usage-name [zloc]
+(defn find-function-usage-name-loc [zloc]
   (some-> zloc
           (z/find-tag z/up :list)
           z/down))

@@ -60,7 +60,7 @@
 (defn ^:private assert-function-name [code]
   (let [zloc (-> code z/of-string (z/find-next-value z/next 'd))]
     (is (= "foo"
-           (z/string (edit/find-function-definition-name zloc))))))
+           (z/string (edit/find-function-definition-name-loc zloc))))))
 
 (deftest find-function-definition-name
   (testing "defn"
@@ -118,9 +118,9 @@
 
 (deftest find-function-usage-name
   (let [zloc (-> "(defn foo [] (let [a 1] d))" z/of-string (z/find-next-value z/next 'd))]
-    (is (= "let" (z/string (edit/find-function-usage-name zloc)))))
+    (is (= "let" (z/string (edit/find-function-usage-name-loc zloc)))))
   (let [zloc (-> "(defn foo [] (let [a 1] (and 1 d)))" z/of-string (z/find-next-value z/next 'd))]
-    (is (= "and" (z/string (edit/find-function-usage-name zloc))))))
+    (is (= "and" (z/string (edit/find-function-usage-name-loc zloc))))))
 
 (deftest inside-refer?
   (let [zloc (-> "(ns a (:require [clojure.test :refer [deftes]]))" z/of-string (z/find-next-value z/next 'deftes))]

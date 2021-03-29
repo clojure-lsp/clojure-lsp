@@ -42,7 +42,7 @@
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
   (let [local-analysis (get analysis filename)]
-    (->>  (filter (fn [{:keys [name-row name-col name-end-row name-end-col scope-end-row scope-end-col bucket] :as a}]
+    (->>  (filter (fn [{:keys [name-row name-col name-end-row name-end-col scope-end-row scope-end-col bucket]}]
                     (and (= :locals bucket)
                          (inside?
                            name-row name-col
@@ -59,6 +59,17 @@
                                      end-line end-column))
                              local-analysis)))
           (remove nil?))))
+
+(defn find-var-usages-under-form
+  [analysis filename line column end-line end-column]
+  (let [local-analysis (get analysis filename)]
+    (filter (fn [{:keys [name-row name-col bucket]}]
+              (and (= :var-usages bucket)
+                   (inside?
+                     line column
+                     name-row name-col
+                     end-line end-column)))
+            local-analysis)))
 
 (defmulti find-definition
   (fn [_analysis element]

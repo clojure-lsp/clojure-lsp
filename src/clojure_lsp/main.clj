@@ -20,6 +20,7 @@
    (java.util.function Supplier)
    (org.eclipse.lsp4j
     CallHierarchyIncomingCallsParams
+    CallHierarchyOutgoingCallsParams
     CallHierarchyPrepareParams
     CodeActionParams
     CodeAction
@@ -219,7 +220,11 @@
 
   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
     (start :callHierarchyIncomingCalls
-           (async-handler params handlers/call-hierarchy-incoming ::interop/call-hierarchy-incoming-calls))))
+           (async-handler params handlers/call-hierarchy-incoming ::interop/call-hierarchy-incoming-calls)))
+
+  (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
+    (start :callHierarchyOutgoingCalls
+           (async-handler params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService

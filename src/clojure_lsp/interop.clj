@@ -11,6 +11,7 @@
     (com.google.gson JsonElement)
     (org.eclipse.lsp4j
       CallHierarchyIncomingCall
+      CallHierarchyOutgoingCall
       CallHierarchyItem
       CodeAction
       CodeActionKind
@@ -351,13 +352,20 @@
 
 (s/def :call-hierarchy/from-ranges (s/coll-of ::range))
 (s/def :call-hierarchy/from ::call-hierarchy-item)
+(s/def :call-hierarchy/to ::call-hierarchy-item)
 
 (s/def ::call-hierarchy-incoming-call (s/and (s/keys :req-un [:call-hierarchy/from :call-hierarchy/from-ranges])
                                              (s/conformer #(doto (CallHierarchyIncomingCall.)
                                                              (.setFrom (:from %1))
                                                              (.setFromRanges (:from-ranges %1))))))
 
+(s/def ::call-hierarchy-outgoing-call (s/and (s/keys :req-un [:call-hierarchy/to :call-hierarchy/from-ranges])
+                                             (s/conformer #(doto (CallHierarchyOutgoingCall.)
+                                                             (.setTo (:to %1))
+                                                             (.setFromRanges (:from-ranges %1))))))
+
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
+(s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
 
 (defn java->clj [inst]
   (let [converted (j/from-java inst)]

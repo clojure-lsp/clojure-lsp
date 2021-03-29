@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Bump clj-londo 2021.03.22-20210327.192113-4 - Fixes #385
+- Add support for outgoing call hierarchy - Fixes #384
 
 ## 2021.03.26-23.41.07
 

@@ -278,3 +278,11 @@
         col (inc (-> item :range :start :character))
         project-root (:project-root @db/db)]
     (f.call-hierarchy/incoming uri row col project-root)))
+
+(defn call-hierarchy-outgoing
+  [{:keys [item]}]
+  (let [uri (:uri item)
+        row (inc (-> item :range :start :line))
+        col (inc (-> item :range :start :character))
+        project-root (:project-root @db/db)]
+    (f.call-hierarchy/outgoing uri row col project-root)))

@@ -105,6 +105,17 @@
   "allPublicMethods":true
 },
 {
+  "name":"org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.CallHierarchyOutgoingCall",
+  "allDeclaredFields":true,
+  "allPublicMethods":true
+},
+{
   "name":"org.eclipse.lsp4j.CallHierarchyItem",
   "allDeclaredFields":true,
   "allPublicMethods":true

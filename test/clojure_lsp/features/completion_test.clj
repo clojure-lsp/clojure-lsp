@@ -43,14 +43,14 @@
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-a"
     (h/assert-submaps
-     [{:label "alpaca" :kind :module :detail "alpaca.ns"}
-      {:label "alpaca" :kind :module :detail "user"}
+     [{:label "alpaca" :kind :property :detail "user"}
+      {:label "alpaca" :kind :property :detail "alpaca.ns"}
       {:label "alpha" :kind :variable}
       {:label "ba" :detail "alpaca.ns"}]
      (f.completion/completion "file:///b.clj" 3 3)))
   (testing "complete-ba"
     (h/assert-submaps
-     [{:label "ba" :kind :module}
+     [{:label "ba" :kind :property}
       {:label "ba/baff"}
       {:label "ba/barr"}
       {:label "ba/bazz"}
@@ -58,8 +58,8 @@
      (f.completion/completion "file:///b.clj" 4 3)))
   (testing "complete-alpaca"
     (h/assert-submaps
-     [{:label "alpaca" :kind :module :detail "alpaca.ns"}
-      {:label "alpaca" :kind :module :detail "user"}
+     [{:label "alpaca" :kind :property :detail "user"}
+      {:label "alpaca" :kind :property :detail "alpaca.ns"}
       {:label "alpha" :kind :variable}
       {:label "ba" :detail "alpaca.ns"}]
      (f.completion/completion "file:///b.clj" 3 3)))
@@ -96,7 +96,7 @@
      (f.completion/completion "file:///f.clj" 2 21)))
   (testing "complete locals"
     (h/assert-submaps
-     [{:label "ba" :kind :module}
+     [{:label "ba" :kind :property}
       {:label "ba/baff"}
       {:label "ba/barr"}
       {:label "ba/bazz"}

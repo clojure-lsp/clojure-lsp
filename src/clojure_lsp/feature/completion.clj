@@ -41,9 +41,11 @@
 (defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities]}]
   (cond
     (#{:namespace-definitions
-       :namespace-usages
-       :namespace-alias} bucket)
+       :namespace-usages} bucket)
     :module
+
+    (#{:namespace-alias} bucket)
+    :property
 
     (#{:keywords} bucket)
     :keyword
@@ -52,14 +54,14 @@
          fixed-arities)
     :function
 
-    (#{:var-definitions :var-usages} bucket)
+    (#{:var-definitions :var-usages :locals} bucket)
     :variable
 
-    (#{:locals :localusages} bucket)
+    (#{:local-usages} bucket)
     :value
 
     :else
-    :text))
+    :reference))
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias]
   (cond
@@ -212,6 +214,7 @@
   (->> common-sym/core-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
+                       :kind :variable
                        :data (walk/stringify-keys {:name (str sym)
                                                    :ns "clojure.core"})
                        :detail (str "clojure.core/" sym)}))))
@@ -220,6 +223,7 @@
   (->> common-sym/cljs-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
+                       :kind :variable
                        :data (walk/stringify-keys {:name (str sym)
                                                    :ns "cljs.core"})
                        :detail (str "cljs.core/" sym)}))))
@@ -229,10 +233,12 @@
     (->> common-sym/java-lang-syms
          (filter (comp matches-fn str))
          (map (fn [sym] {:label (str sym)
+                         :kind :class
                          :detail (str "java.lang." sym)})))
     (->> common-sym/java-util-syms
          (filter (comp matches-fn str))
          (map (fn [sym] {:label (str sym)
+                         :kind :class
                          :detail (str "java.util." sym)})))))
 
 (defn completion [uri row col]

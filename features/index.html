@@ -482,9 +482,29 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#call-hierarchy-incoming-only" class="md-nav__link">
-    Call hierarchy (Incoming only)
+  <a href="#call-hierarchy" class="md-nav__link">
+    Call hierarchy
   </a>
+  
+    <nav class="md-nav" aria-label="Call hierarchy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#incoming" class="md-nav__link">
+    Incoming
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outgoing" class="md-nav__link">
+    Outgoing
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -849,9 +869,29 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#call-hierarchy-incoming-only" class="md-nav__link">
-    Call hierarchy (Incoming only)
+  <a href="#call-hierarchy" class="md-nav__link">
+    Call hierarchy
   </a>
+  
+    <nav class="md-nav" aria-label="Call hierarchy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#incoming" class="md-nav__link">
+    Incoming
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outgoing" class="md-nav__link">
+    Outgoing
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1166,9 +1206,14 @@
 <p><img alt="" src="../images/features/signature-help.gif" /></p>
 <h3 id="semantic-tokens">Semantic tokens<a class="headerlink" href="#semantic-tokens" title="Permanent link">#</a></h3>
 <p>Experimental: apply color on client editor for each known token</p>
-<h3 id="call-hierarchy-incoming-only">Call hierarchy (Incoming only)<a class="headerlink" href="#call-hierarchy-incoming-only" title="Permanent link">#</a></h3>
-<p>Show all the call hierarchy of a function/variable as a lazy tree</p>
-<p><img alt="" src="../images/features/call-hierarchy.png" /></p>
+<h3 id="call-hierarchy">Call hierarchy<a class="headerlink" href="#call-hierarchy" title="Permanent link">#</a></h3>
+<p>Show the incoming or outgoing call hierarchy of a function/variable as a lazy tree</p>
+<h5 id="incoming">Incoming<a class="headerlink" href="#incoming" title="Permanent link">#</a></h5>
+<p>Show functions that call the current one recursively</p>
+<p><img alt="" src="../images/features/call-hierarchy-incoming.png" /></p>
+<h5 id="outgoing">Outgoing<a class="headerlink" href="#outgoing" title="Permanent link">#</a></h5>
+<p>Show functions that the current one call, recursively</p>
+<p><img alt="" src="../images/features/call-hierarchy-outgoing.png" /></p>
 <h3 id="execute-command">Execute command<a class="headerlink" href="#execute-command" title="Permanent link">#</a></h3>
 <p>Commands that client can request. Some code actions use these commands as actions.</p>
 <h4 id="refactoring">Refactoring<a class="headerlink" href="#refactoring" title="Permanent link">#</a></h4>
@@ -1221,7 +1266,7 @@ make most of features work.</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 27, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 29, 2021</span>
     
   </small>
 </div>

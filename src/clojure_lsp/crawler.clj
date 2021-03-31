@@ -200,16 +200,17 @@
     nil))
 
 (defn initialize-project [project-root client-capabilities client-settings]
-   (let [project-settings (config/resolve-config project-root)
-         root-path (shared/uri->path project-root)]
-     (when-let [log-path (:log-path project-settings)]
-       (logging/update-log-path log-path))
-     (swap! db/db assoc
-            :project-root project-root
-            :project-settings project-settings
-            :client-settings client-settings
-            :settings (-> (merge client-settings project-settings)
-                          (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
-                          (update :cljfmt cljfmt.main/merge-default-options))
-            :client-capabilities client-capabilities)
-     (analyze-project project-root)))
+  (let [project-settings (config/resolve-config project-root)
+        root-path (shared/uri->path project-root)
+        settings (-> (merge client-settings project-settings)
+                     (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
+                     (update :cljfmt cljfmt.main/merge-default-options))]
+    (when-let [log-path (:log-path settings)]
+      (logging/update-log-path log-path))
+    (swap! db/db assoc
+           :project-root project-root
+           :project-settings project-settings
+           :client-settings client-settings
+           :settings settings
+           :client-capabilities client-capabilities)
+    (analyze-project project-root)))

@@ -5,13 +5,14 @@
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [taoensso.timbre :as log]))
 
 (defn ^:private fuzzy-search [^String query col get-against]
-  (let [query (.toLowerCase query)]
+  (let [query (string/lower-case query)]
     (->> (for [doc col]
            {:data doc
-            :score (fuzzy/dice query (.toLowerCase (name (get-against doc))))})
+            :score (fuzzy/dice query (string/lower-case (name (get-against doc))))})
          (filter #(< 0 (:score %)))
          (sort-by :score (comp - compare))
          (map :data))))

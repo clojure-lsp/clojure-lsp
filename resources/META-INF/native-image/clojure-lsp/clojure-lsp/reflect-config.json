@@ -994,6 +994,8 @@
 },
 {
   "name":"org.eclipse.lsp4j.WorkspaceSymbolParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

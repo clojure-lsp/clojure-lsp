@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix textDocument/workspaceSymbols filter not working on native binaries.
+
 ## 2021.03.30-20.42.34
 
 - Bump clj-londo 2021.03.22-20210327.192113-4 - Fixes #385

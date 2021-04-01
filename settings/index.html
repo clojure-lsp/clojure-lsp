@@ -759,10 +759,16 @@
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
 <h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
-make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
-that can be retrieved in <code>clojure-lsp --version</code>, but make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file. </p>
-<p>You can disable clj-kondo diagnostics with:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}}}</span>
+make most of features work, you don't have to install clj-kondo to make it work, <code>clojure-lsp</code> will use a specific clj-kondo version 
+that can be retrieved via <code>clojure-lsp --version</code>, but make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file. </p>
+<p>It has the possible key/values:</p>
+<ul>
+<li><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code> </li>
+<li><code>:report-duplicates</code> which will show all linters of the same symbol instead of showing only the first spot. Available values: <code>true</code>, <code>false</code> with default value of <code>true</code> </li>
+</ul>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span>
+                       <span class="ss">:report-duplicates</span> <span class="nv">false</span><span class="p">}}}</span>
 </code></pre></div>
 <p>For more information about available configurations, 
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>

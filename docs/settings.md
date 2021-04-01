@@ -58,13 +58,19 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 #### clj-kondo
 
 `clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to
-make most of features work, you don't have to install clj-kondo to make it work, clojure-lsp will use a specific clj-kondo version 
-that can be retrieved in `clojure-lsp --version`, but make sure you have it properly configured in your `.clj-kondo/config.edn` file. 
+make most of features work, you don't have to install clj-kondo to make it work, `clojure-lsp` will use a specific clj-kondo version 
+that can be retrieved via `clojure-lsp --version`, but make sure you have it properly configured in your `.clj-kondo/config.edn` file. 
 
-You can disable clj-kondo diagnostics with:
+It has the possible key/values:
+
+- `:level` with available values: `:off`, `:on` with default value of `:on` 
+- `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true` 
+
+Example:
 
 ```clojure
-{:linters {:clj-kondo {:level :off}}}
+{:linters {:clj-kondo {:level :off
+                       :report-duplicates false}}}
 ```
 
 For more information about available configurations, 

@@ -20,11 +20,11 @@
     (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/b.clj"))
-        [{:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
+        [{:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
-         {:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
+         {:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
           :newText "your-func"}]
         (keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 3 :character 6} :end {:line 3 :character 13}}
@@ -39,11 +39,11 @@
     (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/b.clj"))
-        [{:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
+        [{:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
-         {:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
+         {:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
           :newText "your-func"}]
         (keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 3 :character 6} :end {:line 3 :character 13}}
@@ -110,11 +110,11 @@
     (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/b.clj"))
-        [{:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
+        [{:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
-         {:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
+         {:range {:start {:line 5 :character 1} :end {:line 5 :character 8}}
           :newText "your-func"}]
         (keyword (h/source-path->uri "rename/a.clj"))
         [{:range {:start {:line 3 :character 6} :end {:line 3 :character 13}}

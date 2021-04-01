@@ -12,9 +12,13 @@
      :params params
      :id (lsp/inc-request-id)}))
 
-(defn initialize-request []
-  (lsp-json-rpc :initialize
-                {:rootUri (h/file->uri (io/file h/root-project-path))}))
+(defn initialize-request
+  ([]
+   (initialize-request {}))
+  ([settings]
+   (lsp-json-rpc :initialize
+                 {:rootUri (h/file->uri (io/file h/root-project-path))
+                  :initializationOptions settings})))
 
 (defn definition-request [path row col]
   (lsp-json-rpc :textDocument/definition

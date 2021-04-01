@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix textDocument/workspaceSymbols filter not working on native binaries.
+- Report duplicate linters as default, can be disabled via `:linters :clj-kondo :report-duplicates` - Fixes #390
 
 ## 2021.03.30-20.42.34
 

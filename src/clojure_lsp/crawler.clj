@@ -90,12 +90,12 @@
                           (run-kondo-on-paths! batch-paths)))
            (reduce shared/deep-merge)))))
 
-(defn run-kondo-on-text! [text uri]
+(defn run-kondo-on-text! [text uri settings]
   (let [err (java.io.StringWriter.)]
     (binding [*err* err]
       (let [result (with-in-str
                      text
-                     (kondo/run! (config/kondo-for-single-file uri)))]
+                     (kondo/run! (config/kondo-for-single-file uri settings)))]
         (when-not (string/blank? (str err))
           (log/error (str err)))
         result))))

@@ -29,21 +29,22 @@
                              (string/replace #"_" "-")))))))))
 
 (defn did-open [uri text]
-  (when-let [new-ns (and (string/blank? text)
-                         (uri->namespace uri))]
-    (when (get-in @db/db [:settings :auto-add-ns-to-new-files?] true)
-      (let [new-text (format "(ns %s)" new-ns)
-            changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
-                      :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
-                               :new-text new-text}]}]]
-        (async/put! db/edits-chan (f.refactor/client-changes changes)))))
-  (when-let [kondo-result (crawler/run-kondo-on-text! text uri)]
-    (swap! db/db (fn [state-db]
-                   (-> state-db
-                       (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                       (crawler/update-analysis uri (:analysis kondo-result))
-                       (crawler/update-findings uri (:findings kondo-result)))))
-    (f.diagnostic/lint-file uri @db/db)))
+  (let [settings (get @db/db :settings {})]
+    (when-let [new-ns (and (string/blank? text)
+                           (uri->namespace uri))]
+      (when (get @db/db :auto-add-ns-to-new-files? true)
+        (let [new-text (format "(ns %s)" new-ns)
+              changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
+                        :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
+                                 :new-text new-text}]}]]
+          (async/put! db/edits-chan (f.refactor/client-changes changes)))))
+    (when-let [kondo-result (crawler/run-kondo-on-text! text uri settings)]
+      (swap! db/db (fn [state-db]
+                     (-> state-db
+                         (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
+                         (crawler/update-analysis uri (:analysis kondo-result))
+                         (crawler/update-findings uri (:findings kondo-result)))))
+      (f.diagnostic/lint-file uri @db/db))))
 
 (defn ^:private find-changed-var-definitions [old-analysis new-analysis]
   (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)
@@ -106,10 +107,11 @@
 (defn update-and-notify
   "Should only be called from processing change channel"
   [{:keys [uri version text new-version?]}]
-  (let [notify-references? (get-in @db/db [:settings :notify-references-on-file-change] false)
+  (let [settings (get @db/db :settings {})
+        notify-references? (get settings :settings false)
         filename (shared/uri->filename uri)
         old-analysis (get-in @db/db [:analysis filename])
-        kondo-result (some-> text (crawler/run-kondo-on-text! uri))]
+        kondo-result (some-> text (crawler/run-kondo-on-text! uri settings))]
     (when kondo-result
       (when (loop [state-db @db/db]
               (when (>= version (get-in state-db [:documents uri :v] -1))

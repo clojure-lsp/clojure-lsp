@@ -23,16 +23,20 @@
                                 :keywords true}
                      :canonical-paths true}}})
 
-(defn kondo-for-single-file [uri]
-  {:cache true
-   :lint ["-"]
-   :copy-configs true
-   :lang (shared/uri->file-type uri)
-   :filename (shared/uri->filename uri)
-   :config {:output {:analysis {:arglists true
-                                :locals true
-                                :keywords true}
-                     :canonical-paths true}}})
+(defn kondo-for-single-file [uri settings]
+  (cond-> {:cache true
+           :lint ["-"]
+           :copy-configs true
+           :lang (shared/uri->file-type uri)
+           :filename (shared/uri->filename uri)
+           :config {:output {:analysis {:arglists true
+                                        :locals true
+                                        :keywords true}
+                             :canonical-paths true}}}
+    (get-in settings [:linters :clj-kondo :report-duplicates] true)
+    (assoc-in [:config :linters] {:unresolved-symbol {:report-duplicates true}
+                                  :unresolved-namespace {:report-duplicates true}
+                                  :unresolved-var {:report-duplicates true}})))
 
 (defn ^:private read-edn-file [^java.io.File file]
   (try

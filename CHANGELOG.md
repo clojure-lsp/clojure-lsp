@@ -4,6 +4,7 @@
 
 - Fix textDocument/workspaceSymbols filter not working on native binaries.
 - Report duplicate linters as default, can be disabled via `:linters :clj-kondo :report-duplicates` - Fixes #390
+- Bump rewrite-clj to 1.0.605-alpha to fix exceptions when on clojure files with babashka interpreter on first line.
 
 ## 2021.03.30-20.42.34
 

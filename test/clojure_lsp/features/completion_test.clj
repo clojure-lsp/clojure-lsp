@@ -160,6 +160,9 @@
            (f.completion/resolve-item {:label "foo"
                                        :kind :function
                                        :data {:name "foo"
+                                              :filename "/a.clj"
+                                              :name-row 1
+                                              :name-col 13
                                               :ns "a"}})))))
 
 (deftest completing-refers

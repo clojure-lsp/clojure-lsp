@@ -1,9 +1,10 @@
 (ns clojure-lsp.queries
   (:require
-   [taoensso.timbre :as log]
-   [medley.core :as medley]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
    [clojure.string :as string]
-   [clojure-lsp.shared :as shared]))
+   [medley.core :as medley]
+   [taoensso.timbre :as log]))
 
 (defn inside?
   [start-l start-c
@@ -38,6 +39,12 @@
 (defn ^:private find-first-order-by-project-analysis [pred? analysis]
   (or (find-first pred? (mapcat val (filter-project-analysis analysis)))
       (find-first pred? (mapcat val (filter-external-analysis analysis)))))
+
+(defn ^:private match-file-lang
+  [check-element match-element]
+  (let [match-file-lang (shared/uri->available-langs (:filename match-element))
+        check-file-lang (shared/uri->available-langs (:filename check-element))]
+    (seq (set/intersection match-file-lang check-file-lang))))
 
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
@@ -79,7 +86,8 @@
   [analysis element]
   (find-first-order-by-project-analysis
     #(and (= (:bucket %) :namespace-definitions)
-          (= (:name %) (:name element)))
+          (= (:name %) (:name element))
+          (match-file-lang % element))
     analysis))
 
 (defmethod find-definition :var-usages
@@ -87,7 +95,8 @@
   (find-first-order-by-project-analysis
     #(and (= (:bucket %) :var-definitions)
           (= (:name %) (:name element))
-          (= (:ns %) (:to element)))
+          (= (:ns %) (:to element))
+          (match-file-lang % element))
     analysis))
 
 (defmethod find-definition :local-usages

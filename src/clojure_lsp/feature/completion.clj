@@ -215,7 +215,8 @@
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
                        :kind :variable
-                       :data (walk/stringify-keys {:name (str sym)
+                       :data (walk/stringify-keys {:filename "/clojure.core.clj"
+                                                   :name (str sym)
                                                    :ns "clojure.core"})
                        :detail (str "clojure.core/" sym)}))))
 
@@ -224,7 +225,8 @@
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
                        :kind :variable
-                       :data (walk/stringify-keys {:name (str sym)
+                       :data (walk/stringify-keys {:filename "/cljs.core.cljs"
+                                                   :name (str sym)
                                                    :ns "cljs.core"})
                        :detail (str "cljs.core/" sym)}))))
 
@@ -315,9 +317,10 @@
              not-empty)))))
 
 (defn ^:private resolve-item-by-ns
-  [{{:keys [name ns]} :data :as item}]
+  [{{:keys [name ns filename]} :data :as item}]
   (let [analysis (:analysis @db/db)
-        definition (q/find-definition analysis {:name (symbol name)
+        definition (q/find-definition analysis {:filename filename
+                                                :name (symbol name)
                                                 :to (symbol ns)
                                                 :bucket :var-usages})]
     (if definition

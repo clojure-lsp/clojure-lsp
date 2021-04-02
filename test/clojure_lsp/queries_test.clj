@@ -180,6 +180,35 @@
      {:name 'bar :filename "/a.clj"}
      (q/find-definition-from-cursor ana "/b.clj" bar-r bar-c))))
 
+(deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
+  (testing "when on a clj file"
+    (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:some-jar.clj")
+          _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:other-jar.cljs")
+          [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+                                                        "|f/bar") "file:///b.clj")
+          ana (:analysis @db/db)]
+      (h/assert-submap
+        {:name 'bar :filename "/some.jar:some-jar.clj"}
+        (q/find-definition-from-cursor ana "/b.clj" bar-r bar-c))))
+  (testing "when on a cljs file"
+    (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:some-jar.clj")
+          _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:other-jar.cljs")
+          [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+                                                        "|f/bar") "file:///b.cljs")
+          ana (:analysis @db/db)]
+      (h/assert-submap
+        {:name 'bar :filename "/some.jar:other-jar.cljs"}
+        (q/find-definition-from-cursor ana "/b.cljs" bar-r bar-c))))
+  (testing "when on a cljc file"
+    (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:some-jar.clj")
+          _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "file:///some.jar:other-jar.cljs")
+          [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+                                                        "|f/bar") "file:///b.cljc")
+          ana (:analysis @db/db)]
+      (h/assert-submap
+        {:name 'bar :filename "/some.jar:some-jar.clj"}
+        (q/find-definition-from-cursor ana "/b.cljc" bar-r bar-c)))))
+
 (deftest find-unused-aliases
   (testing "used require via alias"
     (h/load-code-and-locs "(ns a (:require [x :as f])) f/foo")

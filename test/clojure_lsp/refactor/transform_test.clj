@@ -6,8 +6,7 @@
     [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
     [clojure.test :refer [deftest testing is]]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.node :as n]))
+    [rewrite-clj.zip :as z]))
 
 (defn code [& strings] (string/join "\n" strings))
 

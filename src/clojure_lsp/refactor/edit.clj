@@ -1,6 +1,5 @@
 (ns clojure-lsp.refactor.edit
   (:require
-   [rewrite-clj.custom-zipper.core :as cz]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -119,7 +118,7 @@
           (z/rightmost) ; move to nested binding
           (z/splice) ; remove nesting
           z/left
-          (cz/insert-right (n/newlines 1))
+          (z/insert-right* (n/newlines 1))
           (z/up) ; move to new binding
           (z/up))) ; move to let-form
     let-loc))

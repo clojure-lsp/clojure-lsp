@@ -1,19 +1,18 @@
 (ns clojure-lsp.refactor.transform
   (:require
-   [clojure-lsp.common-symbols :as common-sym]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.parser :as parser]
-   [clojure-lsp.queries :as q]
-   [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [medley.core :as medley]
-   [rewrite-clj.custom-zipper.core :as cz]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]))
+    [clojure-lsp.common-symbols :as common-sym]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.parser :as parser]
+    [clojure-lsp.queries :as q]
+    [clojure-lsp.refactor.edit :as edit]
+    [clojure-lsp.shared :as shared]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [medley.core :as medley]
+    [rewrite-clj.node :as n]
+    [rewrite-clj.zip :as z]
+    [rewrite-clj.zip.subedit :as zsub]
+    [taoensso.timbre :as log]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -87,8 +86,8 @@
                                         threaded?
                                         (-> (z/insert-left first-node)
                                             (z/left)
-                                            (cz/insert-right (n/spaces first-col))
-                                            (cz/insert-right (n/newlines 1))
+                                            (z/insert-right* (n/spaces first-col))
+                                            (z/insert-right* (n/newlines 1))
                                             z/up)
 
                                         (not threaded?)
@@ -223,13 +222,13 @@
           with-binding (if bindings-pos
                          (-> bindings-pos
                              (z/insert-left binding-sym)
-                             (cz/insert-left bound-node)
-                             (cz/insert-left (n/newlines 1))
-                             (cz/insert-left (n/spaces col)))
+                             (z/insert-left* bound-node)
+                             (z/insert-left* (n/newlines 1))
+                             (z/insert-left* (n/spaces col)))
                          (-> bindings-loc
                              (cond->
-                              first-bind (cz/append-child (n/newlines 1))
-                              first-bind (cz/append-child (n/spaces col))) ; insert let and binding backwards
+                              first-bind (z/append-child* (n/newlines 1))
+                              first-bind (z/append-child* (n/spaces col))) ; insert let and binding backwards
                              (z/append-child binding-sym) ; add binding symbol
                              (z/append-child bound-node)
                              (z/down)
@@ -250,8 +249,8 @@
         loc (-> zloc
                 (edit/wrap-around :list) ; wrap with new let list
                 (z/insert-child 'let) ; add let
-                (cz/append-child (n/newlines 1)) ; add new line after location
-                (cz/append-child (n/spaces (inc col)))  ; indent body
+                (z/append-child* (n/newlines 1)) ; add new line after location
+                (z/append-child* (n/spaces (inc col)))  ; indent body
                 (z/append-child sym) ; add new symbol to body of let
                 (z/down) ; enter let list
                 (z/right) ; skip 'let
@@ -283,8 +282,8 @@
                        (z/remove) ; remove binding
                        (z/find z/up #(= (z/tag %) :list)) ; go to parent form container
                        (edit/wrap-around :list) ; wrap with new let list
-                       (cz/insert-child (n/spaces col)) ; insert let and bindings backwards
-                       (cz/insert-child (n/newlines 1)) ; insert let and bindings backwards
+                       (z/insert-child* (n/spaces col)) ; insert let and bindings backwards
+                       (z/insert-child* (n/newlines 1)) ; insert let and bindings backwards
                        (z/insert-child bind-node)
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
@@ -294,29 +293,29 @@
   (let [sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
         forms (->> removed-nodes
-                        z/node
-                        n/children
-                        (remove n/printable-only?)
-                        (sort-by (comp (fn [sexpr]
-                                         (if (symbol? sexpr)
-                                           (str sexpr)
-                                           (str (first sexpr)))) n/sexpr))
-                        (map-indexed (fn [idx node]
-                                       (if (and keep-at-start?
-                                                (= idx 0))
-                                         [single-space node]
-                                         [(n/newlines 1) sep node])))
-                        (apply concat)
-                        (cons (n/keyword-node form-type)))]
+                   z/node
+                   n/children
+                   (remove n/printable-only?)
+                   (sort-by (comp (fn [sexpr]
+                                    (if (symbol? sexpr)
+                                      (str sexpr)
+                                      (str (first sexpr)))) n/sexpr))
+                   (map-indexed (fn [idx node]
+                                  (if (and keep-at-start?
+                                           (= idx 0))
+                                    [single-space node]
+                                    [(n/newlines 1) sep node])))
+                   (apply concat)
+                   (cons (n/keyword-node form-type)))]
     (if (empty? (z/child-sexprs removed-nodes))
-        (z/subedit-> ns-loc
-                     (z/find-value z/next form-type)
-                     (z/up)
-                     z/remove)
-        (z/subedit-> ns-loc
-                     (z/find-value z/next form-type)
-                     (z/up)
-                     (z/replace (n/list-node forms))))))
+      (z/subedit-> ns-loc
+                   (z/find-value z/next form-type)
+                   (z/up)
+                   z/remove)
+      (z/subedit-> ns-loc
+                   (z/find-value z/next form-type)
+                   (z/up)
+                   (z/replace (n/list-node forms))))))
 
 (defn ^:private remove-unused-refers
   [node unused-refers]
@@ -367,8 +366,8 @@
         single-unused?  (when (and single-require? (z/vector? first-node))
                           (or (contains? unused-aliases first-node-ns)
                               (and (seq first-node-refers)
-                                   (seq unused-refers)
-                                   (set/subset? first-node-refers unused-refers))))]
+                                (seq unused-refers)
+                                (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
@@ -431,8 +430,8 @@
                   (-> import-loc z/right z/node meta :col dec))
                 4)
           removed-nodes (-> import-loc
-                             z/remove
-                             (edit/map-children #(remove-unused-import % unused-imports)))]
+                            z/remove
+                            (edit/map-children #(remove-unused-import % unused-imports)))]
       (process-clean-ns ns-loc removed-nodes col keep-at-start? :import))
     ns-loc))
 
@@ -457,10 +456,10 @@
         alias->info (->> (q/find-all-aliases (:analysis @db/db))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
-                                   (medley/distinct-by (juxt :to))
-                                   (map :to))
+                            (medley/distinct-by (juxt :to))
+                            (map :to))
                           (->> [(get common-sym/common-alias->info require-alias)]
-                               (remove nil?)))]
+                            (remove nil?)))]
     (when (= 1 (count possibilities))
       (some-> possibilities first name symbol))))
 
@@ -520,8 +519,8 @@
                                     (z/up)
                                     (cond->
                                      (or (not add-form-type?)
-                                         (not keep-require-at-start?)) (cz/append-child (n/newlines 1)))
-                                    (cz/append-child (n/spaces (dec col)))
+                                         (not keep-require-at-start?)) (z/append-child* (n/newlines 1)))
+                                    (z/append-child* (n/spaces (dec col)))
                                     (z/append-child form-to-add))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
@@ -560,7 +559,7 @@
                                     (z/find-value z/next qualified-ns-to-add)
                                     (z/find-value z/next ':refer)
                                     z/right
-                                    (cz/append-child (n/spaces 1))
+                                    (z/append-child* (n/spaces 1))
                                     (z/append-child (z/sexpr zloc)))
                        (z/subedit-> ns-loc
                                     (cond->
@@ -569,8 +568,8 @@
                                      add-require? (z/append-child (list :require)))
                                     (z/find-value z/next :require)
                                     (z/up)
-                                    (cz/append-child (n/newlines 1))
-                                    (cz/append-child (n/spaces (dec col)))
+                                    (z/append-child* (n/newlines 1))
+                                    (z/append-child* (n/spaces (dec col)))
                                     (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))]
       [{:range (meta (z/node result-loc))
         :loc result-loc}])))
@@ -661,17 +660,17 @@
         defn-edit (-> (z/of-string "(defn)\n\n")
                       (z/append-child fn-sym)
                       (z/append-child used-syms)
-                      (cz/append-child (n/newlines 1))
-                      (cz/append-child (n/spaces 2))
+                      (z/append-child* (n/newlines 1))
+                      (z/append-child* (n/spaces 2))
                       (z/append-child expr-node))]
     [{:loc defn-edit
       :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+               :end-row form-row
+               :end-col form-col)}
      {:loc (z/of-string "\n\n")
       :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+               :end-row form-row
+               :end-col form-col)}
      {:loc expr-edit
       :range expr-meta}]))
 
@@ -743,37 +742,37 @@
     (let [fn-form (if (= :token (z/tag zloc))
                     (z/up zloc)
                     zloc)
-            fn-name (z/string (z/down fn-form))
-            privacy-meta? (get-in @db/db [:settings :use-metadata-for-privacy?] false)
-            new-fn-str (if privacy-meta?
-                        (format "(defn ^:private %s)" (symbol fn-name))
-                        (format "(defn- %s)\n\n" (symbol fn-name)))
-            args (->> fn-form
+          fn-name (z/string (z/down fn-form))
+          privacy-meta? (get-in @db/db [:settings :use-metadata-for-privacy?] false)
+          new-fn-str (if privacy-meta?
+                       (format "(defn ^:private %s)" (symbol fn-name))
+                       (format "(defn- %s)\n\n" (symbol fn-name)))
+          args (->> fn-form
                     z/node
                     n/children
                     (drop 1)
                     (filter (complement n/whitespace?))
                     (map-indexed (fn [index node]
-                                    (if (and (= :token (n/tag node))
+                                   (if (and (= :token (n/tag node))
                                             (symbol? (n/sexpr node)))
-                                    (n/sexpr node)
-                                    (symbol (str "arg" (inc index))))))
+                                     (n/sexpr node)
+                                     (symbol (str "arg" (inc index))))))
                     vec)
-            expr-loc (z/up (edit/find-op zloc))
-            form-loc (edit/to-top expr-loc)
-            {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
-            defn-edit (-> (z/of-string new-fn-str)
-                        (cz/append-child (n/newlines 1))
-                        (cz/append-child (n/spaces 2))
+          expr-loc (z/up (edit/find-op zloc))
+          form-loc (edit/to-top expr-loc)
+          {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
+          defn-edit (-> (z/of-string new-fn-str)
+                        (z/append-child* (n/newlines 1))
+                        (z/append-child* (n/spaces 2))
                         (z/append-child args)
-                        (cz/append-child (n/newlines 1))
-                        (cz/append-child (n/spaces 2)))]
+                        (z/append-child* (n/newlines 1))
+                        (z/append-child* (n/spaces 2)))]
 
-        [{:loc defn-edit
+      [{:loc defn-edit
         :range (assoc form-pos
-                        :end-row form-row
-                        :end-col form-col)}
-        {:loc (z/of-string "\n\n")
+                 :end-row form-row
+                 :end-col form-col)}
+       {:loc (z/of-string "\n\n")
         :range (assoc form-pos
-                        :end-row form-row
-                        :end-col form-col)}])))
+                 :end-row form-row
+                 :end-col form-col)}])))

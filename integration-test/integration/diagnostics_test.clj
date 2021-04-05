@@ -11,6 +11,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
 
   (testing "When a public var is unused"
     (h/assert-submaps
@@ -34,6 +35,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))
 
   (testing "when report-duplicates is enabled by default"
     (h/assert-submaps
@@ -61,6 +63,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request {:linters {:clj-kondo {:report-duplicates false}}}))
   (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))
 
   (testing "when report-duplicates is disabled manually"
     (h/assert-submaps

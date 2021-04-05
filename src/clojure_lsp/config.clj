@@ -13,30 +13,36 @@
 
 (def clj-kondo-version (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
-(defn kondo-for-paths [paths]
-  {:cache true
-   :parallel true
-   :copy-configs true
-   :lint [(string/join (System/getProperty "path.separator") paths)]
-   :config {:output {:analysis {:arglists true
-                                :locals false
-                                :keywords true}
-                     :canonical-paths true}}})
-
-(defn kondo-for-single-file [uri settings]
-  (cond-> {:cache true
-           :lint ["-"]
-           :copy-configs true
-           :lang (shared/uri->file-type uri)
-           :filename (shared/uri->filename uri)
-           :config {:output {:analysis {:arglists true
-                                        :locals true
-                                        :keywords true}
-                             :canonical-paths true}}}
+(defn ^:private with-additional-config
+  [config settings]
+  (cond-> config
     (get-in settings [:linters :clj-kondo :report-duplicates] true)
     (assoc-in [:config :linters] {:unresolved-symbol {:report-duplicates true}
                                   :unresolved-namespace {:report-duplicates true}
                                   :unresolved-var {:report-duplicates true}})))
+
+(defn kondo-for-paths [paths settings]
+  (-> {:cache true
+       :parallel true
+       :copy-configs true
+       :lint [(string/join (System/getProperty "path.separator") paths)]
+       :config {:output {:analysis {:arglists true
+                                    :locals false
+                                    :keywords true}
+                         :canonical-paths true}}}
+      (with-additional-config settings)))
+
+(defn kondo-for-single-file [uri settings]
+  (-> {:cache true
+       :lint ["-"]
+       :copy-configs true
+       :lang (shared/uri->file-type uri)
+       :filename (shared/uri->filename uri)
+       :config {:output {:analysis {:arglists true
+                                    :locals true
+                                    :keywords true}
+                         :canonical-paths true}}}
+      (with-additional-config settings)))
 
 (defn ^:private read-edn-file [^java.io.File file]
   (try

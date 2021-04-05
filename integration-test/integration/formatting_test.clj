@@ -5,7 +5,7 @@
     [integration.lsp :as lsp]
     [integration.helper :as h]))
 
-(h/clean-after-test)
+(lsp/clean-after-test)
 
 (deftest formatting
   (lsp/start-process!)

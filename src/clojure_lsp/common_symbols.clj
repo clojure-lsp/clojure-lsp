@@ -1324,22 +1324,6 @@
      uuid
      write-all})
 
-(def core-refers
-  (->> core-syms
-       (mapv (juxt identity (constantly 'clojure.core)))
-       (into {})))
-
-(def cljs-refers
-  (->> core-syms
-       (concat cljs-syms)
-       (mapv (juxt identity (constantly 'cljs.core)))
-       (into {})))
-
-(def java-lang-imports
-  (->> java-lang-syms
-       (mapv (juxt identity #(symbol (str "java.lang." (name %)))))
-       (into {})))
-
 (def java-util-imports
   (->> java-util-syms
        (mapv (juxt identity #(symbol (str "java.util." (name %)))))

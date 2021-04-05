@@ -1,5 +1,6 @@
 (ns clojure-lsp.main
   (:require
+   borkdude.dynaload
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
@@ -12,8 +13,7 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop timeout thread]]
-   [taoensso.timbre :as log]
-   borkdude.dynaload)
+   [taoensso.timbre :as log])
   (:import
    (clojure_lsp ClojureExtensions)
    (java.util.concurrent CompletableFuture)
@@ -291,9 +291,9 @@
              (end
               (do
                 (log/info "Initializing...")
-                (#'handlers/initialize (.getRootUri params)
-                                       (client-capabilities params)
-                                       (client-settings params))
+                (handlers/initialize (.getRootUri params)
+                                     (client-capabilities params)
+                                     (client-settings params))
                 (when-let [parent-process-id (.getProcessId params)]
                   (start-parent-process-liveness-probe! parent-process-id this))
                 (let [settings (:settings @db/db)]
@@ -391,23 +391,23 @@
   (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
-        launcher (LSPLauncher/createServerLauncher server is os)]
+        launcher (LSPLauncher/createServerLauncher server is os)
+        debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
+        debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
     (nrepl/setup-nrepl)
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (go-loop [edit (<! db/edits-chan)]
       (producer/workspace-apply-edit edit)
       (recur (<! db/edits-chan)))
-    (let [debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms (constantly nil))
-          debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
-      (go-loop []
-        (producer/publish-diagnostic (<! debounced-diags))
-        (recur))
-      (go-loop []
-        (try
-          (f.file-management/update-and-notify (<! debounced-changes))
-          (catch Exception e
-            (log/error e "Error during analyzing buffer file changes")))
-        (recur)))
+    (go-loop []
+      (producer/publish-diagnostic (<! debounced-diags))
+      (recur))
+    (go-loop []
+      (try
+        (f.file-management/update-and-notify (<! debounced-changes))
+        (catch Exception e
+          (log/error e "Error during analyzing buffer file changes")))
+      (recur))
     (.startListening launcher)))
 
 (defn ^:private print-version []

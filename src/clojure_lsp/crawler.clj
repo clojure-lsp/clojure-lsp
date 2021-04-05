@@ -1,18 +1,20 @@
 (ns clojure-lsp.crawler
   (:require
-   [clj-kondo.core :as kondo]
-   [cljfmt.main :as cljfmt.main]
-   [clojure-lsp.config :as config]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.producer :as producer]
-   [clojure-lsp.shared :as shared]
-   [clojure.java.io :as io]
-   [clojure.java.shell :as shell]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [digest :as digest]
-   [taoensso.timbre :as log]
-   [clojure-lsp.logging :as logging]))
+    [clj-kondo.core :as kondo]
+    [cljfmt.main :as cljfmt.main]
+    [clojure-lsp.config :as config]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+    [clojure-lsp.logging :as logging]
+    [clojure-lsp.producer :as producer]
+    [clojure-lsp.shared :as shared]
+    [clojure.core.async :as async]
+    [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [digest :as digest]
+    [taoensso.timbre :as log]))
 
 (defn ^:private to-file ^java.io.File
   [^java.nio.file.Path path
@@ -20,6 +22,7 @@
   (.toFile (.resolve path child)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]}]
+  (log/info "Finding classpath via `" (string/join " " classpath-cmd) "`")
   (try
     (let [sep (re-pattern (System/getProperty "path.separator"))
           response (apply shell/sh (into classpath-cmd
@@ -66,10 +69,10 @@
 
 (def clj-kondo-analysis-batch-size 50)
 
-(defn ^:private run-kondo-on-paths! [paths]
+(defn ^:private run-kondo-on-paths! [paths settings]
   (let [err (java.io.StringWriter.)]
     (binding [*err* err]
-      (let [result (kondo/run! (config/kondo-for-paths paths))]
+      (let [result (kondo/run! (config/kondo-for-paths paths settings))]
         (when-not (string/blank? (str err))
           (log/error (str err)))
         result))))
@@ -77,17 +80,17 @@
 (defn ^:private run-kondo-on-paths-batch!
   "Run kondo on paths by partition the paths, with this we should call
   kondo more times but we fewer paths to analyze, improving memory."
-  [paths]
+  [paths settings]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
     (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths)
+      (run-kondo-on-paths! paths settings)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
                           (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
-                          (run-kondo-on-paths! batch-paths)))
+                          (run-kondo-on-paths! batch-paths settings)))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-text! [text uri settings]
@@ -153,23 +156,36 @@
 (defn update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
-(defn ^:private analyze-paths [paths public-only?]
-  (let [start-time (System/nanoTime)
+(defn ^:private lint-project-files [paths]
+  (doseq [path paths]
+    (doseq [file (file-seq (io/file path))]
+      (let [filename (.getAbsolutePath ^java.io.File file)
+            uri (shared/filename->uri filename)]
+        (when (not= :unknown (shared/uri->file-type uri))
+          (f.diagnostic/lint-file uri @db/db))))))
+
+(defn ^:private analyze-paths! [paths public-only?]
+  (let [settings (:settings @db/db)
+        start-time (System/nanoTime)
         result (if public-only?
-                 (run-kondo-on-paths-batch! paths)
-                 (run-kondo-on-paths! paths))
+                 (run-kondo-on-paths-batch! paths settings)
+                 (run-kondo-on-paths! paths settings))
         end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
         _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)
-                           public-only? (dissoc :namespace-usages :var-usages)
-                           public-only? (update :var-definitions (fn [usages] (remove :private usages))))
+                         public-only? (dissoc :namespace-usages :var-usages)
+                         public-only? (update :var-definitions (fn [usages] (remove :private usages))))
         analysis (->> kondo-analysis
                       (normalize-analysis)
                       (group-by :filename))]
     (swap! db/db update :analysis merge analysis)
+    (when-not public-only?
+      (swap! db/db update :findings merge (group-by :filename (:findings result)))
+      (async/go
+        (lint-project-files paths)))
     analysis))
 
-(defn ^:private analyze-classpath [root-path source-paths settings]
+(defn ^:private analyze-classpath! [root-path source-paths settings]
   (let [project-specs (->> (or (get settings :project-specs) default-project-specs)
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
@@ -182,22 +198,23 @@
                                 (mapcat #(lookup-classpath root-path %))
                                 vec
                                 seq)]
+        (log/info "Analyzing classpath for project root" root-path)
         (let [adjusted-cp (cond->> classpath
                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
                             :always (remove (set source-paths)))
-              analysis (analyze-paths adjusted-cp true)
+              analysis (analyze-paths! adjusted-cp true)
               start-time (System/nanoTime)]
-            (System/gc)
-            (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
-            (db/save-deps root-path project-hash classpath analysis))))))
+          (System/gc)
+          (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
+          (db/save-deps root-path project-hash classpath analysis))))))
 
-(defn ^:private analyze-project [project-root]
+(defn ^:private analyze-project! [project-root]
   (let [root-path (shared/uri->path project-root)
         settings (:settings @db/db)
         source-paths (get settings :source-paths)]
-    (analyze-classpath root-path source-paths settings)
-    (analyze-paths source-paths false)
-    nil))
+    (analyze-classpath! root-path source-paths settings)
+    (log/info "Analyzing source paths for project root" root-path)
+    (analyze-paths! source-paths false)))
 
 (defn initialize-project [project-root client-capabilities client-settings]
   (let [project-settings (config/resolve-config project-root)
@@ -213,4 +230,4 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (analyze-project project-root)))
+    (analyze-project! project-root)))

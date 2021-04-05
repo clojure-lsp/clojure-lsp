@@ -3,7 +3,9 @@
     [babashka.process :as p]
     [cheshire.core :as json]
     [clojure.core.async :as async]
-    [clojure.java.io :as io]))
+    [clojure.java.io :as io]
+    [clojure.test :refer [use-fixtures]]
+    [integration.helper :as h]))
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *clojure-lsp-listener* nil)
@@ -83,6 +85,10 @@
   (when *clojure-lsp-process*
     (p/destroy *clojure-lsp-process*)))
 
+(defn clean-after-test []
+  (use-fixtures :each (fn [f] (clean!) (f)))
+  (use-fixtures :once (fn [f] (f) (clean!))))
+
 (defn notify! [params]
   (println (colored :blue "Sending notification:") (colored :yellow params))
   (binding [*out* *stdin*]
@@ -120,3 +126,23 @@
         (do
           (Thread/sleep 500)
           (recur))))))
+
+(defn await-diagnostics [path]
+  (let [file (h/source-path->file path)
+        uri (h/file->uri file)
+        method-str (keyname :textDocument/publishDiagnostics)]
+  (loop []
+    (let [notification (first (filter #(and (= method-str (:method %))
+                                            (= uri (-> % :params :uri)))
+                                      @server-notifications))]
+      (if notification
+        (do
+          (swap! server-notifications
+                 (fn [n]
+                   (->> n
+                        (remove #(= method-str (:method %)))
+                        vec)))
+          (-> notification :params :diagnostics))
+        (do
+          (Thread/sleep 500)
+          (recur)))))))

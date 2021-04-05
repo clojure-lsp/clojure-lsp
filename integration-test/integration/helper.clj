@@ -3,8 +3,7 @@
    [clojure.java.io :as io]
    [clojure.pprint :as pprint]
    [clojure.string :as str]
-   [clojure.test :refer [is use-fixtures]]
-   [integration.lsp :as lsp]))
+   [clojure.test :refer [is]]))
 
 (def root-project-path
   (-> (io/file *file*)
@@ -30,10 +29,6 @@
   (-> source-path
       source-path->file
       file->uri))
-
-(defn clean-after-test []
-  (use-fixtures :each (fn [f] (lsp/clean!) (f)))
-  (use-fixtures :once (fn [f] (f) (lsp/clean!))))
 
 (defn assert-submap [expected actual]
   (is (= expected

@@ -5,7 +5,7 @@
     [integration.helper :as h]
     [integration.lsp :as lsp]))
 
-(h/clean-after-test)
+(lsp/clean-after-test)
 
 (deftest document-symbol
   (lsp/start-process!)

@@ -38,8 +38,7 @@
 
 (defn initialize [project-root client-capabilities client-settings]
   (when project-root
-    (crawler/initialize-project project-root client-capabilities client-settings)
-    nil))
+    (crawler/initialize-project project-root client-capabilities client-settings)))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (-> textDocument :uri URLDecoder/decode)

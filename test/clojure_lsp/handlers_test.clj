@@ -208,9 +208,9 @@
                                                                            "(def name |::dd/name|)"
                                                                            "(def other-name |:d.dd/name|)") "file:///e.clj")
         [main-uname-kw-start main-uname-kw-end] (h/load-code-and-locs (code "(ns main (:require [user :as u]))"
-                                                                            "(def name |::u/name|)") "file:///main.clj")
+                                                                            "(def name |::u/name|)") "file:///main.cljc")
         [uname-kw-start uname-kw-end] (h/load-code-and-locs (code "(ns user)"
-                                                                  "(def name |::name|)") "file:///user.clj")]
+                                                                  "(def name |::name|)") "file:///user.cljc")]
     (testing "on symbol without namespace"
       (let [changes (:changes (handlers/rename {:textDocument "file:///a.clj"
                                                 :position (h/->position abar-start)
@@ -250,11 +250,11 @@
                 "file:///b.clj" [{:new-text "::aa/foo" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on single-name-namespace'd keyword"
-      (let [changes (:changes (handlers/rename {:textDocument "file:///main.clj"
+      (let [changes (:changes (handlers/rename {:textDocument "file:///main.cljc"
                                                 :position (h/->position main-uname-kw-start)
                                                 :newName "::full-name"}))]
-        (is (= {"file:///main.clj" [{:new-text "::u/full-name" :range (h/->range main-uname-kw-start main-uname-kw-end)}]
-                "file:///user.clj" [{:new-text "::full-name" :range (h/->range uname-kw-start uname-kw-end)}]}
+        (is (= {"file:///main.cljc" [{:new-text "::u/full-name" :range (h/->range main-uname-kw-start main-uname-kw-end)}]
+                "file:///user.cljc" [{:new-text "::full-name" :range (h/->range uname-kw-start uname-kw-end)}]}
                changes))))
     (testing "on qualified keyword without alias"
       (let [changes (:changes (handlers/rename {:textDocument "file:///d.clj"

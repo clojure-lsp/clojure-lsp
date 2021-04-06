@@ -157,12 +157,13 @@
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn ^:private lint-project-files [paths]
-  (doseq [path paths]
-    (doseq [file (file-seq (io/file path))]
-      (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename)]
-        (when (not= :unknown (shared/uri->file-type uri))
-          (f.diagnostic/lint-file uri @db/db))))))
+  (async/go
+    (doseq [path paths]
+      (doseq [file (file-seq (io/file path))]
+        (let [filename (.getAbsolutePath ^java.io.File file)
+              uri (shared/filename->uri filename)]
+          (when (not= :unknown (shared/uri->file-type uri))
+            (f.diagnostic/lint-file uri @db/db)))))))
 
 (defn ^:private analyze-paths! [paths public-only?]
   (let [settings (:settings @db/db)
@@ -181,7 +182,7 @@
     (swap! db/db update :analysis merge analysis)
     (when-not public-only?
       (swap! db/db update :findings merge (group-by :filename (:findings result)))
-      (async/go
+      (when (get settings :lint-project-files-after-startup? true)
         (lint-project-files paths)))
     analysis))
 

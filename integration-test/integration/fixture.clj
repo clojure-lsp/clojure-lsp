@@ -14,7 +14,7 @@
 
 (defn initialize-request
   ([]
-   (initialize-request {}))
+   (initialize-request {:lint-project-files-after-startup? false}))
   ([settings]
    (lsp-json-rpc :initialize
                  {:rootUri (h/file->uri (io/file h/root-project-path))

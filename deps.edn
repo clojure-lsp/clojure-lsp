@@ -49,5 +49,4 @@
                                    :main-class clojure-lsp.main
                                    :aliases [:debug]}}
            :run {:main-opts ["-m" "clojure-lsp.main"]
-                 :extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}}
                  :jvm-opts ["-Xmx2g" "-server"]}}}

@@ -97,7 +97,7 @@
                       (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
   (testing "when inside expression?"
     (swap! db/db merge {:settings {}})
-    (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
+    (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 14}}
                         :message "clojure.core/assert is called with 0 args but expects 1 or 2"
                         :code "invalid-arity"
                         :tags []

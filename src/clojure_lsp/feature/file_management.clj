@@ -60,6 +60,20 @@
        flatten
        (map (comp shared/filename->uri :filename))))
 
+(defn ^:private notify-references [old-analysis new-analysis]
+  (let [changed-var-definitions (find-changed-var-definitions old-analysis new-analysis)
+        references-uri (find-references-uris (:analysis @db/db) changed-var-definitions)
+        settings (:settings @db/db)]
+    (mapv
+     (fn [uri]
+       (when-let [text (get-in @db/db [:documents uri :text])]
+         (log/debug "Analyzing reference" uri)
+         (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
+           (swap! db/db (fn [db] (-> db
+                                     (crawler/update-analysis uri (:analysis new-analysis))
+                                     (crawler/update-findings uri (:findings new-analysis)))))
+           (f.diagnostic/lint-file uri @db/db))))
+     references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -102,44 +116,32 @@
       ;; the full content of the document.
       new-text)))
 
-(declare notify-references)
-
-(defn update-and-notify
-  "Should only be called from processing change channel"
-  [{:keys [uri version text new-version?]}]
-  (let [settings (get @db/db :settings {})
-        notify-references? (get settings :settings false)
-        filename (shared/uri->filename uri)
-        old-analysis (get-in @db/db [:analysis filename])
-        kondo-result (some-> text (crawler/run-kondo-on-text! uri settings))]
-    (when kondo-result
-      (when (loop [state-db @db/db]
-              (when (>= version (get-in state-db [:documents uri :v] -1))
-                (if (compare-and-set! db/db state-db (cond-> state-db
-                                                       new-version? (assoc-in [:documents uri :v] version)
-                                                       new-version? (assoc-in [:documents uri :text] text)
-                                                       :always (crawler/update-analysis uri (:analysis kondo-result))
-                                                       :always (crawler/update-findings uri (:findings kondo-result))))
-                  true
-                  (recur @db/db))))
-        (f.diagnostic/lint-file uri @db/db)
-        (when notify-references?
-          (notify-references uri old-analysis (get-in @db/db [:analysis filename])))))))
+(defn analyze-changes [{:keys [uri text version]}]
+  (let [notify-references? (get-in @db/db [:settings :notify-references-on-file-change] false)
+        settings (:settings @db/db)]
+    (loop [state-db @db/db]
+      (when (>= version (get-in state-db [:documents uri :v] -1))
+        (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
+          (let [filename (shared/uri->filename uri)
+                old-analysis (get-in @db/db [:analysis filename])]
+            (if (compare-and-set! db/db state-db (-> state-db
+                                                     (crawler/update-analysis uri (:analysis new-analysis))
+                                                     (crawler/update-findings uri (:findings new-analysis))))
+              (do
+                (f.diagnostic/lint-file uri @db/db)
+                (when notify-references?
+                  (notify-references old-analysis (get-in @db/db [:analysis filename]))))
+              (recur @db/db))))))))
 
 (defn did-change [uri changes version]
   (let [old-text (get-in @db/db [:documents uri :text])
         final-text (reduce handle-change old-text changes)]
-    (async/put! db/current-changes-chan {:uri uri :version version :text final-text :new-version? true})))
-
-(defn reanalyze-uri [uri]
-  (let [version (get-in @db/db [:documents uri :v] -1)
-        text (get-in @db/db [:documents uri :text])]
-    (async/put! db/current-changes-chan {:uri uri :version version :text text :new-version? false})))
-
-(defn ^:private notify-references [uri old-analysis new-analysis]
-  (let [changed-var-definitions (find-changed-var-definitions old-analysis new-analysis)
-        references-uri (disj (set (find-references-uris (:analysis @db/db) changed-var-definitions)) uri)]
-    (mapv reanalyze-uri references-uri)))
+    (swap! db/db (fn [state-db] (-> state-db
+                                    (assoc-in [:documents uri :v] version)
+                                    (assoc-in [:documents uri :text] final-text))))
+    (async/put! db/current-changes-chan {:uri uri
+                                         :text final-text
+                                         :version version})))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

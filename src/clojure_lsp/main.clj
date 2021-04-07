@@ -404,7 +404,7 @@
       (recur))
     (go-loop []
       (try
-        (f.file-management/update-and-notify (<! debounced-changes))
+        (f.file-management/analyze-changes (<! debounced-changes))
         (catch Exception e
           (log/error e "Error during analyzing buffer file changes")))
       (recur))

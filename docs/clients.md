@@ -14,7 +14,7 @@ I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozim
 
 See my [nvim/init.vim](https://github.com/snoe/dotfiles/blob/master/home/.vimrc) and [coc-settings.json](https://github.com/snoe/dotfiles/blob/master/home/.vim/coc-settings.json)
 
-Another example of a Neovim Conjure/CoC/clojure-lsp setup can be found on [dharrigan's github](https://github.com/dharrigan/vimconfig)
+Another example of a Neovim Conjure/CoC/clojure-lsp setup can be found on [dharrigan's github](https://github.com/dharrigan/vimconfig) repository.
 
 LanguageClient-neovim can be configure with:
 

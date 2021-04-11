@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-## 2021.04.07-16.34.10
+- Add common snippets on completion. Check all available snippets [here](https://clojure-lsp.github.io/clojure-lsp/features/#snippets).
 
-## 2021.04.07-16.25.02
+## 2021.04.07-16.34.10
 
 - Fix renaming keywords in cljc files producing duplicate edits.
 - After project startup, publish all project only diagnostics. This is a approach done by other LSPs to make work features like [Project errors](https://emacs-lsp.github.io/lsp-mode/page/main-features/#project-errors-on-modeline). Feature flag via `lint-project-files-after-startup?` with default `true`.

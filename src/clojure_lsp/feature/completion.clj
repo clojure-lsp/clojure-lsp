@@ -2,6 +2,7 @@
   (:require
     [clojure-lsp.common-symbols :as common-sym]
     [clojure-lsp.db :as db]
+    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
     [clojure-lsp.feature.hover :as f.hover]
     [clojure-lsp.parser :as parser]
     [clojure-lsp.queries :as q]
@@ -243,11 +244,18 @@
                          :kind :class
                          :detail (str "java.util." sym)})))))
 
+(defn ^:private with-snippets []
+  (->> (f.completion-snippet/known-snippets (:settings @db/db))
+       (map #(assoc %
+                    :kind :snippet
+                    :insert-text-format :snippet))))
+
 (defn completion [uri row col]
   (let [filename (shared/uri->filename uri)
         {:keys [text]} (get-in @db/db [:documents uri])
         analysis (get @db/db :analysis)
         current-ns-elements (get analysis filename)
+        support-snippets? (get-in @db/db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
         other-ns-elements (->> (dissoc analysis filename)
                                q/filter-project-analysis
                                (mapcat val))
@@ -311,6 +319,9 @@
         (and simple-cursor?
              (supports-clj-core? uri))
         (into (with-java-items matches-fn))
+
+        support-snippets?
+        (into (with-snippets))
 
         :always
         (->> (sort-by :label)

@@ -26,6 +26,126 @@ Above you can find all available features that clojure-lsp provide with examples
 
 <img src="../images/features/document-highlight.gif" width=340>
 
+### Completion
+
+<img src="../images/features/completion.gif" width=340>
+
+#### Snippets
+
+[Snippets](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax) snippets are templates that make it easier to enter repeating code patterns, such as common functions/forms, they are available during completion. Tabstops are defined as `$number` with `$0` as last tabstop.
+
+<details>
+<summary><strong>Check all available snippets here</strong></summary>
+
+<table>
+<thead>
+    <tr>
+        <th>name</th>
+        <th>description</th>
+        <th>raw content</th>
+    </tr>
+</thead>
+<tbody>
+    <tr>
+        <td><code>comment$</code></td>
+        <td>Create comment block</td>
+        <td><code>(comment\n  $0\n  )</code></td>
+    </tr>
+    <tr>
+        <td><code>condp$</code></td>
+        <td>Create condp</td>
+        <td><code>(condp ${1:pred} ${2:expr}\n $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>def$</code></td>
+        <td>Create def</td>
+        <td><code>(def ${1:name} $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>defmethod$</code></td>
+        <td>Create defmethod</td>
+        <td><code>(defmethod ${1:name} ${2:match}\n [${3:args}]\n $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>defmulti$</code></td>
+        <td>Create defmulti</td>
+        <td><code>(defmulti ${1:name} ${2:dispatch-fn})</code></td>
+    </tr>
+    <tr>
+        <td><code>defn-$</code></td>
+        <td>Create private function</td>
+        <td><code>(defn%s ${1:name} [$2]\n  $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>defn$</code></td>
+        <td>Create public function</td>
+        <td><code>(defn ${1:foo} [$2]\n  $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>defprotocol$</code></td>
+        <td>Create defprotocol</td>
+        <td><code>(defprotocol ${1:Name}\n $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>defrecord$</code></td>
+        <td>Create defrecord</td>
+        <td><code>(defrecord ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>deftype$</code></td>
+        <td>Create deftype</td>
+        <td><code>(deftype ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>fn$</code></td>
+        <td>Create fn</td>
+        <td><code>(fn [${1:arg-list}] $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>if$</code></td>
+        <td>Create if</td>
+        <td><code>(if ${1:test-expr}\n ${2:then-expr}\n ${3:else-expr})</code></td>
+    </tr>
+    <tr>
+        <td><code>import$</code></td>
+        <td>Create import</td>
+        <td><code>(:import [${1:package}])</code></td>
+    </tr>
+    <tr>
+        <td><code>kwargs$</code></td>
+        <td>Create keyword args</td>
+        <td><code>{:keys [${1:keys}] :or {${2:defaults}}}</code></td>
+    </tr>
+    <tr>
+        <td><code>let$</code></td>
+        <td>Create let</td>
+        <td><code>(let [$0])</code></td>
+    </tr>
+    <tr>
+        <td><code>letfn$</code></td>
+        <td>Create letfn</td>
+        <td><code>(letfn [(${1:name} [${2:args}]\n $0)])</code></td>
+    </tr>
+    <tr>
+        <td><code>ns$</code></td>
+        <td>Create ns</td>
+        <td><code>(ns $1\n  $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>require$</code></td>
+        <td>Create require</td>
+        <td><code>(:require [${1:namespace} :as [$0]])</code></td>
+    </tr>
+    <tr>
+        <td><code>use$</code></td>
+        <td>Create use</td>
+        <td><code>(:use [${1:namespace} :only [$0]])</code></td>
+    </tr>
+</tbody>
+</table>
+
+</details>
+
 ### Code actions
 
 | Name                               | Example                                                              |

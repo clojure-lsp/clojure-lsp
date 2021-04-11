@@ -189,3 +189,24 @@
       (h/assert-submaps
         [{:label "bar" :kind :function}]
        (f.completion/completion "file:///d.clj" ba-refer-r ba-refer-c)))))
+
+(deftest completing-snippets
+  (h/load-code-and-locs
+    (h/code "(ns foo)"
+            "comment$"))
+
+  (testing "completing comment snippet when client does not support snippets"
+    (swap! db/db merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false}}}}})
+    (h/assert-submaps
+      []
+      (f.completion/completion "file:///a.clj" 2 9)))
+
+  (testing "completing with snippets enable return all available snippets"
+    (swap! db/db merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
+    (h/assert-submaps
+      [{:label "comment$"
+        :detail "Create comment block"
+        :insert-text "(comment\n  $0\n  )"
+        :kind :snippet
+        :insert-text-format :snippet}]
+      (filter (comp #(= "comment$" %) :label) (f.completion/completion "file:///a.clj" 2 9)))))

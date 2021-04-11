@@ -570,6 +570,10 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.InsertTextFormat",
+  "fields":[{"name":"value"}]
+},
+{
   "name":"org.eclipse.lsp4j.Location",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

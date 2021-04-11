@@ -25,6 +25,7 @@
       DocumentSymbol
       FileChangeType
       Hover
+      InsertTextFormat
       Location
       MarkedString
       MarkupContent
@@ -103,6 +104,17 @@
 (s/def :completion-item/kind (s/and keyword?
                                     completion-kind-enum
                                     (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
+
+(def insert-text-format-enum
+  {:plain-text 1
+   :snippet 2})
+
+(s/def :completion-item/insert-text-format
+  (s/and keyword?
+         insert-text-format-enum
+         (s/conformer (fn [v] (InsertTextFormat/forValue (get insert-text-format-enum v))))))
+
+
 (s/def ::new-text string?)
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
@@ -111,8 +123,12 @@
                                     :markup-content ::markup-content)
                               (s/conformer second)))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit :completion-item/kind ::documentation ::data])
-                                (s/conformer (fn [{:keys [label additional-text-edits filter-text detail text-edit kind documentation data insert-text]}]
+                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
+                                           :completion-item/kind ::documentation ::data
+                                           ::insert-text :completion-item/insert-text-format])
+                                (s/conformer (fn [{:keys [label additional-text-edits filter-text
+                                                          detail text-edit kind documentation data
+                                                          insert-text insert-text-format]}]
                                                (let [item (CompletionItem. label)
                                                      with-typed-docs (fn [^CompletionItem item]
                                                                        (if (instance? MarkupContent documentation)
@@ -121,10 +137,11 @@
                                                  (cond-> item
                                                    filter-text (doto (.setFilterText filter-text))
                                                    kind (doto (.setKind kind))
+                                                   text-edit (doto (.setTextEdit (Either/forLeft text-edit)))
                                                    additional-text-edits (doto (.setAdditionalTextEdits additional-text-edits))
                                                    insert-text (doto (.setInsertText insert-text))
+                                                   insert-text-format (doto (.setInsertTextFormat insert-text-format))
                                                    detail (doto (.setDetail detail))
-                                                   text-edit (doto (.setTextEdit text-edit))
                                                    documentation (doto with-typed-docs)
                                                    data (doto (.setData data))))))))
 

@@ -190,7 +190,7 @@
         [{:label "bar" :kind :function}]
        (f.completion/completion "file:///d.clj" ba-refer-r ba-refer-c)))))
 
-(deftest completing-snippets
+(deftest completing-known-snippets
   (h/load-code-and-locs
     (h/code "(ns foo)"
             "comment$"))
@@ -210,3 +210,25 @@
         :kind :snippet
         :insert-text-format :snippet}]
       (filter (comp #(= "comment$" %) :label) (f.completion/completion "file:///a.clj" 2 9)))))
+
+(deftest completing-user-snippets
+  (h/load-code-and-locs
+    (h/code "(ns foo)"
+            "(defn foo []"
+            "  wrap-in(+ 1 2))"))
+
+  (testing "completing replacing $current-form"
+    (swap! db/db merge {:settings {:additional-snippets
+                                   [{:name "wrap-in-let-sexpr$"
+                                     :detail "Wrap in let"
+                                     :snippet "(let [$1] $0$current-form)"}]}
+                        :client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
+    (h/assert-submaps
+      [{:label "wrap-in-let-sexpr$"
+        :detail "Wrap in let"
+        :text-edit {:range {:start {:line 2 :character 2}
+                            :end {:line 2 :character 16}}
+                    :new-text "(let [$1] $0(+ 1 2))"}
+        :kind :snippet
+        :insert-text-format :snippet}]
+      (filter (comp #(= "wrap-in-let-sexpr$" %) :label) (f.completion/completion "file:///a.clj" 3 10)))))

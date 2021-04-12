@@ -146,6 +146,10 @@ Above you can find all available features that clojure-lsp provide with examples
 
 </details>
 
+##### Custom snippets
+
+User can register additional custom snippets, for more information on how to configure it, check the [snippets settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#snippets).
+
 ### Code actions
 
 | Name                               | Example                                                              |

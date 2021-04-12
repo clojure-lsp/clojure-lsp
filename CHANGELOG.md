@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Add common snippets on completion. Check all available snippets [here](https://clojure-lsp.github.io/clojure-lsp/features/#snippets).
-
+- Add support for custom snippets via `:additional-snippets`. Check [here](https://clojure-lsp.github.io/clojure-lsp/features/#snippets) for more information. - Fixes #403
+ 
 ## 2021.04.07-16.34.10
 
 - Fix renaming keywords in cljc files producing duplicate edits.

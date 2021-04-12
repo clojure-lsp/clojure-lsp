@@ -244,11 +244,26 @@
                          :kind :class
                          :detail (str "java.util." sym)})))))
 
-(defn ^:private with-snippets []
-  (->> (f.completion-snippet/known-snippets (:settings @db/db))
-       (map #(assoc %
-                    :kind :snippet
-                    :insert-text-format :snippet))))
+(defn ^:private with-snippets [cursor-loc text row col]
+  (let [settings (:settings @db/db)
+        next-loc (parser/safe-loc-at-pos text row (inc col))]
+    (->> (concat
+           (f.completion-snippet/known-snippets settings)
+           (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
+         (map #(assoc %
+                      :kind :snippet
+                      :insert-text-format :snippet)))))
+
+
+
+(defn foo []
+  (+ 1 2))
+
+
+
+
+
+
 
 (defn completion [uri row col]
   (let [filename (shared/uri->filename uri)
@@ -321,7 +336,7 @@
         (into (with-java-items matches-fn))
 
         support-snippets?
-        (into (with-snippets))
+        (into (with-snippets cursor-loc text row col))
 
         :always
         (->> (sort-by :label)

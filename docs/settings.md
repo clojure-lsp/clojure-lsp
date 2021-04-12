@@ -38,6 +38,7 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 |-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
 | `source-paths`                      | project-local directories to look for clj/cljc/cljs files                                                                                                                                                                                                                                                                                                                                                            | `#{"src" "test"}`                                                                                                    |
 | `linters`                           | clojure-lsp custom linters, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                             | `{:unused-public-ns {:level :info}}`                                                                                 |
+| `additional-snippets`               | Additional user snippets to be available during completing, check the snippets section below                                                                                                                                                                                                                                                                                                                         | `[]`                                                                                                                 |
 | `ignore-classpath-directories`      | will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.                                                                                                                                                                                                             | `false`                                                                                                              |
 | `lint-project-files-after-startup?` | Whether to async lint all project only files after startup to make featues like [List project errors](https://emacs-lsp.github.io/lsp-mode/page/main-features/#project-errors-on-modeline) work.                                                                                                                                                                                                                     | `true`                                                                                                               |
 | `use-metadata-for-privacy?`         | Whether to use `^:private` metadata for refactorings instead of `defn-`                                                                                                                                                                                                                                                                                                                                              | `false`                                                                                                              |
@@ -102,3 +103,33 @@ Example:
 ```
 
 For information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.github.io/clojure-lsp/troubleshooting/)
+
+### Snippets
+
+Besides the **19** built-in snippets, it's possible to configure custom additional snippets via `:additional-snippets` setting:
+
+- `:name` the name to use while completing to reach that snippet, preferably with a `$` sufix to indicate a snippet.
+- `:detail` Custom text to show along with the completion name. 
+- `:snippet` The body of the snippet, besides any text it can contains:
+    - `$1`, `$2`, ... as the tabstops representing each place where user may change the content.
+    - `$0` as the last tabstop.
+    - `$current-form` to replace the current form in the snippet.
+  
+Example:
+
+```clojure
+{:additional-snippets [{:name "wrap-let-sexpr$"
+                        :detail "Wrap current sexpr in let"
+                        :snippet "(let [$1] $0$current-form)"}]}
+```
+
+when completion is called on the code below with the cursor as `|`
+```clojure
+wrap|(+ 1 2)
+```
+
+It should return a completion item that after applied should result in:
+
+```clojure
+(let [|] (+ 1 2))
+```

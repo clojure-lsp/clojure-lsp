@@ -418,6 +418,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#snippets" class="md-nav__link">
+    Snippets
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -619,6 +626,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#snippets" class="md-nav__link">
+    Snippets
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -683,6 +697,11 @@
 <td><code>linters</code></td>
 <td>clojure-lsp custom linters, check the diagnostics settings section below</td>
 <td><code>{:unused-public-ns {:level :info}}</code></td>
+</tr>
+<tr>
+<td><code>additional-snippets</code></td>
+<td>Additional user snippets to be available during completing, check the snippets section below</td>
+<td><code>[]</code></td>
 </tr>
 <tr>
 <td><code>ignore-classpath-directories</code></td>
@@ -795,6 +814,29 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}}}}</span>
 </code></pre></div>
 <p>For information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
+<h3 id="snippets">Snippets<a class="headerlink" href="#snippets" title="Permanent link">#</a></h3>
+<p>Besides the <strong>19</strong> built-in snippets, it's possible to configure custom additional snippets via <code>:additional-snippets</code> setting:</p>
+<ul>
+<li><code>:name</code> the name to use while completing to reach that snippet, preferably with a <code>$</code> sufix to indicate a snippet.</li>
+<li><code>:detail</code> Custom text to show along with the completion name. </li>
+<li><code>:snippet</code> The body of the snippet, besides any text it can contains:<ul>
+<li><code>$1</code>, <code>$2</code>, ... as the tabstops representing each place where user may change the content.</li>
+<li><code>$0</code> as the last tabstop.</li>
+<li><code>$current-form</code> to replace the current form in the snippet.</li>
+</ul>
+</li>
+</ul>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:additional-snippets</span> <span class="p">[{</span><span class="ss">:name</span> <span class="s">&quot;wrap-let-sexpr$&quot;</span>
+                        <span class="ss">:detail</span> <span class="s">&quot;Wrap current sexpr in let&quot;</span>
+                        <span class="ss">:snippet</span> <span class="s">&quot;(let [$1] $0$current-form)&quot;</span><span class="p">}]}</span>
+</code></pre></div>
+<p>when completion is called on the code below with the cursor as <code>|</code>
+<div class="highlight"><pre><span></span><code><span class="nv">wrap|</span><span class="p">(</span><span class="nb">+ </span><span class="mi">1</span> <span class="mi">2</span><span class="p">)</span>
+</code></pre></div></p>
+<p>It should return a completion item that after applied should result in:</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">|</span><span class="p">]</span> <span class="p">(</span><span class="nb">+ </span><span class="mi">1</span> <span class="mi">2</span><span class="p">))</span>
+</code></pre></div>
                 
                   
                     
@@ -803,7 +845,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 11, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 12, 2021</span>
     
   </small>
 </div>

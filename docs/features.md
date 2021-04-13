@@ -32,7 +32,7 @@ Above you can find all available features that clojure-lsp provide with examples
 
 #### Snippets
 
-[Snippets](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax) snippets are templates that make it easier to enter repeating code patterns, such as common functions/forms, they are available during completion. Tabstops are defined as `$number` with `$0` as last tabstop.
+[Snippets](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax) are templates that make it easier to enter repeating code patterns, such as common functions/forms, they are available during completion. Tabstops are defined as `$number` with `$0` as last tabstop.
 
 <details>
 <summary><strong>Check all available snippets here</strong></summary>

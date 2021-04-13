@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.04.13-12.47.33
+
 - Add common snippets on completion. Check all available snippets [here](https://clojure-lsp.github.io/clojure-lsp/features/#snippets).
 - Add support for custom snippets via `:additional-snippets`. Check [here](https://clojure-lsp.github.io/clojure-lsp/features/#snippets) for more information. - Fixes #403
 - Bump lsp4j from 0.11.0 -> 0.12.0

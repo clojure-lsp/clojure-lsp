@@ -9,7 +9,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.producer :as producer]))
 
 (defn ^:private find-function-name-position [uri row col]
   (some-> (get-in @db/db [:documents uri :text])
@@ -35,21 +36,22 @@
       (str "\n")))
 
 (defn ^:private resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path]
-  (let [full-symbol (find-full-macro-symbol-to-resolve uri row col)
-        kondo-config-file (io/file kondo-config-path)]
-    (if (.exists ^java.io.File kondo-config-file)
-      (->> (z/of-file kondo-config-file)
-           (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))
-      (->> (z/of-string "{}")
-           (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol)))))
+  (when-let [full-symbol (find-full-macro-symbol-to-resolve uri row col)]
+    (let [kondo-config-file (io/file kondo-config-path)]
+      (if (.exists ^java.io.File kondo-config-file)
+        (->> (z/of-file kondo-config-file)
+             (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))
+        (->> (z/of-string "{}")
+             (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))))))
 
 (defn resolve-macro-as!
   [uri row col resolved-full-symbol-str kondo-config-path]
-  (let [document (get-in @db/db [:documents uri])]
-    (io/make-parents kondo-config-path)
-    (->> (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path)
-         (spit kondo-config-path))
-    (f.file-management/analyze-changes {:uri uri
-                                        :version (:v document)
-                                        :text (:text document)})
-    (log/info (format "Resolving macro as %s. Saving setting on %s" resolved-full-symbol-str kondo-config-path))))
+  (if-let [new-kondo-config (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path)]
+    (let [document (get-in @db/db [:documents uri])]
+      (io/make-parents kondo-config-path)
+      (spit kondo-config-path new-kondo-config)
+      (f.file-management/analyze-changes {:uri uri
+                                          :version (:v document)
+                                          :text (:text document)})
+      (log/info (format "Resolving macro as %s. Saving setting in %s" resolved-full-symbol-str kondo-config-path)))
+    (producer/window-show-message (format "Could not resolve macro %s for path %s" resolved-full-symbol-str kondo-config-path) :error)))

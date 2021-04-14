@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve resolve-macro-as command to check and log if couldn't resolve the macro.
+
 ## 2021.04.13-12.47.33
 
 - Add common snippets on completion. Check all available snippets [here](https://clojure-lsp.github.io/clojure-lsp/features/#snippets).

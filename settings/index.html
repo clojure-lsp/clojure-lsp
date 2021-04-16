@@ -662,7 +662,7 @@
 <li><strong>Global configuration</strong> </li>
 <li><strong>LSP InitializationOptions</strong></li>
 </ul>
-<h2 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h2>
+<h3 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp</code> will look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your project root folder up the directory structure so you can have multiple projects share the same settings.</p>
 <p>Example:
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:cljfmt</span> <span class="p">{</span><span class="ss">:indents</span> <span class="p">{</span><span class="o">#</span><span class="nv">re</span> <span class="s">&quot;.*&quot;</span> <span class="kd">ns </span><span class="p">[[</span><span class="ss">:inner</span> <span class="mi">0</span><span class="p">]</span> <span class="p">[</span><span class="ss">:inner</span> <span class="mi">1</span><span class="p">]]}}</span>
@@ -671,12 +671,12 @@
                   <span class="ss">:classpath-cmd</span> <span class="p">[</span><span class="s">&quot;clojure&quot;</span> <span class="s">&quot;-A:dev&quot;</span> <span class="s">&quot;-Spath&quot;</span><span class="p">]}]}</span>
 </code></pre></div></p>
 <hr />
-<h2 id="global">Global<a class="headerlink" href="#global" title="Permanent link">#</a></h2>
-<p>For global settings which should work for all the projects using <code>clojure-lsp</code>, you just need to add the same configs to <code>~/.lsp/config.edn</code>.</p>
+<h3 id="global">Global<a class="headerlink" href="#global" title="Permanent link">#</a></h3>
+<p>For global settings which should work for all the projects using <code>clojure-lsp</code>, you just need to add the same configs to <code>~/.lsp/config.edn</code> or <code>$XDG_CONFIG_HOME/.lsp/config.edn</code>.</p>
 <p>For an example of a global <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn">here</a>.</p>
 <hr />
-<h2 id="initializationoptions">InitializationOptions<a class="headerlink" href="#initializationoptions" title="Permanent link">#</a></h2>
-<p>This is specific for an client, where it sends on startup, check <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP spec for more information</a>.</p>
+<h3 id="initializationoptions">InitializationOptions<a class="headerlink" href="#initializationoptions" title="Permanent link">#</a></h3>
+<p>This is specific for an client, where it sends on startup, check <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP spec for more information</a>. This is useful if you are changing a default for a client/editor that will affect all users of that editor.</p>
 <p>This is an <a href="https://github.com/emacs-lsp/lsp-mode/blob/master/clients/lsp-clojure.el#L205">example how Emacs <code>lsp-mode</code></a> pass custom information.</p>
 <h2 id="all-settings">All settings<a class="headerlink" href="#all-settings" title="Permanent link">#</a></h2>
 <table>
@@ -845,7 +845,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 14, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 16, 2021</span>
     
   </small>
 </div>

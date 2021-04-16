@@ -1,19 +1,19 @@
 (ns clojure-lsp.feature.workspace-symbols
   (:require
-   [clj-fuzzy.metrics :as fuzzy]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.document-symbol :as f.document-symbol]
-   [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
-   [clojure.string :as string]
-   [taoensso.timbre :as log]))
+    [anonimitoraf.clj-flx :as flx]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.feature.document-symbol :as f.document-symbol]
+    [clojure-lsp.queries :as q]
+    [clojure-lsp.shared :as shared]
+    [clojure.string :as string]
+    [taoensso.timbre :as log]))
 
 (defn ^:private fuzzy-search [^String query col get-against]
   (let [query (string/lower-case query)]
     (->> (for [doc col]
            {:data doc
-            :score (fuzzy/dice query (string/lower-case (name (get-against doc))))})
-         (filter #(< 0 (:score %)))
+            :score (flx/score query (string/lower-case (name (get-against doc))))})
+         (filter #(not (nil? (:score %))))
          (sort-by :score (comp - compare))
          (map :data))))
 

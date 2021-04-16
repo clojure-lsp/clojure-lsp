@@ -52,12 +52,12 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 
 ### GraalVM
 
-Every release the native binaries (Windows, Linux and MacOS) are compiled with __GraalVM__ and uploaded.
+Every release, the native binaries (Windows, Linux and MacOS) are compiled with __GraalVM__ and uploaded to Github releases page.
 
 To build a native image with GraalVM:
 
-- Install the GraalVM 21.0.0 for Java 11 and set the `GRAALVM_HOME` to the installation dir 
-- Install `native-image` with `$GRAALVM_HOME/bin/gu install native-image` 
+- Install the GraalVM 21.0.0 for Java 11 and set the `GRAALVM_HOME` to the installation dir. 
+- Install `native-image` with `$GRAALVM_HOME/bin/gu install native-image`. 
 - Run from `clojure-lsp` project root `./graalvm/native-unix-compile.sh` or `./graalvm/native-windows-compile.bat`. 
 
 The build may take some minutes and the result will be a `./clojure-lsp` native binary.
@@ -87,4 +87,4 @@ You can help us keep going and improving it by **[supporting the project](https:
 
 [![](https://opencollective.com/clojure-lsp/tiers/backer.svg)](https://opencollective.com/clojure-lsp)
 
-Special thanks to [Eccentric-J](https://eccentric-j.com/) for the `clojure-lsp` logo
+_Special thanks to [Eccentric-J](https://eccentric-j.com/) for the `clojure-lsp` logo_

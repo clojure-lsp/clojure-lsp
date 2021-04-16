@@ -6,7 +6,7 @@
 - **Global configuration** 
 - **LSP InitializationOptions**
 
-## Project
+### Project
 
 `clojure-lsp` will look for project specific settings in a file called `.lsp/config.edn`. It will search from your project root folder up the directory structure so you can have multiple projects share the same settings.
 
@@ -19,16 +19,16 @@ Example:
 ```
 
 ---
-## Global
+### Global
 
-For global settings which should work for all the projects using `clojure-lsp`, you just need to add the same configs to `~/.lsp/config.edn`.
+For global settings which should work for all the projects using `clojure-lsp`, you just need to add the same configs to `~/.lsp/config.edn` or `$XDG_CONFIG_HOME/.lsp/config.edn`.
 
 For an example of a global `config.edn`, check [here](https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn).
 
 ---
-## InitializationOptions
+### InitializationOptions
 
-This is specific for an client, where it sends on startup, check [LSP spec for more information](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
+This is specific for an client, where it sends on startup, check [LSP spec for more information](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize). This is useful if you are changing a default for a client/editor that will affect all users of that editor.
 
 This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/blob/master/clients/lsp-clojure.el#L205) pass custom information.
 

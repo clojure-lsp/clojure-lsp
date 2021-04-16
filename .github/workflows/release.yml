@@ -401,3 +401,42 @@ jobs:
           file: clojure-lsp-native-windows-amd64.zip/clojure-lsp-native-windows-amd64.zip
           asset_name: clojure-lsp-native-windows-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}
+
+  bump-homebrew-formula:
+    name: Bump Homebrew formula
+    needs: [upload-to-release]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Get latest tag
+        id: latest-tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+
+      - uses: actions/download-artifact@v2
+
+      - name: Get new version sha256
+        id: sha256
+        env:
+          VERSION: ${{ steps.latest-tag.outputs.tag }}
+        run: |
+          sha256=$(shasum -a 256 clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip | awk '{print $1}')
+          echo "::set-output name=sha256::$sha256"
+
+      - name: Bump Homebrew formula
+        env:
+          VERSION: ${{ steps.latest-tag.outputs.tag }}
+          SHA256: ${{ steps.sha256.outputs.sha256 }}
+        run: |
+          git config --global user.name "Clojure LSP Bot"
+          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+          mkdir ~/.ssh && touch ~/.ssh/id_rsa
+          echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          git clone git@github.com:clojure-lsp/homebrew-brew.git
+          cd homebrew-brew
+          sed -i .rb 's/sha256 ".*"/sha256 "${{ env.SHA256 }}"/g' clojure-lsp-native.rb
+          sed -i .rb 's/[0-9]\{4\}.[0-9]\{2\}.[0-9]\{2\}-[0-9]\{2\}.[0-9]\{2\}.[0-9]\{2\}/${{ env.VERSION }}/g' clojure-lsp-native.rb
+          rm -f clojure-lsp-native.rb.rb
+          cat clojure-lsp-native.rb
+          git add .
+          git commit -m "Bump to version: ${{ env.VERSION }}"
+          git push

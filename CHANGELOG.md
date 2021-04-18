@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Improve resolve-macro-as command to check and log if couldn't resolve the macro.
+- Improve workspace symbol filtering/searching. Now, the sole candidates shown are guaranteed to include all the characters contained in the filter/search string.
 
 ## 2021.04.13-12.47.33
 

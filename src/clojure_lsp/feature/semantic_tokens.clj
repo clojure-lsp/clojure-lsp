@@ -1,14 +1,17 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.shared :as shared])
+   [clojure-lsp.db :as db]
+   [clojure-lsp.shared :as shared])
   (:import
    [clojure.lang PersistentVector]))
 
 (def token-types
   [:type
    :function
-   :macro])
+   :macro
+   :keyword
+   :constant
+   :variable])
 
 (def token-types-str
   (->> token-types
@@ -35,16 +38,41 @@
    (.indexOf ^PersistentVector token-types token-type)
    token-modifier])
 
+(defn ^:private var-usage-element->absolute-tokens
+  [{:keys [alias name-col] :as element}]
+  (if alias
+    (let [slash-pos (+ name-col (count (str alias)))
+          alias-pos (assoc element :name-end-col slash-pos)
+          name-pos (assoc element :name-col (inc slash-pos))]
+      [(element->absolute-token alias-pos :type)
+       (element->absolute-token name-pos :function)])
+    [(element->absolute-token element :function)]))
+
 (defn ^:private elements->absolute-tokens
   [elements]
   (->> elements
        (sort-by (juxt :name-row :name-col))
        (map
-         (fn [{:keys [bucket macro] :as element}]
+         (fn [{:keys [name bucket macro] :as element}]
            (cond
-            (and macro
-                  (= bucket :var-usages))
-             [(element->absolute-token element :macro)])))
+             (and (= bucket :var-usages)
+                  macro)
+             [(element->absolute-token element :macro)]
+
+             (and (= bucket :var-usages)
+                  (Character/isUpperCase (.charAt ^String (str name) 0)))
+             [(element->absolute-token element :constant)]
+
+             (= bucket :var-usages)
+             (var-usage-element->absolute-tokens element)
+
+             (#{:locals :local-usages} bucket)
+             [(element->absolute-token element :variable)]
+
+             (and (= bucket :keywords)
+                  (not (:str element))
+                  (not (:keys-destructuring element)))
+             [(element->absolute-token element :keyword)])))
        (remove nil?)
        (mapcat identity)))
 

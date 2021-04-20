@@ -61,7 +61,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/prepareRename             |      |                                               |
 | textDocument/foldingRange              |      |                                               |
 | textDocument/selectionRange            |      |                                               |
-| textDocument/semanticTokens/full       | √    | Just `functions`, type' and `macros` ATM      |
+| textDocument/semanticTokens/full       | √    |                                               |
 | textDocument/semanticTokens/full/delta |      |                                               |
 | textDocument/semanticTokens/range      | √    |                                               |
 | workspace/semanticTokens/refresh       |      |                                               |

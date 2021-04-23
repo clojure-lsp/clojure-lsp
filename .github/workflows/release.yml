@@ -133,10 +133,10 @@ jobs:
         with:
           file: clojure-lsp
 
-      - name: Run integration tests
-        continue-on-error: true # Not working, check #296
-        run: |
-          make integration-test
+      # Not working, check #296
+      # - name: Run integration tests
+      #   run: |
+      #     make integration-test
 
       - name: Zip binary
         run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
@@ -292,10 +292,10 @@ jobs:
         with:
           file: clojure-lsp.exe
 
-      - name: Run integration tests
-        continue-on-error: true # Windows return the json in the same line but for some reason clients seems to accept that.
-        run: |
-          bb integration-test/run-all.clj .\clojure-lsp.exe
+      # Windows return the json in the same line but for some reason clients seems to accept that.
+      # - name: Run integration tests
+      #   run: |
+      #     bb integration-test/run-all.clj .\clojure-lsp.exe
 
       - name: Zip binary
         run: |

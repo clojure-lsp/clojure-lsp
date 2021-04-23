@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.04.23-15.20.10
+
 - Improve resolve-macro-as command to check and log if couldn't resolve the macro.
 - Improve workspace symbol filtering/searching. Now, the sole candidates shown are guaranteed to include all the characters contained in the filter/search string.
 - Add more tokens to semantic tokens: keywords, functions/var usages, java classes, local variables.

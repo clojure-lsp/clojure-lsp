@@ -309,7 +309,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build-jvm, linux-amd64, macos, windows]
+    needs: [build-jvm, linux-amd64, linux-amd64-static, macos, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1

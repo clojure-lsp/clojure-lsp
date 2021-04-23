@@ -21,7 +21,8 @@
            (name file-type)))))
 
 (defn ^:private rename-keyword [replacement {:keys [ns alias name filename
-                                                    name-col name-end-col] :as reference}]
+                                                    name-col name-end-col
+                                                    namespace-from-prefix] :as reference}]
   (let [ref-doc-uri (shared/filename->uri filename)
         version (get-in @db/db [:documents ref-doc-uri :v] 0)
         ;; Extracts the name of the keyword
@@ -33,12 +34,14 @@
         qualified-same-ns? (= (- name-end-col name-col)
                               (+ 2 (count name)))
         text (cond
-
                alias
                (str "::" alias "/" replacement-name)
 
                qualified-same-ns?
                (str "::" replacement-name)
+
+               namespace-from-prefix
+               (str ":" replacement-name)
 
                ns
                (str ":" ns "/" replacement-name)

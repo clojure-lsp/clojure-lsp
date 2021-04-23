@@ -6,6 +6,7 @@
 - Improve workspace symbol filtering/searching. Now, the sole candidates shown are guaranteed to include all the characters contained in the filter/search string.
 - Add more tokens to semantic tokens: keywords, functions/var usages, java classes, local variables.
 - Bump Graalvm from 21.0.0 to 21.1.0
+- Bump clj-kondo to 2021.04.23 fixing some keywords corner cases.
 
 ## 2021.04.13-12.47.33
 

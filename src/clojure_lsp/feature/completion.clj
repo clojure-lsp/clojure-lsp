@@ -254,17 +254,6 @@
                       :kind :snippet
                       :insert-text-format :snippet)))))
 
-
-
-(defn foo []
-  (+ 1 2))
-
-
-
-
-
-
-
 (defn completion [uri row col]
   (let [filename (shared/uri->filename uri)
         {:keys [text]} (get-in @db/db [:documents uri])
@@ -277,7 +266,10 @@
         external-ns-elements (->> (dissoc analysis filename)
                                   q/filter-external-analysis
                                   (mapcat val))
-        cursor-loc (parser/safe-loc-at-pos text row col)
+        cursor-loc (when-let [loc (parser/safe-loc-at-pos text row col)]
+                     (when (or (not (-> loc z/node meta))
+                               (= row (-> loc z/node meta :row)))
+                       loc))
         cursor-element (loop [try-column col]
                          (if-let [usage (q/find-element-under-cursor analysis filename row col)]
                            usage
@@ -287,8 +279,7 @@
                        ""
                        (if cursor-loc
                          (z/sexpr cursor-loc)
-                         (or (:name cursor-element)
-                             "")))
+                         ""))
         matches-fn (partial matches-cursor? cursor-value)
         inside-require? (edit/inside-require? cursor-loc)
         inside-refer? (edit/inside-refer? cursor-loc)

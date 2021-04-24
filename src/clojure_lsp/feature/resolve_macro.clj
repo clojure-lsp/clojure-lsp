@@ -53,5 +53,7 @@
       (f.file-management/analyze-changes {:uri uri
                                           :version (:v document)
                                           :text (:text document)})
-      (log/info (format "Resolving macro as %s. Saving setting in %s" resolved-full-symbol-str kondo-config-path)))
-    (producer/window-show-message (format "Could not resolve macro %s for path %s" resolved-full-symbol-str kondo-config-path) :error)))
+      (log/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
+    (do
+      (log/error (format "Could not resolve macro '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+      (producer/window-show-message (format "No macro '%s' was found to be resolved." resolved-full-symbol-str) :error))))

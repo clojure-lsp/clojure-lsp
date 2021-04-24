@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Significantly improve the performance of workspace symbol filtering/searching. [See relevant commit](https://github.com/anonimitoraf/clj-flx/commit/61b2081b65b7d3be14851bac03ea508147c90054).
+
 ## 2021.04.23-15.49.47
 
 - Improve resolve-macro-as command to check and log if couldn't resolve the macro.

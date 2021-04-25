@@ -340,8 +340,7 @@
     (contains? unused-aliases (-> node z/down z/leftmost z/sexpr))
     (z/remove node)
 
-    (contains? (->> unused-refers (map (comp symbol namespace)) set)
-               (-> node z/down z/leftmost z/sexpr))
+    (= :vector (-> node z/down z/rightmost z/tag))
     (remove-unused-refers node unused-refers)
 
     :else

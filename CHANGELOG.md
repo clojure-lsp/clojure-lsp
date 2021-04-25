@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Significantly improve the performance of workspace symbol filtering/searching. [See relevant commit](https://github.com/anonimitoraf/clj-flx/commit/61b2081b65b7d3be14851bac03ea508147c90054).
+- Always sort refers when clean-ns.
 
 ## 2021.04.23-15.49.47
 

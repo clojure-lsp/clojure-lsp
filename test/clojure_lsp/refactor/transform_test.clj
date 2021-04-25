@@ -350,6 +350,16 @@
                            "   [bar :refer [some] ]"
                            "   [baz :as b]))")
                      (code "(ns foo.bar)")))
+  (testing "unsorted used refer"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [some :refer [foo bar baz]]))"
+                           "   foo bar baz")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [some :refer [bar baz foo]]))"
+                           "   foo bar baz")))
   (testing "single unused full package import"
     (test-clean-ns {}
                    (code "(ns foo.bar"

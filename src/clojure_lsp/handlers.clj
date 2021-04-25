@@ -28,10 +28,10 @@
     [rewrite-clj.zip :as z]
     [taoensso.timbre :as log])
   (:import
-   [java.net
-    URL
-    URLDecoder
-    JarURLConnection]))
+    [java.net
+     URL
+     URLDecoder
+     JarURLConnection]))
 
 (def ^:private full-file-range
   (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
@@ -51,8 +51,8 @@
 
 ;; TODO wait for lsp4j release
 #_(defn did-delete-files [{:keys [textDocument]}]
-  (when (get-in @db/db [:documents textDocument :saved-on-disk])
-    (swap! db/db #(update % :documents dissoc textDocument))))
+    (when (get-in @db/db [:documents textDocument :saved-on-disk])
+      (swap! db/db #(update % :documents dissoc textDocument))))
 
 (defn did-change [{:keys [textDocument contentChanges]}]
   (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument)))

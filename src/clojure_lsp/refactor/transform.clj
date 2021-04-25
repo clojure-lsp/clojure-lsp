@@ -355,7 +355,11 @@
                                    (z/vector? first-node))
                           (-> first-node z/down z/leftmost z/sexpr))
         first-node-refers (when (and single-require?
-                                     (z/vector? first-node))
+                                     (z/vector? first-node)
+                                     (-> first-node
+                                         z/down
+                                         (z/find-next-value ':all)
+                                         not))
                             (->> (-> first-node
                                      z/down
                                      (z/find-next-value ':refer)

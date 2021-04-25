@@ -263,7 +263,14 @@
                    (code "(ns foo.bar"
                          " (:require"
                          "   [bar :refer [some]]))")
-                   (code "(ns foo.bar)")))
+                   (code "(ns foo.bar)"))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer :all]))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer :all]))")))
   (testing "in any form"
     (let [to-clean (code "(ns foo.bar"
                          " (:require"

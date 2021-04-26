@@ -6,6 +6,7 @@
 - Always sort refers when clean-ns.
 - Add support for installing with homebrew on Linux.
 - Bump clj-kondo to 2021.04.24-20210426.144134-2 adding support for finding re-frame by keyword. Fixes #411
+- Fix find definition going to `declare` - Fixes #340
 
 ## 2021.04.23-15.49.47
 

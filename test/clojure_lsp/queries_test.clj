@@ -209,6 +209,17 @@
         {:name 'bar :filename "/some.jar:some-jar.clj"}
         (q/find-definition-from-cursor ana "/b.cljc" bar-r bar-c)))))
 
+(deftest find-definition-from-cursor-when-declared
+  (let [[[bar-r bar-c]] (h/load-code-and-locs
+                          (h/code "(ns foo)"
+                                  "(declare bar)"
+                                  "(|bar)"
+                                  "(defn bar [] 1)") "file:///a.clj")
+        ana (:analysis @db/db)]
+    (h/assert-submap
+     {:name 'bar :filename "/a.clj" :defined-by 'clojure.core/defn :row 4}
+     (q/find-definition-from-cursor ana "/a.clj" bar-r bar-c))))
+
 (deftest find-unused-aliases
   (testing "used require via alias"
     (h/load-code-and-locs "(ns a (:require [x :as f])) f/foo")

@@ -95,6 +95,7 @@
   (find-first-order-by-project-analysis
     #(and (= (:bucket %) :var-definitions)
           (= (:name %) (:name element))
+          (not (= (:defined-by %) 'clojure.core/declare))
           (= (:ns %) (:to element))
           (match-file-lang % element))
     analysis))
@@ -167,7 +168,8 @@
                         (:ns element))
                      (not= :keywords (:bucket %))
                      (or include-declaration?
-                         (not= :var-definitions (:bucket %)))))
+                         (or (not= :var-definitions (:bucket %))
+                             (= (:defined-by %) 'clojure.core/declare)))))
        (medley/distinct-by (juxt :filename :name :row :col))))
 
 (defmethod find-references :keywords

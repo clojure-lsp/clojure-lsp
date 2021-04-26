@@ -22,7 +22,7 @@ In Github releases you will find a `clojure-lsp` file that runs a embedded jar. 
 - Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
 - Place it in your $PATH with a chmod 755
 
-## MacOS
+## Homebrew (MacOS and Linux)
 
 We have a custom tap using the native compiled binaries for users that use homebrew:
 

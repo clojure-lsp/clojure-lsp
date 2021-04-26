@@ -110,7 +110,7 @@
     (find-first-order-by-project-analysis
       #(and (= (:bucket %) :keywords)
             (= (:name %) (:name element))
-            (:def %)
+            (:reg %)
             (= (:ns %) (:ns element)))
       analysis)))
 
@@ -179,7 +179,7 @@
                          (= (:ns %) ns)
                          (not (:keys-destructuring %))
                          (or include-declaration?
-                           (not (:def %))))
+                             (not (:reg %))))
                    (mapcat val project-analysis))
            (filter #(and (= :keywords (:bucket %))
                          (= (:name %) name)

@@ -5,8 +5,9 @@
 - Significantly improve the performance of workspace symbol filtering/searching. [See relevant commit](https://github.com/anonimitoraf/clj-flx/commit/61b2081b65b7d3be14851bac03ea508147c90054).
 - Always sort refers when clean-ns.
 - Add support for installing with homebrew on Linux.
-- Bump clj-kondo to 2021.04.24-20210426.144134-2 adding support for finding re-frame by keyword. Fixes #411
+- Bump clj-kondo to `2021.04.24-20210426.144134-2` adding support for finding re-frame by keyword. Fixes #411
 - Fix find definition going to `declare` - Fixes #340
+- Remove common already known clojure macros from `Resolve macro as` code action.
 
 ## 2021.04.23-15.49.47
 

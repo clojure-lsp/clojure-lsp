@@ -4,13 +4,17 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]
-   [clojure-lsp.producer :as producer]))
+   [taoensso.timbre :as log]))
+
+(def ^:private excluded-macros
+  '{clojure.test [deftest is testing]
+    clojure.core *})
 
 (defn ^:private find-function-name-position [uri row col]
   (some-> (get-in @db/db [:documents uri :text])
@@ -26,7 +30,10 @@
           element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)
           definition (q/find-definition analysis element)]
       (when (:macro definition)
-        (symbol (-> definition :ns name) (-> definition :name name))))))
+        (let [excluded-vars (get excluded-macros (:ns definition))]
+          (when (and (not= excluded-vars '*)
+                     (not (contains? excluded-vars (:name definition))))
+            (symbol (-> definition :ns name) (-> definition :name name))))))))
 
 (defn ^:private update-macro-resolve-for-config
   [resolved-full-symbol full-symbol config-loc]

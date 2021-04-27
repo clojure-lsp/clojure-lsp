@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.shared :as shared]
-   [clojure.test :refer [deftest testing is]]))
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest uri->project-related-path
   (is (= "/src/my-project/some/ns.clj"

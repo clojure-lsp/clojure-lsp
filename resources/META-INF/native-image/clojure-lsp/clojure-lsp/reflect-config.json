@@ -949,6 +949,12 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.WorkspaceEditChangeAnnotationSupportCapabilities",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.WorkspaceClientCapabilities",
   "allDeclaredFields":true,
   "allPublicMethods":true,

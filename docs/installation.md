@@ -2,26 +2,6 @@
 
 Below are all available `clojure-lsp` installation methods, after installed, follow the documentation for your editor's language client. See [Clients](//clojure-lsp.github.io/clojure-lsp/clients).
 
-## Native binary (recommended)
-
-`clojure-lsp` builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.
-
-### Manually
-
-The binaries are available on [Github releases](https://github.com/clojure-lsp/clojure-lsp/releases) as `clojure-lsp-native-<os>-<arch>.zip`, after downloading you just need to unzip it.
-
-### Script
-
-You can install it running [./install-latest-clojure-lsp.sh](https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh)
-
-## Embedded jar (Legacy executable)
-
-In Github releases you will find a `clojure-lsp` file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.
-
-- You need `java` on your $PATH.
-- Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
-- Place it in your $PATH with a chmod 755
-
 ## Homebrew (MacOS and Linux)
 
 We have a custom tap using the native compiled binaries for users that use homebrew:
@@ -56,3 +36,23 @@ Issue following command to download the `clojure-lsp` executable.
 ```bash
 scoop install clojure-lsp
 ```
+
+## Native binary (recommended)
+
+`clojure-lsp` builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.
+
+### Manually
+
+The binaries are available on [Github releases](https://github.com/clojure-lsp/clojure-lsp/releases) as `clojure-lsp-native-<os>-<arch>.zip`, after downloading you just need to unzip it.
+
+### Script
+
+You can install it running [./install-latest-clojure-lsp.sh](https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh)
+
+## Embedded jar (Legacy executable)
+
+In Github releases you will find a `clojure-lsp` file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.
+
+- You need `java` on your $PATH.
+- Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
+- Place it in your $PATH with a chmod 755

@@ -418,6 +418,34 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#homebrew-macos-and-linux" class="md-nav__link">
+    Homebrew (MacOS and Linux)
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nix" class="md-nav__link">
+    Nix
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arch-linux" class="md-nav__link">
+    Arch Linux
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#windows" class="md-nav__link">
+    Windows
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#native-binary-recommended" class="md-nav__link">
     Native binary (recommended)
   </a>
@@ -447,34 +475,6 @@
         <li class="md-nav__item">
   <a href="#embedded-jar-legacy-executable" class="md-nav__link">
     Embedded jar (Legacy executable)
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#homebrew-macos-and-linux" class="md-nav__link">
-    Homebrew (MacOS and Linux)
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#nix" class="md-nav__link">
-    Nix
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#arch-linux" class="md-nav__link">
-    Arch Linux
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#windows" class="md-nav__link">
-    Windows
   </a>
   
 </li>
@@ -537,6 +537,34 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#homebrew-macos-and-linux" class="md-nav__link">
+    Homebrew (MacOS and Linux)
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nix" class="md-nav__link">
+    Nix
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arch-linux" class="md-nav__link">
+    Arch Linux
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#windows" class="md-nav__link">
+    Windows
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#native-binary-recommended" class="md-nav__link">
     Native binary (recommended)
   </a>
@@ -570,34 +598,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#homebrew-macos-and-linux" class="md-nav__link">
-    Homebrew (MacOS and Linux)
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#nix" class="md-nav__link">
-    Nix
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#arch-linux" class="md-nav__link">
-    Arch Linux
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#windows" class="md-nav__link">
-    Windows
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -617,19 +617,6 @@
                 
                 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
 <p>Below are all available <code>clojure-lsp</code> installation methods, after installed, follow the documentation for your editor's language client. See <a href="//clojure-lsp.github.io/clojure-lsp/clients">Clients</a>.</p>
-<h2 id="native-binary-recommended">Native binary (recommended)<a class="headerlink" href="#native-binary-recommended" title="Permanent link">#</a></h2>
-<p><code>clojure-lsp</code> builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.</p>
-<h3 id="manually">Manually<a class="headerlink" href="#manually" title="Permanent link">#</a></h3>
-<p>The binaries are available on <a href="https://github.com/clojure-lsp/clojure-lsp/releases">Github releases</a> as <code>clojure-lsp-native-&lt;os&gt;-&lt;arch&gt;.zip</code>, after downloading you just need to unzip it.</p>
-<h3 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h3>
-<p>You can install it running <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh">./install-latest-clojure-lsp.sh</a></p>
-<h2 id="embedded-jar-legacy-executable">Embedded jar (Legacy executable)<a class="headerlink" href="#embedded-jar-legacy-executable" title="Permanent link">#</a></h2>
-<p>In Github releases you will find a <code>clojure-lsp</code> file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.</p>
-<ul>
-<li>You need <code>java</code> on your $PATH.</li>
-<li>Grab the latest <code>clojure-lsp</code> from github <a href="https://github.com/snoe/clojure-lsp/releases/latest">LATEST</a></li>
-<li>Place it in your $PATH with a chmod 755</li>
-</ul>
 <h2 id="homebrew-macos-and-linux">Homebrew (MacOS and Linux)<a class="headerlink" href="#homebrew-macos-and-linux" title="Permanent link">#</a></h2>
 <p>We have a custom tap using the native compiled binaries for users that use homebrew:</p>
 <div class="highlight"><pre><span></span><code>brew remove clojure-lsp <span class="c1"># if you have old clojure-lsp installed via brew</span>
@@ -651,6 +638,19 @@ brew install clojure-lsp/brew/clojure-lsp-native
 <p>Issue following command to download the <code>clojure-lsp</code> executable.</p>
 <div class="highlight"><pre><span></span><code>scoop install clojure-lsp
 </code></pre></div>
+<h2 id="native-binary-recommended">Native binary (recommended)<a class="headerlink" href="#native-binary-recommended" title="Permanent link">#</a></h2>
+<p><code>clojure-lsp</code> builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.</p>
+<h3 id="manually">Manually<a class="headerlink" href="#manually" title="Permanent link">#</a></h3>
+<p>The binaries are available on <a href="https://github.com/clojure-lsp/clojure-lsp/releases">Github releases</a> as <code>clojure-lsp-native-&lt;os&gt;-&lt;arch&gt;.zip</code>, after downloading you just need to unzip it.</p>
+<h3 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h3>
+<p>You can install it running <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh">./install-latest-clojure-lsp.sh</a></p>
+<h2 id="embedded-jar-legacy-executable">Embedded jar (Legacy executable)<a class="headerlink" href="#embedded-jar-legacy-executable" title="Permanent link">#</a></h2>
+<p>In Github releases you will find a <code>clojure-lsp</code> file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.</p>
+<ul>
+<li>You need <code>java</code> on your $PATH.</li>
+<li>Grab the latest <code>clojure-lsp</code> from github <a href="https://github.com/snoe/clojure-lsp/releases/latest">LATEST</a></li>
+<li>Place it in your $PATH with a chmod 755</li>
+</ul>
                 
                   
                     
@@ -659,7 +659,7 @@ brew install clojure-lsp/brew/clojure-lsp-native
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 28, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 29, 2021</span>
     
   </small>
 </div>

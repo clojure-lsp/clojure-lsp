@@ -139,9 +139,13 @@
     (swap! db/db (fn [state-db] (-> state-db
                                     (assoc-in [:documents uri :v] version)
                                     (assoc-in [:documents uri :text] final-text))))
-    (async/put! db/current-changes-chan {:uri uri
-                                         :text final-text
-                                         :version version})))
+    (if (= :full (get-in @db/db [:settings :text-document-sync-kind] :full))
+      (analyze-changes {:uri uri
+                        :text final-text
+                        :version version})
+      (async/put! db/current-changes-chan {:uri uri
+                                           :text final-text
+                                           :version version}))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

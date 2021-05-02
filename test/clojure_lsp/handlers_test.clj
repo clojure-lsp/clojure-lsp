@@ -494,7 +494,7 @@
                                 :character 5}
                         :end   {:line      1
                                 :character 12}}
-              :command {:title   "1 references"
+              :command {:title   "1 reference"
                         :command "code-lens-references"
                         :arguments ["file:///a.clj" 2 6]}}
              (handlers/code-lens-resolve {:data ["file:///a.clj" 2 6]
@@ -503,7 +503,7 @@
                                 :character 7}
                         :end   {:line      2
                                 :character 11}}
-              :command {:title   "1 references"
+              :command {:title   "1 reference"
                         :command "code-lens-references"
                         :arguments ["file:///a.clj" 3 8]}}
              (handlers/code-lens-resolve {:data ["file:///a.clj" 3 8]

@@ -3,6 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
+    [clojure.set :as set]
     [clojure.string :as string]
     [taoensso.timbre :as log]))
 
@@ -20,9 +21,11 @@
   (references->string references " test"))
 
 (defn reference-code-lens [uri]
-  (let [analysis (get @db/db :analysis)]
+  (let [analysis (get @db/db :analysis)
+        excluded-vars (set/union #{'clojure.test/deftest}
+                                 (get-in @db/db [:settings :linters :unused-public-var :exclude-when-defined-by] #{}))]
     (->> (q/find-vars analysis (shared/uri->filename uri) true)
-         (filter #(not= 'clojure.test/deftest (:defined-by %)))
+         (remove #(contains? excluded-vars (:defined-by %)))
          (map (fn [var]
                 {:range (shared/->range var)
                  :data  [uri (:name-row var) (:name-col var)]})))))

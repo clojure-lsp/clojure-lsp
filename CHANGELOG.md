@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.05.06-19.44.00
+
 - Quick fix full text changes to handle it sync for semantic tokens
 - Segregate main references from test references with option to disable via `lens-segregate-test-references`
 

@@ -36,7 +36,7 @@ e.g.,
     "clojure-lsp": {
       "command": "clojure-lsp",
       "filetypes": ["clojure"],
-      "disableDiagnostics": true,
+      "disableDiagnostics": false,
       "rootPatterns": ["deps.edn", "project.clj"],
       "additionalSchemes": ["jar", "zipfile"],
       "trace.server": "verbose",
@@ -70,6 +70,8 @@ whatever...)
 clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to scan the classpath
 during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.
 
+Please note that `clojure-lsp` comes bundled with `clj-kondo`, so you do not have to install it separately.
+
 ### Classpath scan error
 
 By default clojure-lsp knows how to scan most common clojure projects using the following rules:
@@ -94,6 +96,15 @@ It is also important to get your `project-root` correct in your client otherwise
 try to remove that file and restart the server.
 - clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that file as well if you think it's not linting correctly
 - If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
+
+### Missing `add code actions` using CoC and (neo)vim
+
+If you find, when executing the command
+`(coc-codeaction-line)` (or `(coc-codeaction-selected)` or
+`(coc-codeaction-cursor)`), that you aren't getting back
+all of the code actions you might expect, please ensure that you have,
+in your `coc-settings.json` the line `disableDiagnostics` set to
+`false` or better yet, don't have the line there at all :-)
 
 ---
 ## MacOS

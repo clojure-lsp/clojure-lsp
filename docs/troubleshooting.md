@@ -97,7 +97,7 @@ try to remove that file and restart the server.
 - clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that file as well if you think it's not linting correctly
 - If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
 
-### Missing `add code actions` using CoC and (neo)vim
+### Missing `Add require...` on code actions when using CoC and (neo)vim
 
 If you find, when executing the command
 `(coc-codeaction-line)` (or `(coc-codeaction-selected)` or

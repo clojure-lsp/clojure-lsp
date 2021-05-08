@@ -656,10 +656,10 @@
                 
                 
                 <h1 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h1>
-<p><code>clojure-lsp</code> settings are picked up on server start and can be configured via 3 ways: </p>
+<p><code>clojure-lsp</code> settings are picked up on server start and can be configured via 3 ways:</p>
 <ul>
 <li><strong>Project configuration</strong></li>
-<li><strong>Global configuration</strong> </li>
+<li><strong>Global configuration</strong></li>
 <li><strong>LSP InitializationOptions</strong></li>
 </ul>
 <h3 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h3>
@@ -788,18 +788,23 @@
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
 <h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
-make most of features work, you don't have to install clj-kondo to make it work, <code>clojure-lsp</code> will use a specific clj-kondo version 
-that can be retrieved via <code>clojure-lsp --version</code>, but make sure you have it properly configured in your <code>.clj-kondo/config.edn</code> file. </p>
+make most of features work, you don't have to install clj-kondo to
+make it work.</p>
+<p>For example, if you are a (neo)vim user and have <a href="https://github.com/dense-analysis/ale">ale</a> installed as a plugin, you
+<strong>should not</strong> have this configured as a linter <code>let g:ale_linters = {'clojure': ['clj-kondo']}</code> in your vimrc. Having this
+linter enabled via <code>ale</code> will only conflict with the built-in clj-kondo bundled with clojure-lsp.</p>
+<p><code>clojure-lsp</code> will use a specific clj-kondo version that can be retrieved via <code>clojure-lsp --version</code>, but make sure you have it
+properly configured in your <code>.clj-kondo/config.edn</code> file.</p>
 <p>It has the possible key/values:</p>
 <ul>
-<li><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code> </li>
-<li><code>:report-duplicates</code> which will show all linters of the same symbol instead of showing only the first spot. Available values: <code>true</code>, <code>false</code> with default value of <code>true</code> </li>
+<li><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code></li>
+<li><code>:report-duplicates</code> which will show all linters of the same symbol instead of showing only the first spot. Available values: <code>true</code>, <code>false</code> with default value of <code>true</code></li>
 </ul>
 <p>Example:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span>
                        <span class="ss">:report-duplicates</span> <span class="nv">false</span><span class="p">}}}</span>
 </code></pre></div>
-<p>For more information about available configurations, 
+<p>For more information about available configurations,
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
 <h4 id="clojure-lsp">clojure-lsp<a class="headerlink" href="#clojure-lsp" title="Permanent link">#</a></h4>
 <p>At the moment clojure-lsp has only the custom linters below:</p>
@@ -813,8 +818,8 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 </ul>
 <p>Example:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:unused-public-var</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:warning</span>
-                               <span class="ss">:exclude</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/foo</span> 
-                                          <span class="nv">my-ns/bar</span> 
+                               <span class="ss">:exclude</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/foo</span>
+                                          <span class="nv">my-ns/bar</span>
                                           <span class="nv">other-ns</span><span class="p">}</span>
                                <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}}}}</span>
 </code></pre></div>
@@ -823,7 +828,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <p>Besides the <strong>19</strong> built-in snippets, it's possible to configure custom additional snippets via <code>:additional-snippets</code> setting:</p>
 <ul>
 <li><code>:name</code> the name to use while completing to reach that snippet, preferably with a <code>$</code> sufix to indicate a snippet.</li>
-<li><code>:detail</code> Custom text to show along with the completion name. </li>
+<li><code>:detail</code> Custom text to show along with the completion name.</li>
 <li><code>:snippet</code> The body of the snippet, besides any text it can contains:<ul>
 <li><code>$1</code>, <code>$2</code>, ... as the tabstops representing each place where user may change the content.</li>
 <li><code>$0</code> as the last tabstop.</li>
@@ -850,7 +855,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 7, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 8, 2021</span>
     
   </small>
 </div>

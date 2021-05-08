@@ -1,9 +1,9 @@
-# Settings 
+# Settings
 
-`clojure-lsp` settings are picked up on server start and can be configured via 3 ways: 
+`clojure-lsp` settings are picked up on server start and can be configured via 3 ways:
 
 - **Project configuration**
-- **Global configuration** 
+- **Global configuration**
 - **LSP InitializationOptions**
 
 ### Project
@@ -56,18 +56,25 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 | `sqlite-db-path`                    | Where to store the project's analysis cache, used to speed up next `clojure-lsp` startup. A path relative to project root or an absolute path.                                                                                                                                                                                                                                                                       | `.lsp/sqlite.db`                                                                                                     |
 | `log-path`                          | A absolute path to a file where clojure-lsp should log.                                                                                                                                                                                                                                                                                                                                                              | A JVM tmp path, usually `/tmp/clojure-lsp.*.out`                                                                     |
 
-### Diagnostics (linter) 
+### Diagnostics (linter)
 
 #### clj-kondo
 
 `clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to
-make most of features work, you don't have to install clj-kondo to make it work, `clojure-lsp` will use a specific clj-kondo version 
-that can be retrieved via `clojure-lsp --version`, but make sure you have it properly configured in your `.clj-kondo/config.edn` file. 
+make most of features work, you don't have to install clj-kondo to
+make it work.
+
+For example, if you are a (neo)vim user and have [ale](https://github.com/dense-analysis/ale) installed as a plugin, you
+**should not** have this configured as a linter `let g:ale_linters = {'clojure': ['clj-kondo']}` in your vimrc. Having this
+linter enabled via `ale` will only conflict with the built-in clj-kondo bundled with clojure-lsp.
+
+`clojure-lsp` will use a specific clj-kondo version that can be retrieved via `clojure-lsp --version`, but make sure you have it
+properly configured in your `.clj-kondo/config.edn` file.
 
 It has the possible key/values:
 
-- `:level` with available values: `:off`, `:on` with default value of `:on` 
-- `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true` 
+- `:level` with available values: `:off`, `:on` with default value of `:on`
+- `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true`
 
 Example:
 
@@ -76,7 +83,7 @@ Example:
                        :report-duplicates false}}}
 ```
 
-For more information about available configurations, 
+For more information about available configurations,
 check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 
 #### clojure-lsp
@@ -97,8 +104,8 @@ Example:
 
 ```clojure
 {:linters {:unused-public-var {:level :warning
-                               :exclude #{my-ns/foo 
-                                          my-ns/bar 
+                               :exclude #{my-ns/foo
+                                          my-ns/bar
                                           other-ns}
                                :exclude-when-defined-by #{my-ns/defflow}}}}
 ```
@@ -110,12 +117,12 @@ For information on how to troubleshoot the linter, check the [troubleshooting se
 Besides the **19** built-in snippets, it's possible to configure custom additional snippets via `:additional-snippets` setting:
 
 - `:name` the name to use while completing to reach that snippet, preferably with a `$` sufix to indicate a snippet.
-- `:detail` Custom text to show along with the completion name. 
+- `:detail` Custom text to show along with the completion name.
 - `:snippet` The body of the snippet, besides any text it can contains:
     - `$1`, `$2`, ... as the tabstops representing each place where user may change the content.
     - `$0` as the last tabstop.
     - `$current-form` to replace the current form in the snippet.
-  
+
 Example:
 
 ```clojure

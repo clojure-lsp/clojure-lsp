@@ -351,40 +351,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#building" class="md-nav__link">
-    Building
-  </a>
-  
-    <nav class="md-nav" aria-label="Building">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#graalvm" class="md-nav__link">
-    GraalVM
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#jar" class="md-nav__link">
-    Jar
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
-    Development
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#support-the-project" class="md-nav__link">
     Support the project
   </a>
@@ -420,6 +386,32 @@
   <li class="md-nav__item">
     <a href="clients/" class="md-nav__link">
       Clients
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="building/" class="md-nav__link">
+      Building
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="development/" class="md-nav__link">
+      Development
     </a>
   </li>
 
@@ -546,40 +538,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#building" class="md-nav__link">
-    Building
-  </a>
-  
-    <nav class="md-nav" aria-label="Building">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#graalvm" class="md-nav__link">
-    GraalVM
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#jar" class="md-nav__link">
-    Jar
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
-    Development
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#support-the-project" class="md-nav__link">
     Support the project
   </a>
@@ -638,32 +596,10 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <li><strong>Semantic tokens (syntax highlighting)</strong></li>
 <li><strong>Call hierarchy</strong></li>
 </ul>
-<p>For all available features, check the <a href="https://clojure-lsp.github.io/clojure-lsp/features/">features section</a>.</p>
+<p>For all available documentation, check the official <a href="https://clojure-lsp.github.io/clojure-lsp/">website</a>.</p>
 <hr />
 <h2 id="contribution">Contribution<a class="headerlink" href="#contribution" title="Permanent link">#</a></h2>
 <p>Contributions to <code>clojure-lsp</code> are very welcome! You can open an issue or a PR and we'd love to help.</p>
-<hr />
-<h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
-<h3 id="graalvm">GraalVM<a class="headerlink" href="#graalvm" title="Permanent link">#</a></h3>
-<p>Every release, the native binaries (Windows, Linux and MacOS) are compiled with <strong>GraalVM</strong> and uploaded to Github releases page.</p>
-<p>To build a native image with GraalVM:</p>
-<ul>
-<li>Install the GraalVM 21.1.0 for Java 11 and set the <code>GRAALVM_HOME</code> to the installation dir. </li>
-<li>Install <code>native-image</code> with <code>$GRAALVM_HOME/bin/gu install native-image</code>. </li>
-<li>Run from <code>clojure-lsp</code> project root <code>./graalvm/native-unix-compile.sh</code> or <code>./graalvm/native-windows-compile.bat</code>. </li>
-</ul>
-<p>The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
-<h3 id="jar">Jar<a class="headerlink" href="#jar" title="Permanent link">#</a></h3>
-<p>Run <code>clojure -X:prod-jar</code> for building the jar.</p>
-<hr />
-<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h2>
-<p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:</p>
-<ul>
-<li>Create a test for your bug/feature, then implement the code following the test (TDD).</li>
-<li><code>clojure-lsp</code> starts a NREPL server if built with <code>clj -X:debug-jar &amp;&amp; clj -X:bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>server-info</code> custom LSP command.</li>
-<li>Build <code>clojure-lsp</code> with your changes and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
-<li>For debugging purposes, there is two custom commands <code>server-info</code> and <code>cursor-info</code>.</li>
-</ul>
 <hr />
 <h2 id="support-the-project">Support the project<a class="headerlink" href="#support-the-project" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> has more than 8.000 lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva) and vim.</p>
@@ -679,7 +615,7 @@ It aims to work alongside you to help you navigate, identify and fix errors, per
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 8, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 9, 2021</span>
     
   </small>
 </div>

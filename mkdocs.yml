@@ -10,6 +10,8 @@ nav:
     - Overview: README.md
     - Settings: settings.md
     - Clients: clients.md
+    - Building: building.md
+    - Development: development.md
     - Troubleshooting: troubleshooting.md
     - Capabilities: capabilities.md
   - Features: features.md

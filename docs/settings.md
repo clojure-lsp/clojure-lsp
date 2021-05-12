@@ -106,7 +106,8 @@ Example:
 {:linters {:unused-public-var {:level :warning
                                :exclude #{my-ns/foo
                                           my-ns/bar
-                                          other-ns}
+                                          other-ns
+                                          my-func}
                                :exclude-when-defined-by #{my-ns/defflow}}}}
 ```
 

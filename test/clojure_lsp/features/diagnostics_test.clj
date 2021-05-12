@@ -59,6 +59,11 @@
     (h/assert-submaps
      []
      (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
+  (testing "excluding the simple var from ns"
+    (swap! db/db merge {:settings {:linters {:unused-public-var {:exclude #{'foo}}}}})
+    (h/assert-submaps
+     []
+     (#'f.diagnostic/find-diagnostics "file:///a.clj" @db/db)))
   (testing "excluding the specific function"
     (swap! db/db merge {:settings {:linters {:unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps

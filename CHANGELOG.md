@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include non full qualified vars on unused-public-var exclude filter.
+
 ## 2021.05.06-19.44.00
 
 - Quick fix full text changes to handle it sync for semantic tokens

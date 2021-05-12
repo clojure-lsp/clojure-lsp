@@ -74,15 +74,14 @@
 (defn ^:private exclude-public-var? [settings var]
   (let [excluded-syms (get-in settings [:linters :unused-public-var :exclude] #{})
         excluded-defined-by-syms (get-in settings [:linters :unused-public-var :exclude-when-defined-by] #{})
-        excluded-vars (filter qualified-ident? excluded-syms)
-        excluded-ns (filter simple-ident? excluded-syms)]
+        excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
+        excluded-ns-or-var (set (filter simple-ident? excluded-syms))]
     (not (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
                         (:defined-by var))
-             (contains? default-public-vars-name-to-exclude (:name var))
-             (-> excluded-ns
-                 set
-                 (contains? (:ns var)))
-             (-> excluded-vars
+             (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
+                        (:name var))
+             (contains? (set excluded-ns-or-var) (:ns var))
+             (-> excluded-full-qualified-vars
                  set
                  (contains? (symbol (-> var :ns str) (-> var :name str))))))))
 

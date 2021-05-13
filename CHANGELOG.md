@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Include non full qualified vars on unused-public-var exclude filter.
+- Improve hover documentation: use correct markdown for docstrings; remove unnecessary new lines; add link to filename location.
 
 ## 2021.05.06-19.44.00
 

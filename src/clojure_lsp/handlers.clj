@@ -174,21 +174,8 @@
 
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)
-        filename (shared/uri->filename textDocument)
-        analysis (:analysis @db/db)
-        element (q/find-element-under-cursor analysis filename line column)
-        definition (when element (q/find-definition analysis element))]
-    (cond
-      definition
-      {:range (shared/->range element)
-       :contents (f.hover/hover-documentation definition)}
-
-      element
-      {:range (shared/->range element)
-       :contents (f.hover/hover-documentation element)}
-
-      :else
-      {:contents []})))
+        filename (shared/uri->filename textDocument)]
+    (f.hover/hover filename line column)))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (let [[line column] (shared/position->line-column position)]

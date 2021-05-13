@@ -1,11 +1,14 @@
 (ns clojure-lsp.feature.hover
   (:require
     [clojure-lsp.db :as db]
-    [clojure.string :as string]))
+    [clojure.string :as string]
+    [clojure-lsp.queries :as q]
+    [clojure-lsp.shared :as shared]
+    [clojure-lsp.feature.hover :as f.hover]))
 
 (def line-break "\n----\n")
 (def opening-code "```clojure\n")
-(def closing-code "\n```\n")
+(def closing-code "\n```")
 
 (defn ^:private drop-whitespace [n s]
   (if (> n (count s))
@@ -45,12 +48,27 @@
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
-                signatures-line (str opening-code signatures-line closing-code)
-                doc-line (str line-break opening-code doc-line "\n```")
-                filename (str line-break "*" filename "*"))}
-
+                signatures-line (str "\n" opening-code signatures-line closing-code)
+                doc-line (str line-break doc-line "\n")
+                filename (str (format "%s*[%s](%s)*" line-break filename filename)))}
       ;; Default to plaintext
       [(cond-> (str sym-line "\n")
          signatures-line (str signatures-line "\n")
          doc-line (str line-break doc-line)
          filename (str line-break filename))])))
+
+(defn hover [filename line column]
+  (let [analysis (:analysis @db/db)
+        element (q/find-element-under-cursor analysis filename line column)
+        definition (when element (q/find-definition analysis element))]
+    (cond
+      definition
+      {:range (shared/->range element)
+       :contents (f.hover/hover-documentation definition)}
+
+      element
+      {:range (shared/->range element)
+       :contents (f.hover/hover-documentation element)}
+
+      :else
+      {:contents []})))

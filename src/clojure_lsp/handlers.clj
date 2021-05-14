@@ -36,6 +36,15 @@
 (def ^:private full-file-range
   (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
+(defmacro process-after-changes [& body]
+  `(let [~'_time (System/nanoTime)]
+     (loop []
+       (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
+         (log/warn "Timeout waiting for changes for body")
+         (if (:processing-changes @db/db)
+           (recur)
+           ~@body)))))
+
 (defn initialize [project-root client-capabilities client-settings]
   (when project-root
     (crawler/initialize-project project-root client-capabilities client-settings)))
@@ -111,14 +120,15 @@
                               :selection-range (shared/->range e)})))}]))
 
 (defn document-highlight [{:keys [textDocument position]}]
-  (let [line (-> position :line inc)
-        column (-> position :character inc)
-        filename (shared/uri->filename textDocument)
-        scoped-analysis (select-keys (:analysis @db/db) [filename])
-        references (q/find-references-from-cursor scoped-analysis filename line column true)]
-    (mapv (fn [reference]
-            {:range (shared/->range reference)})
-          references)))
+  (process-after-changes
+    (let [line (-> position :line inc)
+          column (-> position :character inc)
+          filename (shared/uri->filename textDocument)
+          scoped-analysis (select-keys (:analysis @db/db) [filename])
+          references (q/find-references-from-cursor scoped-analysis filename line column true)]
+      (mapv (fn [reference]
+              {:range (shared/->range reference)})
+            references))))
 
 (defn workspace-symbols [{:keys [query]}]
   (f.workspace-symbols/workspace-symbols query))
@@ -192,13 +202,14 @@
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos]
-  (let [{:keys [text]} (get-in @db/db [:documents doc-id])
-        cljfmt-settings (get-in @db/db [:settings :cljfmt])
-        forms (parser/find-top-forms-in-range text format-pos)]
-    (mapv (fn [form-loc]
-            {:range (shared/->range (-> form-loc z/node meta))
-             :new-text (n/string (cljfmt/reformat-form (z/node form-loc) cljfmt-settings))})
-          forms)))
+  (process-after-changes
+    (let [{:keys [text]} (get-in @db/db [:documents doc-id])
+          cljfmt-settings (get-in @db/db [:settings :cljfmt])
+          forms (parser/find-top-forms-in-range text format-pos)]
+      (mapv (fn [form-loc]
+              {:range (shared/->range (-> form-loc z/node meta))
+               :new-text (n/string (cljfmt/reformat-form (z/node form-loc) cljfmt-settings))})
+            forms))))
 
 (defmulti extension (fn [method _] method))
 
@@ -214,15 +225,16 @@
 
 (defn code-actions
   [{:keys [range context textDocument]}]
-  (let [db @db/db
-        diagnostics (-> context :diagnostics)
-        line (-> range :start :line)
-        character (-> range :start :character)
-        row (inc line)
-        col (inc character)
-        zloc (parser/safe-cursor-loc textDocument line character)
-        client-capabilities (get db :client-capabilities)]
-    (f.code-actions/all zloc textDocument row col diagnostics client-capabilities)))
+  (process-after-changes
+    (let [db @db/db
+          diagnostics (-> context :diagnostics)
+          line (-> range :start :line)
+          character (-> range :start :character)
+          row (inc line)
+          col (inc character)
+          zloc (parser/safe-cursor-loc textDocument line character)
+          client-capabilities (get db :client-capabilities)]
+      (f.code-actions/all zloc textDocument row col diagnostics client-capabilities))))
 
 (defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
   (let [zloc (parser/safe-cursor-loc uri line character)]
@@ -230,7 +242,8 @@
 
 (defn code-lens
   [{:keys [textDocument]}]
-  (f.code-lens/reference-code-lens textDocument))
+  (process-after-changes
+    (f.code-lens/reference-code-lens textDocument)))
 
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
@@ -238,17 +251,19 @@
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
-  (let [data (f.semantic-tokens/full-tokens textDocument)]
-    {:data data}))
+  (process-after-changes
+    (let [data (f.semantic-tokens/full-tokens textDocument)]
+      {:data data})))
 
 (defn semantic-tokens-range
   [{:keys [textDocument] {:keys [start end]} :range}]
-  (let [range {:name-row (inc (:line start))
-               :name-col (inc (:character start))
-               :name-end-row (inc (:line end))
-               :name-end-col (inc (:character end))}
-        data (f.semantic-tokens/range-tokens textDocument range)]
-    {:data data}))
+  (process-after-changes
+    (let [range {:name-row (inc (:line start))
+                 :name-col (inc (:character start))
+                 :name-end-row (inc (:line end))
+                 :name-end-col (inc (:character end))}
+          data (f.semantic-tokens/range-tokens textDocument range)]
+      {:data data})))
 
 (defn prepare-call-hierarchy
   [{:keys [textDocument position]}]

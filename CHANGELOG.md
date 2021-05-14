@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.05.14-15.26.02
+
 - Include non full qualified vars on unused-public-var exclude filter.
 - Improve hover documentation: use correct markdown for docstrings; remove unnecessary new lines; add link to filename location.
 - Rollback full text changes on last release and change approach for a temporary fix. #424

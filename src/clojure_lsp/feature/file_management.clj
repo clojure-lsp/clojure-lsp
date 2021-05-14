@@ -117,8 +117,8 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]}]
-  (let [notify-references? (get-in @db/db [:settings :notify-references-on-file-change] false)
-        settings (:settings @db/db)]
+  (let [settings (:settings @db/db)
+        notify-references? (get-in settings [:notify-references-on-file-change] false)]
     (loop [state-db @db/db]
       (when (>= version (get-in state-db [:documents uri :v] -1))
         (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
@@ -126,7 +126,8 @@
                 old-analysis (get-in @db/db [:analysis filename])]
             (if (compare-and-set! db/db state-db (-> state-db
                                                      (crawler/update-analysis uri (:analysis new-analysis))
-                                                     (crawler/update-findings uri (:findings new-analysis))))
+                                                     (crawler/update-findings uri (:findings new-analysis))
+                                                     (assoc :processing-changes false)))
               (do
                 (f.diagnostic/lint-file uri @db/db)
                 (when notify-references?
@@ -138,14 +139,11 @@
         final-text (reduce handle-change old-text changes)]
     (swap! db/db (fn [state-db] (-> state-db
                                     (assoc-in [:documents uri :v] version)
-                                    (assoc-in [:documents uri :text] final-text))))
-    (if (= :full (get-in @db/db [:settings :text-document-sync-kind] :full))
-      (analyze-changes {:uri uri
-                        :text final-text
-                        :version version})
-      (async/put! db/current-changes-chan {:uri uri
-                                           :text final-text
-                                           :version version}))))
+                                    (assoc-in [:documents uri :text] final-text)
+                                    (assoc :processing-changes true))))
+    (async/put! db/current-changes-chan {:uri uri
+                                         :text final-text
+                                         :version version})))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

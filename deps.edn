@@ -20,7 +20,7 @@
  :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.829"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
-           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.0.0"}}
+           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.0.1"}}
                     :exec-fn americano.cli/javac
                     :exec-args {:source-paths ["src-java"]}}
            :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.0.216"}}

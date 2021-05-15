@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix completion item kind of clojure core items. Fixes #426
+
 ## 2021.05.14-15.26.02
 
 - Include non full qualified vars on unused-public-var exclude filter.

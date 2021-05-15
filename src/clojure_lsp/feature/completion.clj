@@ -39,7 +39,7 @@
 (defn ^:private supports-clj-core? [uri]
   (#{:cljc :clj} (shared/uri->file-type uri)))
 
-(defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities]}]
+(defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities arglist-strs defined-by]}]
   (cond
     (#{:namespace-definitions
        :namespace-usages} bucket)
@@ -52,7 +52,8 @@
     :keyword
 
     (and (#{:var-definitions} bucket)
-         fixed-arities)
+         (or fixed-arities
+             (= defined-by 'clojure.core/defmacro)))
     :function
 
     (#{:var-definitions :var-usages :locals} bucket)
@@ -63,6 +64,14 @@
 
     :else
     :reference))
+
+(defn ^:private resolve-item-kind [name ns analysis]
+  (->> (mapcat val analysis)
+       (filter #(and (= name (:name %))
+                     (= ns (:ns %))
+                     (= :var-definitions (:bucket %))))
+       first
+       element->completion-item-kind))
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias]
   (cond
@@ -211,21 +220,21 @@
                      (not (:private %))))
        (mapv #(element->completion-item % full-ns))))
 
-(defn ^:private with-clojure-core-items [matches-fn]
+(defn ^:private with-clojure-core-items [matches-fn analysis]
   (->> common-sym/core-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
-                       :kind :variable
+                       :kind (resolve-item-kind sym 'clojure.core analysis)
                        :data (walk/stringify-keys {:filename "/clojure.core.clj"
                                                    :name (str sym)
                                                    :ns "clojure.core"})
                        :detail (str "clojure.core/" sym)}))))
 
-(defn ^:private with-clojurescript-items [matches-fn]
+(defn ^:private with-clojurescript-items [matches-fn analysis]
   (->> common-sym/cljs-syms
        (filter (comp matches-fn str))
        (map (fn [sym] {:label (str sym)
-                       :kind :variable
+                       :kind (resolve-item-kind sym 'cljs.core analysis)
                        :data (walk/stringify-keys {:filename "/cljs.core.cljs"
                                                    :name (str sym)
                                                    :ns "cljs.core"})
@@ -316,11 +325,11 @@
 
         simple-cursor?
         (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements))
-            (into (with-clojure-core-items matches-fn)))
+            (into (with-clojure-core-items matches-fn analysis)))
 
         (and simple-cursor?
              (supports-cljs? uri))
-        (into (with-clojurescript-items matches-fn))
+        (into (with-clojurescript-items matches-fn analysis))
 
         (and simple-cursor?
              (supports-clj-core? uri))

@@ -1,20 +1,23 @@
 all: debug-bin
 
 clean:
-	rm -f clojure-lsp clojure-lsp.jar docs/README.md
+	rm -rf classes clojure-lsp clojure-lsp.jar docs/README.md
 
-debug-bin: clean
+classes:
+	clojure -X:javac
+
+debug-bin: clean classes
 	clojure -X:debug-jar
 	clojure -X:bin
 
-prod-bin:
+prod-bin: clean classes
 	clojure -X:prod-jar
 	clojure -X:bin
 
 prod-native:
 	./graalvm/native-unix-compile.sh
 
-test:
+test: classes
 	clojure -M:test
 
 integration-test:

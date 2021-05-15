@@ -8,6 +8,7 @@
 /integration-test/sample-test/target
 /out
 /target
+/classes
 /.DS_Store
 /.cpcache
 /node_modules

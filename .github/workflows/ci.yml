@@ -50,6 +50,7 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         jdk: [8, 11, 15]
     steps:

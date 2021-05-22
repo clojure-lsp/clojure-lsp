@@ -31,7 +31,7 @@
    taken from kondo"
   [maps result]
   `(let [maps# ~maps
-         res# ~result]
+       res# ~result]
      (and
       (is (= (count maps#) (count res#))
           (format "Expected %s results, but got: %s \n--\n%s--"

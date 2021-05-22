@@ -30,13 +30,21 @@
                 {:range (shared/->range var)
                  :data  [uri (:name-row var) (:name-col var)]})))))
 
+(defn test-reference? [source-path {:keys [filename]}]
+  (and source-path
+       (not (string/starts-with? filename source-path))
+       (string/includes? filename "_test.")))
+
 (defn resolve-code-lens [uri row col range]
   (let [filename (shared/uri->filename uri)
         segregate-lens? (get-in @db/db [:settings :lens-segregate-test-references] true)
         references (q/find-references-from-cursor (:analysis @db/db) filename row col false)]
     (if segregate-lens?
-      (let [main-references (filter #(not (string/includes? (:filename %) "_test.")) references)
-            test-references (filter #(string/includes? (:filename %) "_test.") references)]
+      (let [source-path (->> (get-in @db/db [:settings :source-paths])
+                             (filter #(string/starts-with? filename %))
+                             first)
+            main-references (filter (complement (partial test-reference? source-path)) references)
+            test-references (filter (partial test-reference? source-path) references)]
         (if (seq test-references)
           {:range range
            :command {:title (str (main-references->string main-references)

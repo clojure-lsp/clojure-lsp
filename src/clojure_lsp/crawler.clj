@@ -163,7 +163,7 @@
         (let [filename (.getAbsolutePath ^java.io.File file)
               uri (shared/filename->uri filename)]
           (when (not= :unknown (shared/uri->file-type uri))
-            (f.diagnostic/lint-file uri @db/db)))))))
+            (f.diagnostic/sync-lint-file uri @db/db)))))))
 
 (defn ^:private analyze-paths! [paths public-only?]
   (let [settings (:settings @db/db)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Drastically improve didOpen performance, improving kondo findings parsing and making linting async avoiding blocking some editors.
+
 ## 2021.05.22-16.50.45
 
 - Fix completion item kind of clojure core items. Fixes #426

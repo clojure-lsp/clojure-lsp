@@ -42,23 +42,23 @@
                                     :range {:start {:line 2 :character 3}}}] {}))))
   (testing "already used alias, we add one more suggestion"
     (let [result (f.code-actions/all (zloc-at "file:///a.clj" 4 4)
-                                       "file:///a.clj"
-                                       4
-                                       4
-                                       [{:code "unresolved-namespace"
-                                         :range {:start {:line 3 :character 3}}}] {})]
+                                     "file:///a.clj"
+                                     4
+                                     4
+                                     [{:code "unresolved-namespace"
+                                       :range {:start {:line 3 :character 3}}}] {})]
       (is (some #(= (:title %) "Add require 'clojure.data.json' as 'json'") result))
       (is (some #(= (:title %) "Add require 'clojure.data.json' as 'data.json'") result)))))
 
 (deftest add-missing-namespace-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
-                        "file://a.clj")
+                        "file:///a.clj")
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"
                              "(defn baz []\n"
                              "  bar)")
-                        "file://b.clj")
+                        "file:///b.clj")
   (h/load-code-and-locs (str "(ns another-ns)\n"
                              "(def bar ons/bar)\n"
                              "(def foo sns/foo)\n"
@@ -66,42 +66,42 @@
                              "MyClass.\n"
                              "Date.\n"
                              "Date/parse")
-                        "file://c.clj")
+                        "file:///c.clj")
   (testing "when it has not unresolved-namespace diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                  (f.code-actions/all (zloc-at "file://c.clj" 2 10)
-                                      "file://c.clj"
+                  (f.code-actions/all (zloc-at "file:///c.clj" 2 10)
+                                      "file:///c.clj"
                                       2
                                       10
                                       [] {}))))
   (testing "when it has unresolved-namespace and can find namespace"
     (is (some #(= (:title %) "Add missing 'some-ns' require")
-              (f.code-actions/all (zloc-at "file://c.clj" 3 11)
-                                  "file://c.clj"
+              (f.code-actions/all (zloc-at "file:///c.clj" 3 11)
+                                  "file:///c.clj"
                                   3
                                   11
                                   [{:code "unresolved-namespace"
                                     :range {:start {:line 2 :character 10}}}] {}))))
   (testing "when it has unresolved-namespace but cannot find namespace"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                  (f.code-actions/all (zloc-at "file://c.clj" 2 11)
-                                      "file://c.clj"
+                  (f.code-actions/all (zloc-at "file:///c.clj" 2 11)
+                                      "file:///c.clj"
                                       2
                                       11
                                       [{:code "unresolved-namespace"
                                         :range {:start {:line 1 :character 10}}}] {}))))
   (testing "when it has unresolved-symbol and it's a known refer"
     (is (some #(= (:title %) "Add missing 'clojure.test' require")
-              (f.code-actions/all (zloc-at "file://c.clj" 4 2)
-                                  "file://c.clj"
+              (f.code-actions/all (zloc-at "file:///c.clj" 4 2)
+                                  "file:///c.clj"
                                   4
                                   2
                                   [{:code "unresolved-namespace"
                                     :range {:start {:line 3 :character 1}}}] {}))))
   (testing "when it has unresolved-symbol but it's not a known refer"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                  (f.code-actions/all (zloc-at "file://c.clj" 4 11)
-                                      "file://c.clj"
+                  (f.code-actions/all (zloc-at "file:///c.clj" 4 11)
+                                      "file:///c.clj"
                                       4
                                       11
                                       [{:code "unresolved-symbol"
@@ -116,19 +116,19 @@
                              "MyClass.\n"
                              "Date.\n"
                              "Date/parse")
-                        "file://c.clj")
+                        "file:///c.clj")
   (testing "when it has no unresolved-symbol diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                  (f.code-actions/all (zloc-at "file://c.clj" 5 2)
-                                      "file://c.clj"
+                  (f.code-actions/all (zloc-at "file:///c.clj" 5 2)
+                                      "file:///c.clj"
                                       5
                                       2
                                       [] {}))))
 
   (testing "when it has unresolved-symbol but it's not a common import"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
-                  (f.code-actions/all (zloc-at "file://c.clj" 5 2)
-                                      "file://c.clj"
+                  (f.code-actions/all (zloc-at "file:///c.clj" 5 2)
+                                      "file:///c.clj"
                                       5
                                       2
                                       [{:code "unresolved-symbol"
@@ -136,8 +136,8 @@
                                         :range {:start {:line 4 :character 2}}}] {}))))
   (testing "when it has unresolved-symbol and it's a common import"
     (is (some #(= (:title %) "Add missing 'java.util.Date' import")
-              (f.code-actions/all (zloc-at "file://c.clj" 6 2)
-                                  "file://c.clj"
+              (f.code-actions/all (zloc-at "file:///c.clj" 6 2)
+                                  "file:///c.clj"
                                   6
                                   2
                                   [{:code "unresolved-symbol"
@@ -145,8 +145,8 @@
                                     :range {:start {:line 5 :character 2}}}] {}))))
   (testing "when it has unresolved-namespace and it's a common import via method"
     (is (some #(= (:title %) "Add missing 'java.util.Date' import")
-              (f.code-actions/all (zloc-at "file://c.clj" 7 2)
-                                  "file://c.clj"
+              (f.code-actions/all (zloc-at "file:///c.clj" 7 2)
+                                  "file:///c.clj"
                                   7
                                   2
                                   [{:code "unresolved-namespace"
@@ -182,7 +182,7 @@
                         "file:///b.clj")
   (testing "when in not a coll"
     (is (not-any? #(= (:title %) "Change coll to")
-                  (f.code-actions/all (zloc-at "file://b.clj" 1 1)
+                  (f.code-actions/all (zloc-at "file:///b.clj" 1 1)
                                       "file:///b.clj"
                                       1
                                       1
@@ -224,18 +224,18 @@
 (deftest cycle-privacy-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
-                        "file://a.clj")
+                        "file:///a.clj")
   (testing "when non function location"
     (is (not-any? #(= (:title %) "Cycle privacy")
-                  (f.code-actions/all (zloc-at "file://a.clj" 1 5)
-                                      "file://a.clj"
+                  (f.code-actions/all (zloc-at "file:///a.clj" 1 5)
+                                      "file:///a.clj"
                                       1
                                       5
                                       [] {}))))
   (testing "when on function location"
     (is (some #(= (:title %) "Cycle privacy")
-              (f.code-actions/all (zloc-at "file://a.clj" 2 5)
-                                  "file://a.clj"
+              (f.code-actions/all (zloc-at "file:///a.clj" 2 5)
+                                  "file:///a.clj"
                                   2
                                   5
                                   [] {})))))
@@ -243,18 +243,18 @@
 (deftest extract-function-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
-                        "file://a.clj")
+                        "file:///a.clj")
   (testing "when non function location"
     (is (not-any? #(= (:title %) "Extract function")
-                  (f.code-actions/all (zloc-at "file://a.clj" 1 5)
-                                      "file://a.clj"
+                  (f.code-actions/all (zloc-at "file:///a.clj" 1 5)
+                                      "file:///a.clj"
                                       1
                                       5
                                       [] {}))))
   (testing "when on function location"
     (is (some #(= (:title %) "Extract function")
-              (f.code-actions/all (zloc-at "file://a.clj" 2 5)
-                                  "file://a.clj"
+              (f.code-actions/all (zloc-at "file:///a.clj" 2 5)
+                                  "file:///a.clj"
                                   2
                                   5
                                   [] {})))))
@@ -313,12 +313,12 @@
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
-                        "file://a.clj")
+                        "file:///a.clj")
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"
                              "(defn baz []\n"
                              "  bar)")
-                        "file://b.clj")
+                        "file:///b.clj")
   (h/load-code-and-locs (str "(ns another-ns)\n"
                              "(def bar ons/bar)\n"
                              "(def foo sns/foo)\n"
@@ -326,11 +326,11 @@
                              "MyClass.\n"
                              "Date.\n"
                              "Date/parse")
-                        "file://c.clj")
+                        "file:///c.clj")
   (testing "without workspace edit client capability"
     (is (not-any? #(= (:title %) "Clean namespace")
-                  (f.code-actions/all (zloc-at "file://b.clj" 2 2)
-                                      "file://b.clj"
+                  (f.code-actions/all (zloc-at "file:///b.clj" 2 2)
+                                      "file:///b.clj"
                                       2
                                       2
                                       [] {}))))
@@ -338,8 +338,8 @@
   (testing "with workspace edit client capability"
     (swap! db/db assoc-in [:client-capabilities :workspace :workspace-edit] true)
     (is (some #(= (:title %) "Clean namespace")
-              (f.code-actions/all (zloc-at "file://b.clj" 2 2)
-                                  "file://b.clj"
+              (f.code-actions/all (zloc-at "file:///b.clj" 2 2)
+                                  "file:///b.clj"
                                   2
                                   2
                                   [] {:workspace {:workspace-edit true}})))))

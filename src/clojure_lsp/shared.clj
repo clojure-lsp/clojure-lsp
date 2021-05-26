@@ -77,7 +77,7 @@
          jar-file
          ":"
          nested-file)
-    (str (string/replace uri #"^[a-z]+://" ""))))
+    (.getPath (URI. uri))))
 
 (defn filename->uri [^String filename]
   (let [jar-scheme? (= "jar" (get-in @db/db [:settings :dependency-scheme]))]

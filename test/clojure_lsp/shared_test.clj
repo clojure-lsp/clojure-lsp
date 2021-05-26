@@ -6,7 +6,7 @@
 
 (deftest uri->project-related-path
   (is (= "/src/my-project/some/ns.clj"
-        (shared/uri->project-related-path "file://home/foo/bar/my-project/src/my-project/some/ns.clj" "file://home/foo/bar/my-project"))))
+         (shared/uri->project-related-path "file:///home/foo/bar/my-project/src/my-project/some/ns.clj" "file:///home/foo/bar/my-project"))))
 
 (deftest filename->uri
   (testing "when it is not a jar and contains slash"
@@ -25,6 +25,11 @@
     (reset! db/db {:settings {:dependency-scheme "jar"}})
     (is (= "jar:file:////home/some/.m2/some-jar.jar!/clojure/core.clj"
            (shared/filename->uri "/home/some/.m2/some-jar.jar:clojure/core.clj")))))
+
+(deftest uri->filename
+  (testing "should decode special characters in file URI"
+    (is (= "/path+/encoded characters!"
+           (shared/uri->filename "file:///path%2B/encoded%20characters%21")))))
 
 (deftest ->range-test
   (testing "should subtract 1 from row and col values"

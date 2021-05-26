@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Drastically improve didOpen performance, improving kondo findings parsing and making linting async avoiding blocking some editors.
+- Drastically improve didOpen performance, improving kondo findings parsing and making linting async avoiding blocking some editors. #435
+- Fix `:auto-add-ns-to-new-files?` flag always being considered as `true`. #436
 
 ## 2021.05.22-16.50.45
 

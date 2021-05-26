@@ -32,7 +32,7 @@
   (let [settings (get @db/db :settings {})]
     (when-let [new-ns (and (string/blank? text)
                            (uri->namespace uri))]
-      (when (get @db/db :auto-add-ns-to-new-files? true)
+      (when (get settings :auto-add-ns-to-new-files? true)
         (let [new-text (format "(ns %s)" new-ns)
               changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
                         :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})

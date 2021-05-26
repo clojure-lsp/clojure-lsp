@@ -1,12 +1,10 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.set :as set]
-   [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
 (def unnecessary-diagnostic-types
@@ -21,20 +19,18 @@
     :unused-private-var
     :unused-referred-var})
 
+(def deprecated-diagnostic-types
+  #{:deprecated-var})
+
 (defn ^:private kondo-finding->diagnostic
-  [{:keys [type message level row col end-row] :as finding}
-   text]
-  (let [start-char (-> (parser/loc-at-pos text row col)
-                       z/string
-                       (nth 0 nil))
-        expression? (or (not= row end-row)
-                        (identical? \( start-char))
+  [{:keys [type message level row col end-row] :as finding}]
+  (let [expression? (not= row end-row)
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   expression? (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
      :tags (cond-> []
              (unnecessary-diagnostic-types type) (conj 1)
-             (#{:deprecated-var} type) (conj 2))
+             (deprecated-diagnostic-types type) (conj 2))
      :message message
      :code (name type)
      :severity (case level
@@ -47,11 +43,11 @@
   (or (and row col)
       (log/warn "Invalid clj-kondo finding. Cannot find position data for" finding)))
 
-(defn ^:private kondo-findings->diagnostics [uri findings text]
-  (->> (get findings (shared/uri->filename uri))
-       (filter #(= (shared/uri->filename uri) (:filename %)))
+(defn ^:private kondo-findings->diagnostics [filename findings]
+  (->> (get findings filename)
+       (filter #(= filename (:filename %)))
        (filter valid-finding?)
-       (mapv #(kondo-finding->diagnostic % text))))
+       (mapv kondo-finding->diagnostic)))
 
 (defn ^:private unused-public-var->diagnostic [settings var]
   {:range (shared/->range var)
@@ -85,25 +81,34 @@
                  set
                  (contains? (symbol (-> var :ns str) (-> var :name str))))))))
 
-(defn ^:private lint-public-vars [uri analysis settings]
+(defn ^:private lint-public-vars [filename analysis settings]
   (when (not (= :off (get-in settings [:linters :unused-public-var :level])))
-    (let [filename (shared/uri->filename uri)]
-      (->> (q/find-vars analysis filename false)
-           (filter (partial exclude-public-var? settings))
-           (filter (comp #(= (count %) 0)
-                         #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
-           (mapv (partial unused-public-var->diagnostic settings))))))
+    (let [start-time (System/nanoTime)
+          public-vars (->> (q/find-vars analysis filename false)
+                           (filter (partial exclude-public-var? settings))
+                           (filter (comp #(= (count %) 0)
+                                         #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
+                           (mapv (partial unused-public-var->diagnostic settings)))]
+      (log/info (format "Linting public vars took %sms" (quot (- (System/nanoTime) start-time) 1000000)))
+      public-vars)))
 
 (defn ^:private find-diagnostics [uri db]
-  (let [settings (get db :settings)]
+  (let [settings (get db :settings)
+        filename (shared/uri->filename uri)]
     (cond-> []
       (not (= :off (get-in settings [:linters :clj-kondo :level])))
-      (concat (kondo-findings->diagnostics uri (:findings db) (get-in db [:documents uri :text])))
+      (concat (kondo-findings->diagnostics filename (:findings db)))
 
       (not (= :off (get-in settings [:linters :unused-public-var :level])))
-      (concat (lint-public-vars uri (:analysis db) settings)))))
+      (concat (lint-public-vars filename (:analysis db) settings)))))
 
-(defn lint-file [uri db]
+(defn sync-lint-file [uri db]
   (async/put! db/diagnostics-chan
               {:uri uri
                :diagnostics (find-diagnostics uri db)}))
+
+(defn async-lint-file [uri db]
+  (async/go
+    (async/put! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics (find-diagnostics uri db)})))

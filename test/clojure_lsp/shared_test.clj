@@ -26,6 +26,11 @@
     (is (= "jar:file:////home/some/.m2/some-jar.jar!/clojure/core.clj"
            (shared/filename->uri "/home/some/.m2/some-jar.jar:clojure/core.clj")))))
 
+(deftest uri->filename
+  (testing "should decode special characters in file URI"
+    (is (= "/path+/encoded characters!"
+           (shared/uri->filename "file:///path%2B/encoded%20characters%21")))))
+
 (deftest ->range-test
   (testing "should subtract 1 from row and col values"
     (is (= {:start {:line      1

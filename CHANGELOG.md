@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix corner case error with project paths with spaces or other special characters. #437
 - Drastically improve didOpen performance, improving kondo findings parsing and making linting async avoiding blocking some editors. #435
 - Fix `:auto-add-ns-to-new-files?` flag always being considered as `true`. #436
 

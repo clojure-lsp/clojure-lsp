@@ -6,7 +6,7 @@
 
 (deftest uri->project-related-path
   (is (= "/src/my-project/some/ns.clj"
-        (shared/uri->project-related-path "file://home/foo/bar/my-project/src/my-project/some/ns.clj" "file://home/foo/bar/my-project"))))
+         (shared/uri->project-related-path "file:///home/foo/bar/my-project/src/my-project/some/ns.clj" "file:///home/foo/bar/my-project"))))
 
 (deftest filename->uri
   (testing "when it is not a jar and contains slash"

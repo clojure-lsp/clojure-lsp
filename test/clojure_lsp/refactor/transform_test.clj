@@ -27,7 +27,7 @@
 
 (deftest add-missing-libspec
   (testing "aliases"
-     (testing "known namespaces in project"
+    (testing "known namespaces in project"
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
       (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
@@ -278,7 +278,7 @@
                          ""
                          "(defn func []"
                          "  (f/some))")]
-      (test-clean-ns {:documents {"file://a.clj" {:text to-clean}}}
+      (test-clean-ns {:documents {"file:///a.clj" {:text to-clean}}}
                      to-clean
                      (code "(ns foo.bar"
                            " (:require"
@@ -320,46 +320,46 @@
                          "  b/some"
                          "  (some))")))
   (testing "unused refer from multiple refers"
-      (test-clean-ns {}
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [bar :refer [some other] ]))"
-                           "(some)")
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [bar :refer [some] ]))"
-                           "(some)")))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some other] ]))"
+                         "(some)")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some] ]))"
+                         "(some)")))
   (testing "unused middle refer from multiple refers"
-      (test-clean-ns {}
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [bar :refer [some other baz another] ]))"
-                           "(some)"
-                           "(another)"
-                           "(baz)")
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [bar :refer [another baz some] ]))"
-                           "(some)"
-                           "(another)"
-                           "(baz)")))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some other baz another] ]))"
+                         "(some)"
+                         "(another)"
+                         "(baz)")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [another baz some] ]))"
+                         "(some)"
+                         "(another)"
+                         "(baz)")))
   (testing "unused refer and alias"
-      (test-clean-ns {}
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [bar :refer [some] ]"
-                           "   [baz :as b]))")
-                     (code "(ns foo.bar)")))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :refer [some] ]"
+                         "   [baz :as b]))")
+                   (code "(ns foo.bar)")))
   (testing "unsorted used refer"
-      (test-clean-ns {}
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [some :refer [foo bar baz]]))"
-                           "   foo bar baz")
-                     (code "(ns foo.bar"
-                           " (:require"
-                           "   [some :refer [bar baz foo]]))"
-                           "   foo bar baz")))
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [some :refer [foo bar baz]]))"
+                         "   foo bar baz")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [some :refer [bar baz foo]]))"
+                         "   foo bar baz")))
   (testing "single unused full package import"
     (test-clean-ns {}
                    (code "(ns foo.bar"

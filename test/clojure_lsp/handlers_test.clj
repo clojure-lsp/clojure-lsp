@@ -301,43 +301,43 @@
             (map :message usages))))))
 
 (deftest test-formatting
-  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (reset! db/db {:documents {"file:///a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= "(a)\n(b c d)"
-         (:new-text (first (handlers/formatting {:textDocument "file://a.clj"}))))))
+         (:new-text (first (handlers/formatting {:textDocument "file:///a.clj"}))))))
 
 (deftest test-formatting-noop
-  (reset! db/db {:documents {"file://a.clj" {:text "(a)\n(b c d)"}}})
-  (let [r (handlers/formatting {:textDocument "file://a.clj"})]
+  (reset! db/db {:documents {"file:///a.clj" {:text "(a)\n(b c d)"}}})
+  (let [r (handlers/formatting {:textDocument "file:///a.clj"})]
     (is (empty? r))
     (is (vector? r))))
 
 (deftest test-range-formatting
-  (reset! db/db {:documents {"file://a.clj" {:text "(a  )\n(b c d)"}}})
+  (reset! db/db {:documents {"file:///a.clj" {:text "(a  )\n(b c d)"}}})
   (is (= [{:range {:start {:line 0 :character 0}
                    :end {:line 0 :character 5}}
            :new-text "(a)"}]
-         (handlers/range-formatting "file://a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
+         (handlers/range-formatting "file:///a.clj" {:row 1 :col 1 :end-row 1 :end-col 4}))))
 
 (deftest test-code-actions-handle
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
-                        "file://a.clj")
+                        "file:///a.clj")
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"
                              "(defn baz []\n"
                              "  bar)")
-                        "file://b.clj")
+                        "file:///b.clj")
   (h/load-code-and-locs (str "(ns another-ns)\n"
                              "(def bar ons/bar)\n"
                              "(def foo sns/foo)\n"
                              "(deftest some-test)\n"
                              "MyClass.\n"
                              "Date.")
-                        "file://c.clj")
+                        "file:///c.clj")
   (testing "when it has unresolved-namespace and can find namespace"
     (is (some #(= (:title %) "Add missing 'some-ns' require")
               (handlers/code-actions
-                {:textDocument "file://c.clj"
+                {:textDocument "file:///c.clj"
                  :context {:diagnostics [{:code "unresolved-namespace"
                                           :range {:start {:line 2 :character 10}}}]}
                  :range {:start {:line 2 :character 10}}}))))
@@ -345,14 +345,14 @@
     (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit false}}})
     (is (not-any? #(= (:title %) "Clean namespace")
                   (handlers/code-actions
-                    {:textDocument "file://b.clj"
+                    {:textDocument "file:///b.clj"
                      :context {:diagnostics []}
                      :range {:start {:line 1 :character 1}}}))))
   (testing "with workspace edit client capability"
     (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit true}}})
     (is (some #(= (:title %) "Clean namespace")
               (handlers/code-actions
-                {:textDocument "file://b.clj"
+                {:textDocument "file:///b.clj"
                  :context {:diagnostics []}
                  :range {:start {:line 1 :character 1}}})))))
 

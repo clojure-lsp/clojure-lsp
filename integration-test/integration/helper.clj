@@ -20,10 +20,7 @@
        io/file))
 
 (defn file->uri [file]
-  (let [path (.getAbsolutePath file)]
-    (if (str/starts-with? path "/")
-      (str "file://" path)
-      (str "file:///" path))))
+  (-> file .toPath .toUri .toString))
 
 (defn source-path->uri [source-path]
   (-> source-path

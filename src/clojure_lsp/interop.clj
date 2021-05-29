@@ -47,13 +47,10 @@
       VersionedTextDocumentIdentifier
       WatchKind
       WorkspaceEdit)
-    (org.eclipse.lsp4j.jsonrpc.messages Either)
-    (java.net URLDecoder)))
+    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
-(defn document->decoded-uri [^TextDocumentIdentifier document]
-  (-> document
-      .getUri
-      URLDecoder/decode))
+(defn document->uri [^TextDocumentIdentifier document]
+  (.getUri document))
 
 (defmethod j/from-java DiagnosticSeverity [^DiagnosticSeverity instance]
   (-> instance .name .toLowerCase keyword))
@@ -74,11 +71,11 @@
   (j/from-java (.get instance)))
 
 (defmethod j/from-java TextDocumentIdentifier [^TextDocumentIdentifier instance]
-  (document->decoded-uri instance))
+  (document->uri instance))
 
 (defmethod j/from-java VersionedTextDocumentIdentifier [^VersionedTextDocumentIdentifier instance]
   {:version (.getVersion instance)
-   :uri (document->decoded-uri instance)})
+   :uri (document->uri instance)})
 
 (defmethod j/from-java JsonElement [^JsonElement instance]
   (-> instance

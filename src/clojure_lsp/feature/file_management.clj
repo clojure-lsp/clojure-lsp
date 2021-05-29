@@ -21,11 +21,10 @@
       (->> source-paths
            (some (fn [source-path]
                    (when (string/starts-with? filename source-path)
-                     (some-> filename
-                             (subs (inc (count source-path))
-                                   (- (count filename)
-                                      (inc (count (name file-type)))))
-                             (string/replace #"/" ".")
+                     (some-> (shared/relativize-filepath filename source-path)
+                             (->> (re-find #"^(.+)\.\S+$"))
+                             (nth 1)
+                             (string/replace (System/getProperty "file.separator") ".")
                              (string/replace #"_" "-")))))))))
 
 (defn did-open [uri text]

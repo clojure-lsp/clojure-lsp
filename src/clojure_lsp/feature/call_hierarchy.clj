@@ -20,7 +20,7 @@
                  (-> (f.file-management/force-get-document-text uri)
                      (parser/loc-at-pos name-row name-col)
                      edit/find-namespace-name)
-                 (shared/uri->project-related-path uri project-root))]
+                 (shared/uri->relative-filepath uri project-root))]
     {:name (if arglist-strs
              (str (name value) " " (some->> arglist-strs (remove nil?) (string/join " ")))
              (name value))

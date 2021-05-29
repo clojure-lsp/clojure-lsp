@@ -8,6 +8,20 @@
     [clojure.test :refer [is use-fixtures]]
     [taoensso.timbre :as log]))
 
+(def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
+
+(defn file-path [path]
+  (cond-> path windows?
+          (-> (string/replace #"^/" "C:\\\\")
+              (->> (re-matches #"(.+?)(\.jar:.*)?"))
+              (update 1 string/replace "/" "\\")
+              rest
+              (->> (apply str)))))
+
+(defn file-uri [uri]
+  (cond-> uri windows?
+          (string/replace #"file:///(?!\w:/)" "file:///C:/")))
+
 (defn code [& strings] (string/join "\n" strings))
 
 (defn reset-db-after-test []
@@ -62,7 +76,7 @@
 
 (defn load-code-and-locs [code & [filename]]
   (let [[code positions] (positions-from-text code)
-        filename (or filename "file:///a.clj")]
+        filename (or filename (file-uri "file:///a.clj"))]
     (handlers/did-open {:textDocument {:uri filename :text code}})
     positions))
 

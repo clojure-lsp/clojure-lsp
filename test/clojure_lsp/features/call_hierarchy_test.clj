@@ -38,27 +38,27 @@
 (def project-root "file:/")
 
 (deftest prepare
-  (h/load-code-and-locs a-code "file:///some/a.clj")
-  (h/load-code-and-locs b-code "file:///some/b.clj")
-  (h/load-code-and-locs c-code "file:///some/c.clj")
-  (h/load-code-and-locs d-code "file:///some/d.clj")
+  (h/load-code-and-locs a-code (h/file-uri "file:///some/a.clj"))
+  (h/load-code-and-locs b-code (h/file-uri "file:///some/b.clj"))
+  (h/load-code-and-locs c-code (h/file-uri "file:///some/c.clj"))
+  (h/load-code-and-locs d-code (h/file-uri "file:///some/d.clj"))
   (testing "single element"
-    (let [items (f.call-hierarchy/prepare "file:///some/d.clj" 2 7 project-root)]
+    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 project-root)]
       (is (= 1 (count items)))
       (is (= {:name            "d-func []"
               :kind            :function
               :tags            []
               :detail          "some.d"
-              :uri             "file:///some/d.clj"
+              :uri             (h/file-uri "file:///some/d.clj")
               :range           {:start {:line 1 :character 6} :end {:line 1 :character 12}}
               :selection-range {:start {:line 1 :character 6} :end {:line 1 :character 12}}}
              (first items))))))
 
 (deftest incoming
-  (h/load-code-and-locs a-code "file:///some/a.clj")
-  (h/load-code-and-locs b-code "file:///some/b.clj")
-  (h/load-code-and-locs c-code "file:///some/c.clj")
-  (h/load-code-and-locs d-code "file:///some/d.clj")
+  (h/load-code-and-locs a-code (h/file-uri "file:///some/a.clj"))
+  (h/load-code-and-locs b-code (h/file-uri "file:///some/b.clj"))
+  (h/load-code-and-locs c-code (h/file-uri "file:///some/c.clj"))
+  (h/load-code-and-locs d-code (h/file-uri "file:///some/d.clj"))
   (testing "from first element"
     (h/assert-submaps
       [{:from-ranges []
@@ -66,10 +66,10 @@
                :kind :function
                :tags []
                :detail "some.c"
-               :uri "file:///some/c.clj"
+               :uri (h/file-uri "file:///some/c.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/incoming "file:///some/d.clj" 2 7 project-root)))
+      (f.call-hierarchy/incoming (h/file-uri "file:///some/d.clj") 2 7 project-root)))
 
   (testing "for multiple elements"
     (h/assert-submaps
@@ -78,7 +78,7 @@
                :kind :function
                :tags []
                :detail "some.b"
-               :uri "file:///some/b.clj"
+               :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
        {:from-ranges []
@@ -86,7 +86,7 @@
                :kind :function
                :tags []
                :detail "some.b"
-               :uri "file:///some/b.clj"
+               :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
        {:from-ranges []
@@ -94,16 +94,16 @@
                :kind :function
                :tags []
                :detail "some.b"
-               :uri "file:///some/b.clj"
+               :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 5 :character 6} :end {:line 5 :character 14}}
                :selection-range {:start {:line 5 :character 6} :end {:line 5 :character 14}}}}]
-      (f.call-hierarchy/incoming "file:///some/c.clj" 3 7 project-root))))
+      (f.call-hierarchy/incoming (h/file-uri "file:///some/c.clj") 3 7 project-root))))
 
 (deftest outgoing
-  (h/load-code-and-locs a-code "file:///some/a.clj")
-  (h/load-code-and-locs b-code "file:///some/b.clj")
-  (h/load-code-and-locs c-code "file:///some/c.clj")
-  (h/load-code-and-locs d-code "file:///some/d.clj")
+  (h/load-code-and-locs a-code (h/file-uri "file:///some/a.clj"))
+  (h/load-code-and-locs b-code (h/file-uri "file:///some/b.clj"))
+  (h/load-code-and-locs c-code (h/file-uri "file:///some/c.clj"))
+  (h/load-code-and-locs d-code (h/file-uri "file:///some/d.clj"))
 
   (testing "from first element"
     (h/assert-submaps
@@ -112,10 +112,10 @@
              :kind :function
              :tags []
              :detail "some.b"
-             :uri "file:///some/b.clj"
+             :uri (h/file-uri "file:///some/b.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/outgoing "file:///some/a.clj" 3 7 project-root)))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/a.clj") 3 7 project-root)))
 
   (testing "for multiple elements"
     (h/assert-submaps
@@ -124,7 +124,7 @@
              :kind :function
              :tags []
              :detail "some.c"
-             :uri "file:///some/c.clj"
+             :uri (h/file-uri "file:///some/c.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
        {:from-ranges []
@@ -132,7 +132,7 @@
              :kind :function
              :tags []
              :detail "some.c"
-             :uri "file:///some/c.clj"
+             :uri (h/file-uri "file:///some/c.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/outgoing "file:///some/b.clj" 3 7 project-root))))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/b.clj") 3 7 project-root))))

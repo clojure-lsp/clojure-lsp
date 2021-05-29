@@ -30,7 +30,6 @@
   (:import
     [java.net
      URL
-     URLDecoder
      JarURLConnection]))
 
 (def ^:private full-file-range
@@ -50,7 +49,7 @@
     (crawler/initialize-project project-root client-capabilities client-settings)))
 
 (defn did-open [{:keys [textDocument]}]
-  (let [uri (-> textDocument :uri URLDecoder/decode)
+  (let [uri (:uri textDocument)
         text (:text textDocument)]
     (f.file-management/did-open uri text))
   nil)

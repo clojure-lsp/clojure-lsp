@@ -25,7 +25,7 @@
       (let [sym "a/foo"
             sig "[x]"
             doc "Some cool docs :foo"
-            filename "/a.clj"]
+            filename (h/file-path "/a.clj")]
         (testing "show-docs-arity-on-same-line? disabled"
           (testing "plain"
             (is (= [(join [sym
@@ -34,7 +34,7 @@
                            doc
                            "----"
                            filename])]
-                   (:contents (f.hover/hover "/a.clj" foo-row foo-col)))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col)))))
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
@@ -44,7 +44,7 @@
                                   doc
                                   "\n----"
                                   (str "*[" filename "](" filename ")*")])}
-                   (:contents (f.hover/hover "/a.clj" foo-row foo-col))))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
           (testing "plain"
@@ -54,7 +54,7 @@
                            doc
                            "----"
                            filename])]
-                   (:contents (f.hover/hover "/a.clj" foo-row foo-col)))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col)))))
 
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
@@ -64,12 +64,12 @@
                                   doc
                                   "\n----"
                                   (str "*[" filename "](" filename ")*")])}
-                   (:contents (f.hover/hover "/a.clj" foo-row foo-col))))))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))))
 
     (testing "without docs"
       (let [sym "a/bar"
             sig "[y]"
-            filename "/a.clj"]
+            filename (h/file-path "/a.clj")]
         (testing "show-docs-arity-on-same-line? disabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? false} :client-capabilities nil})
@@ -77,7 +77,7 @@
                            sig
                            "" "----"
                            filename])]
-                   (:contents (f.hover/hover "/a.clj" bar-row bar-col)))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col)))))
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
@@ -85,7 +85,7 @@
                                   start-code sig end-code
                                   "----"
                                   (str "*[" filename "](" filename ")*")])}
-                   (:contents (f.hover/hover "/a.clj" bar-row bar-col))))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
           (testing "plain"
@@ -93,7 +93,7 @@
             (is (= [(join [(str sym " " sig)
                            "" "----"
                            filename])]
-                   (:contents (f.hover/hover "/a.clj" bar-row bar-col)))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col)))))
 
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
@@ -101,4 +101,4 @@
                     :value (join [start-code (str sym " " sig) end-code
                                   "----"
                                   (str "*[" filename "](" filename ")*")])}
-                   (:contents (f.hover/hover "/a.clj" bar-row bar-col))))))))))
+                   (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))))))

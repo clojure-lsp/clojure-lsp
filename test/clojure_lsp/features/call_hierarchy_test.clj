@@ -35,7 +35,7 @@
         "(defn d-func []"
         "  (println 1))"))
 
-(def project-root "file:/")
+(def project-root-uri "file:/")
 
 (deftest prepare
   (h/load-code-and-locs a-code (h/file-uri "file:///some/a.clj"))
@@ -43,7 +43,7 @@
   (h/load-code-and-locs c-code (h/file-uri "file:///some/c.clj"))
   (h/load-code-and-locs d-code (h/file-uri "file:///some/d.clj"))
   (testing "single element"
-    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 project-root)]
+    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 project-root-uri)]
       (is (= 1 (count items)))
       (is (= {:name            "d-func []"
               :kind            :function
@@ -69,7 +69,7 @@
                :uri (h/file-uri "file:///some/c.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/incoming (h/file-uri "file:///some/d.clj") 2 7 project-root)))
+      (f.call-hierarchy/incoming (h/file-uri "file:///some/d.clj") 2 7 project-root-uri)))
 
   (testing "for multiple elements"
     (h/assert-submaps
@@ -97,7 +97,7 @@
                :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 5 :character 6} :end {:line 5 :character 14}}
                :selection-range {:start {:line 5 :character 6} :end {:line 5 :character 14}}}}]
-      (f.call-hierarchy/incoming (h/file-uri "file:///some/c.clj") 3 7 project-root))))
+      (f.call-hierarchy/incoming (h/file-uri "file:///some/c.clj") 3 7 project-root-uri))))
 
 (deftest outgoing
   (h/load-code-and-locs a-code (h/file-uri "file:///some/a.clj"))
@@ -115,7 +115,7 @@
              :uri (h/file-uri "file:///some/b.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/outgoing (h/file-uri "file:///some/a.clj") 3 7 project-root)))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/a.clj") 3 7 project-root-uri)))
 
   (testing "for multiple elements"
     (h/assert-submaps
@@ -135,4 +135,4 @@
              :uri (h/file-uri "file:///some/c.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
-      (f.call-hierarchy/outgoing (h/file-uri "file:///some/b.clj") 3 7 project-root))))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/b.clj") 3 7 project-root-uri))))

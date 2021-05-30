@@ -11,10 +11,10 @@
    [taoensso.timbre :as log]))
 
 (defn ^:private uri->namespace [uri]
-  (let [project-root (:project-root @db/db)
+  (let [project-root-uri (:project-root-uri @db/db)
         source-paths (get-in @db/db [:settings :source-paths])
-        in-project? (when project-root
-                      (string/starts-with? uri project-root))
+        in-project? (when project-root-uri
+                      (string/starts-with? uri project-root-uri))
         file-type (shared/uri->file-type uri)
         filename (shared/uri->filename uri)]
     (when (and in-project? (not= :unknown file-type))

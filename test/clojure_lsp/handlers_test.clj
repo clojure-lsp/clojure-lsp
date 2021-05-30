@@ -26,7 +26,7 @@
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
                                    :source-paths #{(h/file-path "/project/src")}}
                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                        :project-root (h/file-uri "file:///project")})
+                        :project-root-uri (h/file-uri "file:///project")})
     (alter-var-root #'db/edits-chan (constantly (async/chan 1)))
     (let [_ (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
           changes (:document-changes (h/edits-or-timeout))]
@@ -181,7 +181,7 @@
                                               {:new-text "::xx/bar" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on a namespace"
-      (reset! db/db {:project-root (h/file-uri "file:///my-project")
+      (reset! db/db {:project-root-uri (h/file-uri "file:///my-project")
                      :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
       (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))

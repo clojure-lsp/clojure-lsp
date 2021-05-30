@@ -13,14 +13,14 @@
 
 (defn ^:private element-by-uri->call-hierarchy-item
   [{uri :uri {:keys [name-row name-col arglist-strs deprecated] value :name :as element} :element}
-   project-root]
+   project-root-uri]
   (let [range (shared/->range element)
         project-file? (string/starts-with? uri "file://")
         detail (if project-file?
                  (-> (f.file-management/force-get-document-text uri)
                      (parser/loc-at-pos name-row name-col)
                      edit/find-namespace-name)
-                 (shared/uri->relative-filepath uri project-root))]
+                 (shared/uri->relative-filepath uri project-root-uri))]
     {:name (if arglist-strs
              (str (name value) " " (some->> arglist-strs (remove nil?) (string/join " ")))
              (name value))
@@ -31,9 +31,9 @@
      :range range
      :selection-range range}))
 
-(defn prepare [uri row col project-root]
+(defn prepare [uri row col project-root-uri]
   (let [cursor-element (q/find-element-under-cursor (:analysis @db/db) (shared/uri->filename uri) row col)]
-    [(element-by-uri->call-hierarchy-item {:uri uri :element cursor-element} project-root)]))
+    [(element-by-uri->call-hierarchy-item {:uri uri :element cursor-element} project-root-uri)]))
 
 (defn ^:private element->incoming-usage-by-uri
   [{:keys [name-row name-col filename]}]
@@ -56,15 +56,15 @@
       {:uri definition-uri
        :element definition})))
 
-(defn incoming [uri row col project-root]
+(defn incoming [uri row col project-root-uri]
   (->> (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col false)
        (map element->incoming-usage-by-uri)
        (remove nil?)
        (mapv (fn [element-by-uri]
                {:from-ranges []
-                :from (element-by-uri->call-hierarchy-item element-by-uri project-root)}))))
+                :from (element-by-uri->call-hierarchy-item element-by-uri project-root-uri)}))))
 
-(defn outgoing [uri row col project-root]
+(defn outgoing [uri row col project-root-uri]
   (let [analysis (:analysis @db/db)
         filename (shared/uri->filename uri)
         zloc (-> (f.file-management/force-get-document-text uri)
@@ -84,4 +84,4 @@
              (remove nil?)
              (mapv (fn [element-by-uri]
                      {:from-ranges []
-                      :to (element-by-uri->call-hierarchy-item element-by-uri project-root)})))))))
+                      :to (element-by-uri->call-hierarchy-item element-by-uri project-root-uri)})))))))

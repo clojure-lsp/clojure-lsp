@@ -217,10 +217,10 @@
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-paths! source-paths false)))
 
-(defn initialize-project [project-root-uri client-capabilities client-settings]
+(defn initialize-project [project-root-uri client-capabilities]
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
-        settings (-> (merge client-settings project-settings)
+        settings (-> (merge (:settings @db/db) project-settings)
                      (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
                      (update :cljfmt cljfmt.main/merge-default-options))]
     (when-let [log-path (:log-path settings)]
@@ -228,7 +228,6 @@
     (swap! db/db assoc
            :project-root-uri project-root-uri
            :project-settings project-settings
-           :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
     (analyze-project! project-root-uri)))

@@ -1,12 +1,13 @@
 (ns clojure-lsp.interop
   (:require
+    [clojure-lsp.shared :as shared]
     [clojure.data.json :as json]
     [clojure.java.data :as j]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
-    [taoensso.timbre :as log]
     [clojure.walk :as walk]
-    [medley.core :as medley])
+    [medley.core :as medley]
+    [taoensso.timbre :as log])
   (:import
     (com.google.gson JsonElement)
     (org.eclipse.lsp4j

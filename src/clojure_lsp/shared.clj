@@ -73,7 +73,8 @@
         (string/starts-with? uri "zipfile:/"))))
 
 (defn- uri-obj->filepath [uri]
-  (-> uri Paths/get .toAbsolutePath .toString))
+  (-> uri Paths/get .toAbsolutePath .toString
+      (string/replace #"^[a-z]:\\" string/upper-case)))
 
 (defn- path->canonical-path [path]
   (-> path io/file .getCanonicalPath))
@@ -100,6 +101,20 @@
 (defn- uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
 
+(defn conform-uri [uri]
+  (let [format-settings (get-in @db/db [:settings :uri-format])
+        [match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
+    (when-not match
+      (log/error "Found invalid URI:" uri))
+    (str scheme+auth
+         (-> path
+             (string/replace-first #"^/[a-zA-Z]:/"
+                                   (if (:upper-case-drive-letter? format-settings)
+                                     string/upper-case
+                                     string/lower-case))
+             (cond-> (:encode-colons-in-path? format-settings)
+               (string/replace ":" "%3A"))))))
+
 (defn filename->uri
   "Converts an absolute file path into a file URI string.
 
@@ -108,11 +123,12 @@
   [^String filename]
   (let [jar-scheme? (= "jar" (get-in @db/db [:settings :dependency-scheme]))
         [_ jar-filepath nested-file] (re-find #"^(.*\.jar):(.*)" filename)]
-    (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
-      (if jar-scheme?
-        (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
-        (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
-      (.toString (filepath->uri-obj filename)))))
+    (conform-uri
+      (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
+        (if jar-scheme?
+          (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
+          (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
+        (.toString (filepath->uri-obj filename))))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)

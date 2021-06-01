@@ -63,8 +63,24 @@
     (string/ends-with? uri ".edn") #{:edn}
     :else #{}))
 
+(defn conform-uri
+  ([uri] (conform-uri uri (get-in @db/db [:settings :uri-format])))
+  ([uri format-settings]
+   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
+     (when-not match
+       (log/error "Found invalid URI:" uri))
+     (str scheme+auth
+          (-> path
+              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
+                                    (if (:upper-case-drive-letter? format-settings)
+                                      string/upper-case
+                                      string/lower-case))
+              (cond-> (:encode-colons-in-path? format-settings)
+                (string/replace ":" "%3A")))))))
+
 (defn uri->path ^java.nio.file.Path [uri]
-  (.toAbsolutePath (Paths/get (URI. uri))))
+  (-> (conform-uri uri {:upper-case-drive-letter? true})
+      URI. Paths/get))
 
 (defn plain-uri? [uri]
   (when uri
@@ -73,11 +89,8 @@
         (string/starts-with? uri "zipfile:/"))))
 
 (defn- uri-obj->filepath [uri]
-  (-> uri Paths/get .toAbsolutePath .toString
+  (-> uri Paths/get .toString
       (string/replace #"^[a-z]:\\" string/upper-case)))
-
-(defn- path->canonical-path [path]
-  (-> path io/file .getCanonicalPath))
 
 (defn uri->filename
   "Converts a URI string into an absolute file path.
@@ -92,7 +105,7 @@
           [_ jar-uri-path nested-file] (when (= "zipfile" (.getScheme uri-obj))
                                          (re-find #"^(.*\.jar)::(.*)" (.getPath uri-obj)))]
       (if jar-uri-path
-        (str (path->canonical-path jar-uri-path) ":" nested-file)
+        (str (-> jar-uri-path io/file .getCanonicalPath) ":" nested-file)
         (uri-obj->filepath uri-obj)))))
 
 (defn- filepath->uri-obj ^URI [filepath]
@@ -100,20 +113,6 @@
 
 (defn- uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
-
-(defn conform-uri [uri]
-  (let [format-settings (get-in @db/db [:settings :uri-format])
-        [match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
-    (when-not match
-      (log/error "Found invalid URI:" uri))
-    (str scheme+auth
-         (-> path
-             (string/replace-first #"^/[a-zA-Z]:/"
-                                   (if (:upper-case-drive-letter? format-settings)
-                                     string/upper-case
-                                     string/lower-case))
-             (cond-> (:encode-colons-in-path? format-settings)
-               (string/replace ":" "%3A"))))))
 
 (defn filename->uri
   "Converts an absolute file path into a file URI string.

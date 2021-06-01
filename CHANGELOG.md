@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix graalvm issue on completionItem InsertTextMode
 - Bump clj-kondo and rewrite-clj to latest releases.
 
 ## 2021.05.27-17.42.34

@@ -276,6 +276,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.CompletionItemInsertTextModeSupportCapabilities",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.CompletionItemTag",
   "fields":[{"name":"value"}]
 },

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bump clj-kondo and rewrite-clj to latest releases.
+
 ## 2021.05.27-17.42.34
 
 - Fix corner case error with project paths with spaces or other special characters. #437

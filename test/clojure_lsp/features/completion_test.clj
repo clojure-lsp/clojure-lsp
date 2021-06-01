@@ -41,7 +41,7 @@
                         "file:///g.clj")
 
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
-  (testing "complete-a"
+  (testing "complete-alp"
     (h/assert-submaps
      [{:label "alpaca" :kind :property :detail "user"}
       {:label "alpaca" :kind :property :detail "alpaca.ns"}
@@ -56,13 +56,6 @@
       {:label "ba/bazz"}
       {:label "bases" :detail "clojure.core/bases"}]
      (f.completion/completion "file:///b.clj" 4 3)))
-  (testing "complete-alpaca"
-    (h/assert-submaps
-     [{:label "alpaca" :kind :property :detail "user"}
-      {:label "alpaca" :kind :property :detail "alpaca.ns"}
-      {:label "alpha" :kind :variable}
-      {:label "ba" :detail "alpaca.ns"}]
-     (f.completion/completion "file:///b.clj" 3 3)))
   (testing "complete-core-stuff"
     (h/assert-submaps
      [{:label "frequencies", :detail "clojure.core/frequencies"}]

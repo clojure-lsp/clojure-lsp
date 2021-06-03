@@ -82,30 +82,30 @@
             0 2 3 1 -1
             2 0 3 1 -1
             1 1 7 2 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "macro refered tokens"
     (h/load-code-and-locs
       (code "(ns some.ns (:require [clojure.test :refer [deftest]]))"
             "(deftest some-test 1)"))
     (is (= [0 44 7 2 -1
             1 1 7 2 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "macro core tokens"
     (h/load-code-and-locs (code "(comment 1)"))
     (is (= [0 1 7 2 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "function declared tokens"
     (h/load-code-and-locs (code "(def foo 1)"
                                 "foo"))
     (is (= [0 1 3 2 -1
             1 0 3 1 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "type alias for function tokens"
     (h/load-code-and-locs (code "(ns some.ns (:require [foo.bar :as fb]))"
                                 "fb/some-foo-bar"))
     (is (= [1 0 2 0 -1
             0 3 12 1 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "java classes for function tokens"
     (h/load-code-and-locs (code "(ns some.ns)"
                                 "^java.lang.String \"\""
@@ -114,7 +114,7 @@
     (is (= [1 1 16 1 -1
             1 0 6 4 -1
             1 1 6 4 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "keywords for keyword tokens"
     (h/load-code-and-locs (code "(ns some.ns)"
                                 ":foo"
@@ -123,7 +123,7 @@
     (is (= [1 0 4 3 -1
             1 0 12 3 -1
             1 0 5 3 -1]
-           (semantic-tokens/full-tokens "file:///a.clj"))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj")))))
   (testing "locals destructuring for variable tokens"
     (h/load-code-and-locs (code "(fn [{:keys [foo bar]}])"))
     (is (= [0 1 2 2 -1
@@ -131,7 +131,7 @@
             0 0 5 3 -1
             0 7 3 5 -1
             0 4 3 5 -1]
-           (semantic-tokens/full-tokens "file:///a.clj")))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj"))))))
 
 (deftest range-tokens
   (testing "tokens only for range"
@@ -143,4 +143,4 @@
             "baz"))
     (is (= [2 0 3 1 -1
             1 1 7 2 -1]
-           (semantic-tokens/range-tokens "file:///a.clj" {:name-row 3 :name-col 0 :name-end-row 4 :name-end-col 0})))))
+           (semantic-tokens/range-tokens (h/file-uri "file:///a.clj") {:name-row 3 :name-col 0 :name-end-row 4 :name-end-col 0})))))

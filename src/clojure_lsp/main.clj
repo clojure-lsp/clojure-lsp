@@ -161,7 +161,7 @@
            (end
             (let [result (when (compare-and-set! formatting false true)
                            (try
-                             (let [doc-id (interop/document->decoded-uri (.getTextDocument params))
+                             (let [doc-id (interop/document->uri (.getTextDocument params))
                                    range (.getRange params)
                                    start (.getStart range)
                                    end (.getEnd range)]

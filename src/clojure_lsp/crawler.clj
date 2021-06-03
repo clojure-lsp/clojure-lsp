@@ -14,7 +14,9 @@
     [clojure.set :as set]
     [clojure.string :as string]
     [digest :as digest]
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log])
+  (:import
+   (java.net URI)))
 
 (defn ^:private to-file ^java.io.File
   [^java.nio.file.Path path
@@ -209,26 +211,32 @@
           (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
           (db/save-deps root-path project-hash classpath analysis))))))
 
-(defn ^:private analyze-project! [project-root]
-  (let [root-path (shared/uri->path project-root)
+(defn ^:private analyze-project! [project-root-uri]
+  (let [root-path (shared/uri->path project-root-uri)
         settings (:settings @db/db)
         source-paths (get settings :source-paths)]
     (analyze-classpath! root-path source-paths settings)
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-paths! source-paths false)))
 
-(defn initialize-project [project-root client-capabilities client-settings]
-  (let [project-settings (config/resolve-config project-root)
-        root-path (shared/uri->path project-root)
-        settings (-> (merge client-settings project-settings)
+(defn initialize-project [project-root-uri client-capabilities client-settings]
+  (let [project-settings (config/resolve-config project-root-uri)
+        root-path (shared/uri->path project-root-uri)
+        default-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
+                                                                      (re-find #"^/[A-Z]:/")
+                                                                      boolean)
+                                       :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
+        settings (-> (merge default-settings
+                            client-settings
+                            project-settings)
                      (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
                      (update :cljfmt cljfmt.main/merge-default-options))]
     (when-let [log-path (:log-path settings)]
       (logging/update-log-path log-path))
     (swap! db/db assoc
-           :project-root project-root
+           :project-root-uri project-root-uri
            :project-settings project-settings
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (analyze-project! project-root)))
+    (analyze-project! project-root-uri)))

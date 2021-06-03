@@ -15,9 +15,9 @@
                                 "(+ 1 2)"))
   (testing "inside a macro usage"
     (is (= 'some-ns/foo
-           (f.resolve-macro/find-full-macro-symbol-to-resolve "file:///a.clj" 3 7))))
+           (f.resolve-macro/find-full-macro-symbol-to-resolve (h/file-uri "file:///a.clj") 3 7))))
   (testing "not inside a macro usage"
-    (is (not (f.resolve-macro/find-full-macro-symbol-to-resolve "file:///a.clj" 4 5)))))
+    (is (not (f.resolve-macro/find-full-macro-symbol-to-resolve (h/file-uri "file:///a.clj") 4 5)))))
 
 (deftest resolve-macro-as
   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
@@ -27,4 +27,4 @@
                                 "(+ 1 2)"))
   (testing "resolving macro as def"
     (is (= "{:lint-as {some-ns/foo clojure.core/def}}\n"
-           (#'f.resolve-macro/resolve-macro-as "file:///a.clj" 3 7 "clojure.core/def" ".any-clj-kondo/config.edn")))))
+           (#'f.resolve-macro/resolve-macro-as (h/file-uri "file:///a.clj") 3 7 "clojure.core/def" ".any-clj-kondo/config.edn")))))

@@ -263,6 +263,9 @@
                       :kind :snippet
                       :insert-text-format :snippet)))))
 
+(defn- sort-completion-results [results]
+  (sort-by (juxt :label :detail) results))
+
 (defn completion [uri row col]
   (let [filename (shared/uri->filename uri)
         {:keys [text]} (get-in @db/db [:documents uri])
@@ -306,13 +309,13 @@
       inside-refer?
       (->> (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
            (into #{})
-           (sort-by :label)
+           sort-completion-results
            not-empty)
 
       inside-require?
       (->> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
            (into #{})
-           (sort-by :label)
+           sort-completion-results
            not-empty)
 
       :else
@@ -339,8 +342,8 @@
         (into (with-snippets cursor-loc text row col))
 
         :always
-        (->> (sort-by :label)
-             not-empty)))))
+        (-> sort-completion-results
+            not-empty)))))
 
 (defn ^:private resolve-item-by-ns
   [{{:keys [name ns filename]} :data :as item}]

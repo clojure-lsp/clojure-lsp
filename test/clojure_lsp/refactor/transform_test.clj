@@ -168,7 +168,7 @@
    (h/load-code-and-locs input-code)
    (let [zloc (when in-form
                 (-> (z/of-string input-code) z/down z/right z/right))
-         [{:keys [loc range]}] (transform/clean-ns zloc "file:///a.clj")]
+         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri "file:///a.clj"))]
      (is (some? range))
      (is (= expected-code
             (z/root-string loc))))))
@@ -278,7 +278,7 @@
                          ""
                          "(defn func []"
                          "  (f/some))")]
-      (test-clean-ns {:documents {"file:///a.clj" {:text to-clean}}}
+      (test-clean-ns {:documents {(h/file-uri "file:///a.clj") {:text to-clean}}}
                      to-clean
                      (code "(ns foo.bar"
                            " (:require"
@@ -679,7 +679,7 @@
           _ (h/load-code-and-locs code)
           results (transform/extract-function
                     zloc
-                    "file:///a.clj"
+                    (h/file-uri "file:///a.clj")
                     "foo")]
       (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
       (is (= "(foo b)" (z/string (:loc (last results)))))))
@@ -693,7 +693,7 @@
           _ (h/load-code-and-locs code)
           results (transform/extract-function
                     zloc
-                    "file:///a.clj"
+                    (h/file-uri "file:///a.clj")
                     "foo")]
       (is (= "(defn foo [a]\n  (+ 1 a))" (z/string (:loc (first results)))))
       (is (= "(foo a)" (z/string (:loc (last results))))))))
@@ -736,8 +736,8 @@
   (testing "simple let"
     (reset! db/db {})
     (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (transform/inline-symbol "file:///a.clj" 1 7)
-          a-results (get results "file:///a.clj")]
+    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7)
+          a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
       (is (= 3 (count a-results)))
@@ -745,10 +745,10 @@
   (testing "def in another file"
     (reset! db/db {})
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
-          _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" "file:///b.clj")
-          results (transform/inline-symbol "file:///a.clj" pos-l pos-c)
-          a-results (get results "file:///a.clj")
-          b-results (get results "file:///b.clj")]
+          _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
+          results (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c)
+          a-results (get results (h/file-uri "file:///a.clj"))
+          b-results (get results (h/file-uri "file:///b.clj"))]
       (is (map? results))
       (is (= 2 (count results)))
       (is (= [nil] (map (comp z/string :loc) a-results)))

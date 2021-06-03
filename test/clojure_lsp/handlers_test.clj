@@ -10,7 +10,7 @@
 
 (h/reset-db-after-test)
 
-(defn code [& strings] (clojure.string/join "\n" strings))
+(defn code [& strings] (string/join "\n" strings))
 
 (deftest initialize
   (testing "detects URI format with lower-case drive letter and encoded colons"

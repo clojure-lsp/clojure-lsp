@@ -1,6 +1,5 @@
 (ns clojure-lsp.interop
   (:require
-    [clojure-lsp.shared :as shared]
     [clojure.data.json :as json]
     [clojure.java.data :as j]
     [clojure.spec.alpha :as s]

@@ -23,7 +23,6 @@
     [clojure-lsp.queries :as q]
     [clojure-lsp.shared :as shared]
     [clojure.pprint :as pprint]
-    [clojure.string :as string]
     [medley.core :as medley]
     [rewrite-clj.node :as n]
     [rewrite-clj.zip :as z]

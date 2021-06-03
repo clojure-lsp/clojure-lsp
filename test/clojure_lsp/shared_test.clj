@@ -3,7 +3,6 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.shared :as shared]
     [clojure-lsp.test-helper :as h]
-    [clojure.string :as string]
     [clojure.test :refer [deftest is testing]]))
 
 (deftest uri->filename

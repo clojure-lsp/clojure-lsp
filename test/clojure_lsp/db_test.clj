@@ -2,9 +2,8 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.test-helper :as h]
-   [clojure.string :as s]
-   [clojure.test :refer [deftest testing is]]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

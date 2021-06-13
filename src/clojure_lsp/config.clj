@@ -102,8 +102,10 @@
        (remove nil?)
        set))
 
-(defn resolve-deps-source-paths [{:keys [paths extra-paths aliases]} settings]
-  (let [source-aliases (get settings :source-aliases #{:dev :test})
+(defn resolve-deps-source-paths
+  [{:keys [paths extra-paths aliases]}
+   settings]
+  (let [source-aliases (or (:source-aliases settings) #{:dev :test})
         root-source-paths (extract-source-paths paths extra-paths aliases)]
     (->> source-aliases
          (map #(get aliases % nil))

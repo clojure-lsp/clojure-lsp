@@ -99,4 +99,12 @@
                                                             :bar {:other :things
                                                                   :paths ["a"]}
                                                             :baz ["x"]}}
-                                                 {:source-aliases #{:foo :bar}})))))))
+                                                 {:source-aliases #{:foo :bar}}))))
+      (testing "when settings exists but is nil"
+        (is (= #{"a"}
+               (config/resolve-deps-source-paths {:aliases {:dev {:paths ["a"]}
+                                                            :foo {:extra-paths ["x"]}
+                                                            :bar {:other :things
+                                                                  :paths ["y"]}
+                                                            :baz ["z"]}}
+                                                 {:source-aliases nil})))))))

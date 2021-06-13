@@ -219,19 +219,33 @@
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-paths! source-paths false)))
 
-(defn ^:private resolve-default-source-paths [root-path settings]
-  (let [deps-file (to-file root-path "deps.edn")
-        deps-source-paths (when (.exists deps-file)
-                            (config/resolve-deps-source-paths (config/read-edn-file deps-file) settings))]
-    (if (seq deps-source-paths)
+(def default-source-paths #{"src" "test"})
+
+(defn ^:private resolve-source-paths [root-path settings given-source-paths]
+  (let [deps-file (to-file root-path "deps.edn")]
+    (cond
+      given-source-paths
       (do
-        (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
-        deps-source-paths)
-      #{"src" "test"})))
+        (log/info "Using given source-paths:" given-source-paths)
+        given-source-paths)
+
+      (.exists deps-file)
+      (let [deps-source-paths (config/resolve-deps-source-paths (config/read-edn-file deps-file) settings)]
+        (if (seq deps-source-paths)
+          (do
+            (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
+            deps-source-paths)
+          (do
+            (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
+            default-source-paths)))
+
+      :else
+      (do
+        (log/info "Using default source-paths:" default-source-paths)
+        default-source-paths))))
 
 (defn ^:private process-source-paths [root-path settings given-source-paths]
-  (let [source-paths (or given-source-paths
-                         (resolve-default-source-paths root-path settings))]
+  (let [source-paths (resolve-source-paths root-path settings given-source-paths)]
     (mapv #(->> % (to-file root-path) .getAbsolutePath str) source-paths)))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings]

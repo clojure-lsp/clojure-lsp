@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.06.14-17.00.47
+
 - Improve source paths discoverability for `deps.edn` projects. Adds `:source-aliases` for customization. For more information, check the [settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#source-paths-discovery). 
 
 ## 2021.06.01-16.19.44

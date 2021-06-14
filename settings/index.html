@@ -419,6 +419,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#source-paths-discovery" class="md-nav__link">
+    Source paths discovery
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#snippets" class="md-nav__link">
     Snippets
   </a>
@@ -653,6 +660,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#source-paths-discovery" class="md-nav__link">
+    Source paths discovery
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#snippets" class="md-nav__link">
     Snippets
   </a>
@@ -716,8 +730,13 @@
 <tbody>
 <tr>
 <td><code>source-paths</code></td>
-<td>project-local directories to look for clj/cljc/cljs files</td>
+<td>project-local directories to look for clj/cljc/cljs files, if using <code>deps.edn</code>, use <code>:source-aliases</code> instead.</td>
 <td><code>#{"src" "test"}</code></td>
+</tr>
+<tr>
+<td><code>source-aliases</code></td>
+<td>Used for <code>deps.edn</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>.</td>
+<td><code>#{:dev :test}</code></td>
 </tr>
 <tr>
 <td><code>linters</code></td>
@@ -851,6 +870,12 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}}}}</span>
 </code></pre></div>
 <p>For information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
+<h3 id="source-paths-discovery">Source paths discovery<a class="headerlink" href="#source-paths-discovery" title="Permanent link">#</a></h3>
+<p>Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.</p>
+<ul>
+<li>If your project is not a <code>deps.edn</code> project, a <code>leiningen</code> project for example, clojure-lsp will use only the <code>:source-paths</code>(default <code>#{"src" "test"}</code>).</li>
+<li>If your project is a <code>deps.edn</code>, clojure-lsp will scan the <code>deps.edn</code> file for <code>:paths</code>, <code>:extra-paths</code> and the paths from the specified aliases (default <code>#{:dev :test}</code>).</li>
+</ul>
 <h3 id="snippets">Snippets<a class="headerlink" href="#snippets" title="Permanent link">#</a></h3>
 <p>Besides the <strong>19</strong> built-in snippets, it's possible to configure custom additional snippets via <code>:additional-snippets</code> setting:</p>
 <ul>
@@ -882,7 +907,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 3, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 14, 2021</span>
     
   </small>
 </div>

@@ -1,11 +1,11 @@
 (ns clojure-lsp.code-lens
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.shared :as shared]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [taoensso.timbre :as log]))
 
 (defn ^:private references->string [references s]
   (let [count (count references)

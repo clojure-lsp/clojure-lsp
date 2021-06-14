@@ -3,6 +3,7 @@
     [clojure-lsp.shared :as shared]
     [clojure.edn :as edn]
     [clojure.java.io :as io]
+    [clojure.set :as set]
     [clojure.string :as string]
     [taoensso.timbre :as log]))
 
@@ -44,7 +45,7 @@
                          :canonical-paths true}}}
       (with-additional-config settings)))
 
-(defn ^:private read-edn-file [^java.io.File file]
+(defn read-edn-file [^java.io.File file]
   (try
     (->> (slurp file)
          (edn/read-string {:readers {'re re-pattern}})
@@ -88,3 +89,27 @@
             (merge {}
                    (resolve-home-config home-dir-file))
             (resolve-project-configs project-root-uri home-dir-file))))
+
+(defn ^:private extract-source-paths [paths extra-paths aliases]
+  (->> (concat paths extra-paths)
+       (map (fn [path]
+              (if (keyword? path)
+                (when (or (vector? (get aliases path))
+                          (set? (get aliases path)))
+                  (get aliases path))
+                path)))
+       flatten
+       (remove nil?)
+       set))
+
+(defn resolve-deps-source-paths
+  [{:keys [paths extra-paths aliases]}
+   settings]
+  (let [source-aliases (or (:source-aliases settings) #{:dev :test})
+        root-source-paths (extract-source-paths paths extra-paths aliases)]
+    (->> source-aliases
+         (map #(get aliases % nil))
+         (mapcat #(extract-source-paths (:paths %) (:extra-paths %) nil))
+         (remove nil?)
+         set
+         (set/union root-source-paths))))

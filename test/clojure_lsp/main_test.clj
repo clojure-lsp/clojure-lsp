@@ -1,7 +1,7 @@
 (ns clojure-lsp.main-test
   (:require
    [clojure-lsp.main :as main]
-   [clojure.test :refer [deftest testing is]])
+   [clojure.test :refer [deftest is testing]])
   (:import
    (org.eclipse.lsp4j
      InitializeParams)))
@@ -10,8 +10,8 @@
   (testing "initializationOptions are null"
     (let [params (InitializeParams.)]
       (.setInitializationOptions params nil)
-      (is (= #{"src" "test"}
-             (get (#'main/client-settings params) :source-paths)))))
+      (is (= "zipfile"
+             (get (#'main/client-settings params) :dependency-scheme)))))
   (testing "document-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
       (is (= true (:document-formatting? (#'main/client-settings params))))))

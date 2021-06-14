@@ -219,20 +219,50 @@
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-paths! source-paths false)))
 
+(def default-source-paths #{"src" "test"})
+
+(defn ^:private resolve-source-paths [root-path settings given-source-paths]
+  (let [deps-file (to-file root-path "deps.edn")]
+    (cond
+      given-source-paths
+      (do
+        (log/info "Using given source-paths:" given-source-paths)
+        given-source-paths)
+
+      (.exists deps-file)
+      (let [deps-source-paths (config/resolve-deps-source-paths (config/read-edn-file deps-file) settings)]
+        (if (seq deps-source-paths)
+          (do
+            (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
+            deps-source-paths)
+          (do
+            (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
+            default-source-paths)))
+
+      :else
+      (do
+        (log/info "Using default source-paths:" default-source-paths)
+        default-source-paths))))
+
+(defn ^:private process-source-paths [root-path settings given-source-paths]
+  (let [source-paths (resolve-source-paths root-path settings given-source-paths)]
+    (mapv #(->> % (to-file root-path) .getAbsolutePath str) source-paths)))
+
 (defn initialize-project [project-root-uri client-capabilities client-settings]
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
-        default-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
-                                                                      (re-find #"^/[A-Z]:/")
-                                                                      boolean)
-                                       :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
-        settings (-> (merge default-settings
+        encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
+                                                                       (re-find #"^/[A-Z]:/")
+                                                                       boolean)
+                                        :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
+        raw-settings (merge encoding-settings
                             client-settings
                             project-settings)
-                     (update :source-paths (fn [source-paths] (mapv #(str (.getAbsolutePath (to-file root-path %))) source-paths)))
+        _ (when-let [log-path (:log-path raw-settings)]
+            (logging/update-log-path log-path))
+        settings (-> raw-settings
+                     (update :source-paths (partial process-source-paths root-path raw-settings))
                      (update :cljfmt cljfmt.main/merge-default-options))]
-    (when-let [log-path (:log-path settings)]
-      (logging/update-log-path log-path))
     (swap! db/db assoc
            :project-root-uri project-root-uri
            :project-settings project-settings

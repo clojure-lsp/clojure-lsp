@@ -735,7 +735,7 @@
 </tr>
 <tr>
 <td><code>source-aliases</code></td>
-<td>Used for <code>deps.edn</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>.</td>
+<td>Used for <code>deps.edn</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>. Check the <code>source-aliases discovery</code> section below.</td>
 <td><code>#{:dev :test}</code></td>
 </tr>
 <tr>
@@ -873,8 +873,8 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <h3 id="source-paths-discovery">Source paths discovery<a class="headerlink" href="#source-paths-discovery" title="Permanent link">#</a></h3>
 <p>Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.</p>
 <ul>
-<li>If your project is not a <code>deps.edn</code> project, a <code>leiningen</code> project for example, clojure-lsp will use only the <code>:source-paths</code>(default <code>#{"src" "test"}</code>).</li>
-<li>If your project is a <code>deps.edn</code>, clojure-lsp will scan the <code>deps.edn</code> file for <code>:paths</code>, <code>:extra-paths</code> and the paths from the specified aliases (default <code>#{:dev :test}</code>).</li>
+<li>If your project is not a <code>deps.edn</code> project, a <code>leiningen</code> project for example, clojure-lsp will use only the <code>:source-paths</code> setting (default <code>#{"src" "test"}</code>) which should point to the folders containing your clojure code.</li>
+<li>If your project is a <code>deps.edn</code>, clojure-lsp will scan the <code>deps.edn</code> file for <code>:paths</code>, <code>:extra-paths</code> and the paths from the specified <code>:source-aliases</code> setting (default <code>#{:dev :test}</code>), unless you specified <code>:source-paths</code> manually.</li>
 </ul>
 <h3 id="snippets">Snippets<a class="headerlink" href="#snippets" title="Permanent link">#</a></h3>
 <p>Besides the <strong>19</strong> built-in snippets, it's possible to configure custom additional snippets via <code>:additional-snippets</code> setting:</p>

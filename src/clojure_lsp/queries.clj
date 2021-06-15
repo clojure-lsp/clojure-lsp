@@ -25,6 +25,9 @@
     nil
     coll))
 
+(defn- find-last [pred coll]
+  (find-first pred (reverse coll)))
+
 (defn ^:private remove-keys [pred m]
   (apply dissoc m (filter pred (keys m))))
 
@@ -39,6 +42,10 @@
 (defn ^:private find-first-order-by-project-analysis [pred? analysis]
   (or (find-first pred? (mapcat val (filter-project-analysis analysis)))
       (find-first pred? (mapcat val (filter-external-analysis analysis)))))
+
+(defn ^:private find-last-order-by-project-analysis [pred? analysis]
+  (or (find-last pred? (mapcat val (filter-project-analysis analysis)))
+      (find-last pred? (mapcat val (filter-external-analysis analysis)))))
 
 (defn ^:private match-file-lang
   [check-element match-element]
@@ -92,7 +99,7 @@
 
 (defmethod find-definition :var-usages
   [analysis element]
-  (find-first-order-by-project-analysis
+  (find-last-order-by-project-analysis
     #(and (= (:bucket %) :var-definitions)
           (= (:name %) (:name element))
           (not (= (:defined-by %) 'clojure.core/declare))

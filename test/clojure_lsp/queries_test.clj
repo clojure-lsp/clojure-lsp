@@ -206,7 +206,7 @@
                                                         "|f/bar") (h/file-uri "file:///b.cljc"))
           ana (:analysis @db/db)]
       (h/assert-submap
-        {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
+        {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
         (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r bar-c)))))
 
 (deftest find-definition-from-cursor-when-declared

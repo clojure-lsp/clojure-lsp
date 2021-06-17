@@ -413,6 +413,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#disable-linter" class="md-nav__link">
+    Disable linter
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -654,6 +661,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#disable-linter" class="md-nav__link">
+    Disable linter
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -868,6 +882,11 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                           <span class="nv">other-ns</span>
                                           <span class="nv">my-func</span><span class="p">}</span>
                                <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}}}}</span>
+</code></pre></div>
+<h4 id="disable-linter">Disable linter<a class="headerlink" href="#disable-linter" title="Permanent link">#</a></h4>
+<p>It's not recommended to disable the linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}</span>
+           <span class="ss">:unused-public-var</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}}}</span>
 </code></pre></div>
 <p>For information on how to troubleshoot the linter, check the <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">troubleshooting section</a></p>
 <h3 id="source-paths-discovery">Source paths discovery<a class="headerlink" href="#source-paths-discovery" title="Permanent link">#</a></h3>

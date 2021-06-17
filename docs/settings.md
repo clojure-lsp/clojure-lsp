@@ -112,6 +112,15 @@ Example:
                                :exclude-when-defined-by #{my-ns/defflow}}}}
 ```
 
+#### Disable linter
+
+It's not recommended to disable the linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:
+
+```clojure
+{:linters {:clj-kondo {:level :off}
+           :unused-public-var {:level :off}}}
+```
+
 For information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.github.io/clojure-lsp/troubleshooting/)
 
 ### Source paths discovery

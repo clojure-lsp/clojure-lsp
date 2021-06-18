@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Avoid removing whole require if unused refer but with used alias during clean-ns. #447 
+- Bump cljfmt 0.7.0 -> 0.8.0. Fixes #266
+- Bump clj-kondo 2021.06.01 -> 2021.06.18
 
 ## 2021.06.14-17.00.47
 

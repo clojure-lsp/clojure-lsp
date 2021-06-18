@@ -5,7 +5,7 @@
     [clojure-lsp.refactor.transform :as transform]
     [clojure-lsp.test-helper :as h]
     [clojure.string :as string]
-    [clojure.test :refer [deftest testing is]]
+    [clojure.test :refer [deftest is testing]]
     [rewrite-clj.zip :as z]))
 
 (defn code [& strings] (string/join "\n" strings))
@@ -160,7 +160,7 @@
     (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
       (is (= nil (transform/add-common-import-to-namespace zloc))))))
 
-(defn test-clean-ns
+(defn- test-clean-ns
   ([db input-code expected-code]
    (test-clean-ns db input-code expected-code true))
   ([db input-code expected-code in-form]
@@ -329,6 +329,46 @@
                          " (:require"
                          "   [bar :refer [some] ]))"
                          "(some)")))
+  (testing "unused refer from single refer but used alias before"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [aba :as a]"
+                         "   [bar :as b :refer [some]]))"
+                         "(a/bla)"
+                         "(b/another)")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [aba :as a]"
+                         "   [bar :as b]))"
+                         "(a/bla)"
+                         "(b/another)")))
+  (testing "unused refer from single refer but used alias after"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [aba :as a]"
+                         "   [bar :refer [some] :as b]))"
+                         "(a/bla)"
+                         "(b/another)")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [aba :as a]"
+                         "   [bar :as b]))"
+                         "(a/bla)"
+                         "(b/another)")))
+  (testing "unused refer from multiple refers but used alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b :refer [some other]]))"
+                         "(other)"
+                         "(b/another)")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [bar :as b :refer [other]]))"
+                         "(other)"
+                         "(b/another)")))
   (testing "unused middle refer from multiple refers"
     (test-clean-ns {}
                    (code "(ns foo.bar"

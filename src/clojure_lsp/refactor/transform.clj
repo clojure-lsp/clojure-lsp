@@ -323,7 +323,12 @@
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
         removed-refers (set/difference node-refers unused-refers-symbol)]
     (if (empty? removed-refers)
-      (z/remove node)
+      (-> node
+          z/down
+          (z/find-next-value ':refer)
+          z/remove
+          z/right
+          z/remove)
       (-> node
           z/down
           z/rightmost
@@ -340,7 +345,7 @@
     (contains? unused-aliases (-> node z/down z/leftmost z/sexpr))
     (z/remove node)
 
-    (= :vector (-> node z/down z/rightmost z/tag))
+    (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
     (remove-unused-refers node unused-refers)
 
     :else
@@ -369,8 +374,8 @@
         single-unused?  (when (and single-require? (z/vector? first-node))
                           (or (contains? unused-aliases first-node-ns)
                               (and (seq first-node-refers)
-                                (seq unused-refers)
-                                (set/subset? first-node-refers unused-refers))))]
+                                   (seq unused-refers)
+                                   (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))

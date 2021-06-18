@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Avoid removing whole require if unused refer but with used alias during clean-ns. #447 
+
 ## 2021.06.14-17.00.47
 
 - Improve source paths discoverability for `deps.edn` projects. Adds `:source-aliases` for customization. For more information, check the [settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#source-paths-discovery). 

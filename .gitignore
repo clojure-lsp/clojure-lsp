@@ -18,3 +18,4 @@
 /.calva/output-window
 /clojure-lsp
 /clojure-lsp.jar
+.dir-locals.el

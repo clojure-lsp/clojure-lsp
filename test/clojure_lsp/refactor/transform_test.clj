@@ -781,7 +781,28 @@
       (is (map? results))
       (is (= 1 (count results)))
       (is (= 3 (count a-results)))
-      (is (= [nil "1" "1"] (map (comp z/string :loc) a-results)))))
+      (h/assert-submaps
+        [{:loc nil :range {:row 1 :col 7 :end-row 1 :end-col 18}}
+         {:loc "1" :range {:row 1 :col 20 :end-row 1 :end-col 29}}
+         {:loc "1" :range {:row 1 :col 30 :end-row 1 :end-col 39}}]
+        (map #(-> %
+                  (update :loc z/string)
+                  (update :range select-keys [:row :col :end-row :end-col])) a-results))))
+  (testing "multiple binding let"
+    (reset! db/db {})
+    (h/load-code-and-locs "(let [something 1 other 2] something other something)")
+    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7)
+          a-results (get results (h/file-uri "file:///a.clj"))]
+      (is (map? results))
+      (is (= 1 (count results)))
+      (is (= 3 (count a-results)))
+      (h/assert-submaps
+        [{:loc nil :range {:row 1 :col 7 :end-row 1 :end-col 18}}
+         {:loc "1" :range {:row 1 :col 28 :end-row 1 :end-col 37}}
+         {:loc "1" :range {:row 1 :col 44 :end-row 1 :end-col 53}}]
+        (map #(-> %
+                  (update :loc z/string)
+                  (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "def in another file"
     (reset! db/db {})
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")

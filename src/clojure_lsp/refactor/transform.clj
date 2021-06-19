@@ -725,8 +725,12 @@
         op (inline-symbol? definition)]
     (when op
       (let [val-loc (z/right def-loc)
-            end-pos (if (= op 'def) (meta (z/node (z/up def-loc))) (meta (z/node val-loc)))
-            prev-loc (if (= op 'def) (z/left (z/up def-loc)) (z/left def-loc))
+            end-pos (if (= op 'def)
+                      (meta (z/node (z/up def-loc)))
+                      (meta (z/node val-loc)))
+            prev-loc (if (= op 'def)
+                       (z/left (z/up def-loc))
+                       (z/left def-loc))
             start-pos (if prev-loc
                         (set/rename-keys (meta (z/node prev-loc))
                                          {:end-row :row :end-col :col})
@@ -737,7 +741,10 @@
                        :end-col (:end-col end-pos)}]
         (reduce
           (fn [accum {:keys [filename] :as element}]
-            (update accum (shared/filename->uri filename) (fnil conj []) {:loc val-loc :range element}))
+            (update accum
+                    (shared/filename->uri filename)
+                    (fnil conj [])
+                    {:loc val-loc :range element}))
           {def-uri [{:loc nil :range def-range}]}
           references)))))
 

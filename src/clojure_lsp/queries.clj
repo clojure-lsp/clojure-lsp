@@ -39,10 +39,6 @@
   (->> analysis
        (remove-keys #(string/starts-with? (-> % name shared/filename->uri) "file://"))))
 
-(defn ^:private find-first-order-by-project-analysis [pred? analysis]
-  (or (find-first pred? (mapcat val (filter-project-analysis analysis)))
-      (find-first pred? (mapcat val (filter-external-analysis analysis)))))
-
 (defn ^:private find-last-order-by-project-analysis [pred? analysis]
   (or (find-last pred? (mapcat val (filter-project-analysis analysis)))
       (find-last pred? (mapcat val (filter-external-analysis analysis)))))
@@ -91,7 +87,7 @@
 
 (defmethod find-definition :namespace-usages
   [analysis element]
-  (find-first-order-by-project-analysis
+  (find-last-order-by-project-analysis
     #(and (= (:bucket %) :namespace-definitions)
           (= (:name %) (:name element))
           (match-file-lang % element))
@@ -115,7 +111,7 @@
 (defmethod find-definition :keywords
   [analysis element]
   (when (:ns element)
-    (find-first-order-by-project-analysis
+    (find-last-order-by-project-analysis
       #(and (= (:bucket %) :keywords)
             (= (:name %) (:name element))
             (:reg %)

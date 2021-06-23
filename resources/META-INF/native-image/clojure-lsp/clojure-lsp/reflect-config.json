@@ -215,7 +215,10 @@
 },
 {
   "name":"org.eclipse.lsp4j.CodeLensCapabilities",
-  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.CodeLensWorkspaceCapabilities",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
@@ -520,6 +523,10 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.FileChangeType",
   "allPublicMethods":true,
   "fields":[{"name":"value"}]
@@ -744,6 +751,10 @@
   "allDeclaredFields":true,
   "allPublicMethods":true,
   "allPublicConstructors":true
+},
+{
+  "name":"org.eclipse.lsp4j.SemanticTokensWorkspaceCapabilities",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"org.eclipse.lsp4j.SemanticTokensClientCapabilitiesRequests",

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix graalvm reflect config for LSP 3.16 protocol.
+
 ## 2021.06.21-14.30.54
 
 - Avoid removing whole require if unused refer but with used alias during clean-ns. #447 

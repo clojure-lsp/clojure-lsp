@@ -19,3 +19,4 @@
 /clojure-lsp
 /clojure-lsp.jar
 .dir-locals.el
+clojure-lsp.build_artifacts.txt

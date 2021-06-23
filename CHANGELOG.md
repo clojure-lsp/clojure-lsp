@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Fix graalvm reflect config for LSP 3.16 protocol.
+- Fix graalvm reflect config for LSP 3.16 protocol. #449
+- Use last definition when showing signature help. #446
 
 ## 2021.06.21-14.30.54
 

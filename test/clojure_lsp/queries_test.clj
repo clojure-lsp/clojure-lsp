@@ -36,20 +36,20 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 1 (count (q/filter-external-analysis (:analysis @db/db)))))))
 
-(deftest find-first-order-by-project-analysis
+(deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"
     (reset! db/db {})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
-    (let [element (#'q/find-first-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
+    (let [element (#'q/find-last-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
     (reset! db/db {})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
-    (let [element (#'q/find-first-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
-      (is (= (h/file-path "/a.clj") (:filename element))))))
+    (let [element (#'q/find-last-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
+      (is (= (h/file-path "/b.clj") (:filename element))))))
 
 (deftest find-element-under-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
@@ -206,7 +206,7 @@
                                                         "|f/bar") (h/file-uri "file:///b.cljc"))
           ana (:analysis @db/db)]
       (h/assert-submap
-        {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
+        {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
         (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r bar-c)))))
 
 (deftest find-definition-from-cursor-when-declared

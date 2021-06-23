@@ -57,6 +57,19 @@
       (is (= nil
              (f.signature-help/signature-help (h/file-uri "file:///a.clj") outside-r outside-c))))))
 
+(deftest signature-help-multiple-definitions
+  (let [[[after-r after-c]] (h/load-code-and-locs
+                              (h/code "(def bar)"
+                                      "(defn bar [a b] 1)"
+                                      "(defn foo [a b] (bar| 1 2))"))]
+    (testing "after function name"
+      (is (= {:signatures [{:label "(bar [a b])"
+                            :parameters [{:label "a"}
+                                         {:label "b"}]}]
+              :active-parameter 0
+              :active-signature 0}
+             (f.signature-help/signature-help (h/file-uri "file:///a.clj") after-r after-c))))))
+
 (deftest signature-help-multiple-signatures
   (testing "With fixed arities"
     (let [[[zero-r zero-c]

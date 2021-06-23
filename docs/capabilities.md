@@ -112,12 +112,12 @@ Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
 
-### Custom commands
+### Custom methods
 
-`clojure-lsp` has some custom commands:
+`clojure-lsp` has some custom LSP methods that doesn't follow the protocol but aggregate value as a clojure IDE:
 
-
-| command             | args                           | notes                                                          |
-| ------------------- | ----                           | -----                                                          |
-| server-info         |                                | Use to retrieve server and configuration information           |
-| cursor-info         | `[document-uri, line, column]` | Use to retrieve debugging information for the symbol at cursor |
+| command                | args                           | notes                                                                 |
+| -------------------    | ----                           | -----                                                                 |
+| clojure/serverInfo/raw |                                | Use to retrieve from server the server configuration information      |
+| clojure/serverInfo/log |                                | Use to log to user the server configuration information               |
+| clojure/cursorInfo/log | `[document-uri, line, column]` | Use to log to user the debugging information for the symbol at cursor |

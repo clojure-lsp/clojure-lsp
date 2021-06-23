@@ -4,6 +4,7 @@
 
 - Fix graalvm reflect config for LSP 3.16 protocol. #449
 - Use last definition when showing signature help. #446
+- Create 2 new LSP custom methods: `clojure/serverInfo/raw` and `clojure/serverInfo/log`, check the documentation for more information.
 
 ## 2021.06.21-14.30.54
 

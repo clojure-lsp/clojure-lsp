@@ -381,6 +381,32 @@
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 (s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
 
+(defn stringify-keys-and-vals
+  "Recursively transforms all map keys and values from keywords to strings."
+  [m]
+  (let [kf (fn [[k v]] (if (keyword? k) [(name k) v] [k v]))
+        vf (fn [[k v]] (if (keyword? v) [k (name v)] [k v]))]
+    ;; only apply to maps
+    (clojure.walk/postwalk
+      (fn [x]
+        (cond
+          (map? x)
+          (into {} (map #(-> % kf vf) x))
+
+          :else
+          x)) m)))
+
+(defn clj->java [clj-map]
+  (->> clj-map
+       stringify-keys-and-vals
+       (j/to-java java.util.Map)))
+
+;; (.toString (clj->java {:a 1
+;;                        :b :bla
+;;                        :c {:d "a"
+;;                            :e "b"}
+;;                        :d #{"as" "ba"}}))
+
 (defn java->clj [inst]
   (let [converted (j/from-java inst)]
     (if (map? converted)
@@ -403,6 +429,7 @@
 
 (s/def ::legacy-debean (s/conformer debeaner))
 (s/def ::debean (s/conformer java->clj))
+(s/def ::bean (s/conformer clj->java))
 
 (s/def :capabilities/code-action ::legacy-debean)
 (s/def :capabilities/code-lens ::legacy-debean)
@@ -488,6 +515,8 @@
 (s/def :watched-files/change (s/and ::legacy-debean (s/keys :req-un [::uri :watched-files/type])))
 (s/def ::watched-files-changes (s/and (s/conformer (fn [vs] (into [] vs)))
                                       (s/coll-of :watched-files/change)))
+
+(s/def ::server-info-raw ::bean)
 
 (defn conform-or-log [spec value]
   (when value

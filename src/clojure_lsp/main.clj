@@ -1,72 +1,76 @@
 (ns clojure-lsp.main
   (:require
-   borkdude.dynaload
-   [clojure-lsp.config :as config]
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.file-management :as f.file-management]
-   [clojure-lsp.feature.refactor :as f.refactor]
-   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
-   [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.interop :as interop]
-   [clojure-lsp.logging :as logging]
-   [clojure-lsp.nrepl :as nrepl]
-   [clojure-lsp.producer :as producer]
-   [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! go-loop timeout thread]]
-   [taoensso.timbre :as log])
+    borkdude.dynaload
+    [clojure-lsp.config :as config]
+    [clojure-lsp.db :as db]
+    [clojure-lsp.feature.file-management :as f.file-management]
+    [clojure-lsp.feature.refactor :as f.refactor]
+    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+    [clojure-lsp.handlers :as handlers]
+    [clojure-lsp.interop :as interop]
+    [clojure-lsp.logging :as logging]
+    [clojure-lsp.nrepl :as nrepl]
+    [clojure-lsp.producer :as producer]
+    [clojure-lsp.shared :as shared]
+    [clojure.core.async :refer [<! go-loop thread timeout]]
+    [taoensso.timbre :as log])
   (:import
-   (clojure_lsp ClojureExtensions)
-   (java.util.concurrent CompletableFuture)
-   (java.util.function Supplier)
-   (org.eclipse.lsp4j
-    CallHierarchyIncomingCallsParams
-    CallHierarchyOutgoingCallsParams
-    CallHierarchyPrepareParams
-    CodeActionParams
-    CodeAction
-    CodeActionOptions
-    CodeLens
-    CodeLensParams
-    CodeLensOptions
-    CompletionItem
-    CompletionOptions
-    CompletionParams
-    DefinitionParams
-    DidChangeConfigurationParams
-    DidChangeTextDocumentParams
-    DidChangeWatchedFilesParams
-    DidChangeWatchedFilesRegistrationOptions
-    DidCloseTextDocumentParams
-    DidOpenTextDocumentParams
-    DidSaveTextDocumentParams
-    DocumentFormattingParams
-    DocumentHighlightParams
-    DocumentRangeFormattingParams
-    DocumentSymbolParams
-    ExecuteCommandOptions
-    ExecuteCommandParams
-    FileSystemWatcher
-    HoverParams
-    InitializeParams
-    InitializeResult
-    InitializedParams
-    ReferenceParams
-    Registration
-    RegistrationParams
-    RenameParams
-    SaveOptions
-    SemanticTokensLegend
-    SemanticTokensParams
-    SemanticTokensRangeParams
-    SemanticTokensWithRegistrationOptions
-    ServerCapabilities
-    SignatureHelpOptions
-    SignatureHelpParams
-    TextDocumentSyncKind
-    TextDocumentSyncOptions
-    WorkspaceSymbolParams)
-   (org.eclipse.lsp4j.launch LSPLauncher)
-   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
+    (clojure_lsp
+      ClojureExtensions
+      ExtraMethods
+      CursorInfoParams)
+    (java.util.concurrent CompletableFuture)
+    (java.util.function Supplier)
+    (java.util List)
+    (org.eclipse.lsp4j
+      CallHierarchyIncomingCallsParams
+      CallHierarchyOutgoingCallsParams
+      CallHierarchyPrepareParams
+      CodeActionParams
+      CodeAction
+      CodeActionOptions
+      CodeLens
+      CodeLensParams
+      CodeLensOptions
+      CompletionItem
+      CompletionOptions
+      CompletionParams
+      DefinitionParams
+      DidChangeConfigurationParams
+      DidChangeTextDocumentParams
+      DidChangeWatchedFilesParams
+      DidChangeWatchedFilesRegistrationOptions
+      DidCloseTextDocumentParams
+      DidOpenTextDocumentParams
+      DidSaveTextDocumentParams
+      DocumentFormattingParams
+      DocumentHighlightParams
+      DocumentRangeFormattingParams
+      DocumentSymbolParams
+      ExecuteCommandOptions
+      ExecuteCommandParams
+      FileSystemWatcher
+      HoverParams
+      InitializeParams
+      InitializeResult
+      InitializedParams
+      ReferenceParams
+      Registration
+      RegistrationParams
+      RenameParams
+      SaveOptions
+      SemanticTokensLegend
+      SemanticTokensParams
+      SemanticTokensRangeParams
+      SemanticTokensWithRegistrationOptions
+      ServerCapabilities
+      SignatureHelpOptions
+      SignatureHelpParams
+      TextDocumentSyncKind
+      TextDocumentSyncOptions
+      WorkspaceSymbolParams)
+    (org.eclipse.lsp4j.launch LSPLauncher)
+    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
 
 (defonce formatting (atom false))
@@ -91,22 +95,22 @@
 (defmacro ^:private sync-handler
   ([params handler]
    `(end
-     (->> ~params
-          interop/java->clj
-          ~handler)))
+      (->> ~params
+           interop/java->clj
+           ~handler)))
   ([params handler response-spec]
    `(end
-     (->> ~params
-          interop/java->clj
-          ~handler
-          (interop/conform-or-log ~response-spec)))))
+      (->> ~params
+           interop/java->clj
+           ~handler
+           (interop/conform-or-log ~response-spec)))))
 
 (defmacro ^:private async-handler
   [params handler response-spec]
   `(CompletableFuture/supplyAsync
-    (reify Supplier
-      (get [this]
-        (sync-handler ~params ~handler ~response-spec)))))
+     (reify Supplier
+       (get [this]
+         (sync-handler ~params ~handler ~response-spec)))))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
@@ -159,24 +163,24 @@
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (start :rangeFormatting
            (end
-            (let [result (when (compare-and-set! formatting false true)
-                           (try
-                             (let [doc-id (interop/document->uri (.getTextDocument params))
-                                   range (.getRange params)
-                                   start (.getStart range)
-                                   end (.getEnd range)]
-                               (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
-                                                                        doc-id
-                                                                        {:row (inc (.getLine start))
-                                                                         :col (inc (.getCharacter start))
-                                                                         :end-row (inc (.getLine end))
-                                                                         :end-col (inc (.getCharacter end))})))
-                             (catch Exception e
-                               (log/error e))
-                             (finally
-                               (reset! formatting false))))]
-              (CompletableFuture/completedFuture
-               result)))))
+             (let [result (when (compare-and-set! formatting false true)
+                            (try
+                              (let [doc-id (interop/document->uri (.getTextDocument params))
+                                    range (.getRange params)
+                                    start (.getStart range)
+                                    end (.getEnd range)]
+                                (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
+                                                                         doc-id
+                                                                         {:row (inc (.getLine start))
+                                                                          :col (inc (.getCharacter start))
+                                                                          :end-row (inc (.getLine end))
+                                                                          :end-col (inc (.getCharacter end))})))
+                              (catch Exception e
+                                (log/error e))
+                              (finally
+                                (reset! formatting false))))]
+               (CompletableFuture/completedFuture
+                 result)))))
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (start :codeAction
@@ -240,10 +244,10 @@
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
            (end
-            (some->> params
-                     (.getChanges)
-                     (interop/conform-or-log ::interop/watched-files-changes)
-                     (handlers/did-change-watched-files)))))
+             (some->> params
+                      (.getChanges)
+                      (interop/conform-or-log ::interop/watched-files-changes)
+                      (handlers/did-change-watched-files)))))
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
@@ -271,8 +275,8 @@
 (defn extension [method & args]
   (start :extension
          (CompletableFuture/completedFuture
-          (end
-           (apply #'handlers/extension method args)))))
+           (end
+             (apply #'handlers/extension method args)))))
 
 (defn ^:private start-parent-process-liveness-probe!
   [ppid server]
@@ -285,69 +289,86 @@
         (.exit server)))))
 
 (def server
-  (proxy [ClojureExtensions LanguageServer] []
+  (proxy [ClojureExtensions LanguageServer ExtraMethods] []
     (^CompletableFuture initialize [^InitializeParams params]
       (start :initialize
              (end
-              (do
-                (log/info "Initializing...")
-                (handlers/initialize (.getRootUri params)
-                                     (client-capabilities params)
-                                     (client-settings params))
-                (when-let [parent-process-id (.getProcessId params)]
-                  (start-parent-process-liveness-probe! parent-process-id this))
-                (let [settings (:settings @db/db)]
-                  (CompletableFuture/completedFuture
-                   (InitializeResult. (doto (ServerCapabilities.)
-                                        (.setDocumentHighlightProvider true)
-                                        (.setHoverProvider true)
-                                        (.setSignatureHelpProvider (SignatureHelpOptions. []))
-                                        (.setCallHierarchyProvider true)
-                                        (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
-                                                                  (.setResolveProvider true)))
-                                        (.setCodeLensProvider (CodeLensOptions. true))
-                                        (.setReferencesProvider true)
-                                        (.setRenameProvider true)
-                                        (.setDefinitionProvider true)
-                                        (.setDocumentFormattingProvider ^Boolean (:document-formatting? settings))
-                                        (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting? settings))
-                                        (.setDocumentSymbolProvider true)
-                                        (.setWorkspaceSymbolProvider true)
-                                        (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
-                                                                              (:semantic-tokens? settings))
-                                                                      (doto (SemanticTokensWithRegistrationOptions.)
-                                                                        (.setLegend (doto (SemanticTokensLegend.
-                                                                                           semantic-tokens/token-types-str
-                                                                                           semantic-tokens/token-modifiers)))
-                                                                        (.setRange true)
-                                                                        (.setFull true))))
-                                        (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
-                                                                      (.setCommands f.refactor/available-refactors)))
-                                        (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                                (.setOpenClose true)
-                                                                (.setChange (case (:text-document-sync-kind settings)
-                                                                              :full TextDocumentSyncKind/Full
-                                                                              :incremental TextDocumentSyncKind/Incremental
-                                                                              TextDocumentSyncKind/Full))
-                                                                (.setSave (SaveOptions. true))))
-                                        (.setCompletionProvider (CompletionOptions. true []))))))))))
+               (do
+                 (log/info "Initializing...")
+                 (handlers/initialize (.getRootUri params)
+                                      (client-capabilities params)
+                                      (client-settings params))
+                 (when-let [parent-process-id (.getProcessId params)]
+                   (start-parent-process-liveness-probe! parent-process-id this))
+                 (let [settings (:settings @db/db)]
+                   (CompletableFuture/completedFuture
+                     (InitializeResult. (doto (ServerCapabilities.)
+                                          (.setDocumentHighlightProvider true)
+                                          (.setHoverProvider true)
+                                          (.setSignatureHelpProvider (SignatureHelpOptions. []))
+                                          (.setCallHierarchyProvider true)
+                                          (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
+                                                                    (.setResolveProvider true)))
+                                          (.setCodeLensProvider (CodeLensOptions. true))
+                                          (.setReferencesProvider true)
+                                          (.setRenameProvider true)
+                                          (.setDefinitionProvider true)
+                                          (.setDocumentFormattingProvider ^Boolean (:document-formatting? settings))
+                                          (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting? settings))
+                                          (.setDocumentSymbolProvider true)
+                                          (.setWorkspaceSymbolProvider true)
+                                          (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                                                                (:semantic-tokens? settings))
+                                                                        (doto (SemanticTokensWithRegistrationOptions.)
+                                                                          (.setLegend (doto (SemanticTokensLegend.
+                                                                                              semantic-tokens/token-types-str
+                                                                                              semantic-tokens/token-modifiers)))
+                                                                          (.setRange true)
+                                                                          (.setFull true))))
+                                          (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
+                                                                        (.setCommands f.refactor/available-refactors)))
+                                          (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                                  (.setOpenClose true)
+                                                                  (.setChange (case (:text-document-sync-kind settings)
+                                                                                :full TextDocumentSyncKind/Full
+                                                                                :incremental TextDocumentSyncKind/Incremental
+                                                                                TextDocumentSyncKind/Full))
+                                                                  (.setSave (SaveOptions. true))))
+                                          (.setCompletionProvider (CompletionOptions. true []))))))))))
 
     (^void initialized [^InitializedParams params]
       (start :initialized
              (end
-              (do
-                (log/info "Initialized!")
-                (let [client ^LanguageClient (:client @db/db)]
-                  (.registerCapability client
-                                       (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                                            (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))])))))))
+               (do
+                 (log/info "Initialized!")
+                 (let [client ^LanguageClient (:client @db/db)]
+                   (.registerCapability client
+                                        (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                                                             (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))])))))))
+
+    (^CompletableFuture serverInfoRaw []
+      (CompletableFuture/completedFuture
+        (->> (handlers/server-info-raw)
+             (interop/conform-or-log ::interop/server-info-raw))))
+
+    (^void serverInfoLog []
+      (start :server-info-log
+             (future
+               (end
+                 (handlers/server-info-log)))))
+
+    (^void cursorInfoLog [^CursorInfoParams params]
+      (start :cursor-info-log
+             (future
+               (sync-handler params handlers/cursor-info-log))))
+
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
       (reset! db/db {:documents {}}) ;; TODO confirm this is correct
       (CompletableFuture/completedFuture
-       {:result nil}))
+        {:result nil}))
     (exit []
-      (log/info "Exit")
+      (log/info "Exitting...")
       (shutdown-agents)
       (System/exit 0))
     (getTextDocumentService []

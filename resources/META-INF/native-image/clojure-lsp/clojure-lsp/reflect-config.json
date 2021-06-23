@@ -22,6 +22,17 @@
   "allDeclaredMethods":true
 },
 {
+  "name":"clojure_lsp.ExtraMethods",
+  "allDeclaredMethods":true
+},
+{
+  "name":"clojure_lsp.CursorInfoParams",
+  "allDeclaredMethods":true,
+  "allPublicMethods": true,
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"clojure_lsp.main.LSPTextDocumentService",
   "allDeclaredMethods":true
 },

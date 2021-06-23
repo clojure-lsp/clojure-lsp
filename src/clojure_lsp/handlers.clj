@@ -134,15 +134,21 @@
 
 (defn ^:private server-info []
   (let [db @db/db]
-    {:type :info
-     :message (with-out-str (pprint/pprint {:project-root-uri (:project-root-uri db)
-                                            :project-settings (:project-settings db)
-                                            :client-settings (:client-settings db)
-                                            :port (or (:port db)
-                                                      "NREPL only available on :debug profile (`make debug-bin`)")
-                                            :server-version config/clojure-lsp-version
-                                            :clj-kondo-version config/clj-kondo-version
-                                            :log-path (:log-path db)}))}))
+    {:project-root-uri (:project-root-uri db)
+     :project-settings (:project-settings db)
+     :client-settings (:client-settings db)
+     :port (or (:port db)
+               "NREPL only available on :debug profile (`make debug-bin`)")
+     :server-version config/clojure-lsp-version
+     :clj-kondo-version config/clj-kondo-version
+     :log-path (:log-path db)}))
+
+(defn server-info-log []
+  (producer/window-show-message
+    (with-out-str (pprint/pprint (server-info)))
+    :info))
+
+(def server-info-raw server-info)
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)
@@ -151,6 +157,9 @@
     {:type    :info
      :message (with-out-str (pprint/pprint {:element element
                                             :definition definition}))}))
+
+(defn cursor-info-log [{:keys [textDocument position]}]
+  (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)])))
 
 (defn ^:private refactor [refactoring [doc-id line character args]]
   (let [row                        (inc (int line))
@@ -169,10 +178,12 @@
 (defn execute-command [{:keys [command arguments]}]
   (cond
     (= command "server-info")
-    (producer/window-show-message (server-info))
+    (server-info-log)
 
     (= command "cursor-info")
-    (producer/window-show-message (cursor-info arguments))
+    (cursor-info-log {:textDocument (nth arguments 0)
+                      :position {:line (nth arguments 1)
+                                 :character (nth arguments 2)}})
 
     (= command "resolve-macro-as")
     (apply f.resolve-macro/resolve-macro-as! arguments)

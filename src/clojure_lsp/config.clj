@@ -14,6 +14,8 @@
 
 (def clj-kondo-version (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
+(def default-source-aliases #{:dev :test})
+
 (defn ^:private with-additional-config
   [config settings]
   (cond-> config
@@ -105,7 +107,7 @@
 (defn resolve-deps-source-paths
   [{:keys [paths extra-paths aliases]}
    settings]
-  (let [source-aliases (or (:source-aliases settings) #{:dev :test})
+  (let [source-aliases (or (:source-aliases settings) default-source-aliases)
         root-source-paths (extract-source-paths paths extra-paths aliases)]
     (->> source-aliases
          (map #(get aliases % nil))

@@ -261,6 +261,8 @@
         _ (when-let [log-path (:log-path raw-settings)]
             (logging/update-log-path log-path))
         settings (-> raw-settings
+                     (update :project-specs #(or % default-project-specs))
+                     (update :source-aliases #(or % config/default-source-aliases))
                      (update :source-paths (partial process-source-paths root-path raw-settings))
                      (update :cljfmt cljfmt.main/merge-default-options))]
     (swap! db/db assoc

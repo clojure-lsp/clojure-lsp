@@ -137,6 +137,7 @@
     {:project-root-uri (:project-root-uri db)
      :project-settings (:project-settings db)
      :client-settings (:client-settings db)
+     :final-settings (:settings db)
      :port (or (:port db)
                "NREPL only available on :debug profile (`make debug-bin`)")
      :server-version config/clojure-lsp-version

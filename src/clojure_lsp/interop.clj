@@ -577,7 +577,6 @@
         (update :dependency-scheme #(or % "zipfile"))
         (update :source-paths #(when (seq %) (set %)))
         (update :source-aliases #(when (seq %) (set %)))
-        (update :macro-defs clean-symbol-map)
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
         (update :cljfmt kwd-keys)
         (update-in [:cljfmt :indents] clean-symbol-map)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix missing LSP 3.16 graalvm reflection configs. #452
+
 ## 2021.06.24-01.20.01
 
 - Fix graalvm reflect config for LSP 3.16 protocol. #449

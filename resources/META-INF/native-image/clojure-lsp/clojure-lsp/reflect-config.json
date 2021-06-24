@@ -616,6 +616,21 @@
   "allDeclaredFields":true
 },
 {
+  "name":"org.eclipse.lsp4j.MonikerCapabilities",
+  "methods":[{"name":"<init>","parameterTypes":[] }],
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.WindowShowMessageRequestCapabilities",
+  "methods":[{"name":"<init>","parameterTypes":[] }],
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.ShowDocumentCapabilities",
+  "methods":[{"name":"<init>","parameterTypes":[] }],
+  "allDeclaredFields":true
+},
+{
   "name":"org.eclipse.lsp4j.Location",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

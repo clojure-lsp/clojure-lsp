@@ -3,7 +3,7 @@
     [clojure-lsp.db :as db]
     [clojure-lsp.feature.file-management :as f.file-management]
     [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest testing is]]))
+    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

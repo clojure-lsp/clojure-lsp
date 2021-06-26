@@ -9,15 +9,6 @@
     [clojure.string :as string]
     [taoensso.timbre :as log]))
 
-(defn ^:private namespace->uri [namespace source-paths filename]
-  (let [file-type (shared/uri->file-type filename)]
-    (shared/filename->uri
-      (shared/join-filepaths (first (filter #(string/starts-with? filename %) source-paths))
-                             (-> namespace
-                                 (string/replace "." (System/getProperty "file.separator"))
-                                 (string/replace "-" "_")
-                                 (str "." (name file-type)))))))
-
 (defn ^:private rename-keyword [replacement {:keys [ns alias name filename
                                                     name-col name-end-col
                                                     namespace-from-prefix] :as reference}]
@@ -131,7 +122,7 @@
                                      :edits (mapv #(dissoc % :text-document) edits)})))]
         (if (and (= (:bucket definition) :namespace-definitions)
                  (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes]))
-          (let [new-uri (namespace->uri replacement source-paths (:filename definition))]
+          (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition))]
             (swap! db/db (fn [db] (-> db
                                       (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
                                       (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))

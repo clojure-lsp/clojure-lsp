@@ -3,8 +3,8 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
-   [taoensso.timbre :as log]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
 (defn client-changes [changes]
   (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])

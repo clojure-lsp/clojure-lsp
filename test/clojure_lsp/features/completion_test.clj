@@ -4,7 +4,7 @@
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
-   [clojure.test :refer [deftest testing is]]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

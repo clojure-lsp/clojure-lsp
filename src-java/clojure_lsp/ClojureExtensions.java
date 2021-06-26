@@ -21,8 +21,8 @@ public class ClojureExtensions {
     @SuppressWarnings("unchecked")
     CompletableFuture<String> dependencyContents(TextDocumentIdentifier documentUri) {
         IFn require = Clojure.var("clojure.core", "require");
-        require.invoke(Clojure.read("clojure-lsp.main"));
-        IFn extension = Clojure.var("clojure-lsp.main", "extension");
+        require.invoke(Clojure.read("clojure-lsp.server"));
+        IFn extension = Clojure.var("clojure-lsp.server", "extension");
         return (CompletableFuture<String>) extension.invoke("dependencyContents", documentUri);
     }
 }

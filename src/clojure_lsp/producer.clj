@@ -4,9 +4,9 @@
     [clojure-lsp.interop :as interop]
     [taoensso.timbre :as log])
   (:import
-   (org.eclipse.lsp4j.services LanguageClient)
    (org.eclipse.lsp4j
-     ApplyWorkspaceEditParams)))
+     ApplyWorkspaceEditParams)
+   (org.eclipse.lsp4j.services LanguageClient)))
 
 (defn window-show-message
   ([message type]

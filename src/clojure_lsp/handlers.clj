@@ -46,7 +46,7 @@
 
 (defn initialize [project-root-uri client-capabilities client-settings]
   (when project-root-uri
-    (crawler/initialize-project project-root-uri client-capabilities client-settings)))
+    (crawler/initialize-project project-root-uri client-capabilities client-settings {})))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)
@@ -191,7 +191,9 @@
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [result (refactor command arguments)]
-      (producer/workspace-apply-edit result))))
+      (if (:client @db/db)
+        (producer/workspace-apply-edit result)
+        result))))
 
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)

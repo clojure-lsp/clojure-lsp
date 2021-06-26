@@ -1,6 +1,6 @@
-(ns clojure-lsp.main-test
+(ns clojure-lsp.server-test
   (:require
-   [clojure-lsp.main :as main]
+   [clojure-lsp.server :as server]
    [clojure.test :refer [deftest is testing]])
   (:import
    (org.eclipse.lsp4j
@@ -11,10 +11,10 @@
     (let [params (InitializeParams.)]
       (.setInitializationOptions params nil)
       (is (= "zipfile"
-             (get (#'main/client-settings params) :dependency-scheme)))))
+             (get (#'server/client-settings params) :dependency-scheme)))))
   (testing "document-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
-      (is (= true (:document-formatting? (#'main/client-settings params))))))
+      (is (= true (:document-formatting? (#'server/client-settings params))))))
   (testing "document-range-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
-      (is (= true (:document-range-formatting? (#'main/client-settings params)))))))
+      (is (= true (:document-range-formatting? (#'server/client-settings params)))))))

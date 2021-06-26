@@ -1,8 +1,8 @@
 (ns clojure-lsp.main
   (:require
    borkdude.dynaload
-   [clojure-lsp.api :as api]
    [clojure-lsp.config :as config]
+   [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.server :as server]
    [clojure.java.io :as io]
@@ -38,12 +38,11 @@
     :id :project-root
     :default (System/getProperty "user.dir")
     :parse-fn io/file
-    :validate-fn #(.exists %)
-    :validate-msg "Invalid --project-root path"
-    :assoc-fn #(assoc %1 %2 (.getCanonicalPath %3))
-    ]
-   [nil "--namespaces NS" "The optional namespaces to apply the action, all if not supplied."
+    :validate [#(.exists %) "Specify a valid path after --project-root"]
+    :assoc-fn #(assoc %1 %2 (.getCanonicalPath %3))]
+   ["-n" "--namespace NS" "The optional namespace to apply the action, all if not supplied. This flag accepts multiple values"
     :default []
+    :parse-fn symbol
     :multi true
     :update-fn conj]])
 
@@ -81,7 +80,7 @@
   [action options]
   (case action
     "listen" (with-out-str (server/run-server!))
-    "clean-ns" (api/clean-ns! options)))
+    "clean-ns" (internal-api/clean-ns! options)))
 
 (defn -main [& args]
   (logging/setup-logging)

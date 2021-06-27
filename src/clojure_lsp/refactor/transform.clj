@@ -1,18 +1,18 @@
 (ns clojure-lsp.refactor.transform
   (:require
-    [clojure-lsp.common-symbols :as common-sym]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure-lsp.shared :as shared]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [medley.core :as medley]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [rewrite-clj.zip.subedit :as zsub]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.common-symbols :as common-sym]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [medley.core :as medley]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [rewrite-clj.zip.subedit :as zsub]
+   [taoensso.timbre :as log]))
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
@@ -386,8 +386,8 @@
     (let [col (if require-loc
                 (if keep-at-start?
                   (-> require-loc z/node meta :end-col)
-                  (-> require-loc z/right z/node meta :col dec))
-                4)
+                  (-> require-loc z/node meta :col dec))
+                2)
           removed-nodes (->> require-loc
                              z/remove
                              (remove-unused-requires unused-aliases unused-refers))]
@@ -435,8 +435,8 @@
     (let [col (if import-loc
                 (if keep-at-start?
                   (-> import-loc z/node meta :end-col)
-                  (-> import-loc z/right z/node meta :col dec))
-                4)
+                  (-> import-loc z/node meta :col dec))
+                2)
           removed-nodes (-> import-loc
                             z/remove
                             (edit/map-children #(remove-unused-import % unused-imports)))]

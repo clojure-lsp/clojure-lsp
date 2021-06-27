@@ -1,12 +1,12 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure-lsp.refactor.transform :as transform]
-    [clojure-lsp.test-helper :as h]
-    [clojure.string :as string]
-    [clojure.test :refer [deftest is testing]]
-    [rewrite-clj.zip :as z]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.refactor.transform :as transform]
+   [clojure-lsp.test-helper :as h]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]]
+   [rewrite-clj.zip :as z]))
 
 (defn code [& strings] (string/join "\n" strings))
 
@@ -68,7 +68,7 @@
             [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :refer [subset?]]
-                          [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+                                  [clojure.test :refer [deftest]])) (z/sexpr loc)))))
     (testing "when already exists that ns with another refer"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)
@@ -175,19 +175,33 @@
 
 (deftest clean-ns-test
   (testing "without keep-require-at-start?"
-    (test-clean-ns {:settings {:keep-require-at-start? false}}
-                   (code "(ns foo.bar"
-                         " (:require"
-                         "   [foo  :as f] [bar :refer [b]] baz [z] ))"
-                         "(s/defn func []"
-                         "  (f/some))")
-                   (code "(ns foo.bar"
-                         " (:require"
-                         "   baz"
-                         "   [foo  :as f]"
-                         "   [z]))"
-                         "(s/defn func []"
-                         "  (f/some))")))
+    (testing "without requires at start"
+      (test-clean-ns {:settings {:keep-require-at-start? false}}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [foo  :as f] [bar :refer [b]] baz [z] ))"
+                           "(s/defn func []"
+                           "  (f/some))")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  baz"
+                           "  [foo  :as f]"
+                           "  [z]))"
+                           "(s/defn func []"
+                           "  (f/some))")))
+    (testing "with requires at start"
+      (test-clean-ns {:settings {:keep-require-at-start? false}}
+                     (code "(ns foo.bar"
+                           " (:require [foo  :as f] [bar :refer [b]] baz [z] ))"
+                           "(s/defn func []"
+                           "  (f/some))")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  baz"
+                           "  [foo  :as f]"
+                           "  [z]))"
+                           "(s/defn func []"
+                           "  (f/some))"))))
   (testing "with keep-require-at-start?"
     (test-clean-ns {:settings {:keep-require-at-start? true}}
                    (code "(ns foo.bar"
@@ -210,9 +224,9 @@
                          "  (b/some))")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :as b]"
-                         "   baz"
-                         "   [z]))"
+                         "  [bar :as b]"
+                         "  baz"
+                         "  [z]))"
                          "(defn func []"
                          "  (b/some))")))
   (testing "with single unused require on ns"
@@ -234,7 +248,7 @@
                          "  (f/some))")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [foo  :as f]))"
+                         "  [foo  :as f]))"
                          "(defn func []"
                          "  (f/some))")))
   (testing "with multiple unused requires on ns"
@@ -253,9 +267,9 @@
                          "  (f/some))")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   baz"
-                         "   [foo  :as f]"
-                         "   [z]))"
+                         "  baz"
+                         "  [foo  :as f]"
+                         "  [z]))"
                          "(defn func []"
                          "  (f/some))")))
   (testing "with refer as single require"
@@ -270,7 +284,7 @@
                          "   [bar :refer :all]))")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :refer :all]))")))
+                         "  [bar :refer :all]))")))
   (testing "in any form"
     (let [to-clean (code "(ns foo.bar"
                          " (:require"
@@ -282,9 +296,9 @@
                      to-clean
                      (code "(ns foo.bar"
                            " (:require"
-                           "   baz"
-                           "   [foo  :as f]"
-                           "   [z]))"
+                           "  baz"
+                           "  [foo  :as f]"
+                           "  [z]))"
                            ""
                            "(defn func []"
                            "  (f/some))")
@@ -299,7 +313,7 @@
                          "  (some))")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :refer [some] ]))"
+                         "  [bar :refer [some] ]))"
                          ""
                          "(defn func []"
                          "  (some))")))
@@ -314,7 +328,7 @@
                          "  (some))")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :as b :refer [some] ]))"
+                         "  [bar :as b :refer [some] ]))"
                          ""
                          "(defn func []"
                          "  b/some"
@@ -327,7 +341,7 @@
                          "(some)")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :refer [some] ]))"
+                         "  [bar :refer [some] ]))"
                          "(some)")))
   (testing "unused refer from single refer but used alias before"
     (test-clean-ns {}
@@ -339,8 +353,8 @@
                          "(b/another)")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [aba :as a]"
-                         "   [bar :as b]))"
+                         "  [aba :as a]"
+                         "  [bar :as b]))"
                          "(a/bla)"
                          "(b/another)")))
   (testing "unused refer from single refer but used alias after"
@@ -353,8 +367,8 @@
                          "(b/another)")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [aba :as a]"
-                         "   [bar :as b]))"
+                         "  [aba :as a]"
+                         "  [bar :as b]))"
                          "(a/bla)"
                          "(b/another)")))
   (testing "unused refer from multiple refers but used alias"
@@ -366,7 +380,7 @@
                          "(b/another)")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :as b :refer [other]]))"
+                         "  [bar :as b :refer [other]]))"
                          "(other)"
                          "(b/another)")))
   (testing "unused middle refer from multiple refers"
@@ -379,7 +393,7 @@
                          "(baz)")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [bar :refer [another baz some] ]))"
+                         "  [bar :refer [another baz some] ]))"
                          "(some)"
                          "(another)"
                          "(baz)")))
@@ -398,7 +412,7 @@
                          "   foo bar baz")
                    (code "(ns foo.bar"
                          " (:require"
-                         "   [some :refer [bar baz foo]]))"
+                         "  [some :refer [bar baz foo]]))"
                          "   foo bar baz")))
   (testing "single unused full package import"
     (test-clean-ns {}

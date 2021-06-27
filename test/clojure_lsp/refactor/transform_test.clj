@@ -380,6 +380,22 @@
                          "  [bar :as b]))"
                          "(a/bla)"
                          "(b/another)")))
+  (testing "used refer from single refer and used alias after refer"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "   [aba :as a]"
+                         "   [bar :refer [some] :as b]))"
+                         "(a/bla)"
+                         "(b/another)"
+                         "some")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [aba :as a]"
+                         "  [bar :refer [some] :as b]))"
+                         "(a/bla)"
+                         "(b/another)"
+                         "some")))
   (testing "unused refer from single refer but used alias after"
     (test-clean-ns {}
                    (code "(ns foo.bar"

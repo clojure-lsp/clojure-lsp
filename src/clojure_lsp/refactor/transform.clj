@@ -331,7 +331,8 @@
           z/remove)
       (-> node
           z/down
-          z/rightmost
+          (z/find-next-value ':refer)
+          z/right
           (z/replace (n/vector-node (interpose (n/whitespace-node " ")
                                                (vec (sort removed-refers)))))
           z/up))))

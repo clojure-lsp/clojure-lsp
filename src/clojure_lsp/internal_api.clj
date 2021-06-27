@@ -8,9 +8,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]))
 
-(defn ^:private start-analysis!
-  [project-root]
-  (let [project-uri (shared/filename->uri project-root)]
+(defn ^:private start-analysis! [project-root]
+  (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
     (crawler/initialize-project
       project-uri
       {:workspace {:workspace-edit {:document-changes true}}}

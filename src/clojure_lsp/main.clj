@@ -36,10 +36,9 @@
    [nil "--version" "Print clojure-lsp version"]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
-    :default (System/getProperty "user.dir")
+    :default (io/file (System/getProperty "user.dir"))
     :parse-fn io/file
-    :validate [#(.exists %) "Specify a valid path after --project-root"]
-    :assoc-fn #(assoc %1 %2 (.getCanonicalPath %3))]
+    :validate [#(.exists %) "Specify a valid path after --project-root"]]
    ["-n" "--namespace NS" "The optional namespace to apply the action, all if not supplied. This flag accepts multiple values"
     :default []
     :parse-fn symbol

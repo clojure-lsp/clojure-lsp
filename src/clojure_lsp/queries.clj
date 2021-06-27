@@ -49,6 +49,11 @@
         check-file-lang (shared/uri->available-langs (:filename check-element))]
     (seq (set/intersection match-file-lang check-file-lang))))
 
+(defn ^:private defrecord-names-for [{:keys [name]}]
+  #{name
+    (symbol (str "->" name))
+    (symbol (str "map->" name))})
+
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
   (let [local-analysis (get analysis filename)]
@@ -165,15 +170,19 @@
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
-  (->> (mapcat val analysis)
-       (filter #(and (= (:name %) (:name element))
-                     (= (or (:ns %) (:to %))
-                        (:ns element))
-                     (not= :keywords (:bucket %))
-                     (or include-declaration?
-                         (or (not= :var-definitions (:bucket %))
-                             (= (:defined-by %) 'clojure.core/declare)))))
-       (medley/distinct-by (juxt :filename :name :row :col))))
+  (let [defrecord? (= 'clojure.core/defrecord (:defined-by element))
+        names (when defrecord? (defrecord-names-for element))]
+    (->> (mapcat val analysis)
+         (filter #(and (or (= (:name %) (:name element))
+                           (and defrecord?
+                                (contains? names (:name %))))
+                       (= (or (:ns %) (:to %))
+                          (:ns element))
+                       (not= :keywords (:bucket %))
+                       (or include-declaration?
+                           (or (not= :var-definitions (:bucket %))
+                               (= (:defined-by %) 'clojure.core/declare)))))
+         (medley/distinct-by (juxt :filename :name :row :col)))))
 
 (defmethod find-references :keywords
   [analysis {:keys [ns name] :as _element} include-declaration?]

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix find-references and references lens for `defrecord`.
+
 ## 2021.06.24-14.24.11
 
 - Fix missing LSP 3.16 graalvm reflection configs. #452

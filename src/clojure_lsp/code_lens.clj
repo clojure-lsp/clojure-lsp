@@ -25,7 +25,10 @@
         excluded-vars (set/union #{'clojure.test/deftest}
                                  (get-in @db/db [:settings :linters :unused-public-var :exclude-when-defined-by] #{}))]
     (->> (q/find-vars analysis (shared/uri->filename uri) true)
-         (remove #(contains? excluded-vars (:defined-by %)))
+         (remove #(or (contains? excluded-vars (:defined-by %))
+                      (and (= 'clojure.core/defrecord (:defined-by %))
+                           (or (string/starts-with? (str (:name %)) "->")
+                               (string/starts-with? (str (:name %)) "map->")))))
          (map (fn [var]
                 {:range (shared/->range var)
                  :data  [uri (:name-row var) (:name-col var)]})))))

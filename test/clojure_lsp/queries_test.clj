@@ -142,6 +142,22 @@
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
       (q/find-references-from-cursor ana (h/file-path "/a.cljc") alias-r alias-c true))))
 
+(deftest find-references-from-defrecord
+  (let [code (str "(defrecord |MyRecord [])\n"
+                  "(|MyRecord)"
+                  "(|->MyRecord)"
+                  "(|map->MyRecord)")
+        [[def-r def-c]
+         [raw-r raw-c]
+         [to-r to-c]
+         [map-to-r map-to-c]] (h/load-code-and-locs code (h/file-uri "file:///a.clj"))
+        ana (:analysis @db/db)]
+    (h/assert-submaps
+      [{:name 'MyRecord :bucket :var-usages :name-row raw-r :name-col raw-c}
+       {:name '->MyRecord :bucket :var-usages :name-row to-r :name-col to-c}
+       {:name 'map->MyRecord :bucket :var-usages :name-row map-to-r :name-col map-to-c}]
+      (q/find-references-from-cursor ana (h/file-path "/a.clj") def-r def-c false))))
+
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"

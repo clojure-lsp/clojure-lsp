@@ -371,7 +371,8 @@
                  :range {:start {:line 1 :character 1}}})))))
 
 (deftest test-code-lens
-  (h/load-code-and-locs (str "(ns some-ns)\n"
+  (testing "references lens"
+    (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo 1)\n"
                              "(defn- foo2 []\n"
                              " foo)\n"
@@ -379,7 +380,6 @@
                              "  (+ a b (foo2)))\n"
                              "(s/defn baz []\n"
                              "  (bar 2 3))\n"))
-  (testing "references lens"
     (is (= (list {:range
                   {:start {:line 1 :character 5} :end {:line 1 :character 8}}
                   :data [(h/file-uri "file:///a.clj") 2 6]}
@@ -389,6 +389,15 @@
                  {:range
                   {:start {:line 4 :character 6} :end {:line 4 :character 9}}
                   :data [(h/file-uri "file:///a.clj") 5 7]})
+           (handlers/code-lens {:textDocument (h/file-uri "file:///a.clj")}))))
+  (testing "references lens for defrecord"
+    (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
+                                  "(MyRecord)"
+                                  "(->MyRecord)"
+                                  "(map->MyRecord)"))
+    (is (= [{:range
+            {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
+             :data [(h/file-uri "file:///a.clj") 1 12]}]
            (handlers/code-lens {:textDocument (h/file-uri "file:///a.clj")})))))
 
 (deftest test-code-lens-resolve
@@ -429,4 +438,19 @@
                         :command "code-lens-references"
                         :arguments [(h/file-uri "file:///a.clj") 3 8]}}
              (handlers/code-lens-resolve {:data [(h/file-uri "file:///a.clj") 3 8]
-                                          :range {:start {:line 2 :character 7} :end {:line 2 :character 11}}}))))))
+                                          :range {:start {:line 2 :character 7} :end {:line 2 :character 11}}}))))
+    (testing "defrecord lens"
+      (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
+                                    "(MyRecord)"
+                                    "(->MyRecord)"
+                                    "(map->MyRecord)"))
+      (is (= {:range
+              {:start {:line 1, :character 5}, :end {:line 1, :character 12}},
+              :command
+              {:title "3 references",
+               :command "code-lens-references",
+               :arguments ["file:///a.clj" 1 13]}}
+             (handlers/code-lens-resolve
+               {:data [(h/file-uri "file:///a.clj") 1 13]
+                :range {:start {:line 1 :character 5}
+                        :end {:line 1 :character 12}}}))))))

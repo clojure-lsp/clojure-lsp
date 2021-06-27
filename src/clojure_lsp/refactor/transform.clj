@@ -289,7 +289,7 @@
                        (edit/join-let))}]))))))
 
 (defn ^:private process-clean-ns
-  [ns-loc removed-nodes col keep-at-start? form-type]
+  [ns-loc removed-nodes col ns-inner-blocks-indentation form-type]
   (let [sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
         forms (->> removed-nodes
@@ -301,7 +301,7 @@
                                       (str sexpr)
                                       (str (first sexpr)))) n/sexpr))
                    (map-indexed (fn [idx node]
-                                  (if (and keep-at-start?
+                                  (if (and (= :same-line ns-inner-blocks-indentation)
                                            (= idx 0))
                                     [single-space node]
                                     [(n/newlines 1) sep node])))
@@ -381,17 +381,17 @@
       (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
 
 (defn ^:private clean-requires
-  [ns-loc unused-aliases unused-refers keep-at-start?]
+  [ns-loc unused-aliases unused-refers ns-inner-blocks-indentation]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
     (let [col (if require-loc
-                (if keep-at-start?
+                (if (= :same-line ns-inner-blocks-indentation)
                   (-> require-loc z/node meta :end-col)
                   (-> require-loc z/node meta :col dec))
                 2)
           removed-nodes (->> require-loc
                              z/remove
                              (remove-unused-requires unused-aliases unused-refers))]
-      (process-clean-ns ns-loc removed-nodes col keep-at-start? :require))
+      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :require))
     ns-loc))
 
 (defn ^:private package-import?
@@ -430,32 +430,38 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc unused-imports keep-at-start?]
+  [ns-loc unused-imports ns-inner-blocks-indentation]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (if import-loc
-                (if keep-at-start?
+                (if (= :same-line ns-inner-blocks-indentation)
                   (-> import-loc z/node meta :end-col)
                   (-> import-loc z/node meta :col dec))
                 2)
           removed-nodes (-> import-loc
                             z/remove
                             (edit/map-children #(remove-unused-import % unused-imports)))]
-      (process-clean-ns ns-loc removed-nodes col keep-at-start? :import))
+      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :import))
     ns-loc))
+
+(defn ^:private resolve-ns-inner-blocks-identation [db]
+  (or (get-in db [:settings :clean :ns-inner-blocks-indentation])
+      (if (get-in db [:settings :keep-require-at-start?])
+        :same-line
+        :next-line)))
 
 (defn clean-ns
   [zloc uri]
   (let [safe-loc (or zloc (z/of-string (get-in @db/db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
-      (let [keep-at-start? (get-in @db/db [:settings :keep-require-at-start?])
+      (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation @db/db)
             filename (shared/uri->filename uri)
             unused-aliases (q/find-unused-aliases (:findings @db/db) filename)
             unused-refers (q/find-unused-refers (:findings @db/db) filename)
             unused-imports (q/find-unused-imports (:findings @db/db) filename)
             result-loc (-> ns-loc
-                           (clean-requires unused-aliases unused-refers keep-at-start?)
-                           (clean-imports unused-imports keep-at-start?))]
+                           (clean-requires unused-aliases unused-refers ns-inner-blocks-indentation)
+                           (clean-imports unused-imports ns-inner-blocks-indentation))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
@@ -512,10 +518,10 @@
     (when (and form-to-add need-to-add?)
       (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
-            keep-require-at-start? (get-in @db/db [:settings :keep-require-at-start?])
+            ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation @db/db)
             col (if form-type-loc
                   (:col (meta (z/node (z/rightmost form-type-loc))))
-                  (if keep-require-at-start?
+                  (if (= :same-line ns-inner-blocks-indentation)
                     2
                     5))
             result-loc (z/subedit-> ns-zip
@@ -527,7 +533,7 @@
                                     (z/up)
                                     (cond->
                                      (or (not add-form-type?)
-                                         (not keep-require-at-start?)) (z/append-child* (n/newlines 1)))
+                                         (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
                                     (z/append-child* (n/spaces (dec col)))
                                     (z/append-child form-to-add))]
         [{:range (meta (z/node result-loc))

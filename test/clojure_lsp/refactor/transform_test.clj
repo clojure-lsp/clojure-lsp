@@ -39,16 +39,32 @@
             [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
-    (testing "with keep-require-at-start?"
+    (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
-        (reset! db/db {:settings {:keep-require-at-start? true}})
+        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
               [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
-        (reset! db/db {:settings {:keep-require-at-start? true}})
+        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+          (is (some? range))
+          (is (= (code "(ns foo "
+                       "  (:require [foo :as bar]"
+                       "            [clojure.set :as set]))") (z/string loc))))))
+    (testing "with deprecated keep-require-at-start?"
+      (testing "we add first require without spaces"
+        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+          (is (some? range))
+          (is (= (code "(ns foo "
+                       "  (:require [clojure.set :as set]))") (z/string loc)))))
+      (testing "next requires follow the same pattern"
+        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
               [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
           (is (some? range))
@@ -95,8 +111,15 @@
       (is (= (code "(ns foo.bar "
                    "  (:import"
                    "    java.util.Date))") (z/root-string loc)))))
-  (testing "when there is no :import form with keep-require-at-start?"
-    (reset! db/db {:settings {:keep-require-at-start? true}})
+  (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
+    (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+      (is (some? range))
+      (is (= (code "(ns foo.bar "
+                   "  (:import java.util.Date))") (z/root-string loc)))))
+  (testing "when there is no :import form with deprecated :keep-require-at-start?"
+    (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
           [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
       (is (some? range))
@@ -174,9 +197,9 @@
             (z/root-string loc))))))
 
 (deftest clean-ns-test
-  (testing "without keep-require-at-start?"
+  (testing "with :ns-inner-blocks-indentation on next line"
     (testing "without requires at start"
-      (test-clean-ns {:settings {:keep-require-at-start? false}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (code "(ns foo.bar"
                            " (:require"
                            "   [foo  :as f] [bar :refer [b]] baz [z] ))"
@@ -190,7 +213,7 @@
                            "(s/defn func []"
                            "  (f/some))")))
     (testing "with requires at start"
-      (test-clean-ns {:settings {:keep-require-at-start? false}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (code "(ns foo.bar"
                            " (:require [foo  :as f] [bar :refer [b]] baz [z] ))"
                            "(s/defn func []"
@@ -202,8 +225,8 @@
                            "  [z]))"
                            "(s/defn func []"
                            "  (f/some))"))))
-  (testing "with keep-require-at-start?"
-    (test-clean-ns {:settings {:keep-require-at-start? true}}
+  (testing "with :ns-inner-blocks-indentation on same line"
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :same-line}}}
                    (code "(ns foo.bar"
                          " (:require"
                          "   [foo  :as f] [bar :as b] baz [z] ))"
@@ -448,8 +471,18 @@
                          "  [java.util Calendar Map]))"
                          "Calendar."
                          "Map.")))
-  (testing "unused package imports with keep-at-start?"
-    (test-clean-ns {:settings {:keep-require-at-start? true}}
+  (testing "unused package imports with ns-inner-blocks-indentation :same-line"
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :same-line}}}
+                   (code "(ns foo.bar"
+                         " (:import [java.util Date Calendar List Map]))"
+                         "Calendar."
+                         "Map.")
+                   (code "(ns foo.bar"
+                         " (:import [java.util Calendar Map]))"
+                         "Calendar."
+                         "Map.")))
+  (testing "unused package imports with :ns-inner-blocks-indentation on same line"
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :same-line}}}
                    (code "(ns foo.bar"
                          " (:import [java.util Date Calendar List Map]))"
                          "Calendar."

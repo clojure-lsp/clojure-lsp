@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Fix find-references and references lens for `defrecord`.
+- Improve `clean-ns` refactoring following the Clojure style guide.
+- Deprecate `:keep-require-at-start?` in favor of `:clean :ns-inner-blocks-indentation` with default value of `:next-line`.
 
 ## 2021.06.24-14.24.11
 

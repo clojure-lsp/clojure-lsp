@@ -19,7 +19,8 @@
     integration.formatting-test
     integration.rename-test
     integration.document-highlight-test
-    integration.document-symbol-test])
+    integration.document-symbol-test
+    integration.api.clean-ns-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

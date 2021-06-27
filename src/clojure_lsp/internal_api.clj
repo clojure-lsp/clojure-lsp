@@ -30,8 +30,8 @@
   (start-analysis! project-root)
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
-                         q/filter-project-analysis
-                         q/find-all-ns-definitions))]
+                            q/filter-project-analysis
+                            q/find-all-ns-definitions))]
     (doseq [namespace namespaces]
       (if-let [uri (ns->uri namespace)]
         (do

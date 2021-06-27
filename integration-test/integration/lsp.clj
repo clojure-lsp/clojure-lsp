@@ -75,6 +75,11 @@
     (alter-var-root #'*stdout* (constantly (io/reader (:out *clojure-lsp-process*))))
     (alter-var-root #'*clojure-lsp-listener* (constantly (listen-output!)))))
 
+(defn cli! [& args]
+  (let [clojure-lsp-binary (first *command-line-args*)]
+    (alter-var-root #'*clojure-lsp-process* (constantly (p/process (into [clojure-lsp-binary] args))))
+    (io/reader (:out *clojure-lsp-process*))))
+
 (defn clean! []
   (reset! server-requests {})
   (reset! server-responses {})

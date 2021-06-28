@@ -1,5 +1,14 @@
 all: debug-bin
 
+# NOTE!
+#
+# Older versions of the clojure launcher script may not work with this Makefile
+#
+# If you see errors (e.g. file not found errors) please download and install 
+# the latest version of the clojure launcher script for your platform from
+#
+# https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools
+
 clean:
 	rm -rf classes clojure-lsp clojure-lsp.jar docs/README.md
 

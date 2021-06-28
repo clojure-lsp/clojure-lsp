@@ -29,21 +29,21 @@
 
 (defn did-open [uri text]
   (let [settings (get @db/db :settings {})]
-    (when-let [new-ns (and (string/blank? text)
-                           (uri->namespace uri))]
-      (when (get settings :auto-add-ns-to-new-files? true)
-        (let [new-text (format "(ns %s)" new-ns)
-              changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
-                        :edits [{:range (shared/->range {:row 1 :end-row 1 :col 1 :end-col 1})
-                                 :new-text new-text}]}]]
-          (async/put! db/edits-chan (f.refactor/client-changes changes)))))
     (when-let [kondo-result (crawler/run-kondo-on-text! text uri settings)]
       (swap! db/db (fn [state-db]
                      (-> state-db
                          (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
                          (crawler/update-analysis uri (:analysis kondo-result))
                          (crawler/update-findings uri (:findings kondo-result)))))
-      (f.diagnostic/async-lint-file uri @db/db))))
+      (f.diagnostic/async-lint-file uri @db/db))
+    (when-let [new-ns (and (string/blank? text)
+                           (uri->namespace uri))]
+      (when (get settings :auto-add-ns-to-new-files? true)
+        (let [new-text (format "(ns %s)" new-ns)
+              changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
+                        :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
+                                 :new-text new-text}]}]]
+          (async/put! db/edits-chan (f.refactor/client-changes changes)))))))
 
 (defn ^:private find-changed-var-definitions [old-analysis new-analysis]
   (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)

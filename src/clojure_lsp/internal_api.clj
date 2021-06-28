@@ -8,14 +8,15 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]))
 
-(defn ^:private start-analysis! [project-root]
+(defn ^:private start-analysis! [project-root settings]
   (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
     (crawler/initialize-project
       project-uri
       {:workspace {:workspace-edit {:document-changes true}}}
-      (interop/clean-client-settings {:dependency-scheme "jar"})
-      {:lint-project-files-after-startup? false
-       :text-document-sync-kind :full})))
+      (interop/clean-client-settings {})
+      (merge {:lint-project-files-after-startup? false
+              :text-document-sync-kind :full}
+             settings))))
 
 (defn ^:private ns->uri [namespace]
   (let [source-paths (-> @db/db :settings :source-paths)]
@@ -25,8 +26,8 @@
 (defn ^:private open-file! [uri]
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}}))
 
-(defn clean-ns! [{:keys [project-root namespace]}]
-  (start-analysis! project-root)
+(defn clean-ns! [{:keys [project-root namespace settings]}]
+  (start-analysis! project-root settings)
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis

@@ -11,14 +11,14 @@
       
       
       
-        <link rel="canonical" href="https://clojure-lsp.github.io/clojure-lsp/development/">
+        <link rel="canonical" href="https://clojure-lsp.github.io/clojure-lsp/api/">
       
       <link rel="shortcut icon" href="../images/logo-light.svg">
       <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.4">
     
     
       
-        <title>Development - Clojure LSP</title>
+        <title>API - Clojure LSP</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#development" class="md-skip">
+        <a href="#api-experimental" class="md-skip">
           Skip to content
         </a>
       
@@ -99,7 +99,7 @@
         <div class="md-header-nav__topic">
           <span class="md-ellipsis">
             
-              Development
+              API
             
           </span>
         </div>
@@ -165,15 +165,13 @@
         
   
   
-    
-  
 
 
   
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link md-tabs__link--active">
+      <a href=".." class="md-tabs__link">
         Home
       </a>
     </li>
@@ -207,10 +205,12 @@
         
   
   
+    
+  
 
 
   <li class="md-tabs__item">
-    <a href="../api/" class="md-tabs__link">
+    <a href="./" class="md-tabs__link md-tabs__link--active">
       API
     </a>
   </li>
@@ -290,14 +290,12 @@
       
 
 
-  
-
 
   
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1" checked>
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1" >
     
     <label class="md-nav__link" for="nav-1">
       Home
@@ -368,20 +366,11 @@
           
 
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-    <a href="./" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../development/" class="md-nav__link">
       Development
     </a>
-    
   </li>
 
         
@@ -447,11 +436,69 @@
       
 
 
+  
 
-  <li class="md-nav__item">
-    <a href="../api/" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        API
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
+    <a href="./" class="md-nav__link md-nav__link--active">
       API
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    CLI
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#library" class="md-nav__link">
+    Library
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
     
@@ -499,6 +546,41 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    CLI
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#library" class="md-nav__link">
+    Library
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -509,19 +591,20 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/clojure-lsp/clojure-lsp/edit/master/docs/development.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/clojure-lsp/clojure-lsp/edit/master/docs/api.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h1>
-<p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:</p>
-<ul>
-<li>Create a test for your bug/feature, then implement the code following the test (TDD).</li>
-<li><code>clojure-lsp</code> starts a NREPL server if built with <code>clj -X:debug-jar &amp;&amp; clj -X:bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>clojure/serverInfo/log</code> custom LSP method.</li>
-<li>Build <code>clojure-lsp</code> with your changes and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
-<li>For debugging purposes, there is two custom LSP methods <code>clojure/serverInfo/log</code> and <code>clojure/cursorInfo/log</code>.</li>
-</ul>
+                <h1 id="api-experimental">API (experimental)<a class="headerlink" href="#api-experimental" title="Permanent link">#</a></h1>
+<p>clojure-lsp is commonly used in a text editor, but it has its own API featuring the same features that can be used as a library or via CLI. An example is calling the CLI in a CI for cleaning the project namespaces.</p>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
+<h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h3>
+<p><code>clojure-lsp --help</code> should show all available commands and options, clojure-lsp will consider the same rules of configuration, checking <code>.lsp/config.edn</code>.</p>
+<p>At the moment the features available are:</p>
+<p><code>clean-ns</code> - clean the ns form removing unused requires/refers/imports, sorting the form.</p>
+<h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h3>
+<p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj"><code>clojure-lsp.api</code></a> should be used as the entrypoint for available features as API, feel free to open a issue for missing features.</p>
                 
                   
                     
@@ -553,7 +636,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../building/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../installation/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -562,19 +645,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Building
+                Installation
               </div>
             </div>
           </a>
         
         
-          <a href="../troubleshooting/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../CHANGELOG/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Troubleshooting
+                Changelog
               </div>
             </div>
             <div class="md-footer-nav__button md-icon">

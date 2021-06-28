@@ -36,6 +36,10 @@
      <lastmod>2021-06-28</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
+     <loc>https://clojure-lsp.github.io/clojure-lsp/api/</loc>
+     <lastmod>2021-06-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
      <loc>https://clojure-lsp.github.io/clojure-lsp/CHANGELOG/</loc>
      <lastmod>2021-06-28</lastmod>
      <changefreq>daily</changefreq>

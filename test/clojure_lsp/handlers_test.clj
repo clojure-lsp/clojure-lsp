@@ -46,7 +46,7 @@
           changes (:document-changes (h/edits-or-timeout))]
       (h/assert-submaps
         [{:edits [{:range {:start {:line 0, :character 0}
-                           :end {:line 0, :character 0}}
+                           :end {:line 999998, :character 999998}}
                    :new-text "(ns foo.bar)"}]}]
         changes)
       (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/bar.clj")]))))))

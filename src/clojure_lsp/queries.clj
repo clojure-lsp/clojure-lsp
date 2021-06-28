@@ -271,3 +271,9 @@
        (filter (comp #(= % :unused-import) :type))
        (map :class)
        set))
+
+(defn find-namespace-definition-by-namespace [analysis namespace]
+  (find-last-order-by-project-analysis
+    #(and (= (:bucket %) :namespace-definitions)
+          (= (:name %) namespace))
+    analysis))

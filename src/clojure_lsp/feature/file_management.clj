@@ -94,7 +94,7 @@
              (+ offset (count (first lines)))
              (inc idx)))))
 
-(defn ^:private replace-text [original replacement line col end-line end-col]
+(defn replace-text [original replacement line col end-line end-col]
   (let [lines (string/split original #"\n") ;; don't use OS specific line delimiter!
         [start-offset end-offset] (offsets lines line col end-line end-col)
         [prefix suffix] [(subs original 0 start-offset)

@@ -4,7 +4,7 @@
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.test-helper :as h]
    [clojure.core.async :as async]
-   [clojure.test :refer [deftest testing is]]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

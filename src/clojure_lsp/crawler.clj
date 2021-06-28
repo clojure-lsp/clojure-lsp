@@ -248,7 +248,7 @@
   (let [source-paths (resolve-source-paths root-path settings given-source-paths)]
     (mapv #(->> % (to-file root-path) .getAbsolutePath str) source-paths)))
 
-(defn initialize-project [project-root-uri client-capabilities client-settings]
+(defn initialize-project [project-root-uri client-capabilities client-settings force-settings]
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -257,7 +257,8 @@
                                         :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
         raw-settings (merge encoding-settings
                             client-settings
-                            project-settings)
+                            project-settings
+                            force-settings)
         _ (when-let [log-path (:log-path raw-settings)]
             (logging/update-log-path log-path))
         settings (-> raw-settings

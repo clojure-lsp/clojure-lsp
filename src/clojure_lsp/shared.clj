@@ -147,6 +147,15 @@
   [& components]
   (.getPath ^java.io.File (apply io/file components)))
 
+(defn namespace->uri [namespace source-paths filename]
+  (let [file-type (uri->file-type filename)]
+    (filename->uri
+      (join-filepaths (first (filter #(string/starts-with? filename %) source-paths))
+                             (-> namespace
+                                 (string/replace "." (System/getProperty "file.separator"))
+                                 (string/replace "-" "_")
+                                 (str "." (name file-type)))))))
+
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
     {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}

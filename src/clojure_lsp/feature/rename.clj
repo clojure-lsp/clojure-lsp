@@ -1,13 +1,13 @@
 (ns clojure-lsp.feature.rename
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.shared :as shared]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [taoensso.timbre :as log]))
 
 (defn ^:private rename-keyword [replacement {:keys [ns alias name filename
                                                     name-col name-end-col

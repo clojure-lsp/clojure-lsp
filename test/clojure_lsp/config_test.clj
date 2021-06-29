@@ -1,8 +1,8 @@
 (ns clojure-lsp.config-test
   (:require
-    [clojure-lsp.config :as config]
-    [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.config :as config]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest resolve-config
   (testing "when user doesn't have a home config or a project config"

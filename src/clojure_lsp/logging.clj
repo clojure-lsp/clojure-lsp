@@ -1,7 +1,7 @@
 (ns clojure-lsp.logging
   (:require
-    [clojure-lsp.db :as db]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [taoensso.timbre :as log]))
 
 (defn setup-logging []
   (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]

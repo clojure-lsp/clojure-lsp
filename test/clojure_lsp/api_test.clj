@@ -1,11 +1,11 @@
 (ns clojure-lsp.api-test
   (:require
-    [clojure-lsp.api :as api]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.test-helper :as h]
-    [clojure.java.io :as io]
-    [clojure.test :refer [deftest is testing]]
-    [clojure.string :as string]))
+   [clojure-lsp.api :as api]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.test-helper :as h]
+   [clojure.java.io :as io]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

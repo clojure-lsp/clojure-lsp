@@ -1,8 +1,8 @@
 (ns clojure-lsp.client
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.file-management :as f.file-management]
-    [clojure-lsp.handlers :as handlers]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.handlers :as handlers]))
 
 (defn apply-workspace-edit [{:keys [text-document edits]}]
   (let [uri (:uri text-document)

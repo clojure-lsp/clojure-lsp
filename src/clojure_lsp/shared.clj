@@ -1,14 +1,14 @@
 (ns clojure-lsp.shared
   (:require
-    [clojure-lsp.db :as db]
-    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
-    [clojure.java.io :as io]
-    [clojure.java.shell :as shell]
-    [clojure.string :as string]
-    [taoensso.timbre :as log])
+   [clojure-lsp.db :as db]
+   [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
+   [clojure.java.io :as io]
+   [clojure.java.shell :as shell]
+   [clojure.string :as string]
+   [taoensso.timbre :as log])
   (:import
-    [java.net URI URL JarURLConnection]
-    [java.nio.file Paths]))
+   [java.net URI URL JarURLConnection]
+   [java.nio.file Paths]))
 
 (defn assoc-some
   "Assoc[iate] if the value is not nil. "

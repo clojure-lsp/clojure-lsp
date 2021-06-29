@@ -1,10 +1,10 @@
 (ns clojure-lsp.queries-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest is testing]]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]
+   [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
 

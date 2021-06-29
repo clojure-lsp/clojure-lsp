@@ -1,9 +1,9 @@
 (ns clojure-lsp.features.semantic-tokens-test
   (:require
-    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
-    [clojure-lsp.test-helper :as h]
-    [clojure.string :as clojure.string]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.test-helper :as h]
+   [clojure.string :as clojure.string]
+   [clojure.test :refer [deftest is testing]]))
 
 (defn ^:private ->token
   [usage token-type]

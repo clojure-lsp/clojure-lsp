@@ -1,9 +1,9 @@
 (ns clojure-lsp.parser-test
   (:require
-    [clojure-lsp.parser :as parser]
-    [clojure.test :refer [deftest is testing]]
-    [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.parser :as parser]
+   [clojure.test :refer [deftest is testing]]
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
 (deftest find-last-by-pos
   (is (= "foo/bar" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) (foo/bar 1)")

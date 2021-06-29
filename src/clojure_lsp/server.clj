@@ -1,25 +1,25 @@
 (ns clojure-lsp.server
   (:require
-    [clojure-lsp.config :as config]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.file-management :as f.file-management]
-    [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
-    [clojure-lsp.handlers :as handlers]
-    [clojure-lsp.interop :as interop]
-    [clojure-lsp.nrepl :as nrepl]
-    [clojure-lsp.producer :as producer]
-    [clojure-lsp.shared :as shared]
-    [clojure.core.async :refer [<! go-loop thread timeout]]
-    [taoensso.timbre :as log])
+   [clojure-lsp.config :as config]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.interop :as interop]
+   [clojure-lsp.nrepl :as nrepl]
+   [clojure-lsp.producer :as producer]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :refer [<! go-loop thread timeout]]
+   [taoensso.timbre :as log])
   (:import
-    (clojure_lsp
+   (clojure_lsp
       ClojureExtensions
       ExtraMethods
       CursorInfoParams)
-    (java.util.concurrent CompletableFuture)
-    (java.util.function Supplier)
-    (org.eclipse.lsp4j
+   (java.util.concurrent CompletableFuture)
+   (java.util.function Supplier)
+   (org.eclipse.lsp4j
       CallHierarchyIncomingCallsParams
       CallHierarchyOutgoingCallsParams
       CallHierarchyPrepareParams
@@ -66,8 +66,8 @@
       TextDocumentSyncKind
       TextDocumentSyncOptions
       WorkspaceSymbolParams)
-    (org.eclipse.lsp4j.launch LSPLauncher)
-    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
+   (org.eclipse.lsp4j.launch LSPLauncher)
+   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
 
 (defonce formatting (atom false))

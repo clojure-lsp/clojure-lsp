@@ -1,8 +1,8 @@
 (ns clojure-lsp.features.workspace-symbols-test
   (:require
-    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
-    [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

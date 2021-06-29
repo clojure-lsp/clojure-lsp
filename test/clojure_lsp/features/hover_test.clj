@@ -1,10 +1,10 @@
 (ns clojure-lsp.features.hover-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.hover :as f.hover]
-    [clojure-lsp.test-helper :as h]
-    [clojure.string :as string]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.test-helper :as h]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

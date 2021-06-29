@@ -1,8 +1,8 @@
 (ns clojure-lsp.features.rename-test
   (:require
-    [clojure-lsp.feature.rename :as f.rename]
-    [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.feature.rename :as f.rename]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

@@ -1,6 +1,6 @@
 (ns clojure-lsp.feature.document-symbol
   (:require
-    [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]))
 
 (defn declaration? [e]
   (#{:namespace-definitions :var-definitions} (:bucket e)))

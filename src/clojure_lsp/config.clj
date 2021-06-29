@@ -1,11 +1,11 @@
 (ns clojure-lsp.config
   (:require
-    [clojure-lsp.shared :as shared]
-    [clojure.edn :as edn]
-    [clojure.java.io :as io]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.shared :as shared]
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [taoensso.timbre :as log]))
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)

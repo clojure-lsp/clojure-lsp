@@ -1,12 +1,12 @@
 (ns clojure-lsp.test-helper
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.handlers :as handlers]
-    [clojure.core.async :as async]
-    [clojure.pprint :as pprint]
-    [clojure.string :as string]
-    [clojure.test :refer [is use-fixtures]]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.handlers :as handlers]
+   [clojure.core.async :as async]
+   [clojure.pprint :as pprint]
+   [clojure.string :as string]
+   [clojure.test :refer [is use-fixtures]]
+   [taoensso.timbre :as log]))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 

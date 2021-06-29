@@ -1,15 +1,15 @@
 (ns clojure-lsp.interop
   (:require
-    [clojure.data.json :as json]
-    [clojure.java.data :as j]
-    [clojure.spec.alpha :as s]
-    [clojure.string :as string]
-    [clojure.walk :as walk]
-    [medley.core :as medley]
-    [taoensso.timbre :as log])
+   [clojure.data.json :as json]
+   [clojure.java.data :as j]
+   [clojure.spec.alpha :as s]
+   [clojure.string :as string]
+   [clojure.walk :as walk]
+   [medley.core :as medley]
+   [taoensso.timbre :as log])
   (:import
-    (com.google.gson JsonElement)
-    (org.eclipse.lsp4j
+   (com.google.gson JsonElement)
+   (org.eclipse.lsp4j
       CallHierarchyIncomingCall
       CallHierarchyOutgoingCall
       CallHierarchyItem
@@ -47,7 +47,7 @@
       VersionedTextDocumentIdentifier
       WatchKind
       WorkspaceEdit)
-    (org.eclipse.lsp4j.jsonrpc.messages Either)))
+   (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
 (defn document->uri [^TextDocumentIdentifier document]
   (.getUri document))

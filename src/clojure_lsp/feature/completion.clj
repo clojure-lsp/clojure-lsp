@@ -1,18 +1,18 @@
 (ns clojure-lsp.feature.completion
   (:require
-    [clojure-lsp.common-symbols :as common-sym]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
-    [clojure-lsp.feature.hover :as f.hover]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure-lsp.refactor.transform :as r.transform]
-    [clojure-lsp.shared :as shared]
-    [clojure.string :as string]
-    [clojure.walk :as walk]
-    [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.common-symbols :as common-sym]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
+   [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.refactor.transform :as r.transform]
+   [clojure-lsp.shared :as shared]
+   [clojure.string :as string]
+   [clojure.walk :as walk]
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
 (defn ^:private keyword-element->str [{:keys [alias ns] :as element}]
   (cond-> ":"

@@ -1,9 +1,9 @@
 (ns clojure-lsp.feature.completion-snippet
   (:require
-    [clojure-lsp.shared :as shared]
-    [clojure.string :as string]
-    [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.shared :as shared]
+   [clojure.string :as string]
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
 (defn known-snippets [settings]
   [{:label "comment$"

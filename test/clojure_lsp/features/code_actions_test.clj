@@ -1,11 +1,11 @@
 (ns clojure-lsp.features.code-actions-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.code-actions :as f.code-actions]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.test-helper :as h]
-    [clojure.string :as string]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.code-actions :as f.code-actions]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.test-helper :as h]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

@@ -1,8 +1,8 @@
 (ns clojure-lsp.refactor.edit-test
   (:require
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure.test :refer [deftest is testing]]
-    [rewrite-clj.zip :as z]))
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure.test :refer [deftest is testing]]
+   [rewrite-clj.zip :as z]))
 
 (deftest find-op-test
   (let [code "(foo ((x) [a] (b {c d})))"

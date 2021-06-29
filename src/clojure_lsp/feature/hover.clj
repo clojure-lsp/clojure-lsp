@@ -1,10 +1,10 @@
 (ns clojure-lsp.feature.hover
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.hover :as f.hover]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.shared :as shared]
-    [clojure.string :as string]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.shared :as shared]
+   [clojure.string :as string]))
 
 (def line-break "\n----\n")
 (def opening-code "```clojure\n")

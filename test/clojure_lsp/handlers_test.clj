@@ -1,12 +1,12 @@
 (ns clojure-lsp.handlers-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.handlers :as handlers]
-    [clojure-lsp.test-helper :as h]
-    [clojure.core.async :as async]
-    [clojure.string :as string]
-    [clojure.test :refer [deftest is testing]]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.test-helper :as h]
+   [clojure.core.async :as async]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]]
+   [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
 

@@ -1,9 +1,9 @@
 (ns clojure-lsp.shared-test
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.shared :as shared]
-    [clojure-lsp.test-helper :as h]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.shared :as shared]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest uri->filename
   (testing "should decode special characters in file URI"

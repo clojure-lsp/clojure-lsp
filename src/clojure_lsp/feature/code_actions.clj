@@ -1,16 +1,16 @@
 (ns clojure-lsp.feature.code-actions
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.refactor :as f.refactor]
-    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.refactor.transform :as r.transform]
-    [clojure-lsp.shared :as shared]
-    [clojure.string :as string]
-    [taoensso.timbre :as log])
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.transform :as r.transform]
+   [clojure-lsp.shared :as shared]
+   [clojure.string :as string]
+   [taoensso.timbre :as log])
   (:import
-    (org.eclipse.lsp4j
+   (org.eclipse.lsp4j
       CodeActionKind)))
 
 (defn ^:private find-alias-suggestion [uri diagnostic]

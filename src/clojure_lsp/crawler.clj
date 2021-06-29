@@ -1,20 +1,20 @@
 (ns clojure-lsp.crawler
   (:require
-    [clj-kondo.core :as kondo]
-    [cljfmt.main :as cljfmt.main]
-    [clojure-lsp.config :as config]
-    [clojure-lsp.db :as db]
-    [clojure-lsp.feature.diagnostics :as f.diagnostic]
-    [clojure-lsp.logging :as logging]
-    [clojure-lsp.producer :as producer]
-    [clojure-lsp.shared :as shared]
-    [clojure.core.async :as async]
-    [clojure.java.io :as io]
-    [clojure.java.shell :as shell]
-    [clojure.set :as set]
-    [clojure.string :as string]
-    [digest :as digest]
-    [taoensso.timbre :as log])
+   [clj-kondo.core :as kondo]
+   [cljfmt.main :as cljfmt.main]
+   [clojure-lsp.config :as config]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.logging :as logging]
+   [clojure-lsp.producer :as producer]
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
+   [clojure.java.io :as io]
+   [clojure.java.shell :as shell]
+   [clojure.set :as set]
+   [clojure.string :as string]
+   [digest :as digest]
+   [taoensso.timbre :as log])
   (:import
    (java.net URI)))
 

@@ -1,9 +1,9 @@
 (ns clojure-lsp.features.call-hierarchy-test
   (:require
-    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
-    [clojure-lsp.test-helper :as h]
-    [clojure.string :as string]
-    [clojure.test :refer [deftest is testing]]))
+   [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
+   [clojure-lsp.test-helper :as h]
+   [clojure.string :as string]
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

@@ -35,6 +35,11 @@
 (def ^:private cli-options
   [["-h" "--help" "Print the available commands and its options"]
    [nil "--version" "Print clojure-lsp version"]
+   ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.github.io/clojure-lsp/settings"
+    :id :settings
+    :validate [#(try (edn/read-string %) true (catch Exception _ false))
+               "Invalid --settings EDN"]
+    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
     :default (io/file (System/getProperty "user.dir"))
@@ -45,12 +50,7 @@
     :default []
     :parse-fn symbol
     :multi true
-    :update-fn conj]
-   ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.github.io/clojure-lsp/settings"
-    :id :settings
-    :validate [#(try (edn/read-string %) true (catch Exception _ false))
-               "Invalid --settings EDN"]
-    :update-fn edn/read-string]])
+    :update-fn conj]])
 
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"

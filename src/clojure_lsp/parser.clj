@@ -1,11 +1,11 @@
 (ns clojure-lsp.parser
   (:require
-    [clojure-lsp.db :as db]
-    [clojure-lsp.refactor.edit :as edit]
-    [clojure.string :as string]
-    [rewrite-clj.node :as n]
-    [rewrite-clj.zip :as z]
-    [taoensso.timbre :as log]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure.string :as string]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
 (defmacro zspy [loc]
   `(do

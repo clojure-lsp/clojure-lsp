@@ -17,7 +17,7 @@ nav:
   - Features: features.md
   - Installation: installation.md
   - API: api.md
-  - Support Us: https://opencollective.com/clojure-lsp
+  - Support Us: https://github.com/sponsors/clojure-lsp
   - Changelog: CHANGELOG.md
 
 theme:

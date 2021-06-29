@@ -52,7 +52,27 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 
 `clojure-lsp` has more than 8.000 lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva) and vim.
 
-You can help us keep going and improving it by **[supporting the project](https://opencollective.com/clojure-lsp)**
+You can help us keep going and improving it by **[supporting the project](https://github.com/sponsors/clojure-lsp)**
+
+### Gold sponsors
+
+<table id="github-sponsors">
+  <tr>
+    <td align="center">
+      <div>
+        <a href="https://github.com/pitch-io">
+          <img src="https://github.com/pitch-io.png" width="100px;" style="border-radius: 50%;" alt="pitch-io"/>
+          <br/>
+          <sub><b>pitch-io</b></sub>
+        </a>
+        <br/>
+         Pitch
+      </div>
+    </td>
+  </tr>
+</table>
+
+### Sponsors
 
 [![](https://opencollective.com/clojure-lsp/tiers/sponsor.svg)](https://opencollective.com/clojure-lsp)
 

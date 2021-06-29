@@ -10,6 +10,7 @@
 
 (defn ^:private start-analysis! [project-root settings]
   (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
+    (println "Analyzing project...");
     (crawler/initialize-project
       project-uri
       {:workspace {:workspace-edit {:document-changes true}}}

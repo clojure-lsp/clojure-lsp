@@ -1,8 +1,8 @@
 (ns clojure-lsp.main-test
   (:require
    [clojure-lsp.main :as main]
-   [clojure.test :refer [deftest is testing]]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io]
+   [clojure.test :refer [deftest is testing]]))
 
 (def default-root (io/file (System/getProperty "user.dir")))
 

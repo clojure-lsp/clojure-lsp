@@ -1,7 +1,8 @@
 (ns integration.api.clean-ns-test
   (:require
     [clojure.test :refer [deftest is testing]]
-    [integration.lsp :as lsp]))
+    [integration.lsp :as lsp]
+    [clojure.string :as string]))
 
 (lsp/clean-after-test)
 
@@ -15,7 +16,7 @@
     (with-open [rdr (lsp/cli! "clean-ns"
                               "--project-root" "./integration-test/sample-test"
                               "--namespace" "api.clean-ns.a")]
-      (is (= "Cleaned api.clean-ns.a\n" (slurp rdr)))
+      (is (string/includes? (slurp rdr) "Cleaned api.clean-ns.a\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "passing multiple namespaces but only one is cleanable"
@@ -23,6 +24,6 @@
                               "--project-root" "./integration-test/sample-test"
                               "--namespace" "api.clean-ns.b"
                               "--namespace" "api.clean-ns.a")]
-      (is (= "Cleaned api.clean-ns.a\n" (slurp rdr)))
+      (is (string/includes? (slurp rdr) "Cleaned api.clean-ns.a\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text)))

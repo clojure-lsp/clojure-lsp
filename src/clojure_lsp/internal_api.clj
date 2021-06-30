@@ -6,18 +6,41 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]))
+   [clojure-lsp.shared :as shared]
+   [clojure.core.async :refer [>! alts!! chan go timeout]]
+   [taoensso.timbre :as log]))
+
+(defn ^:private cli-print [& msg]
+  (when (:cli? @db/db)
+    (apply print msg)
+    (flush)))
+
+(defn ^:private cli-println [& msg]
+  (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n")))
+
+(defmacro ^:private print-with-time [msg & body]
+  `(let [~'_time (System/nanoTime)
+         ~'_done-ch (chan)]
+     (go
+       ~@body
+       (>! ~'_done-ch true))
+     (loop []
+       (cli-print (str "\r" ~@msg " " (quot (- (System/nanoTime) ~'_time) 1000000) "ms"))
+       (if (first (alts!! [(timeout 100) ~'_done-ch]))
+         (cli-println "")
+         (recur)))))
 
 (defn ^:private start-analysis! [project-root settings]
-  (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
-    (println "Analyzing project...");
-    (crawler/initialize-project
-      project-uri
-      {:workspace {:workspace-edit {:document-changes true}}}
-      (interop/clean-client-settings {})
-      (merge {:lint-project-files-after-startup? false
-              :text-document-sync-kind :full}
-             settings))))
+  (print-with-time
+    "Analyzing project..."
+    (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
+      (crawler/initialize-project
+        project-uri
+        {:workspace {:workspace-edit {:document-changes true}}}
+        (interop/clean-client-settings {})
+        (merge {:lint-project-files-after-startup? false
+                :text-document-sync-kind :full}
+               settings)))))
 
 (defn ^:private ns->uri [namespace]
   (let [source-paths (-> @db/db :settings :source-paths)]
@@ -29,6 +52,7 @@
 
 (defn clean-ns! [{:keys [project-root namespace settings]}]
   (start-analysis! project-root settings)
+  (cli-print "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
@@ -40,5 +64,5 @@
           (when-let [edits (handlers/execute-command {:command "clean-ns"
                                                       :arguments [uri 0 0]})]
             (when (seq (client/apply-workspace-edits edits))
-              (println "Cleaned" namespace))))
-        (println "Namespace" namespace "not found")))))
+              (cli-println "Cleaned" namespace))))
+        (cli-println "Namespace" namespace "not found")))))

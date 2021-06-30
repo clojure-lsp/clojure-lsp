@@ -2,6 +2,7 @@
   (:require
    borkdude.dynaload
    [clojure-lsp.config :as config]
+   [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.server :as server]
@@ -82,8 +83,9 @@
   (println msg)
   (System/exit status))
 
-(defn ^:private handle-action
+(defn ^:private handle-action!
   [action options]
+  (swap! db/db assoc :cli? true)
   (case action
     "listen" (with-out-str (server/run-server!))
     "clean-ns" (internal-api/clean-ns! options)))
@@ -93,4 +95,4 @@
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (handle-action action options))))
+      (handle-action! action options))))

@@ -52,7 +52,7 @@
 
 (defn clean-ns! [{:keys [project-root namespace settings]}]
   (start-analysis! project-root settings)
-  (cli-print "Checking namespaces...")
+  (cli-println "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis

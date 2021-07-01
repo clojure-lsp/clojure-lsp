@@ -41,6 +41,7 @@ You will get:
 - **Call hierarchy**
 
 For all available documentation, check the official [website](https://clojure-lsp.github.io/clojure-lsp/).
+Also, clojure-lsp doesn't need to run in a editor, for mmore infromation check the [API documentation section](https://clojure-lsp.github.io/clojure-lsp/api/).
 
 ---
 ## Contribution

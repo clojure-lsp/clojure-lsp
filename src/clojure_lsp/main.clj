@@ -42,6 +42,8 @@
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --settings EDN"]
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
+   [nil "--log-path PATH" "Path to use as the log path for clojure-lsp.out, debug purposes only."
+    :id :log-path]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
     :default (io/file "")

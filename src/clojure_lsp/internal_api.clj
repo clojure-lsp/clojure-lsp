@@ -9,7 +9,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.logging :as logging]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)
@@ -33,7 +34,7 @@
          (cli-println "")
          (recur)))))
 
-(defn ^:private start-analysis! [project-root settings]
+(defn ^:private start-analysis! [{:keys [project-root settings log-path]}]
   (print-with-time
     "Analyzing project..."
     (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
@@ -41,8 +42,10 @@
         project-uri
         {:workspace {:workspace-edit {:document-changes true}}}
         (interop/clean-client-settings {})
-        (merge {:lint-project-files-after-startup? false
-                :text-document-sync-kind :full}
+        (merge (shared/assoc-some
+                 {:lint-project-files-after-startup? false
+                  :text-document-sync-kind :full}
+                 :log-path log-path)
                settings)))))
 
 (defn ^:private ns->uri [namespace]
@@ -53,8 +56,8 @@
 (defn ^:private open-file! [uri]
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}}))
 
-(defn clean-ns! [{:keys [project-root namespace settings]}]
-  (start-analysis! project-root settings)
+(defn clean-ns! [{:keys [namespace] :as options}]
+  (start-analysis! options)
   (cli-println "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
@@ -70,8 +73,8 @@
               (cli-println "Cleaned" namespace))))
         (cli-println "Namespace" namespace "not found")))))
 
-(defn rename! [{:keys [project-root settings from to]}]
-  (start-analysis! project-root settings)
+(defn rename! [{:keys [from to] :as options}]
+  (start-analysis! options)
   (let [from-name (symbol (name from))
         from-ns (symbol (namespace from))
         project-analysis (q/filter-project-analysis (:analysis @db/db))]

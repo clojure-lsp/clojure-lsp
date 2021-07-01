@@ -617,12 +617,13 @@ This is a new feature and it's experimental, so things can break at any moment, 
 <h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp --help</code> should show all available commands and options.</p>
 <p>At the moment the features available are:</p>
-<p><code>clean-ns</code> - clean the ns form removing unused requires/refers/imports, sorting the form.
-<code>rename</code> - rename a symbol and all references across the project, use --from and --to options.</p>
+<p><code>clean-ns</code> - clean the ns form removing unused requires/refers/imports, sorting the form.</p>
+<p><code>rename</code> - rename a symbol and all references across the project, use --from and --to options.</p>
 <h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h3>
-<p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj"><code>clojure-lsp.api</code></a> should be used as the entrypoint for available features as API, feel free to open a issue for missing features.</p>
+<p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj"><code>clojure-lsp.api</code></a> should be used as the entrypoint for the same available featues of the CLI, feel free to open a issue for missing features.</p>
 <h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
 <p>clojure-lsp will check for <code>.lsp/config.edn</code> in the project or home dir, but it's possible to force override the settings via the <code>:settings</code> option of the API or <code>--settings</code> option of the CLI.</p>
+<p>For all available settings, check the <a href="https://clojure-lsp.github.io/clojure-lsp/settings/">settings section documentation</a>.</p>
                 
                   
                     

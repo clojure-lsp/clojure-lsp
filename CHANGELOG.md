@@ -4,7 +4,8 @@
 
 ## 2021.07.01-19.49.02
 
-## 2021.07.01-18.46.23
+- Fix --project-path option for API.
+- Add --log-path option to API.
 
 ## 2021.07.01-13.46.18
 

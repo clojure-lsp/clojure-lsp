@@ -1,6 +1,7 @@
-# API (experimental)
+# API
 
 clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI. An example is calling the CLI in a CI for cleaning the project namespaces.
+This is a new feature and it's experimental, so things can break at any moment, so please open an issue if find anything wrong.
 
 ## Usage
 

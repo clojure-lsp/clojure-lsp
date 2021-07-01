@@ -23,11 +23,20 @@
       (is (= [] (:namespace (:options (#'main/parse [])))))
       (is (= '[abc] (:namespace (:options (#'main/parse ["--namespace" "abc"])))))
       (is (= '[abc] (:namespace (:options (#'main/parse ["-n" "abc"])))))
-      (is (= '[abc bcd] (:namespace (:options (#'main/parse ["-n" "abc" "-n" "bcd"])))))))
+      (is (= '[abc bcd] (:namespace (:options (#'main/parse ["-n" "abc" "-n" "bcd"]))))))
+    (testing "from"
+      (is (= nil (:from (:options (#'main/parse [])))))
+      (is (= nil (:from (:options (#'main/parse ["--from" "abc"])))))
+      (is (= 'bla/abc (:from (:options (#'main/parse ["--from" "bla/abc"]))))))
+    (testing "to"
+      (is (= nil (:to (:options (#'main/parse [])))))
+      (is (= nil (:to (:options (#'main/parse ["--to" "abc"])))))
+      (is (= 'bla/abc (:to (:options (#'main/parse ["--to" "bla/abc"])))))))
   (testing "commands"
     (is (= "listen" (:action (#'main/parse []))))
     (is (= "listen" (:action (#'main/parse ["listen"]))))
     (is (= "clean-ns" (:action (#'main/parse ["clean-ns"]))))
+    (is (= "rename" (:action (#'main/parse ["rename"]))))
     (is (= nil (:action (#'main/parse ["clean-ns" "listen"])))))
   (testing "final options"
     (is (string? (:exit-message (#'main/parse ["--help"]))))

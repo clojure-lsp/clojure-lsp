@@ -22,14 +22,15 @@
         ""
         "Usage: clojure-lsp <command> [<options>]"
         ""
-        "Options:"
+        "All options:"
         options-summary
         ""
         "Available commands:"
         "  listen (or empty)    Start clojure-lsp as server, listening to stdin."
         "  clean-ns             Organize ns form, removing unused requires/refers/imports and sorting alphabetically."
+        "  rename               Rename a symbol and all references across the project, use --from and --to options."
         ""
-        "Run \"clojure-lsp help <command>\" for more information about a command."
+        ;; "Run \"clojure-lsp help <command>\" for more information about a command."
         "See https://clojure-lsp.github.io/clojure-lsp/settings/ for detailed documentation."]
        (string/join \newline)))
 
@@ -51,7 +52,15 @@
     :default []
     :parse-fn symbol
     :multi true
-    :update-fn conj]])
+    :update-fn conj]
+   [nil "--from FROM" "Full qualified symbol name, e.g. my-project/my-var"
+    :id :from
+    :parse-fn symbol
+    :validate [qualified-ident? "Specify a valid clojure full qualified symbol after --from"]]
+   [nil "--to TO" "Full qualified symbol name, e.g. my-project/my-var"
+    :id :to
+    :parse-fn symbol
+    :validate [qualified-ident? "Specify a valid clojure full qualified symbol after --to"]]])
 
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
@@ -73,7 +82,7 @@
       {:action "listen" :options options}
 
       (and (= 1 (count arguments))
-           (#{"clean-ns" "listen"} (first arguments)))
+           (#{"clean-ns" "rename" "listen"} (first arguments)))
       {:action (first arguments) :options options}
 
       :else
@@ -83,12 +92,23 @@
   (println msg)
   (System/exit status))
 
+(defn ^:private with-required-options [options required fn]
+  (doseq [option required]
+    (when-not (get options option)
+      (exit 1 (format "Missing required %s option for this command" option))))
+  (when (every? options required)
+    (apply fn [options])))
+
 (defn ^:private handle-action!
   [action options]
   (swap! db/db assoc :cli? true)
   (case action
     "listen" (with-out-str (server/run-server!))
-    "clean-ns" (internal-api/clean-ns! options)))
+    "clean-ns" (internal-api/clean-ns! options)
+    "rename" (with-required-options
+               options
+               [:from :to]
+               internal-api/rename!)))
 
 (defn -main [& args]
   (logging/setup-logging)

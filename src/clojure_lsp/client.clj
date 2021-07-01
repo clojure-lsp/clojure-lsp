@@ -6,7 +6,7 @@
 
 (defn apply-workspace-edit [{:keys [text-document edits]}]
   (let [uri (:uri text-document)
-        old-text (get-in @db/db [:documents uri :text])]
+        old-text (get-in @db/db [:documents uri :text] (slurp uri))]
     (loop [text old-text
            i 0]
       (if-let [{:keys [range new-text]} (nth edits i nil)]
@@ -26,10 +26,11 @@
   (->> document-changes
        (map apply-workspace-edit)
        (mapv (fn [{:keys [uri new-text version changed?]}]
-              (when changed?
-                (spit uri new-text)
-                (handlers/did-change {:textDocument {:uri uri
-                                                     :version (inc version)}
-                                      :contentChanges new-text})
-                uri)))
+               (when changed?
+                 (spit uri new-text)
+                 (when (get-in @db/db [:documents uri :text])
+                   (handlers/did-change {:textDocument {:uri uri
+                                                        :version (inc version)}
+                                         :contentChanges new-text}))
+                 uri)))
        (remove nil?)))

@@ -8,12 +8,16 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure.java.io :as io]
+   [clojure-lsp.feature.rename :as f.rename]))
 
 (defn ^:private cli-print [& msg]
-  (when (:cli? @db/db)
-    (apply print msg)
-    (flush)))
+  (if (:cli? @db/db)
+    (do
+      (apply print msg)
+      (flush))
+    (log/debug msg)))
 
 (defn ^:private cli-println [& msg]
   (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n")))
@@ -66,3 +70,18 @@
             (when (seq (client/apply-workspace-edits edits))
               (cli-println "Cleaned" namespace))))
         (cli-println "Namespace" namespace "not found")))))
+
+(defn rename! [{:keys [project-root settings from to]}]
+  (start-analysis! project-root settings)
+  (let [from-name (symbol (name from))
+        from-ns (symbol (namespace from))
+        project-analysis (q/filter-project-analysis (:analysis @db/db))]
+    (if-let [from-element (q/find-element-by-full-name project-analysis from-name from-ns)]
+      (let [uri (shared/filename->uri (:filename from-element))]
+        (open-file! uri)
+        (if-let [edits (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
+          (when (seq (client/apply-workspace-edits edits))
+            (cli-println "Renamed" from "to" to)
+            to)
+          (cli-println "Could not rename" from "to" to)))
+      (cli-println "Symbol" from "not found in project"))))

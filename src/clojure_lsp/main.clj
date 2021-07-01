@@ -44,7 +44,7 @@
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
-    :default (io/file (System/getProperty "user.dir"))
+    :default (io/file "")
     :parse-fn io/file
     :validate [#(.exists %) "Specify a valid path after --project-root"]]
    ["-n" "--namespace NS" "Optional namespace to apply the action, all if not supplied. This flag accepts multiple values"

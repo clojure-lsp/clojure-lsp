@@ -3,14 +3,13 @@
    [clojure-lsp.client :as client]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
-   [taoensso.timbre :as log]
-   [clojure.java.io :as io]
-   [clojure-lsp.feature.rename :as f.rename]))
+   [taoensso.timbre :as log]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)

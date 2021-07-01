@@ -4,7 +4,7 @@
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 
-(def default-root (io/file (System/getProperty "user.dir")))
+(def default-root (.getAbsolutePath (io/file "src")))
 
 (deftest parse
   (testing "parsing options"
@@ -15,8 +15,8 @@
       (is (= nil (:settings (:options (#'main/parse ["-s" "}"])))))
       (is (= {:a {:b 1} :c 2} (:settings (:options (#'main/parse ["-s" "{:a {:b 1} :c 2}"]))))))
     (testing "project-root"
-      (is (= default-root (:project-root (:options (#'main/parse ["--project-root" (System/getProperty "user.dir")])))))
-      (is (= default-root (:project-root (:options (#'main/parse ["-p" (System/getProperty "user.dir")])))))
+      (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["--project-root" "src"]))))))
+      (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["-p" "src"]))))))
       (is (= nil (:project-root (:options (#'main/parse ["-p" "1"])))))
       (is (= nil (:project-root (:options (#'main/parse ["p" "/this/is/not/a/valid/path"]))))))
     (testing "namespace"

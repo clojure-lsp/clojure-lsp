@@ -1,8 +1,7 @@
 (ns clojure-lsp.api
   "Entrypoint for main clojure-lsp features"
   (:require
-   [clojure-lsp.internal-api :as internal-api]
-   [clojure.java.io :as io])
+   [clojure-lsp.internal-api :as internal-api])
   (:import
    [java.io File]))
 

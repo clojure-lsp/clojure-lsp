@@ -1,9 +1,9 @@
 (ns rename.b
-  (:require [rename.a :as a :refer [your-func]]))
+  (:require [rename.a :as a :refer [my-func]]))
 
-(a/your-func 5 6)
+(a/my-func 5 6)
 
-(your-func 7 8)
+(my-func 7 8)
 
 ::a/click
 

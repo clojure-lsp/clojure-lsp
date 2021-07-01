@@ -11,6 +11,9 @@
 (def a-expected-path "./integration-test/sample-test/fixtures/api/rename/a.cljc")
 (def a-expected-text (slurp a-expected-path))
 
+(def b-subject-path "./integration-test/sample-test/src/rename/b.cljc")
+(def b-subject-text (slurp b-subject-path))
+
 (deftest rename
   (testing "passing a valid from and too"
     (with-open [rdr (lsp/cli! "rename"
@@ -19,4 +22,5 @@
                               "--to" "rename.a/your-func")]
       (is (string/includes? (slurp rdr) "Renamed rename.a/my-func to rename.a/your-func\n"))
       (is (= a-expected-text (slurp a-subject-path))))
-    (spit a-subject-path a-subject-text)))
+    (spit a-subject-path a-subject-text)
+    (spit b-subject-path b-subject-text)))

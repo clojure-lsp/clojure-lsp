@@ -14,6 +14,9 @@
       (is (= {} (:settings (:options (#'main/parse ["-s" "{}"])))))
       (is (= nil (:settings (:options (#'main/parse ["-s" "}"])))))
       (is (= {:a {:b 1} :c 2} (:settings (:options (#'main/parse ["-s" "{:a {:b 1} :c 2}"]))))))
+    (testing "log-path"
+      (is (= "/custom/path" (:log-path (:options (#'main/parse ["--log-path" "/custom/path"])))))
+      (is (= nil (:log-path (:options (#'main/parse []))))))
     (testing "project-root"
       (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["--project-root" "src"]))))))
       (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["-p" "src"]))))))

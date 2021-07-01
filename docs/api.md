@@ -12,12 +12,15 @@ This is a new feature and it's experimental, so things can break at any moment, 
 At the moment the features available are:
 
 `clean-ns` - clean the ns form removing unused requires/refers/imports, sorting the form.
+
 `rename` - rename a symbol and all references across the project, use --from and --to options.
 
 ### Library
 
-The namespace [`clojure-lsp.api`](https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj) should be used as the entrypoint for available features as API, feel free to open a issue for missing features.
+The namespace [`clojure-lsp.api`](https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj) should be used as the entrypoint for the same available featues of the CLI, feel free to open a issue for missing features.
 
 ## Settings
 
 clojure-lsp will check for `.lsp/config.edn` in the project or home dir, but it's possible to force override the settings via the `:settings` option of the API or `--settings` option of the CLI.
+
+For all available settings, check the [settings section documentation](https://clojure-lsp.github.io/clojure-lsp/settings/).

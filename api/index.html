@@ -495,6 +495,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    Settings
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -579,6 +586,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    Settings
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -597,14 +611,17 @@
                 
                 
                 <h1 id="api-experimental">API (experimental)<a class="headerlink" href="#api-experimental" title="Permanent link">#</a></h1>
-<p>clojure-lsp is commonly used in a text editor, but it has its own API featuring the same features that can be used as a library or via CLI. An example is calling the CLI in a CI for cleaning the project namespaces.</p>
+<p>clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI. An example is calling the CLI in a CI for cleaning the project namespaces.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
 <h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h3>
-<p><code>clojure-lsp --help</code> should show all available commands and options, clojure-lsp will consider the same rules of configuration, checking <code>.lsp/config.edn</code>.</p>
+<p><code>clojure-lsp --help</code> should show all available commands and options.</p>
 <p>At the moment the features available are:</p>
-<p><code>clean-ns</code> - clean the ns form removing unused requires/refers/imports, sorting the form.</p>
+<p><code>clean-ns</code> - clean the ns form removing unused requires/refers/imports, sorting the form.
+<code>rename</code> - rename a symbol and all references across the project, use --from and --to options.</p>
 <h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h3>
 <p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj"><code>clojure-lsp.api</code></a> should be used as the entrypoint for available features as API, feel free to open a issue for missing features.</p>
+<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
+<p>clojure-lsp will check for <code>.lsp/config.edn</code> in the project or home dir, but it's possible to force override the settings via the <code>:settings</code> option of the API or <code>--settings</code> option of the CLI.</p>
                 
                   
                     
@@ -613,7 +630,7 @@
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 30, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 1, 2021</span>
     
   </small>
 </div>

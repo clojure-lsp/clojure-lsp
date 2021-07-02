@@ -463,6 +463,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#script" class="md-nav__link">
+    Script
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#nix" class="md-nav__link">
     Nix
   </a>
@@ -494,13 +501,6 @@
           <li class="md-nav__item">
   <a href="#manually" class="md-nav__link">
     Manually
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#script" class="md-nav__link">
-    Script
   </a>
   
 </li>
@@ -595,6 +595,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#script" class="md-nav__link">
+    Script
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#nix" class="md-nav__link">
     Nix
   </a>
@@ -626,13 +633,6 @@
           <li class="md-nav__item">
   <a href="#manually" class="md-nav__link">
     Manually
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#script" class="md-nav__link">
-    Script
   </a>
   
 </li>
@@ -673,6 +673,9 @@
 <div class="highlight"><pre><span></span><code>brew remove clojure-lsp <span class="c1"># if you have old clojure-lsp installed via brew</span>
 brew install clojure-lsp/brew/clojure-lsp-native
 </code></pre></div>
+<h2 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>sudo bash &lt; &lt;<span class="o">(</span>curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install<span class="o">)</span>
+</code></pre></div>
 <h2 id="nix">Nix<a class="headerlink" href="#nix" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
@@ -693,8 +696,6 @@ brew install clojure-lsp/brew/clojure-lsp-native
 <p><code>clojure-lsp</code> builds using GraalVM a native executable for each OS: Linux, MacOS and Windows.</p>
 <h3 id="manually">Manually<a class="headerlink" href="#manually" title="Permanent link">#</a></h3>
 <p>The binaries are available on <a href="https://github.com/clojure-lsp/clojure-lsp/releases">Github releases</a> as <code>clojure-lsp-native-&lt;os&gt;-&lt;arch&gt;.zip</code>, after downloading you just need to unzip it.</p>
-<h3 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h3>
-<p>You can install it running <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh">./install-latest-clojure-lsp.sh</a></p>
 <h2 id="embedded-jar-legacy-executable">Embedded jar (Legacy executable)<a class="headerlink" href="#embedded-jar-legacy-executable" title="Permanent link">#</a></h2>
 <p>In Github releases you will find a <code>clojure-lsp</code> file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.</p>
 <ul>

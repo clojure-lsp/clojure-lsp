@@ -11,6 +11,12 @@ brew remove clojure-lsp # if you have old clojure-lsp installed via brew
 brew install clojure-lsp/brew/clojure-lsp-native
 ```
 
+## Script
+
+```bash
+sudo bash < <(curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install)
+```
+
 ## Nix
 
 `clojure-lsp` is available in the [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix):
@@ -44,10 +50,6 @@ scoop install clojure-lsp
 ### Manually
 
 The binaries are available on [Github releases](https://github.com/clojure-lsp/clojure-lsp/releases) as `clojure-lsp-native-<os>-<arch>.zip`, after downloading you just need to unzip it.
-
-### Script
-
-You can install it running [./install-latest-clojure-lsp.sh](https://github.com/clojure-lsp/clojure-lsp/blob/master/install-latest-clojure-lsp.sh)
 
 ## Embedded jar (Legacy executable)
 

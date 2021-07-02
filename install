@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+# Inspired on official babashka install script https://github.com/babashka/babashka/blob/master/install
+
+set -euo pipefail
+
+version=""
+checksum=""
+static_binary="false"
+default_install_dir="/usr/local/bin"
+install_dir="$default_install_dir"
+download_dir=""
+
+print_help() {
+    echo "Installs latest (or specific) version of clojure-lsp. Installation directory defaults to $default_install_dir."
+    echo -e
+    echo "Usage:"
+    echo "install [--dir <dir>] [--download-dir <download-dir>] [--version <version>] [--checksum <checksum>] [--static]"
+    echo -e
+    echo "Defaults:"
+    echo " * Installation directory: ${default_install_dir}"
+    echo " * Download directory: temporary"
+    if [[ -z "$checksum" ]]; then
+        echo " * Checksum: no"
+    else
+        echo " * Checksum: ${checksum}"
+    fi
+    echo " * Static binary: ${static_binary}"
+    echo " * Version: <Latest release on github>"
+    exit 1
+}
+
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+    case "$key" in
+        --dir)
+            install_dir="$2"
+            shift
+            shift
+            ;;
+        --download-dir)
+            download_dir="$2"
+            shift
+            shift
+            ;;
+        --version)
+            version="$2"
+            shift
+            shift
+            ;;
+        --checksum)
+            checksum="$2"
+            shift
+            shift
+            ;;
+        --static)
+            static_binary="true"
+            shift
+            ;;
+        *)    # unknown option
+            print_help
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$download_dir" ]]; then
+    download_dir="$(mktemp -d)"
+    trap 'rm -rf "$download_dir"' EXIT
+fi
+
+if [[ "$checksum" != "" ]] && [[ "$version" == "" ]]; then
+    >&2 echo "Options --checksum and --version should be provided together!"
+    exit 1
+fi
+
+if [[ "$version" == "" ]]; then
+  version="$(curl -sL https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/resources/CLOJURE_LSP_VERSION)"
+fi
+
+case "$(uname -s)" in
+    Linux*)  platform=linux;;
+    Darwin*) platform=macos;;
+esac
+
+case "$(uname -m)" in
+    # aarch64) arch=aarch64;;
+    *)       arch=amd64;;
+esac
+
+ext="zip"
+util="$(which unzip) -qqo"
+
+case "$platform-$static_binary" in
+    linux-true) filename="clojure-lsp-native-$platform-$arch-static."$ext
+                ;;
+    *-true)     >&2 echo "Static binaries are only available in Linux platform! Using the non-static one..."
+                filename="clojure-lsp-native-$platform-$arch."$ext
+                ;;
+    *)          filename="clojure-lsp-native-$platform-$arch."$ext
+                ;;
+esac
+
+download_url="https://github.com/clojure-lsp/clojure-lsp/releases/download/$version/$filename"
+
+# Running this part in a subshell so when it finishes we go back to the previous directory
+mkdir -p "$download_dir" && (
+    cd "$download_dir"
+    echo -e "Downloading $download_url to $download_dir"
+
+    curl -o "$filename" -sL "$download_url"
+    if [[ -n "$checksum" ]]; then
+        if ! echo "$checksum *$filename" | shasum -a 256 --check --status; then
+            >&2 echo "Failed checksum on $filename"
+            >&2 echo "Got: $(shasum -a 256 "$filename" | cut -d' ' -f1)"
+            >&2 echo "Expected: $checksum"
+            exit 1
+        fi
+    fi
+    $util "$filename"
+    rm -f "$filename"
+)
+
+if [[ "$download_dir" != "$install_dir" ]]
+then
+    mkdir -p "$install_dir"
+    if [ -f "$install_dir/clojure-lsp" ]; then
+        echo "Moving $install_dir/clojure-lsp to $install_dir/clojure-lsp.old"
+        mv -f "$install_dir/clojure-lsp" "$install_dir/clojure-lsp.old"
+    fi
+    mv -f "$download_dir/clojure-lsp" "$install_dir/clojure-lsp"
+fi
+
+echo "Successfully installed clojure-lsp in $install_dir"

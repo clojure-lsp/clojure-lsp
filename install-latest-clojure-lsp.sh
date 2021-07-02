@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+echo -e "\033[0;33mWARNING\033[0m"
+echo -e "\033[0;33mThis installation script method is deprecated, please use the new \`install\` script:\033[0m"
+echo -e "\033[0;33mhttps://clojure-lsp.github.io/clojure-lsp/installation/#script\033[0m"
+echo -e "\033[0;33mWARNING\033[0m"
+echo ""
+
 # Install the latest version of an executable file from a Github release
 # Keep a local copy of old versions
 # Requires curl

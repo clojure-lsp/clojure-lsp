@@ -445,6 +445,60 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clean" class="md-nav__link">
+    Clean
+  </a>
+  
+    <nav class="md-nav" aria-label="Clean">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ns-inner-blocks-indentation" class="md-nav__link">
+    ns-inner-blocks-indentation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sort" class="md-nav__link">
+    sort
+  </a>
+  
+    <nav class="md-nav" aria-label="sort">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#require" class="md-nav__link">
+    require
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import" class="md-nav__link">
+    import
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refer" class="md-nav__link">
+    refer
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#snippets" class="md-nav__link">
     Snippets
   </a>
@@ -706,6 +760,60 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clean" class="md-nav__link">
+    Clean
+  </a>
+  
+    <nav class="md-nav" aria-label="Clean">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ns-inner-blocks-indentation" class="md-nav__link">
+    ns-inner-blocks-indentation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sort" class="md-nav__link">
+    sort
+  </a>
+  
+    <nav class="md-nav" aria-label="sort">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#require" class="md-nav__link">
+    require
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import" class="md-nav__link">
+    import
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refer" class="md-nav__link">
+    refer
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#snippets" class="md-nav__link">
     Snippets
   </a>
@@ -804,13 +912,8 @@
 </tr>
 <tr>
 <td><code>:clean</code></td>
-<td>Settings related to <code>clean-ns</code> refactoring.</td>
+<td>Settings related to <code>clean-ns</code> refactoring. Check <code>clean</code> settings below.</td>
 <td></td>
-</tr>
-<tr>
-<td><code>:clean :ns-inner-blocks-indentation</code></td>
-<td>Where to place first require/import, <code>:same-line</code> or <code>:next-line</code> refactoring.</td>
-<td><code>:next-line</code></td>
 </tr>
 <tr>
 <td><code>semantic-tokens?</code></td>
@@ -925,6 +1028,22 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <li>If your project is not a <code>deps.edn</code> project, a <code>leiningen</code> project for example, clojure-lsp will use only the <code>:source-paths</code> setting (default <code>#{"src" "test"}</code>) which should point to the folders containing your clojure code.</li>
 <li>If your project is a <code>deps.edn</code>, clojure-lsp will scan the <code>deps.edn</code> file for <code>:paths</code>, <code>:extra-paths</code> and the paths from the specified <code>:source-aliases</code> setting (default <code>#{:dev :test}</code>), unless you specified <code>:source-paths</code> manually.</li>
 </ul>
+<h3 id="clean">Clean<a class="headerlink" href="#clean" title="Permanent link">#</a></h3>
+<p>Default:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:ns-inner-blocks-indenation</span> <span class="ss">:next-line</span>
+ <span class="ss">:sort</span> <span class="p">{</span><span class="ss">:require</span> <span class="nv">true</span>
+        <span class="ss">:import</span> <span class="nv">true</span>
+        <span class="ss">:refer</span> <span class="nv">true</span><span class="p">}}</span>
+</code></pre></div>
+<h4 id="ns-inner-blocks-indentation">ns-inner-blocks-indentation<a class="headerlink" href="#ns-inner-blocks-indentation" title="Permanent link">#</a></h4>
+<p>Where to place first require/import following <a href="https://github.com/bbatsov/clojure-style-guide#line-breaks-in-ns">Clojure Style Guide</a>, <code>:same-line</code>, <code>:next-line</code> or <code>:keep</code>.</p>
+<h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>
+<h5 id="require">require<a class="headerlink" href="#require" title="Permanent link">#</a></h5>
+<p>Whether to enable sort of <code>:require</code> form.</p>
+<h5 id="import">import<a class="headerlink" href="#import" title="Permanent link">#</a></h5>
+<p>Whether to enable sort of <code>:import</code> form.</p>
+<h5 id="refer">refer<a class="headerlink" href="#refer" title="Permanent link">#</a></h5>
+<p>Whether to enable sort of <code>:import</code> form.</p>
 <h3 id="snippets">Snippets<a class="headerlink" href="#snippets" title="Permanent link">#</a></h3>
 <p>Besides the <strong>19</strong> built-in snippets, it's possible to configure custom additional snippets via <code>:additional-snippets</code> setting:</p>
 <ul>
@@ -956,7 +1075,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 1, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 2, 2021</span>
     
   </small>
 </div>

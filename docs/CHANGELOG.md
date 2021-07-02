@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Add `:clean :sort` settings option to disable sorting during `clean-ns`.
-- Add `:keep` value to `:ns-indent-blocks-indentation` setting to don't change indentation during `clean-ns`.
-
 ## 2021.07.01-19.49.02
 
 - Fix --project-path option for API.

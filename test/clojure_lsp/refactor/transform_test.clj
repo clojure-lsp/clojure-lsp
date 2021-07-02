@@ -238,6 +238,20 @@
                          "           [z]))"
                          "(s/defn func []"
                          "  (f/some))")))
+  (testing "with :ns-inner-blocks-indentation :keep"
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :keep}}}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "     [foo  :as f] [bar :as b] baz [z] ))"
+                         "(s/defn func []"
+                         "  (f/some))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "     baz"
+                         "     [foo  :as f]"
+                         "     [z]))"
+                         "(s/defn func []"
+                         "  (f/some))")))
   (testing "with first require as unused"
     (test-clean-ns {}
                    (code "(ns foo.bar"
@@ -443,16 +457,77 @@
                          "   [bar :refer [some] ]"
                          "   [baz :as b]))")
                    (code "(ns foo.bar)")))
-  (testing "unsorted used refer"
-    (test-clean-ns {}
-                   (code "(ns foo.bar"
-                         " (:require"
-                         "   [some :refer [foo bar baz]]))"
-                         "   foo bar baz")
-                   (code "(ns foo.bar"
-                         " (:require"
-                         "  [some :refer [bar baz foo]]))"
-                         "   foo bar baz")))
+  (testing "sorting"
+    (testing "sorts according to symbols not brackets"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [zebra import1]"
+                           "  apple))"
+                           "import1."
+                           "apple.")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  apple"
+                           "  [zebra import1]))"
+                           "import1."
+                           "apple.")))
+    (testing "don't sort imports"
+      (test-clean-ns {:settings {:clean {:sort {:import false}}}}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [zebra import1]"
+                           "  ball"
+                           "  apple))"
+                           "import1."
+                           "apple."
+                           "ball.")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [zebra import1]"
+                           "  ball"
+                           "  apple))"
+                           "import1."
+                           "apple."
+                           "ball.")))
+    (testing "don't sort requires"
+      (test-clean-ns {:settings {:clean {:sort {:require false}}}}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [zebra import1]"
+                           "  ball"
+                           "  apple))"
+                           "import1."
+                           "apple."
+                           "ball.")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [zebra import1]"
+                           "  ball"
+                           "  apple))"
+                           "import1."
+                           "apple."
+                           "ball.")))
+    (testing "unsorted used refer"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [some :refer [foo bar baz]]))"
+                           "   foo bar baz")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [some :refer [bar baz foo]]))"
+                           "   foo bar baz")))
+    (testing "unsorted used refer with sort disabled"
+      (test-clean-ns {:settings {:clean {:sort {:refer false}}}}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [some :refer [foo bar baz]]))"
+                           "   foo bar baz")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [some :refer [foo bar baz]]))"
+                           "   foo bar baz"))))
   (testing "single unused full package import"
     (test-clean-ns {}
                    (code "(ns foo.bar"
@@ -548,21 +623,7 @@
                          "  [java.util Date"
                          "             List]))"
                          "Date."
-                         "List."))
-    (testing "sorts according to symbols not brackets"
-      (test-clean-ns {}
-                     (code "(ns foo.bar"
-                           " (:import"
-                           "  [zebra import1]"
-                           "  apple))"
-                           "import1."
-                           "apple.")
-                     (code "(ns foo.bar"
-                           " (:import"
-                           "  apple"
-                           "  [zebra import1]))"
-                           "import1."
-                           "apple.")))))
+                         "List."))))
 
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]

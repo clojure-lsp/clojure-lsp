@@ -288,6 +288,11 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
+(defn ^:private sort-by-if-enabled [fn type coll]
+  (if (get-in @db/db [:settings :clean :sort type] true)
+    (sort-by fn coll)
+    coll))
+
 (defn ^:private process-clean-ns
   [ns-loc removed-nodes col ns-inner-blocks-indentation form-type]
   (let [sep (n/whitespace-node (apply str (repeat col " ")))
@@ -296,10 +301,12 @@
                    z/node
                    n/children
                    (remove n/printable-only?)
-                   (sort-by (comp (fn [sexpr]
-                                    (if (symbol? sexpr)
-                                      (str sexpr)
-                                      (str (first sexpr)))) n/sexpr))
+                   (sort-by-if-enabled
+                     (comp (fn [sexpr]
+                             (if (symbol? sexpr)
+                               (str sexpr)
+                               (str (first sexpr)))) n/sexpr)
+                     form-type)
                    (map-indexed (fn [idx node]
                                   (if (and (= :same-line ns-inner-blocks-indentation)
                                            (= idx 0))
@@ -319,9 +326,9 @@
 
 (defn ^:private remove-unused-refers
   [node unused-refers]
-  (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr set)
+  (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr)
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
-        removed-refers (set/difference node-refers unused-refers-symbol)]
+        removed-refers (remove unused-refers-symbol node-refers)]
     (if (empty? removed-refers)
       (-> node
           z/down
@@ -334,7 +341,7 @@
           (z/find-next-value ':refer)
           z/right
           (z/replace (n/vector-node (interpose (n/whitespace-node " ")
-                                               (vec (sort removed-refers)))))
+                                               (vec (sort-by-if-enabled identity :refer removed-refers)))))
           z/up))))
 
 (defn ^:private remove-unused-require
@@ -384,11 +391,12 @@
 (defn ^:private clean-requires
   [ns-loc unused-aliases unused-refers ns-inner-blocks-indentation]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
-    (let [col (if require-loc
-                (if (= :same-line ns-inner-blocks-indentation)
-                  (-> require-loc z/node meta :end-col)
-                  (-> require-loc z/node meta :col dec))
-                2)
+    (let [col (or (case ns-inner-blocks-indentation
+                    :same-line (some-> require-loc z/node meta :end-col)
+                    :next-line (some-> require-loc z/node meta :col dec)
+                    :keep (some-> require-loc z/right z/node meta :col dec)
+                    :else nil)
+                  2)
           removed-nodes (->> require-loc
                              z/remove
                              (remove-unused-requires unused-aliases unused-refers))]

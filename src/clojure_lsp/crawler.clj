@@ -76,7 +76,7 @@
     (binding [*err* err]
       (let [result (kondo/run! (config/kondo-for-paths paths settings))]
         (when-not (string/blank? (str err))
-          (log/error (str err)))
+          (log/info (str err)))
         result))))
 
 (defn ^:private run-kondo-on-paths-batch!

@@ -1,15 +1,16 @@
 (ns clojure-lsp.internal-api
   (:require
-   [clojure-lsp.client :as client]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.rename :as f.rename]
+   [clojure-lsp.client :as client]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.diff :as diff]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)
@@ -55,7 +56,13 @@
 (defn ^:private open-file! [uri]
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}}))
 
-(defn clean-ns! [{:keys [namespace] :as options}]
+(defn ^:private process-dry-run
+  [diffs]
+  (when (seq diffs)
+    (mapv (comp cli-print diff/colorize-diff) diffs)
+    (throw (ex-info "Code not clean" {:message diffs}))))
+
+(defn clean-ns! [{:keys [namespace dry-run?] :as options}]
   (start-analysis! options)
   (cli-println "Checking namespaces...")
   (let [namespaces (or (seq namespace)
@@ -68,8 +75,10 @@
           (open-file! uri)
           (when-let [edits (handlers/execute-command {:command "clean-ns"
                                                       :arguments [uri 0 0]})]
-            (when (seq (client/apply-workspace-edits edits))
-              (cli-println "Cleaned" namespace))))
+            (when-let [uris-or-diffs (seq (client/apply-workspace-edits edits (:dry-run? options)))]
+              (if dry-run?
+                (process-dry-run uris-or-diffs)
+                (cli-println "Cleaned" namespace)))))
         (cli-println "Namespace" namespace "not found")))))
 
 (defn rename! [{:keys [from to] :as options}]
@@ -81,7 +90,7 @@
       (let [uri (shared/filename->uri (:filename from-element))]
         (open-file! uri)
         (if-let [edits (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
-          (when (seq (client/apply-workspace-edits edits))
+          (when (seq (client/apply-workspace-edits edits (:dry-run? options)))
             (cli-println "Renamed" from "to" to)
             to)
           (cli-println "Could not rename" from "to" to)))

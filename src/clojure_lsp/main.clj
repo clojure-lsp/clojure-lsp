@@ -44,6 +44,9 @@
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
    [nil "--log-path PATH" "Path to use as the log path for clojure-lsp.out, debug purposes only."
     :id :log-path]
+   [nil "--dry-run" "Make no changes to files, only report"
+    :id :dry-run?
+    :default false]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
     :default-fn (fn [& _args] (io/file ""))
@@ -104,13 +107,18 @@
 (defn ^:private handle-action!
   [action options]
   (swap! db/db assoc :cli? true)
-  (case action
-    "listen" (with-out-str (server/run-server!))
-    "clean-ns" (internal-api/clean-ns! options)
-    "rename" (with-required-options
-               options
-               [:from :to]
-               internal-api/rename!)))
+  (try
+    (case action
+      "listen" (with-out-str (server/run-server!))
+      "clean-ns" (internal-api/clean-ns! options)
+      "rename" (with-required-options
+                 options
+                 [:from :to]
+                 internal-api/rename!))
+    (catch Exception e
+      (if-let [{:keys [message]} (ex-data e)]
+        (exit 1 message)
+        (exit 1 (str "Error:\n" e))))))
 
 (defn -main [& args]
   (logging/setup-logging)

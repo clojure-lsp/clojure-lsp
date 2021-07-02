@@ -1,10 +1,11 @@
 (ns clojure-lsp.client
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.diff :as diff]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.handlers :as handlers]))
 
-(defn apply-workspace-edit [{:keys [text-document edits]}]
+(defn ^:private process-edit [{:keys [text-document edits]}]
   (let [uri (:uri text-document)
         old-text (get-in @db/db [:documents uri :text] (slurp uri))]
     (loop [text old-text
@@ -20,17 +21,26 @@
         {:uri uri
          :changed? (not= text old-text)
          :version (get-in @db/db [:documents uri :version] 0)
+         :old-text old-text
          :new-text text}))))
 
-(defn apply-workspace-edits [{:keys [document-changes]}]
+(defn ^:private apply-workspace-edit
+  [dry-run?
+   {:keys [uri old-text new-text version]}]
+  (if dry-run?
+    (diff/unified-diff uri old-text new-text)
+    (do
+      (spit uri new-text)
+      (when (get-in @db/db [:documents uri :text])
+        (handlers/did-change {:textDocument {:uri uri
+                                             :version (inc version)}
+                              :contentChanges new-text}))
+      uri)))
+
+(defn apply-workspace-edits
+  [{:keys [document-changes]} dry-run?]
   (->> document-changes
-       (map apply-workspace-edit)
-       (mapv (fn [{:keys [uri new-text version changed?]}]
-               (when changed?
-                 (spit uri new-text)
-                 (when (get-in @db/db [:documents uri :text])
-                   (handlers/did-change {:textDocument {:uri uri
-                                                        :version (inc version)}
-                                         :contentChanges new-text}))
-                 uri)))
+       (map process-edit)
+       (filter :changed?)
+       (mapv (partial apply-workspace-edit dry-run?))
        (remove nil?)))

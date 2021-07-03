@@ -1,23 +1,29 @@
 # API
 
-clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI. An example is calling the CLI in a CI for cleaning the project namespaces.
+clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI.
 This is a new feature and it's experimental, so things can break at any moment, so please open an issue if find anything wrong.
 
-## Usage
-
-### CLI
+## CLI
 
 `clojure-lsp --help` should show all available commands and options.
 
-At the moment the features available are:
+## Library
 
-`clean-ns` - clean the ns form removing unused requires/refers/imports, sorting the form.
+The namespace [clojure-lsp.api](https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj) should be used as the entrypoint for the same available featues of the CLI, feel free to open a issue for missing features.
 
-`rename` - rename a symbol and all references across the project, use --from and --to options.
+## GitHub Action
 
-### Library
+You can use [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) GitHub action to install clojure-lsp in a CI.
 
-The namespace [`clojure-lsp.api`](https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj) should be used as the entrypoint for the same available featues of the CLI, feel free to open a issue for missing features.
+## Usage
+
+* `clean-ns`
+
+Useful for cleaning the namespaces forms of your project, removing any unused required, import or refer, sorting and indenting correctly.
+
+* `rename`
+
+Rename a symbol and all its references across the project.
 
 ## Settings
 

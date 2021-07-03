@@ -1,16 +1,16 @@
 (ns clojure-lsp.internal-api
   (:require
+   [clojure-lsp.client :as client]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
+   [clojure-lsp.diff :as diff]
    [clojure-lsp.feature.rename :as f.rename]
-   [clojure-lsp.client :as client]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
-   [taoensso.timbre :as log]
-   [clojure-lsp.diff :as diff]))
+   [taoensso.timbre :as log]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)
@@ -56,12 +56,6 @@
 (defn ^:private open-file! [uri]
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}}))
 
-(defn ^:private process-dry
-  [diffs]
-  (when (seq diffs)
-    (mapv (comp cli-print diff/colorize-diff) diffs)
-    (throw (ex-info "Code not clean" {:message diffs}))))
-
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
   (start-analysis! options)
   (cli-println "Checking namespaces...")
@@ -75,9 +69,11 @@
           (open-file! uri)
           (when-let [edits (handlers/execute-command {:command "clean-ns"
                                                       :arguments [uri 0 0]})]
-            (when-let [uris-or-diffs (seq (client/apply-workspace-edits edits (:dry? options)))]
+            (let [uris-or-diffs (client/apply-workspace-edits edits (:dry? options))]
               (if dry?
-                (process-dry uris-or-diffs)
+                (when (seq uris-or-diffs)
+                  (mapv (comp cli-println diff/colorize-diff) uris-or-diffs)
+                  (throw (ex-info "Code not clean" {:message uris-or-diffs})))
                 (cli-println "Cleaned" namespace)))))
         (cli-println "Namespace" namespace "not found")))))
 

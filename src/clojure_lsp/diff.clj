@@ -1,7 +1,7 @@
 (ns clojure-lsp.diff
   (:require
-   [clojure.string :as str]
-   [clojure.java.io :as io])
+   [clojure.java.io :as io]
+   [clojure.string :as str])
 
   (:import
    [difflib DiffUtils]

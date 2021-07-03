@@ -13,15 +13,17 @@
 (require '[integration.helper])
 
 (def namespaces
-  '[integration.initialize-test
-    integration.definition-test
-    integration.diagnostics-test
-    integration.formatting-test
-    integration.rename-test
-    integration.document-highlight-test
-    integration.document-symbol-test
+  '[
+    ;; integration.initialize-test
+    ;; integration.definition-test
+    ;; integration.diagnostics-test
+    ;; integration.formatting-test
+    ;; integration.rename-test
+    ;; integration.document-highlight-test
+    ;; integration.document-symbol-test
     integration.api.clean-ns-test
-    integration.api.rename-test])
+    ;; integration.api.rename-test
+    ])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

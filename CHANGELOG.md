@@ -5,7 +5,7 @@
 - Add `:clean :sort` settings option to disable sorting during `clean-ns`.
 - Add `:keep` value to `:ns-indent-blocks-indentation` setting to don't change indentation during `clean-ns`.
 - Deprecate `install-latest-clojure-lsp.sh` in place of `install` new script.
-- Add `--dry-run` option to API/CLI, useful to print only clean-ns diffs instead of making changes.
+- Add `--dry` option to API/CLI, useful to print only clean-ns diffs instead of making changes.
 - Check the new [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) Github Action to run clojure-lsp on CI.
 
 ## 2021.07.01-19.49.02

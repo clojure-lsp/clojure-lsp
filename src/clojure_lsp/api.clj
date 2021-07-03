@@ -15,7 +15,7 @@
   `:namespaces` a coll of symbols representing the namespaces which should be cleaned,
   if empty all project namespaces will be considered.
 
-  `dry-run` make no changes to files, only report.
+  `dry` make no changes to files, only report.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
   [& {:keys [project-root settings namespace] :as options}]
@@ -37,7 +37,7 @@
 
   `:to` the full qualified symbol that will replace the original symbol. e.g. my-project/my-var-2
 
-  `dry-run` make no changes to files, only report.
+  `dry` make no changes to files, only report.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
   [& {:keys [project-root settings from to] :as options}]

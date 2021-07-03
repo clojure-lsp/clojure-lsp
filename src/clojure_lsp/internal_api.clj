@@ -56,13 +56,13 @@
 (defn ^:private open-file! [uri]
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}}))
 
-(defn ^:private process-dry-run
+(defn ^:private process-dry
   [diffs]
   (when (seq diffs)
     (mapv (comp cli-print diff/colorize-diff) diffs)
     (throw (ex-info "Code not clean" {:message diffs}))))
 
-(defn clean-ns! [{:keys [namespace dry-run?] :as options}]
+(defn clean-ns! [{:keys [namespace dry?] :as options}]
   (start-analysis! options)
   (cli-println "Checking namespaces...")
   (let [namespaces (or (seq namespace)
@@ -75,9 +75,9 @@
           (open-file! uri)
           (when-let [edits (handlers/execute-command {:command "clean-ns"
                                                       :arguments [uri 0 0]})]
-            (when-let [uris-or-diffs (seq (client/apply-workspace-edits edits (:dry-run? options)))]
-              (if dry-run?
-                (process-dry-run uris-or-diffs)
+            (when-let [uris-or-diffs (seq (client/apply-workspace-edits edits (:dry? options)))]
+              (if dry?
+                (process-dry uris-or-diffs)
                 (cli-println "Cleaned" namespace)))))
         (cli-println "Namespace" namespace "not found")))))
 
@@ -90,7 +90,7 @@
       (let [uri (shared/filename->uri (:filename from-element))]
         (open-file! uri)
         (if-let [edits (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
-          (when (seq (client/apply-workspace-edits edits (:dry-run? options)))
+          (when (seq (client/apply-workspace-edits edits (:dry? options)))
             (cli-println "Renamed" from "to" to)
             to)
           (cli-println "Could not rename" from "to" to)))

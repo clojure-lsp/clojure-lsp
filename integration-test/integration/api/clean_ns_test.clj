@@ -6,9 +6,9 @@
 
 (lsp/clean-after-test)
 
-(def a-subject-path "./integration-test/sample-test/src/api/clean_ns/a.clj")
+(def a-subject-path "integration-test/sample-test/src/api/clean_ns/a.clj")
 (def a-subject-text (slurp a-subject-path))
-(def a-expected-path "./integration-test/sample-test/fixtures/api/clean_ns/a.clj")
+(def a-expected-path "integration-test/sample-test/fixtures/api/clean_ns/a.clj")
 (def a-expected-text (slurp a-expected-path))
 
 (deftest clean-ns
@@ -26,4 +26,11 @@
                               "--namespace" "api.clean-ns.a")]
       (is (string/includes? (slurp rdr) "Cleaned api.clean-ns.a\n"))
       (is (= a-expected-text (slurp a-subject-path))))
-    (spit a-subject-path a-subject-text)))
+    (spit a-subject-path a-subject-text))
+  (testing "when running with dry"
+    (with-open [rdr (lsp/cli! "clean-ns"
+                              "--project-root" "./integration-test/sample-test"
+                              "--namespace" "api.clean-ns.a"
+                              "--dry")]
+      (is (string/includes? (slurp rdr) a-subject-path))
+      (is (= a-subject-text (slurp a-subject-path))))))

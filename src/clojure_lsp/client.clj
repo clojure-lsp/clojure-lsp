@@ -25,9 +25,9 @@
          :new-text text}))))
 
 (defn ^:private apply-workspace-edit
-  [dry-run?
+  [dry?
    {:keys [uri old-text new-text version]}]
-  (if dry-run?
+  (if dry?
     (diff/unified-diff uri old-text new-text)
     (do
       (spit uri new-text)
@@ -38,9 +38,9 @@
       uri)))
 
 (defn apply-workspace-edits
-  [{:keys [document-changes]} dry-run?]
+  [{:keys [document-changes]} dry?]
   (->> document-changes
        (map process-edit)
        (filter :changed?)
-       (mapv (partial apply-workspace-edit dry-run?))
+       (mapv (partial apply-workspace-edit dry?))
        (remove nil?)))

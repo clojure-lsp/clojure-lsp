@@ -469,29 +469,30 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    Usage
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#cli" class="md-nav__link">
     CLI
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#library" class="md-nav__link">
     Library
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#github-action" class="md-nav__link">
+    GitHub Action
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
   
 </li>
       
@@ -560,29 +561,30 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    Usage
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#cli" class="md-nav__link">
     CLI
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#library" class="md-nav__link">
     Library
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#github-action" class="md-nav__link">
+    GitHub Action
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
   
 </li>
       
@@ -611,16 +613,23 @@
                 
                 
                 <h1 id="api">API<a class="headerlink" href="#api" title="Permanent link">#</a></h1>
-<p>clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI. An example is calling the CLI in a CI for cleaning the project namespaces.
+<p>clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI.
 This is a new feature and it's experimental, so things can break at any moment, so please open an issue if find anything wrong.</p>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h3>
+<h2 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp --help</code> should show all available commands and options.</p>
-<p>At the moment the features available are:</p>
-<p><code>clean-ns</code> - clean the ns form removing unused requires/refers/imports, sorting the form.</p>
-<p><code>rename</code> - rename a symbol and all references across the project, use --from and --to options.</p>
-<h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h3>
-<p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj"><code>clojure-lsp.api</code></a> should be used as the entrypoint for the same available featues of the CLI, feel free to open a issue for missing features.</p>
+<h2 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h2>
+<p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj">clojure-lsp.api</a> should be used as the entrypoint for the same available featues of the CLI, feel free to open a issue for missing features.</p>
+<h2 id="github-action">GitHub Action<a class="headerlink" href="#github-action" title="Permanent link">#</a></h2>
+<p>You can use <a href="https://github.com/marketplace/actions/setup-clojure-lsp">setup-clojure-lsp</a> GitHub action to install clojure-lsp in a CI.</p>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
+<ul>
+<li><code>clean-ns</code></li>
+</ul>
+<p>Useful for cleaning the namespaces forms of your project, removing any unused required, import or refer, sorting and indenting correctly.</p>
+<ul>
+<li><code>rename</code></li>
+</ul>
+<p>Rename a symbol and all its references across the project.</p>
 <h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
 <p>clojure-lsp will check for <code>.lsp/config.edn</code> in the project or home dir, but it's possible to force override the settings via the <code>:settings</code> option of the API or <code>--settings</code> option of the CLI.</p>
 <p>For all available settings, check the <a href="https://clojure-lsp.github.io/clojure-lsp/settings/">settings section documentation</a>.</p>

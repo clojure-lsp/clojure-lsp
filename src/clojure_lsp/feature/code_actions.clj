@@ -11,16 +11,16 @@
    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
-      CodeActionKind)))
+     CodeActionKind)))
 
 (defn ^:private find-alias-suggestion [uri diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
       (->> (r.transform/find-alias-suggestion diagnostic-zloc)
            (map (fn [{:keys [ns alias]}]
-               {:ns ns
-                :alias alias
-                :position position}))))))
+                  {:ns ns
+                   :alias alias
+                   :position position}))))))
 
 (defn ^:private find-alias-suggestions [uri diagnostics]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)]

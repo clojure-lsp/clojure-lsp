@@ -10,43 +10,43 @@
   (:import
    (com.google.gson JsonElement)
    (org.eclipse.lsp4j
-      CallHierarchyIncomingCall
-      CallHierarchyOutgoingCall
-      CallHierarchyItem
-      CodeAction
-      CodeActionKind
-      CodeLens
-      Command
-      CompletionItem
-      CompletionItemKind
-      Diagnostic
-      DiagnosticSeverity
-      DocumentHighlight
-      DocumentSymbol
-      FileChangeType
-      Hover
-      InsertTextFormat
-      Location
-      MarkedString
-      MarkupContent
-      MessageParams
-      MessageType
-      ParameterInformation
-      Position
-      PublishDiagnosticsParams
-      Range
-      RenameFile
-      SemanticTokens
-      SignatureHelp
-      SignatureInformation
-      SymbolKind
-      SymbolInformation
-      TextDocumentEdit
-      TextDocumentIdentifier
-      TextEdit
-      VersionedTextDocumentIdentifier
-      WatchKind
-      WorkspaceEdit)
+     CallHierarchyIncomingCall
+     CallHierarchyOutgoingCall
+     CallHierarchyItem
+     CodeAction
+     CodeActionKind
+     CodeLens
+     Command
+     CompletionItem
+     CompletionItemKind
+     Diagnostic
+     DiagnosticSeverity
+     DocumentHighlight
+     DocumentSymbol
+     FileChangeType
+     Hover
+     InsertTextFormat
+     Location
+     MarkedString
+     MarkupContent
+     MessageParams
+     MessageType
+     ParameterInformation
+     Position
+     PublishDiagnosticsParams
+     Range
+     RenameFile
+     SemanticTokens
+     SignatureHelp
+     SignatureInformation
+     SymbolKind
+     SymbolInformation
+     TextDocumentEdit
+     TextDocumentIdentifier
+     TextEdit
+     VersionedTextDocumentIdentifier
+     WatchKind
+     WorkspaceEdit)
    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
 (defn document->uri [^TextDocumentIdentifier document]
@@ -111,7 +111,6 @@
          insert-text-format-enum
          (s/conformer (fn [v] (InsertTextFormat/forValue (get insert-text-format-enum v))))))
 
-
 (s/def ::new-text string?)
 (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
@@ -120,9 +119,9 @@
                                     :markup-content ::markup-content)
                               (s/conformer second)))
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
-                                           :completion-item/kind ::documentation ::data
-                                           ::insert-text :completion-item/insert-text-format])
+                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
+                                                 :completion-item/kind ::documentation ::data
+                                                 ::insert-text :completion-item/insert-text-format])
                                 (s/conformer (fn [{:keys [label additional-text-edits filter-text
                                                           detail text-edit kind documentation data
                                                           insert-text insert-text-format]}]
@@ -159,13 +158,13 @@
                             (s/conformer #(RenameFile. (:old-uri %) (:new-uri %)))))
 
 (s/def ::document-changes-entry (s/or :rename-file ::rename-file
-                                      :text-document-edit ::text-document-edit ))
+                                      :text-document-edit ::text-document-edit))
 (s/def ::document-changes (s/and (s/coll-of ::document-changes-entry)
                                  (s/conformer #(map (fn [c]
                                                       (case (first c)
                                                         :text-document-edit (Either/forLeft (second c))
                                                         :rename-file (Either/forRight (second c))))
-                                                      %))))
+                                                    %))))
 (s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
                                (s/conformer #(if-let [changes (:changes %)]
                                                (WorkspaceEdit. changes)
@@ -290,8 +289,8 @@
 (s/def :command/arguments (s/coll-of any?))
 
 (s/def ::command (s/and (s/keys :req-un [:command/title :command/command]
-                              :opt-un [:command/arguments])
-                      (s/conformer #(Command. (:title %1) (:command %1)(:arguments %1)))))
+                                :opt-un [:command/arguments])
+                        (s/conformer #(Command. (:title %1) (:command %1) (:arguments %1)))))
 
 (def show-message-type-enum
   {:error MessageType/Error
@@ -346,7 +345,7 @@
 (s/def ::code-lenses (s/coll-of ::code-lens))
 
 (s/def ::semantic-tokens (s/and (s/keys :req-un [::data]
-                                  :opt-un [::result-id])
+                                        :opt-un [::result-id])
                                 (s/conformer #(doto (SemanticTokens. (:result-id %1)
                                                                      (java.util.ArrayList. (:data %1)))))))
 
@@ -448,7 +447,6 @@
 (s/def :capabilities/signature-information ::debean)
 (s/def :capabilities/synchronization ::legacy-debean)
 (s/def :capabilities/type-definition ::legacy-debean)
-
 
 (s/def :capabilities/symbol-kind-value-set
   (s/conformer (fn [value-set]

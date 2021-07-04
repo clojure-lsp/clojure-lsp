@@ -45,13 +45,13 @@
    taken from kondo"
   [maps result]
   `(let [maps# ~maps
-       res# ~result]
+         res# ~result]
      (and
-      (is (= (count maps#) (count res#))
-          (format "Expected %s results, but got: %s \n--\n%s--"
-                  (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
-      (doseq [[r# m#] (map vector res# maps#)]
-        (assert-submap m# r#)))))
+       (is (= (count maps#) (count res#))
+           (format "Expected %s results, but got: %s \n--\n%s--"
+                   (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
+       (doseq [[r# m#] (map vector res# maps#)]
+         (assert-submap m# r#)))))
 
 (defn positions-from-text
   "Takes text with a pipe `|` as a placeholder for cursor positions and returns the text without
@@ -73,7 +73,6 @@
 
     [text positions]))
 
-
 (defn load-code-and-locs [code & [filename]]
   (let [[code positions] (positions-from-text code)
         filename (or filename (file-uri "file:///a.clj"))]
@@ -82,13 +81,13 @@
 
 (defn diagnostics-or-timeout []
   (:diagnostics (first (async/alts!!
-                        [(async/timeout 1000)
-                         db/diagnostics-chan]))))
+                         [(async/timeout 1000)
+                          db/diagnostics-chan]))))
 
 (defn edits-or-timeout []
   (first (async/alts!!
-          [(async/timeout 1000)
-           db/edits-chan])))
+           [(async/timeout 1000)
+            db/edits-chan])))
 
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})

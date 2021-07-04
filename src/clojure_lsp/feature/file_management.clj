@@ -64,15 +64,15 @@
         references-uri (find-references-uris (:analysis @db/db) changed-var-definitions)
         settings (:settings @db/db)]
     (mapv
-     (fn [uri]
-       (when-let [text (get-in @db/db [:documents uri :text])]
-         (log/debug "Analyzing reference" uri)
-         (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
-           (swap! db/db (fn [db] (-> db
-                                     (crawler/update-analysis uri (:analysis new-analysis))
-                                     (crawler/update-findings uri (:findings new-analysis)))))
-           (f.diagnostic/async-lint-file uri @db/db))))
-     references-uri)))
+      (fn [uri]
+        (when-let [text (get-in @db/db [:documents uri :text])]
+          (log/debug "Analyzing reference" uri)
+          (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
+            (swap! db/db (fn [db] (-> db
+                                      (crawler/update-analysis uri (:analysis new-analysis))
+                                      (crawler/update-findings uri (:findings new-analysis)))))
+            (f.diagnostic/async-lint-file uri @db/db))))
+      references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)

@@ -20,7 +20,7 @@
        (if (next kvs)
          (recur ret (first kvs) (second kvs) (nnext kvs))
          (throw (IllegalArgumentException.
-                 "assoc-some expects even number of arguments after map/vector, found odd number")))
+                  "assoc-some expects even number of arguments after map/vector, found odd number")))
        ret))))
 
 (def windows-os?
@@ -151,10 +151,10 @@
   (let [file-type (uri->file-type filename)]
     (filename->uri
       (join-filepaths (first (filter #(string/starts-with? filename %) source-paths))
-                             (-> namespace
-                                 (string/replace "." (System/getProperty "file.separator"))
-                                 (string/replace "-" "_")
-                                 (str "." (name file-type)))))))
+                      (-> namespace
+                          (string/replace "." (System/getProperty "file.separator"))
+                          (string/replace "-" "_")
+                          (str "." (name file-type)))))))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element

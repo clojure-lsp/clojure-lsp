@@ -43,11 +43,11 @@
     (with-open [conn (jdbc/get-connection (make-spec project-root-path))]
       (let [project-row
             (-> (jdbc/execute! conn
-                                ["select root, hash, classpath, analysis from project where root = ? and version = ?"
-                                 (str project-root-path)
-                                 (str version)]
-                                {:builder-fn rs/as-unqualified-lower-maps})
-                 (nth 0))]
+                               ["select root, hash, classpath, analysis from project where root = ? and version = ?"
+                                (str project-root-path)
+                                (str version)]
+                               {:builder-fn rs/as-unqualified-lower-maps})
+                (nth 0))]
         {:analysis (edn/read-string (:analysis project-row))
          :classpath (edn/read-string (:classpath project-row))
          :project-hash (:hash project-row)}))

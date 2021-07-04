@@ -29,8 +29,8 @@
    [taoensso.timbre :as log])
   (:import
    [java.net
-     URL
-     JarURLConnection]))
+    URL
+    JarURLConnection]))
 
 (def ^:private full-file-range
   (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))

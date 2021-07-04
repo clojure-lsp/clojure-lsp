@@ -6,6 +6,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.logging :as logging]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
@@ -14,9 +15,8 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [digest :as digest]
-   [taoensso.timbre :as log]
    [rewrite-clj.zip :as z]
-   [clojure-lsp.parser :as parser])
+   [taoensso.timbre :as log])
   (:import
    (java.net URI)))
 

@@ -14,13 +14,13 @@
 (defn find-op
   [zloc]
   (loop [op-loc (or (and (= :list (z/tag zloc))
-                           (z/down zloc))
-                      (z/leftmost zloc))]
-      (let [up-loc (z/up op-loc)]
-       (cond
-         (nil? up-loc) nil
-         (= :list (z/tag up-loc)) op-loc
-         :else (recur (z/leftmost up-loc))))))
+                         (z/down zloc))
+                    (z/leftmost zloc))]
+    (let [up-loc (z/up op-loc)]
+      (cond
+        (nil? up-loc) nil
+        (= :list (z/tag up-loc)) op-loc
+        :else (recur (z/leftmost up-loc))))))
 
 (defn find-ops-up
   [zloc & op-strs]

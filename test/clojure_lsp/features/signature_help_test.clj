@@ -23,8 +23,8 @@
          [first-arg-r first-arg-c]
          [second-arg-r second-arg-c]
          [outside-r outside-c]] (h/load-code-and-locs
-                                 (h/code "(defn bar [a b] 1)"
-                                         "(defn foo [a b] (|bar| |1 |2) |)"))]
+                                  (h/code "(defn bar [a b] 1)"
+                                          "(defn foo [a b] (|bar| |1 |2) |)"))]
     (testing "before function name"
       (is (= {:signatures [{:label "(bar [a b])"
                             :parameters [{:label "a"}
@@ -77,12 +77,12 @@
            [two-r two-c]
            [three-r three-c]
            [four-r four-c]] (h/load-code-and-locs
-                             (h/code "(defn bar ([a b] 1) ([a b c] 2))"
-                                     "(bar|)"
-                                     "(bar| 1)"
-                                     "(bar| 1 2)"
-                                     "(bar| 1 2 3)"
-                                     "(bar| 1 2 3 4)"))]
+                              (h/code "(defn bar ([a b] 1) ([a b c] 2))"
+                                      "(bar|)"
+                                      "(bar| 1)"
+                                      "(bar| 1 2)"
+                                      "(bar| 1 2 3)"
+                                      "(bar| 1 2 3 4)"))]
       (testing "zero arity"
         (is (= {:signatures [{:label "(bar [a b])"
                               :parameters [{:label "a"}
@@ -142,10 +142,10 @@
     (let [[[zero-r zero-c]
            [one-r one-c]
            [two-r two-c]] (h/load-code-and-locs
-                             (h/code "(defn bar [& rest] 2)"
-                                     "(bar|)"
-                                     "(bar| 1)"
-                                     "(bar| 1 2)"))]
+                            (h/code "(defn bar [& rest] 2)"
+                                    "(bar|)"
+                                    "(bar| 1)"
+                                    "(bar| 1 2)"))]
       (testing "zero arity"
         (is (= {:signatures [{:label "(bar [& rest])"
                               :parameters [{:label "& rest"}]}]
@@ -170,12 +170,12 @@
            [two-r two-c]
            [three-r three-c]
            [four-r four-c]] (h/load-code-and-locs
-                             (h/code "(defn bar ([a] 1) ([a & rest] 2))"
-                                     "(bar|)"
-                                     "(bar| 1)"
-                                     "(bar| 1 2)"
-                                     "(bar| 1 2 3)"
-                                     "(bar| 1 2 3 4)"))]
+                              (h/code "(defn bar ([a] 1) ([a & rest] 2))"
+                                      "(bar|)"
+                                      "(bar| 1)"
+                                      "(bar| 1 2)"
+                                      "(bar| 1 2 3)"
+                                      "(bar| 1 2 3 4)"))]
       (testing "zero arity"
         (is (= {:signatures [{:label "(bar [a])"
                               :parameters [{:label "a"}]}
@@ -227,8 +227,8 @@
          [second-arg-r second-arg-c]
          [third-arg-r third-arg-c]
          [end-function-r end-function-c]] (h/load-code-and-locs
-                                       (h/code "(defn bar [a & more] 1)"
-                                               "(defn foo [a b] (bar |1 |2 {:a| 2} |))"))]
+                                            (h/code "(defn bar [a & more] 1)"
+                                                    "(defn foo [a b] (bar |1 |2 {:a| 2} |))"))]
     (testing "on first arg"
       (is (= {:signatures [{:label "(bar [a & more])"
                             :parameters [{:label "a"}

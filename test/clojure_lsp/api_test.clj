@@ -25,9 +25,9 @@
     (testing "when a single namespace is specified with dry option"
       (reset! db/db {})
       (is (thrown? clojure.lang.ExceptionInfo
-            (api/clean-ns! :project-root (io/file "integration-test/sample-test")
-                           :namespace '[api.clean-ns.a]
-                           :dry? true))))))
+                   (api/clean-ns! :project-root (io/file "integration-test/sample-test")
+                                  :namespace '[api.clean-ns.a]
+                                  :dry? true))))))
 
 (deftest rename!
   (testing "when project-root is not a file"

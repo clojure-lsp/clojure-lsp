@@ -56,7 +56,7 @@
   [zloc pos]
   (let [forms (find-forms zloc (fn [loc]
                                  (in-range?
-                                  (-> loc z/node meta) pos)))
+                                   (-> loc z/node meta) pos)))
         disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
                                        (> (count forms) 1))]
     (if disconsider-reader-macro?

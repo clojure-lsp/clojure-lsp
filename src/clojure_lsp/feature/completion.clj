@@ -139,10 +139,10 @@
 
                    :else
                    (string/join
-                    "\n"
-                    (cond-> []
-                      ns (conj (str (name ns) "/" (name (:name element))))
-                      arglist-strs (conj (string/join " " arglist-strs))))))]
+                     "\n"
+                     (cond-> []
+                       ns (conj (str (name ns) "/" (name (:name element))))
+                       arglist-strs (conj (string/join " " arglist-strs))))))]
     (cond-> {:label (element->label element cursor-alias)
              :data (walk/stringify-keys {:name (-> element :name str)
                                          :filename (:filename element)
@@ -185,9 +185,9 @@
         (when (simple-ident? cursor-value)
           (->> aliases
                (filterv (fn [element]
-                         (or
-                           (matches-fn (:alias element))
-                           (matches-fn (:to element)))))
+                          (or
+                            (matches-fn (:alias element))
+                            (matches-fn (:to element)))))
                (mapv
                  (fn [element]
                    (let [require-edit (some-> cursor-loc
@@ -260,8 +260,8 @@
            (f.completion-snippet/known-snippets settings)
            (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
          (map #(assoc %
-                      :kind :snippet
-                      :insert-text-format :snippet)))))
+                 :kind :snippet
+                 :insert-text-format :snippet)))))
 
 (defn- sort-completion-results [results]
   (sort-by (juxt :label :detail) results))

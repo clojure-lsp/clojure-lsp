@@ -13,7 +13,6 @@
   (:import
    [clojure.lang PersistentVector]))
 
-
 (defn ^:private function-loc->arglist-nodes [zloc]
   (->> zloc
        z/up

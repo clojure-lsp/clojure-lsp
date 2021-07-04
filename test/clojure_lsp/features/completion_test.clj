@@ -43,97 +43,97 @@
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-alp"
     (h/assert-submaps
-     [{:label "alpaca" :kind :property :detail "alpaca.ns"}
-      {:label "alpaca" :kind :property :detail "user"}
-      {:label "alpha" :kind :variable}
-      {:label "ba" :detail "alpaca.ns"}]
-     (f.completion/completion (h/file-uri "file:///b.clj") 3 3)))
+      [{:label "alpaca" :kind :property :detail "alpaca.ns"}
+       {:label "alpaca" :kind :property :detail "user"}
+       {:label "alpha" :kind :variable}
+       {:label "ba" :detail "alpaca.ns"}]
+      (f.completion/completion (h/file-uri "file:///b.clj") 3 3)))
   (testing "complete-ba"
     (h/assert-submaps
-     [{:label "ba" :kind :property}
-      {:label "ba/baff"}
-      {:label "ba/barr"}
-      {:label "ba/bazz"}
-      {:label "bases" :detail "clojure.core/bases"}]
-     (f.completion/completion (h/file-uri "file:///b.clj") 4 3)))
+      [{:label "ba" :kind :property}
+       {:label "ba/baff"}
+       {:label "ba/barr"}
+       {:label "ba/bazz"}
+       {:label "bases" :detail "clojure.core/bases"}]
+      (f.completion/completion (h/file-uri "file:///b.clj") 4 3)))
   (testing "complete-core-stuff"
     (h/assert-submaps
-     [{:label "frequencies", :detail "clojure.core/frequencies"}]
-     (f.completion/completion (h/file-uri "file:///d.clj") 1 49))
+      [{:label "frequencies", :detail "clojure.core/frequencies"}]
+      (f.completion/completion (h/file-uri "file:///d.clj") 1 49))
     (testing "complete symbols from alias"
       (h/assert-submaps
-       [{:label "d-alias/bar"
-         :kind :variable}
-        {:label "d-alias/barbaz", :kind :function}]
-       (f.completion/completion (h/file-uri "file:///e.clj") 4 10))))
+        [{:label "d-alias/bar"
+          :kind :variable}
+         {:label "d-alias/barbaz", :kind :function}]
+        (f.completion/completion (h/file-uri "file:///e.clj") 4 10))))
   (testing "complete cljc files"
     (h/assert-submaps
-     [{:label "alpaca/alpha" :kind :variable}
-      {:label "alpaca/baff" :kind :variable}
-      {:label "alpaca/barr" :kind :variable}
-      {:label "alpaca/bazz" :kind :variable}]
-     (f.completion/completion (h/file-uri "file:///a.cljc") 2 8)))
+      [{:label "alpaca/alpha" :kind :variable}
+       {:label "alpaca/baff" :kind :variable}
+       {:label "alpaca/barr" :kind :variable}
+       {:label "alpaca/bazz" :kind :variable}]
+      (f.completion/completion (h/file-uri "file:///a.cljc") 2 8)))
   (testing "complete-core-stuff"
     (h/assert-submaps
-     [{:label "frequencies", :detail "clojure.core/frequencies"}]
-     (f.completion/completion (h/file-uri "file:///d.clj") 1 49))
+      [{:label "frequencies", :detail "clojure.core/frequencies"}]
+      (f.completion/completion (h/file-uri "file:///d.clj") 1 49))
     (h/assert-submaps
-     [{:label "System", :detail "java.lang.System"}]
-     (f.completion/completion (h/file-uri "file:///e.clj") 3 6)))
+      [{:label "System", :detail "java.lang.System"}]
+      (f.completion/completion (h/file-uri "file:///e.clj") 3 6)))
   (testing "complete non symbols doesn't blow up"
     (is (= nil (f.completion/completion (h/file-uri "file:///e.clj") 5 3))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
-     [{:label "alpaca.ns" :kind :module}
-      {:label "alpaca.ns" :kind :module}]
-     (f.completion/completion (h/file-uri "file:///f.clj") 2 21)))
+      [{:label "alpaca.ns" :kind :module}
+       {:label "alpaca.ns" :kind :module}]
+      (f.completion/completion (h/file-uri "file:///f.clj") 2 21)))
   (testing "complete locals"
     (h/assert-submaps
-     [{:label "ba" :kind :property}
-      {:label "ba/baff"}
-      {:label "ba/barr"}
-      {:label "ba/bazz"}
-      {:label "bar"}
-      {:label "bases" :detail "clojure.core/bases"}
-      {:label "baz"}
+      [{:label "ba" :kind :property}
+       {:label "ba/baff"}
+       {:label "ba/barr"}
+       {:label "ba/bazz"}
+       {:label "bar"}
+       {:label "bases" :detail "clojure.core/bases"}
+       {:label "baz"}
        ;; TODO should complete local refer
-      #_{:label "baq"}]
-     (f.completion/completion (h/file-uri "file:///g.clj") 2 18)))
+       #_{:label "baq"}]
+      (f.completion/completion (h/file-uri "file:///g.clj") 2 18)))
   (testing "complete without prefix return all available completions"
     (is (< 100 (count (f.completion/completion (h/file-uri "file:///g.clj") 3 1))))))
 
 (deftest completing-full-ns
   (h/load-code-and-locs
-   (h/code "(ns alpaca.ns)"
-           "(def foo 1)"))
+    (h/code "(ns alpaca.ns)"
+            "(def foo 1)"))
   (let [[[full-ns-r full-ns-c]] (h/load-code-and-locs
-                                 (h/code "(ns foo)"
-                                         "(alpaca.ns/f|)") (h/file-uri "file:///b.clj"))]
+                                  (h/code "(ns foo)"
+                                          "(alpaca.ns/f|)") (h/file-uri "file:///b.clj"))]
     (testing "completing a project full ns"
       (h/assert-submaps
-       [{:label "alpaca.ns/foo" :kind :variable}]
-       (f.completion/completion (h/file-uri "file:///b.clj") full-ns-r full-ns-c)))))
+        [{:label "alpaca.ns/foo" :kind :variable}]
+        (f.completion/completion (h/file-uri "file:///b.clj") full-ns-r full-ns-c)))))
 
 (deftest completing-with-reader-macros
   (let [[[before-reader-r before-reader-c]
          [after-reader-r after-reader-c]] (h/load-code-and-locs
-                                           (h/code "(ns foo)"
-                                                   "(def some-function 1)"
-                                                   "some-fun|"
-                                                   "1"
-                                                   "#?(:clj \"clojure\" :cljs \"clojurescript\")"
-                                                   "1"
-                                                   "some-fun|") (h/file-uri "file:///a.cljc"))]
+                                            (h/code "(ns foo)"
+                                                    "(def some-function 1)"
+                                                    "some-fun|"
+                                                    "1"
+                                                    "#?(:clj \"clojure\" :cljs \"clojurescript\")"
+                                                    "1"
+                                                    "some-fun|") (h/file-uri "file:///a.cljc"))]
     (testing "before reader macro"
       (h/assert-submaps
-       [{:label         "some-function"
-         :kind          :variable}]
-       (f.completion/completion (h/file-uri "file:///a.cljc") before-reader-r before-reader-c)))
+        [{:label         "some-function"
+          :kind          :variable}]
+        (f.completion/completion (h/file-uri "file:///a.cljc") before-reader-r before-reader-c)))
     (testing "after reader macro"
       (h/assert-submaps
-       [{:label         "some-function"
-         :kind          :variable}]
-       (f.completion/completion (h/file-uri "file:///a.cljc") after-reader-r after-reader-c)))))
+        [{:label         "some-function"
+          :kind          :variable}]
+        (f.completion/completion (h/file-uri "file:///a.cljc") after-reader-r after-reader-c)))))
 
 (deftest resolve-item-test
   (h/load-code-and-locs "(ns a) (def foo \"Some docs\" 1)")
@@ -160,28 +160,28 @@
 
 (deftest completing-refers
   (h/load-code-and-locs
-   (h/code "(ns some-ns)"
-           "(def foob 1)"
-           "(defn barb [] foo)") (h/file-uri "file:///a.clj"))
+    (h/code "(ns some-ns)"
+            "(def foob 1)"
+            "(defn barb [] foo)") (h/file-uri "file:///a.clj"))
   (h/load-code-and-locs
-   (h/code "(ns alpaca.ns)"
-           "(def foo 1)"
-           "(defn bar [] foo)") (h/file-uri "file:///b.clj"))
+    (h/code "(ns alpaca.ns)"
+            "(def foo 1)"
+            "(defn bar [] foo)") (h/file-uri "file:///b.clj"))
   (let [[[refer-vec-r refer-vec-c]] (h/load-code-and-locs
-                                     (h/code "(ns foo"
-                                             "  (:require [alpaca.ns :refer [|]]))") (h/file-uri "file:///c.clj"))
+                                      (h/code "(ns foo"
+                                              "  (:require [alpaca.ns :refer [|]]))") (h/file-uri "file:///c.clj"))
         [[ba-refer-r ba-refer-c]] (h/load-code-and-locs
-                                     (h/code "(ns foo"
-                                             "  (:require [alpaca.ns :refer [ba|]]))") (h/file-uri "file:///d.clj"))]
+                                    (h/code "(ns foo"
+                                            "  (:require [alpaca.ns :refer [ba|]]))") (h/file-uri "file:///d.clj"))]
     (testing "completing all available refers"
       (h/assert-submaps
         [{:label "bar" :kind :function}
          {:label "foo" :kind :variable}]
-       (f.completion/completion (h/file-uri "file:///c.clj") refer-vec-r refer-vec-c)))
+        (f.completion/completion (h/file-uri "file:///c.clj") refer-vec-r refer-vec-c)))
     (testing "completing specific refer"
       (h/assert-submaps
         [{:label "bar" :kind :function}]
-       (f.completion/completion (h/file-uri "file:///d.clj") ba-refer-r ba-refer-c)))))
+        (f.completion/completion (h/file-uri "file:///d.clj") ba-refer-r ba-refer-c)))))
 
 (deftest completing-known-snippets
   (h/load-code-and-locs

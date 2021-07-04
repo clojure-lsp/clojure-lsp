@@ -373,13 +373,13 @@
 (deftest test-code-lens
   (testing "references lens"
     (h/load-code-and-locs (str "(ns some-ns)\n"
-                             "(def foo 1)\n"
-                             "(defn- foo2 []\n"
-                             " foo)\n"
-                             "(defn bar [a b]\n"
-                             "  (+ a b (foo2)))\n"
-                             "(s/defn baz []\n"
-                             "  (bar 2 3))\n"))
+                               "(def foo 1)\n"
+                               "(defn- foo2 []\n"
+                               " foo)\n"
+                               "(defn bar [a b]\n"
+                               "  (+ a b (foo2)))\n"
+                               "(s/defn baz []\n"
+                               "  (bar 2 3))\n"))
     (is (= (list {:range
                   {:start {:line 1 :character 5} :end {:line 1 :character 8}}
                   :data [(h/file-uri "file:///a.clj") 2 6]}
@@ -396,7 +396,7 @@
                                   "(->MyRecord)"
                                   "(map->MyRecord)"))
     (is (= [{:range
-            {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
+             {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
              :data [(h/file-uri "file:///a.clj") 1 12]}]
            (handlers/code-lens {:textDocument (h/file-uri "file:///a.clj")})))))
 

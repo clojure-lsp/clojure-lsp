@@ -4,14 +4,14 @@
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
+   [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
    [clojure.string :as string]
-   [taoensso.timbre :as log]
-   [clojure-lsp.feature.rename :as f.rename]))
+   [taoensso.timbre :as log]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)
@@ -121,13 +121,13 @@
                                       (map #(client/edit->summary uri %)))))
                    (remove nil?))]
     (if (seq edits)
-        (if dry?
-          (throw
-            (ex-info "Code not formatted"
-                     {:message (edits->diff-string edits)}))
-          (mapv (comp #(cli-println "Formatted" (uri->ns (:uri %) ns+uris))
-                      client/apply-workspace-edit-summary!) edits))
-        (cli-println "Nothing to format!"))))
+      (if dry?
+        (throw
+          (ex-info "Code not formatted"
+                   {:message (edits->diff-string edits)}))
+        (mapv (comp #(cli-println "Formatted" (uri->ns (:uri %) ns+uris))
+                    client/apply-workspace-edit-summary!) edits))
+      (cli-println "Nothing to format!"))))
 
 (defn rename! [{:keys [from to dry?] :as options}]
   (start-analysis! options)

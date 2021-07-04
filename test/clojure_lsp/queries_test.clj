@@ -93,26 +93,26 @@
                                                                 "  foo-kw)") (h/file-uri "file:///c.clj"))
         ana (:analysis @db/db)]
     (h/assert-submaps
-     [{:name 'x :name-row x-r :name-col x-c}
-      {:name 'x :name-row x-use-r :name-col x-use-c}]
-     (q/find-references-from-cursor ana (h/file-path "/a.clj") x-r x-c true))
+      [{:name 'x :name-row x-r :name-col x-c}
+       {:name 'x :name-row x-use-r :name-col x-use-c}]
+      (q/find-references-from-cursor ana (h/file-path "/a.clj") x-r x-c true))
     (h/assert-submaps
-     [{:name 'filename :name-row param-r :name-col param-c}
-      {:name 'filename :name-row param-use-r :name-col param-use-c}]
-     (q/find-references-from-cursor ana (h/file-path "/a.clj") param-r param-c true))
+      [{:name 'filename :name-row param-r :name-col param-c}
+       {:name 'filename :name-row param-use-r :name-col param-use-c}]
+      (q/find-references-from-cursor ana (h/file-path "/a.clj") param-r param-c true))
     (h/assert-submaps
-     ['{:name unknown}]
-     (q/find-references-from-cursor ana (h/file-path "/a.clj") unknown-r unknown-c true))
+      ['{:name unknown}]
+      (q/find-references-from-cursor ana (h/file-path "/a.clj") unknown-r unknown-c true))
     (h/assert-submaps
-     [{:alias 'f-alias :name-row alias-r :name-col alias-c}
-      {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
-     (q/find-references-from-cursor ana (h/file-path "/a.clj") alias-r alias-c true))
+      [{:alias 'f-alias :name-row alias-r :name-col alias-c}
+       {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
+      (q/find-references-from-cursor ana (h/file-path "/a.clj") alias-r alias-c true))
     (h/assert-submaps
       [{:name "foo-kw" :name-row a-foo-kw-r :name-col a-foo-kw-c}
        {:name "foo-kw" :name-row b-foo-kw-r :name-col b-foo-kw-c}
        {:name "foo-kw" :name-row d-foo-kw-r :name-col d-foo-kw-c}
        {:name "foo-kw" :name-row c-foo-kw-r :name-col c-foo-kw-c}]
-     (q/find-references-from-cursor ana (h/file-path "/c.clj") b-foo-kw-r b-foo-kw-c true))))
+      (q/find-references-from-cursor ana (h/file-path "/c.clj") b-foo-kw-r b-foo-kw-c true))))
 
 (deftest find-references-from-cursor-cljc
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
@@ -193,8 +193,8 @@
                                                       "|f/bar") (h/file-uri "file:///b.clj"))
         ana (:analysis @db/db)]
     (h/assert-submap
-     {:name 'bar :filename (h/file-path "/a.clj")}
-     (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
+      {:name 'bar :filename (h/file-path "/a.clj")}
+      (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
 
 (deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
   (testing "when on a clj file"
@@ -233,8 +233,8 @@
                                   "(defn bar [] 1)") (h/file-uri "file:///a.clj"))
         ana (:analysis @db/db)]
     (h/assert-submap
-     {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
-     (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c))))
+      {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
+      (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c))))
 
 (deftest find-unused-aliases
   (testing "used require via alias"

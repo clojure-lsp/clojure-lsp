@@ -479,10 +479,10 @@
         alias->info (->> (q/find-all-aliases (:analysis @db/db))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
-                            (medley/distinct-by (juxt :to))
-                            (map :to))
+                                   (medley/distinct-by (juxt :to))
+                                   (map :to))
                           (->> [(get common-sym/common-alias->info require-alias)]
-                            (remove nil?)))]
+                               (remove nil?)))]
     (when (= 1 (count possibilities))
       (some-> possibilities first name symbol))))
 

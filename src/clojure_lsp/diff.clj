@@ -24,11 +24,11 @@
    (unified-diff filename original revised 3))
   ([filename original revised context]
    (unlines (DiffUtils/generateUnifiedDiff
-             (->> filename to-absolute-path (str "a"))
-             (->> filename to-absolute-path (str "b"))
-             (lines original)
-             (DiffUtils/diff (lines original) (lines revised))
-             context))))
+              (->> filename to-absolute-path (str "a"))
+              (->> filename to-absolute-path (str "b"))
+              (lines original)
+              (DiffUtils/diff (lines original) (lines revised))
+              context))))
 
 (def ^:private ansi-colors
   {:reset "[0m"

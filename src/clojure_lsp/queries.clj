@@ -155,7 +155,6 @@
                            (= (:alias %) alias))))
          (medley/distinct-by (juxt :filename :name :name-row :name-col)))))
 
-
 (defmethod find-references :var-usages
   [analysis element include-declaration?]
   (if (= (:to element) :clj-kondo/unknown-namespace)
@@ -165,7 +164,7 @@
                        (= (or (:ns %) (:to %)) (:to element))
                        (not= :keywords (:bucket %))
                        (or include-declaration?
-                         (not= :var-definitions (:bucket %)))))
+                           (not= :var-definitions (:bucket %)))))
          (medley/distinct-by (juxt :filename :name :row :col)))))
 
 (defmethod find-references :var-definitions
@@ -240,7 +239,7 @@
   (->> (get analysis filename)
        (filter #(and (= (:bucket %) :var-definitions)
                      (or include-private?
-                       (not (get % :private)))))
+                         (not (get % :private)))))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
 (defn find-all-ns-definitions [analysis]

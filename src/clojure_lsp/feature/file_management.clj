@@ -98,7 +98,7 @@
   (let [lines (string/split original #"\n") ;; don't use OS specific line delimiter!
         [start-offset end-offset] (offsets lines line col end-line end-col)
         [prefix suffix] [(subs original 0 start-offset)
-                         (subs original end-offset (count original))]]
+                         (subs original (min end-offset (count original)) (count original))]]
     (string/join [prefix replacement suffix])))
 
 (defn ^:private handle-change

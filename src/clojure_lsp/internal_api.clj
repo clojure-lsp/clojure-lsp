@@ -4,13 +4,14 @@
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
-   [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
-   [taoensso.timbre :as log]))
+   [clojure.string :as string]
+   [taoensso.timbre :as log]
+   [clojure-lsp.feature.rename :as f.rename]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)
@@ -43,18 +44,41 @@
         {:workspace {:workspace-edit {:document-changes true}}}
         (interop/clean-client-settings {})
         (merge (shared/assoc-some
-                 {:lint-project-files-after-startup? false
-                  :text-document-sync-kind :full}
+                {:lint-project-files-after-startup? false
+                 :text-document-sync-kind :full}
                  :log-path log-path)
                settings)))))
 
-(defn ^:private ns->uri [namespace]
+(defn ^:private ns->ns+uri [namespace]
   (let [source-paths (-> @db/db :settings :source-paths)]
-    (when-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
-      (shared/namespace->uri (name namespace) source-paths filename))))
+    (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
+      {:namespace namespace
+       :uri (shared/namespace->uri (name namespace) source-paths filename)}
+      {:namespace namespace})))
 
-(defn ^:private open-file! [uri]
-  (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}}))
+(defn ^:private uri->ns
+  [uri ns+uris]
+  (->> ns+uris
+       (filter #(= uri (:uri %)))
+       first
+       :namespace))
+
+(defn ^:private assert-ns-exists-or-drop! [ns+uris]
+  (->> ns+uris
+       (filter (complement :uri))
+       (mapv #(cli-println "Namespace" (:namespace %) "not found")))
+  (filter :uri ns+uris))
+
+(defn ^:private open-file! [{:keys [uri] :as ns+uri}]
+  (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}})
+  ns+uri)
+
+(defn ^:private edits->diff-string [edits]
+  (->> edits
+       (map (fn [{:keys [uri old-text new-text]}]
+              (diff/unified-diff uri old-text new-text)))
+       (map diff/colorize-diff)
+       (string/join "\n")))
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
   (start-analysis! options)
@@ -62,32 +86,45 @@
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
-                            q/find-all-ns-definitions))]
-    (doseq [namespace namespaces]
-      (if-let [uri (ns->uri namespace)]
-        (do
-          (open-file! uri)
-          (when-let [edits (handlers/execute-command {:command "clean-ns"
-                                                      :arguments [uri 0 0]})]
-            (let [uris-or-diffs (client/apply-workspace-edits edits (:dry? options))]
-              (if dry?
-                (when (seq uris-or-diffs)
-                  (mapv (comp cli-println diff/colorize-diff) uris-or-diffs)
-                  (throw (ex-info "Code not clean" {:message uris-or-diffs})))
-                (cli-println "Cleaned" namespace)))))
-        (cli-println "Namespace" namespace "not found")))))
+                            q/find-all-ns-definitions))
+        ns+uris (map ns->ns+uri namespaces)
+        edits (->> ns+uris
+                   assert-ns-exists-or-drop!
+                   (map open-file!)
+                   (mapcat (comp :document-changes
+                                 #(handlers/execute-command {:command "clean-ns"
+                                                             :arguments [(:uri %) 0 0]})))
+                   (map client/document-change->edit-summary)
+                   (remove nil?))]
+    (if (seq edits)
+      (if dry?
+        (throw
+          (ex-info "Code not clean"
+                   {:message (edits->diff-string edits)}))
+        (mapv (comp #(cli-println "Cleaned" (uri->ns (:uri %) ns+uris))
+                    client/apply-workspace-edit-summary!) edits))
+      (cli-println "Nothing to clear!"))))
 
-(defn rename! [{:keys [from to] :as options}]
+(defn rename! [{:keys [from to dry?] :as options}]
   (start-analysis! options)
   (let [from-name (symbol (name from))
         from-ns (symbol (namespace from))
         project-analysis (q/filter-project-analysis (:analysis @db/db))]
     (if-let [from-element (q/find-element-by-full-name project-analysis from-name from-ns)]
       (let [uri (shared/filename->uri (:filename from-element))]
-        (open-file! uri)
-        (if-let [edits (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
-          (when (seq (client/apply-workspace-edits edits (:dry? options)))
-            (cli-println "Renamed" from "to" to)
-            to)
+        (open-file! {:uri uri
+                     :namespace from-ns})
+        (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
+          (if-let [edits (->> document-changes
+                              (map client/document-change->edit-summary)
+                              (remove nil?)
+                              seq)]
+            (if dry?
+              (cli-println (edits->diff-string edits))
+              (do
+                (mapv client/apply-workspace-edit-summary! edits)
+                (cli-println "Renamed" from "to" to)
+                to))
+            (cli-println "Nothing to rename"))
           (cli-println "Could not rename" from "to" to)))
       (cli-println "Symbol" from "not found in project"))))

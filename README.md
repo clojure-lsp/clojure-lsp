@@ -7,7 +7,7 @@
 
 # clojure-lsp
 
-A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure. Taking a Cursive-like approach of statically analyzing code.
+A [Language Server](https://microsoft.github.io/language-server-protocol/) for Clojure(script). Taking a Cursive-like approach of statically analyzing code.
 
 <hr>
 <p align="center">
@@ -17,13 +17,13 @@ A [Language Server](https://microsoft.github.io/language-server-protocol/) for C
   <a href="https://clojure-lsp.github.io/clojure-lsp/settings"><strong>settings</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/clients"><strong>clients</strong></a> •
   <a href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting"><strong>troubleshooting</strong></a> •
-  <a href="https://opencollective.com/clojure-lsp"><strong>support us</strong></a>
+  <a href="https://github.com/sponsors/clojure-lsp"><strong>support us</strong></a>
 </p>
 <hr>
 
 ## Overview 
 
-The goal of this project is to bring great editing tools for Clojure to all editors.
+The goal of this project is to bring great editing tools for Clojure/Clojurescript to all editors.
 It aims to work alongside you to help you navigate, identify and fix errors, perform refactors and much more!
 
 You will get:
@@ -42,7 +42,7 @@ You will get:
 
 For all available documentation, check the official [website](https://clojure-lsp.github.io/clojure-lsp/).
 
-Also, clojure-lsp doesn't need to run in a editor, for more infromation check the [API documentation section](https://clojure-lsp.github.io/clojure-lsp/api/).
+Also, clojure-lsp doesn't need to run in a editor, for more information check the [API documentation section](https://clojure-lsp.github.io/clojure-lsp/api/).
 
 ---
 ## Contribution
@@ -52,7 +52,7 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 ---
 ## Support the project
 
-`clojure-lsp` has more than 8.000 lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva) and vim.
+`clojure-lsp` has more than 12.000 lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva), vim and other editors.
 
 You can help us keep going and improving it by **[supporting the project](https://github.com/sponsors/clojure-lsp)**
 

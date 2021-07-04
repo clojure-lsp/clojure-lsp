@@ -40,3 +40,15 @@
            (->> {:row 1 :col 2 :end-row 1 :end-col (count code)}
                 (parser/find-top-forms-in-range code)
                 (map z/sexpr))))))
+
+(deftest lein-file->edn
+  (testing "simple defproject on root"
+    (is (= {:foo 1
+            :bar 2}
+           (parser/lein-zloc->edn (z/of-string "(defproject my-project \"0.1.2\" :foo 1 :bar 2)")))))
+  (testing "simple defproject with multiple code before"
+    (is (= {:foo 1
+            :bar 2}
+           (parser/lein-zloc->edn (z/of-string (str "(def otherthing 2)\n"
+                                                    "(defproject my-project \"0.1.2\" :foo 1 :bar 2)\n"
+                                                    "(def something 1)")))))))

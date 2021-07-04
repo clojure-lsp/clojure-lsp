@@ -2,12 +2,16 @@
 
 ## Unreleased
 
-- Add `:clean :sort` settings option to disable sorting during `clean-ns`.
-- Add `:keep` value to `:ns-indent-blocks-indentation` setting to don't change indentation during `clean-ns`.
-- Deprecate `install-latest-clojure-lsp.sh` in place of `install` new script.
-- Add `--dry` option to API/CLI commands, useful to print only diffs instead of making changes.
-- Check the new [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) Github Action to run clojure-lsp on CI.
-- Add `format` feature to API/CLI using cljfmt.
+- General
+  - Add `:clean :sort` settings option to disable sorting during `clean-ns`.
+  - Add `:keep` value to `:ns-indent-blocks-indentation` setting to don't change indentation during `clean-ns`.
+  - Deprecate `install-latest-clojure-lsp.sh` in place of `install` new script.
+  - Improve source paths discoverability for `leiningen` projects following the same rules as `deps.edn` projects. For more information, check the [settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#source-paths-discovery).
+
+- API/CLI
+  - Add `--dry` option to commands, useful to print only diffs instead of making changes.
+  - Check the new [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) Github Action to run clojure-lsp on CI.
+  - Add `format` feature using cljfmt.
 
 ## 2021.07.01-19.49.02
 

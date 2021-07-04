@@ -108,3 +108,77 @@
                                                                   :paths ["y"]}
                                                             :baz ["z"]}}
                                                  {:source-aliases nil})))))))
+
+(deftest resolve-lein-source-paths
+  (testing "when on not a lein project"
+    (is (= nil (config/resolve-lein-source-paths nil {}))))
+  (testing "when source-paths and test-paths does not exist"
+    (is (= #{"src" "src/main/clojure" "test" "src/test/clojure"}
+           (config/resolve-lein-source-paths {} {}))))
+  (testing "when only source-paths exists"
+    (is (= #{"a" "test" "src/test/clojure"}
+           (config/resolve-lein-source-paths {:source-paths ["a"]} {}))))
+  (testing "when only test-paths exists"
+    (is (= #{"b" "src" "src/main/clojure"}
+           (config/resolve-lein-source-paths {:test-paths ["b"]} {}))))
+  (testing "when both exists"
+    (is (= #{"a" "b"}
+           (config/resolve-lein-source-paths {:source-paths ["a"] :test-paths ["b"]} {}))))
+  (testing "when paths contains a non existent alias"
+    (is (= #{"a" "b"}
+           (config/resolve-lein-source-paths {:source-paths ["a" :foo] :test-paths ["b"]} {}))))
+  (testing "when paths contains an existent alias"
+    (is (= #{"a" "b" "c" "d"}
+           (config/resolve-lein-source-paths {:source-paths ["a" :foo]
+                                              :test-paths ["b"]
+                                              :profiles {:foo ["c" "d"]}} {}))))
+  (testing "when paths contains multiple aliases"
+    (is (= #{"a" "b" "c" "d" "e"}
+           (config/resolve-lein-source-paths {:source-paths ["a" :foo :bar :baz]
+                                              :test-paths ["b"]
+                                              :profiles {:foo ["c" "d"]
+                                                        :bar {:other :things}
+                                                        :baz ["e"]}} {}))))
+  (testing "checking default source aliases"
+    (testing "with default settings"
+      (testing "when some default source alias is not present"
+        (is (= #{"a" "b" "c"}
+               (config/resolve-lein-source-paths {:source-paths ["a"]
+                                                  :test-paths ["b"]
+                                                  :profiles {:dev {:source-paths ["c"]}
+                                                            :bar {:other :things}
+                                                            :baz ["x"]}} {}))))
+      (testing "when all source-aliases have paths"
+        (is (= #{"a" "b" "c" "d" "e" "f" "g" "h"}
+               (config/resolve-lein-source-paths {:source-paths ["a"]
+                                                  :test-paths ["b"]
+                                                  :profiles {:dev {:source-paths ["c"]
+                                                                  :test-paths ["d" "e"]}
+                                                            :bar {:other :things}
+                                                            :test {:source-paths ["f" "g"]
+                                                                   :test-paths ["h"]}
+                                                            :baz ["x"]}} {})))))
+    (testing "with custom source-aliases"
+      (testing "when one of the specified alias does not exists"
+        (is (= #{"a" "src" "src/main/clojure" "test" "src/test/clojure"}
+               (config/resolve-lein-source-paths {:profiles {:dev {:source-paths ["y"]}
+                                                            :bar {:other :things
+                                                                  :source-paths ["a"]}
+                                                            :baz ["x"]}}
+                                                 {:source-aliases #{:foo :bar}}))))
+      (testing "when all source aliases exists"
+        (is (= #{"a" "b" "src" "src/main/clojure" "test" "src/test/clojure"}
+               (config/resolve-lein-source-paths {:profiles {:dev {:source-paths ["y"]}
+                                                            :foo {:test-paths ["b"]}
+                                                            :bar {:other :things
+                                                                  :source-paths ["a"]}
+                                                            :baz ["x"]}}
+                                                 {:source-aliases #{:foo :bar}}))))
+      (testing "when settings exists but is nil"
+        (is (= #{"a" "src" "src/main/clojure" "test" "src/test/clojure"}
+               (config/resolve-lein-source-paths {:profiles {:dev {:source-paths ["a"]}
+                                                            :foo {:test-paths ["x"]}
+                                                            :bar {:other :things
+                                                                  :source-paths ["y"]}
+                                                            :baz ["z"]}}
+                                                 {:source-aliases nil})))))))

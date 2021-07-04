@@ -58,7 +58,7 @@
                                (vector? sexpr) (n/set-node children)
                                (set? sexpr) (n/list-node children)
                                (list? sexpr) (n/map-node children)))]
-        [{:range (meta (z/node zloc))
+        [{:range (meta node)
           :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
       [])))
 

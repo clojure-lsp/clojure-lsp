@@ -108,3 +108,14 @@
         (loc-at-pos (inc line) (inc character)))
     (catch Exception _
       (log/warn "It was not possible to get cursor location at given position. Probably a not valid clojure code"))))
+
+(defn lein-zloc->edn [zloc]
+  (let [zloc (-> zloc
+                 (z/find-next-value z/next 'defproject)
+                 z/remove ;; remove defproject
+                 z/down
+                 z/remove ;; remove project name
+                 z/down
+                 z/remove ;; remove version
+                 )]
+    (z/sexpr (z/replace zloc (n/map-node (n/children (z/node zloc)))))))

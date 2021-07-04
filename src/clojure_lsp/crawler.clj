@@ -14,7 +14,9 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [digest :as digest]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [rewrite-clj.zip :as z]
+   [clojure-lsp.parser :as parser])
   (:import
    (java.net URI)))
 
@@ -222,7 +224,8 @@
 (def default-source-paths #{"src" "test"})
 
 (defn ^:private resolve-source-paths [root-path settings given-source-paths]
-  (let [deps-file (to-file root-path "deps.edn")]
+  (let [deps-file (to-file root-path "deps.edn")
+        lein-file (to-file root-path "project.clj")]
     (cond
       given-source-paths
       (do
@@ -237,6 +240,17 @@
             deps-source-paths)
           (do
             (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
+            default-source-paths)))
+
+      (.exists lein-file)
+      (let [lein-edn (parser/lein-zloc->edn (z/of-file lein-file))
+            lein-source-paths (config/resolve-lein-source-paths lein-edn settings)]
+        (if (seq lein-source-paths)
+          (do
+            (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths)
+            lein-source-paths)
+          (do
+            (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths)
             default-source-paths)))
 
       :else

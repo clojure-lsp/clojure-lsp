@@ -14,8 +14,6 @@
 
 (def clj-kondo-version (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
-(def default-source-aliases #{:dev :test})
-
 (defn ^:private with-additional-config
   [config settings]
   (cond-> config
@@ -104,6 +102,8 @@
        (remove nil?)
        set))
 
+(def default-source-aliases #{:dev :test})
+
 (defn resolve-deps-source-paths
   [{:keys [paths extra-paths aliases]}
    settings]
@@ -115,3 +115,21 @@
          (remove nil?)
          set
          (set/union root-source-paths))))
+
+(def default-lein-source-paths ["src" "src/main/clojure"])
+(def default-lein-test-paths ["test" "src/test/clojure"])
+
+(defn resolve-lein-source-paths
+  [{:keys [source-paths test-paths profiles monolith] :as project}
+   settings]
+  (when project
+    (let [source-aliases (or (:source-aliases settings) default-source-aliases)
+          source-paths (or source-paths default-lein-source-paths)
+          test-paths (or test-paths default-lein-test-paths)
+          root-source-paths (extract-source-paths source-paths test-paths profiles)]
+      (->> source-aliases
+           (map #(get profiles % nil))
+           (mapcat #(extract-source-paths (:source-paths %) (:test-paths %) nil))
+           (remove nil?)
+           set
+           (set/union root-source-paths)))))

@@ -27,6 +27,27 @@
              (coll? namespace))]}
   (internal-api/clean-ns! options))
 
+(defn format!
+  "Format one or more namespaces using cljfmt.
+  Options:
+
+  `:project-root` a java.io.File representing the project root.
+
+  `:namespace` a coll of symbols representing the namespaces which should be cleaned,
+  if empty all project namespaces will be considered.
+
+  `dry?` a boolean, when enabled make no changes to files, only report.
+
+  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
+  [& {:keys [project-root settings namespace] :as options}]
+  {:pre [(instance? File project-root)
+         (.exists project-root)
+         (or (nil? settings)
+             (map? settings))
+         (or (nil? namespace)
+             (coll? namespace))]}
+  (internal-api/format! options))
+
 (defn rename!
   "Rename a symbol and its definitions across the project.
   Options:

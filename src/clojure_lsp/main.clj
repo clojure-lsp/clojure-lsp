@@ -28,6 +28,7 @@
         "Available commands:"
         "  listen (or empty)    Start clojure-lsp as server, listening to stdin."
         "  clean-ns             Organize ns form, removing unused requires/refers/imports and sorting alphabetically."
+        "  format               Format code using cljfmt."
         "  rename               Rename a symbol and all references across the project, use --from and --to options."
         ""
         ;; "Run \"clojure-lsp help <command>\" for more information about a command."
@@ -87,7 +88,7 @@
       {:action "listen" :options options}
 
       (and (= 1 (count arguments))
-           (#{"clean-ns" "rename" "listen"} (first arguments)))
+           (#{"clean-ns" "format" "rename" "listen"} (first arguments)))
       {:action (first arguments) :options options}
 
       :else
@@ -111,6 +112,7 @@
     (case action
       "listen" (with-out-str (server/run-server!))
       "clean-ns" (internal-api/clean-ns! options)
+      "format" (internal-api/format! options)
       "rename" (with-required-options
                  options
                  [:from :to]

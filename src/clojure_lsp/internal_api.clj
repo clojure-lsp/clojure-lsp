@@ -105,6 +105,30 @@
                     client/apply-workspace-edit-summary!) edits))
       (cli-println "Nothing to clear!"))))
 
+(defn format! [{:keys [namespace dry?] :as options}]
+  (start-analysis! options)
+  (cli-println "Formatting namespaces...")
+  (let [namespaces (or (seq namespace)
+                       (->> (:analysis @db/db)
+                            q/filter-project-analysis
+                            q/find-all-ns-definitions))
+        ns+uris (map ns->ns+uri namespaces)
+        edits (->> ns+uris
+                   assert-ns-exists-or-drop!
+                   (map open-file!)
+                   (mapcat (fn [{:keys [uri]}]
+                             (some->> (handlers/formatting {:textDocument uri})
+                                      (map #(client/edit->summary uri %)))))
+                   (remove nil?))]
+    (if (seq edits)
+        (if dry?
+          (throw
+            (ex-info "Code not formatted"
+                     {:message (edits->diff-string edits)}))
+          (mapv (comp #(cli-println "Formatted" (uri->ns (:uri %) ns+uris))
+                      client/apply-workspace-edit-summary!) edits))
+        (cli-println "Nothing to format!"))))
+
 (defn rename! [{:keys [from to dry?] :as options}]
   (start-analysis! options)
   (let [from-name (symbol (name from))

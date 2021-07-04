@@ -21,6 +21,7 @@
     integration.document-highlight-test
     integration.document-symbol-test
     integration.api.clean-ns-test
+    integration.api.format-test
     integration.api.rename-test])
 
 (defn timeout [timeout-ms callback]

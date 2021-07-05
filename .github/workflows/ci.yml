@@ -33,7 +33,7 @@ jobs:
       - name: Setup clojure-lsp
         uses: clojure-lsp/setup-clojure-lsp@v1
         with:
-          clojure-lsp-version: 2021.07.01-19.49.02
+          clojure-lsp-version: 2021.07.05-15.12.14
 
       - name: Check if namespaces are clean
         run: clojure-lsp clean-ns --dry

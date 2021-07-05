@@ -25,13 +25,14 @@ on:
     #   - '.github/workflows/bump_homebrew.yml'
 
 jobs:
-  release:
+  release-clojars:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
       - uses: jlesquembre/clojars-publish-action@0.3
         env:
+          USE_GIT_REF: false
           CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
   # clean-ns:

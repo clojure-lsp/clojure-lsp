@@ -35,6 +35,9 @@ jobs:
         with:
           cli: '1.10.3.814'
 
+      - name: Compile java classes
+        run: clojure -X:javac
+
       - name: Check if namespaces are clean
         run: clojure -M:run clean-ns --dry
 

@@ -11,6 +11,14 @@ This is a new feature and it's experimental, so things can break at any moment, 
 
 The namespace [clojure-lsp.api](https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj) should be used as the entrypoint for the same available features of the CLI, feel free to open a issue for missing features.
 
+Below is an example using the clean-ns feature on a `deps.edn` project:
+
+```clojure
+{:aliases 
+  {:lint-ns {:exec-fn clojure-lsp.api/clean-ns!
+             :exec-args {:dry? true}}}}
+```
+
 ## CI
 
 You can use [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) GitHub action to install clojure-lsp in a CI.

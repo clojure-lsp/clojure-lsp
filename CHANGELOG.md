@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.07.05-20.31.12
+
 - API/CLI
   - Add `--verbose` option for debugging purposes.
   - Fix usage as library parsing `:exec-args` correctly

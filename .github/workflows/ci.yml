@@ -35,16 +35,11 @@ jobs:
         with:
           cli: '1.10.3.814'
 
-      - name: Setup clojure-lsp
-        uses: clojure-lsp/setup-clojure-lsp@v1
-        with:
-          clojure-lsp-version: 2021.07.05-15.12.14
-
       - name: Check if namespaces are clean
-        run: clojure-lsp clean-ns --dry
+        run: clojure -M:run clean-ns --dry
 
       - name: Check if namespaces are formatted
-        run: clojure-lsp format --dry
+        run: clojure -M:run format --dry
 
   unit-test:
     runs-on: ubuntu-latest

@@ -11,9 +11,9 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
+   [clojure.java.io :as io]
    [clojure.string :as string]
-   [taoensso.timbre :as log]
-   [clojure.java.io :as io]))
+   [taoensso.timbre :as log]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)

@@ -4,6 +4,7 @@
 
 - API/CLI
   - Add `--verbose` option for debugging purposes.
+  - Fix usage as library parsing `:exec-args` correctly
 
 ## 2021.07.05-15.12.14
 

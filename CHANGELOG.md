@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.07.05-15.12.14
+
 - General
   - Add `:clean :sort` settings option to disable sorting during `clean-ns`.
   - Add `:keep` value to `:ns-indent-blocks-indentation` setting to don't change indentation during `clean-ns`.

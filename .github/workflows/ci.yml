@@ -30,6 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
+
       - name: Setup clojure-lsp
         uses: clojure-lsp/setup-clojure-lsp@v1
         with:

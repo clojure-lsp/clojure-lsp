@@ -1,9 +1,18 @@
 (ns clojure-lsp.api
   "Entrypoint for main clojure-lsp features"
   (:require
-   [clojure-lsp.internal-api :as internal-api])
+   [clojure-lsp.internal-api :as internal-api]
+   [clojure-lsp.logging :as logging])
   (:import
    [java.io File]))
+
+(defmacro ^:private safe-parsing-error
+  [& body]
+  `(try
+     ~@body
+     (catch clojure.lang.ExceptionInfo e#
+       (some-> e# ex-data :message println)
+       e#)))
 
 (defn clean-ns!
   "Organize ns form, removing unused requires/refers/imports and sorting
@@ -18,14 +27,16 @@
   `dry?` a boolean, when enabled make no changes to files, only report.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
-  [& {:keys [project-root settings namespace] :as options}]
-  {:pre [(instance? File project-root)
-         (.exists project-root)
+  [{:keys [project-root settings namespace] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists project-root)))
          (or (nil? settings)
              (map? settings))
          (or (nil? namespace)
              (coll? namespace))]}
-  (internal-api/clean-ns! options))
+  (logging/setup-logging)
+  (safe-parsing-error (internal-api/clean-ns! options)))
 
 (defn format!
   "Format one or more namespaces using cljfmt.
@@ -39,14 +50,16 @@
   `dry?` a boolean, when enabled make no changes to files, only report.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
-  [& {:keys [project-root settings namespace] :as options}]
-  {:pre [(instance? File project-root)
-         (.exists project-root)
+  [{:keys [project-root settings namespace] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists project-root)))
          (or (nil? settings)
              (map? settings))
          (or (nil? namespace)
              (coll? namespace))]}
-  (internal-api/format! options))
+  (logging/setup-logging)
+  (safe-parsing-error (internal-api/format! options)))
 
 (defn rename!
   "Rename a symbol and its definitions across the project.
@@ -61,13 +74,15 @@
   `dry?` a boolean, when enabled make no changes to files, only report.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
-  [& {:keys [project-root settings from to] :as options}]
-  {:pre [(instance? File project-root)
-         (.exists project-root)
+  [{:keys [project-root settings from to] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists project-root)))
          (or (nil? settings)
              (map? settings))
          (and (symbol? from)
               (qualified-ident? from))
          (and (symbol? to)
               (qualified-ident? to))]}
-  (internal-api/rename! options))
+  (logging/setup-logging)
+  (safe-parsing-error (internal-api/rename! options)))

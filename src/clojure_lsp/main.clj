@@ -51,9 +51,8 @@
     :default false]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
-    :default-fn (fn [& _args] (io/file ""))
     :parse-fn io/file
-    :validate [#(.exists %) "Specify a valid path after --project-root"]]
+    :validate [#(-> % io/file .exists) "Specify a valid path after --project-root"]]
    ["-n" "--namespace NS" "Optional namespace to apply the action, all if not supplied. This flag accepts multiple values"
     :id :namespace
     :default []

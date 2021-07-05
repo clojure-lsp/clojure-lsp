@@ -12,7 +12,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure.java.io :as io]))
 
 (defn ^:private cli-print [& msg]
   (if (:cli? @db/db)
@@ -41,7 +42,8 @@
     (logging/set-log-to-stdout))
   (print-with-time
     "Analyzing project..."
-    (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]
+    (let [project-uri (shared/filename->uri (.getCanonicalPath (or project-root
+                                                                   (io/file ""))))]
       (crawler/initialize-project
         project-uri
         {:workspace {:workspace-edit {:document-changes true}}}

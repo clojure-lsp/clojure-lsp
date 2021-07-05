@@ -24,6 +24,10 @@
  :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.861"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
+           :clean-ns {:exec-fn clojure-lsp.api/clean-ns!
+                      :exec-args {:dry? true}}
+           :format {:exec-fn clojure-lsp.api/format!
+                    :exec-args {:dry? true}}
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.0.1"}}
                     :exec-fn americano.cli/javac
                     :exec-args {:source-paths ["src-java"]}}

@@ -4,86 +4,35 @@ on:
   push:
     branches:
       - master
-    paths-ignore:
-      - '**/README.md'
-      - '**/CHANGELOG.md'
-      - 'resources/CLOJURE_LSP_VERSION'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
-      - '.github/workflows/bump_homebrew.yml'
+    # paths-ignore:
+    #   - '**/README.md'
+    #   - '**/CHANGELOG.md'
+    #   - 'resources/CLOJURE_LSP_VERSION'
+    #   - 'docs/**'
+    #   - 'images/**'
+    #   - 'mkdocs.yml'
+    #   - '.github/workflows/bump_deps.yml'
+    #   - '.github/workflows/bump_homebrew.yml'
   pull_request:
-    paths-ignore:
-      - '**/README.md'
-      - '**/CHANGELOG.md'
-      - 'resources/CLOJURE_LSP_VERSION'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
-      - '.github/workflows/bump_homebrew.yml'
+    # paths-ignore:
+    #   - '**/README.md'
+    #   - '**/CHANGELOG.md'
+    #   - 'resources/CLOJURE_LSP_VERSION'
+    #   - 'docs/**'
+    #   - 'images/**'
+    #   - 'mkdocs.yml'
+    #   - '.github/workflows/bump_deps.yml'
+    #   - '.github/workflows/bump_homebrew.yml'
 
 jobs:
-  clean-ns:
+  release-clojars:
+    name: Release artifact to Clojars
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
-      - name: Setup clojure-lsp
-        uses: clojure-lsp/setup-clojure-lsp@v1
-        with:
-          clojure-lsp-version: 2021.07.01-19.49.02
-
-      - name: Check if namespaces are clean
-        run: clojure-lsp clean-ns --dry
-
-  unit-test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8, 11, 15]
-    steps:
-      - uses: actions/checkout@v1
-
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
-
-      - name: Run tests
-        run: make test
-
-  integration-test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8, 11, 15]
-    steps:
-      - uses: actions/checkout@v1
-
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
-
-      - name: Generate embedded binary
-        run: make prod-bin
-
-      - name: Run integration tests
-        run: make integration-test
+      - uses: jlesquembre/clojars-publish-action@0.3
+        env:
+          USE_GIT_REF: false
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}

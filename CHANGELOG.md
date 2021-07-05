@@ -12,6 +12,7 @@
   - Add `--dry` option to commands, useful to print only diffs instead of making changes.
   - Check the new [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) Github Action to run clojure-lsp on CI.
   - Add `format` feature using cljfmt.
+  - Now, every release is available in clojars as `com.github.clojure-lsp/clojure-lsp`.
 
 ## 2021.07.01-19.49.02
 

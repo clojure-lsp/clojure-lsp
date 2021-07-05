@@ -444,3 +444,16 @@ jobs:
           git add .
           git commit -m "Bump to version: ${{ env.VERSION }}"
           git push
+
+  release-clojars:
+    name: Release artifact to Clojars
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: jlesquembre/clojars-publish-action@0.3
+        env:
+          USE_GIT_REF: false
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- API/CLI
+  - Add `--verbose` option for debugging purposes.
+
 ## 2021.07.05-15.12.14
 
 - General

@@ -7,6 +7,7 @@
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
+   [clojure-lsp.logging :as logging]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [>! alts!! chan go timeout]]
@@ -35,7 +36,9 @@
          (cli-println "")
          (recur)))))
 
-(defn ^:private start-analysis! [{:keys [project-root settings log-path]}]
+(defn ^:private start-analysis! [{:keys [project-root settings log-path verbose]}]
+  (when verbose
+    (logging/set-log-to-stdout))
   (print-with-time
     "Analyzing project..."
     (let [project-uri (shared/filename->uri (.getCanonicalPath project-root))]

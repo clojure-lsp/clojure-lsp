@@ -29,8 +29,9 @@ prod-native:
 test: classes
 	clojure -M:test
 
-clean-ns:
+lint-fix:
 	clojure -M:run clean-ns
+	clojure -M:run format
 
 release:
 	./release

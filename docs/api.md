@@ -11,15 +11,21 @@ This is a new feature and it's experimental, so things can break at any moment, 
 
 The namespace [clojure-lsp.api](https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj) should be used as the entrypoint for the same available features of the CLI, feel free to open a issue for missing features.
 
-## GitHub Action
+## CI
 
 You can use [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) GitHub action to install clojure-lsp in a CI.
+
+Remember to install your build tool, like `clojure` or `leiningen` as well in your CI according to your project to clojure-lsp be able to scan the classpath correctly.
 
 ## Usage
 
 * `clean-ns`
 
 Useful for cleaning the namespaces forms of your project, removing any unused required, import or refer, sorting and indenting correctly.
+
+* `format`
+
+Useful for formatting the namespaces of your project, using cljfmt and following the rules from the `:cljfmt` clojure-lsp setting.
 
 * `rename`
 

@@ -40,13 +40,19 @@
    token-modifier])
 
 (defn ^:private var-usage-element->absolute-tokens
-  [{:keys [alias name-col] :as element}]
-  (if alias
+  [{:keys [alias name-col to] :as element}]
+  (cond
+    (= :clj-kondo/unknown-namespace to)
+    nil
+
+    alias
     (let [slash-pos (+ name-col (count (str alias)))
           alias-pos (assoc element :name-end-col slash-pos)
           name-pos (assoc element :name-col (inc slash-pos))]
       [(element->absolute-token alias-pos :type)
        (element->absolute-token name-pos :function)])
+
+    :else
     [(element->absolute-token element :function)]))
 
 (defn ^:private elements->absolute-tokens

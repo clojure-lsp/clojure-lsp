@@ -43,7 +43,7 @@
                                   "----"
                                   doc
                                   "\n----"
-                                  (str "*[" filename "](" filename ")*")])}
+                                  (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
@@ -63,7 +63,7 @@
                                   "----"
                                   doc
                                   "\n----"
-                                  (str "*[" filename "](" filename ")*")])}
+                                  (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))))
 
     (testing "without docs"
@@ -84,7 +84,7 @@
                     :value (join [start-code sym end-code
                                   start-code sig end-code
                                   "----"
-                                  (str "*[" filename "](" filename ")*")])}
+                                  (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
@@ -100,5 +100,5 @@
             (is (= {:kind "markdown"
                     :value (join [start-code (str sym " " sig) end-code
                                   "----"
-                                  (str "*[" filename "](" filename ")*")])}
+                                  (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))))))

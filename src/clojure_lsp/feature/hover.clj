@@ -50,7 +50,10 @@
        :value (cond-> (str opening-code sym-line closing-code)
                 signatures-line (str "\n" opening-code signatures-line closing-code)
                 doc-line (str line-break doc-line "\n")
-                filename (str (format "%s*[%s](%s)*" line-break filename filename)))}
+                filename (str (format "%s*[%s](%s)*"
+                                      line-break
+                                      (string/replace filename #"\\" "#\\\\")
+                                      (shared/filename->uri filename))))}
       ;; Default to plaintext
       [(cond-> (str sym-line "\n")
          signatures-line (str signatures-line "\n")

@@ -142,4 +142,7 @@
       <url>https://repo.clojars.org/</url>
     </repository>
   </repositories>
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+  </build>
 </project>

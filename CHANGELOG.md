@@ -6,6 +6,7 @@
 
 - API/CLI
   - Fix when ns form does not match filename. #466
+  - Fix errors with project-root on graalvm binary
 
 ## 2021.07.05-20.31.12
 

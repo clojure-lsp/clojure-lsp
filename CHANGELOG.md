@@ -4,6 +4,9 @@
 
 ## 2021.07.09-03.23.52
 
+- Editor
+  - Make semantic-tokens return no token for unknown symbols which has `:clj-kondo/unknown-namespace` on its analysis.
+
 - API/CLI
   - Fix when ns form does not match filename. #466
   - Fix errors with project-root on graalvm binary

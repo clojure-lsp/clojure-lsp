@@ -452,7 +452,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: jlesquembre/clojars-publish-action@0.3
+      - uses: jlesquembre/clojars-publish-action@0.4
         env:
           USE_GIT_REF: false
           CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}

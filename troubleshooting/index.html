@@ -414,6 +414,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#getting-server-log" class="md-nav__link">
+    Getting server log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server-is-not-initializing" class="md-nav__link">
     Server is not initializing
   </a>
@@ -583,6 +590,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#getting-server-log" class="md-nav__link">
+    Getting server log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server-is-not-initializing" class="md-nav__link">
     Server is not initializing
   </a>
@@ -655,6 +669,12 @@
                 
                 
                 <h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h1>
+<h2 id="getting-server-log">Getting server log<a class="headerlink" href="#getting-server-log" title="Permanent link">#</a></h2>
+<p>clojure-lsp logs most of what is doing to a file which location could be found:</p>
+<ul>
+<li>on <code>:log-path</code> if specified in your clojure-lsp config, for example: <code>{:log-path "/tmp/clojure-lsp.out"}</code></li>
+<li>Auto generated every server start on <code>/tmp/clojure-lsp.&lt;TIMESTAMP&gt;.out</code></li>
+</ul>
 <p>Below are the common issues ordered by the most important to specific ones:</p>
 <h2 id="server-is-not-initializing">Server is not initializing<a class="headerlink" href="#server-is-not-initializing" title="Permanent link">#</a></h2>
 <p>Make sure you have the <a href="https://clojure-lsp.github.io/clojure-lsp/installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>

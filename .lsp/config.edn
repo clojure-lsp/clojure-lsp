@@ -1,5 +1,4 @@
 {:cljfmt {:indents {#re ".*" [[:block 0]]
                     are [[:inner 0]]}}
- :semantic-tokens? true
  :clean {:ns-inner-blocks-indentation :next-line}
  :use-metadata-for-privacy? true}

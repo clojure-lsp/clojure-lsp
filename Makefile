@@ -19,8 +19,10 @@ debug-bin: clean classes
 	clojure -X:debug-jar
 	clojure -X:bin
 
-prod-bin: clean classes
+prod-jar:
 	clojure -X:prod-jar
+
+prod-bin: clean classes prod-jar
 	clojure -X:bin
 
 prod-native:

@@ -55,11 +55,10 @@
                settings)))))
 
 (defn ^:private ns->ns+uri [namespace]
-  (let [source-paths (-> @db/db :settings :source-paths)]
-    (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
-      {:namespace namespace
-       :uri (shared/namespace->uri (name namespace) source-paths filename)}
-      {:namespace namespace})))
+  (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
+    {:namespace namespace
+     :uri (shared/filename->uri filename)}
+    {:namespace namespace}))
 
 (defn ^:private uri->ns
   [uri ns+uris]

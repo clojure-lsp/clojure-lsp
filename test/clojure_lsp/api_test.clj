@@ -26,6 +26,11 @@
       (reset! db/db {})
       (is (:message (ex-data (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
                                              :namespace '[api.clean-ns.a]
+                                             :dry? true})))))
+    (testing "when ns does not matches uri"
+      (reset! db/db {})
+      (is (:message (ex-data (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
+                                             :namespace '[api.clean-ns.a.other]
                                              :dry? true})))))))
 
 (deftest rename!

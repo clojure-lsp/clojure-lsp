@@ -6,3 +6,5 @@
 a
 b
 c
+
+(ns api.clean-ns.a.other)

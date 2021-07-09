@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- API/CLI
+  - Fix when ns form does not match filename. #466
+
 ## 2021.07.05-20.31.12
 
 - API/CLI

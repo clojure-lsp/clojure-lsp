@@ -1,8 +1,8 @@
 ---
-name: Bug report
-about: Create a report to help us fix a bug
+name: Editor Bug report
+about: Create a report for an issue with clojure-lsp running in your editor
 title: ''
-labels: bug
+labels: [bug, editor]
 assignees: ''
 
 ---
@@ -23,19 +23,19 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-<!-- Fill the template below with the request/response logs between client and clojure-lsp. -->
+<!-- Fill the template below with the json request/response logs between the LS client (your editor plugin, like Calva, lsp-mode, nvim) and clojure-lsp. -->
 
 <details>
  <summary><b>Log - client <-> server</b></summary>
 <pre>
-ADD HERE
+ADD JSON HERE
 </pre>
 </details>
 
-<!-- Fill the template below with the content of the `/tmp/clojure-lsp.*.out` most recent/relevant to this bug if any exceptions/relevant logs -->
+<!-- Fill the template below with the content of the clojure-lsp log if any exceptions/relevant logs, check https://clojure-lsp.github.io/clojure-lsp/troubleshooting/#getting-server-log how to get it -->
 
 <details>
- <summary><b>Log - /tmp/clojure-lsp.*.out</b></summary>
+ <summary><b>Log - clojure-lsp</b></summary>
 <pre>
 ADD HERE
 </pre>
@@ -43,7 +43,7 @@ ADD HERE
 
 **User details (please complete the following information):**
  - OS: [e.g. ArchLinux, MacOS, Windows 10]
- - Editor [e.g. emacs, vim, VSCode (Calva)]
+ - Editor [e.g. emacs, nvim, VSCode (Calva)]
  - Version: (post the result of `clojure-lsp --version`)
 
 **Additional context**

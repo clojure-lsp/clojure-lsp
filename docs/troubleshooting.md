@@ -1,5 +1,12 @@
 # Troubleshooting
 
+## Getting server log
+
+clojure-lsp logs most of what is doing to a file which location could be found:
+
+- on `:log-path` if specified in your clojure-lsp config, for example: `{:log-path "/tmp/clojure-lsp.out"}`
+- Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out`
+
 Below are the common issues ordered by the most important to specific ones:
 
 ## Server is not initializing

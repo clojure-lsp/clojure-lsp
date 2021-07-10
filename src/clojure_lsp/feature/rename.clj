@@ -66,7 +66,7 @@
         version (get-in @db/db [:documents ref-doc-id :v] 0)]
     (if (string/starts-with? replacement ":")
       {:range (shared/->range (assoc reference
-                                     :name-col name-start))
+                                :name-col name-start))
        :new-text (subs replacement 1)
        :text-document {:version version :uri ref-doc-id}}
       {:range (shared/->range (assoc reference :name-col name-start))

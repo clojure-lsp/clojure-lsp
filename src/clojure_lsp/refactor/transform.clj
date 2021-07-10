@@ -688,12 +688,12 @@
                       (z/append-child expr-node))]
     [{:loc defn-edit
       :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+               :end-row form-row
+               :end-col form-col)}
      {:loc (z/of-string "\n\n")
       :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+               :end-row form-row
+               :end-col form-col)}
      {:loc expr-edit
       :range expr-meta}]))
 
@@ -800,9 +800,9 @@
 
       [{:loc defn-edit
         :range (assoc form-pos
-                      :end-row form-row
-                      :end-col form-col)}
+                 :end-row form-row
+                 :end-col form-col)}
        {:loc (z/of-string "\n\n")
         :range (assoc form-pos
-                      :end-row form-row
-                      :end-col form-col)}])))
+                 :end-row form-row
+                 :end-col form-col)}])))

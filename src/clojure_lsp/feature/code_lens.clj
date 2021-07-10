@@ -1,4 +1,4 @@
-(ns clojure-lsp.code-lens
+(ns clojure-lsp.feature.code-lens
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]

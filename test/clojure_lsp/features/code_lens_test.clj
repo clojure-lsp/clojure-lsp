@@ -1,0 +1,89 @@
+(ns clojure-lsp.features.code-lens-test
+  (:require
+   [clojure-lsp.feature.code-lens :as f.code-lens]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]))
+
+(h/reset-db-after-test)
+
+(deftest test-code-lens
+  (testing "references lens"
+    (h/load-code-and-locs (str "(ns some-ns)\n"
+                               "(def foo 1)\n"
+                               "(defn- foo2 []\n"
+                               " foo)\n"
+                               "(defn bar [a b]\n"
+                               "  (+ a b (foo2)))\n"
+                               "(s/defn baz []\n"
+                               "  (bar 2 3))\n"))
+    (is (= (list {:range
+                  {:start {:line 1 :character 5} :end {:line 1 :character 8}}
+                  :data [(h/file-uri "file:///a.clj") 2 6]}
+                 {:range
+                  {:start {:line 2 :character 7} :end {:line 2 :character 11}}
+                  :data [(h/file-uri "file:///a.clj") 3 8]}
+                 {:range
+                  {:start {:line 4 :character 6} :end {:line 4 :character 9}}
+                  :data [(h/file-uri "file:///a.clj") 5 7]})
+           (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj")))))
+  (testing "references lens for defrecord"
+    (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
+                                  "(MyRecord)"
+                                  "(->MyRecord)"
+                                  "(map->MyRecord)"))
+    (is (= [{:range
+             {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
+             :data [(h/file-uri "file:///a.clj") 1 12]}]
+           (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj"))))))
+
+(deftest test-code-lens-resolve
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n"))
+  (testing "references"
+    (testing "empty lens"
+      (is (= {:range   {:start {:line      0
+                                :character 5}
+                        :end   {:line      0
+                                :character 12}}
+              :command {:title   "0 references"
+                        :command "code-lens-references"
+                        :arguments [(h/file-uri "file:///a.clj") 0 5]}}
+             (f.code-lens/resolve-code-lens (h/file-uri "file:///a.clj") 0 5 {:start {:line 0 :character 5} :end {:line 0 :character 12}}))))
+    (testing "some lens"
+      (is (= {:range   {:start {:line      1
+                                :character 5}
+                        :end   {:line      1
+                                :character 12}}
+              :command {:title   "1 reference"
+                        :command "code-lens-references"
+                        :arguments [(h/file-uri "file:///a.clj") 2 6]}}
+             (f.code-lens/resolve-code-lens (h/file-uri "file:///a.clj") 2 6 {:start {:line 1 :character 5} :end {:line 1 :character 12}})))
+      (is (= {:range   {:start {:line      2
+                                :character 7}
+                        :end   {:line      2
+                                :character 11}}
+              :command {:title   "1 reference"
+                        :command "code-lens-references"
+                        :arguments [(h/file-uri "file:///a.clj") 3 8]}}
+             (f.code-lens/resolve-code-lens (h/file-uri "file:///a.clj") 3 8 {:start {:line 2 :character 7} :end {:line 2 :character 11}}))))
+    (testing "defrecord lens"
+      (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
+                                    "(MyRecord)"
+                                    "(->MyRecord)"
+                                    "(map->MyRecord)"))
+      (is (= {:range
+              {:start {:line 1, :character 5}, :end {:line 1, :character 12}},
+              :command
+              {:title "3 references",
+               :command "code-lens-references",
+               :arguments ["file:///a.clj" 1 13]}}
+             (f.code-lens/resolve-code-lens
+               (h/file-uri "file:///a.clj") 1 13
+               {:start {:line 1 :character 5}
+                :end {:line 1 :character 12}}))))))

@@ -1,12 +1,12 @@
 (ns clojure-lsp.handlers
   (:require
    [cljfmt.core :as cljfmt]
-   [clojure-lsp.code-lens :as f.code-lens]
    [clojure-lsp.config :as config]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.feature.code-actions :as f.code-actions]
+   [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.feature.file-management :as f.file-management]

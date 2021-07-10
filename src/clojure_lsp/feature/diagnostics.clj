@@ -84,7 +84,7 @@
 (defn ^:private lint-public-vars [filename analysis settings]
   (when (not (= :off (get-in settings [:linters :unused-public-var :level])))
     (let [start-time (System/nanoTime)
-          public-vars (->> (q/find-vars analysis filename false)
+          public-vars (->> (q/find-var-definitions analysis filename false)
                            (filter (partial exclude-public-var? settings))
                            (filter (comp #(= (count %) 0)
                                          #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))

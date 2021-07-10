@@ -6,8 +6,8 @@
 
 (h/reset-db-after-test)
 
-(deftest test-code-lens
-  (testing "references lens"
+(deftest reference-code-lens
+  (testing "common lens"
     (h/load-code-and-locs (str "(ns some-ns)\n"
                                "(def foo 1)\n"
                                "(defn- foo2 []\n"
@@ -26,7 +26,7 @@
                   {:start {:line 4 :character 6} :end {:line 4 :character 9}}
                   :data [(h/file-uri "file:///a.clj") 5 7]})
            (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj")))))
-  (testing "references lens for defrecord"
+  (testing "defrecord"
     (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
                                   "(MyRecord)"
                                   "(->MyRecord)"
@@ -34,6 +34,17 @@
     (is (= [{:range
              {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
              :data [(h/file-uri "file:///a.clj") 1 12]}]
+           (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj")))))
+  (testing "keyword definitions"
+    (h/load-code-and-locs (h/code "(ns foo (:require [re-frame.core :as r]))"
+                                  "(r/reg-event-db ::event identity)"
+                                  "(r/reg-sub ::sub identity)"))
+    (is (= [{:range
+             {:start {:line 1, :character 16}, :end {:line 1, :character 23}},
+             :data [(h/file-uri "file:///a.clj") 2 17]}
+            {:range
+             {:start {:line 2, :character 11}, :end {:line 2, :character 16}},
+             :data [(h/file-uri "file:///a.clj") 3 12]}]
            (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj"))))))
 
 (deftest test-code-lens-resolve

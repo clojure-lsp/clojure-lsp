@@ -235,11 +235,17 @@
     (catch Throwable e
       (log/error e "can't find references"))))
 
-(defn find-vars [analysis filename include-private?]
+(defn find-var-definitions [analysis filename include-private?]
   (->> (get analysis filename)
        (filter #(and (= (:bucket %) :var-definitions)
                      (or include-private?
                          (not (get % :private)))))
+       (medley/distinct-by (juxt :ns :name :row :col))))
+
+(defn find-keyword-definitions [analysis filename]
+  (->> (get analysis filename)
+       (filter #(and (= (:bucket %) :keywords)
+                     (:reg %)))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
 (defn find-all-ns-definitions [analysis]

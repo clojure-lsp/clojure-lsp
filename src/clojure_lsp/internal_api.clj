@@ -55,8 +55,8 @@
         {:workspace {:workspace-edit {:document-changes true}}}
         (interop/clean-client-settings {})
         (merge (shared/assoc-some
-                {:lint-project-files-after-startup? false
-                 :text-document-sync-kind :full}
+                 {:lint-project-files-after-startup? false
+                  :text-document-sync-kind :full}
                  :log-path log-path)
                settings)))))
 

@@ -260,8 +260,8 @@
            (f.completion-snippet/known-snippets settings)
            (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
          (map #(assoc %
-                 :kind :snippet
-                 :insert-text-format :snippet)))))
+                      :kind :snippet
+                      :insert-text-format :snippet)))))
 
 (defn- sort-completion-results [results]
   (sort-by (juxt :label :detail) results))

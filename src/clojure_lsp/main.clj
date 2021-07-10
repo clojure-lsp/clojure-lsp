@@ -108,19 +108,16 @@
 (defn ^:private handle-action!
   [action options]
   (swap! db/db assoc :cli? true)
-  (try
-    (case action
-      "listen" (with-out-str (server/run-server!))
-      "clean-ns" (internal-api/clean-ns! options)
-      "format" (internal-api/format! options)
-      "rename" (with-required-options
-                 options
-                 [:from :to]
-                 internal-api/rename!))
-    (catch Exception e
-      (if-let [{:keys [message]} (ex-data e)]
-        (exit 1 message)
-        (exit 1 (str "Error:\n" e))))))
+  (let [result
+        (case action
+          "listen" (with-out-str (server/run-server!))
+          "clean-ns" (internal-api/clean-ns! options)
+          "format" (internal-api/format! options)
+          "rename" (with-required-options
+                     options
+                     [:from :to]
+                     internal-api/rename!))]
+    (exit (:result-code result) (:message result))))
 
 (defn -main [& args]
   (logging/setup-logging)

@@ -12,6 +12,8 @@
 - API/CLI
   - Fix when ns form does not match filename. #466
   - Fix errors with project-root on graalvm binary
+  - Improve API usage avoiding exceptions and returning just data instead.
+  - Improve analysis cache to multiple API calls.
 
 ## 2021.07.05-20.31.12
 

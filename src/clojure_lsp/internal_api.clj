@@ -43,22 +43,23 @@
                       (throw (ex-info "Error during project analysis" {:message ~'_ex})))
            (recur))))))
 
-(defn ^:private start-analysis! [{:keys [project-root settings log-path verbose]}]
+(defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose]}]
   (when verbose
     (logging/set-log-to-stdout))
-  (print-with-time
-    "Analyzing project..."
-    (let [project-root-file (or ^java.io.File project-root (io/file ""))
-          project-uri (shared/filename->uri (.getCanonicalPath project-root-file))]
-      (crawler/initialize-project
-        project-uri
-        {:workspace {:workspace-edit {:document-changes true}}}
-        (interop/clean-client-settings {})
-        (merge (shared/assoc-some
-                 {:lint-project-files-after-startup? false
-                  :text-document-sync-kind :full}
-                 :log-path log-path)
-               settings)))))
+  (when-not (:analysis @db/db)
+    (print-with-time
+      "Analyzing project..."
+      (let [project-root-file (or ^java.io.File project-root (io/file ""))
+            project-uri (shared/filename->uri (.getCanonicalPath project-root-file))]
+        (crawler/initialize-project
+          project-uri
+          {:workspace {:workspace-edit {:document-changes true}}}
+          (interop/clean-client-settings {})
+          (merge (shared/assoc-some
+                   {:lint-project-files-after-startup? false
+                    :text-document-sync-kind :full}
+                   :log-path log-path)
+                 settings))))))
 
 (defn ^:private ns->ns+uri [namespace]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
@@ -91,7 +92,7 @@
        (string/join "\n")))
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
-  (start-analysis! options)
+  (setup-analysis! options)
   (cli-println "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
@@ -108,15 +109,18 @@
                    (remove nil?))]
     (if (seq edits)
       (if dry?
-        (throw
-          (ex-info "Code not clean"
-                   {:message (edits->diff-string edits)}))
-        (mapv (comp #(cli-println "Cleaned" (uri->ns (:uri %) ns+uris))
-                    client/apply-workspace-edit-summary!) edits))
-      (cli-println "Nothing to clear!"))))
+        {:result-code 1
+         :message (edits->diff-string edits)
+         :edits edits}
+        (do
+          (mapv (comp #(cli-println "Cleaned" (uri->ns (:uri %) ns+uris))
+                      client/apply-workspace-edit-summary!) edits)
+          {:result-code 0
+           :edits edits}))
+      {:result-code 0 :message "Nothing to clear!"})))
 
 (defn format! [{:keys [namespace dry?] :as options}]
-  (start-analysis! options)
+  (setup-analysis! options)
   (cli-println "Formatting namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
@@ -132,33 +136,38 @@
                    (remove nil?))]
     (if (seq edits)
       (if dry?
-        (throw
-          (ex-info "Code not formatted"
-                   {:message (edits->diff-string edits)}))
-        (mapv (comp #(cli-println "Formatted" (uri->ns (:uri %) ns+uris))
-                    client/apply-workspace-edit-summary!) edits))
-      (cli-println "Nothing to format!"))))
+        {:result-code 1
+         :message (edits->diff-string edits)
+         :edits edits}
+        (do
+          (mapv (comp #(cli-println "Formatted" (uri->ns (:uri %) ns+uris))
+                      client/apply-workspace-edit-summary!) edits)
+          {:result-code 0
+           :edits edits}))
+      {:result-code 0 :message "Nothing to format!"})))
 
 (defn rename! [{:keys [from to dry?] :as options}]
-  (start-analysis! options)
+  (setup-analysis! options)
   (let [from-name (symbol (name from))
         from-ns (symbol (namespace from))
         project-analysis (q/filter-project-analysis (:analysis @db/db))]
     (if-let [from-element (q/find-element-by-full-name project-analysis from-name from-ns)]
       (let [uri (shared/filename->uri (:filename from-element))]
-        (open-file! {:uri uri
-                     :namespace from-ns})
+        (open-file! {:uri uri :namespace from-ns})
         (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
           (if-let [edits (->> document-changes
                               (map client/document-change->edit-summary)
                               (remove nil?)
                               seq)]
             (if dry?
-              (cli-println (edits->diff-string edits))
+              {:result-code 0
+               :message (edits->diff-string edits)
+               :edits edits}
               (do
                 (mapv client/apply-workspace-edit-summary! edits)
-                (cli-println "Renamed" from "to" to)
-                to))
-            (cli-println "Nothing to rename"))
-          (cli-println "Could not rename" from "to" to)))
-      (cli-println "Symbol" from "not found in project"))))
+                {:result-code 0
+                 :message (format "Renamed %s to %s" from to)
+                 :edits edits}))
+            {:result-code 1 :message "Nothing to rename"})
+          {:result-code 1 :message (format "Could not rename %s to %s" from to)}))
+      {:result-code 1 :message (format "Symbol %s not found in project" from)})))

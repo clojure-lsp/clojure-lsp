@@ -46,8 +46,11 @@
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
    [nil "--log-path PATH" "Path to use as the log path for clojure-lsp.out, debug purposes only."
     :id :log-path]
-   [nil "--dry" "Make no changes to files, only report"
+   [nil "--dry" "Make no changes to files, only report diffs"
     :id :dry?
+    :default false]
+   [nil "--raw" "Print only necessary data"
+    :id :raw?
     :default false]
    ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
     :id :project-root
@@ -95,7 +98,8 @@
       {:exit-message (help summary)})))
 
 (defn ^:private exit [status msg]
-  (println msg)
+  (when msg
+    (println msg))
   (System/exit status))
 
 (defn ^:private with-required-options [options required fn]

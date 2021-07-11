@@ -20,6 +20,9 @@
     (testing "dry"
       (is (not (:dry? (:options (#'main/parse [])))))
       (is (:dry? (:options (#'main/parse ["--dry"])))))
+    (testing "raw"
+      (is (not (:raw? (:options (#'main/parse [])))))
+      (is (:raw? (:options (#'main/parse ["--raw"])))))
     (testing "project-root"
       (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["--project-root" "src"]))))))
       (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["-p" "src"]))))))

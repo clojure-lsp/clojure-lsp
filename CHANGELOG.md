@@ -15,6 +15,7 @@
   - Fix errors with project-root on graalvm binary
   - Improve API usage avoiding exceptions and returning just data instead.
   - Improve analysis cache to multiple API calls.
+  - Add new `--raw` option allowing to display only raw data. Useful to integrate with other tools like reviewdog.
 
 ## 2021.07.05-20.31.12
 

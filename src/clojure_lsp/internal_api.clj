@@ -22,32 +22,36 @@
       (flush))
     (log/debug msg)))
 
-(defn ^:private cli-println [& msg]
-  (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n")))
+(defn ^:private cli-println [options & msg]
+  (when-not (:raw? options)
+    (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
-(defmacro ^:private print-with-time [msg & body]
-  `(let [~'_time (System/nanoTime)
-         ~'_result-ch (chan)]
-     (go
-       (try
-         ~@body
-         (>! ~'_result-ch [:success])
-         (catch Exception e#
-           (>! ~'_result-ch [:error e#]))))
-     (loop []
-       (cli-print (str "\r" ~@msg " " (quot (- (System/nanoTime) ~'_time) 1000000) "ms"))
-       (let [[~'_result ~'_ex] (first (alts!! [(timeout 100) ~'_result-ch]))]
-         (case ~'_result
-           :success (cli-println "")
-           :error (do (cli-println "")
-                      (throw (ex-info "Error during project analysis" {:message ~'_ex})))
-           (recur))))))
+(defmacro ^:private print-with-time [options msg & body]
+  `(if (:raw? ~options)
+     ~@body
+     (let [~'_time (System/nanoTime)
+           ~'_result-ch (chan)]
+       (go
+         (try
+           ~@body
+           (>! ~'_result-ch [:success])
+           (catch Exception e#
+             (>! ~'_result-ch [:error e#]))))
+       (loop []
+         (cli-print (str "\r" ~@msg " " (quot (- (System/nanoTime) ~'_time) 1000000) "ms"))
+         (let [[~'_result ~'_ex] (first (alts!! [(timeout 100) ~'_result-ch]))]
+           (case ~'_result
+             :success (cli-println ~options "")
+             :error (do (cli-println ~options "")
+                        (throw (ex-info "Error during project analysis" {:message ~'_ex})))
+             (recur)))))))
 
-(defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose]}]
+(defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
   (when verbose
     (logging/set-log-to-stdout))
   (when-not (:analysis @db/db)
     (print-with-time
+      options
       "Analyzing project..."
       (let [project-root-file (or ^java.io.File project-root (io/file ""))
             project-uri (shared/filename->uri (.getCanonicalPath project-root-file))]
@@ -74,10 +78,10 @@
        first
        :namespace))
 
-(defn ^:private assert-ns-exists-or-drop! [ns+uris]
+(defn ^:private assert-ns-exists-or-drop! [options ns+uris]
   (->> ns+uris
        (filter (complement :uri))
-       (mapv #(cli-println "Namespace" (:namespace %) "not found")))
+       (mapv #(cli-println options "Namespace" (:namespace %) "not found")))
   (filter :uri ns+uris))
 
 (defn ^:private open-file! [{:keys [uri] :as ns+uri}]
@@ -88,19 +92,18 @@
   (->> edits
        (map (fn [{:keys [uri old-text new-text]}]
               (diff/unified-diff uri old-text new-text)))
-       (map diff/colorize-diff)
        (string/join "\n")))
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
   (setup-analysis! options)
-  (cli-println "Checking namespaces...")
+  (cli-println options "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
                             q/find-all-ns-definitions))
         ns+uris (map ns->ns+uri namespaces)
         edits (->> ns+uris
-                   assert-ns-exists-or-drop!
+                   (assert-ns-exists-or-drop! options)
                    (map open-file!)
                    (mapcat (comp :document-changes
                                  #(handlers/execute-command {:command "clean-ns"
@@ -113,7 +116,7 @@
          :message (edits->diff-string edits)
          :edits edits}
         (do
-          (mapv (comp #(cli-println "Cleaned" (uri->ns (:uri %) ns+uris))
+          (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
                       client/apply-workspace-edit-summary!) edits)
           {:result-code 0
            :edits edits}))
@@ -121,14 +124,14 @@
 
 (defn format! [{:keys [namespace dry?] :as options}]
   (setup-analysis! options)
-  (cli-println "Formatting namespaces...")
+  (cli-println options "Formatting namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
                             q/find-all-ns-definitions))
         ns+uris (map ns->ns+uri namespaces)
         edits (->> ns+uris
-                   assert-ns-exists-or-drop!
+                   (assert-ns-exists-or-drop! options)
                    (map open-file!)
                    (mapcat (fn [{:keys [uri]}]
                              (some->> (handlers/formatting {:textDocument uri})
@@ -140,7 +143,7 @@
          :message (edits->diff-string edits)
          :edits edits}
         (do
-          (mapv (comp #(cli-println "Formatted" (uri->ns (:uri %) ns+uris))
+          (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
                       client/apply-workspace-edit-summary!) edits)
           {:result-code 0
            :edits edits}))

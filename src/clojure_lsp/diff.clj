@@ -2,7 +2,6 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str])
-
   (:import
    [difflib DiffUtils]
    [java.io File]

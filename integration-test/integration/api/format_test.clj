@@ -11,7 +11,7 @@
 (def a-expected-path "integration-test/sample-test/fixtures/api/format/a.clj")
 (def a-expected-text (slurp a-expected-path))
 
-(deftest format
+(deftest format-test
   (testing "passing a single namespace"
     (with-open [rdr (lsp/cli! "format"
                               "--project-root" "./integration-test/sample-test"

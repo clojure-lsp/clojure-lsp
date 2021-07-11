@@ -1,9 +1,8 @@
-(ns api.format.b
-  (:require [api.clean-ns.b :refer [b  c a]]))
+(ns api.format.b)
 
-a
-b
-c
+(def a nil)
+(def b nil)
+(def c nil)
 
 (defn ^:private  baz [a b]
   (+ 2 4))

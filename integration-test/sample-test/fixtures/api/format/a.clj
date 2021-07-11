@@ -1,6 +1,6 @@
 (ns api.format.a
   (:require
-   [api.clean-ns.b :refer [b  c a]]))
+   [api.format.b :refer [b  c a]]))
 
 a       b
 c
@@ -9,3 +9,5 @@ c
   [a
    b]
   (+ 2 4))
+
+(ns api.format.a.other)

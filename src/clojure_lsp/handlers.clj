@@ -154,10 +154,14 @@
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)
         element (q/find-element-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))
-        definition (when element (q/find-definition analysis element))]
+        definition (when element (q/find-definition analysis element))
+        data (shared/assoc-some {}
+                                :element element
+                                :definition definition
+                                :semantic-tokens (when element
+                                                   (f.semantic-tokens/element->token-type element)))]
     {:type    :info
-     :message (with-out-str (pprint/pprint {:element element
-                                            :definition definition}))}))
+     :message (with-out-str (pprint/pprint data))}))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
   (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)])))

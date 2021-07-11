@@ -121,3 +121,10 @@
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))
+
+(defn element->token-type [element]
+  (->> [element]
+       elements->absolute-tokens
+       (mapv (fn [[_ _ _ type modifier]]
+               {:token-type (nth token-types type type)
+                :token-modifier (nth token-modifiers modifier modifier)}))))

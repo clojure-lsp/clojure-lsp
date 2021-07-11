@@ -8,6 +8,7 @@
   - Make semantic-tokens return no token for unknown symbols which has `:clj-kondo/unknown-namespace` on its analysis.
   - Fix file uri location when hovering a symbol.
   - Add reference code lens to keyword definitions, e.g. `re-frame.core/reg-sub`.
+  - Add `semantic-tokens` debug information to `cursor-info` response.
 
 - API/CLI
   - Fix when ns form does not match filename. #466

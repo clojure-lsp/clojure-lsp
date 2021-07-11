@@ -75,8 +75,8 @@
     (testing "when ns is already formatted"
       (reset! db/db {})
       (let [result (api/format! {:project-root (io/file "integration-test/sample-test")
-                                   :namespace '[api.format.b]
-                                   :dry? true})]
+                                 :namespace '[api.format.b]
+                                 :dry? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to format!" (:message result)))))))
 

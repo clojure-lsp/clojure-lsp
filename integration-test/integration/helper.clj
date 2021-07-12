@@ -2,7 +2,6 @@
   (:require
    [clojure.java.io :as io]
    [clojure.pprint :as pprint]
-   [clojure.string :as str]
    [clojure.test :refer [is]]))
 
 (def root-project-path

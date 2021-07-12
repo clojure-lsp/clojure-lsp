@@ -33,7 +33,35 @@
                             "{:foo {:baz 2}}"))]
       (is (= {:foo {:bar 1
                     :baz 2}
-              :home :bla} (config/resolve-config (h/file-uri "file:///home/user/some/project/")))))))
+              :home :bla} (config/resolve-config (h/file-uri "file:///home/user/some/project/"))))))
+  (testing "when XDG_CONFIG_HOME is unset but user has XDG config and a project config we merge with project as priority"
+    (with-redefs [config/get-property (constantly "/home/user")
+                  config/file-exists? #(or (= (h/file-path "/home/user/.config/.lsp/config.edn") (str %))
+                                           (= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %)))
+                  config/get-env (constantly nil)
+                  slurp (fn [f]
+                          (if (= (h/file-path "/home/user/.config/.lsp/config.edn") (str f))
+                            "{:foo {:bar 1 :baz 1} :xdg :bla}"
+                            "{:foo {:baz 2}}"))]
+      (is (= {:foo {:bar 1
+                    :baz 2}
+              :xdg :bla} (config/resolve-config (h/file-uri "file:///home/user/some/project/"))))))
+  (testing "when XDG_CONFIG_HOME is set and both global and a project config exist we merge with project as priority"
+    (with-redefs [config/get-property (constantly "/home/user")
+                  config/file-exists? #(or (= (h/file-path "/tmp/config/.lsp/config.edn") (str %))
+                                           (= (h/file-path "/home/user/.config/.lsp/config.edn") (str %))
+                                           (= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %)))
+                  config/get-env (constantly "/tmp/config")
+                  slurp (fn [f]
+                          (cond (= (h/file-path "/tmp/config/.lsp/config.edn") (str f))
+                                "{:foo {:bar 1 :baz 1} :xdg :tmp}"
+                                (= (h/file-path "/home/user/.config/.lsp/config.edn") (str f))
+                                "{:foo {:bar 1 :baz 2} :xdg :home.config}"
+                                :else
+                                "{:foo {:baz 3}}"))]
+      (is (= {:foo {:bar 1
+                    :baz 3}
+              :xdg :tmp} (config/resolve-config (h/file-uri "file:///home/user/some/project/")))))))
 
 (deftest resolve-deps-source-paths
   (testing "when on not a deps.edn project"

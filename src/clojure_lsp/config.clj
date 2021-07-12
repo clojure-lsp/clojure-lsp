@@ -63,12 +63,13 @@
   (.exists f))
 
 (defn ^:private get-home-config-file []
-  (if-let [xdg-config-home (get-env "XDG_CONFIG_HOME")]
-    (io/file xdg-config-home ".lsp" "config.edn")
-    (let [xdg-config-default (io/file (get-property "user.home") ".config" ".lsp" "config.edn")]
-      (if (file-exists? xdg-config-default)
-        xdg-config-default 
-        (io/file (get-property "user.home") ".lsp" "config.edn")))))
+  (let [xdg-config-home (or (get-env "XDG_CONFIG_HOME")
+                            (io/file (get-property "user.home") ".config"))
+        xdg-config (io/file xdg-config-home ".lsp" "config.edn")
+        home-config (io/file (get-property "user.home") ".lsp" "config.edn")]
+    (if (file-exists? xdg-config)
+      xdg-config
+      home-config)))
 
 (defn ^:private resolve-home-config [^java.io.File home-dir-file]
   (when (file-exists? home-dir-file)

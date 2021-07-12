@@ -7,12 +7,12 @@
 
 (lsp/clean-after-test)
 
-(def a-subject-path (h/path->abs-path "integration-test/sample-test/src/rename/a.cljc"))
+(def a-subject-path (h/project-path->abs-path "src/rename/a.cljc"))
 (def a-subject-text (slurp a-subject-path))
-(def a-expected-path (h/path->abs-path "integration-test/sample-test/fixtures/api/rename/a.cljc"))
+(def a-expected-path (h/project-path->abs-path "fixtures/api/rename/a.cljc"))
 (def a-expected-text (slurp a-expected-path))
 
-(def b-subject-path (h/path->abs-path "integration-test/sample-test/src/rename/b.cljc"))
+(def b-subject-path (h/project-path->abs-path "src/rename/b.cljc"))
 (def b-subject-text (slurp b-subject-path))
 
 (deftest rename

@@ -12,11 +12,8 @@
       (.resolve "sample-test")
       str))
 
-(defn path->abs-path [path]
-  (-> path
-      io/as-relative-path
-      io/file
-      .getAbsolutePath))
+(defn project-path->abs-path [path]
+  (.getAbsolutePath (io/file root-project-path path)))
 
 (defn source-path->file [source-path]
   (->> source-path

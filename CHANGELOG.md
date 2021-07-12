@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-## 2021.07.09-03.23.52
-
 - Editor
   - Make semantic-tokens return no token for unknown symbols which has `:clj-kondo/unknown-namespace` on its analysis.
   - Fix file uri location when hovering a symbol.

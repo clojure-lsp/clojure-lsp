@@ -12,6 +12,12 @@
       (.resolve "sample-test")
       str))
 
+(defn path->abs-path [path]
+  (-> path
+      io/as-relative-path
+      io/file
+      .getAbsolutePath))
+
 (defn source-path->file [source-path]
   (->> source-path
        (str "integration-test/sample-test/src/")

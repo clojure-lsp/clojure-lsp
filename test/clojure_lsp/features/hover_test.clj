@@ -28,32 +28,27 @@
             filename (h/file-path "/a.clj")]
         (testing "show-docs-arity-on-same-line? disabled"
           (testing "plain"
-            (is (= [(join [sym
-                           sig
-                           "" "----"
-                           doc
-                           "----"
-                           filename])]
+            (is (= [{:language "clojure" :value sym}
+                    {:language "clojure" :value sig}
+                    doc
+                    filename]
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col)))))
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
-                    :value (join [start-code sym end-code
-                                  start-code sig end-code
+                    :value (join [start-code sym sig end-code
                                   "----"
                                   doc
-                                  "\n----"
+                                  "----"
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
-            (is (= [(join [(str sym " " sig)
-                           "" "----"
-                           doc
-                           "----"
-                           filename])]
+            (is (= [{:language "clojure" :value (str sym " " sig)}
+                    doc
+                    filename]
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col)))))
 
           (testing "markdown"
@@ -62,7 +57,7 @@
                     :value (join [start-code (str sym " " sig) end-code
                                   "----"
                                   doc
-                                  "\n----"
+                                  "----"
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))))
 
@@ -73,16 +68,14 @@
         (testing "show-docs-arity-on-same-line? disabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? false} :client-capabilities nil})
-            (is (= [(join [sym
-                           sig
-                           "" "----"
-                           filename])]
+            (is (= [{:language "clojure" :value sym}
+                    {:language "clojure" :value sig}
+                    filename]
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col)))))
           (testing "markdown"
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
-                    :value (join [start-code sym end-code
-                                  start-code sig end-code
+                    :value (join [start-code sym sig end-code
                                   "----"
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))
@@ -90,9 +83,8 @@
         (testing "show-docs-arity-on-same-line? enabled"
           (testing "plain"
             (swap! db/db merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
-            (is (= [(join [(str sym " " sig)
-                           "" "----"
-                           filename])]
+            (is (= [{:language "clojure" :value (str sym " " sig)}
+                    filename]
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col)))))
 
           (testing "markdown"

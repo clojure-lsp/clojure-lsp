@@ -53,7 +53,7 @@
                 doc-line (str line-break doc-line)
                 filename (str (format "%s*[%s](%s)*"
                                       line-break
-                                      (string/replace filename #"\\" #"\\\\")
+                                      (string/replace filename #"\\" "\\\\")
                                       (shared/filename->uri filename))))}
       ;; Default to plaintext
       (cond->> []

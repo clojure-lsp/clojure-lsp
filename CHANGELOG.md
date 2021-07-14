@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Improve hover output, both markdown and plain text forms.
+
 - API/CLI
   - Fix empty `XDG_CONFIG_HOME` not defaulting to `$HOME/.config` #474
 

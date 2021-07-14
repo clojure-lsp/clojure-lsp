@@ -6,7 +6,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]))
 
-(def line-break "\n----\n")
+(def line-break "\n\n----\n\n")
 (def opening-code "```clojure\n")
 (def closing-code "\n```")
 
@@ -34,13 +34,15 @@
 (defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}]
   (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        signatures (some->> arglist-strs (remove nil?) (string/join "\n"))
+        join-char (if show-docs-arity-on-same-line? " " "\n")
+        signatures (some->> arglist-strs
+                            (remove nil?)
+                            (string/join join-char))
         sym (cond->> sym-name
               sym-ns (str sym-ns "/"))
+        sym-line (str sym (when signatures
+                            (str join-char signatures)))
         markdown? (= "markdown" content-format)
-        sym-line (str sym (when show-docs-arity-on-same-line? (str " " signatures)))
-        signatures-line (when (not show-docs-arity-on-same-line?)
-                          signatures)
         doc-line (when (seq doc)
                    (if markdown?
                      (docstring->formatted-markdown doc)
@@ -48,17 +50,21 @@
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
-                signatures-line (str "\n" opening-code signatures-line closing-code)
-                doc-line (str line-break doc-line "\n")
+                doc-line (str line-break doc-line)
                 filename (str (format "%s*[%s](%s)*"
                                       line-break
-                                      (string/replace filename #"\\" "#\\\\")
+                                      (string/replace filename #"\\" "\\\\")
                                       (shared/filename->uri filename))))}
       ;; Default to plaintext
-      [(cond-> (str sym-line "\n")
-         signatures-line (str signatures-line "\n")
-         doc-line (str line-break doc-line)
-         filename (str line-break filename))])))
+      (cond->> []
+        filename (cons filename)
+        doc-line (cons doc-line)
+        (and signatures
+             (not show-docs-arity-on-same-line?))
+        (cons {:language "clojure"
+               :value signatures})
+        sym (cons {:language "clojure"
+                   :value (if show-docs-arity-on-same-line? sym-line sym)})))))
 
 (defn hover [filename line column]
   (let [analysis (:analysis @db/db)

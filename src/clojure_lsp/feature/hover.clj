@@ -6,7 +6,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]))
 
-(def line-break "\n----\n")
+(def line-break "\n\n----\n\n")
 (def opening-code "```clojure\n")
 (def closing-code "\n```")
 

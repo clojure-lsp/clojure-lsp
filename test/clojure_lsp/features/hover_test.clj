@@ -14,6 +14,7 @@
 (deftest hover
   (let [start-code "```clojure"
         end-code "```"
+        line-break "\n----\n"
         code (str "(ns a)\n"
                   "(defn foo \"Some cool docs :foo\" [x] x)\n"
                   "(defn bar [y] y)\n"
@@ -37,9 +38,9 @@
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
                     :value (join [start-code sym sig end-code
-                                  "----"
+                                  line-break
                                   doc
-                                  "----"
+                                  line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))
 
@@ -55,9 +56,9 @@
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
                     :value (join [start-code (str sym " " sig) end-code
-                                  "----"
+                                  line-break
                                   doc
-                                  "----"
+                                  line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))))
 
@@ -76,7 +77,7 @@
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
                     :value (join [start-code sym sig end-code
-                                  "----"
+                                  line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))
 
@@ -91,6 +92,6 @@
             (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind "markdown"
                     :value (join [start-code (str sym " " sig) end-code
-                                  "----"
+                                  line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") bar-row bar-col))))))))))

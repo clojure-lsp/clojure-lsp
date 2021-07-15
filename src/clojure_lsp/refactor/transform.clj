@@ -109,6 +109,13 @@
        (not (contains? thread-invalid-symbols
                        (some-> zloc z/next z/sexpr)))))
 
+(defn can-thread-at-cursor? [zloc]
+  (or (can-thread? zloc)
+      (and (= (z/tag zloc) :token)
+           (= (z/tag (z/up zloc)) :list)
+           (not (contains? thread-invalid-symbols
+                           (some-> zloc z/up z/next z/sexpr))))))
+
 (defn thread-first
   [zloc]
   (when (can-thread? zloc)
@@ -121,8 +128,9 @@
 
 (defn thread-all
   [zloc sym]
-  (when (can-thread? zloc)
-    (let [top-meta (meta (z/node zloc))
+  (when (can-thread-at-cursor? zloc)
+    (let [zloc (if (= (z/tag zloc) :list) zloc (z/up zloc))
+          top-meta (meta (z/node zloc))
           [{top-range :range} :as result] (thread-sym zloc sym top-meta)]
       (loop [[{:keys [loc]} :as result] result]
         (let [next-loc (z/right (z/down loc))]

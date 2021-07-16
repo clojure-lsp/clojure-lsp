@@ -291,9 +291,15 @@
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread first all")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {}))))
+  (testing "when on a def non-list node"
+    (is (not-any? #(= (:title %) "Thread first all")
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {}))))
   (testing "when on a valid function that can be threaded"
     (is (some #(= (:title %) "Thread first all")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {})))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {}))))
+  (testing "when on a non-list node"
+    (is (some #(= (:title %) "Thread first all")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {})))))
 
 (deftest thread-last-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -306,9 +312,15 @@
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread last all")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {}))))
+  (testing "when on a def non-list node"
+    (is (not-any? #(= (:title %) "Thread last all")
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {}))))
   (testing "when on a valid function that can be threaded"
     (is (some #(= (:title %) "Thread last all")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {})))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {}))))
+  (testing "when on a non-list node"
+    (is (some #(= (:title %) "Thread last all")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {})))))
 
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"

@@ -104,10 +104,17 @@
   (set/union edit/function-definition-symbols
              '#{-> ->> ns :require :import deftest testing comment when if}))
 
-(defn can-thread? [zloc]
+(defn can-thread-list? [zloc]
   (and (= (z/tag zloc) :list)
        (not (contains? thread-invalid-symbols
                        (some-> zloc z/next z/sexpr)))))
+
+(defn can-thread? [zloc]
+  (or (can-thread-list? zloc)
+      (and (= (z/tag zloc) :token)
+           (= (z/tag (z/up zloc)) :list)
+           (not (contains? thread-invalid-symbols
+                           (some-> zloc z/up z/next z/sexpr))))))
 
 (defn thread-first
   [zloc]
@@ -122,11 +129,12 @@
 (defn thread-all
   [zloc sym]
   (when (can-thread? zloc)
-    (let [top-meta (meta (z/node zloc))
+    (let [zloc (if (= (z/tag zloc) :list) zloc (z/up zloc))
+          top-meta (meta (z/node zloc))
           [{top-range :range} :as result] (thread-sym zloc sym top-meta)]
       (loop [[{:keys [loc]} :as result] result]
         (let [next-loc (z/right (z/down loc))]
-          (if (and (can-thread? next-loc) (z/right (z/down next-loc)))
+          (if (and (can-thread-list? next-loc) (z/right (z/down next-loc)))
             (recur (thread-sym next-loc sym top-meta))
             (assoc-in result [0 :range] top-range)))))))
 

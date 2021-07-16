@@ -281,7 +281,7 @@
         other-colls (r.transform/find-other-colls zloc)
         definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
         inline-symbol? (r.transform/inline-symbol? definition)
-        can-thread? (r.transform/can-thread-at-cursor? zloc)
+        can-thread? (r.transform/can-thread? zloc)
         macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col)
         line (dec row)
         character (dec col)

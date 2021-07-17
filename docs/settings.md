@@ -137,7 +137,8 @@ Default:
 
 ```clojure
 {:ns-inner-blocks-indenation :next-line
- :sort {:require true
+ :sort {:ns true
+        :require true
         :import true
         :refer true}}
 ```
@@ -147,6 +148,10 @@ Default:
 Where to place first require/import following [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#line-breaks-in-ns), `:same-line`, `:next-line` or `:keep`.
 
 #### sort
+
+##### ns
+
+Whether to enable sort of `ns` children like require,import forms following [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration).
 
 ##### require
 

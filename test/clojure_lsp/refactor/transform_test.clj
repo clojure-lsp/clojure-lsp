@@ -527,7 +527,61 @@
                      (code "(ns foo.bar"
                            " (:require"
                            "  [some :refer [foo bar baz]]))"
-                           "   foo bar baz"))))
+                           "   foo bar baz")))
+    (testing "ns children sorting"
+      (testing "import before require"
+        (test-clean-ns {}
+                       (code "(ns foo.bar"
+                             " (:import"
+                             "  [foo Bar])"
+                             " (:require"
+                             "  [clojure.string :as str]))"
+                             "str/join"
+                             "Bar")
+                       (code "(ns foo.bar"
+                             " (:require"
+                             "  [clojure.string :as str])"
+                             " (:import"
+                             "  [foo Bar]))"
+                             "str/join"
+                             "Bar")))
+      (testing "import before require with other list between"
+        (test-clean-ns {}
+                       (code "(ns foo.bar"
+                             " (:import"
+                             "  [foo Bar"
+                             "       Baz"
+                             "       Qux])"
+                             " (:refer-clojure :exclude [next])"
+                             " (:require"
+                             "  [clojure.string :as str]))"
+                             "str/join"
+                             "Bar Qux")
+                       (code "(ns foo.bar"
+                             " (:require"
+                             "  [clojure.string :as str])"
+                             " (:refer-clojure :exclude [next])"
+                             " (:import"
+                             "  [foo Bar"
+                             "       Qux]))"
+                             "str/join"
+                             "Bar Qux")))
+      (testing "don't sort when :ns sort config is disabled"
+        (test-clean-ns {:settings {:clean {:sort {:ns false}}}}
+                       (code "(ns foo.bar"
+                             " (:import"
+                             "  [foo Bar])"
+                             " (:require"
+                             "  [clojure.string :as str]))"
+                             "str/join"
+                             "Bar")
+                       (code "(ns foo.bar"
+                             " (:import"
+                             "  [foo Bar])"
+                             " (:require"
+                             "  [clojure.string :as str]))"
+                             "str/join"
+                             "Bar")))))
   (testing "single unused full package import"
     (test-clean-ns {}
                    (code "(ns foo.bar"

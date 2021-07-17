@@ -330,7 +330,8 @@
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)
-                   (z/replace (n/list-node forms))))))
+                   (z/replace (with-meta (n/list-node forms)
+                                         (-> removed-nodes z/node meta)))))))
 
 (defn ^:private remove-unused-refers
   [node unused-refers]
@@ -466,9 +467,34 @@
         :same-line
         :next-line)))
 
+(defn ^:private sort-ns-children
+  [ns-loc settings]
+  (if (get-in settings [:clean :sort :ns] true)
+    (let [require-loc (-> ns-loc
+                          (z/find-next-depth-first #(and (= :list (z/tag %))
+                                                         (= :require (z/sexpr (z/next %))))))
+          import-loc (-> ns-loc
+                         (z/find-next-depth-first #(and (= :list (z/tag %))
+                                                        (= :import (z/sexpr (z/next %))))))]
+      (if (and require-loc
+               import-loc
+               (< (-> import-loc z/node meta :row)
+                  (-> require-loc z/node meta :row)))
+        (z/subedit-> ns-loc
+                     (z/find-next-value z/next :import)
+                     z/up
+                     (z/replace (z/node require-loc))
+                     z/right
+                     (z/find-next-value z/next :require)
+                     z/up
+                     (z/replace (z/node import-loc)))
+        ns-loc))
+    ns-loc))
+
 (defn clean-ns
   [zloc uri]
-  (let [safe-loc (or zloc (z/of-string (get-in @db/db [:documents uri :text])))
+  (let [settings (:settings @db/db)
+        safe-loc (or zloc (z/of-string (get-in @db/db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation @db/db)
@@ -478,7 +504,8 @@
             unused-imports (q/find-unused-imports (:findings @db/db) filename)
             result-loc (-> ns-loc
                            (clean-requires unused-aliases unused-refers ns-inner-blocks-indentation)
-                           (clean-imports unused-imports ns-inner-blocks-indentation))]
+                           (clean-imports unused-imports ns-inner-blocks-indentation)
+                           (sort-ns-children settings))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 

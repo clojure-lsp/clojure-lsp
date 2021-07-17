@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - `clean-ns` now sorts ns children forms according to the ClojureStyleGuide, at the moment moving require form before import form, enabled by default under flag `:clean :sort :ns` setting.
+
 - Editor
   - Improve hover output, both markdown and plain text forms.
   - Allow calling thread-first/last and thread-first-all/last-all from within the list.

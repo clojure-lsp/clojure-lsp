@@ -82,15 +82,14 @@
                  (contains? (symbol (-> var :ns str) (-> var :name str))))))))
 
 (defn ^:private lint-public-vars [filename analysis settings]
-  (when (not (= :off (get-in settings [:linters :unused-public-var :level])))
-    (let [start-time (System/nanoTime)
-          public-vars (->> (q/find-var-definitions analysis filename false)
-                           (filter (partial exclude-public-var? settings))
-                           (filter (comp #(= (count %) 0)
-                                         #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
-                           (mapv (partial unused-public-var->diagnostic settings)))]
-      (log/info (format "Linting public vars took %sms" (quot (- (System/nanoTime) start-time) 1000000)))
-      public-vars)))
+  (let [start-time (System/nanoTime)
+        public-vars (->> (q/find-var-definitions analysis filename false)
+                         (filter (partial exclude-public-var? settings))
+                         (filter (comp #(= (count %) 0)
+                                       #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
+                         (mapv (partial unused-public-var->diagnostic settings)))]
+    (log/info (format "Linting public vars took %sms" (quot (- (System/nanoTime) start-time) 1000000)))
+    public-vars))
 
 (defn ^:private find-diagnostics [uri db]
   (let [settings (get db :settings)

@@ -1353,11 +1353,16 @@
    'facts        'midje.sweet})
 
 (def common-alias->info
-  {'str    'clojure.string
-   'repl   'clojure.repl
+  {'async  'clojure.core.async
+   'csv    'clojure.data.csv
+   'xml    'clojure.data.xml
    'edn    'clojure.edn
-   'set    'clojure.set
-   'walk   'clojure.walk
+   'io     'clojure.java.io
+   'sh     'clojure.java.shell
    'pprint 'clojure.pprint
-   'async  'clojure.core.async
-   'io     'clojure.java.io})
+   'repl   'clojure.repl
+   'set    'clojure.set
+   'spec   'clojure.spec.alpha
+   'str    'clojure.string
+   'walk   'clojure.walk
+   'zip    'clojure.zip})

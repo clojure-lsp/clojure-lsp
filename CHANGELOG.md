@@ -5,6 +5,7 @@
 - Editor
   - Improve hover output, both markdown and plain text forms.
   - Allow calling thread-first/last and thread-first-all/last-all from within the list.
+  - Improve resolve-macro-as messages and default excluded symbols.
 
 - API/CLI
   - Fix empty `XDG_CONFIG_HOME` not defaulting to `$HOME/.config` #474

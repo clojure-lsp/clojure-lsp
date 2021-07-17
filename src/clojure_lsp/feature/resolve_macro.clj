@@ -13,8 +13,15 @@
    [taoensso.timbre :as log]))
 
 (def ^:private excluded-macros
-  '{clojure.test [deftest is testing]
-    clojure.core *})
+  '{clojure.core *
+    clojure.core.async *
+    clojure.test [deftest is testing]
+    clojure.test.check.generators [let]
+    cljs.core.async *
+    cljs.core.async.macros *
+    cats.core [->= ->>=]
+    schema.core [defschema]
+    compojure.core [defroutes let-routes]})
 
 (defn ^:private find-function-name-position [uri row col]
   (some-> (get-in @db/db [:documents uri :text])
@@ -62,5 +69,5 @@
                                           :text (:text document)})
       (log/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
     (do
-      (log/error (format "Could not resolve macro '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
-      (producer/window-show-message (format "No macro '%s' was found to be resolved." resolved-full-symbol-str) :error))))
+      (log/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+      (producer/window-show-message (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error))))

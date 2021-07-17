@@ -468,6 +468,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#ns" class="md-nav__link">
+    ns
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#require" class="md-nav__link">
     require
   </a>
@@ -783,6 +790,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#ns" class="md-nav__link">
+    ns
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#require" class="md-nav__link">
     require
   </a>
@@ -1032,13 +1046,16 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <h3 id="clean">Clean<a class="headerlink" href="#clean" title="Permanent link">#</a></h3>
 <p>Default:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:ns-inner-blocks-indenation</span> <span class="ss">:next-line</span>
- <span class="ss">:sort</span> <span class="p">{</span><span class="ss">:require</span> <span class="nv">true</span>
+ <span class="ss">:sort</span> <span class="p">{</span><span class="ss">:ns</span> <span class="nv">true</span>
+        <span class="ss">:require</span> <span class="nv">true</span>
         <span class="ss">:import</span> <span class="nv">true</span>
         <span class="ss">:refer</span> <span class="nv">true</span><span class="p">}}</span>
 </code></pre></div>
 <h4 id="ns-inner-blocks-indentation">ns-inner-blocks-indentation<a class="headerlink" href="#ns-inner-blocks-indentation" title="Permanent link">#</a></h4>
 <p>Where to place first require/import following <a href="https://github.com/bbatsov/clojure-style-guide#line-breaks-in-ns">Clojure Style Guide</a>, <code>:same-line</code>, <code>:next-line</code> or <code>:keep</code>.</p>
 <h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>
+<h5 id="ns">ns<a class="headerlink" href="#ns" title="Permanent link">#</a></h5>
+<p>Whether to enable sort of <code>ns</code> children like require,import forms following <a href="https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration">Clojure Style Guide</a>.</p>
 <h5 id="require">require<a class="headerlink" href="#require" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:require</code> form.</p>
 <h5 id="import">import<a class="headerlink" href="#import" title="Permanent link">#</a></h5>

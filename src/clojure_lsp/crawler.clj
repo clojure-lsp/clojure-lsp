@@ -30,8 +30,8 @@
   (try
     (let [sep (re-pattern (System/getProperty "path.separator"))
           {:keys [exit out err]} (apply shell/sh (into classpath-cmd
-                                   (cond-> [:dir (str root-path)]
-                                     env (conj :env (merge {} (System/getenv) env)))))]
+                                                       (cond-> [:dir (str root-path)]
+                                                         env (conj :env (merge {} (System/getenv) env)))))]
       (if (= 0 exit)
         (-> out
             string/trim-newline

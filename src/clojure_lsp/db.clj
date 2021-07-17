@@ -23,13 +23,13 @@
       (.getAbsolutePath file)
       (.getAbsolutePath (io/file (str project-root-path) file)))))
 
-(defn ^:private make-spec [project-root-path]
-  (let [lsp-db-path (get-sqlite-db-file-path project-root-path)]
-    {:dbtype "sqlite"
-     :dbname lsp-db-path}))
+(defn ^:private make-spec [lsp-db-path]
+  {:dbtype "sqlite"
+   :dbname lsp-db-path})
 
-(defn save-deps [project-root-path project-hash classpath analysis]
-  (let [db-spec (make-spec project-root-path)]
+(defn save-deps! [project-root-path project-hash classpath analysis]
+  (let [lsp-db-path (get-sqlite-db-file-path project-root-path)
+        db-spec (make-spec lsp-db-path)]
     (io/make-parents (:dbname db-spec))
     (with-open [conn (jdbc/get-connection db-spec)]
       (jdbc/execute! conn ["drop table if exists project;"])
@@ -39,17 +39,20 @@
                             values (?,?,?,?,?);" (str version) (str project-root-path) project-hash (pr-str classpath) (pr-str analysis)]))))
 
 (defn read-deps [project-root-path]
-  (try
-    (with-open [conn (jdbc/get-connection (make-spec project-root-path))]
-      (let [project-row
-            (-> (jdbc/execute! conn
-                               ["select root, hash, classpath, analysis from project where root = ? and version = ?"
-                                (str project-root-path)
-                                (str version)]
-                               {:builder-fn rs/as-unqualified-lower-maps})
-                (nth 0))]
-        {:analysis (edn/read-string (:analysis project-row))
-         :classpath (edn/read-string (:classpath project-row))
-         :project-hash (:hash project-row)}))
-    (catch Throwable e
-      (log/warn "Could not load db" (.getMessage e)))))
+  (let [lsp-db-path (get-sqlite-db-file-path project-root-path)]
+    (try
+      (with-open [conn (jdbc/get-connection (make-spec lsp-db-path))]
+        (let [project-row
+              (-> (jdbc/execute! conn
+                                 ["select root, hash, classpath, analysis from project where root = ? and version = ?"
+                                  (str project-root-path)
+                                  (str version)]
+                                 {:builder-fn rs/as-unqualified-lower-maps})
+                  (nth 0))]
+          {:analysis (edn/read-string (:analysis project-row))
+           :classpath (edn/read-string (:classpath project-row))
+           :project-hash (:hash project-row)}))
+      (catch org.sqlite.SQLiteException _
+        (log/warn (format "Could not load project cache from '%s'. This usually happens the first time project is being analyzed." lsp-db-path)))
+      (catch Throwable e
+        (log/error e (format "Could not load project cache from '%s'" lsp-db-path))))))

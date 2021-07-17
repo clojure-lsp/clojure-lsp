@@ -26,16 +26,20 @@
   (.toFile (.resolve path child)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]}]
-  (log/info "Finding classpath via `" (string/join " " classpath-cmd) "`")
+  (log/info (format "Finding classpath via `%s`" (string/join " " classpath-cmd)))
   (try
     (let [sep (re-pattern (System/getProperty "path.separator"))
-          response (apply shell/sh (into classpath-cmd
-                                         (cond-> [:dir (str root-path)]
-                                           env (conj :env (merge {} (System/getenv) env)))))]
-      (-> response
-          (:out)
-          (string/trim-newline)
-          (string/split sep)))
+          {:keys [exit out err]} (apply shell/sh (into classpath-cmd
+                                   (cond-> [:dir (str root-path)]
+                                     env (conj :env (merge {} (System/getenv) env)))))]
+      (if (= 0 exit)
+        (-> out
+            string/trim-newline
+            (string/split sep))
+        (do
+          (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
+          (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly."  :warning)
+          [])))
     (catch Exception e
       (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
       (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly."  :warning)
@@ -147,11 +151,7 @@
   (for [[bucket vs] analysis
         v vs
         element (entry->normalized-entries (assoc v :bucket bucket))
-        :let [valid? (valid-element? element)
-              _ (when (and (not valid?)
-                           (not (macro-expanded-element? element)))
-                  (log/debug "Invalid clj-kondo analysis. Cannot find position data for" (:name element) (pr-str element) (some-> (:name element) meta)))]
-        :when valid?]
+        :when (valid-element? element)]
     element))
 
 (defn update-analysis [db uri new-analysis]
@@ -211,7 +211,7 @@
               start-time (System/nanoTime)]
           (System/gc)
           (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
-          (db/save-deps root-path project-hash classpath analysis))))))
+          (db/save-deps! root-path project-hash classpath analysis))))))
 
 (defn ^:private analyze-project! [project-root-uri]
   (let [root-path (shared/uri->path project-root-uri)

@@ -4,7 +4,7 @@
 
 - General
   - `clean-ns` now sorts ns children forms according to the ClojureStyleGuide, at the moment moving require form before import form, enabled by default under flag `:clean :sort :ns` setting.
-  - Improve startup error handler and logging during project analysis.
+  - Improve startup error handler and logging during project analysis. Related to #484
 
 - Editor
   - Improve hover output, both markdown and plain text forms.

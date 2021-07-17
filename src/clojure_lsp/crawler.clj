@@ -38,10 +38,10 @@
             (string/split sep))
         (do
           (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-          (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly."  :warning)
+          (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
           [])))
     (catch Exception e
-      (log/error e "Error while looking up classpath info in" (str root-path) (.getMessage e))
+      (log/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
       (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly."  :warning)
       [])))
 

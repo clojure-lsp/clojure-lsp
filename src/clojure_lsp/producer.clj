@@ -13,7 +13,7 @@
    (window-show-message {:message message :type type}))
   ([message-content]
    (log/info message-content)
-   (let [client ^LanguageClient (:client @db/db)]
+   (when-let [client ^LanguageClient (:client @db/db)]
      (->> message-content
           (interop/conform-or-log ::interop/show-message)
           (.showMessage client)))))

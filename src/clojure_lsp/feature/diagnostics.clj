@@ -88,7 +88,7 @@
                          (filter (comp #(= (count %) 0)
                                        #(q/find-references-from-cursor analysis filename (:name-row %) (:name-col %) false)))
                          (mapv (partial unused-public-var->diagnostic settings)))]
-    (log/info (format "Linting public vars took %sms" (quot (- (System/nanoTime) start-time) 1000000)))
+    (log/info (format "Linting public vars took %sms for %s" (quot (- (System/nanoTime) start-time) 1000000) filename))
     public-vars))
 
 (defn ^:private find-diagnostics [uri db]

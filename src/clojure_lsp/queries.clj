@@ -139,9 +139,12 @@
   (concat
     (when include-declaration?
       [element])
-    (filter #(and (= (:name %) name)
-                  (= :namespace-usages (:bucket %)))
-            (mapcat val analysis))))
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(= (:name %) name))
+            (filter #(identical? :namespace-usages (:bucket %))))
+          analysis)))
 
 (defmethod find-references :namespace-alias
   [analysis {:keys [alias filename] :as element} include-declaration?]
@@ -159,51 +162,66 @@
   [analysis element include-declaration?]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     [element]
-    (->> (mapcat val analysis)
-         (filter #(and (= (:name %) (:name element))
-                       (= (or (:ns %) (:to %)) (:to element))
-                       (not= :keywords (:bucket %))
-                       (or include-declaration?
-                           (not= :var-definitions (:bucket %)))))
-         (medley/distinct-by (juxt :filename :name :row :col)))))
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(not (identical? :keywords (:bucket %))))
+            (filter #(.equals ^clojure.lang.Symbol (:name element)
+                              (:name %)))
+            (filter #(.equals ^clojure.lang.Symbol (:to element)
+                              (or (:ns %) (:to %))))
+            (filter #(or include-declaration?
+                         (not (identical? :var-definitions (:bucket %)))))
+            (medley/distinct-by (juxt :filename :name :row :col)))
+          analysis)))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
   (let [defrecord? (= 'clojure.core/defrecord (:defined-by element))
         names (when defrecord? (defrecord-names-for element))]
-    (->> (mapcat val analysis)
-         (filter #(and (or (= (:name %) (:name element))
-                           (and defrecord?
-                                (contains? names (:name %))))
-                       (= (or (:ns %) (:to %))
-                          (:ns element))
-                       (not= :keywords (:bucket %))
-                       (or include-declaration?
-                           (or (not= :var-definitions (:bucket %))
-                               (= (:defined-by %) 'clojure.core/declare)))))
-         (medley/distinct-by (juxt :filename :name :row :col)))))
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(not (identical? :keywords (:bucket %))))
+            (filter #(or (.equals ^clojure.lang.Symbol (:name element)
+                                  (:name %))
+                         (and defrecord?
+                              (contains? names (:name %)))))
+            (filter #(.equals ^clojure.lang.Symbol (:ns element)
+                              (or (:ns %) (:to %))))
+            (filter #(or include-declaration?
+                         (not (identical? :var-definitions (:bucket %)))
+                         (= (:defined-by %) 'clojure.core/declare)))
+            (medley/distinct-by (juxt :filename :name :row :col)))
+          analysis)))
 
 (defmethod find-references :keywords
   [analysis {:keys [ns name] :as _element} include-declaration?]
-  (->> (let [project-analysis (filter-project-analysis analysis)]
-         (if ns
-           (filter #(and (= :keywords (:bucket %))
-                         (= (:name %) name)
-                         (= (:ns %) ns)
-                         (not (:keys-destructuring %))
-                         (or include-declaration?
-                             (not (:reg %))))
-                   (mapcat val project-analysis))
-           (filter #(and (= :keywords (:bucket %))
-                         (= (:name %) name)
-                         (not (:ns %)))
-                   (mapcat val project-analysis))))
-       (medley/distinct-by (juxt :filename :name :row :col))))
+  (let [project-analysis (filter-project-analysis analysis)]
+    (into []
+          (if ns
+            (comp
+              (mapcat val)
+              (filter #(identical? :keywords (:bucket %)))
+              (filter #(.equals ^String name (:name %)))
+              (filter #(.equals ^clojure.lang.Symbol ns (:ns %)))
+              (filter #(not (:keys-destructuring %)))
+              (filter #(or include-declaration?
+                           (not (:reg %))))
+              (medley/distinct-by (juxt :filename :name :row :col)))
+            (comp
+              (mapcat val)
+              (filter #(identical? :keywords (:bucket %)))
+              (filter #(.equals ^String name (:name %)))
+              (filter #(not (:ns %)))
+              (medley/distinct-by (juxt :filename :name :row :col))))
+          project-analysis)))
 
 (defmethod find-references :local
   [analysis {:keys [id filename] :as _element} include-declaration?]
   (filter #(and (= (:id %) id)
-                (or include-declaration? (not= :locals (:bucket %))))
+                (or include-declaration?
+                    (not (identical? :locals (:bucket %)))))
           (get analysis filename)))
 
 (defmethod find-references :default
@@ -212,52 +230,54 @@
 
 (defn find-element-under-cursor
   [analysis filename line column]
-  (let [local-analysis (get analysis filename)]
-    (find-first (fn [{:keys [name-row name-col name-end-row name-end-col] :as _v}]
-                  ;; TODO Probably should use q/inside? instead
-                  (and (<= name-row line name-end-row)
-                       (<= name-col column name-end-col)))
-                local-analysis)))
+  (find-first (fn [{:keys [name-row name-col name-end-row name-end-col]}]
+                ;; TODO Probably should use q/inside? instead
+                (and (<= name-row line name-end-row)
+                     (<= name-col column name-end-col)))
+              (get analysis filename)))
 
 (defn find-definition-from-cursor [analysis filename line column]
   (try
-    (let [element (find-element-under-cursor analysis filename line column)]
-      (when element
-        (find-definition analysis element)))
+    (when-let [element (find-element-under-cursor analysis filename line column)]
+      (find-definition analysis element))
     (catch Throwable e
       (log/error e "can't find definition"))))
 
 (defn find-references-from-cursor [analysis filename line column include-declaration?]
   (try
-    (let [element (find-element-under-cursor analysis filename line column)]
-      (when element
-        (find-references analysis element include-declaration?)))
+    (when-let [element (find-element-under-cursor analysis filename line column)]
+      (find-references analysis element include-declaration?))
     (catch Throwable e
       (log/error e "can't find references"))))
 
 (defn find-var-definitions [analysis filename include-private?]
   (->> (get analysis filename)
-       (filter #(and (= (:bucket %) :var-definitions)
+       (filter #(and (identical? :var-definitions (:bucket %))
                      (or include-private?
                          (not (get % :private)))))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
 (defn find-keyword-definitions [analysis filename]
   (->> (get analysis filename)
-       (filter #(and (= (:bucket %) :keywords)
+       (filter #(and (identical? :keywords (:bucket %))
                      (:reg %)))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
 (defn find-all-ns-definitions [analysis]
-  (->> (mapcat val analysis)
-       (filter (comp #(= % :namespace-definitions) :bucket))
-       (map :name)
-       set))
+  (into #{}
+        (comp
+          (mapcat val)
+          (filter #(identical? :namespace-definitions (:bucket %)))
+          (map :name))
+        analysis))
 
 (defn find-all-aliases [analysis]
-  (filter #(and (= (:bucket %) :namespace-alias)
-                (:alias %))
-          (mapcat val analysis)))
+  (into #{}
+        (comp
+          (mapcat val)
+          (filter #(identical? :namespace-alias (:bucket %)))
+          (filter :alias))
+        analysis))
 
 (defn find-unused-aliases [findings filename]
   (->> (get findings filename)

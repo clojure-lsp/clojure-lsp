@@ -27,8 +27,11 @@
     (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
 (defmacro ^:private print-with-time [options msg & body]
-  `(if (:raw? ~options)
-     ~@body
+  `(if (or (:raw? ~options)
+           (:verbose ~options))
+     (do
+       (cli-println ~options ~msg)
+       ~@body)
      (let [~'_time (System/nanoTime)
            ~'_result-ch (chan)]
        (go

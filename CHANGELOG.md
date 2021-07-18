@@ -13,6 +13,7 @@
 
 - API/CLI
   - Fix empty `XDG_CONFIG_HOME` not defaulting to `$HOME/.config` #474
+  - Improve verbose logging setting.
 
 ## 2021.07.12-12.30.59
 

@@ -6,6 +6,7 @@
   - `clean-ns` now sorts ns children forms according to the ClojureStyleGuide, at the moment moving require form before import form, enabled by default under flag `:clean :sort :ns` setting.
   - Improve startup error handler and logging during project analysis. Related to #484
   - Performance improvements using transducers on analysis queries.
+  - Fixed auto-resolve source-paths for lein projects that get source-paths dynamically, clojure-lsp will use the default source-paths for these cases
 
 - Editor
   - Improve hover output, both markdown and plain text forms.

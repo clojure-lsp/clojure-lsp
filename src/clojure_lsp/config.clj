@@ -123,13 +123,24 @@
 (def default-lein-source-paths ["src" "src/main/clojure"])
 (def default-lein-test-paths ["test" "src/test/clojure"])
 
+(defn ^:private valid-path-config? [config]
+  (and config
+       (or (vector? config)
+           (and (list? config)
+                (string? (first config)))
+           (set? config))))
+
 (defn resolve-lein-source-paths
-  [{:keys [source-paths test-paths profiles monolith] :as project}
+  [{:keys [source-paths test-paths profiles] :as project}
    settings]
   (when project
     (let [source-aliases (or (:source-aliases settings) default-source-aliases)
-          source-paths (or source-paths default-lein-source-paths)
-          test-paths (or test-paths default-lein-test-paths)
+          source-paths (if (valid-path-config? source-paths)
+                         source-paths
+                         default-lein-source-paths)
+          test-paths (if (valid-path-config? test-paths)
+                       test-paths
+                       default-lein-test-paths)
           root-source-paths (extract-source-paths source-paths test-paths profiles)]
       (->> source-aliases
            (map #(get profiles % nil))

@@ -167,6 +167,13 @@
                                               :profiles {:foo ["c" "d"]
                                                          :bar {:other :things}
                                                          :baz ["e"]}} {}))))
+  (testing "when source-paths are not static"
+    (is (= #{"src" "src/main/clojure" "b"}
+           (config/resolve-lein-source-paths '{:test-paths ["b"]
+                                               :source-paths ~(get-path "lib" ["clojure"])} {})))
+    (is (= #{"test" "src/test/clojure" "b"}
+           (config/resolve-lein-source-paths '{:source-paths ["b"]
+                                               :test-paths (get-path "lib" ["clojure"])} {}))))
   (testing "checking default source aliases"
     (testing "with default settings"
       (testing "when some default source alias is not present"

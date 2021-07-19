@@ -1430,8 +1430,9 @@
 <li>General</li>
 <li><code>clean-ns</code> now sorts ns children forms according to the ClojureStyleGuide, at the moment moving require form before import form, enabled by default under flag <code>:clean :sort :ns</code> setting.</li>
 <li>Improve startup error handler and logging during project analysis. Related to #484</li>
+<li>Performance improvements using transducers on analysis queries.</li>
 <li>
-<p>Performance improvements using transducers on analysis queries.</p>
+<p>Fixed auto-resolve source-paths for lein projects that get source-paths dynamically, clojure-lsp will use the default source-paths for these cases</p>
 </li>
 <li>
 <p>Editor</p>
@@ -1835,7 +1836,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 18, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 19, 2021</span>
     
   </small>
 </div>

@@ -8,6 +8,11 @@ If that fails, you may need to have your client launch inside a shell, so use so
 In windows you probably need to rename to `clojure-lsp.bat`.
 
 ---
+## Sublime Text
+
+Clojure LSP can be installed by first installing the [LSP plugin](https://packagecontrol.io/packages/LSP) which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions [here](https://lsp.sublimetext.io/language_servers/#clojure) to download Clojure LSP and how to configure it in Sublime Text.
+
+---
 ## Vim
 
 I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well.

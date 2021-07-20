@@ -1,11 +1,9 @@
 (ns clojure-lsp.diff
   (:require
-   [clojure.java.io :as io]
+   [clojure-lsp.shared :as shared]
    [clojure.string :as str])
   (:import
-   [difflib DiffUtils]
-   [java.io File]
-   [java.util.regex Pattern]))
+   [difflib DiffUtils]))
 
 (defn- lines [s]
   (str/split s #"\n"))
@@ -13,18 +11,13 @@
 (defn- unlines [ss]
   (str/join "\n" ss))
 
-(defn to-absolute-path [filename]
-  (->> (str/split filename (re-pattern (Pattern/quote File/separator)))
-       ^java.io.File (apply io/file)
-       .getCanonicalPath))
-
 (defn unified-diff
-  ([filename original revised]
-   (unified-diff filename original revised 3))
-  ([filename original revised context]
+  ([uri original revised]
+   (unified-diff uri original revised 3))
+  ([uri original revised context]
    (unlines (DiffUtils/generateUnifiedDiff
-              (->> filename to-absolute-path (str "a"))
-              (->> filename to-absolute-path (str "b"))
+              (->> uri shared/uri->filename (str "a"))
+              (->> uri shared/uri->filename (str "b"))
               (lines original)
               (DiffUtils/diff (lines original) (lines revised))
               context))))
@@ -33,6 +26,7 @@
   {:reset "[0m"
    :red   "[031m"
    :green "[032m"
+   :yellow "[033m"
    :cyan  "[036m"})
 
 (defn- colorize [s color]
@@ -40,6 +34,8 @@
 
 (defn colorize-diff [diff-text]
   (-> diff-text
+      (str/replace #"(?m)^(\-\-\-\sa.*)$"  (colorize "$1" :yellow))
+      (str/replace #"(?m)^(\+\+\+\sb.*)$"  (colorize "$1" :yellow))
       (str/replace #"(?m)^(@@.*@@)$"       (colorize "$1" :cyan))
       (str/replace #"(?m)^(\+(?!\+\+).*)$" (colorize "$1" :green))
       (str/replace #"(?m)^(-(?!--).*)$"    (colorize "$1" :red))))

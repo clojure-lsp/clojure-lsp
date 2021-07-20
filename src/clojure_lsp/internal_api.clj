@@ -91,10 +91,12 @@
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}})
   ns+uri)
 
-(defn ^:private edits->diff-string [edits]
+(defn ^:private edits->diff-string [edits {:keys [raw?]}]
   (->> edits
        (map (fn [{:keys [uri old-text new-text]}]
-              (diff/unified-diff uri old-text new-text)))
+              (if raw?
+                (diff/unified-diff uri old-text new-text)
+                (diff/colorize-diff (diff/unified-diff uri old-text new-text)))))
        (string/join "\n")))
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
@@ -116,7 +118,7 @@
     (if (seq edits)
       (if dry?
         {:result-code 1
-         :message (edits->diff-string edits)
+         :message (edits->diff-string edits options)
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
@@ -143,7 +145,7 @@
     (if (seq edits)
       (if dry?
         {:result-code 1
-         :message (edits->diff-string edits)
+         :message (edits->diff-string edits options)
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
@@ -167,7 +169,7 @@
                               seq)]
             (if dry?
               {:result-code 0
-               :message (edits->diff-string edits)
+               :message (edits->diff-string edits options)
                :edits edits}
               (do
                 (mapv client/apply-workspace-edit-summary! edits)

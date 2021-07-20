@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- API/CLI
+  - Fix filename in diffs with dry option.
+  - Add coloring to diffs following git diff.
+
 ## 2021.07.19-14.46.52
 
 - General

@@ -15,7 +15,8 @@ Below is an example using the clean-ns feature on a `deps.edn` project:
 
 ```clojure
 {:aliases 
-  {:lint-ns {:exec-fn clojure-lsp.api/clean-ns!
+  {:lint-ns {:replace-deps {com.github.clojure-lsp/clojure-lsp {:mvn/version "..."}}
+             :exec-fn clojure-lsp.api/clean-ns!
              :exec-args {:dry? true}}}}
 ```
 

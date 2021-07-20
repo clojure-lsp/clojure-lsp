@@ -621,7 +621,8 @@ This is a new feature and it's experimental, so things can break at any moment, 
 <p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj">clojure-lsp.api</a> should be used as the entrypoint for the same available features of the CLI, feel free to open a issue for missing features.</p>
 <p>Below is an example using the clean-ns feature on a <code>deps.edn</code> project:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:aliases</span> 
-  <span class="p">{</span><span class="ss">:lint-ns</span> <span class="p">{</span><span class="ss">:exec-fn</span> <span class="nv">clojure-lsp.api/clean-ns!</span>
+  <span class="p">{</span><span class="ss">:lint-ns</span> <span class="p">{</span><span class="ss">:replace-deps</span> <span class="p">{</span><span class="nv">com.github.clojure-lsp/clojure-lsp</span> <span class="p">{</span><span class="ss">:mvn/version</span> <span class="s">&quot;...&quot;</span><span class="p">}}</span>
+             <span class="ss">:exec-fn</span> <span class="nv">clojure-lsp.api/clean-ns!</span>
              <span class="ss">:exec-args</span> <span class="p">{</span><span class="ss">:dry?</span> <span class="nv">true</span><span class="p">}}}}</span>
 </code></pre></div>
 <h2 id="ci">CI<a class="headerlink" href="#ci" title="Permanent link">#</a></h2>

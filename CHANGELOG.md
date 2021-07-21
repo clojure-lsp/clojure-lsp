@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Minor fix on the analysis queries comparison.
+
 - API/CLI
   - Fix filename in diffs with dry option.
   - Add coloring to diffs following git diff.

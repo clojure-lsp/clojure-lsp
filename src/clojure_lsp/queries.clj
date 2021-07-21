@@ -6,6 +6,13 @@
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
+(defn ^:private safe-equal?
+  "Fast equals for string and symbols."
+  [a b]
+  (if (instance? clojure.lang.Symbol a)
+    (.equals ^clojure.lang.Symbol a b)
+    (.equals ^String a b)))
+
 (defn inside?
   [start-l start-c
    check-l check-c
@@ -166,10 +173,8 @@
           (comp
             (mapcat val)
             (filter #(not (identical? :keywords (:bucket %))))
-            (filter #(.equals ^clojure.lang.Symbol (:name element)
-                              (:name %)))
-            (filter #(.equals ^clojure.lang.Symbol (:to element)
-                              (or (:ns %) (:to %))))
+            (filter #(safe-equal? (:name element) (:name %)))
+            (filter #(safe-equal? (:to element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
                          (not (identical? :var-definitions (:bucket %)))))
             (medley/distinct-by (juxt :filename :name :row :col)))
@@ -183,12 +188,10 @@
           (comp
             (mapcat val)
             (filter #(not (identical? :keywords (:bucket %))))
-            (filter #(or (.equals ^clojure.lang.Symbol (:name element)
-                                  (:name %))
+            (filter #(or (safe-equal? (:name element) (:name %))
                          (and defrecord?
                               (contains? names (:name %)))))
-            (filter #(.equals ^clojure.lang.Symbol (:ns element)
-                              (or (:ns %) (:to %))))
+            (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
                          (not (identical? :var-definitions (:bucket %)))
                          (= (:defined-by %) 'clojure.core/declare)))
@@ -203,8 +206,8 @@
             (comp
               (mapcat val)
               (filter #(identical? :keywords (:bucket %)))
-              (filter #(.equals ^String name (:name %)))
-              (filter #(.equals ^clojure.lang.Symbol ns (:ns %)))
+              (filter #(safe-equal? name (:name %)))
+              (filter #(safe-equal? ns (:ns %)))
               (filter #(not (:keys-destructuring %)))
               (filter #(or include-declaration?
                            (not (:reg %))))
@@ -212,7 +215,7 @@
             (comp
               (mapcat val)
               (filter #(identical? :keywords (:bucket %)))
-              (filter #(.equals ^String name (:name %)))
+              (filter #(safe-equal? name (:name %)))
               (filter #(not (:ns %)))
               (medley/distinct-by (juxt :filename :name :row :col))))
           project-analysis)))

@@ -4,6 +4,7 @@
 
 - General
   - Minor fix on the analysis queries comparison.
+  - Improve GraalVM configuration to use direct/less configurations.
 
 - API/CLI
   - Fix filename in diffs with dry option.

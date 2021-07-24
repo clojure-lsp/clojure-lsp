@@ -23,17 +23,6 @@
       <version>1.0.206</version>
     </dependency>
     <dependency>
-      <groupId>ericdallo</groupId>
-      <artifactId>sqlite-jni-graal-fix</artifactId>
-      <version>0.0.3-graalvm-21.1.0</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.graalvm.nativeimage</groupId>
-          <artifactId>svm</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.lsp4j</groupId>
       <artifactId>org.eclipse.lsp4j</artifactId>
       <version>0.12.0</version>

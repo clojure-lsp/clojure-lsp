@@ -38,9 +38,7 @@
                                   :jvm-opts ["-Xmx2g" "-server"]
                                   :main-class clojure-lsp.main
                                   :aliases [:native]}}
-           :native {:extra-deps {ericdallo/sqlite-jni-graal-fix {:mvn/version "0.0.3-graalvm-21.1.0"
-                                                                 :exclusions [org.graalvm.nativeimage/svm]}}
-                    :jvm-opts ["-Xmx2g"
+           :native {:jvm-opts ["-Xmx2g"
                                "-server"
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"

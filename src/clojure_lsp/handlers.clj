@@ -284,24 +284,20 @@
 
 (defn prepare-call-hierarchy
   [{:keys [textDocument position]}]
-  (let [project-root-uri (:project-root-uri @db/db)]
-    (f.call-hierarchy/prepare textDocument
-                              (inc (:line position))
-                              (inc (:character position))
-                              project-root-uri)))
+  (f.call-hierarchy/prepare textDocument
+                            (inc (:line position))
+                            (inc (:character position))))
 
 (defn call-hierarchy-incoming
   [{:keys [item]}]
   (let [uri (:uri item)
         row (inc (-> item :range :start :line))
-        col (inc (-> item :range :start :character))
-        project-root-uri (:project-root-uri @db/db)]
-    (f.call-hierarchy/incoming uri row col project-root-uri)))
+        col (inc (-> item :range :start :character))]
+    (f.call-hierarchy/incoming uri row col)))
 
 (defn call-hierarchy-outgoing
   [{:keys [item]}]
   (let [uri (:uri item)
         row (inc (-> item :range :start :line))
-        col (inc (-> item :range :start :character))
-        project-root-uri (:project-root-uri @db/db)]
-    (f.call-hierarchy/outgoing uri row col project-root-uri)))
+        col (inc (-> item :range :start :character))]
+    (f.call-hierarchy/outgoing uri row col)))

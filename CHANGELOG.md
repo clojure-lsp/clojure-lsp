@@ -5,6 +5,9 @@
 - General
   - Minor fix on the analysis queries comparison.
   - Improve GraalVM configuration to use direct/less configurations.
+  
+- Editor
+  - Fix outgoing/incoming call hierarchy when vars are outside project/external jars.
 
 - API/CLI
   - Fix filename in diffs with dry option.

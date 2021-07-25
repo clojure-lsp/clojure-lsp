@@ -14,6 +14,7 @@
   - Minor fix on the analysis queries comparison.
   - Improve GraalVM configuration to use direct/less configurations.
   - Bump clj-kondo 2021.06.18 -> 2021.07.28 which adds support for macroexpanding.
+  - Support babashka classpath and source-paths discovery via bb.edn file. (needs babashka >= 0.5.1)
   
 - Editor
   - Fix outgoing/incoming call hierarchy when vars are outside project/external jars.

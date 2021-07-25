@@ -73,19 +73,21 @@
     (string/replace snippet "$current-form" current-sexpr)))
 
 (defn build-additional-snippets [cursor-loc next-loc settings]
-  (->> (get settings :additional-snippets [])
-       (filter #(or (not (string/includes? (:snippet %) "$current-form"))
-                    (and cursor-loc
-                         next-loc)))
-       (map (fn [{:keys [name detail snippet]}]
-              (if (string/includes? snippet "$current-form")
-                (let [range (shared/->range (meta (z/node next-loc)))]
+  (if (and next-loc (meta (z/node next-loc)))
+    (->> (get settings :additional-snippets [])
+         (filter #(or (not (string/includes? (:snippet %) "$current-form"))
+                      (and cursor-loc
+                           next-loc)))
+         (map (fn [{:keys [name detail snippet]}]
+                (if (string/includes? snippet "$current-form")
+                  (let [range (shared/->range (meta (z/node next-loc)))]
+                    {:label name
+                     :detail detail
+                     :text-edit {:range (if (= :token (z/tag cursor-loc))
+                                          (update-in range [:start :character] - (count (z/string cursor-loc)))
+                                          range)
+                                 :new-text (replace-snippets-vars snippet next-loc)}})
                   {:label name
                    :detail detail
-                   :text-edit {:range (if (= :token (z/tag cursor-loc))
-                                        (update-in range [:start :character] - (count (z/string cursor-loc)))
-                                        range)
-                               :new-text (replace-snippets-vars snippet next-loc)}})
-                {:label name
-                 :detail detail
-                 :insert-text (replace-snippets-vars snippet next-loc)})))))
+                   :insert-text (replace-snippets-vars snippet next-loc)}))))
+    []))

@@ -114,6 +114,25 @@
         [{:label "alpaca.ns/foo" :kind :variable}]
         (f.completion/completion (h/file-uri "file:///b.clj") full-ns-r full-ns-c)))))
 
+(deftest completing-all-ns-vars
+  (h/load-code-and-locs
+    (h/code "(ns alpaca.ns)"
+            "(def foo 1)"
+            "(defn foobar [] 2)"
+            "(def bar 3)"))
+  (let [[[all-vars-r all-vars-c]] (h/load-code-and-locs
+                                    (h/code "(ns other.ns"
+                                            " (:require [alpaca.ns :as alpaca]))"
+                                            "alpaca/|"
+                                            "")
+                                    (h/file-uri "file:///b.clj"))]
+    (testing "completing all vars of a ns alias"
+      (h/assert-submaps
+        [{:label "alpaca/bar" :kind :variable}
+         {:label "alpaca/foo" :kind :variable}
+         {:label "alpaca/foobar" :kind :function}]
+        (f.completion/completion (h/file-uri "file:///b.clj") all-vars-r all-vars-c)))))
+
 (deftest completing-with-reader-macros
   (let [[[before-reader-r before-reader-c]
          [after-reader-r after-reader-c]] (h/load-code-and-locs

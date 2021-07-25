@@ -1,5 +1,6 @@
 (ns clojure-lsp.config
   (:require
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -27,7 +28,9 @@
        :parallel true
        :copy-configs true
        :lint [(string/join (System/getProperty "path.separator") paths)]
-       :config {:output {:analysis {:arglists true
+       :custom-lint-fn f.diagnostic/unused-public-var-lint-from-kondo!
+       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}
+                :output {:analysis {:arglists true
                                     :locals false
                                     :keywords true}
                          :canonical-paths true}}}
@@ -39,7 +42,9 @@
        :copy-configs true
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
-       :config {:output {:analysis {:arglists true
+       :custom-lint-fn f.diagnostic/unused-public-var-lint-from-kondo!
+       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}
+                :output {:analysis {:arglists true
                                     :locals true
                                     :keywords true}
                          :canonical-paths true}}}

@@ -39,7 +39,7 @@ release:
 	./release
 
 integration-test:
-	bb integration-test/run-all.clj ./clojure-lsp
+	bb integration-test ./clojure-lsp
 
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs

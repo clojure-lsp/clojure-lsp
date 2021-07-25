@@ -125,6 +125,10 @@
          set
          (set/union root-source-paths))))
 
+(defn resolve-bb-source-paths
+  [{:keys [paths]}]
+  (set paths))
+
 (def default-lein-source-paths ["src" "src/main/clojure"])
 (def default-lein-test-paths ["test" "src/test/clojure"])
 

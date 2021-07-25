@@ -65,7 +65,9 @@
         {:project-path "build.boot"
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}]
+         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
+        {:project-path "bb.edn"
+         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
        (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
@@ -167,37 +169,52 @@
 
 (def default-source-paths #{"src" "test"})
 
-(defn ^:private resolve-source-paths [root-path settings given-source-paths]
+(defn ^:private resolve-source-paths-from-files [root-path settings]
   (let [deps-file (to-file root-path "deps.edn")
-        lein-file (to-file root-path "project.clj")]
-    (cond
-      given-source-paths
-      (do
-        (log/info "Using given source-paths:" given-source-paths)
-        given-source-paths)
-
+        lein-file (to-file root-path "project.clj")
+        bb-file (to-file root-path "bb.edn")]
+    (cond-> #{}
       (.exists deps-file)
-      (let [deps-source-paths (config/resolve-deps-source-paths (config/read-edn-file deps-file) settings)]
-        (if (seq deps-source-paths)
-          (do
-            (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
-            deps-source-paths)
-          (do
-            (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
-            default-source-paths)))
+      (set/union
+        (let [deps-source-paths (config/resolve-deps-source-paths (config/read-edn-file deps-file) settings)]
+          (if (seq deps-source-paths)
+            (do
+              (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
+              deps-source-paths)
+            (do
+              (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
+              default-source-paths))))
 
       (.exists lein-file)
-      (let [lein-edn (parser/lein-zloc->edn (z/of-file lein-file))
-            lein-source-paths (config/resolve-lein-source-paths lein-edn settings)]
-        (if (seq lein-source-paths)
-          (do
-            (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths)
-            lein-source-paths)
-          (do
-            (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths)
-            default-source-paths)))
+      (set/union
+        (let [lein-edn (parser/lein-zloc->edn (z/of-file lein-file))
+              lein-source-paths (config/resolve-lein-source-paths lein-edn settings)]
+          (if (seq lein-source-paths)
+            (do
+              (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths)
+              lein-source-paths)
+            (do
+              (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths)
+              default-source-paths))))
 
-      :else
+      (.exists bb-file)
+      (set/union
+        (let [bb-paths (config/resolve-bb-source-paths (config/read-edn-file bb-file))]
+          (if (seq bb-paths)
+            (do
+              (log/info "Automatically resolved source-paths from bb.edn:" bb-paths)
+              bb-paths)
+            (do
+              (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths)
+              default-source-paths)))))))
+
+(defn ^:private resolve-source-paths [root-path settings given-source-paths]
+  (if given-source-paths
+    (do
+      (log/info "Using given source-paths:" given-source-paths)
+      given-source-paths)
+    (if-let [file-source-paths (seq (resolve-source-paths-from-files root-path settings))]
+      (set file-source-paths)
       (do
         (log/info "Using default source-paths:" default-source-paths)
         default-source-paths))))

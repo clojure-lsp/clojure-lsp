@@ -20,7 +20,7 @@
     (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/b.cljc"))
-        [{:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
+        [{:range {:start {:line 1 :character 48} :end {:line 1 :character 55}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
@@ -39,7 +39,7 @@
     (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/b.cljc"))
-        [{:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
+        [{:range {:start {:line 1 :character 48} :end {:line 1 :character 55}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
@@ -70,14 +70,14 @@
        {(keyword (h/source-path->uri "rename/a.cljc"))
         [{:range {:start {:line 15 :character 0} :end {:line 15 :character 7}}
           :newText "::click-now"}
-         {:range {:start {:line 17 :character 0} :end {:line 17 :character 15}}
-          :newText ":rename.a/click-now"}]
+         {:range {:start {:line 17 :character 0} :end {:line 17 :character 27}}
+          :newText ":sample-test.rename.a/click-now"}]
 
         (keyword (h/source-path->uri "rename/b.cljc"))
         [{:range {:start {:line 7 :character 0} :end {:line 7 :character 9}}
           :newText "::a/click-now"}
-         {:range {:start {:line 9 :character 0} :end {:line 9 :character 15}}
-          :newText ":rename.a/click-now"}]}}
+         {:range {:start {:line 9 :character 0} :end {:line 9 :character 27}}
+          :newText ":sample-test.rename.a/click-now"}]}}
       (lsp/request! (fixture/rename-request "rename/a.cljc" "::click-now" 15 0))))
 
   (testing "Renaming single-name-namespace'd keywords"
@@ -86,14 +86,14 @@
        {(keyword (h/source-path->uri "rename/single_a.clj"))
         [{:range {:start {:line 2 :character 0} :end {:line 2 :character 7}}
           :newText "::click-now"}
-         {:range {:start {:line 4 :character 0} :end {:line 4 :character 22}}
-          :newText ":rename.single-a/click-now"}]
+         {:range {:start {:line 4 :character 0} :end {:line 4 :character 34}}
+          :newText ":sample-test.rename.single-a/click-now"}]
 
         (keyword (h/source-path->uri "rename/single_b.clj"))
         [{:range {:start {:line 3 :character 0} :end {:line 3 :character 9}}
           :newText "::a/click-now"}
-         {:range {:start {:line 5 :character 0} :end {:line 5 :character 22}}
-          :newText ":rename.single-a/click-now"}]}}
+         {:range {:start {:line 5 :character 0} :end {:line 5 :character 34}}
+          :newText ":sample-test.rename.single-a/click-now"}]}}
       (lsp/request! (fixture/rename-request "rename/single_a.clj" "::click-now" 2 0))))
 
   (testing "Renaming require alias"
@@ -110,7 +110,7 @@
     (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/b.cljc"))
-        [{:range {:start {:line 1 :character 36} :end {:line 1 :character 43}}
+        [{:range {:start {:line 1 :character 48} :end {:line 1 :character 55}}
           :newText "your-func"}
          {:range {:start {:line 3 :character 3} :end {:line 3 :character 10}}
           :newText "your-func"}
@@ -123,4 +123,4 @@
           :newText "your-func"}
          {:range {:start {:line 8 :character 1} :end {:line 8 :character 8}}
           :newText "your-func"}]}}
-      (lsp/request! (fixture/rename-request "rename/b.cljc" "your-func" 1 40)))))
+      (lsp/request! (fixture/rename-request "rename/b.cljc" "your-func" 1 52)))))

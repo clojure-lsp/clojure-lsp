@@ -99,13 +99,18 @@
                 (diff/colorize-diff (diff/unified-diff uri old-text new-text)))))
        (string/join "\n")))
 
+(defn ^:private exclude-ns? [{:keys [ns-exclude-regex]} namespace]
+  (and ns-exclude-regex
+       (re-matches ns-exclude-regex (str namespace))))
+
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
   (setup-analysis! options)
   (cli-println options "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
-                            q/find-all-ns-definitions))
+                            q/find-all-ns-definitions
+                            (remove (partial exclude-ns? options))))
         ns+uris (map ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
@@ -133,7 +138,8 @@
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
-                            q/find-all-ns-definitions))
+                            q/find-all-ns-definitions
+                            (remove (partial exclude-ns? options))))
         ns+uris (map ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)

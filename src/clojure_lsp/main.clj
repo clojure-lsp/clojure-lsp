@@ -62,6 +62,10 @@
     :parse-fn symbol
     :multi true
     :update-fn conj]
+   [nil "--ns-exclude-regex REGEX" "Optional regex representing the namespaces to be excluded during a command"
+    :id :ns-exclude-regex
+    :parse-fn re-pattern
+    :validate [#(instance? java.util.regex.Pattern %) "Specify a valid string regex after --ns-exclude-regex"]]
    [nil "--from FROM" "Full qualified symbol name, e.g. my-project/my-var"
     :id :from
     :parse-fn symbol

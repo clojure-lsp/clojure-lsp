@@ -17,7 +17,7 @@
     (h/assert-submaps
       [{:range {:start {:line 0, :character 0}
                 :end {:line 999999, :character 999999}}
-        :newText "(ns formatting)\n\n(def foo 123)\n\n(defn bar []\n  (+\n    1 foo))\n\n(bar)\n"}]
+        :newText "(ns sample-test.formatting)\n\n(def foo 123)\n\n(defn bar []\n  (+\n    1 foo))\n\n(bar)\n"}]
       (lsp/request! (fixture/formatting-full-request "formatting.clj"))))
 
   (testing "we format the whole top-level form otherwise we get wrong spaces on parent forms"

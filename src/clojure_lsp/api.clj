@@ -25,17 +25,21 @@
   `:namespace` a coll of symbols representing the namespaces which should be cleaned,
   if empty all project namespaces will be considered.
 
+  `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
+
   `dry?` a boolean, when enabled make no changes to files, only report.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
-  [{:keys [project-root settings namespace] :as options}]
+  [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
                   (.exists project-root)))
          (or (nil? settings)
              (map? settings))
          (or (nil? namespace)
-             (coll? namespace))]}
+             (coll? namespace))
+         (or (nil? ns-exclude-regex)
+             (instance? java.util.regex.Pattern ns-exclude-regex))]}
   (logging/setup-logging)
   (safe-parsing-error (internal-api/clean-ns! options)))
 
@@ -50,15 +54,19 @@
 
   `dry?` a boolean, when enabled make no changes to files, only report.
 
+  `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
+
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
-  [{:keys [project-root settings namespace] :as options}]
+  [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
                   (.exists project-root)))
          (or (nil? settings)
              (map? settings))
          (or (nil? namespace)
-             (coll? namespace))]}
+             (coll? namespace))
+         (or (nil? ns-exclude-regex)
+             (instance? java.util.regex.Pattern ns-exclude-regex))]}
   (logging/setup-logging)
   (safe-parsing-error (internal-api/format! options)))
 

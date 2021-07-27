@@ -16,10 +16,10 @@
 
   (testing "get file document symbols"
     (h/assert-submaps
-      [{:name "document-symbol.a"
+      [{:name "sample-test.document-symbol.a"
         :kind 3
         :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
-        :selectionRange {:start {:line 0 :character 0} :end {:line 0 :character 21}}
+        :selectionRange {:start {:line 0 :character 0} :end {:line 0 :character 33}}
         :children
         [{:name "a-some-var"
           :kind 13

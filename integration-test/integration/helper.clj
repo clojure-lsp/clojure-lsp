@@ -17,7 +17,7 @@
 
 (defn source-path->file [source-path]
   (->> source-path
-       (str "integration-test/sample-test/src/")
+       (str "integration-test/sample-test/src/sample_test/")
        io/as-relative-path
        io/file))
 
@@ -25,9 +25,9 @@
   (-> file .toPath .toUri .toString))
 
 (defn source-path->uri [source-path]
-  (-> source-path
-      source-path->file
-      file->uri))
+  (->> source-path
+       source-path->file
+       file->uri))
 
 (defn assert-submap [expected actual]
   (is (= expected

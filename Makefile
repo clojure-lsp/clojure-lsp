@@ -32,7 +32,7 @@ test: classes
 	clojure -M:test
 
 lint-fix:
-	clojure -M:run clean-ns
+	clojure -M:run clean-ns --ns-exclude-regex "sample-test.*"
 	clojure -M:run format
 
 release:

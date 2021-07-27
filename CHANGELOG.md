@@ -13,6 +13,7 @@
 - API/CLI
   - Fix filename in diffs with dry option.
   - Add coloring to diffs following git diff.
+  - Add `ns-exclude-regex` for commands that check whole project, allowing to exclude certain namespaces via regex.
 
 ## 2021.07.19-14.46.52
 

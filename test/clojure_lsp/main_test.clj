@@ -33,6 +33,10 @@
       (is (= '[abc] (:namespace (:options (#'main/parse ["--namespace" "abc"])))))
       (is (= '[abc] (:namespace (:options (#'main/parse ["-n" "abc"])))))
       (is (= '[abc bcd] (:namespace (:options (#'main/parse ["-n" "abc" "-n" "bcd"]))))))
+    (testing "ns-exclude-regex"
+      (is (= "foo" (str (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "foo"]))))))
+      (is (= nil (:ns-exclude-regex (:options (#'main/parse [])))))
+      (is (= nil (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "*invalid-regex*"]))))))
     (testing "from"
       (is (= nil (:from (:options (#'main/parse [])))))
       (is (= nil (:from (:options (#'main/parse ["--from" "abc"])))))

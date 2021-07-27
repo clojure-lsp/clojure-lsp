@@ -20,14 +20,14 @@
         :severity 3
         :code "unused-public-var"
         :source "clojure-lsp"
-        :message "Unused public var 'diagnostics.unused-public-var/foo'"
+        :message "Unused public var 'sample-test.diagnostics.unused-public-var/foo'"
         :tags [1]}
        {:range {:start {:line 5 :character 5}
                 :end {:line 5 :character 8}}
         :severity 3
         :code "unused-public-var"
         :source "clojure-lsp"
-        :message "Unused public var 'diagnostics.unused-public-var/bar'"
+        :message "Unused public var 'sample-test.diagnostics.unused-public-var/bar'"
         :tags [1]}]
       (lsp/await-diagnostics "diagnostics/unused_public_var.clj"))))
 
@@ -43,7 +43,7 @@
         :severity 2
         :code "unused-private-var"
         :source "clj-kondo"
-        :message "Unused private var diagnostics.kondo/foo"
+        :message "Unused private var sample-test.diagnostics.kondo/foo"
         :tags [1]}
        {:range {:start {:line 5 :character 0} :end {:line 5 :character 3}}
         :severity 1
@@ -72,7 +72,7 @@
         :severity 2
         :code "unused-private-var"
         :source "clj-kondo"
-        :message "Unused private var diagnostics.kondo/foo"
+        :message "Unused private var sample-test.diagnostics.kondo/foo"
         :tags [1]}
        {:range {:start {:line 5 :character 0} :end {:line 5 :character 3}}
         :severity 1

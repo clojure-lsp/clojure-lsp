@@ -89,8 +89,8 @@
     (testing "specifying a ns-exclude-regex"
       (reset! db/db {})
       (let [result (api/format! {:project-root (io/file "integration-test/sample-test")
-                                   :ns-exclude-regex #".*"
-                                   :dry? true})]
+                                 :ns-exclude-regex #".*"
+                                 :dry? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to format!" (:message result)))))))
 

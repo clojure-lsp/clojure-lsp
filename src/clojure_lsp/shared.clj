@@ -7,7 +7,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log])
   (:import
-   [java.net URI URL JarURLConnection]
+   [java.net URI URL JarURLConnection URLDecoder]
+   [java.nio.charset StandardCharsets]
    [java.nio.file Paths]))
 
 (defn assoc-some
@@ -92,13 +93,25 @@
   (-> uri Paths/get .toString
       (string/replace #"^[a-z]:\\" string/upper-case)))
 
+(defn- unescape-uri
+  [uri]
+  (try
+    (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
+    (catch UnsupportedOperationException e
+      (log/warn "Unable to decode URI. Returning URI as-is." e)
+      uri)
+    (catch IllegalArgumentException e
+      (log/warn "Unable to decode URI. Returning URI as-is." e)
+      uri)))
+
 (defn uri->filename
   "Converts a URI string into an absolute file path.
 
   The output path representation matches that of the operating system."
   [^String uri]
   (if (string/starts-with? uri "jar:")
-    (let [conn ^JarURLConnection (.openConnection (URL. uri))
+    (let [unescaped-uri (unescape-uri uri)
+          conn ^JarURLConnection (.openConnection (URL. unescaped-uri))
           jar-file (uri-obj->filepath ^URI (.toURI ^URL (.getJarFileURL conn)))]
       (str jar-file ":" (.getEntryName conn)))
     (let [uri-obj (URI. uri)

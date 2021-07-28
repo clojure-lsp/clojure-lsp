@@ -83,3 +83,10 @@
             :end   {:line      0
                     :character 0}}
            (shared/->range {:row 0 :end-row 0 :col 0 :end-col 0})))))
+
+(def unescape-uri-var #'shared/unescape-uri)
+
+(deftest unescape-uri
+  (testing "unescaping a URI containing %3A and %21 characters"
+    (is (= "jar:file:///home/foo/bar.jar!foo.bar"
+           (unescape-uri-var "jar:file%3A///home/foo/bar.jar%21foo.bar")))))

@@ -92,13 +92,19 @@
   (-> uri Paths/get .toString
       (string/replace #"^[a-z]:\\" string/upper-case)))
 
+(defn- unescape-colon-and-exclaimation
+  [uri]
+  (-> (string/replace uri #"%3A" ":")
+      (string/replace #"%33" "!")))
+
 (defn uri->filename
   "Converts a URI string into an absolute file path.
 
   The output path representation matches that of the operating system."
   [^String uri]
   (if (string/starts-with? uri "jar:")
-    (let [conn ^JarURLConnection (.openConnection (URL. uri))
+    (let [unescaped-uri (unescape-colon-and-exclaimation uri)
+          conn ^JarURLConnection (.openConnection (URL. unescaped-uri))
           jar-file (uri-obj->filepath ^URI (.toURI ^URL (.getJarFileURL conn)))]
       (str jar-file ":" (.getEntryName conn)))
     (let [uri-obj (URI. uri)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.07.28-14.24.06
+
 - General
   - Minor fix on the analysis queries comparison.
   - Improve GraalVM configuration to use direct/less configurations.

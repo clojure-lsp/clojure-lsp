@@ -60,6 +60,21 @@
                                   doc
                                   line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))
+
+        (testing "hide-filename? enabled"
+          (testing "plain"
+            (swap! db/db merge {:settings {:hide-filename? true} :client-capabilities nil})
+            (is (= [{:language "clojure" :value sym}
+                    {:language "clojure" :value sig}
+                    doc]
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col)))))
+          (testing "markdown"
+            (swap! db/db merge {:settings {:hide-filename? true} :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+            (is (= {:kind  "markdown"
+                    :value (join [start-code sym sig end-code
+                                  line-break
+                                  doc])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col))))))))
 
     (testing "without docs"

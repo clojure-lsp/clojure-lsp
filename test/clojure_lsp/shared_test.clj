@@ -83,3 +83,16 @@
             :end   {:line      0
                     :character 0}}
            (shared/->range {:row 0 :end-row 0 :col 0 :end-col 0})))))
+
+(def unescape-uri #'shared/unescape-uri)
+
+(deftest unescape-uri-test
+  (testing "URI should unescape."
+    (is (= "jar:file:///home/foo/bar.jar!baz.clj"
+           (unescape-uri "jar:file%3A///home/foo/bar.jar%21baz.clj"))))
+  (testing "URI should remain the same."
+    (is (= "file:///home/foo/bar.jar"
+           (unescape-uri "file:///home/foo/bar.jar"))))
+  (testing "URI should remain the same as IllegalArgumentException is thrown."
+    (is (= "file:///home/foo/bar.jar%%"
+           (unescape-uri "file:///home/foo/bar.jar%%")))))

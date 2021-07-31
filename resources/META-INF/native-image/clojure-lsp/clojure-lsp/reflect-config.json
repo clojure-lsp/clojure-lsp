@@ -63,6 +63,10 @@
   "allPublicMethods":true
 },
 {
+  "name":"java.net.URLDecoder",
+  "allPublicMethods":true
+},
+{
   "name":"java.util.ArrayList",
   "allPublicConstructors":true
 },

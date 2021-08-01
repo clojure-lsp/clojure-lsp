@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
+
 ## 2021.07.28-14.24.06
 
 - General

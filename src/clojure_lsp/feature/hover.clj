@@ -34,6 +34,7 @@
 (defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}]
   (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
+        hide-filename? (get-in @db/db [:settings :hover :hide-file-location?])
         join-char (if show-docs-arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)
@@ -51,13 +52,14 @@
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
                 doc-line (str line-break doc-line)
-                filename (str (format "%s*[%s](%s)*"
-                                      line-break
-                                      (string/replace filename #"\\" "\\\\")
-                                      (shared/filename->uri filename))))}
+                (and filename (not hide-filename?))
+                (str (format "%s*[%s](%s)*"
+                             line-break
+                             (string/replace filename #"\\" "\\\\")
+                             (shared/filename->uri filename))))}
       ;; Default to plaintext
       (cond->> []
-        filename (cons filename)
+        (and filename (not hide-filename?)) (cons filename)
         doc-line (cons doc-line)
         (and signatures
              (not show-docs-arity-on-same-line?))

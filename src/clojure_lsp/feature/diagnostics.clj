@@ -75,7 +75,7 @@
                    :end-row (:name-end-row element)
                    :end-col (:name-end-col element)
                    :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
-                   :type :unused-private-var})))
+                   :type :clojure-lsp/unused-public-var})))
 
 (defn unused-public-var-lint-for-paths!
   [{:keys [analysis reg-finding!]}]

@@ -40,7 +40,8 @@
 
 (defn filter-project-analysis [analysis]
   (->> analysis
-       (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))))
+       (remove-keys #(and %
+                          (not (string/starts-with? (-> % name shared/filename->uri) "file://"))))))
 
 (defn filter-external-analysis [analysis]
   (->> analysis

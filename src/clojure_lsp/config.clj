@@ -19,9 +19,10 @@
   [config settings]
   (cond-> config
     (get-in settings [:linters :clj-kondo :report-duplicates] true)
-    (assoc-in [:config :linters] {:unresolved-symbol {:report-duplicates true}
-                                  :unresolved-namespace {:report-duplicates true}
-                                  :unresolved-var {:report-duplicates true}})))
+    (->
+      (assoc-in [:config :linters :unresolved-symbol :report-duplicates] true)
+      (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
+      (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn kondo-for-paths [paths settings]
   (-> {:cache true
@@ -29,8 +30,7 @@
        :copy-configs true
        :lint [(string/join (System/getProperty "path.separator") paths)]
        :custom-lint-fn f.diagnostic/unused-public-var-lint-for-paths!
-       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}
-                :output {:analysis {:arglists true
+       :config {:output {:analysis {:arglists true
                                     :locals false
                                     :keywords true}
                          :canonical-paths true}}}
@@ -43,8 +43,7 @@
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
        :custom-lint-fn f.diagnostic/unused-public-var-lint-for-single-file!
-       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}
-                :output {:analysis {:arglists true
+       :config {:output {:analysis {:arglists true
                                     :locals true
                                     :keywords true}
                          :canonical-paths true}}}

@@ -5,10 +5,19 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.set :as set]
    [taoensso.timbre :as log]))
 
+(def default-public-vars-defined-by-to-exclude
+  '#{clojure.test/deftest
+     state-flow.cljtest/defflow})
+
+(def default-public-vars-name-to-exclude
+  '#{-main})
+
 (def unnecessary-diagnostic-types
-  #{:redefined-var
+  #{:clojure-lsp/unused-public-var
+    :redefined-var
     :redundant-do
     :redundant-expression
     :redundant-let
@@ -21,6 +30,31 @@
 
 (def deprecated-diagnostic-types
   #{:deprecated-var})
+
+(defn ^:private reg-unused-public-var-elements! [elements reg-finding! config]
+  (doseq [element elements]
+    (reg-finding! {:filename (:filename element)
+                   :row (:name-row element)
+                   :col (:name-col element)
+                   :end-row (:name-end-row element)
+                   :end-col (:name-end-col element)
+                   :level (or (-> config :linters :clojure-lsp/unused-public-var :level) :info)
+                   :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
+                   :type :clojure-lsp/unused-public-var})))
+
+(defn ^:private exclude-public-var? [kondo-config var]
+  (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
+        excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
+        excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
+        excluded-ns-or-var (set (filter simple-ident? excluded-syms))]
+    (not (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
+                        (:defined-by var))
+             (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
+                        (:name var))
+             (contains? (set excluded-ns-or-var) (:ns var))
+             (-> excluded-full-qualified-vars
+                 set
+                 (contains? (symbol (-> var :ns str) (-> var :name str))))))))
 
 (defn ^:private kondo-finding->diagnostic
   [{:keys [type message level row col end-row] :as finding}]
@@ -37,7 +71,9 @@
                  :error   1
                  :warning 2
                  :info    3)
-     :source "clj-kondo"}))
+     :source (if (= :clojure-lsp/unused-public-var type)
+               "clojure-lsp"
+               "clj-kondo")}))
 
 (defn ^:private valid-finding? [{:keys [row col] :as finding}]
   (or (and row col)
@@ -67,18 +103,8 @@
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)})))
 
-(defn ^:private reg-unused-public-var-elements! [elements reg-finding!]
-  (doseq [element elements]
-    (reg-finding! {:filename (:filename element)
-                   :row (:name-row element)
-                   :col (:name-col element)
-                   :end-row (:name-end-row element)
-                   :end-col (:name-end-col element)
-                   :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
-                   :type :clojure-lsp/unused-public-var})))
-
 (defn unused-public-var-lint-for-paths!
-  [{:keys [analysis reg-finding!]}]
+  [{:keys [analysis reg-finding! config]}]
   (async/go
     (let [start-time (System/nanoTime)
           project-analysis (->> (lsp.kondo/normalize-analysis analysis)
@@ -86,18 +112,20 @@
                                 q/filter-project-analysis)
           elements (->> project-analysis
                         q/find-all-var-definitions
+                        (filter (partial exclude-public-var? config))
                         (filter (comp #(= (count %) 0)
                                       #(q/find-references project-analysis % false))))]
-      (reg-unused-public-var-elements! elements reg-finding!)
+      (reg-unused-public-var-elements! elements reg-finding! config)
       (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))
 
 (defn unused-public-var-lint-for-single-file!
-  [{:keys [analysis reg-finding!]}]
+  [{:keys [analysis reg-finding! config]}]
   (let [filename (-> analysis :var-definitions first :filename)
         project-analysis (->> (lsp.kondo/normalize-analysis analysis)
                               (assoc (:analysis @db/db) filename)
                               q/filter-project-analysis)
         elements (->> (q/find-var-definitions project-analysis filename false)
+                      (filter (partial exclude-public-var? config))
                       (filter (comp #(= (count %) 0)
                                     #(q/find-references project-analysis % false))))]
-    (reg-unused-public-var-elements! elements reg-finding!)))
+    (reg-unused-public-var-elements! elements reg-finding! config)))

@@ -5,6 +5,7 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -12,7 +13,6 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
-   [clojure.set :as set]
    [clojure.string :as string]
    [digest :as digest]
    [rewrite-clj.zip :as z]
@@ -111,51 +111,8 @@
           (log/error (str err)))
         result))))
 
-(defn entry->normalized-entries [{:keys [bucket] :as element}]
-  (cond
-    ;; We create two entries here (and maybe more for refer)
-    (= :namespace-usages bucket)
-    (cond-> [(set/rename-keys element {:to :name})]
-      (:alias element)
-      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row :alias-col :name-col :alias-end-row :name-end-row :alias-end-col :name-end-col})))
-
-    (contains? #{:locals :local-usages :keywords} bucket)
-    [(-> element
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
-
-    :else
-    [element]))
-
-(defn ^:private macro-expanded-element? [{:keys [name to row col] :as _element}]
-  (and (not row)
-       (not col)
-       (or (= '-> name)
-           (= '->> name)
-           (= 'fn* name)
-           (= 'let* name)
-           (= 'let name)
-           (= 'if name)
-           (= 'new name))
-       (#{'clojure.core 'cljs.core} to)))
-
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col] :as _element}]
-  (and name-row
-       name-col
-       name-end-row
-       name-end-col))
-
-(defn normalize-analysis [analysis]
-  (for [[bucket vs] analysis
-        v vs
-        element (entry->normalized-entries (assoc v :bucket bucket))
-        :when (valid-element? element)]
-    element))
-
 (defn update-analysis [db uri new-analysis]
-  (assoc-in db [:analysis (shared/uri->filename uri)] (normalize-analysis new-analysis)))
+  (assoc-in db [:analysis (shared/uri->filename uri)] (lsp.kondo/normalize-analysis new-analysis)))
 
 (defn update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
@@ -181,7 +138,7 @@
                          public-only? (dissoc :namespace-usages :var-usages)
                          public-only? (update :var-definitions (fn [usages] (remove :private usages))))
         analysis (->> kondo-analysis
-                      (normalize-analysis)
+                      lsp.kondo/normalize-analysis
                       (group-by :filename))]
     (swap! db/db update :analysis merge analysis)
     (when-not public-only?

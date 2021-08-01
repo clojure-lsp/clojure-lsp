@@ -28,7 +28,7 @@
        :parallel true
        :copy-configs true
        :lint [(string/join (System/getProperty "path.separator") paths)]
-       :custom-lint-fn f.diagnostic/unused-public-var-lint-from-kondo!
+       :custom-lint-fn f.diagnostic/unused-public-var-lint-for-paths!
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}
                 :output {:analysis {:arglists true
                                     :locals false
@@ -42,7 +42,7 @@
        :copy-configs true
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
-       :custom-lint-fn f.diagnostic/unused-public-var-lint-from-kondo!
+       :custom-lint-fn f.diagnostic/unused-public-var-lint-for-single-file!
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}
                 :output {:analysis {:arglists true
                                     :locals true

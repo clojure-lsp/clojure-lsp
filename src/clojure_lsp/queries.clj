@@ -260,6 +260,14 @@
                          (not (get % :private)))))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
+(defn find-all-var-definitions [analysis]
+  (into []
+        (comp
+          (mapcat val)
+          (filter #(and (identical? :var-definitions (:bucket %))
+                        (not (get % :private)))))
+        analysis))
+
 (defn find-keyword-definitions [analysis filename]
   (->> (get analysis filename)
        (filter #(and (identical? :keywords (:bucket %))

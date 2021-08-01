@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
+- Add `:hover :hide-file-location?` settings option to disable displaying the source path on hover.
 
 ## 2021.07.28-14.24.06
 

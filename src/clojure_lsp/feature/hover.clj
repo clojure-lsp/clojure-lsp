@@ -34,7 +34,7 @@
 (defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}]
   (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        hide-filename? (get-in @db/db [:settings :hide-filename?])
+        hide-filename? (get-in @db/db [:settings :hover :hide-file-location?])
         join-char (if show-docs-arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)

@@ -116,20 +116,25 @@
         (when (not= :unknown (shared/uri->file-type uri))
           (sync-lint-file uri @db/db))))))
 
-(defn unused-public-var-lint-for-paths!
+(defn ^:private unused-public-vars-lint!
+  [var-definitions project-analysis {:keys [config reg-finding!]}]
+  (let [elements (->> var-definitions
+                      (filter (partial exclude-public-var? config))
+                      (filter (comp #(= (count %) 0)
+                                    #(q/find-references project-analysis % false))))]
+    (->> (reg-unused-public-var-elements! elements reg-finding! config)
+         (group-by :filename))))
+
+(defn post-project-lint!
   [paths
-   {:keys [analysis reg-finding! config]}]
+   {:keys [analysis] :as kondo-ctx}]
   (async/go
     (let [start-time (System/nanoTime)
           project-analysis (->> (lsp.kondo/normalize-analysis analysis)
                                 (group-by :filename)
                                 q/filter-project-analysis)
-          elements (->> project-analysis
-                        q/find-all-var-definitions
-                        (filter (partial exclude-public-var? config))
-                        (filter (comp #(= (count %) 0)
-                                      #(q/find-references project-analysis % false))))
-          kondo-findings (group-by :filename (reg-unused-public-var-elements! elements reg-finding! config))]
+          var-definitions (q/find-all-var-definitions project-analysis)
+          kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
       (loop [state-db @db/db]
         (let [cur-findings (:findings @db/db)
               new-findings (merge-with #(->> (into %1 %2)
@@ -143,13 +148,10 @@
       (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))
 
 (defn unused-public-var-lint-for-single-file!
-  [{:keys [analysis reg-finding! config]}]
+  [{:keys [analysis] :as kondo-ctx}]
   (let [filename (-> analysis :var-definitions first :filename)
         project-analysis (->> (lsp.kondo/normalize-analysis analysis)
                               (assoc (:analysis @db/db) filename)
                               q/filter-project-analysis)
-        elements (->> (q/find-var-definitions project-analysis filename false)
-                      (filter (partial exclude-public-var? config))
-                      (filter (comp #(= (count %) 0)
-                                    #(q/find-references project-analysis % false))))]
-    (reg-unused-public-var-elements! elements reg-finding! config)))
+        var-definitions (q/find-var-definitions project-analysis filename false)]
+    (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)))

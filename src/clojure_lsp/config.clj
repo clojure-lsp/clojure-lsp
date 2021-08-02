@@ -34,7 +34,7 @@
                                     :keywords true}
                          :canonical-paths true}}}
       (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
-                                           (partial f.diagnostic/unused-public-var-lint-for-paths! paths)))
+                                           (partial f.diagnostic/post-project-lint! paths)))
       (with-additional-config settings)))
 
 (defn kondo-for-single-file [uri settings]

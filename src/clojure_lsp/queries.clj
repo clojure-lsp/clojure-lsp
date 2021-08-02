@@ -40,7 +40,8 @@
 
 (defn filter-project-analysis [analysis]
   (->> analysis
-       (remove-keys #(not (string/starts-with? (-> % name shared/filename->uri) "file://")))))
+       (remove-keys #(and %
+                          (not (string/starts-with? (-> % name shared/filename->uri) "file://"))))))
 
 (defn filter-external-analysis [analysis]
   (->> analysis
@@ -60,6 +61,9 @@
   #{name
     (symbol (str "->" name))
     (symbol (str "map->" name))})
+
+(defn ^:private deftype-names-for [{:keys [name]}]
+  #{name (symbol (str "->" name))})
 
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
@@ -183,13 +187,16 @@
 (defmethod find-references :var-definitions
   [analysis element include-declaration?]
   (let [defrecord? (= 'clojure.core/defrecord (:defined-by element))
-        names (when defrecord? (defrecord-names-for element))]
+        deftype? (= 'clojure.core/deftype (:defined-by element))
+        names (cond
+                defrecord? (defrecord-names-for element)
+                deftype? (deftype-names-for element))]
     (into []
           (comp
             (mapcat val)
             (filter #(not (identical? :keywords (:bucket %))))
             (filter #(or (safe-equal? (:name element) (:name %))
-                         (and defrecord?
+                         (and (or defrecord? deftype?)
                               (contains? names (:name %)))))
             (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
@@ -253,12 +260,31 @@
     (catch Throwable e
       (log/error e "can't find references"))))
 
+(defn drop-def-multi-vars [elements]
+  (remove #(or (and (= 'clojure.core/defrecord (:defined-by %))
+                    (or (string/starts-with? (str (:name %)) "->")
+                        (string/starts-with? (str (:name %)) "map->")))
+               (and (= 'clojure.core/deftype (:defined-by %))
+                    (string/starts-with? (str (:name %)) "->")))
+          elements))
+
 (defn find-var-definitions [analysis filename include-private?]
   (->> (get analysis filename)
        (filter #(and (identical? :var-definitions (:bucket %))
                      (or include-private?
                          (not (get % :private)))))
-       (medley/distinct-by (juxt :ns :name :row :col))))
+       (medley/distinct-by (juxt :ns :name :row :col))
+       drop-def-multi-vars))
+
+(defn find-all-var-definitions [analysis]
+  (into []
+        (comp
+          (mapcat val)
+          (filter #(and (identical? :var-definitions (:bucket %))
+                        (not (get % :private))))
+          (medley/distinct-by (juxt :ns :name :row :col))
+          drop-def-multi-vars)
+        analysis))
 
 (defn find-keyword-definitions [analysis filename]
   (->> (get analysis filename)

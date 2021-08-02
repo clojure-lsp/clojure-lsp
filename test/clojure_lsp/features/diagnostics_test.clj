@@ -5,75 +5,113 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
+(def findings (atom []))
+
 (h/reset-db-after-test)
 
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns some-ns) (defn -main [& _args] 1)" (h/file-uri "file:///b.clj"))
-  (testing "when linter level is :off"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:level :off}}}})
-    (is (= []
-           (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db))))
   (testing "when linter level is :info"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:level :info}}}})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
-      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
+      [{:filename "/a.clj"
+        :level :info
+        :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
-        :code "unused-public-var"
-        :tags [1]
-        :severity 3
-        :source "clojure-lsp"}]
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+        :row 1
+        :col 20
+        :end-row 1
+        :end-col 23}]
+      @findings))
   (testing "when linter level is :warning"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:level :warning}}}})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
-      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
+      [{:filename "/a.clj"
+        :level :warning
+        :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
-        :code "unused-public-var"
-        :tags [1]
-        :severity 2
-        :source "clojure-lsp"}]
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+        :row 1
+        :col 20
+        :end-row 1
+        :end-col 23}]
+      @findings))
   (testing "when linter level is :error"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:level :error}}}})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
-      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
+      [{:filename "/a.clj"
+        :level :error
+        :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
-        :code "unused-public-var"
-        :tags [1]
-        :severity 1
-        :source "clojure-lsp"}]
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+        :row 1
+        :col 20
+        :end-row 1
+        :end-col 23}]
+      @findings))
   (testing "linter level by default is :info"
-    (swap! db/db merge {:settings {}})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {}})
     (h/assert-submaps
-      [{:range {:start {:line 0 :character 19} :end {:line 0 :character 22}}
+      [{:filename "/a.clj"
+        :level :info
+        :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
-        :code "unused-public-var"
-        :tags [1]
-        :severity 3
-        :source "clojure-lsp"}]
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+        :row 1
+        :col 20
+        :end-row 1
+        :end-col 23}]
+      @findings))
   (testing "excluding the whole ns"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:exclude #{'some-ns}}}}})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
     (h/assert-submaps
       []
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+      @findings))
   (testing "excluding the simple var from ns"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:exclude #{'foo}}}}})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
     (h/assert-submaps
       []
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
-  (testing "excluding the specific function"
-    (swap! db/db merge {:settings {:linters {:unused-public-var {:exclude #{'some-ns/foo}}}}})
+      @findings))
+  (testing "excluding the specific var"
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
       []
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+      @findings))
   (testing "excluding specific syms"
-    (swap! db/db merge {})
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/b.clj"]))}
+       :reg-finding! #(swap! findings conj %)
+       :config {}})
     (h/assert-submaps
       []
-      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") @db/db))))
+      @findings)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")

@@ -1,5 +1,6 @@
 (ns clojure-lsp.config
   (:require
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -18,11 +19,12 @@
   [config settings]
   (cond-> config
     (get-in settings [:linters :clj-kondo :report-duplicates] true)
-    (assoc-in [:config :linters] {:unresolved-symbol {:report-duplicates true}
-                                  :unresolved-namespace {:report-duplicates true}
-                                  :unresolved-var {:report-duplicates true}})))
+    (->
+      (assoc-in [:config :linters :unresolved-symbol :report-duplicates] true)
+      (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
+      (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-(defn kondo-for-paths [paths settings]
+(defn kondo-for-paths [paths settings external-analysis-only?]
   (-> {:cache true
        :parallel true
        :copy-configs true
@@ -31,6 +33,8 @@
                                     :locals false
                                     :keywords true}
                          :canonical-paths true}}}
+      (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
+                                           (partial f.diagnostic/post-project-lint! paths)))
       (with-additional-config settings)))
 
 (defn kondo-for-single-file [uri settings]
@@ -39,6 +43,7 @@
        :copy-configs true
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
+       :custom-lint-fn f.diagnostic/unused-public-var-lint-for-single-file!
        :config {:output {:analysis {:arglists true
                                     :locals true
                                     :keywords true}

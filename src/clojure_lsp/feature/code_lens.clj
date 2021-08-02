@@ -24,10 +24,7 @@
   (let [excluded-vars (set/union #{'clojure.test/deftest}
                                  (get-in settings [:linters :unused-public-var :exclude-when-defined-by] #{}))]
     (->> (q/find-var-definitions analysis filename true)
-         (remove #(or (contains? excluded-vars (:defined-by %))
-                      (and (= 'clojure.core/defrecord (:defined-by %))
-                           (or (string/starts-with? (str (:name %)) "->")
-                               (string/starts-with? (str (:name %)) "map->"))))))))
+         (remove #(contains? excluded-vars (:defined-by %))))))
 
 (defn ^:private keyword-definitions-lens
   [filename settings analysis]

@@ -5,6 +5,7 @@
 - Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
 - Add `:hover :hide-file-location?` settings option to disable displaying the source path on hover.
 - Use new clj-kondo `:custom-lint-fn` for the `:unused-public-var`, this should improve performance and give the ability to suppress unused vars via code with `#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}` or `#_:clj-kondo/ignore`
+- Bump clj-kondo fixing analysis position issue with `declare`, making rename and other features work.
 
 ## 2021.07.28-14.24.06
 

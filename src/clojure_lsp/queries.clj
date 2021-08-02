@@ -260,21 +260,17 @@
     (catch Throwable e
       (log/error e "can't find references"))))
 
-(defn drop-def-multi-vars [elements]
-  (remove #(or (and (= 'clojure.core/defrecord (:defined-by %))
-                    (or (string/starts-with? (str (:name %)) "->")
-                        (string/starts-with? (str (:name %)) "map->")))
-               (and (= 'clojure.core/deftype (:defined-by %))
-                    (string/starts-with? (str (:name %)) "->")))
-          elements))
-
 (defn find-var-definitions [analysis filename include-private?]
   (->> (get analysis filename)
        (filter #(and (identical? :var-definitions (:bucket %))
                      (or include-private?
                          (not (get % :private)))))
        (medley/distinct-by (juxt :ns :name :row :col))
-       drop-def-multi-vars))
+       (remove #(or (and (= 'clojure.core/defrecord (:defined-by %))
+                         (or (string/starts-with? (str (:name %)) "->")
+                             (string/starts-with? (str (:name %)) "map->")))
+                    (and (= 'clojure.core/deftype (:defined-by %))
+                         (string/starts-with? (str (:name %)) "->"))))))
 
 (defn find-all-var-definitions [analysis]
   (into []
@@ -283,7 +279,11 @@
           (filter #(and (identical? :var-definitions (:bucket %))
                         (not (get % :private))))
           (medley/distinct-by (juxt :ns :name :row :col))
-          drop-def-multi-vars)
+          (remove #(or (and (= 'clojure.core/defrecord (:defined-by %))
+                            (or (string/starts-with? (str (:name %)) "->")
+                                (string/starts-with? (str (:name %)) "map->")))
+                       (and (= 'clojure.core/deftype (:defined-by %))
+                            (string/starts-with? (str (:name %)) "->")))))
         analysis))
 
 (defn find-keyword-definitions [analysis filename]

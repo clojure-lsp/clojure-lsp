@@ -43,24 +43,3 @@
                                          :version (inc version)}
                           :contentChanges new-text}))
   change)
-
-(defn ^:private process-changes [uri {:keys [range new-text]}]
-  (let [old-text (get-in @db/db [:documents uri :text] (slurp uri))
-        new-full-text (f.file-management/replace-text old-text
-                                                      new-text
-                                                      (-> range :start :line)
-                                                      (-> range :start :character)
-                                                      (-> range :end :line)
-                                                      (-> range :end :character))]
-    {:uri uri
-     :changed? (not= new-full-text old-text)
-     :version (get-in @db/db [:documents uri :version] 0)
-     :old-text old-text
-     :new-text new-full-text}))
-
-(defn apply-range-changes [uri changes dry?]
-  (->> changes
-       (map (partial process-changes uri))
-       (filter :changed?)
-       (mapv (partial apply-workspace-edit-summary! dry?))
-       (remove nil?)))

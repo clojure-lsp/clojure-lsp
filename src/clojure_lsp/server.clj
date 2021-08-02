@@ -269,6 +269,7 @@
            (interop/conform-or-log ::interop/client-capabilities)))
 
 ;; Called from java
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn extension [method & args]
   (start :extension
          (CompletableFuture/completedFuture

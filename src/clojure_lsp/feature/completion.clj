@@ -39,7 +39,7 @@
 (defn ^:private supports-clj-core? [uri]
   (#{:cljc :clj} (shared/uri->file-type uri)))
 
-(defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities arglist-strs defined-by]}]
+(defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities defined-by]}]
   (cond
     (#{:namespace-definitions
        :namespace-usages} bucket)

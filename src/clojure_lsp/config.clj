@@ -24,16 +24,17 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-(defn kondo-for-paths [paths settings]
+(defn kondo-for-paths [paths settings external-analysis-only?]
   (-> {:cache true
        :parallel true
        :copy-configs true
        :lint [(string/join (System/getProperty "path.separator") paths)]
-       :custom-lint-fn f.diagnostic/unused-public-var-lint-for-paths!
        :config {:output {:analysis {:arglists true
                                     :locals false
                                     :keywords true}
                          :canonical-paths true}}}
+      (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
+                                           (partial f.diagnostic/unused-public-var-lint-for-paths! paths)))
       (with-additional-config settings)))
 
 (defn kondo-for-single-file [uri settings]

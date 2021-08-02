@@ -5,7 +5,9 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.java.io :as io]
    [clojure.set :as set]
+   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (def default-public-vars-defined-by-to-exclude
@@ -32,15 +34,18 @@
   #{:deprecated-var})
 
 (defn ^:private reg-unused-public-var-elements! [elements reg-finding! config]
-  (doseq [element elements]
-    (reg-finding! {:filename (:filename element)
-                   :row (:name-row element)
-                   :col (:name-col element)
-                   :end-row (:name-end-row element)
-                   :end-col (:name-end-col element)
-                   :level (or (-> config :linters :clojure-lsp/unused-public-var :level) :info)
-                   :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
-                   :type :clojure-lsp/unused-public-var})))
+  (mapv (fn [element]
+          (let [finding {:filename (:filename element)
+                         :row (:name-row element)
+                         :col (:name-col element)
+                         :end-row (:name-end-row element)
+                         :end-col (:name-end-col element)
+                         :level (or (-> config :linters :clojure-lsp/unused-public-var :level) :info)
+                         :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
+                         :type :clojure-lsp/unused-public-var}]
+            (reg-finding! finding)
+            finding))
+        elements))
 
 (defn ^:private exclude-public-var? [kondo-config var]
   (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
@@ -103,8 +108,17 @@
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)})))
 
+(defn ^:private lint-project-files [paths]
+  (doseq [path paths]
+    (doseq [file (file-seq (io/file path))]
+      (let [filename (.getAbsolutePath ^java.io.File file)
+            uri (shared/filename->uri filename)]
+        (when (not= :unknown (shared/uri->file-type uri))
+          (sync-lint-file uri @db/db))))))
+
 (defn unused-public-var-lint-for-paths!
-  [{:keys [analysis reg-finding! config]}]
+  [paths
+   {:keys [analysis reg-finding! config]}]
   (async/go
     (let [start-time (System/nanoTime)
           project-analysis (->> (lsp.kondo/normalize-analysis analysis)
@@ -114,8 +128,15 @@
                         q/find-all-var-definitions
                         (filter (partial exclude-public-var? config))
                         (filter (comp #(= (count %) 0)
-                                      #(q/find-references project-analysis % false))))]
-      (reg-unused-public-var-elements! elements reg-finding! config)
+                                      #(q/find-references project-analysis % false))))
+          kondo-findings (group-by :filename (reg-unused-public-var-elements! elements reg-finding! config))
+          cur-findings (:findings @db/db)]
+      (swap! db/db assoc :findings (merge-with #(->> (into %1 %2)
+                                                     (medley/distinct-by (juxt :row :col :end-row :end-col)))
+                                               cur-findings
+                                               kondo-findings))
+      (when (get-in @db/db [:settings :lint-project-files-after-startup?] true)
+        (lint-project-files paths))
       (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))
 
 (defn unused-public-var-lint-for-single-file!

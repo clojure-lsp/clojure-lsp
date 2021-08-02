@@ -77,10 +77,10 @@
 
 (def clj-kondo-analysis-batch-size 50)
 
-(defn ^:private run-kondo-on-paths! [paths settings]
+(defn ^:private run-kondo-on-paths! [paths settings external-analysis-only?]
   (let [err (java.io.StringWriter.)]
     (binding [*err* err]
-      (let [result (kondo/run! (config/kondo-for-paths paths settings))]
+      (let [result (kondo/run! (config/kondo-for-paths paths settings external-analysis-only?))]
         (when-not (string/blank? (str err))
           (log/info (str err)))
         result))))
@@ -88,17 +88,17 @@
 (defn ^:private run-kondo-on-paths-batch!
   "Run kondo on paths by partition the paths, with this we should call
   kondo more times but we fewer paths to analyze, improving memory."
-  [paths settings]
+  [paths settings public-only?]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
     (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths settings)
+      (run-kondo-on-paths! paths settings public-only?)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
                           (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
-                          (run-kondo-on-paths! batch-paths settings)))
+                          (run-kondo-on-paths! batch-paths settings public-only?)))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-text! [text uri settings]
@@ -117,21 +117,12 @@
 (defn update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
-(defn ^:private lint-project-files [paths]
-  (async/go
-    (doseq [path paths]
-      (doseq [file (file-seq (io/file path))]
-        (let [filename (.getAbsolutePath ^java.io.File file)
-              uri (shared/filename->uri filename)]
-          (when (not= :unknown (shared/uri->file-type uri))
-            (f.diagnostic/sync-lint-file uri @db/db)))))))
-
 (defn ^:private analyze-paths! [paths public-only?]
   (let [settings (:settings @db/db)
         start-time (System/nanoTime)
         result (if public-only?
-                 (run-kondo-on-paths-batch! paths settings)
-                 (run-kondo-on-paths! paths settings))
+                 (run-kondo-on-paths-batch! paths settings true)
+                 (run-kondo-on-paths! paths settings false))
         end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
         _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)
@@ -142,9 +133,7 @@
                       (group-by :filename))]
     (swap! db/db update :analysis merge analysis)
     (when-not public-only?
-      (swap! db/db update :findings merge (group-by :filename (:findings result)))
-      (when (get settings :lint-project-files-after-startup? true)
-        (lint-project-files paths)))
+      (swap! db/db update :findings merge (group-by :filename (:findings result))))
     analysis))
 
 (defn ^:private analyze-classpath! [root-path source-paths settings]

@@ -129,14 +129,17 @@
                         (filter (partial exclude-public-var? config))
                         (filter (comp #(= (count %) 0)
                                       #(q/find-references project-analysis % false))))
-          kondo-findings (group-by :filename (reg-unused-public-var-elements! elements reg-finding! config))
-          cur-findings (:findings @db/db)]
-      (swap! db/db assoc :findings (merge-with #(->> (into %1 %2)
-                                                     (medley/distinct-by (juxt :row :col :end-row :end-col)))
-                                               cur-findings
-                                               kondo-findings))
-      (when (get-in @db/db [:settings :lint-project-files-after-startup?] true)
-        (lint-project-files paths))
+          kondo-findings (group-by :filename (reg-unused-public-var-elements! elements reg-finding! config))]
+      (loop [state-db @db/db]
+        (let [cur-findings (:findings @db/db)
+              new-findings (merge-with #(->> (into %1 %2)
+                                             (medley/distinct-by (juxt :row :col :end-row :end-col)))
+                                       cur-findings
+                                       kondo-findings)]
+          (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
+            (when (get-in @db/db [:settings :lint-project-files-after-startup?] true)
+              (lint-project-files paths))
+            (recur @db/db))))
       (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))
 
 (defn unused-public-var-lint-for-single-file!

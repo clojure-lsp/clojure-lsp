@@ -1455,20 +1455,26 @@
                 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <ul>
+<li>General</li>
 <li>Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.</li>
-<li>Add <code>:hover :hide-file-location?</code> settings option to disable displaying the source path on hover.</li>
-<li>Use new clj-kondo <code>:custom-lint-fn</code> for the <code>:unused-public-var</code>, this should improve performance and give the ability to suppress unused vars via code with <code>#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}</code> or <code>#_:clj-kondo/ignore</code></li>
 <li>Bump clj-kondo fixing analysis position issue with <code>declare</code>, making rename and other features work.</li>
 <li>Don't use PowerShell profiles on Windows when analyzing classpath. Fixes https://github.com/BetterThanTomorrow/calva/issues/1050</li>
+<li>
+<p>Support babashka classpath and source-paths discovery via bb.edn file. (needs babashka &gt;= 0.5.1)</p>
+</li>
+<li>
+<p>Editor</p>
+</li>
+<li>Add <code>:hover :hide-file-location?</code> settings option to disable displaying the source path on hover.</li>
+<li>Use new clj-kondo <code>:custom-lint-fn</code> for the <code>:unused-public-var</code>, this should improve performance and give the ability to suppress unused vars via code with <code>#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}</code> or <code>#_:clj-kondo/ignore</code></li>
 </ul>
 <h2 id="20210728-142406">2021.07.28-14.24.06<a class="headerlink" href="#20210728-142406" title="Permanent link">#</a></h2>
 <ul>
 <li>General</li>
 <li>Minor fix on the analysis queries comparison.</li>
 <li>Improve GraalVM configuration to use direct/less configurations.</li>
-<li>Bump clj-kondo 2021.06.18 -&gt; 2021.07.28 which adds support for macroexpanding.</li>
 <li>
-<p>Support babashka classpath and source-paths discovery via bb.edn file. (needs babashka &gt;= 0.5.1)</p>
+<p>Bump clj-kondo 2021.06.18 -&gt; 2021.07.28 which adds support for macroexpanding.</p>
 </li>
 <li>
 <p>Editor</p>

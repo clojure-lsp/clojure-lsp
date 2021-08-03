@@ -1,9 +1,9 @@
 (ns integration.fixture
   (:require
-    [cheshire.core :as json]
-    [clojure.java.io :as io]
-    [integration.helper :as h]
-    [integration.lsp :as lsp]))
+   [cheshire.core :as json]
+   [clojure.java.io :as io]
+   [integration.helper :as h]
+   [integration.lsp :as lsp]))
 
 (defn ^:private lsp-json-rpc [method params]
   (json/generate-string

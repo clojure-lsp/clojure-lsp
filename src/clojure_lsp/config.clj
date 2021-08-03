@@ -4,7 +4,6 @@
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
-   [clojure.set :as set]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
@@ -98,58 +97,3 @@
             (merge {}
                    (resolve-home-config home-dir-file))
             (resolve-project-configs project-root-uri home-dir-file))))
-
-(defn ^:private extract-source-paths [paths extra-paths aliases]
-  (->> (concat paths extra-paths)
-       (map (fn [path]
-              (if (keyword? path)
-                (when (or (vector? (get aliases path))
-                          (set? (get aliases path)))
-                  (get aliases path))
-                path)))
-       flatten
-       (remove nil?)
-       set))
-
-(def default-source-aliases #{:dev :test})
-
-(defn resolve-deps-source-paths
-  [{:keys [paths extra-paths aliases]}
-   settings]
-  (let [source-aliases (or (:source-aliases settings) default-source-aliases)
-        root-source-paths (extract-source-paths paths extra-paths aliases)]
-    (->> source-aliases
-         (map #(get aliases % nil))
-         (mapcat #(extract-source-paths (:paths %) (:extra-paths %) nil))
-         (remove nil?)
-         set
-         (set/union root-source-paths))))
-
-(def default-lein-source-paths ["src" "src/main/clojure"])
-(def default-lein-test-paths ["test" "src/test/clojure"])
-
-(defn ^:private valid-path-config? [config]
-  (and config
-       (or (vector? config)
-           (and (list? config)
-                (string? (first config)))
-           (set? config))))
-
-(defn resolve-lein-source-paths
-  [{:keys [source-paths test-paths profiles] :as project}
-   settings]
-  (when project
-    (let [source-aliases (or (:source-aliases settings) default-source-aliases)
-          source-paths (if (valid-path-config? source-paths)
-                         source-paths
-                         default-lein-source-paths)
-          test-paths (if (valid-path-config? test-paths)
-                       test-paths
-                       default-lein-test-paths)
-          root-source-paths (extract-source-paths source-paths test-paths profiles)]
-      (->> source-aliases
-           (map #(get profiles % nil))
-           (mapcat #(extract-source-paths (:source-paths %) (:test-paths %) nil))
-           (remove nil?)
-           set
-           (set/union root-source-paths)))))

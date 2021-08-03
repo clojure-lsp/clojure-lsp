@@ -6,22 +6,16 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.source-paths :as source-paths]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
    [digest :as digest]
-   [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])
   (:import
    (java.net URI)))
-
-(defn ^:private to-file ^java.io.File
-  [^java.nio.file.Path path
-   ^String child]
-  (.toFile (.resolve path child)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]}]
   (log/info (format "Finding classpath via `%s`" (string/join " " classpath-cmd)))
@@ -46,7 +40,7 @@
 (defn ^:private valid-project-specs-with-hash [root-path project-specs]
   (keep
     (fn [{:keys [project-path] :as project-spec}]
-      (let [project-file (to-file root-path project-path)]
+      (let [project-file (shared/to-file root-path project-path)]
         (when (.exists project-file)
           (assoc project-spec :hash (digest/md5 project-file)))))
     project-specs))
@@ -65,7 +59,9 @@
         {:project-path "build.boot"
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}]
+         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
+        {:project-path "bb.edn"
+         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
        (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
@@ -160,51 +156,10 @@
 (defn ^:private analyze-project! [project-root-uri]
   (let [root-path (shared/uri->path project-root-uri)
         settings (:settings @db/db)
-        source-paths (get settings :source-paths)]
+        source-paths (:source-paths settings)]
     (analyze-classpath! root-path source-paths settings)
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-paths! source-paths false)))
-
-(def default-source-paths #{"src" "test"})
-
-(defn ^:private resolve-source-paths [root-path settings given-source-paths]
-  (let [deps-file (to-file root-path "deps.edn")
-        lein-file (to-file root-path "project.clj")]
-    (cond
-      given-source-paths
-      (do
-        (log/info "Using given source-paths:" given-source-paths)
-        given-source-paths)
-
-      (.exists deps-file)
-      (let [deps-source-paths (config/resolve-deps-source-paths (config/read-edn-file deps-file) settings)]
-        (if (seq deps-source-paths)
-          (do
-            (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
-            deps-source-paths)
-          (do
-            (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
-            default-source-paths)))
-
-      (.exists lein-file)
-      (let [lein-edn (parser/lein-zloc->edn (z/of-file lein-file))
-            lein-source-paths (config/resolve-lein-source-paths lein-edn settings)]
-        (if (seq lein-source-paths)
-          (do
-            (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths)
-            lein-source-paths)
-          (do
-            (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths)
-            default-source-paths)))
-
-      :else
-      (do
-        (log/info "Using default source-paths:" default-source-paths)
-        default-source-paths))))
-
-(defn ^:private process-source-paths [root-path settings given-source-paths]
-  (let [source-paths (resolve-source-paths root-path settings given-source-paths)]
-    (mapv #(->> % (to-file root-path) .getAbsolutePath str) source-paths)))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings]
   (let [project-settings (config/resolve-config project-root-uri)
@@ -221,8 +176,8 @@
             (logging/update-log-path log-path))
         settings (-> raw-settings
                      (update :project-specs #(or % default-project-specs))
-                     (update :source-aliases #(or % config/default-source-aliases))
-                     (update :source-paths (partial process-source-paths root-path raw-settings))
+                     (update :source-aliases #(or % source-paths/default-source-aliases))
+                     (update :source-paths (partial source-paths/process-source-paths root-path raw-settings))
                      (update :cljfmt cljfmt.main/merge-default-options))]
     (swap! db/db assoc
            :project-root-uri project-root-uri

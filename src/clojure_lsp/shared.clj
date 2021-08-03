@@ -214,3 +214,8 @@
                       (vector? y) (concat x y)
                       :else y))
               a b))
+
+(defn to-file ^java.io.File
+  [^java.nio.file.Path path
+   ^String child]
+  (.toFile (.resolve path child)))

@@ -31,9 +31,15 @@ prod-native:
 test: classes
 	clojure -M:test
 
+lint-clean:
+	clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*"
+
+lint-format:
+	clojure -M:run format --ns-exclude-regex "sample-test.*"
+
 lint-fix:
 	clojure -M:run clean-ns --ns-exclude-regex "sample-test.*"
-	clojure -M:run format
+	clojure -M:run format --ns-exclude-regex "sample-test.*"
 
 release:
 	./release

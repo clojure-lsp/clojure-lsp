@@ -1,10 +1,7 @@
-{:linters {:unresolved-var {:exclude [digest
+{:config-paths ["rewrite-clj/rewrite-clj"]
+ :linters {:unresolved-var {:exclude [digest
                                       rewrite-clj.zip
                                       rewrite-clj.node]}
            :unused-namespace {:exclude [taoensso.timbre]}}
- :lint-as {rewrite-clj.zip/edit->            clojure.core/->
-           rewrite-clj.zip/edit->>           clojure.core/->>
-           rewrite-clj.zip/subedit->         clojure.core/->
-           rewrite-clj.zip/subedit->>        clojure.core/->>
-           rewrite-clj.zip.subedit/edit->    clojure.core/->
+ :lint-as {rewrite-clj.zip.subedit/edit->    clojure.core/->
            rewrite-clj.zip.subedit/subedit-> clojure.core/->}}

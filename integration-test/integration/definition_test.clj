@@ -1,9 +1,9 @@
 (ns integration.definition-test
   (:require
-    [clojure.test :refer [deftest testing]]
-    [integration.fixture :as fixture]
-    [integration.helper :as h]
-    [integration.lsp :as lsp]))
+   [clojure.test :refer [deftest testing]]
+   [integration.fixture :as fixture]
+   [integration.helper :as h]
+   [integration.lsp :as lsp]))
 
 (lsp/clean-after-test)
 

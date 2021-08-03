@@ -44,8 +44,8 @@
   `(let [maps# ~maps
          res# ~result]
      (and
-      (is (= (count maps#) (count res#))
-          (format "Expected %s results, but got: %s \n--\n%s--"
-                  (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
-      (doseq [[r# m#] (map vector res# maps#)]
-        (assert-submap m# r#)))))
+       (is (= (count maps#) (count res#))
+           (format "Expected %s results, but got: %s \n--\n%s--"
+                   (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
+       (doseq [[r# m#] (map vector res# maps#)]
+         (assert-submap m# r#)))))

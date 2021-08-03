@@ -54,7 +54,7 @@
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]
   (if shared/windows-os?
-    (into ["powershell.exe"] classpath)
+    (into ["powershell.exe" "-NoProfile"] classpath)
     classpath))
 
 (def ^:private default-project-specs

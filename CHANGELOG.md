@@ -2,11 +2,15 @@
 
 ## Unreleased
 
-- Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
-- Add `:hover :hide-file-location?` settings option to disable displaying the source path on hover.
-- Use new clj-kondo `:custom-lint-fn` for the `:unused-public-var`, this should improve performance and give the ability to suppress unused vars via code with `#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}` or `#_:clj-kondo/ignore`
-- Bump clj-kondo fixing analysis position issue with `declare`, making rename and other features work.
-- Don't use PowerShell profiles on Windows when analyzing classpath. Fixes https://github.com/BetterThanTomorrow/calva/issues/1050
+- General
+  - Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
+  - Bump clj-kondo fixing analysis position issue with `declare`, making rename and other features work.
+  - Don't use PowerShell profiles on Windows when analyzing classpath. Fixes https://github.com/BetterThanTomorrow/calva/issues/1050
+  - Support babashka classpath and source-paths discovery via bb.edn file. (needs babashka >= 0.5.1)
+
+- Editor
+  - Add `:hover :hide-file-location?` settings option to disable displaying the source path on hover.
+  - Use new clj-kondo `:custom-lint-fn` for the `:unused-public-var`, this should improve performance and give the ability to suppress unused vars via code with `#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}` or `#_:clj-kondo/ignore`
 
 ## 2021.07.28-14.24.06
 
@@ -14,7 +18,6 @@
   - Minor fix on the analysis queries comparison.
   - Improve GraalVM configuration to use direct/less configurations.
   - Bump clj-kondo 2021.06.18 -> 2021.07.28 which adds support for macroexpanding.
-  - Support babashka classpath and source-paths discovery via bb.edn file. (needs babashka >= 0.5.1)
   
 - Editor
   - Fix outgoing/incoming call hierarchy when vars are outside project/external jars.

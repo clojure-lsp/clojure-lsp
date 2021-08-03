@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.08.03-13.33.03
+
 - General
   - Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
   - Bump clj-kondo fixing analysis position issue with `declare`, making rename and other features work.

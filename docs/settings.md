@@ -137,7 +137,7 @@ Some features require know the available source paths of your project, where you
 Default:
 
 ```clojure
-{:ns-inner-blocks-indenation :next-line
+{:ns-inner-blocks-indentation :next-line
  :sort {:ns true
         :require true
         :import true

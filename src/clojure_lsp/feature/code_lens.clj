@@ -21,7 +21,6 @@
   (references->string references " test"))
 
 (defn ^:private var-definitions-lens [filename kondo-config analysis]
-  (println kondo-config)
   (->> (q/find-var-definitions analysis filename true)
        (remove (partial f.diagnostic/exclude-public-var? kondo-config))))
 

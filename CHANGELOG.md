@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.08.05-18.25.54
+
 - Fix async project lint after startup for huge projects. #506
 - Fix `:lint-project-files-after-startup?` to be considered before clojure-lsp lint unusued public vars.
 - Fix excluded symbols for code lens, making clojure-lsp check clj-kondo config as well for the `:clojure-lsp/unused-public-var` excludes

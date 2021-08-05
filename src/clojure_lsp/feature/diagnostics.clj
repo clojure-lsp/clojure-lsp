@@ -47,19 +47,19 @@
             finding))
         elements))
 
-(defn ^:private exclude-public-var? [kondo-config var]
+(defn exclude-public-var? [kondo-config var]
   (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
         excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
         excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
         excluded-ns-or-var (set (filter simple-ident? excluded-syms))]
-    (not (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
-                        (:defined-by var))
-             (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
-                        (:name var))
-             (contains? (set excluded-ns-or-var) (:ns var))
-             (-> excluded-full-qualified-vars
-                 set
-                 (contains? (symbol (-> var :ns str) (-> var :name str))))))))
+    (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
+                   (:defined-by var))
+        (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
+                   (:name var))
+        (contains? (set excluded-ns-or-var) (:ns var))
+        (-> excluded-full-qualified-vars
+            set
+            (contains? (symbol (-> var :ns str) (-> var :name str)))))))
 
 (defn ^:private kondo-finding->diagnostic
   [{:keys [type message level row col end-row] :as finding}]
@@ -119,7 +119,7 @@
 (defn ^:private unused-public-vars-lint!
   [var-definitions project-analysis {:keys [config reg-finding!]}]
   (let [elements (->> var-definitions
-                      (filter (partial exclude-public-var? config))
+                      (remove (partial exclude-public-var? config))
                       (filter (comp #(= (count %) 0)
                                     #(q/find-references project-analysis % false))))]
     (->> (reg-unused-public-var-elements! elements reg-finding! config)

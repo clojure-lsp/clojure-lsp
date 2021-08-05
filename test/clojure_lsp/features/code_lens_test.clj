@@ -2,7 +2,8 @@
   (:require
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [clojure-lsp.db :as db]))
 
 (h/reset-db-after-test)
 
@@ -16,6 +17,7 @@
                                "  (+ a b (foo2)))\n"
                                "(s/defn baz []\n"
                                "  (bar 2 3))\n"))
+    (swap! db/db assoc :kondo-config {})
     (is (= (list {:range
                   {:start {:line 1 :character 5} :end {:line 1 :character 8}}
                   :data [(h/file-uri "file:///a.clj") 2 6]}
@@ -31,6 +33,7 @@
                                   "(MyRecord)"
                                   "(->MyRecord)"
                                   "(map->MyRecord)"))
+    (swap! db/db assoc :kondo-config {})
     (is (= [{:range
              {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
              :data [(h/file-uri "file:///a.clj") 1 12]}]
@@ -39,6 +42,7 @@
     (h/load-code-and-locs (h/code "(ns foo (:require [re-frame.core :as r]))"
                                   "(r/reg-event-db ::event identity)"
                                   "(r/reg-sub ::sub identity)"))
+    (swap! db/db assoc :kondo-config {})
     (is (= [{:range
              {:start {:line 1, :character 16}, :end {:line 1, :character 23}},
              :data [(h/file-uri "file:///a.clj") 2 17]}

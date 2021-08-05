@@ -126,6 +126,7 @@
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
     (swap! db/db update :analysis merge analysis)
+    (swap! db/db assoc :kondo-config (:config result))
     (when-not public-only?
       (swap! db/db update :findings merge (group-by :filename (:findings result))))
     analysis))

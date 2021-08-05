@@ -34,7 +34,8 @@
                      (-> state-db
                          (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
                          (crawler/update-analysis uri (:analysis kondo-result))
-                         (crawler/update-findings uri (:findings kondo-result)))))
+                         (crawler/update-findings uri (:findings kondo-result))
+                         (assoc :kondo-config (:config kondo-result)))))
       (f.diagnostic/async-lint-file uri @db/db))
     (when-let [new-ns (and (string/blank? text)
                            (uri->namespace uri))]
@@ -120,13 +121,14 @@
         notify-references? (get-in settings [:notify-references-on-file-change] false)]
     (loop [state-db @db/db]
       (when (>= version (get-in state-db [:documents uri :v] -1))
-        (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
+        (when-let [kondo-result (crawler/run-kondo-on-text! text uri settings)]
           (let [filename (shared/uri->filename uri)
                 old-analysis (get-in @db/db [:analysis filename])]
             (if (compare-and-set! db/db state-db (-> state-db
-                                                     (crawler/update-analysis uri (:analysis new-analysis))
-                                                     (crawler/update-findings uri (:findings new-analysis))
-                                                     (assoc :processing-changes false)))
+                                                     (crawler/update-analysis uri (:analysis kondo-result))
+                                                     (crawler/update-findings uri (:findings kondo-result))
+                                                     (assoc :processing-changes false)
+                                                     (assoc :kondo-config (:config kondo-result))))
               (do
                 (f.diagnostic/sync-lint-file uri @db/db)
                 (when notify-references?

@@ -1,9 +1,9 @@
 (ns clojure-lsp.feature.code-lens
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
-   [clojure.set :as set]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
@@ -20,24 +20,22 @@
 (defn ^:private test-references->string [references]
   (references->string references " test"))
 
-(defn ^:private var-definitions-lens [filename settings analysis]
-  (let [excluded-vars (set/union #{'clojure.test/deftest}
-                                 (get-in settings [:linters :unused-public-var :exclude-when-defined-by] #{}))]
-    (->> (q/find-var-definitions analysis filename true)
-         (remove #(contains? excluded-vars (:defined-by %))))))
+(defn ^:private var-definitions-lens [filename kondo-config analysis]
+  (println kondo-config)
+  (->> (q/find-var-definitions analysis filename true)
+       (remove (partial f.diagnostic/exclude-public-var? kondo-config))))
 
 (defn ^:private keyword-definitions-lens
-  [filename settings analysis]
-  (let [excluded-vars (get-in settings [:linters :unused-public-var :exclude-when-defined-by] #{})]
-    (->> (q/find-keyword-definitions analysis filename)
-         (remove #(contains? excluded-vars (:reg %))))))
+  [filename kondo-config analysis]
+  (->> (q/find-keyword-definitions analysis filename)
+       (remove (partial f.diagnostic/exclude-public-var? kondo-config))))
 
 (defn reference-code-lens [uri]
   (let [analysis (:analysis @db/db)
-        settings (:settings @db/db)
+        kondo-config (:kondo-config @db/db)
         filename (shared/uri->filename uri)]
-    (->> (concat (var-definitions-lens filename settings analysis)
-                 (keyword-definitions-lens filename settings analysis))
+    (->> (concat (var-definitions-lens filename kondo-config analysis)
+                 (keyword-definitions-lens filename kondo-config analysis))
          (map (fn [element]
                 {:range (shared/->range element)
                  :data  [uri (:name-row element) (:name-col element)]})))))

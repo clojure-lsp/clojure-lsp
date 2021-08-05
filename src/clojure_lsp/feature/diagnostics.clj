@@ -145,7 +145,7 @@
             (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
               (lint-project-files paths)
               (recur @db/db))))
-        (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
+        (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
 
 (defn unused-public-var-lint-for-single-file!
   [{:keys [analysis] :as kondo-ctx}]

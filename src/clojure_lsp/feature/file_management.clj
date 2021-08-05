@@ -43,7 +43,7 @@
               changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
                         :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                  :new-text new-text}]}]]
-          (async/put! db/edits-chan (f.refactor/client-changes changes)))))))
+          (async/>!! db/edits-chan (f.refactor/client-changes changes)))))))
 
 (defn ^:private find-changed-var-definitions [old-analysis new-analysis]
   (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)
@@ -140,9 +140,9 @@
                                     (assoc-in [:documents uri :v] version)
                                     (assoc-in [:documents uri :text] final-text)
                                     (assoc :processing-changes true))))
-    (async/put! db/current-changes-chan {:uri uri
-                                         :text final-text
-                                         :version version})))
+    (async/>!! db/current-changes-chan {:uri uri
+                                        :text final-text
+                                        :version version})))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

@@ -98,15 +98,15 @@
       (concat (kondo-findings->diagnostics filename (:findings db))))))
 
 (defn sync-lint-file [uri db]
-  (async/put! db/diagnostics-chan
-              {:uri uri
-               :diagnostics (find-diagnostics uri db)}))
+  (async/>!! db/diagnostics-chan
+             {:uri uri
+              :diagnostics (find-diagnostics uri db)}))
 
 (defn async-lint-file [uri db]
   (async/go
-    (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (find-diagnostics uri db)})))
+    (async/>! db/diagnostics-chan
+              {:uri uri
+               :diagnostics (find-diagnostics uri db)})))
 
 (defn ^:private lint-project-files [paths]
   (doseq [path paths]

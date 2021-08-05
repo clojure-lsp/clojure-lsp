@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix async project lint after startup for huge projects. #506
+
 ## 2021.08.03-13.33.03
 
 - General

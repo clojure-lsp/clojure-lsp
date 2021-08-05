@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bump clj-kondo to fix window path issues with analysis.
+
 ## 2021.08.05-18.25.54
 
 - Fix async project lint after startup for huge projects. #506

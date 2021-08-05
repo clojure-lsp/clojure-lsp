@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Bump clj-kondo to fix window path issues with analysis.
+- Fix issue with references code lens for vim.
 
 ## 2021.08.05-18.25.54
 

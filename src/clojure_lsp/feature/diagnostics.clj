@@ -128,24 +128,24 @@
 (defn post-project-lint!
   [paths
    {:keys [analysis] :as kondo-ctx}]
-  (async/go
-    (let [start-time (System/nanoTime)
-          project-analysis (->> (lsp.kondo/normalize-analysis analysis)
-                                (group-by :filename)
-                                q/filter-project-analysis)
-          var-definitions (q/find-all-var-definitions project-analysis)
-          kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
-      (loop [state-db @db/db]
-        (let [cur-findings (:findings @db/db)
-              new-findings (merge-with #(->> (into %1 %2)
-                                             (medley/distinct-by (juxt :row :col :end-row :end-col)))
-                                       cur-findings
-                                       kondo-findings)]
-          (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
-            (when (get-in @db/db [:settings :lint-project-files-after-startup?] true)
-              (lint-project-files paths))
-            (recur @db/db))))
-      (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))
+  (when (get-in @db/db [:settings :lint-project-files-after-startup?] true)
+    (async/go
+      (let [start-time (System/nanoTime)
+            project-analysis (->> (lsp.kondo/normalize-analysis analysis)
+                                  (group-by :filename)
+                                  q/filter-project-analysis)
+            var-definitions (q/find-all-var-definitions project-analysis)
+            kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
+        (loop [state-db @db/db]
+          (let [cur-findings (:findings @db/db)
+                new-findings (merge-with #(->> (into %1 %2)
+                                               (medley/distinct-by (juxt :row :col :end-row :end-col)))
+                                         cur-findings
+                                         kondo-findings)]
+            (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
+              (lint-project-files paths)
+              (recur @db/db))))
+        (log/info (format "Linting unused public vars for whole project took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
 
 (defn unused-public-var-lint-for-single-file!
   [{:keys [analysis] :as kondo-ctx}]

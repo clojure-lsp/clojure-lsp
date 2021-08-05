@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix async project lint after startup for huge projects. #506
+- Fix `:lint-project-files-after-startup?` to be considered before clojure-lsp lint unusued public vars.
 
 ## 2021.08.03-13.33.03
 

@@ -1,9 +1,9 @@
 (ns clojure-lsp.features.code-lens-test
   (:require
+   [clojure-lsp.db :as db]
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [clojure-lsp.db :as db]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

@@ -66,10 +66,6 @@ This is an [example how Emacs `lsp-mode`](https://github.com/emacs-lsp/lsp-mode/
 make most of features work, you don't have to install clj-kondo to
 make it work.
 
-For example, if you are a (neo)vim user and have [ale](https://github.com/dense-analysis/ale) installed as a plugin, you
-**should not** have this configured as a linter `let g:ale_linters = {'clojure': ['clj-kondo']}` in your vimrc. Having this
-linter enabled via `ale` will only conflict with the built-in clj-kondo bundled with clojure-lsp.
-
 `clojure-lsp` will use a specific clj-kondo version that can be retrieved via `clojure-lsp --version`, but make sure you have it
 properly configured in your `.clj-kondo/config.edn` file.
 
@@ -80,21 +76,28 @@ It has the possible key/values:
 
 Example:
 
+`.lsp/config.edn`
 ```clojure
 {:linters {:clj-kondo {:level :off
                        :report-duplicates false}}}
 ```
 
+Note for vim users:
+
+If you are a (neo)vim user and have [ale](https://github.com/dense-analysis/ale) installed as a plugin, you
+**should not** have this configured as a linter `let g:ale_linters = {'clojure': ['clj-kondo']}` in your vimrc. Having this
+linter enabled via `ale` will only conflict with the built-in clj-kondo bundled with clojure-lsp.
+
 For more information about available configurations,
 check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 
-#### clojure-lsp
+##### Custom clj-kondo hooks
 
-At the moment clojure-lsp has only the custom linters below:
+Clojure-lsp register custom linters in clj-kondo, those configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`)
 
-##### unused-public-var
+###### clojure-lsp/unused-public-var
 
-This linter reports public functions/vars not used over the project.
+A custom linter that reports public functions/vars not used over the project.
 
 It has the possible key/values:
 
@@ -104,22 +107,23 @@ It has the possible key/values:
 
 Example:
 
+`.clj-kondo/config.edn`
 ```clojure
-{:linters {:unused-public-var {:level :warning
-                               :exclude #{my-ns/foo
-                                          my-ns/bar
-                                          other-ns
-                                          my-func}
-                               :exclude-when-defined-by #{my-ns/defflow}}}}
+{:linters {:clojure-lsp/unused-public-var {:level :warning
+                                           :exclude #{my-ns/foo
+                                                      my-ns/bar
+                                                      other-ns
+                                                      my-func}
+                                           :exclude-when-defined-by #{my-ns/defflow}}}}
 ```
 
 #### Disable linter
 
 It's not recommended to disable the linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:
 
+`.lsp/config.edn`
 ```clojure
-{:linters {:clj-kondo {:level :off}
-           :unused-public-var {:level :off}}}
+{:linters {:clj-kondo {:level :off}}}
 ```
 
 For information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.github.io/clojure-lsp/troubleshooting/)

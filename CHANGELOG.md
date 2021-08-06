@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings.
+- Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507
 
 ## 2021.08.05-19.36.09
 

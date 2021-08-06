@@ -53,8 +53,10 @@
 
 (defn ^:private match-file-lang
   [check-element match-element]
-  (let [match-file-lang (shared/uri->available-langs (:filename match-element))
-        check-file-lang (shared/uri->available-langs (:filename check-element))]
+  (let [match-file-lang (or (some-> match-element :lang list set)
+                            (shared/uri->available-langs (:filename match-element)))
+        check-file-lang (or (some-> check-element :lang list set)
+                            (shared/uri->available-langs (:filename check-element)))]
     (seq (set/intersection match-file-lang check-file-lang))))
 
 (defn ^:private defrecord-names-for [{:keys [name]}]

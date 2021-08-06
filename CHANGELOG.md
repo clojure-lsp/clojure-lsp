@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507
+- Fix find-definition in jars for cljc files where the var is available on both cljs and clj files. #509
 
 ## 2021.08.05-19.36.09
 

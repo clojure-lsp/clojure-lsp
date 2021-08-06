@@ -197,33 +197,41 @@
       (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
 
 (deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
+  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
+  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
   (testing "when on a clj file"
-    (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
-          _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
-          [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+    (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.clj"))
           ana (:analysis @db/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
         (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
   (testing "when on a cljs file"
-    (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
-          _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
-          [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+    (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljs"))
           ana (:analysis @db/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
         (q/find-definition-from-cursor ana (h/file-path "/b.cljs") bar-r bar-c))))
   (testing "when on a cljc file"
-    (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
-          _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
-          [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
+    (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljc"))
           ana (:analysis @db/db)]
       (h/assert-submap
+        {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
+        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r bar-c))))
+  (testing "when on a cljc file with multiple langs available"
+    (let [[[bar-r-clj bar-c-clj]
+           [bar-r-cljs bar-c-cljs]] (h/load-code-and-locs (h/code "(ns baz #?(:clj (:require [foo :as fc]) :cljs (:require [foo :as fs])))"
+                                                        "|fc/bar"
+                                                        "|fs/bar") (h/file-uri "file:///b.cljc"))
+          ana (:analysis @db/db)]
+      (h/assert-submap
+        {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
+        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-clj bar-c-clj))
+      (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r bar-c)))))
+        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-cljs bar-c-cljs)))))
 
 (deftest find-definition-from-cursor-when-declared
   (let [[[bar-r bar-c]] (h/load-code-and-locs

@@ -204,7 +204,7 @@
   (testing "when there is a bb.edn with valid :paths"
     (with-redefs [shared/to-file #(when (= "bb.edn" %2) (io/file ""))
                   source-paths/exists? (complement nil?)
-                  config/read-edn-file (constantly {:paths ["some" "paths"]})]
+                  config/read-edn-file (constantly {:paths ["some" 'paths]})]
       (is (= {:origins #{:bb}
               :source-paths #{"some" "paths"}
               :bb-source-paths #{"some" "paths"}}

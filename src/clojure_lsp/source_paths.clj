@@ -72,7 +72,7 @@
 
 (defn ^:private resolve-bb-source-paths
   [{:keys [paths]}]
-  (set paths))
+  (set (map str paths)))
 
 (defn ^:private resolve-source-paths-from-files [root-path settings]
   (let [deps-file (shared/to-file root-path "deps.edn")
@@ -142,5 +142,4 @@
       #{:empty-leinigen} (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths)
       #{:empty-bb} (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths)
       #{:default} (log/info "Using default source-paths:" default-source-paths))
-
     (mapv #(->> % (shared/to-file root-path) .getAbsolutePath str) source-paths)))

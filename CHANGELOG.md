@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings.
+
 ## 2021.08.05-19.36.09
 
 - Bump clj-kondo to fix window path issues with analysis.

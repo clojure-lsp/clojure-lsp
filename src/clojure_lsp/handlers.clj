@@ -76,7 +76,7 @@
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)
         col (-> position :character inc)]
-    (f.completion/completion textDocument row col)))
+    (f.completion/completion textDocument row col db/db)))
 
 (defn references [{:keys [textDocument position context]}]
   (let [row (-> position :line inc)
@@ -87,7 +87,7 @@
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
 (defn completion-resolve-item [item]
-  (f.completion/resolve-item item))
+  (f.completion/resolve-item item db/db))
 
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)]

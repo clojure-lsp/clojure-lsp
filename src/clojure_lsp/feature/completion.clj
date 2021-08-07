@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.completion
   (:require
    [clojure-lsp.common-symbols :as common-sym]
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.parser :as parser]
@@ -253,9 +252,8 @@
                          :kind :class
                          :detail (str "java.util." sym)})))))
 
-(defn ^:private with-snippets [cursor-loc text row col]
-  (let [settings (:settings @db/db)
-        next-loc (parser/safe-loc-at-pos text row (inc col))]
+(defn ^:private with-snippets [cursor-loc text row col settings]
+  (let [next-loc (parser/safe-loc-at-pos text row (inc col))]
     (->> (concat
            (f.completion-snippet/known-snippets settings)
            (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
@@ -266,12 +264,13 @@
 (defn- sort-completion-results [results]
   (sort-by (juxt :label :detail) results))
 
-(defn completion [uri row col]
+(defn completion [uri row col db]
   (let [filename (shared/uri->filename uri)
-        {:keys [text]} (get-in @db/db [:documents uri])
-        analysis (get @db/db :analysis)
+        {:keys [text]} (get-in @db [:documents uri])
+        settings (:settings @db)
+        analysis (:analysis @db)
         current-ns-elements (get analysis filename)
-        support-snippets? (get-in @db/db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
+        support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
         other-ns-elements (->> (dissoc analysis filename)
                                q/filter-project-analysis
                                (mapcat val))
@@ -339,15 +338,15 @@
         (into (with-java-items matches-fn))
 
         support-snippets?
-        (into (with-snippets cursor-loc text row col))
+        (into (with-snippets cursor-loc text row col settings))
 
         :always
         (-> sort-completion-results
             not-empty)))))
 
 (defn ^:private resolve-item-by-ns
-  [{{:keys [name ns filename]} :data :as item}]
-  (let [analysis (:analysis @db/db)
+  [{{:keys [name ns filename]} :data :as item} db]
+  (let [analysis (:analysis @db)
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
                                                 :to (symbol ns)
@@ -359,8 +358,8 @@
       item)))
 
 (defn ^:private resolve-item-by-definition
-  [{{:keys [name filename name-row name-col]} :data :as item}]
-  (let [local-analysis (get-in @db/db [:analysis filename])
+  [{{:keys [name filename name-row name-col]} :data :as item} db]
+  (let [local-analysis (get-in @db [:analysis filename])
         definition (q/find-first #(and (= :var-definitions (:bucket %))
                                        (= name (str (:name %)))
                                        (= name-row (:name-row %))
@@ -371,9 +370,9 @@
           (dissoc :data))
       item)))
 
-(defn resolve-item [{{:keys [ns]} :data :as item}]
+(defn resolve-item [{{:keys [ns]} :data :as item} db]
   (if (:data item)
     (if ns
-      (resolve-item-by-ns item)
-      (resolve-item-by-definition item))
+      (resolve-item-by-ns item db)
+      (resolve-item-by-definition item db))
     item))

@@ -1,14 +1,20 @@
 (ns clojure-lsp.feature.file-management
   (:require
-   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
+
+(defn ^:private update-analysis [db uri new-analysis]
+  (assoc-in db [:analysis (shared/uri->filename uri)] (lsp.kondo/normalize-analysis new-analysis)))
+
+(defn ^:private update-findings [db uri new-findings]
+  (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn ^:private uri->namespace [uri]
   (let [project-root-uri (:project-root-uri @db/db)
@@ -29,12 +35,12 @@
 
 (defn did-open [uri text]
   (let [settings (get @db/db :settings {})]
-    (when-let [kondo-result (crawler/run-kondo-on-text! text uri settings)]
+    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri settings)]
       (swap! db/db (fn [state-db]
                      (-> state-db
                          (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                         (crawler/update-analysis uri (:analysis kondo-result))
-                         (crawler/update-findings uri (:findings kondo-result))
+                         (update-analysis uri (:analysis kondo-result))
+                         (update-findings uri (:findings kondo-result))
                          (assoc :kondo-config (:config kondo-result)))))
       (f.diagnostic/async-lint-file uri @db/db))
     (when-let [new-ns (and (string/blank? text)
@@ -68,10 +74,10 @@
       (fn [uri]
         (when-let [text (get-in @db/db [:documents uri :text])]
           (log/debug "Analyzing reference" uri)
-          (when-let [new-analysis (crawler/run-kondo-on-text! text uri settings)]
+          (when-let [new-analysis (lsp.kondo/run-kondo-on-text! text uri settings)]
             (swap! db/db (fn [db] (-> db
-                                      (crawler/update-analysis uri (:analysis new-analysis))
-                                      (crawler/update-findings uri (:findings new-analysis)))))
+                                      (update-analysis uri (:analysis new-analysis))
+                                      (update-findings uri (:findings new-analysis)))))
             (f.diagnostic/async-lint-file uri @db/db))))
       references-uri)))
 
@@ -121,12 +127,12 @@
         notify-references? (get-in settings [:notify-references-on-file-change] false)]
     (loop [state-db @db/db]
       (when (>= version (get-in state-db [:documents uri :v] -1))
-        (when-let [kondo-result (crawler/run-kondo-on-text! text uri settings)]
+        (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri settings)]
           (let [filename (shared/uri->filename uri)
                 old-analysis (get-in @db/db [:analysis filename])]
             (if (compare-and-set! db/db state-db (-> state-db
-                                                     (crawler/update-analysis uri (:analysis kondo-result))
-                                                     (crawler/update-findings uri (:findings kondo-result))
+                                                     (update-analysis uri (:analysis kondo-result))
+                                                     (update-findings uri (:findings kondo-result))
                                                      (assoc :processing-changes false)
                                                      (assoc :kondo-config (:config kondo-result))))
               (do

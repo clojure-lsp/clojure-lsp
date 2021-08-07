@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
@@ -125,33 +124,25 @@
     (->> (reg-unused-public-var-elements! elements reg-finding! config)
          (group-by :filename))))
 
-(defn post-project-lint!
-  [paths
-   {:keys [analysis] :as kondo-ctx}]
-  (when (get-in @db/db [:settings :lint-project-files-after-startup?] true)
-    (async/go
-      (let [start-time (System/nanoTime)
-            project-analysis (->> (lsp.kondo/normalize-analysis analysis)
-                                  (group-by :filename)
-                                  q/filter-project-analysis)
-            var-definitions (q/find-all-var-definitions project-analysis)
-            kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
-        (loop [state-db @db/db]
-          (let [cur-findings (:findings @db/db)
-                new-findings (merge-with #(->> (into %1 %2)
-                                               (medley/distinct-by (juxt :row :col :end-row :end-col)))
-                                         cur-findings
-                                         kondo-findings)]
-            (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
-              (lint-project-files paths)
-              (recur @db/db))))
-        (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
+(defn lint-project-diagnostics!
+  [paths analysis kondo-ctx]
+  (let [project-analysis (->> analysis
+                              (group-by :filename)
+                              q/filter-project-analysis)
+        var-definitions (q/find-all-var-definitions project-analysis)
+        kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
+    (loop [state-db @db/db]
+      (let [cur-findings (:findings @db/db)
+            new-findings (merge-with #(->> (into %1 %2)
+                                           (medley/distinct-by (juxt :row :col :end-row :end-col)))
+                                     cur-findings
+                                     kondo-findings)]
+        (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
+          (lint-project-files paths)
+          (recur @db/db))))))
 
 (defn unused-public-var-lint-for-single-file!
-  [{:keys [analysis] :as kondo-ctx}]
-  (let [filename (-> analysis :var-definitions first :filename)
-        project-analysis (->> (lsp.kondo/normalize-analysis analysis)
-                              (assoc (:analysis @db/db) filename)
-                              q/filter-project-analysis)
+  [filename analysis kondo-ctx]
+  (let [project-analysis (q/filter-project-analysis analysis)
         var-definitions (q/find-var-definitions project-analysis filename false)]
     (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)))

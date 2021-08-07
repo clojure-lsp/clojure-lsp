@@ -18,6 +18,7 @@
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.interop :as interop]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -141,7 +142,7 @@
      :port (or (:port db)
                "NREPL only available on :debug profile (`make debug-bin`)")
      :server-version config/clojure-lsp-version
-     :clj-kondo-version config/clj-kondo-version
+     :clj-kondo-version lsp.kondo/clj-kondo-version
      :log-path (:log-path db)}))
 
 (defn server-info-log []

@@ -223,8 +223,8 @@
   (testing "when on a cljc file with multiple langs available"
     (let [[[bar-r-clj bar-c-clj]
            [bar-r-cljs bar-c-cljs]] (h/load-code-and-locs (h/code "(ns baz #?(:clj (:require [foo :as fc]) :cljs (:require [foo :as fs])))"
-                                                        "|fc/bar"
-                                                        "|fs/bar") (h/file-uri "file:///b.cljc"))
+                                                                  "|fc/bar"
+                                                                  "|fs/bar") (h/file-uri "file:///b.cljc"))
           ana (:analysis @db/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}

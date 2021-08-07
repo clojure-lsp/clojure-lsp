@@ -15,8 +15,9 @@
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
@@ -31,8 +32,9 @@
   (testing "when linter level is :warning"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
@@ -47,8 +49,9 @@
   (testing "when linter level is :error"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
@@ -63,8 +66,9 @@
   (testing "linter level by default is :info"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
       [{:filename "/a.clj"
@@ -79,8 +83,9 @@
   (testing "excluding the whole ns"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
     (h/assert-submaps
       []
@@ -88,8 +93,9 @@
   (testing "excluding the simple var from ns"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
     (h/assert-submaps
       []
@@ -97,8 +103,9 @@
   (testing "excluding the specific var"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/a.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
       []
@@ -106,8 +113,9 @@
   (testing "excluding specific syms"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
-      {:analysis {:var-definitions (filter #(= :var-definitions (:bucket %)) (get-in @db/db [:analysis "/b.clj"]))}
-       :reg-finding! #(swap! findings conj %)
+      "/b.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
       []

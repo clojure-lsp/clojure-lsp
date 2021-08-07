@@ -1,6 +1,5 @@
 (ns clojure-lsp.config
   (:require
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -11,43 +10,6 @@
 (def change-debounce-ms 300)
 
 (def clojure-lsp-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
-
-(def clj-kondo-version (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
-
-(defn ^:private with-additional-config
-  [config settings]
-  (cond-> config
-    (get-in settings [:linters :clj-kondo :report-duplicates] true)
-    (->
-      (assoc-in [:config :linters :unresolved-symbol :report-duplicates] true)
-      (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
-      (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
-
-(defn kondo-for-paths [paths settings external-analysis-only?]
-  (-> {:cache true
-       :parallel true
-       :copy-configs true
-       :lint [(string/join (System/getProperty "path.separator") paths)]
-       :config {:output {:analysis {:arglists true
-                                    :locals false
-                                    :keywords true}
-                         :canonical-paths true}}}
-      (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
-                                           (partial f.diagnostic/post-project-lint! paths)))
-      (with-additional-config settings)))
-
-(defn kondo-for-single-file [uri settings]
-  (-> {:cache true
-       :lint ["-"]
-       :copy-configs true
-       :lang (shared/uri->file-type uri)
-       :filename (shared/uri->filename uri)
-       :custom-lint-fn f.diagnostic/unused-public-var-lint-for-single-file!
-       :config {:output {:analysis {:arglists true
-                                    :locals true
-                                    :keywords true}
-                         :canonical-paths true}}}
-      (with-additional-config settings)))
 
 (defn read-edn-file [^java.io.File file]
   (try

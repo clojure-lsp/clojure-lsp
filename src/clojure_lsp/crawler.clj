@@ -1,6 +1,5 @@
 (ns clojure-lsp.crawler
   (:require
-   [clj-kondo.core :as kondo]
    [cljfmt.main :as cljfmt.main]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
@@ -69,54 +68,12 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(def clj-kondo-analysis-batch-size 50)
-
-(defn ^:private run-kondo-on-paths! [paths settings external-analysis-only?]
-  (let [err (java.io.StringWriter.)]
-    (binding [*err* err]
-      (let [result (kondo/run! (config/kondo-for-paths paths settings external-analysis-only?))]
-        (when-not (string/blank? (str err))
-          (log/info (str err)))
-        result))))
-
-(defn ^:private run-kondo-on-paths-batch!
-  "Run kondo on paths by partition the paths, with this we should call
-  kondo more times but we fewer paths to analyze, improving memory."
-  [paths settings public-only?]
-  (let [total (count paths)
-        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
-    (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
-    (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths settings public-only?)
-      (->> paths
-           (partition-all clj-kondo-analysis-batch-size)
-           (map-indexed (fn [index batch-paths]
-                          (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
-                          (run-kondo-on-paths! batch-paths settings public-only?)))
-           (reduce shared/deep-merge)))))
-
-(defn run-kondo-on-text! [text uri settings]
-  (let [err (java.io.StringWriter.)]
-    (binding [*err* err]
-      (let [result (with-in-str
-                     text
-                     (kondo/run! (config/kondo-for-single-file uri settings)))]
-        (when-not (string/blank? (str err))
-          (log/error (str err)))
-        result))))
-
-(defn update-analysis [db uri new-analysis]
-  (assoc-in db [:analysis (shared/uri->filename uri)] (lsp.kondo/normalize-analysis new-analysis)))
-
-(defn update-findings [db uri new-findings]
-  (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
-
 (defn ^:private analyze-paths! [paths public-only?]
   (let [settings (:settings @db/db)
         start-time (System/nanoTime)
         result (if public-only?
-                 (run-kondo-on-paths-batch! paths settings true)
-                 (run-kondo-on-paths! paths settings false))
+                 (lsp.kondo/run-kondo-on-paths-batch! paths settings true)
+                 (lsp.kondo/run-kondo-on-paths! paths settings false))
         end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
         _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)

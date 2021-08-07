@@ -294,7 +294,7 @@
                      (:reg %)))
        (medley/distinct-by (juxt :ns :name :row :col))))
 
-(defn find-all-ns-definitions [analysis]
+(defn find-all-ns-definition-names [analysis]
   (into #{}
         (comp
           (mapcat val)

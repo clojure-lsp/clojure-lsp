@@ -666,7 +666,7 @@
 (defn find-alias-suggestion [zloc]
   (when-let [ns-str (some-> zloc z/sexpr namespace)]
     (let [analysis (:analysis @db/db)
-          ns-definitions (q/find-all-ns-definitions analysis)
+          ns-definitions (q/find-all-ns-definition-names analysis)
           all-aliases (->> (q/find-all-aliases analysis)
                            (map :alias)
                            set)]

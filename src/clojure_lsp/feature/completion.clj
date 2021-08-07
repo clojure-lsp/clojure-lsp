@@ -303,7 +303,7 @@
                                (name cursor-value)
                                (str cursor-value)))
         cursor-full-ns? (when cursor-value-or-ns
-                          (contains? (q/find-all-ns-definitions analysis) (symbol cursor-value-or-ns)))]
+                          (contains? (q/find-all-ns-definition-names analysis) (symbol cursor-value-or-ns)))]
     (cond
       inside-refer?
       (->> (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))

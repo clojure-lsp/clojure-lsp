@@ -109,7 +109,7 @@
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
-                            q/find-all-ns-definitions
+                            q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
         ns+uris (map ns->ns+uri namespaces)
         edits (->> ns+uris
@@ -138,7 +138,7 @@
   (let [namespaces (or (seq namespace)
                        (->> (:analysis @db/db)
                             q/filter-project-analysis
-                            q/find-all-ns-definitions
+                            q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
         ns+uris (map ns->ns+uri namespaces)
         edits (->> ns+uris

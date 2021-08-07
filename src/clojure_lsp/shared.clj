@@ -64,7 +64,7 @@
     (string/ends-with? uri ".edn") #{:edn}
     :else #{}))
 
-(defn conform-uri
+(defn ^:private conform-uri
   ([uri] (conform-uri uri (get-in @db/db [:settings :uri-format])))
   ([uri format-settings]
    (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]

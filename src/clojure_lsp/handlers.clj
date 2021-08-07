@@ -24,7 +24,6 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])
@@ -101,8 +100,9 @@
 
 (defn document-symbol [{:keys [textDocument]}]
   (let [filename (shared/uri->filename textDocument)
-        local-analysis (get-in @db/db [:analysis filename])
-        namespace-definition (q/find-first (comp #{:namespace-definitions} :bucket) local-analysis)]
+        analysis (:analysis @db/db)
+        namespace-definition (->> (get analysis filename)
+                                  (q/find-first (comp #{:namespace-definitions} :bucket)))]
     [{:name (or (some-> namespace-definition :name name)
                 filename)
       :kind (f.document-symbol/element->symbol-kind namespace-definition)
@@ -110,9 +110,7 @@
       :selection-range (if namespace-definition
                          (shared/->scope-range namespace-definition)
                          full-file-range)
-      :children (->> local-analysis
-                     (filter (comp #{:var-definitions} :bucket))
-                     (medley/distinct-by (juxt :filename :name :name-row :name-col))
+      :children (->> (q/find-var-definitions analysis filename true)
                      (mapv (fn [e]
                              {:name            (-> e :name name)
                               :kind            (f.document-symbol/element->symbol-kind e)
@@ -261,16 +259,16 @@
 (defn code-lens
   [{:keys [textDocument]}]
   (process-after-changes
-    (f.code-lens/reference-code-lens textDocument)))
+    (f.code-lens/reference-code-lens textDocument db/db)))
 
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
-  (f.code-lens/resolve-code-lens text-document row col range))
+  (f.code-lens/resolve-code-lens text-document row col range db/db))
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
   (process-after-changes
-    (let [data (f.semantic-tokens/full-tokens textDocument)]
+    (let [data (f.semantic-tokens/full-tokens textDocument db/db)]
       {:data data})))
 
 (defn semantic-tokens-range
@@ -280,7 +278,7 @@
                  :name-col (inc (:character start))
                  :name-end-row (inc (:line end))
                  :name-end-col (inc (:character end))}
-          data (f.semantic-tokens/range-tokens textDocument range)]
+          data (f.semantic-tokens/range-tokens textDocument range db/db)]
       {:data data})))
 
 (defn prepare-call-hierarchy

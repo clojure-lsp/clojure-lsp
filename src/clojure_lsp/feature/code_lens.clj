@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.code-lens
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
@@ -29,9 +28,9 @@
   (->> (q/find-keyword-definitions analysis filename)
        (remove (partial f.diagnostic/exclude-public-var? kondo-config))))
 
-(defn reference-code-lens [uri]
-  (let [analysis (:analysis @db/db)
-        kondo-config (:kondo-config @db/db)
+(defn reference-code-lens [uri db]
+  (let [analysis (:analysis @db)
+        kondo-config (:kondo-config @db)
         filename (shared/uri->filename uri)]
     (->> (concat (var-definitions-lens filename kondo-config analysis)
                  (keyword-definitions-lens filename kondo-config analysis))
@@ -44,12 +43,12 @@
        (not (string/starts-with? filename source-path))
        (string/includes? filename "_test.")))
 
-(defn resolve-code-lens [uri row col range]
+(defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
-        segregate-lens? (get-in @db/db [:settings :lens-segregate-test-references] true)
-        references (q/find-references-from-cursor (:analysis @db/db) filename row col false)]
+        segregate-lens? (get-in @db [:settings :lens-segregate-test-references] true)
+        references (q/find-references-from-cursor (:analysis @db) filename row col false)]
     (if segregate-lens?
-      (let [source-path (->> (get-in @db/db [:settings :source-paths])
+      (let [source-path (->> (get-in @db [:settings :source-paths])
                              (filter #(string/starts-with? filename %))
                              first)
             main-references (filter (complement (partial test-reference? source-path)) references)

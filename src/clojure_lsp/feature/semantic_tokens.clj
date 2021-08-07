@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log])
   (:import
@@ -106,16 +105,16 @@
        token-type
        token-modifier])))
 
-(defn full-tokens [uri]
-  (let [elements (get-in @db/db [:analysis (shared/uri->filename uri)])
+(defn full-tokens [uri db]
+  (let [elements (get-in @db [:analysis (shared/uri->filename uri)])
         absolute-tokens (elements->absolute-tokens elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
          flatten)))
 
 (defn range-tokens
-  [uri range]
-  (let [elements (get-in @db/db [:analysis (shared/uri->filename uri)])
+  [uri range db]
+  (let [elements (get-in @db [:analysis (shared/uri->filename uri)])
         range-elements (filter #(element-inside-range? % range) elements)
         absolute-tokens (elements->absolute-tokens range-elements)]
     (->> absolute-tokens

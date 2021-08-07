@@ -1337,6 +1337,19 @@
    'use-fixture  'clojure.test
    'run-tests    'clojure.test
    'doc          'clojure.repl
+   '<!           'clojure.core.async
+   '<!!          'clojure.core.async
+   '>!           'clojure.core.async
+   '>!!          'clojure.core.async
+   'alt!         'clojure.core.async
+   'alt!!        'clojure.core.async
+   'alts!        'clojure.core.async
+   'chan         'clojure.core.async
+   'put!         'clojure.core.async
+   'take!        'clojure.core.async
+   'alts!!       'clojure.core.async
+   'go           'clojure.core.async
+   'go-loop      'clojure.core.async
    'ANY          'compojure.core
    'DELETE       'compojure.core
    'GET          'compojure.core

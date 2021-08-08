@@ -1,7 +1,5 @@
 (ns clojure-lsp.feature.hover
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]))
@@ -31,10 +29,11 @@
                                    (map #(drop-whitespace indentation %) (rest lines)))]
         (string/join "\n" unindented-lines)))))
 
-(defn hover-documentation [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}]
-  (let [[content-format] (get-in @db/db [:client-capabilities :text-document :hover :content-format])
-        show-docs-arity-on-same-line? (get-in @db/db [:settings :show-docs-arity-on-same-line?])
-        hide-filename? (get-in @db/db [:settings :hover :hide-file-location?])
+(defn hover-documentation
+  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db]
+  (let [[content-format] (get-in @db [:client-capabilities :text-document :hover :content-format])
+        show-docs-arity-on-same-line? (get-in @db [:settings :show-docs-arity-on-same-line?])
+        hide-filename? (get-in @db [:settings :hover :hide-file-location?])
         join-char (if show-docs-arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)
@@ -56,7 +55,7 @@
                 (str (format "%s*[%s](%s)*"
                              line-break
                              (string/replace filename #"\\" "\\\\")
-                             (shared/filename->uri filename))))}
+                             (shared/filename->uri filename db))))}
       ;; Default to plaintext
       (cond->> []
         (and filename (not hide-filename?)) (cons filename)
@@ -68,18 +67,18 @@
         sym (cons {:language "clojure"
                    :value (if show-docs-arity-on-same-line? sym-line sym)})))))
 
-(defn hover [filename line column]
-  (let [analysis (:analysis @db/db)
+(defn hover [filename line column db]
+  (let [analysis (:analysis @db)
         element (q/find-element-under-cursor analysis filename line column)
         definition (when element (q/find-definition analysis element))]
     (cond
       definition
       {:range (shared/->range element)
-       :contents (f.hover/hover-documentation definition)}
+       :contents (hover-documentation definition db)}
 
       element
       {:range (shared/->range element)
-       :contents (f.hover/hover-documentation element)}
+       :contents (hover-documentation element db)}
 
       :else
       {:contents []})))

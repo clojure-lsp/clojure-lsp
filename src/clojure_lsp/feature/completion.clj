@@ -170,8 +170,8 @@
                        (matches-fn (:name %))))
          (map #(element->completion-item % nil)))))
 
-(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn analysis]
-  (when-let [aliases (some->> analysis
+(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
+  (when-let [aliases (some->> (:analysis @db)
                               (q/filter-project-analysis)
                               (mapcat val)
                               (filter #(= (:bucket %) :namespace-alias)))]
@@ -191,11 +191,12 @@
                  (fn [element]
                    (let [require-edit (some-> cursor-loc
                                               (r.transform/add-known-libspec (symbol (str (:alias element)))
-                                                                             (symbol (str (:to element))))
-                                              (r.transform/result))]
+                                                                             (symbol (str (:to element)))
+                                                                             db)
+                                              r.transform/result)]
                      (cond-> (element->completion-item element nil)
                        (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))))
-        (->> analysis
+        (->> (:analysis @db)
              (mapcat val)
              (keep
                #(when (and (= (:bucket %) :var-definitions)
@@ -207,8 +208,8 @@
              (map
                (fn [[element-ns completion-item]]
                  (let [require-edit (some-> cursor-loc
-                                            (r.transform/add-known-libspec (symbol cursor-alias) element-ns)
-                                            (r.transform/result))]
+                                            (r.transform/add-known-libspec (symbol cursor-alias) element-ns db)
+                                            r.transform/result)]
                    (cond-> completion-item
                      (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))))
 
@@ -323,7 +324,7 @@
         (into (with-elements-from-full-ns cursor-value-or-ns analysis))
 
         cursor-value-or-ns
-        (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn analysis))
+        (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
 
         simple-cursor?
         (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements))
@@ -353,7 +354,7 @@
                                                 :bucket :var-usages})]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition))
+          (assoc :documentation (f.hover/hover-documentation definition db))
           (dissoc :data))
       item)))
 
@@ -366,7 +367,7 @@
                                        (= name-col (:name-col %))) local-analysis)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition))
+          (assoc :documentation (f.hover/hover-documentation definition db))
           (dissoc :data))
       item)))
 

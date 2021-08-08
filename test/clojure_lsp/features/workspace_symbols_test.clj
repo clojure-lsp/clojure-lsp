@@ -1,5 +1,6 @@
 (ns clojure-lsp.features.workspace-symbols-test
   (:require
+   [clojure-lsp.db :as db]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
@@ -43,7 +44,7 @@
              :location {:range {:end {:character 53, :line 1}, :start {:character 0, :line 1}},
                         :uri (h/file-uri "file:///b.clj")},
              :name "goats-from-alpacas"}]
-           (f.workspace-symbols/workspace-symbols ""))))
+           (f.workspace-symbols/workspace-symbols "" db/db))))
   (testing "querying a specific function using fuzzy search"
     (is (= [{:name "foo.alpaca.ns"
              :kind :namespace
@@ -64,4 +65,4 @@
              :location {:range {:end {:character 53, :line 1}, :start {:character 0, :line 1}},
                         :uri (h/file-uri "file:///b.clj")},
              :name "goats-from-alpacas"}]
-           (f.workspace-symbols/workspace-symbols "alpaca")))))
+           (f.workspace-symbols/workspace-symbols "alpaca" db/db)))))

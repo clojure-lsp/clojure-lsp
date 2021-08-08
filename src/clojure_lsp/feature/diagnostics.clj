@@ -107,13 +107,13 @@
               {:uri uri
                :diagnostics (find-diagnostics uri db)})))
 
-(defn ^:private lint-project-files [paths]
+(defn ^:private lint-project-files [paths db]
   (doseq [path paths]
     (doseq [file (file-seq (io/file path))]
       (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename)]
+            uri (shared/filename->uri filename db)]
         (when (not= :unknown (shared/uri->file-type uri))
-          (sync-lint-file uri @db/db))))))
+          (sync-lint-file uri @db))))))
 
 (defn ^:private unused-public-vars-lint!
   [var-definitions project-analysis {:keys [config reg-finding!]}]
@@ -125,21 +125,21 @@
          (group-by :filename))))
 
 (defn lint-project-diagnostics!
-  [paths analysis kondo-ctx]
-  (let [project-analysis (->> analysis
+  [paths new-analysis kondo-ctx db]
+  (let [project-analysis (->> new-analysis
                               (group-by :filename)
                               q/filter-project-analysis)
         var-definitions (q/find-all-var-definitions project-analysis)
         kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
-    (loop [state-db @db/db]
-      (let [cur-findings (:findings @db/db)
+    (loop [state-db @db]
+      (let [cur-findings (:findings state-db)
             new-findings (merge-with #(->> (into %1 %2)
                                            (medley/distinct-by (juxt :row :col :end-row :end-col)))
                                      cur-findings
                                      kondo-findings)]
-        (if (compare-and-set! db/db state-db (assoc state-db :findings new-findings))
-          (lint-project-files paths)
-          (recur @db/db))))))
+        (if (compare-and-set! db state-db (assoc state-db :findings new-findings))
+          (lint-project-files paths db)
+          (recur @db))))))
 
 (defn unused-public-var-lint-for-single-file!
   [filename analysis kondo-ctx]

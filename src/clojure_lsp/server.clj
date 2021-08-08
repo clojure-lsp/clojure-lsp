@@ -362,7 +362,7 @@
 
     (^CompletableFuture shutdown []
       (log/info "Shutting down")
-      (reset! db/db {:documents {}}) ;; TODO confirm this is correct
+      (reset! db/db {:documents {}})
       (CompletableFuture/completedFuture
         {:result nil}))
     (exit []
@@ -413,17 +413,17 @@
         launcher (LSPLauncher/createServerLauncher server is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
-    (nrepl/setup-nrepl)
+    (nrepl/setup-nrepl db/db)
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (go-loop [edit (<! db/edits-chan)]
-      (producer/workspace-apply-edit edit)
+      (producer/workspace-apply-edit edit db/db)
       (recur (<! db/edits-chan)))
     (go-loop []
-      (producer/publish-diagnostic (<! debounced-diags))
+      (producer/publish-diagnostic (<! debounced-diags) db/db)
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-changes (<! debounced-changes))
+        (f.file-management/analyze-changes (<! debounced-changes) db/db)
         (catch Exception e
           (log/error e "Error during analyzing buffer file changes")))
       (recur))

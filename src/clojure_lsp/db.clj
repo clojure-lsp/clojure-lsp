@@ -14,8 +14,8 @@
 
 (def version 1)
 
-(defn ^:private get-sqlite-db-file-path [project-root-path]
-  (let [configured (some-> (get-in @db [:settings :sqlite-db-path])
+(defn ^:private get-sqlite-db-file-path [project-root-path db]
+  (let [configured (some-> (get-in db [:settings :sqlite-db-path])
                            io/file)
         default (io/file (str project-root-path) ".lsp" "sqlite.db")
         file (or configured default)]
@@ -27,8 +27,8 @@
   {:dbtype "sqlite"
    :dbname lsp-db-path})
 
-(defn save-deps! [project-root-path project-hash classpath analysis]
-  (let [lsp-db-path (get-sqlite-db-file-path project-root-path)
+(defn save-deps! [project-root-path project-hash classpath analysis db]
+  (let [lsp-db-path (get-sqlite-db-file-path project-root-path db)
         db-spec (make-spec lsp-db-path)]
     (io/make-parents (:dbname db-spec))
     (with-open [conn (jdbc/get-connection db-spec)]
@@ -38,8 +38,8 @@
                             (version, root, hash, classpath, analysis)
                             values (?,?,?,?,?);" (str version) (str project-root-path) project-hash (pr-str classpath) (pr-str analysis)]))))
 
-(defn read-deps [project-root-path]
-  (let [lsp-db-path (get-sqlite-db-file-path project-root-path)]
+(defn read-deps [project-root-path db]
+  (let [lsp-db-path (get-sqlite-db-file-path project-root-path db)]
     (try
       (with-open [conn (jdbc/get-connection (make-spec lsp-db-path))]
         (let [project-row

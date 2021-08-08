@@ -16,9 +16,9 @@
 (defn ^:private update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
-(defn ^:private uri->namespace [uri]
-  (let [project-root-uri (:project-root-uri @db/db)
-        source-paths (get-in @db/db [:settings :source-paths])
+(defn ^:private uri->namespace [uri db]
+  (let [project-root-uri (:project-root-uri @db)
+        source-paths (get-in @db [:settings :source-paths])
         in-project? (when project-root-uri
                       (string/starts-with? uri project-root-uri))
         file-type (shared/uri->file-type uri)
@@ -33,24 +33,24 @@
                              (string/replace (System/getProperty "file.separator") ".")
                              (string/replace #"_" "-")))))))))
 
-(defn did-open [uri text]
-  (let [settings (get @db/db :settings {})]
-    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri settings)]
-      (swap! db/db (fn [state-db]
-                     (-> state-db
-                         (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                         (update-analysis uri (:analysis kondo-result))
-                         (update-findings uri (:findings kondo-result))
-                         (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-lint-file uri @db/db))
+(defn did-open [uri text db]
+  (let [settings (get @db :settings {})]
+    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
+      (swap! db (fn [state-db]
+                  (-> state-db
+                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
+                      (update-analysis uri (:analysis kondo-result))
+                      (update-findings uri (:findings kondo-result))
+                      (assoc :kondo-config (:config kondo-result)))))
+      (f.diagnostic/async-lint-file uri @db))
     (when-let [new-ns (and (string/blank? text)
-                           (uri->namespace uri))]
+                           (uri->namespace uri db))]
       (when (get settings :auto-add-ns-to-new-files? true)
         (let [new-text (format "(ns %s)" new-ns)
-              changes [{:text-document {:version (get-in @db/db [:documents uri :v] 0) :uri uri}
+              changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                         :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                  :new-text new-text}]}]]
-          (async/>!! db/edits-chan (f.refactor/client-changes changes)))))))
+          (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))))
 
 (defn ^:private find-changed-var-definitions [old-analysis new-analysis]
   (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)
@@ -60,25 +60,24 @@
                    (let [var-def (first (filter #(= name (:name %)) new-var-def))]
                      (not (= fixed-arities (:fixed-arities var-def)))))))))
 
-(defn ^:private find-references-uris [analysis elements]
+(defn ^:private find-references-uris [analysis elements db]
   (->> elements
        (map #(q/find-references analysis % false))
        flatten
-       (map (comp shared/filename->uri :filename))))
+       (map (comp #(shared/filename->uri % db) :filename))))
 
-(defn ^:private notify-references [old-analysis new-analysis]
+(defn ^:private notify-references [old-analysis new-analysis db]
   (let [changed-var-definitions (find-changed-var-definitions old-analysis new-analysis)
-        references-uri (find-references-uris (:analysis @db/db) changed-var-definitions)
-        settings (:settings @db/db)]
+        references-uri (find-references-uris (:analysis @db) changed-var-definitions db)]
     (mapv
       (fn [uri]
-        (when-let [text (get-in @db/db [:documents uri :text])]
+        (when-let [text (get-in @db [:documents uri :text])]
           (log/debug "Analyzing reference" uri)
-          (when-let [new-analysis (lsp.kondo/run-kondo-on-text! text uri settings)]
-            (swap! db/db (fn [db] (-> db
-                                      (update-analysis uri (:analysis new-analysis))
-                                      (update-findings uri (:findings new-analysis)))))
-            (f.diagnostic/async-lint-file uri @db/db))))
+          (when-let [new-analysis (lsp.kondo/run-kondo-on-text! text uri db)]
+            (swap! db (fn [db] (-> db
+                                   (update-analysis uri (:analysis new-analysis))
+                                   (update-findings uri (:findings new-analysis)))))
+            (f.diagnostic/async-lint-file uri @db))))
       references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -122,40 +121,40 @@
       ;; the full content of the document.
       new-text)))
 
-(defn analyze-changes [{:keys [uri text version]}]
-  (let [settings (:settings @db/db)
+(defn analyze-changes [{:keys [uri text version]} db]
+  (let [settings (:settings @db)
         notify-references? (get-in settings [:notify-references-on-file-change] false)]
-    (loop [state-db @db/db]
+    (loop [state-db @db]
       (when (>= version (get-in state-db [:documents uri :v] -1))
-        (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri settings)]
+        (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
           (let [filename (shared/uri->filename uri)
-                old-analysis (get-in @db/db [:analysis filename])]
-            (if (compare-and-set! db/db state-db (-> state-db
-                                                     (update-analysis uri (:analysis kondo-result))
-                                                     (update-findings uri (:findings kondo-result))
-                                                     (assoc :processing-changes false)
-                                                     (assoc :kondo-config (:config kondo-result))))
+                old-analysis (get-in @db [:analysis filename])]
+            (if (compare-and-set! db state-db (-> state-db
+                                                  (update-analysis uri (:analysis kondo-result))
+                                                  (update-findings uri (:findings kondo-result))
+                                                  (assoc :processing-changes false)
+                                                  (assoc :kondo-config (:config kondo-result))))
               (do
-                (f.diagnostic/sync-lint-file uri @db/db)
+                (f.diagnostic/sync-lint-file uri @db)
                 (when notify-references?
-                  (notify-references old-analysis (get-in @db/db [:analysis filename]))))
-              (recur @db/db))))))))
+                  (notify-references old-analysis (get-in @db [:analysis filename]) db)))
+              (recur @db))))))))
 
-(defn did-change [uri changes version]
-  (let [old-text (get-in @db/db [:documents uri :text])
+(defn did-change [uri changes version db]
+  (let [old-text (get-in @db [:documents uri :text])
         final-text (reduce handle-change old-text changes)]
-    (swap! db/db (fn [state-db] (-> state-db
-                                    (assoc-in [:documents uri :v] version)
-                                    (assoc-in [:documents uri :text] final-text)
-                                    (assoc :processing-changes true))))
+    (swap! db (fn [state-db] (-> state-db
+                                 (assoc-in [:documents uri :v] version)
+                                 (assoc-in [:documents uri :text] final-text)
+                                 (assoc :processing-changes true))))
     (async/>!! db/current-changes-chan {:uri uri
                                         :text final-text
                                         :version version})))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
-  [uri]
-  (or (get-in @db/db [:documents uri :text])
+  [uri db]
+  (or (get-in @db [:documents uri :text])
       (do
-        (did-open uri (slurp uri))
-        (get-in @db/db [:documents uri :text]))))
+        (did-open uri (slurp uri) db)
+        (get-in @db [:documents uri :text]))))

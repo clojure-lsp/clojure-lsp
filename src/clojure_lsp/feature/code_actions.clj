@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.code-actions
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.parser :as parser]
@@ -13,72 +12,73 @@
    (org.eclipse.lsp4j
      CodeActionKind)))
 
-(defn ^:private find-alias-suggestion [uri diagnostic]
+(defn ^:private find-alias-suggestion [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
-    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
-      (->> (r.transform/find-alias-suggestion diagnostic-zloc)
+    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
+      (->> (r.transform/find-alias-suggestion diagnostic-zloc db)
            (map (fn [{:keys [ns alias]}]
                   {:ns ns
                    :alias alias
                    :position position}))))))
 
-(defn ^:private find-alias-suggestions [uri diagnostics]
+(defn ^:private find-alias-suggestions [uri diagnostics db]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)]
     (->> unresolved-ns-diags
-         (map (partial find-alias-suggestion uri))
+         (map (partial find-alias-suggestion uri db))
          flatten
          (remove nil?))))
 
-(defn ^:private find-missing-require [uri diagnostic]
+(defn ^:private find-missing-require [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
-    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
-      (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc)]
+    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
+      (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc db)]
         {:missing-require missing-require
          :position position}))))
 
-(defn ^:private find-missing-requires [uri diagnostics]
+(defn ^:private find-missing-requires [uri diagnostics db]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
         unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
     (->> (cond-> []
 
            (seq unresolved-ns-diags)
-           (into (map (partial find-missing-require uri) unresolved-ns-diags))
+           (into (map (partial find-missing-require uri db) unresolved-ns-diags))
 
            (seq unresolved-symbol-diags)
-           (into (map (partial find-missing-require uri) unresolved-symbol-diags)))
+           (into (map (partial find-missing-require uri db) unresolved-symbol-diags)))
          (remove nil?))))
 
-(defn ^:private find-missing-import [uri diagnostic]
+(defn ^:private find-missing-import [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
-    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character)]
+    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
       (when-let [missing-import (r.transform/find-missing-import diagnostic-zloc)]
         {:missing-import missing-import
          :position position}))))
 
-(defn ^:private find-missing-imports [uri diagnostics]
+(defn ^:private find-missing-imports [uri diagnostics db]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
         unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
     (->> (cond-> []
 
            (seq unresolved-ns-diags)
-           (into (map (partial find-missing-import uri) unresolved-ns-diags))
+           (into (map (partial find-missing-import uri db) unresolved-ns-diags))
 
            (seq unresolved-symbol-diags)
-           (into (map (partial find-missing-import uri) unresolved-symbol-diags)))
+           (into (map (partial find-missing-import uri db) unresolved-symbol-diags)))
          (remove nil?))))
 
-(defn ^:private find-function-to-create [uri diagnostics]
+(defn ^:private find-function-to-create [uri diagnostics db]
   (when-let [{{{:keys [line character] :as position} :start} :range :as diag} (->> diagnostics
                                                                                    (filter #(= "unresolved-symbol" (:code %)))
                                                                                    first)]
-    (when-let [diag-loc (parser/safe-cursor-loc uri line character)]
+    (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
       (when (r.transform/can-create-function? diag-loc)
         {:name (last (string/split (:message diag) #"Unresolved symbol: "))
          :position position}))))
 
 (defn resolve-code-action
   [{{:keys [id uri line character chosen-alias coll]} :data :as code-action}
-   zloc]
+   zloc
+   db]
   (->
     (merge code-action
            (case id
@@ -89,15 +89,16 @@
                                                                    :uri         uri
                                                                    :version     0
                                                                    :row         (inc line)
-                                                                   :col         (inc character)})]
+                                                                   :col         (inc character)}
+                                                                  db)]
                {:edit missing-require-edit})
 
              "add-missing-import"
-             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc))]
+             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc db) db)]
                {:edit missing-import-edit})
 
              "add-alias-suggestion-require"
-             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-alias))]
+             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-alias db) db)]
                {:edit alias-suggestion-edit})
 
              "refactor-create-private-function"
@@ -272,22 +273,22 @@
           :line row
           :character col}})
 
-(defn all [zloc uri row col diagnostics client-capabilities]
+(defn all [zloc uri row col diagnostics client-capabilities db]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function? (r.transform/find-function-form zloc)
-        function-to-create (find-function-to-create uri diagnostics)
+        function-to-create (find-function-to-create uri diagnostics db)
         inside-let? (r.transform/find-let-form zloc)
         other-colls (r.transform/find-other-colls zloc)
-        definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
-        inline-symbol? (r.transform/inline-symbol? definition)
+        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col)
+        inline-symbol? (r.transform/inline-symbol? definition db)
         can-thread? (r.transform/can-thread? zloc)
-        macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col)
+        macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db)
         line (dec row)
         character (dec col)
-        missing-requires (find-missing-requires uri diagnostics)
-        missing-imports (find-missing-imports uri diagnostics)
-        alias-suggestions (find-alias-suggestions uri diagnostics)]
+        missing-requires (find-missing-requires uri diagnostics db)
+        missing-imports (find-missing-imports uri diagnostics db)
+        alias-suggestions (find-alias-suggestions uri diagnostics db)]
     (cond-> []
 
       (seq missing-requires)
@@ -326,4 +327,4 @@
       (conj (clean-ns-action uri line character))
 
       (not resolve-support?)
-      (->> (map #(resolve-code-action % zloc))))))
+      (->> (map #(resolve-code-action % zloc db))))))

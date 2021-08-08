@@ -28,41 +28,35 @@
   (testing "when it is not a jar"
     (reset! db/db {})
     (is (= (if h/windows? "file:///c:/some%20project/foo/bar_baz.clj" "file:///some%20project/foo/bar_baz.clj")
-           (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj")))))
+           (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj") db/db))))
   (testing "when it is a jar via zipfile"
     (reset! db/db {})
     (is (= (if h/windows? "zipfile:///c:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
-           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj")))))
+           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") db/db))))
   (testing "when it is a jar via jarfile"
     (reset! db/db {:settings {:dependency-scheme "jar"}})
     (is (= (if h/windows? "jar:file:///c:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
-           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj")))))
+           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") db/db))))
   (testing "Windows URIs"
     (reset! db/db {})
     (is (= (when h/windows? "file:///c:/c.clj")
-           (when h/windows? (shared/filename->uri "c:\\c.clj"))))))
+           (when h/windows? (shared/filename->uri "c:\\c.clj" db/db))))))
 
 (deftest conform-uri
   (testing "lower case drive letter and encode colons"
-    (reset! db/db {:settings {:uri-format {:encode-colons-in-path?   true
-                                           :upper-case-drive-letter? false}}})
     (is (= "file:///c%3A/path"
-           (#'shared/conform-uri "file:///C:/path"))))
+           (#'shared/conform-uri "file:///C:/path" {:encode-colons-in-path?   true
+                                                    :upper-case-drive-letter? false}))))
   (testing "upper case drive letter and do not encode colons"
-    (reset! db/db {:settings {:uri-format {:encode-colons-in-path?   false
-                                           :upper-case-drive-letter? true}}})
     (is (= "file:///C:/path"
-           (#'shared/conform-uri "file:///c:/path")))))
+           (#'shared/conform-uri "file:///c:/path" {:encode-colons-in-path?   false
+                                                    :upper-case-drive-letter? true})))))
 
 (deftest relativize-filepath
   (is (= (h/file-path "some/path.clj")
          (shared/relativize-filepath
            (h/file-path "/User/rich/some/path.clj")
            (h/file-path "/User/rich")))))
-
-(deftest uri->relative-filepath
-  (is (= (h/file-path "some foo/path.clj")
-         (shared/uri->relative-filepath "file:///User/ricky%20bar/some%20foo/path.clj" "file:///User/ricky%20bar"))))
 
 (deftest join-filepaths
   (is (= (h/file-path "/users/melon/toasty/onion")

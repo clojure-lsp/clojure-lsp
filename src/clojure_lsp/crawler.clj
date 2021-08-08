@@ -16,7 +16,7 @@
   (:import
    (java.net URI)))
 
-(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]}]
+(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
   (log/info (format "Finding classpath via `%s`" (string/join " " classpath-cmd)))
   (try
     (let [sep (re-pattern (System/getProperty "path.separator"))
@@ -29,11 +29,11 @@
             (string/split sep))
         (do
           (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-          (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning)
+          (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)
           [])))
     (catch Exception e
       (log/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly."  :warning)
+      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)
       [])))
 
 (defn ^:private valid-project-specs-with-hash [root-path project-specs]
@@ -50,7 +50,7 @@
     (into ["powershell.exe" "-NoProfile"] classpath)
     classpath))
 
-(def ^:private default-project-specs
+(defn ^:private default-project-specs []
   (->> [{:project-path "project.clj"
          :classpath-cmd ["lein" "classpath"]}
         {:project-path "deps.edn"
@@ -68,12 +68,11 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-paths! [paths public-only?]
-  (let [settings (:settings @db/db)
-        start-time (System/nanoTime)
+(defn ^:private analyze-paths! [paths public-only? db]
+  (let [start-time (System/nanoTime)
         result (if public-only?
-                 (lsp.kondo/run-kondo-on-paths-batch! paths settings true)
-                 (lsp.kondo/run-kondo-on-paths! paths settings false))
+                 (lsp.kondo/run-kondo-on-paths-batch! paths true db)
+                 (lsp.kondo/run-kondo-on-paths! paths false db))
         end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
         _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
         kondo-analysis (cond-> (:analysis result)
@@ -82,44 +81,44 @@
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (swap! db/db update :analysis merge analysis)
-    (swap! db/db assoc :kondo-config (:config result))
+    (swap! db update :analysis merge analysis)
+    (swap! db assoc :kondo-config (:config result))
     (when-not public-only?
-      (swap! db/db update :findings merge (group-by :filename (:findings result))))
+      (swap! db update :findings merge (group-by :filename (:findings result))))
     analysis))
 
-(defn ^:private analyze-classpath! [root-path source-paths settings]
-  (let [project-specs (->> (or (get settings :project-specs) default-project-specs)
+(defn ^:private analyze-classpath! [root-path source-paths settings db]
+  (let [project-specs (->> (or (get settings :project-specs) (default-project-specs))
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-hash (reduce str (map :hash project-specs))
-        loaded (db/read-deps root-path)
+        loaded (db/read-deps root-path db)
         use-db-analysis? (= (:project-hash loaded) project-hash)]
     (if use-db-analysis?
-      (swap! db/db update :analysis merge (:analysis loaded))
+      (swap! db update :analysis merge (:analysis loaded))
       (when-let [classpath (->> project-specs
-                                (mapcat #(lookup-classpath root-path %))
+                                (mapcat #(lookup-classpath root-path % db))
                                 vec
                                 seq)]
         (log/info "Analyzing classpath for project root" root-path)
         (let [adjusted-cp (cond->> classpath
                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
                             :always (remove (set source-paths)))
-              analysis (analyze-paths! adjusted-cp true)
+              analysis (analyze-paths! adjusted-cp true db)
               start-time (System/nanoTime)]
           (System/gc)
           (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
-          (db/save-deps! root-path project-hash classpath analysis))))))
+          (db/save-deps! root-path project-hash classpath analysis db))))))
 
-(defn ^:private analyze-project! [project-root-uri]
+(defn ^:private analyze-project! [project-root-uri db]
   (let [root-path (shared/uri->path project-root-uri)
-        settings (:settings @db/db)
+        settings (:settings @db)
         source-paths (:source-paths settings)]
-    (analyze-classpath! root-path source-paths settings)
+    (analyze-classpath! root-path source-paths settings db)
     (log/info "Analyzing source paths for project root" root-path)
-    (analyze-paths! source-paths false)))
+    (analyze-paths! source-paths false db)))
 
-(defn initialize-project [project-root-uri client-capabilities client-settings force-settings]
+(defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -131,16 +130,16 @@
                             project-settings
                             force-settings)
         _ (when-let [log-path (:log-path raw-settings)]
-            (logging/update-log-path log-path))
+            (logging/update-log-path log-path db))
         settings (-> raw-settings
-                     (update :project-specs #(or % default-project-specs))
+                     (update :project-specs #(or % (default-project-specs)))
                      (update :source-aliases #(or % source-paths/default-source-aliases))
                      (update :source-paths (partial source-paths/process-source-paths root-path raw-settings))
                      (update :cljfmt cljfmt.main/merge-default-options))]
-    (swap! db/db assoc
+    (swap! db assoc
            :project-root-uri project-root-uri
            :project-settings project-settings
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (analyze-project! project-root-uri)))
+    (analyze-project! project-root-uri db)))

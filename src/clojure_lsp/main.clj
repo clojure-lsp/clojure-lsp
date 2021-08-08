@@ -14,8 +14,8 @@
   (:gen-class))
 
 (defn ^:private version []
-  (->> [(str "clojure-lsp " config/clojure-lsp-version)
-        (str "clj-kondo " lsp.kondo/clj-kondo-version)]
+  (->> [(str "clojure-lsp " (config/clojure-lsp-version))
+        (str "clj-kondo " (lsp.kondo/clj-kondo-version))]
        (string/join \newline)))
 
 (defn ^:private help [options-summary]
@@ -36,7 +36,7 @@
         "See https://clojure-lsp.github.io/clojure-lsp/settings/ for detailed documentation."]
        (string/join \newline)))
 
-(def ^:private cli-options
+(defn ^:private cli-options []
   [["-h" "--help" "Print the available commands and its options"]
    [nil "--version" "Print clojure-lsp version"]
    [nil "--verbose" "Use stdout for clojure-lsp logs instead of default log settings"]
@@ -81,7 +81,7 @@
        (string/join \newline errors)))
 
 (defn ^:private parse [args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
+  (let [{:keys [options arguments errors summary]} (parse-opts args (cli-options))]
     (cond
       (:help options)
       {:exit-message (help summary) :ok? true}
@@ -131,7 +131,7 @@
         (exit (:result-code result) (:message result))))))
 
 (defn -main [& args]
-  (logging/setup-logging)
+  (logging/setup-logging db/db)
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)

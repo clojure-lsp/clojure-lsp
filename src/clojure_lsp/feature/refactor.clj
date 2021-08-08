@@ -1,13 +1,12 @@
 (ns clojure-lsp.feature.refactor
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
-(defn client-changes [changes]
-  (if (get-in @db/db [:client-capabilities :workspace :workspace-edit :document-changes])
+(defn client-changes [changes db]
+  (if (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes])
     {:document-changes changes}
     {:changes (into {} (map (fn [{:keys [text-document edits]}]
                               [(:uri text-document) edits])
@@ -15,14 +14,14 @@
 
 (defmulti refactor :refactoring)
 
-(defmethod refactor :add-import-to-namespace [{:keys [loc args]}]
-  (apply r.transform/add-import-to-namespace loc [args]))
+(defmethod refactor :add-import-to-namespace [{:keys [loc args db]}]
+  (apply r.transform/add-import-to-namespace loc [args] db))
 
-(defmethod refactor :add-missing-libspec [{:keys [loc]}]
-  (r.transform/add-missing-libspec loc))
+(defmethod refactor :add-missing-libspec [{:keys [loc db]}]
+  (r.transform/add-missing-libspec loc db))
 
-(defmethod refactor :clean-ns [{:keys [loc uri]}]
-  (r.transform/clean-ns loc uri))
+(defmethod refactor :clean-ns [{:keys [loc uri db]}]
+  (r.transform/clean-ns loc uri db))
 
 (defmethod refactor :cycle-coll [{:keys [loc]}]
   (r.transform/cycle-coll loc))
@@ -30,17 +29,17 @@
 (defmethod refactor :change-coll [{:keys [loc args]}]
   (apply r.transform/change-coll loc [args]))
 
-(defmethod refactor :cycle-privacy [{:keys [loc]}]
-  (r.transform/cycle-privacy loc))
+(defmethod refactor :cycle-privacy [{:keys [loc db]}]
+  (r.transform/cycle-privacy loc db))
 
 (defmethod refactor :expand-let [{:keys [loc]}]
   (r.transform/expand-let loc))
 
-(defmethod refactor :extract-function [{:keys [loc uri args]}]
-  (apply r.transform/extract-function loc uri [args]))
+(defmethod refactor :extract-function [{:keys [loc uri args db]}]
+  (apply r.transform/extract-function loc uri [args] db))
 
-(defmethod refactor :inline-symbol [{:keys [uri row col]}]
-  (r.transform/inline-symbol uri row col))
+(defmethod refactor :inline-symbol [{:keys [uri row col db]}]
+  (r.transform/inline-symbol uri row col db))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc [args]))
@@ -66,8 +65,8 @@
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
 
-(defmethod refactor :create-function [{:keys [loc]}]
-  (r.transform/create-function loc))
+(defmethod refactor :create-function [{:keys [loc db]}]
+  (r.transform/create-function loc db))
 
 (def available-refactors
   (->> refactor
@@ -76,13 +75,13 @@
        (map name)
        vec))
 
-(defn refactor-client-seq-changes [uri version result]
+(defn refactor-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
                   :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
-    (client-changes changes)))
+    (client-changes changes db)))
 
-(defn call-refactor [{:keys [loc uri refactoring row col version] :as data}]
-  (let [result (refactor data)]
+(defn call-refactor [{:keys [loc uri refactoring row col version] :as data} db]
+  (let [result (refactor (assoc data :db db))]
     (if (or loc
             (= :clean-ns refactoring))
       (cond
@@ -90,10 +89,10 @@
         (let [changes (vec (for [[doc-id sub-results] result]
                              {:text-document {:uri doc-id :version version}
                               :edits (mapv #(update % :range shared/->range) (r.transform/result sub-results))}))]
-          (client-changes changes))
+          (client-changes changes db))
 
         (seq result)
-        (refactor-client-seq-changes uri version result)
+        (refactor-client-seq-changes uri version result db)
 
         (empty? result)
         (log/warn refactoring "made no changes" (z/string loc))

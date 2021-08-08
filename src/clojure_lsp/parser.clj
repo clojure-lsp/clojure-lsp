@@ -1,6 +1,5 @@
 (ns clojure-lsp.parser
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.refactor.edit :as edit]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -101,10 +100,9 @@
     (catch Exception _e
       (log/warn "It was not possible to parse cursor location, probably a not valid clojure text"))))
 
-(defn safe-cursor-loc [uri line character]
+(defn safe-cursor-loc [uri line character db]
   (try
-    (-> @db/db
-        (get-in [:documents uri])
+    (-> (get-in @db [:documents uri])
         :text
         (loc-at-pos (inc line) (inc character)))
     (catch Exception _

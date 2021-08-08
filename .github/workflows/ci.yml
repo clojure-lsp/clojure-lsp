@@ -96,6 +96,7 @@ jobs:
 
   graalvm-build:
     runs-on: ubuntu-latest
+    needs: unit-test
     strategy:
       fail-fast: false
     steps:

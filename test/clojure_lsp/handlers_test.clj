@@ -3,7 +3,6 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.test-helper :as h]
-   [clojure.core.async :as async]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
    [taoensso.timbre :as log]))
@@ -27,29 +26,29 @@
            (get-in @db/db [:settings :uri-format])))))
 
 (deftest did-open
-  (h/clean-db!)
   (testing "opening a existing file"
-    (let [_ (h/load-code-and-locs "(ns a) (when)")
-          diagnostics (h/diagnostics-or-timeout)]
+    (h/clean-db!)
+    (let [_ (h/load-code-and-locs "(ns a) (when)")]
       (is (some? (get-in @db/db [:analysis (h/file-path "/a.clj")])))
-      (h/assert-submaps
-        [{:code "missing-body-in-when"}
-         {:code "invalid-arity"}]
-        diagnostics)))
+      (h/diagnostics
+        #(h/assert-submaps
+           [{:code "missing-body-in-when"}
+            {:code "invalid-arity"}]
+           (:diagnostics %)))))
   (testing "opening a new file adding the ns"
     (h/clean-db!)
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
                                    :source-paths #{(h/file-path "/project/src")}}
                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                         :project-root-uri (h/file-uri "file:///project")})
-    (let [_ (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
-          changes (:document-changes (h/edits-or-timeout))]
-      (h/assert-submaps
-        [{:edits [{:range {:start {:line 0, :character 0}
-                           :end {:line 999998, :character 999998}}
-                   :new-text "(ns foo.bar)"}]}]
-        changes)
-      (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/bar.clj")]))))))
+    (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
+    (h/edits
+      #(h/assert-submaps
+         [{:edits [{:range {:start {:line 0, :character 0}
+                            :end {:line 999998, :character 999998}}
+                    :new-text "(ns foo.bar)"}]}]
+         (:document-changes %)))
+    (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1)"
@@ -236,14 +235,14 @@
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
         (h/load-code-and-locs code)
-        (let [usages (h/diagnostics-or-timeout)]
-          (is (= ["user/foo is called with 3 args but expects 1 or 2"
-                  "user/baz is called with 1 arg but expects 3"
-                  "user/bar is called with 0 args but expects 1 or more"
-                  "user/foo is called with 3 args but expects 1 or 2"
-                  "user/foo is called with 0 args but expects 1 or 2"
-                  "user/foo is called with 4 args but expects 1 or 2"]
-                 (map :message usages))))))
+        (h/diagnostics
+          #(is (= ["user/foo is called with 3 args but expects 1 or 2"
+                   "user/baz is called with 1 arg but expects 3"
+                   "user/bar is called with 0 args but expects 1 or more"
+                   "user/foo is called with 3 args but expects 1 or 2"
+                   "user/foo is called with 0 args but expects 1 or 2"
+                   "user/foo is called with 4 args but expects 1 or 2"]
+                  (map :message (:diagnostics %)))))))
     (testing "for threading macros"
       (h/clean-db!)
       (let [code "(defn foo ([x] x) ([x y z] (z x y)))
@@ -268,14 +267,15 @@
                     (foo 1)
                     (bar))"]
         (h/load-code-and-locs code)
-        (let [usages (h/diagnostics-or-timeout)]
-          (is (= ["user/foo is called with 2 args but expects 1 or 3"
-                  "user/bar is called with 1 arg but expects 0"
-                  "user/bar is called with 1 arg but expects 0"
-                  "user/bar is called with 3 args but expects 0"
-                  "user/foo is called with 2 args but expects 1 or 3"
-                  "user/bar is called with 1 arg but expects 0"]
-                 (map :message usages))))))
+
+        (h/diagnostics
+          #(is (= ["user/foo is called with 2 args but expects 1 or 3"
+                   "user/bar is called with 1 arg but expects 0"
+                   "user/bar is called with 1 arg but expects 0"
+                   "user/bar is called with 3 args but expects 0"
+                   "user/foo is called with 2 args but expects 1 or 3"
+                   "user/bar is called with 1 arg but expects 0"]
+                  (map :message (:diagnostics %)))))))
     (testing "with annotations"
       (h/clean-db!)
       (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
@@ -285,9 +285,9 @@
                   (bar :a)
                   (bar :a :b)"]
         (h/load-code-and-locs code)
-        (let [usages (h/diagnostics-or-timeout)]
-          (is (= ["user/foo is called with 2 args but expects 1"]
-                 (map :message usages))))))
+        (h/diagnostics
+          #(is (= ["user/foo is called with 2 args but expects 1"]
+                  (map :message (:diagnostics %)))))))
     (testing "for schema defs"
       (h/clean-db!)
       (let [code "(ns user (:require [schema.core :as s]))
@@ -298,16 +298,17 @@
                   (foo 1 2)
                   (foo 1)"]
         (h/load-code-and-locs code)
-        (let [usages (h/diagnostics-or-timeout)]
-          (is (= ["user/foo is called with 0 args but expects 2"
-                  "user/foo is called with 1 arg but expects 2"]
-                 (map :message usages)))))))
+        (h/diagnostics
+          #(is (= ["user/foo is called with 0 args but expects 2"
+                   "user/foo is called with 1 arg but expects 2"]
+                  (map :message (:diagnostics %))))))))
   (testing "custom unused namespace declaration"
     (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)")
-    (let [usages (h/diagnostics-or-timeout)]
-      (is (empty?
-            (map :message usages))))))
+    (h/diagnostics
+      #(is (empty?
+             (map :message (:diagnostics %))))))
+  (is true))
 
 (deftest test-formatting
   (reset! db/db {:documents {(h/file-uri "file:///a.clj") {:text "(a  )\n(b c d)"}}})

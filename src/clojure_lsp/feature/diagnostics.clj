@@ -90,11 +90,11 @@
        (mapv kondo-finding->diagnostic)))
 
 (defn ^:private find-diagnostics [uri db]
-  (let [settings (get db :settings)
+  (let [settings (:settings @db)
         filename (shared/uri->filename uri)]
     (cond-> []
       (not (= :off (get-in settings [:linters :clj-kondo :level])))
-      (concat (kondo-findings->diagnostics filename (:findings db))))))
+      (concat (kondo-findings->diagnostics filename (:findings @db))))))
 
 (defn sync-lint-file [uri db]
   (async/>!! db/diagnostics-chan
@@ -113,7 +113,7 @@
       (let [filename (.getAbsolutePath ^java.io.File file)
             uri (shared/filename->uri filename db)]
         (when (not= :unknown (shared/uri->file-type uri))
-          (sync-lint-file uri @db))))))
+          (sync-lint-file uri db))))))
 
 (defn ^:private unused-public-vars-lint!
   [var-definitions project-analysis {:keys [config reg-finding!]}]

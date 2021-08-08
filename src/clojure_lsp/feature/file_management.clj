@@ -42,7 +42,7 @@
                       (update-analysis uri (:analysis kondo-result))
                       (update-findings uri (:findings kondo-result))
                       (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-lint-file uri @db))
+      (f.diagnostic/async-lint-file uri db))
     (when-let [new-ns (and (string/blank? text)
                            (uri->namespace uri db))]
       (when (get settings :auto-add-ns-to-new-files? true)
@@ -77,7 +77,7 @@
             (swap! db (fn [db] (-> db
                                    (update-analysis uri (:analysis new-analysis))
                                    (update-findings uri (:findings new-analysis)))))
-            (f.diagnostic/async-lint-file uri @db))))
+            (f.diagnostic/async-lint-file uri db))))
       references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -135,7 +135,7 @@
                                                   (assoc :processing-changes false)
                                                   (assoc :kondo-config (:config kondo-result))))
               (do
-                (f.diagnostic/sync-lint-file uri @db)
+                (f.diagnostic/sync-lint-file uri db)
                 (when notify-references?
                   (notify-references old-analysis (get-in @db [:analysis filename]) db)))
               (recur @db))))))))

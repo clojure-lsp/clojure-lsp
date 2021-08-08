@@ -127,7 +127,7 @@
   (testing "when linter level is :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
-           (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db))))
+           (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
   (testing "when linter level is not :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :error}}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
@@ -136,7 +136,7 @@
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
   (testing "when linter is not specified"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
@@ -145,7 +145,7 @@
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") @db/db)))
+                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
   (testing "when inside expression?"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
@@ -154,4 +154,4 @@
                         :tags []
                         :severity 1
                         :source "clj-kondo"}]
-                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") @db/db))))
+                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") db/db))))

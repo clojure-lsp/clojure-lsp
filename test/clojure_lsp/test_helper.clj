@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
-   [clojure.core.async :as async :refer [<!!]]
+   [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
@@ -27,6 +27,7 @@
 (defn clean-db! []
   (reset! db/db {})
   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+  (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
   (alter-var-root #'db/edits-chan (constantly (async/chan 1))))
 
 (defn reset-db-after-test []
@@ -83,15 +84,11 @@
     (handlers/did-open {:textDocument {:uri filename :text code}})
     positions))
 
-(defn diagnostics-or-timeout []
-  (:diagnostics (first (async/alts!!
-                         [(async/timeout 1000)
-                          db/diagnostics-chan]))))
+(defn diagnostics [after-fn]
+  (async/take! db/diagnostics-chan after-fn))
 
-(defn edits-or-timeout []
-  (first (async/alts!!
-           [(async/timeout 1000)
-            db/edits-chan])))
+(defn edits [after-fn]
+  (async/take! db/edits-chan after-fn))
 
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})

@@ -66,7 +66,7 @@ jobs:
       - name: Run tests
         run: make test
 
-  integration-test:
+  jvm-integration-test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -93,3 +93,79 @@ jobs:
 
       - name: Run integration tests
         run: make integration-test
+
+  graalvm-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
+
+      - name: Generate jar and embedded jar
+        run: make prod-bin
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm-version: 21.1.0.java11
+
+      - name: Install native-image component
+        run: |
+          gu install native-image
+
+      - name: Build Linux native image
+        env:
+          CLOJURE_LSP_JAR: clojure-lsp.jar
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+        run: |
+          graalvm/native-unix-compile.sh
+
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: clojure-lsp-native
+          path: clojure-lsp
+
+  graalvm-integration-test:
+    needs: graalvm-build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
+      - uses: actions/download-artifact@v2
+        name: clojure-lsp-native
+      - name: Setup binary
+        run: |
+          mv clojure-lsp-native/clojure-lsp .
+          chmod +x clojure-lsp
+
+      - name: Run integration tests
+        run: |
+          make integration-test

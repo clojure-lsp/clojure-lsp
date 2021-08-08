@@ -9,7 +9,8 @@ fi
 
 if [[ ! -f "$CLOJURE_LSP_JAR" ]]
 then
-    clojure -X:prod-jar
+    make classes
+    make prod-jar
     CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
 fi
 

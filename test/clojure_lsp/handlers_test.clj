@@ -14,20 +14,20 @@
 
 (deftest initialize
   (testing "detects URI format with lower-case drive letter and encoded colons"
-    (reset! db/db {})
+    (h/clean-db!)
     (handlers/initialize "file:///c%3A/project/root" {} {})
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
            (get-in @db/db [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
-    (reset! db/db {})
+    (h/clean-db!)
     (handlers/initialize "file:///C:/project/root" {} {})
     (is (= {:encode-colons-in-path?   false
             :upper-case-drive-letter? true}
            (get-in @db/db [:settings :uri-format])))))
 
 (deftest did-open
-  (reset! db/db {})
+  (h/clean-db!)
   (testing "opening a existing file"
     (let [_ (h/load-code-and-locs "(ns a) (when)")
           diagnostics (h/diagnostics-or-timeout)]
@@ -37,11 +37,11 @@
          {:code "invalid-arity"}]
         diagnostics)))
   (testing "opening a new file adding the ns"
+    (h/clean-db!)
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
                                    :source-paths #{(h/file-path "/project/src")}}
                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                         :project-root-uri (h/file-uri "file:///project")})
-    (alter-var-root #'db/edits-chan (constantly (async/chan 1)))
     (let [_ (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
           changes (:document-changes (h/edits-or-timeout))]
       (h/assert-submaps
@@ -216,8 +216,7 @@
 (deftest test-find-diagnostics
   (testing "wrong arity"
     (testing "for argument destructuring"
-      (reset! db/db {})
-      (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+      (h/clean-db!)
       (let [code "(defn foo ([x] x) ([x y] (x y)))
                   (defn bar [y & rest] ((foo y y y) (bar rest)))
                   (defn baz [{x :x y :y :as long}
@@ -246,8 +245,7 @@
                   "user/foo is called with 4 args but expects 1 or 2"]
                  (map :message usages))))))
     (testing "for threading macros"
-      (reset! db/db {})
-      (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+      (h/clean-db!)
       (let [code "(defn foo ([x] x) ([x y z] (z x y)))
                   (defn bar [] :bar)
                   (defn baz [arg & rest] (apply arg rest))
@@ -279,8 +277,7 @@
                   "user/bar is called with 1 arg but expects 0"]
                  (map :message usages))))))
     (testing "with annotations"
-      (reset! db/db {})
-      (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+      (h/clean-db!)
       (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
                   (defn ^:private bar ^String [^Class x & rest] (str x rest))
                   (foo foo)
@@ -292,8 +289,7 @@
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message usages))))))
     (testing "for schema defs"
-      (reset! db/db {})
-      (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+      (h/clean-db!)
       (let [code "(ns user (:require [schema.core :as s]))
                   (s/defn foo :- s/Str
                     [x :- Long y :- Long]
@@ -307,8 +303,7 @@
                   "user/foo is called with 1 arg but expects 2"]
                  (map :message usages)))))))
   (testing "custom unused namespace declaration"
-    (reset! db/db {})
-    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+    (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)")
     (let [usages (h/diagnostics-or-timeout)]
       (is (empty?

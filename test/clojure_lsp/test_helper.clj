@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
-   [clojure.core.async :as async]
+   [clojure.core.async :as async :refer [<!!]]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
@@ -24,13 +24,17 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
+(defn clean-db! []
+  (reset! db/db {})
+  (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+  (alter-var-root #'db/edits-chan (constantly (async/chan 1))))
+
 (defn reset-db-after-test []
   (use-fixtures
     :each
     (fn [f]
-      (reset! db/db {})
-      (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))
-                      (f)))))
+      (clean-db!)
+      (f))))
 
 (defn assert-submap [expected actual]
   (is (= expected

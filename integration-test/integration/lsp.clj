@@ -66,7 +66,7 @@
                 (println (colored :blue "Received notification:") (colored :yellow json))
                 (swap! server-notifications conj json)))))
         (recur))
-      (catch Exception _))))
+      (catch java.io.IOException _))))
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]

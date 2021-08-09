@@ -32,7 +32,7 @@
     URL
     JarURLConnection]))
 
-(def ^:private full-file-range
+(defn ^:private full-file-range []
   (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defmacro process-after-changes [& body]
@@ -46,12 +46,12 @@
 
 (defn initialize [project-root-uri client-capabilities client-settings]
   (when project-root-uri
-    (crawler/initialize-project project-root-uri client-capabilities client-settings {})))
+    (crawler/initialize-project project-root-uri client-capabilities client-settings {} db/db)))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)
         text (:text textDocument)]
-    (f.file-management/did-open uri text))
+    (f.file-management/did-open uri text db/db))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -63,7 +63,7 @@
       (swap! db/db #(update % :documents dissoc textDocument))))
 
 (defn did-change [{:keys [textDocument contentChanges]}]
-  (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument)))
+  (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db))
 
 (defn did-change-watched-files [changes]
   (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
@@ -81,7 +81,7 @@
   (let [row (-> position :line inc)
         col (-> position :character inc)]
     (mapv (fn [reference]
-            {:uri (shared/filename->uri (:filename reference))
+            {:uri (shared/filename->uri (:filename reference) db/db)
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
 
@@ -90,12 +90,12 @@
 
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)]
-    (f.rename/rename textDocument newName row col)))
+    (f.rename/rename textDocument newName row col db/db)))
 
 (defn definition [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)]
     (when-let [d (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column)]
-      {:uri (shared/filename->uri (:filename d))
+      {:uri (shared/filename->uri (:filename d) db/db)
        :range (shared/->range d)})))
 
 (defn document-symbol [{:keys [textDocument]}]
@@ -106,10 +106,10 @@
     [{:name (or (some-> namespace-definition :name name)
                 filename)
       :kind (f.document-symbol/element->symbol-kind namespace-definition)
-      :range full-file-range
+      :range (full-file-range)
       :selection-range (if namespace-definition
                          (shared/->scope-range namespace-definition)
-                         full-file-range)
+                         (full-file-range))
       :children (->> (q/find-var-definitions analysis filename true)
                      (mapv (fn [e]
                              {:name            (-> e :name name)
@@ -129,7 +129,7 @@
             references))))
 
 (defn workspace-symbols [{:keys [query]}]
-  (f.workspace-symbols/workspace-symbols query))
+  (f.workspace-symbols/workspace-symbols query db/db))
 
 (defn ^:private server-info []
   (let [db @db/db]
@@ -139,14 +139,15 @@
      :final-settings (:settings db)
      :port (or (:port db)
                "NREPL only available on :debug profile (`make debug-bin`)")
-     :server-version config/clojure-lsp-version
-     :clj-kondo-version lsp.kondo/clj-kondo-version
+     :server-version (config/clojure-lsp-version)
+     :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db)}))
 
 (defn server-info-log []
   (producer/window-show-message
     (with-out-str (pprint/pprint (server-info)))
-    :info))
+    :info
+    db/db))
 
 (def server-info-raw server-info)
 
@@ -163,13 +164,13 @@
      :message (with-out-str (pprint/pprint data))}))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
-  (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)])))
+  (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)]) db/db))
 
-(defn ^:private refactor [refactoring [doc-id line character args]]
+(defn ^:private refactor [refactoring [doc-id line character args] db]
   (let [row                        (inc (int line))
         col                        (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change
-        {:keys [v text] :or {v 0}} (get-in @db/db [:documents doc-id])
+        {:keys [v text] :or {v 0}} (get-in @db [:documents doc-id])
         loc                        (parser/loc-at-pos text row col)]
     (f.refactor/call-refactor {:refactoring (keyword refactoring)
                                :loc         loc
@@ -177,7 +178,8 @@
                                :row         row
                                :col         col
                                :args        args
-                               :version     v})))
+                               :version     v}
+                              db)))
 
 (defn execute-command [{:keys [command arguments]}]
   (cond
@@ -190,22 +192,22 @@
                                  :character (nth arguments 2)}})
 
     (= command "resolve-macro-as")
-    (apply f.resolve-macro/resolve-macro-as! arguments)
+    (apply f.resolve-macro/resolve-macro-as! arguments db/db)
 
     (some #(= % command) f.refactor/available-refactors)
-    (when-let [result (refactor command arguments)]
+    (when-let [result (refactor command arguments db/db)]
       (if (:client @db/db)
-        (producer/workspace-apply-edit result)
+        (producer/workspace-apply-edit result db/db)
         result))))
 
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)]
-    (f.hover/hover filename line column)))
+    (f.hover/hover filename line column db/db)))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (let [[line column] (shared/position->line-column position)]
-    (f.signature-help/signature-help textDocument line column)))
+    (f.signature-help/signature-help textDocument line column db/db)))
 
 (defn formatting [{:keys [textDocument]}]
   (let [{:keys [text]} (get-in @db/db [:documents textDocument])
@@ -214,7 +216,7 @@
                    (get-in @db/db [:settings :cljfmt]))]
     (if (= new-text text)
       []
-      [{:range full-file-range
+      [{:range (full-file-range)
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos]
@@ -242,19 +244,18 @@
 (defn code-actions
   [{:keys [range context textDocument]}]
   (process-after-changes
-    (let [db @db/db
-          diagnostics (-> context :diagnostics)
+    (let [diagnostics (-> context :diagnostics)
           line (-> range :start :line)
           character (-> range :start :character)
           row (inc line)
           col (inc character)
-          zloc (parser/safe-cursor-loc textDocument line character)
-          client-capabilities (get db :client-capabilities)]
-      (f.code-actions/all zloc textDocument row col diagnostics client-capabilities))))
+          zloc (parser/safe-cursor-loc textDocument line character db/db)
+          client-capabilities (get @db/db :client-capabilities)]
+      (f.code-actions/all zloc textDocument row col diagnostics client-capabilities db/db))))
 
 (defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
-  (let [zloc (parser/safe-cursor-loc uri line character)]
-    (f.code-actions/resolve-code-action action zloc)))
+  (let [zloc (parser/safe-cursor-loc uri line character db/db)]
+    (f.code-actions/resolve-code-action action zloc db/db)))
 
 (defn code-lens
   [{:keys [textDocument]}]
@@ -285,18 +286,18 @@
   [{:keys [textDocument position]}]
   (f.call-hierarchy/prepare textDocument
                             (inc (:line position))
-                            (inc (:character position))))
+                            (inc (:character position)) db/db))
 
 (defn call-hierarchy-incoming
   [{:keys [item]}]
   (let [uri (:uri item)
         row (inc (-> item :range :start :line))
         col (inc (-> item :range :start :character))]
-    (f.call-hierarchy/incoming uri row col)))
+    (f.call-hierarchy/incoming uri row col db/db)))
 
 (defn call-hierarchy-outgoing
   [{:keys [item]}]
   (let [uri (:uri item)
         row (inc (-> item :range :start :line))
         col (inc (-> item :range :start :character))]
-    (f.call-hierarchy/outgoing uri row col)))
+    (f.call-hierarchy/outgoing uri row col db/db)))

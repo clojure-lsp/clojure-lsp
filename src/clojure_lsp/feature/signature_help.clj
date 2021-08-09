@@ -1,11 +1,10 @@
 (ns clojure-lsp.feature.signature-help
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [assoc-some]]
    [edamame.core :as edamame]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -71,18 +70,18 @@
   (map (fn [arglist-str]
          (-> {:label (format "(%s %s)" (-> definition :name str) arglist-str)
               :parameters (arglist-str->parameters arglist-str)}
-             (shared/assoc-some :documentation (:doc definition))))
+             (assoc-some :documentation (:doc definition))))
        arglist-strs))
 
-(defn signature-help [uri row col]
+(defn signature-help [uri row col db]
   (let [filename (shared/uri->filename uri)
-        zloc (-> (f.file-management/force-get-document-text uri)
+        zloc (-> (f.file-management/force-get-document-text uri db)
                  (parser/loc-at-pos row col))
         function-loc (edit/find-function-usage-name-loc zloc)]
     (when function-loc
       (let [arglist-nodes (function-loc->arglist-nodes function-loc)
             function-meta (meta (z/node function-loc))
-            definition (q/find-definition-from-cursor (:analysis @db/db) filename (:row function-meta) (:col function-meta))
+            definition (q/find-definition-from-cursor (:analysis @db) filename (:row function-meta) (:col function-meta))
             signatures (definition->signature-informations definition)
             active-signature (get-active-signature-index definition arglist-nodes)]
         (when (seq signatures)

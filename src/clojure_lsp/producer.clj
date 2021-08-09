@@ -1,6 +1,5 @@
 (ns clojure-lsp.producer
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.interop :as interop]
    [taoensso.timbre :as log])
   (:import
@@ -9,25 +8,25 @@
    (org.eclipse.lsp4j.services LanguageClient)))
 
 (defn window-show-message
-  ([message type]
-   (window-show-message {:message message :type type}))
-  ([message-content]
+  ([message type db]
+   (window-show-message {:message message :type type} db))
+  ([message-content db]
    (log/info message-content)
-   (when-let [client ^LanguageClient (:client @db/db)]
+   (when-let [client ^LanguageClient (:client @db)]
      (->> message-content
           (interop/conform-or-log ::interop/show-message)
           (.showMessage client)))))
 
-(defn workspace-apply-edit [edit]
-  (let [client ^LanguageClient (:client @db/db)]
+(defn workspace-apply-edit [edit db]
+  (let [client ^LanguageClient (:client @db)]
     (->> edit
          (interop/conform-or-log ::interop/workspace-edit)
          ApplyWorkspaceEditParams.
          (.applyEdit client)
          .get)))
 
-(defn publish-diagnostic [diagnostic]
-  (let [client ^LanguageClient (:client @db/db)]
+(defn publish-diagnostic [diagnostic db]
+  (let [client ^LanguageClient (:client @db)]
     (->> diagnostic
          (interop/conform-or-log ::interop/publish-diagnostics-params)
          (.publishDiagnostics client))))

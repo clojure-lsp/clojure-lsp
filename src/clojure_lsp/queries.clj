@@ -41,11 +41,11 @@
 (defn filter-project-analysis [analysis]
   (->> analysis
        (remove-keys #(and %
-                          (not (string/starts-with? (-> % name shared/filename->uri) "file://"))))))
+                          (-> % name shared/external-file?)))))
 
 (defn filter-external-analysis [analysis]
   (->> analysis
-       (remove-keys #(string/starts-with? (-> % name shared/filename->uri) "file://"))))
+       (remove-keys #(-> % name shared/external-file? not))))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis]
   (or (find-last pred? (mapcat val (filter-project-analysis analysis)))

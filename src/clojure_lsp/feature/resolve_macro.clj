@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.resolve-macro
   (:require
    [borkdude.rewrite-edn :as r]
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -23,17 +22,17 @@
     schema.core [defschema]
     compojure.core [defroutes let-routes]})
 
-(defn ^:private find-function-name-position [uri row col]
-  (some-> (get-in @db/db [:documents uri :text])
+(defn ^:private find-function-name-position [uri row col db]
+  (some-> (get-in @db [:documents uri :text])
           (parser/loc-at-pos row col)
           edit/find-function-usage-name-loc
           z/node
           meta))
 
-(defn find-full-macro-symbol-to-resolve [uri row col]
-  (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position uri row col)]
+(defn find-full-macro-symbol-to-resolve [uri row col db]
+  (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position uri row col db)]
     (let [filename (shared/uri->filename uri)
-          analysis (:analysis @db/db)
+          analysis (:analysis @db)
           element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)
           definition (q/find-definition analysis element)]
       (when (:macro definition)
@@ -49,8 +48,8 @@
       (r/assoc-in [:lint-as full-symbol] resolved-full-symbol)
       (str "\n")))
 
-(defn ^:private resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path]
-  (when-let [full-symbol (find-full-macro-symbol-to-resolve uri row col)]
+(defn ^:private resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path db]
+  (when-let [full-symbol (find-full-macro-symbol-to-resolve uri row col db)]
     (let [kondo-config-file (io/file kondo-config-path)]
       (if (.exists ^java.io.File kondo-config-file)
         (->> (z/of-file kondo-config-file)
@@ -59,15 +58,16 @@
              (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))))))
 
 (defn resolve-macro-as!
-  [uri row col resolved-full-symbol-str kondo-config-path]
-  (if-let [new-kondo-config (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path)]
-    (let [document (get-in @db/db [:documents uri])]
+  [uri row col resolved-full-symbol-str kondo-config-path db]
+  (if-let [new-kondo-config (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path db)]
+    (let [document (get-in @db [:documents uri])]
       (io/make-parents kondo-config-path)
       (spit kondo-config-path new-kondo-config)
       (f.file-management/analyze-changes {:uri uri
                                           :version (:v document)
-                                          :text (:text document)})
+                                          :text (:text document)}
+                                         db)
       (log/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
     (do
       (log/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
-      (producer/window-show-message (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error))))
+      (producer/window-show-message (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error db))))

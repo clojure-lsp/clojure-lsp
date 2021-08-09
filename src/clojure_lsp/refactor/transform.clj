@@ -1,7 +1,6 @@
 (ns clojure-lsp.refactor.transform
   (:require
    [clojure-lsp.common-symbols :as common-sym]
-   [clojure-lsp.db :as db]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -296,13 +295,13 @@
                        (z/insert-child 'let)
                        (edit/join-let))}]))))))
 
-(defn ^:private sort-by-if-enabled [fn type coll]
-  (if (get-in @db/db [:settings :clean :sort type] true)
+(defn ^:private sort-by-if-enabled [fn type db coll]
+  (if (get-in @db [:settings :clean :sort type] true)
     (sort-by fn coll)
     coll))
 
 (defn ^:private process-clean-ns
-  [ns-loc removed-nodes col ns-inner-blocks-indentation form-type]
+  [ns-loc removed-nodes col ns-inner-blocks-indentation form-type db]
   (let [sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
         forms (->> removed-nodes
@@ -314,7 +313,8 @@
                              (if (symbol? sexpr)
                                (str sexpr)
                                (str (first sexpr)))) n/sexpr)
-                     form-type)
+                     form-type
+                     db)
                    (map-indexed (fn [idx node]
                                   (if (and (= :same-line ns-inner-blocks-indentation)
                                            (= idx 0))
@@ -334,7 +334,7 @@
                                          (-> removed-nodes z/node meta)))))))
 
 (defn ^:private remove-unused-refers
-  [node unused-refers]
+  [node unused-refers db]
   (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr)
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
         removed-refers (remove unused-refers-symbol node-refers)]
@@ -350,11 +350,11 @@
           (z/find-next-value ':refer)
           z/right
           (z/replace (n/vector-node (interpose (n/whitespace-node " ")
-                                               (vec (sort-by-if-enabled identity :refer removed-refers)))))
+                                               (vec (sort-by-if-enabled identity :refer db removed-refers)))))
           z/up))))
 
 (defn ^:private remove-unused-require
-  [node unused-aliases unused-refers]
+  [node unused-aliases unused-refers db]
   (cond
     (not (z/vector? node))
     node
@@ -363,13 +363,13 @@
     (z/remove node)
 
     (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
-    (remove-unused-refers node unused-refers)
+    (remove-unused-refers node unused-refers db)
 
     :else
     node))
 
 (defn ^:private remove-unused-requires
-  [unused-aliases unused-refers nodes]
+  [unused-aliases unused-refers db nodes]
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
         first-node-ns   (when (and single-require?
@@ -395,10 +395,10 @@
                                    (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
-      (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers)))))
+      (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers db)))))
 
 (defn ^:private clean-requires
-  [ns-loc unused-aliases unused-refers ns-inner-blocks-indentation]
+  [ns-loc unused-aliases unused-refers ns-inner-blocks-indentation db]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
     (let [col (or (case ns-inner-blocks-indentation
                     :same-line (some-> require-loc z/node meta :end-col)
@@ -408,8 +408,8 @@
                   2)
           removed-nodes (->> require-loc
                              z/remove
-                             (remove-unused-requires unused-aliases unused-refers))]
-      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :require))
+                             (remove-unused-requires unused-aliases unused-refers db))]
+      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :require db))
     ns-loc))
 
 (defn ^:private package-import?
@@ -448,7 +448,7 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc unused-imports ns-inner-blocks-indentation]
+  [ns-loc unused-imports ns-inner-blocks-indentation db]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (if import-loc
                 (if (= :same-line ns-inner-blocks-indentation)
@@ -458,12 +458,12 @@
           removed-nodes (-> import-loc
                             z/remove
                             (edit/map-children #(remove-unused-import % unused-imports)))]
-      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :import))
+      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :import db))
     ns-loc))
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]
-  (or (get-in db [:settings :clean :ns-inner-blocks-indentation])
-      (if (get-in db [:settings :keep-require-at-start?])
+  (or (get-in @db [:settings :clean :ns-inner-blocks-indentation])
+      (if (get-in @db [:settings :keep-require-at-start?])
         :same-line
         :next-line)))
 
@@ -492,26 +492,26 @@
     ns-loc))
 
 (defn clean-ns
-  [zloc uri]
-  (let [settings (:settings @db/db)
-        safe-loc (or zloc (z/of-string (get-in @db/db [:documents uri :text])))
+  [zloc uri db]
+  (let [settings (:settings @db)
+        safe-loc (or zloc (z/of-string (get-in @db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
-      (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation @db/db)
+      (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             filename (shared/uri->filename uri)
-            unused-aliases (q/find-unused-aliases (:findings @db/db) filename)
-            unused-refers (q/find-unused-refers (:findings @db/db) filename)
-            unused-imports (q/find-unused-imports (:findings @db/db) filename)
+            unused-aliases (q/find-unused-aliases (:findings @db) filename)
+            unused-refers (q/find-unused-refers (:findings @db) filename)
+            unused-imports (q/find-unused-imports (:findings @db) filename)
             result-loc (-> ns-loc
-                           (clean-requires unused-aliases unused-refers ns-inner-blocks-indentation)
-                           (clean-imports unused-imports ns-inner-blocks-indentation)
+                           (clean-requires unused-aliases unused-refers ns-inner-blocks-indentation db)
+                           (clean-imports unused-imports ns-inner-blocks-indentation db)
                            (sort-ns-children settings))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(defn ^:private find-missing-alias-require [zloc]
+(defn ^:private find-missing-alias-require [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        alias->info (->> (q/find-all-aliases (:analysis @db/db))
+        alias->info (->> (q/find-all-aliases (:analysis @db))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -528,10 +528,10 @@
     (when (not (z/find-value ns-zip z/next refer-to-add))
       (get common-sym/common-refers->info (z/sexpr zloc)))))
 
-(defn find-missing-require [zloc]
+(defn find-missing-require [zloc db]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (find-missing-alias-require zloc)
+      (find-missing-alias-require zloc db)
       (find-missing-refer-require zloc))))
 
 (defn ^:private find-class-name [zloc]
@@ -552,7 +552,7 @@
        find-class-name
        (get common-sym/java-util-imports)))
 
-(defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists]
+(defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists db]
   (let [ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
         cursor-sym (z/sexpr zloc)
@@ -562,7 +562,7 @@
     (when (and form-to-add need-to-add?)
       (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
-            ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation @db/db)
+            ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             col (if form-type-loc
                   (:col (meta (z/node (z/rightmost form-type-loc))))
                   (if (= :same-line ns-inner-blocks-indentation)
@@ -583,22 +583,22 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(defn add-import-to-namespace [zloc import-name]
-  (add-form-to-namespace zloc (symbol import-name) :import import-name))
+(defn add-import-to-namespace [zloc import-name db]
+  (add-form-to-namespace zloc (symbol import-name) :import import-name db))
 
-(defn add-common-import-to-namespace [zloc]
+(defn add-common-import-to-namespace [zloc db]
   (when-let [import-name (find-missing-import zloc)]
-    (add-form-to-namespace zloc (symbol import-name) :import import-name)))
+    (add-form-to-namespace zloc (symbol import-name) :import import-name db)))
 
 (defn add-known-libspec
-  [zloc ns-to-add qualified-ns-to-add]
+  [zloc ns-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add ns-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add)))
+    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add db)))
 
-(defn ^:private add-missing-alias-ns [zloc]
+(defn ^:private add-missing-alias-ns [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        qualified-ns-to-add (find-missing-alias-require zloc)]
-    (add-known-libspec zloc require-alias qualified-ns-to-add)))
+        qualified-ns-to-add (find-missing-alias-require zloc db)]
+    (add-known-libspec zloc require-alias qualified-ns-to-add db)))
 
 (defn ^:private add-missing-refer [zloc]
   (when-let [qualified-ns-to-add (find-missing-refer-require zloc)]
@@ -633,10 +633,10 @@
         :loc result-loc}])))
 
 (defn add-missing-libspec
-  [zloc]
+  [zloc db]
   (let [ns-str (some-> zloc z/sexpr namespace)]
     (if ns-str
-      (add-missing-alias-ns zloc)
+      (add-missing-alias-ns zloc db)
       (add-missing-refer zloc))))
 
 (defn ^:private resolve-best-alias-suggestion
@@ -663,9 +663,9 @@
         #{alias})
       #{alias})))
 
-(defn find-alias-suggestion [zloc]
+(defn find-alias-suggestion [zloc db]
   (when-let [ns-str (some-> zloc z/sexpr namespace)]
-    (let [analysis (:analysis @db/db)
+    (let [analysis (:analysis @db)
           ns-definitions (q/find-all-ns-definition-names analysis)
           all-aliases (->> (q/find-all-aliases analysis)
                            (map :alias)
@@ -676,14 +676,14 @@
                     {:ns ns-str
                      :alias suggestion})))))))
 
-(defn add-alias-suggestion [zloc chosen-alias]
-  (->> (find-alias-suggestion zloc)
+(defn add-alias-suggestion [zloc chosen-alias db]
+  (->> (find-alias-suggestion zloc db)
        (filter (comp #(= chosen-alias %) :alias))
        (map (fn [{:keys [ns alias]}]
               (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))
                                                                   (symbol? (z/sexpr %))
                                                                   (= ns (-> % z/sexpr namespace))))]
-                (concat (add-known-libspec zloc (symbol alias) (symbol ns))
+                (concat (add-known-libspec zloc (symbol alias) (symbol ns) db)
                         (->> ns-usages-nodes
                              (map (fn [node]
                                     (z/replace node (-> (str alias "/" (-> node z/sexpr name))
@@ -696,7 +696,7 @@
        flatten))
 
 (defn extract-function
-  [zloc uri fn-name]
+  [zloc uri fn-name db]
   (let [{:keys [row col]} (meta (z/node zloc))
         expr-loc (if (not= :token (z/tag zloc))
                    zloc
@@ -706,7 +706,7 @@
         form-loc (edit/to-top expr-loc)
         {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
         fn-sym (symbol fn-name)
-        used-syms (->> (q/find-local-usages-under-form (:analysis @db/db)
+        used-syms (->> (q/find-local-usages-under-form (:analysis @db)
                                                        (shared/uri->filename uri)
                                                        row
                                                        col
@@ -736,11 +736,11 @@
   (apply edit/find-ops-up zloc (mapv str edit/function-definition-symbols)))
 
 (defn cycle-privacy
-  [zloc]
+  [zloc db]
   (when-let [oploc (find-function-form zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
-                             (not (get-in @db/db [:settings :use-metadata-for-privacy?])))
+                             (not (get-in @db [:settings :use-metadata-for-privacy?])))
           switch-defn? (= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?
@@ -757,22 +757,22 @@
         :range (meta (z/node source))}])))
 
 (defn inline-symbol?
-  [{:keys [filename name-row name-col] :as definition}]
+  [{:keys [filename name-row name-col] :as definition} db]
   (when definition
-    (let [{:keys [text]} (get-in @db/db [:documents (shared/filename->uri filename)])]
+    (let [{:keys [text]} (get-in @db [:documents (shared/filename->uri filename db)])]
       (some-> (parser/loc-at-pos text name-row name-col)
               edit/find-op
               z/sexpr
               #{'let 'def}))))
 
 (defn inline-symbol
-  [uri row col]
-  (let [definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col)
-        references (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename uri) row col false)
-        def-uri (shared/filename->uri (:filename definition))
-        def-text (get-in @db/db [:documents def-uri :text])
+  [uri row col db]
+  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col)
+        references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false)
+        def-uri (shared/filename->uri (:filename definition) db)
+        def-text (get-in @db [:documents def-uri :text])
         def-loc (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
-        op (inline-symbol? definition)]
+        op (inline-symbol? definition db)]
     (when op
       (let [val-loc (z/right def-loc)
             end-pos (if (= op 'def)
@@ -792,7 +792,7 @@
         (reduce
           (fn [accum {:keys [filename] :as element}]
             (update accum
-                    (shared/filename->uri filename)
+                    (shared/filename->uri filename db)
                     (fnil conj [])
                     {:loc val-loc :range element}))
           {def-uri [{:loc nil :range def-range}]}
@@ -802,13 +802,13 @@
   (and zloc
        (#{:list :token} (z/tag zloc))))
 
-(defn create-function [zloc]
+(defn create-function [zloc db]
   (when (can-create-function? zloc)
     (let [fn-form (if (= :token (z/tag zloc))
                     (z/up zloc)
                     zloc)
           fn-name (z/string (z/down fn-form))
-          privacy-meta? (get-in @db/db [:settings :use-metadata-for-privacy?] false)
+          privacy-meta? (get-in @db [:settings :use-metadata-for-privacy?] false)
           new-fn-str (if privacy-meta?
                        (format "(defn ^:private %s)" (symbol fn-name))
                        (format "(defn- %s)\n\n" (symbol fn-name)))

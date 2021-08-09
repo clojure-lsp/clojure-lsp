@@ -31,7 +31,8 @@
                                   2
                                   4
                                   [{:code "unresolved-namespace"
-                                    :range {:start {:line 1 :character 3}}}] {}))))
+                                    :range {:start {:line 1 :character 3}}}] {}
+                                  db/db))))
   (testing "core ns"
     (is (some #(= (:title %) "Add require 'medley.core' as 'medley'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 4)
@@ -39,14 +40,16 @@
                                   3
                                   4
                                   [{:code "unresolved-namespace"
-                                    :range {:start {:line 2 :character 3}}}] {}))))
+                                    :range {:start {:line 2 :character 3}}}] {}
+                                  db/db))))
   (testing "already used alias, we add one more suggestion"
     (let [result (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 4)
                                      (h/file-uri "file:///a.clj")
                                      4
                                      4
                                      [{:code "unresolved-namespace"
-                                       :range {:start {:line 3 :character 3}}}] {})]
+                                       :range {:start {:line 3 :character 3}}}] {}
+                                     db/db)]
       (is (some #(= (:title %) "Add require 'clojure.data.json' as 'json'") result))
       (is (some #(= (:title %) "Add require 'clojure.data.json' as 'data.json'") result)))))
 
@@ -73,7 +76,8 @@
                                       (h/file-uri "file:///c.clj")
                                       2
                                       10
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when it has unresolved-namespace and can find namespace"
     (is (some #(= (:title %) "Add missing 'some-ns' require")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 3 11)
@@ -81,7 +85,8 @@
                                   3
                                   11
                                   [{:code "unresolved-namespace"
-                                    :range {:start {:line 2 :character 10}}}] {}))))
+                                    :range {:start {:line 2 :character 10}}}] {}
+                                  db/db))))
   (testing "when it has unresolved-namespace but cannot find namespace"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 2 11)
@@ -89,7 +94,8 @@
                                       2
                                       11
                                       [{:code "unresolved-namespace"
-                                        :range {:start {:line 1 :character 10}}}] {}))))
+                                        :range {:start {:line 1 :character 10}}}] {}
+                                      db/db))))
   (testing "when it has unresolved-symbol and it's a known refer"
     (is (some #(= (:title %) "Add missing 'clojure.test' require")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 2)
@@ -97,7 +103,8 @@
                                   4
                                   2
                                   [{:code "unresolved-namespace"
-                                    :range {:start {:line 3 :character 1}}}] {}))))
+                                    :range {:start {:line 3 :character 1}}}] {}
+                                  db/db))))
   (testing "when it has unresolved-symbol but it's not a known refer"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 11)
@@ -106,7 +113,8 @@
                                       11
                                       [{:code "unresolved-symbol"
                                         :message "Unresolved symbol: foo"
-                                        :range {:start {:line 3 :character 15}}}] {})))))
+                                        :range {:start {:line 3 :character 15}}}] {}
+                                      db/db)))))
 
 (deftest add-common-missing-import-code-action
   (h/load-code-and-locs (str "(ns another-ns)\n"
@@ -123,7 +131,8 @@
                                       (h/file-uri "file:///c.clj")
                                       5
                                       2
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
 
   (testing "when it has unresolved-symbol but it's not a common import"
     (is (not-any? #(string/starts-with? (:title %) "Add missing")
@@ -133,7 +142,8 @@
                                       2
                                       [{:code "unresolved-symbol"
                                         :message "Unresolved symbol: foo"
-                                        :range {:start {:line 4 :character 2}}}] {}))))
+                                        :range {:start {:line 4 :character 2}}}] {}
+                                      db/db))))
   (testing "when it has unresolved-symbol and it's a common import"
     (is (some #(= (:title %) "Add missing 'java.util.Date' import")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 6 2)
@@ -142,7 +152,8 @@
                                   2
                                   [{:code "unresolved-symbol"
                                     :message "Unresolved symbol: foo"
-                                    :range {:start {:line 5 :character 2}}}] {}))))
+                                    :range {:start {:line 5 :character 2}}}] {}
+                                  db/db))))
   (testing "when it has unresolved-namespace and it's a common import via method"
     (is (some #(= (:title %) "Add missing 'java.util.Date' import")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 7 2)
@@ -150,7 +161,8 @@
                                   7
                                   2
                                   [{:code "unresolved-namespace"
-                                    :range {:start {:line 6 :character 2}}}] {})))))
+                                    :range {:start {:line 6 :character 2}}}] {}
+                                  db/db)))))
 
 (deftest inline-symbol-code-action
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
@@ -164,14 +176,16 @@
                                       (h/file-uri "file:///b.clj")
                                       4
                                       8
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when in let/def symbol"
     (is (some #(= (:title %) "Inline symbol")
               (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 5)
                                   (h/file-uri "file:///b.clj")
                                   4
                                   5
-                                  [] {})))))
+                                  [] {}
+                                  db/db)))))
 
 (deftest change-coll-code-action
   (h/load-code-and-locs (h/code "\"some string\""
@@ -186,19 +200,20 @@
                                       (h/file-uri "file:///b.clj")
                                       1
                                       1
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when in a list"
     (is (some #(= (:title %) "Change coll to map")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 2 1) (h/file-uri "file:///b.clj") 2 1 [] {}))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 2 1) (h/file-uri "file:///b.clj") 2 1 [] {} db/db))))
   (testing "when in a map"
     (is (some #(= (:title %) "Change coll to vector")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 3 1) (h/file-uri "file:///b.clj") 3 1 [] {}))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 3 1) (h/file-uri "file:///b.clj") 3 1 [] {} db/db))))
   (testing "when in a vector"
     (is (some #(= (:title %) "Change coll to set")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 1) (h/file-uri "file:///b.clj") 4 1 [] {}))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 1) (h/file-uri "file:///b.clj") 4 1 [] {} db/db))))
   (testing "when in a set"
     (is (some #(= (:title %) "Change coll to list")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 5 1) (h/file-uri "file:///b.clj") 5 1 [] {})))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 5 1) (h/file-uri "file:///b.clj") 5 1 [] {} db/db)))))
 
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"
@@ -212,14 +227,16 @@
                                       (h/file-uri "file:///b.clj")
                                       4
                                       1
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when inside let form"
     (is (some #(= (:title %) "Move to let")
               (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 3 3)
                                   (h/file-uri "file:///b.clj")
                                   3
                                   3
-                                  [] {})))))
+                                  [] {}
+                                  db/db)))))
 
 (deftest cycle-privacy-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -231,14 +248,16 @@
                                       (h/file-uri "file:///a.clj")
                                       1
                                       5
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when on function location"
     (is (some #(= (:title %) "Cycle privacy")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 5)
                                   (h/file-uri "file:///a.clj")
                                   2
                                   5
-                                  [] {})))))
+                                  [] {}
+                                  db/db)))))
 
 (deftest extract-function-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -250,14 +269,16 @@
                                       (h/file-uri "file:///a.clj")
                                       1
                                       5
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when on function location"
     (is (some #(= (:title %) "Extract function")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 5)
                                   (h/file-uri "file:///a.clj")
                                   2
                                   5
-                                  [] {})))))
+                                  [] {}
+                                  db/db)))))
 
 (deftest create-private-function-code-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -269,7 +290,8 @@
                                       (h/file-uri "file:///a.clj")
                                       1
                                       10
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
   (testing "when in a unresolved symbol"
     (is (some #(= (:title %) "Create private function 'some-func'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 10)
@@ -278,7 +300,8 @@
                                   10
                                   [{:code "unresolved-symbol"
                                     :message "Unresolved symbol: some-func"
-                                    :range {:start {:line 2 :character 11}}}] {})))))
+                                    :range {:start {:line 2 :character 11}}}] {}
+                                  db/db)))))
 
 (deftest thread-first-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -287,19 +310,19 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when in a ns or :require"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {}))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {}))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a def non-list node"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {}))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a valid function that can be threaded"
     (is (some #(= (:title %) "Thread first all")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {}))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db))))
   (testing "when on a non-list node"
     (is (some #(= (:title %) "Thread first all")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {})))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))))
 
 (deftest thread-last-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -308,19 +331,19 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when in a ns or :require"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {}))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {}))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a def non-list node"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {}))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a valid function that can be threaded"
     (is (some #(= (:title %) "Thread last all")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {}))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db))))
   (testing "when on a non-list node"
     (is (some #(= (:title %) "Thread last all")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {})))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))))
 
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -345,7 +368,8 @@
                                       (h/file-uri "file:///b.clj")
                                       2
                                       2
-                                      [] {}))))
+                                      [] {}
+                                      db/db))))
 
   (testing "with workspace edit client capability"
     (swap! db/db assoc-in [:client-capabilities :workspace :workspace-edit] true)
@@ -354,7 +378,8 @@
                                   (h/file-uri "file:///b.clj")
                                   2
                                   2
-                                  [] {:workspace {:workspace-edit true}})))))
+                                  [] {:workspace {:workspace-edit true}}
+                                  db/db)))))
 
 (deftest resolve-macro-as-code-actions
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -363,7 +388,7 @@
                                 "(+ 1 2)"))
   (testing "when inside a macro usage"
     (is (some #(= (:title %) "Resolve macro 'some-ns/foo' as...")
-              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 7) (h/file-uri "file:///a.clj") 3 7 [] {}))))
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 7) (h/file-uri "file:///a.clj") 3 7 [] {} db/db))))
   (testing "when not inside a macro usage"
     (is (not-any? #(= (:title %) "Resolve macro 'some-ns/foo' as...")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 4) (h/file-uri "file:///a.clj") 4 4 [] {})))))
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 4) (h/file-uri "file:///a.clj") 4 4 [] {} db/db)))))

@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.workspace-symbols
   (:require
    [anonimitoraf.clj-flx :as flx]
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
@@ -44,8 +43,8 @@
                [])
        (map :members)))
 
-(defn workspace-symbols [query]
-  (->> (:analysis @db/db)
+(defn workspace-symbols [query db]
+  (->> (:analysis @db)
        q/filter-project-analysis
        vals
        flatten
@@ -54,7 +53,7 @@
        (mapv (fn [element]
                {:name (-> element :name name)
                 :kind (f.document-symbol/element->symbol-kind element)
-                :location {:uri (shared/filename->uri (:filename element))
+                :location {:uri (shared/filename->uri (:filename element) db)
                            :range (shared/->scope-range element)}}))
        (group-by-ord (comp :uri :location))
        flatten

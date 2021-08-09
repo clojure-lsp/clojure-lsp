@@ -21,33 +21,38 @@
       (reset! db/db {})
       (with-redefs [spit #(is (= (slurp (string/replace %1 "src" "fixtures")) %2))]
         (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
-                        :namespace '[sample-test.api.clean-ns.a]})))
+                        :namespace '[sample-test.api.clean-ns.a]
+                        :raw? true})))
     (testing "when a single namespace is specified with dry option"
       (reset! db/db {})
       (let [result (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
                                    :namespace '[sample-test.api.clean-ns.a]
-                                   :dry? true})]
+                                   :dry? true
+                                   :raw? true})]
         (is (= 1 (:result-code result)))
         (is (:message result))))
     (testing "when ns does not matches uri"
       (reset! db/db {})
       (let [result (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
                                    :namespace '[sample-test.api.clean-ns.a.other]
-                                   :dry? true})]
+                                   :dry? true
+                                   :raw? true})]
         (is (= 1 (:result-code result)))
         (is (:message result))))
     (testing "when ns is already clear"
       (reset! db/db {})
       (let [result (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
                                    :namespace '[sample-test.api.clean-ns.b]
-                                   :dry? true})]
+                                   :dry? true
+                                   :raw? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to clear!" (:message result)))))
     (testing "specifying a ns-exclude-regex"
       (reset! db/db {})
       (let [result (api/clean-ns! {:project-root (io/file "integration-test/sample-test")
                                    :ns-exclude-regex #".*"
-                                   :dry? true})]
+                                   :dry? true
+                                   :raw? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to clear!" (:message result)))))))
 
@@ -63,12 +68,14 @@
       (reset! db/db {})
       (with-redefs [spit #(is (= (slurp (string/replace %1 "src" "fixtures")) %2))]
         (api/format! {:project-root (io/file "integration-test/sample-test")
-                      :namespace '[sample-test.api.format.a]})))
+                      :namespace '[sample-test.api.format.a]
+                      :raw? true})))
     (testing "when a single namespace is specified with dry option"
       (reset! db/db {})
       (let [result (api/format! {:project-root (io/file "integration-test/sample-test")
                                  :namespace '[sample-test.api.format.a]
-                                 :dry? true})]
+                                 :dry? true
+                                 :raw? true})]
         (println result)
         (is (= 1 (:result-code result)))
         (is (:message result))))
@@ -76,21 +83,24 @@
       (reset! db/db {})
       (let [result (api/format! {:project-root (io/file "integration-test/sample-test")
                                  :namespace '[sample-test.api.format.a.other]
-                                 :dry? true})]
+                                 :dry? true
+                                 :raw? true})]
         (is (= 1 (:result-code result)))
         (is (:message result))))
     (testing "when ns is already formatted"
       (reset! db/db {})
       (let [result (api/format! {:project-root (io/file "integration-test/sample-test")
                                  :namespace '[sample-test.api.format.b]
-                                 :dry? true})]
+                                 :dry? true
+                                 :raw? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to format!" (:message result)))))
     (testing "specifying a ns-exclude-regex"
       (reset! db/db {})
       (let [result (api/format! {:project-root (io/file "integration-test/sample-test")
                                  :ns-exclude-regex #".*"
-                                 :dry? true})]
+                                 :dry? true
+                                 :raw? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to format!" (:message result)))))))
 
@@ -103,18 +113,23 @@
                  (api/rename! {:project-root (io/file "integration-test/sample-test/bla")}))))
   (testing "when project-root is a valid file"
     (testing "foo option assertions"
-      (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")})))
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
-                                                :from 'foo}))))
+                                                :raw? true})))
+      (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
+                                                :from 'foo
+                                                :raw? true}))))
     (testing "to option assertions"
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
-                                                :from 'a.rename/foo})))
+                                                :from 'a.rename/foo
+                                                :raw? true})))
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
                                                 :from 'a.rename/foo
-                                                :to 'foo})))))
+                                                :to 'foo
+                                                :raw? true})))))
   (testing "renaming a function"
     (reset! db/db {})
     (with-redefs [spit #(is (= (slurp (string/replace %1 "src" "fixtures/api")) %2))]
       (api/rename! {:project-root (io/file "integration-test/sample-test")
                     :from 'rename.a/my-func
-                    :to 'rename.a/your-func}))))
+                    :to 'rename.a/your-func
+                    :raw? true}))))

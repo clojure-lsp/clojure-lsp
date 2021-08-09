@@ -30,27 +30,27 @@
     (testing "known namespaces in project"
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
       (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
-            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
     (testing "common ns aliases"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
         (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
         (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [foo :as bar]"
@@ -59,14 +59,14 @@
       (testing "we add first require without spaces"
         (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
         (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+              [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [foo :as bar]"
@@ -75,30 +75,30 @@
     (testing "when require doesn't exists"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo) deftest") z/rightmost)
-            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.test :refer [deftest]])) (z/sexpr loc)))))
     (testing "when already exists another require"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.set :refer [subset?]])) deftest") z/rightmost)
-            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :refer [subset?]]
                                   [clojure.test :refer [deftest]])) (z/sexpr loc)))))
     (testing "when already exists that ns with another refer"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)
-            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.test :refer [deftest testing]])) (z/sexpr loc)))))
     (testing "we don't add existing refers"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [testing]])) testing") z/rightmost)]
-        (is (= nil (transform/add-missing-libspec zloc)))))
+        (is (= nil (transform/add-missing-libspec zloc db/db)))))
     (testing "we can add multiple refers"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest testing]])) is") z/rightmost)
-            [{:keys [loc range]}] (transform/add-missing-libspec zloc)]
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]])) (z/sexpr loc)))))))
 
@@ -106,7 +106,7 @@
   (testing "when there is no :import form"
     (reset! db/db {})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import"
@@ -114,14 +114,14 @@
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
     (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import java.util.Date))") (z/root-string loc)))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
     (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import java.util.Date))") (z/root-string loc)))))
@@ -130,7 +130,7 @@
     (let [zloc (-> (z/of-string (code "(ns foo.bar "
                                       "  (:import "
                                       "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import "
@@ -142,13 +142,13 @@
                                       "  (:import "
                                       "    java.util.Date)) Date.")) (z/find-value z/next 'Date.))]
       (is (= nil
-             (transform/add-import-to-namespace zloc "java.util.Date")))))
+             (transform/add-import-to-namespace zloc "java.util.Date" db/db)))))
   (testing "when there is only a :require form"
     (reset! db/db {})
     (let [zloc (-> (z/of-string (code "(ns foo.bar"
                                       "  (:require"
                                       "    [foo.baz :as baz])) Date.")) (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar"
                    "  (:require"
@@ -162,7 +162,7 @@
                                       "    [foo.baz :as baz])"
                                       "  (:import"
                                       "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date")]
+          [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar"
                    "  (:require"
@@ -174,14 +174,14 @@
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (transform/add-common-import-to-namespace zloc)]
+          [{:keys [loc range]}] (transform/add-common-import-to-namespace zloc db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import"
                    "    java.util.Date))") (z/root-string loc)))))
   (testing "when we don't known the import"
     (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
-      (is (= nil (transform/add-common-import-to-namespace zloc))))))
+      (is (= nil (transform/add-common-import-to-namespace zloc db/db))))))
 
 (defn- test-clean-ns
   ([db input-code expected-code]
@@ -191,7 +191,7 @@
    (h/load-code-and-locs input-code)
    (let [zloc (when in-form
                 (-> (z/of-string input-code) z/down z/right z/right))
-         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri "file:///a.clj"))]
+         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri "file:///a.clj") db/db)]
      (is (some? range))
      (is (= expected-code
             (z/root-string loc))))))
@@ -848,24 +848,24 @@
   (testing "without-setting"
     (reset! db/db {:settings {}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
-                              transform/cycle-privacy)]
+                              (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "defn-")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn- a [])") z/next 'a)
-                              transform/cycle-privacy)]
+                              (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "defn")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(def a [])") z/next 'a)
-                              transform/cycle-privacy)]
+                              (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "^:private a")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(def ^:private a [])") z/next 'a)
-                              transform/cycle-privacy)]
+                              (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "a"))))
   (testing "with-setting"
     (reset! db/db {:settings {:use-metadata-for-privacy? true}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
-                              transform/cycle-privacy)]
+                              (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "^:private a")))
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn ^:private a [])") z/next 'a)
-                              transform/cycle-privacy)]
+                              (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "a")))))
 
 (deftest change-coll-test
@@ -898,7 +898,8 @@
           results (transform/extract-function
                     zloc
                     (h/file-uri "file:///a.clj")
-                    "foo")]
+                    "foo"
+                    db/db)]
       (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
       (is (= "(foo b)" (z/string (:loc (last results)))))))
   (testing "multiple locals extract"
@@ -912,7 +913,8 @@
           results (transform/extract-function
                     zloc
                     (h/file-uri "file:///a.clj")
-                    "foo")]
+                    "foo"
+                    db/db)]
       (is (= "(defn foo [a]\n  (+ 1 a))" (z/string (:loc (first results)))))
       (is (= "(foo a)" (z/string (:loc (last results))))))))
 
@@ -922,7 +924,7 @@
     (let [code "(defn a [b] (my-func))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
-          results (transform/create-function zloc)]
+          results (transform/create-function zloc db/db)]
       (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating with no args from the function definition"
@@ -930,7 +932,7 @@
     (let [code "(defn a [b] (my-func))"
           zloc (z/up (z/find-value (z/of-string code) z/next 'my-func))
           _ (h/load-code-and-locs code)
-          results (transform/create-function zloc)]
+          results (transform/create-function zloc db/db)]
       (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating with 1 known arg"
@@ -938,7 +940,7 @@
     (let [code "(defn a [b] (my-func b))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
-          results (transform/create-function zloc)]
+          results (transform/create-function zloc db/db)]
       (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating with 1 known arg and a unknown arg"
@@ -946,7 +948,7 @@
     (let [code "(defn a [b] (my-func b (+ 1 2)))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
-          results (transform/create-function zloc)]
+          results (transform/create-function zloc db/db)]
       (is (= "(defn- my-func\n  [b arg2]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results))))))))
 
@@ -954,7 +956,7 @@
   (testing "simple let"
     (reset! db/db {})
     (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7)
+    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -969,7 +971,7 @@
   (testing "multiple binding let"
     (reset! db/db {})
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7)
+    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -985,7 +987,7 @@
     (reset! db/db {})
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c)
+          results (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db)
           a-results (get results (h/file-uri "file:///a.clj"))
           b-results (get results (h/file-uri "file:///b.clj"))]
       (is (map? results))

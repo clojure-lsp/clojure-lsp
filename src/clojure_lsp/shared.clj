@@ -1,6 +1,5 @@
 (ns clojure-lsp.shared
   (:require
-   [clojure-lsp.db :as db]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -65,19 +64,18 @@
     :else #{}))
 
 (defn ^:private conform-uri
-  ([uri] (conform-uri uri (get-in @db/db [:settings :uri-format])))
-  ([uri format-settings]
-   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
-     (when-not match
-       (log/error "Found invalid URI:" uri))
-     (str scheme+auth
-          (-> path
-              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
-                                    (if (:upper-case-drive-letter? format-settings)
-                                      string/upper-case
-                                      string/lower-case))
-              (cond-> (:encode-colons-in-path? format-settings)
-                (string/replace ":" "%3A")))))))
+  [uri format-settings]
+  (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
+    (when-not match
+      (log/error "Found invalid URI:" uri))
+    (str scheme+auth
+         (-> path
+             (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
+                                   (if (:upper-case-drive-letter? format-settings)
+                                     string/upper-case
+                                     string/lower-case))
+             (cond-> (:encode-colons-in-path? format-settings)
+               (string/replace ":" "%3A"))))))
 
 (defn uri->path ^java.nio.file.Path [uri]
   (-> (conform-uri uri {:upper-case-drive-letter? true})
@@ -127,20 +125,26 @@
 (defn- uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
 
+(def jar-filename-regex #"^(.*\.jar):(.*)")
+
+(defn external-file? [filename]
+  (boolean (re-find jar-filename-regex filename)))
+
 (defn filename->uri
   "Converts an absolute file path into a file URI string.
 
   Jar files are given the `jar:file` or `zipfile` scheme depending on the
   `:dependency-scheme` setting."
-  [^String filename]
-  (let [jar-scheme? (= "jar" (get-in @db/db [:settings :dependency-scheme]))
-        [_ jar-filepath nested-file] (re-find #"^(.*\.jar):(.*)" filename)]
+  [^String filename db]
+  (let [jar-scheme? (= "jar" (get-in @db [:settings :dependency-scheme]))
+        [_ jar-filepath nested-file] (re-find jar-filename-regex filename)]
     (conform-uri
       (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
         (if jar-scheme?
           (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
-        (.toString (filepath->uri-obj filename))))))
+        (.toString (filepath->uri-obj filename)))
+      (get-in @db [:settings :uri-format]))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
@@ -149,25 +153,19 @@
   [path root]
   (.toString (.relativize (-> root io/file .toPath) (-> path io/file .toPath))))
 
-(defn uri->relative-filepath
-  "Returns `uri` as relative file path starting at `root` URI
-
-  The output path representation matches that of the operating system."
-  [uri root]
-  (.toString (.relativize (uri->path root) (uri->path uri))))
-
 (defn join-filepaths
   [& components]
   (.getPath ^java.io.File (apply io/file components)))
 
-(defn namespace->uri [namespace source-paths filename]
+(defn namespace->uri [namespace source-paths filename db]
   (let [file-type (uri->file-type filename)]
     (filename->uri
       (join-filepaths (first (filter #(string/starts-with? filename %) source-paths))
                       (-> namespace
                           (string/replace "." (System/getProperty "file.separator"))
                           (string/replace "-" "_")
-                          (str "." (name file-type)))))))
+                          (str "." (name file-type))))
+      db)))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element

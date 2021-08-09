@@ -57,7 +57,7 @@
       options
       "Analyzing project..."
       (let [project-root-file (or ^java.io.File project-root (io/file ""))
-            project-uri (shared/filename->uri (.getCanonicalPath project-root-file))]
+            project-uri (shared/filename->uri (.getCanonicalPath project-root-file) db/db)]
         (crawler/initialize-project
           project-uri
           {:workspace {:workspace-edit {:document-changes true}}}
@@ -66,12 +66,13 @@
                    {:lint-project-files-after-startup? false
                     :text-document-sync-kind :full}
                    :log-path log-path)
-                 settings))))))
+                 settings)
+          db/db)))))
 
 (defn ^:private ns->ns+uri [namespace]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
     {:namespace namespace
-     :uri (shared/filename->uri filename)}
+     :uri (shared/filename->uri filename db/db)}
     {:namespace namespace}))
 
 (defn ^:private uri->ns
@@ -118,7 +119,7 @@
                    (mapcat (comp :document-changes
                                  #(handlers/execute-command {:command "clean-ns"
                                                              :arguments [(:uri %) 0 0]})))
-                   (map client/document-change->edit-summary)
+                   (map #(client/document-change->edit-summary % db/db))
                    (remove nil?))]
     (if (seq edits)
       (if dry?
@@ -127,7 +128,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
-                      client/apply-workspace-edit-summary!) edits)
+                      #(client/apply-workspace-edit-summary! % db/db)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
@@ -146,7 +147,7 @@
                    (map open-file!)
                    (mapcat (fn [{:keys [uri]}]
                              (some->> (handlers/formatting {:textDocument uri})
-                                      (map #(client/edit->summary uri %)))))
+                                      (map #(client/edit->summary db/db uri %)))))
                    (remove nil?))]
     (if (seq edits)
       (if dry?
@@ -155,7 +156,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
-                      client/apply-workspace-edit-summary!) edits)
+                      #(client/apply-workspace-edit-summary! % db/db)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to format!"})))
@@ -166,11 +167,11 @@
         from-ns (symbol (namespace from))
         project-analysis (q/filter-project-analysis (:analysis @db/db))]
     (if-let [from-element (q/find-element-by-full-name project-analysis from-name from-ns)]
-      (let [uri (shared/filename->uri (:filename from-element))]
+      (let [uri (shared/filename->uri (:filename from-element) db/db)]
         (open-file! {:uri uri :namespace from-ns})
-        (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element))]
+        (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
           (if-let [edits (->> document-changes
-                              (map client/document-change->edit-summary)
+                              (map #(client/document-change->edit-summary % db/db))
                               (remove nil?)
                               seq)]
             (if dry?
@@ -178,7 +179,7 @@
                :message (edits->diff-string edits options)
                :edits edits}
               (do
-                (mapv client/apply-workspace-edit-summary! edits)
+                (mapv #(client/apply-workspace-edit-summary! % db/db) edits)
                 {:result-code 0
                  :message (format "Renamed %s to %s" from to)
                  :edits edits}))

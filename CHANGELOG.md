@@ -9,6 +9,7 @@
   - Fix find-definition in jars for cljc files where the var is available on both cljs and clj files. #509
   - Add clojure.core.async common vars to common-refers to be required via code action.
   - Remove diagnostics when files are deleted, properly cleaning server. #513
+  - Don't add ns form to blank edn files. #515
 
 ## 2021.08.05-19.36.09
 

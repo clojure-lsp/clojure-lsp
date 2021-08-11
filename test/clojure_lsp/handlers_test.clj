@@ -35,7 +35,7 @@
            [{:code "missing-body-in-when"}
             {:code "invalid-arity"}]
            (:diagnostics %)))))
-  (testing "opening a new file adding the ns"
+  (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
                                    :source-paths #{(h/file-path "/project/src")}}
@@ -48,7 +48,17 @@
                             :end {:line 999998, :character 999998}}
                     :new-text "(ns foo.bar)"}]}]
          (:document-changes %)))
-    (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
+    (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/bar.clj")]))))
+  (testing "opening a new edn file not adding the ns"
+    (h/clean-db!)
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{(h/file-path "/project/src")}}
+                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                        :project-root-uri (h/file-uri "file:///project")})
+    (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
+    (h/edits
+      #(is (= [] (:document-changes %))))
+    (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/baz.edn")])))))
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1)"

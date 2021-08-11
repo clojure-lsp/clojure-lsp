@@ -45,6 +45,7 @@
                       (assoc :kondo-config (:config kondo-result)))))
       (f.diagnostic/async-lint-file! uri db))
     (when-let [new-ns (and (string/blank? text)
+                           (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
                            (uri->namespace uri db))]
       (when (get settings :auto-add-ns-to-new-files? true)
         (let [new-text (format "(ns %s)" new-ns)

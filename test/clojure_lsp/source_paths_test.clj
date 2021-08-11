@@ -172,7 +172,7 @@
            (#'source-paths/resolve-source-paths root-path {} #{"some" "paths"}))))
   (testing "when there is a deps.edn with valid :paths"
     (with-redefs [shared/to-file #(when (= "deps.edn" %2) (io/file ""))
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   config/read-edn-file (constantly {:paths ["some" "paths"]})]
       (is (= {:origins #{:deps-edn}
               :source-paths #{"some" "paths"}
@@ -180,14 +180,14 @@
              (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is a deps.edn without :paths"
     (with-redefs [shared/to-file #(when (= "deps.edn" %2) (io/file ""))
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   config/read-edn-file (constantly {})]
       (is (= {:origins #{:empty-deps-edn}
               :source-paths #{"src" "test"}}
              (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is a project.clj with valid :source-paths"
     (with-redefs [shared/to-file #(when (= "project.clj" %2) (io/file ""))
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   z/of-file (constantly (z/of-string "(defproject project \"0.1\" :source-paths [\"some\" \"paths\"])"))]
       (is (= {:origins #{:leiningen}
               :source-paths #{"paths" "some" "test" "src/test/clojure"}
@@ -195,7 +195,7 @@
              (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is a project.clj without :source-paths"
     (with-redefs [shared/to-file #(when (= "project.clj" %2) (io/file ""))
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   z/of-file (constantly nil)
                   parser/lein-zloc->edn (constantly nil)]
       (is (= {:origins #{:empty-leiningen}
@@ -203,7 +203,7 @@
              (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is a bb.edn with valid :paths"
     (with-redefs [shared/to-file #(when (= "bb.edn" %2) (io/file ""))
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   config/read-edn-file (constantly {:paths ["some" 'paths]})]
       (is (= {:origins #{:bb}
               :source-paths #{"some" "paths"}
@@ -211,7 +211,7 @@
              (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is a bb.edn without :paths"
     (with-redefs [shared/to-file #(when (= "bb.edn" %2) (io/file ""))
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   config/read-edn-file (constantly {})]
       (is (= {:origins #{:empty-bb}
               :source-paths #{"src" "test" "script" "scripts"}}
@@ -221,7 +221,7 @@
                                     "deps.edn" (io/file "deps")
                                     "bb.edn" (io/file "bb")
                                     nil)
-                  source-paths/exists? (complement nil?)
+                  shared/file-exists? (complement nil?)
                   config/read-edn-file #(if (= "deps" (.getName %1))
                                           {:paths ["some" "paths"]}
                                           {:paths ["scripts"]})]
@@ -232,7 +232,7 @@
              (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is no file, fallback to default source paths"
     (with-redefs [shared/to-file (constantly nil)
-                  source-paths/exists? (complement nil?)]
+                  shared/file-exists? (complement nil?)]
       (is (= {:origins #{:default}
               :source-paths #{"src" "test"}}
              (#'source-paths/resolve-source-paths root-path {} nil))))))

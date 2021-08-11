@@ -89,73 +89,82 @@
          (catch Throwable ex#
            (log/error ex#))))))
 
-(defmacro ^:private sync-handler
-  ([params handler]
-   `(end
-      (->> ~params
-           interop/java->clj
-           ~handler)))
-  ([params handler response-spec]
-   `(end
-      (->> ~params
-           interop/java->clj
-           ~handler
-           (interop/conform-or-log ~response-spec)))))
+(defmacro ^:private sync-notification
+  [params handler]
+  `(end
+     (->> ~params
+          interop/java->clj
+          ~handler)))
 
-(defmacro ^:private async-handler
+(defmacro ^:private sync-request
+  [params handler response-spec]
+  `(end
+     (->> ~params
+          interop/java->clj
+          ~handler
+          (interop/conform-or-log ~response-spec))))
+
+(defmacro ^:private async-request
   [params handler response-spec]
   `(CompletableFuture/supplyAsync
      (reify Supplier
        (get [this]
-         (sync-handler ~params ~handler ~response-spec)))))
+         (sync-request ~params ~handler ~response-spec)))))
+
+(defmacro ^:private async-notification
+  [params handler]
+  `(CompletableFuture/supplyAsync
+     (reify Supplier
+       (get [this]
+         (sync-notification ~params ~handler)))))
 
 (deftype LSPTextDocumentService []
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (start :didOpen
-           (sync-handler params handlers/did-open)))
+           (sync-notification params handlers/did-open)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (start :didChange
-           (sync-handler params handlers/did-change)))
+           (sync-notification params handlers/did-change)))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (start :didSave
            (future
-             (sync-handler params handlers/did-save)))
+             (sync-notification params handlers/did-save)))
     (CompletableFuture/completedFuture 0))
 
-  (^void didClose [_ ^DidCloseTextDocumentParams _params]
+  (^void didClose [_ ^DidCloseTextDocumentParams params]
     (start :didClose
-           nil))
+           (async-notification params handlers/did-close)))
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
-           (async-handler params handlers/references ::interop/references)))
+           (async-request params handlers/references ::interop/references)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
-           (async-handler params handlers/completion ::interop/completion-items)))
+           (async-request params handlers/completion ::interop/completion-items)))
 
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem
-           (async-handler item handlers/completion-resolve-item ::interop/completion-item)))
+           (async-request item handlers/completion-resolve-item ::interop/completion-item)))
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
-           (async-handler params handlers/rename ::interop/workspace-edit)))
+           (async-request params handlers/rename ::interop/workspace-edit)))
 
   (^CompletableFuture hover [_ ^HoverParams params]
     (start :hover
-           (async-handler params handlers/hover ::interop/hover)))
+           (async-request params handlers/hover ::interop/hover)))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams params]
     (start :signatureHelp
-           (async-handler params handlers/signature-help ::interop/signature-help)))
+           (async-request params handlers/signature-help ::interop/signature-help)))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
     (start :formatting
-           (async-handler params handlers/formatting ::interop/edits)))
+           (async-request params handlers/formatting ::interop/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (start :rangeFormatting
@@ -181,58 +190,58 @@
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (start :codeAction
-           (async-handler params handlers/code-actions ::interop/code-actions)))
+           (async-request params handlers/code-actions ::interop/code-actions)))
 
   (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
     (start :resolveCodeAction
-           (async-handler unresolved handlers/resolve-code-action ::interop/code-action)))
+           (async-request unresolved handlers/resolve-code-action ::interop/code-action)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (start :codeLens
-           (async-handler params handlers/code-lens ::interop/code-lenses)))
+           (async-request params handlers/code-lens ::interop/code-lenses)))
 
   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
     (start :resolveCodeLens
-           (async-handler params handlers/code-lens-resolve ::interop/code-lens)))
+           (async-request params handlers/code-lens-resolve ::interop/code-lens)))
 
   (^CompletableFuture definition [_ ^DefinitionParams params]
     (start :definition
-           (async-handler params handlers/definition ::interop/location)))
+           (async-request params handlers/definition ::interop/location)))
 
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
-           (async-handler params handlers/document-symbol ::interop/document-symbols)))
+           (async-request params handlers/document-symbol ::interop/document-symbols)))
 
   (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
     (start :documentHighlight
-           (async-handler params handlers/document-highlight ::interop/document-highlights)))
+           (async-request params handlers/document-highlight ::interop/document-highlights)))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
     (start :semanticTokensFull
-           (async-handler params handlers/semantic-tokens-full ::interop/semantic-tokens)))
+           (async-request params handlers/semantic-tokens-full ::interop/semantic-tokens)))
 
   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
     (start :semanticTokensRange
-           (async-handler params handlers/semantic-tokens-range ::interop/semantic-tokens)))
+           (async-request params handlers/semantic-tokens-range ::interop/semantic-tokens)))
 
   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
     (start :prepareCallHierarchy
-           (async-handler params handlers/prepare-call-hierarchy ::interop/call-hierarchy-items)))
+           (async-request params handlers/prepare-call-hierarchy ::interop/call-hierarchy-items)))
 
   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
     (start :callHierarchyIncomingCalls
-           (async-handler params handlers/call-hierarchy-incoming ::interop/call-hierarchy-incoming-calls)))
+           (async-request params handlers/call-hierarchy-incoming ::interop/call-hierarchy-incoming-calls)))
 
   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
     (start :callHierarchyOutgoingCalls
-           (async-handler params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls))))
+           (async-request params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (start :executeCommand
            (future
-             (sync-handler params handlers/execute-command)))
+             (sync-notification params handlers/execute-command)))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
@@ -253,7 +262,7 @@
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (start :workspaceSymbol
-           (async-handler params handlers/workspace-symbols ::interop/workspace-symbols))))
+           (async-request params handlers/workspace-symbols ::interop/workspace-symbols))))
 
 (defn ^:private client-settings [^InitializeParams params]
   (-> params
@@ -358,7 +367,7 @@
     (^void cursorInfoLog [^CursorInfoParams params]
       (start :cursor-info-log
              (future
-               (sync-handler params handlers/cursor-info-log))))
+               (sync-notification params handlers/cursor-info-log))))
 
     (^CompletableFuture shutdown []
       (log/info "Shutting down")

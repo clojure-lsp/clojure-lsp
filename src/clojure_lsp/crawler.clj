@@ -40,7 +40,7 @@
   (keep
     (fn [{:keys [project-path] :as project-spec}]
       (let [project-file (shared/to-file root-path project-path)]
-        (when (.exists project-file)
+        (when (shared/file-exists? project-file)
           (assoc project-spec :hash (digest/md5 project-file)))))
     project-specs))
 

@@ -26,20 +26,17 @@
 (defn get-env [p]
   (System/getenv p))
 
-(defn ^:private file-exists? [^java.io.File f]
-  (.exists f))
-
 (defn ^:private get-home-config-file []
   (let [xdg-config-home (or (get-env "XDG_CONFIG_HOME")
                             (io/file (get-property "user.home") ".config"))
         xdg-config (io/file xdg-config-home ".lsp" "config.edn")
         home-config (io/file (get-property "user.home") ".lsp" "config.edn")]
-    (if (file-exists? xdg-config)
+    (if (shared/file-exists? xdg-config)
       xdg-config
       home-config)))
 
 (defn ^:private resolve-home-config [^java.io.File home-dir-file]
-  (when (file-exists? home-dir-file)
+  (when (shared/file-exists? home-dir-file)
     (read-edn-file home-dir-file)))
 
 (defn ^:private resolve-project-configs [project-root-uri ^java.io.File home-dir-file]
@@ -49,7 +46,7 @@
           parent (.getParentFile dir)]
       (if parent
         (recur parent (cond-> configs
-                        (and (file-exists? file)
+                        (and (shared/file-exists? file)
                              (not (= (.getAbsolutePath home-dir-file) (.getAbsolutePath file))))
                         (conj (read-edn-file file))))
         configs))))

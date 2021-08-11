@@ -7,6 +7,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.java.io :as io]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
@@ -42,7 +43,7 @@
                       (update-analysis uri (:analysis kondo-result))
                       (update-findings uri (:findings kondo-result))
                       (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-lint-file uri db))
+      (f.diagnostic/async-lint-file! uri db))
     (when-let [new-ns (and (string/blank? text)
                            (uri->namespace uri db))]
       (when (get settings :auto-add-ns-to-new-files? true)
@@ -77,7 +78,7 @@
             (swap! db (fn [db] (-> db
                                    (update-analysis uri (:analysis new-analysis))
                                    (update-findings uri (:findings new-analysis)))))
-            (f.diagnostic/async-lint-file uri db))))
+            (f.diagnostic/async-lint-file! uri db))))
       references-uri)))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -135,7 +136,7 @@
                                                   (assoc :processing-changes false)
                                                   (assoc :kondo-config (:config kondo-result))))
               (do
-                (f.diagnostic/sync-lint-file uri db)
+                (f.diagnostic/sync-lint-file! uri db)
                 (when notify-references?
                   (notify-references old-analysis (get-in @db [:analysis filename]) db)))
               (recur @db))))))))
@@ -150,6 +151,15 @@
     (async/>!! db/current-changes-chan {:uri uri
                                         :text final-text
                                         :version version})))
+
+(defn did-close [uri db]
+  (let [filename (shared/uri->filename uri)]
+    (when-not (shared/file-exists? (io/file filename))
+      (swap! db (fn [state-db] (-> state-db
+                                   (shared/dissoc-in [:documents uri])
+                                   (shared/dissoc-in [:analysis filename])
+                                   (shared/dissoc-in [:findings filename]))))
+      (f.diagnostic/clean! uri))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

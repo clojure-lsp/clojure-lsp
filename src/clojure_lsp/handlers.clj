@@ -65,6 +65,9 @@
 (defn did-change [{:keys [textDocument contentChanges]}]
   (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db))
 
+(defn did-close [{:keys [textDocument]}]
+  (f.file-management/did-close textDocument db/db))
+
 (defn did-change-watched-files [changes]
   (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
     (swap! db/db (fn [db]

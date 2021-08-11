@@ -10,6 +10,9 @@
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]))
 
+(defn file-exists? [^java.io.File f]
+  (.exists f))
+
 (defn assoc-some
   "Assoc[iate] if the value is not nil. "
   ([m k v]
@@ -22,6 +25,16 @@
          (throw (IllegalArgumentException.
                   "assoc-some expects even number of arguments after map/vector, found odd number")))
        ret))))
+
+(defn assoc-in-some
+  [m ks v]
+  (if (nil? v) m (assoc-in m ks v)))
+
+(defn dissoc-in
+  [m key-vec]
+  (let [firsts (vec (butlast key-vec))
+        node (dissoc (get-in m firsts) (last key-vec))]
+    (assoc-in-some m firsts node)))
 
 (def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))

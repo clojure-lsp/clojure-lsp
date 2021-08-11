@@ -16,10 +16,6 @@
 
 (def default-source-aliases #{:dev :test})
 
-(defn ^:private exists?
-  [^java.io.File file]
-  (.exists file))
-
 (defn ^:private extract-source-paths [paths extra-paths aliases]
   (->> (concat paths extra-paths)
        (map (fn [path]
@@ -80,7 +76,7 @@
         bb-file (shared/to-file root-path "bb.edn")
         file-source-paths
         (cond-> []
-          (exists? deps-file)
+          (shared/file-exists? deps-file)
           (conj
             (let [deps-edn (config/read-edn-file deps-file)
                   deps-source-paths (resolve-deps-source-paths deps-edn settings)]
@@ -91,7 +87,7 @@
                 {:origin :empty-deps-edn
                  :source-paths default-source-paths})))
 
-          (exists? lein-file)
+          (shared/file-exists? lein-file)
           (conj
             (let [lein-edn (parser/lein-zloc->edn (z/of-file lein-file))
                   lein-source-paths (resolve-lein-source-paths lein-edn settings)]
@@ -102,7 +98,7 @@
                 {:origin :empty-leiningen
                  :source-paths default-source-paths})))
 
-          (exists? bb-file)
+          (shared/file-exists? bb-file)
           (conj
             (let [bb-edn (config/read-edn-file bb-file)
                   bb-paths (resolve-bb-source-paths bb-edn)]

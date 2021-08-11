@@ -96,16 +96,21 @@
       (not (= :off (get-in settings [:linters :clj-kondo :level])))
       (concat (kondo-findings->diagnostics filename (:findings @db))))))
 
-(defn sync-lint-file [uri db]
+(defn sync-lint-file! [uri db]
   (async/>!! db/diagnostics-chan
              {:uri uri
               :diagnostics (find-diagnostics uri db)}))
 
-(defn async-lint-file [uri db]
+(defn async-lint-file! [uri db]
   (async/go
     (async/>! db/diagnostics-chan
               {:uri uri
                :diagnostics (find-diagnostics uri db)})))
+
+(defn clean! [uri]
+  (async/>!! db/diagnostics-chan
+             {:uri uri
+              :diagnostics []}))
 
 (defn ^:private lint-project-files [paths db]
   (doseq [path paths]
@@ -113,7 +118,7 @@
       (let [filename (.getAbsolutePath ^java.io.File file)
             uri (shared/filename->uri filename db)]
         (when (not= :unknown (shared/uri->file-type uri))
-          (sync-lint-file uri db))))))
+          (sync-lint-file! uri db))))))
 
 (defn ^:private unused-public-vars-lint!
   [var-definitions project-analysis {:keys [config reg-finding!]}]

@@ -2,7 +2,9 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
@@ -39,3 +41,21 @@
                         :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (#'f.file-management/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") db/db)))))
+
+(deftest did-close
+  (h/load-code-and-locs "(ns foo) a b c")
+  (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///b.clj"))
+  (testing "when file exists on disk"
+    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+    (with-redefs [shared/file-exists? (constantly true)]
+      (f.file-management/did-close "file:///a.clj" db/db))
+    (is (get-in @db/db [:analysis "/a.clj"]))
+    (is (get-in @db/db [:findings "/a.clj"]))
+    (is (get-in @db/db [:documents "file:///a.clj"])))
+  (testing "when file not exists on disk"
+    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+    (with-redefs [shared/file-exists? (constantly false)]
+      (f.file-management/did-close "file:///b.clj" db/db))
+    (is (nil? (get-in @db/db [:analysis "/b.clj"])))
+    (is (nil? (get-in @db/db [:findings "/b.clj"])))
+    (is (nil? (get-in @db/db [:documents "file:///b.clj"])))))

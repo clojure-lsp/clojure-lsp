@@ -51,7 +51,7 @@
 (defn ^:private resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path db]
   (when-let [full-symbol (find-full-macro-symbol-to-resolve uri row col db)]
     (let [kondo-config-file (io/file kondo-config-path)]
-      (if (.exists ^java.io.File kondo-config-file)
+      (if (shared/file-exists? kondo-config-file)
         (->> (z/of-file kondo-config-file)
              (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))
         (->> (z/of-string "{}")

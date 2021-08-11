@@ -28,7 +28,7 @@
 
   (apply require namespaces)
 
-  (let [test-results (timeout 300000
+  (let [test-results (timeout 600000
                               #(apply t/run-tests namespaces))]
 
     (when (= test-results :timed-out)

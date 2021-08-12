@@ -25,7 +25,7 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defn clean-db! []
-  (reset! db/db {})
+  (reset! db/db {:env :test})
   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
   (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
   (alter-var-root #'db/edits-chan (constantly (async/chan 1))))

@@ -102,10 +102,14 @@
               :diagnostics (find-diagnostics uri db)}))
 
 (defn async-lint-file! [uri db]
-  (async/go
-    (async/>! db/diagnostics-chan
-              {:uri uri
-               :diagnostics (find-diagnostics uri db)})))
+  (if (= :test (:env @db)) ;; Avoid async on test which cause flakeness
+    (async/put! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics (find-diagnostics uri db)})
+    (async/go
+      (async/>! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics (find-diagnostics uri db)}))))
 
 (defn clean! [uri]
   (async/>!! db/diagnostics-chan

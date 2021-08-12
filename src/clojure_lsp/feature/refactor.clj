@@ -15,7 +15,7 @@
 (defmulti refactor :refactoring)
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args db]}]
-  (apply r.transform/add-import-to-namespace loc [args] db))
+  (apply r.transform/add-import-to-namespace loc [args db]))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc db]}]
   (r.transform/add-missing-libspec loc db))
@@ -36,7 +36,7 @@
   (r.transform/expand-let loc))
 
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
-  (apply r.transform/extract-function loc uri [args] db))
+  (apply r.transform/extract-function loc uri [args db]))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
   (r.transform/inline-symbol uri row col db))

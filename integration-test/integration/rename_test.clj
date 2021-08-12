@@ -7,7 +7,7 @@
 
 (lsp/clean-after-test)
 
-(deftest rename
+(deftest rename-function-definition
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
@@ -33,7 +33,16 @@
           :newText "your-func"}
          {:range {:start {:line 8 :character 1} :end {:line 8 :character 8}}
           :newText "your-func"}]}}
-      (lsp/request! (fixture/rename-request "rename/a.cljc" "your-func" 3 9))))
+      (lsp/request! (fixture/rename-request "rename/a.cljc" "your-func" 3 9)))))
+
+(deftest rename-function-usage
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming from the function usage on other ns"
     (h/assert-submap
@@ -52,7 +61,16 @@
           :newText "your-func"}
          {:range {:start {:line 8 :character 1} :end {:line 8 :character 8}}
           :newText "your-func"}]}}
-      (lsp/request! (fixture/rename-request "rename/b.cljc" "your-func" 3 4))))
+      (lsp/request! (fixture/rename-request "rename/b.cljc" "your-func" 3 4)))))
+
+(deftest rename-local-keywords
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming local keywords"
     (h/assert-submap
@@ -62,7 +80,16 @@
           :newText "your-key"}
          {:range {:start {:line 13 :character 7} :end {:line 13 :character 13}}
           :newText "your-key"}]}}
-      (lsp/request! (fixture/rename-request "rename/a.cljc" ":your-key" 12 15))))
+      (lsp/request! (fixture/rename-request "rename/a.cljc" ":your-key" 12 15)))))
+
+(deftest rename-namespaced-keywords
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming namespaced keywords"
     (h/assert-submap
@@ -78,7 +105,16 @@
           :newText "::a/click-now"}
          {:range {:start {:line 9 :character 0} :end {:line 9 :character 27}}
           :newText ":sample-test.rename.a/click-now"}]}}
-      (lsp/request! (fixture/rename-request "rename/a.cljc" "::click-now" 15 0))))
+      (lsp/request! (fixture/rename-request "rename/a.cljc" "::click-now" 15 0)))))
+
+(deftest rename-single-namespaced-keywords
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming single-name-namespace'd keywords"
     (h/assert-submap
@@ -94,7 +130,16 @@
           :newText "::a/click-now"}
          {:range {:start {:line 5 :character 0} :end {:line 5 :character 34}}
           :newText ":sample-test.rename.single-a/click-now"}]}}
-      (lsp/request! (fixture/rename-request "rename/single_a.clj" "::click-now" 2 0))))
+      (lsp/request! (fixture/rename-request "rename/single_a.clj" "::click-now" 2 0)))))
+
+(deftest rename-require-alias
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming require alias"
     (h/assert-submap
@@ -104,7 +149,16 @@
           :newText "spec"}
          {:range {:start {:line 10 :character 1} :end {:line 10 :character 6}}
           :newText "spec/def"}]}}
-      (lsp/request! (fixture/rename-request "rename/a.cljc" "spec" 1 36))))
+      (lsp/request! (fixture/rename-request "rename/a.cljc" "spec" 1 36)))))
+
+(deftest rename-require-refer
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
 
   (testing "Renaming require refer"
     (h/assert-submap

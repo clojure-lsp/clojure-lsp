@@ -576,7 +576,7 @@
          (string/starts-with? s ":")) (keyword (subs s 1))
     (string? s) (keyword s)))
 
-(defn- clean-keyword-strings [coll]
+(defn clean-keyword-strings [coll]
   (when (seq coll)
     (->> coll
          (keep kwd-string)

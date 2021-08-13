@@ -1,5 +1,6 @@
 (ns clojure-lsp.server-test
   (:require
+   [clojure-lsp.interop :as interop]
    [clojure-lsp.server :as server]
    [clojure.test :refer [deftest is testing]])
   (:import
@@ -17,4 +18,20 @@
       (is (= true (:document-formatting? (#'server/client-settings params))))))
   (testing "document-range-formatting? is set to true if not provided"
     (let [params (InitializeParams.)]
-      (is (= true (:document-range-formatting? (#'server/client-settings params)))))))
+      (is (= true (:document-range-formatting? (#'server/client-settings params))))))
+  (testing "text-document-sync-kind converts strings"
+    (doseq [kind [:incremental "incremental" ":incremental"]]
+      (let [params (doto (InitializeParams.)
+                     (.setInitializationOptions
+                       (interop/clj->java
+                         {:text-document-sync-kind kind})))]
+        (is (= :incremental (:text-document-sync-kind (#'server/client-settings params)))))))
+  (testing "source-paths and source-aliases convert strings"
+    (doseq [path [[:foo] ["foo"] [":foo"]]]
+      (let [params (doto (InitializeParams.)
+                     (.setInitializationOptions
+                       (interop/clj->java
+                         {:source-paths path
+                          :source-aliases path})))]
+        (is (= #{:foo} (:source-paths (#'server/client-settings params))))
+        (is (= #{:foo} (:source-aliases (#'server/client-settings params))))))))

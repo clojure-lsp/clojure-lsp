@@ -118,17 +118,15 @@
   [action options]
   (if (= "listen" action)
     (with-out-str (server/run-server!))
-    (do
-      (swap! db/db assoc :cli? true)
-      (let [result
-            (case action
-              "clean-ns" (internal-api/clean-ns! options)
-              "format" (internal-api/format! options)
-              "rename" (with-required-options
-                         options
-                         [:from :to]
-                         internal-api/rename!))]
-        (exit (:result-code result) (:message result))))))
+    (let [result
+          (case action
+            "clean-ns" (internal-api/clean-ns! options)
+            "format" (internal-api/format! options)
+            "rename" (with-required-options
+                       options
+                       [:from :to]
+                       internal-api/rename!))]
+      (exit (:result-code result) (:message result)))))
 
 (defn -main [& args]
   (logging/setup-logging db/db)

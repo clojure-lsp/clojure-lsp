@@ -4,12 +4,16 @@
 
 - General
   - Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507
+  - Bump clj-kondo to fix a issue with clojure-lsp running in a lein process.
 
 - Editor
   - Fix find-definition in jars for cljc files where the var is available on both cljs and clj files. #509
   - Add clojure.core.async common vars to common-refers to be required via code action.
   - Remove diagnostics when files are deleted, properly cleaning server. #513
   - Don't add ns form to blank edn files. #515
+  
+- API
+  - Rollback printing to work with API not only via CLI. (can be disabled via :raw? option)
 
 ## 2021.08.05-19.36.09
 

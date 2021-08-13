@@ -16,11 +16,8 @@
    [taoensso.timbre :as log]))
 
 (defn ^:private cli-print [& msg]
-  (if (:cli? @db/db)
-    (do
-      (apply print msg)
-      (flush))
-    (log/debug msg)))
+  (apply print msg)
+  (flush))
 
 (defn ^:private cli-println [options & msg]
   (when-not (:raw? options)

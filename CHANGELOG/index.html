@@ -1498,8 +1498,9 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <ul>
 <li>General</li>
+<li>Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507</li>
 <li>
-<p>Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507</p>
+<p>Bump clj-kondo to fix a issue with clojure-lsp running in a lein process.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -1507,7 +1508,13 @@
 <li>Fix find-definition in jars for cljc files where the var is available on both cljs and clj files. #509</li>
 <li>Add clojure.core.async common vars to common-refers to be required via code action.</li>
 <li>Remove diagnostics when files are deleted, properly cleaning server. #513</li>
-<li>Don't add ns form to blank edn files. #515</li>
+<li>
+<p>Don't add ns form to blank edn files. #515</p>
+</li>
+<li>
+<p>API</p>
+</li>
+<li>Rollback printing to work with API not only via CLI. (can be disabled via :raw? option)</li>
 </ul>
 <h2 id="20210805-193609">2021.08.05-19.36.09<a class="headerlink" href="#20210805-193609" title="Permanent link">#</a></h2>
 <ul>
@@ -1968,7 +1975,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 12, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 13, 2021</span>
     
   </small>
 </div>

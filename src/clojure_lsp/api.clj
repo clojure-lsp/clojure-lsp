@@ -8,10 +8,14 @@
   (:import
    [java.io File]))
 
-(defmacro ^:private safe-parsing-error
-  [& body]
+(defmacro ^:private safe-process-message
+  [options & body]
   `(try
-     ~@body
+     (let [~'_result ~@body]
+       (when-let [~'_message (and (not (:raw? ~options))
+                             (:message ~'_result))]
+         (println ~'_message))
+       ~'_result)
      (catch clojure.lang.ExceptionInfo e#
        (some-> e# ex-data :message println)
        e#)))
@@ -42,7 +46,9 @@
          (or (nil? ns-exclude-regex)
              (instance? java.util.regex.Pattern ns-exclude-regex))]}
   (logging/setup-logging db/db)
-  (safe-parsing-error (internal-api/clean-ns! options)))
+  (safe-process-message
+    options
+    (internal-api/clean-ns! options)))
 
 (defn format!
   "Format one or more namespaces using cljfmt.
@@ -69,7 +75,9 @@
          (or (nil? ns-exclude-regex)
              (instance? java.util.regex.Pattern ns-exclude-regex))]}
   (logging/setup-logging db/db)
-  (safe-parsing-error (internal-api/format! options)))
+  (safe-process-message
+    options
+    (internal-api/format! options)))
 
 (defn rename!
   "Rename a symbol and its definitions across the project.
@@ -95,4 +103,6 @@
          (and (symbol? to)
               (qualified-ident? to))]}
   (logging/setup-logging db/db)
-  (safe-parsing-error (internal-api/rename! options)))
+  (safe-process-message
+    options
+    (internal-api/rename! options)))

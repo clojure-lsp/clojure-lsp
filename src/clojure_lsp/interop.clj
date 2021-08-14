@@ -569,12 +569,26 @@
                            (symbol %)))
        (medley/map-vals typify-json)))
 
+(defn kwd-string [s]
+  (cond
+    (keyword? s) s
+    (and (string? s)
+         (string/starts-with? s ":")) (keyword (subs s 1))
+    (string? s) (keyword s)))
+
+(defn clean-keyword-strings [coll]
+  (when (seq coll)
+    (->> coll
+         (keep kwd-string)
+         (into #{}))))
+
 (defn clean-client-settings [client-settings]
   (let [kwd-keys #(medley/map-keys keyword %)]
     (-> client-settings
         (update :dependency-scheme #(or % "zipfile"))
-        (update :source-paths #(when (seq %) (set %)))
-        (update :source-aliases #(when (seq %) (set %)))
+        (update :text-document-sync-kind kwd-string)
+        (update :source-paths clean-keyword-strings)
+        (update :source-aliases clean-keyword-strings)
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
         (update :cljfmt kwd-keys)
         (update-in [:cljfmt :indents] clean-symbol-map)

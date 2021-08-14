@@ -891,6 +891,13 @@
 <h3 id="initializationoptions">InitializationOptions<a class="headerlink" href="#initializationoptions" title="Permanent link">#</a></h3>
 <p>This is specific for an client, where it sends on startup, check <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP spec for more information</a>. This is useful if you are changing a default for a client/editor that will affect all users of that editor.</p>
 <p>This is an <a href="https://github.com/emacs-lsp/lsp-mode/blob/master/clients/lsp-clojure.el#L205">example how Emacs <code>lsp-mode</code></a> pass custom information.</p>
+<p>If you are using a client which defines InitializationOptions as a json object, you can use json types instead:</p>
+<ul>
+<li>keyword -&gt; string or colon-prefixed string (<code>"incremental"</code> or <code>":incremental"</code>)</li>
+<li>map -&gt; object (<code>{"unused-public-ns": {"level": "info"}}</code>)</li>
+<li>set -&gt; array (<code>["src" "test"]</code>)</li>
+<li>vector -&gt; array (<code>["src" "test"]</code>)</li>
+</ul>
 <h2 id="all-settings">All settings<a class="headerlink" href="#all-settings" title="Permanent link">#</a></h2>
 <table>
 <thead>

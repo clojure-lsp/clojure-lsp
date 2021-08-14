@@ -1,6 +1,6 @@
 # Troubleshooting
 
-## Getting server log
+## Server log
 
 clojure-lsp logs most of what is doing to a file which location could be found:
 
@@ -8,6 +8,15 @@ clojure-lsp logs most of what is doing to a file which location could be found:
 - Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out`
 
 Below are the common issues ordered by the most important to specific ones:
+
+## Client<->Server log
+
+All LSP clients should provide a way to get the jsonrpc logs between client and server, this helps debug the requests and responses content and time.
+
+Check below how to get the logs for most used clients:
+
+- [Emacs/lsp-mode](https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json)
+- [VSCode/Calva](https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server)
 
 ## Server is not initializing
 

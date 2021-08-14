@@ -11,9 +11,10 @@
   - Add clojure.core.async common vars to common-refers to be required via code action.
   - Remove diagnostics when files are deleted, properly cleaning server. #513
   - Don't add ns form to blank edn files. #515
+  - Fix initializationOptions parsing for some clients. #516
   
 - API
-  - Rollback printing to work with API not only via CLI. (can be disabled via :raw? option)
+  - Rollback printing only via CLI to work with API as well. (can be disabled via :raw? option)
 
 ## 2021.08.05-19.36.09
 

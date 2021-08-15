@@ -58,9 +58,19 @@
   [paths db {:keys [analysis] :as kondo-ctx}]
   (when (get-in db [:settings :lint-project-files-after-startup?] true)
     (async/go
-      (let [start-time (System/nanoTime)]
-        (f.diagnostic/lint-project-diagnostics! paths (normalize-analysis analysis) kondo-ctx db)
+      (let [start-time (System/nanoTime)
+            new-analysis (group-by :filename (normalize-analysis analysis))]
+        (f.diagnostic/lint-project-diagnostics! paths new-analysis kondo-ctx db)
         (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
+
+(defn ^:private custom-lint-for-reference-files!
+  [files db {:keys [analysis] :as kondo-ctx}]
+  (let [start-time (System/nanoTime)
+        new-analysis (group-by :filename (normalize-analysis analysis))
+        updated-analysis (merge (:analysis @db) new-analysis)]
+    (doseq [file files]
+      (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx))
+    (log/info (format "Linting references took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))
 
 (defn ^:private single-file-custom-lint!
   [{:keys [analysis] :as kondo-ctx} db]
@@ -80,6 +90,10 @@
       (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
                                            (partial project-custom-lint! paths db)))
       (with-additional-config (:settings @db))))
+
+(defn kondo-for-reference-filenames [filenames db]
+  (-> (kondo-for-paths filenames db false)
+      (assoc :custom-lint-fn (partial custom-lint-for-reference-files! filenames db))))
 
 (defn kondo-for-single-file [uri db]
   (-> {:cache true
@@ -117,6 +131,14 @@
                           (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (run-kondo-on-paths! batch-paths public-only? db)))
            (reduce shared/deep-merge)))))
+
+(defn run-kondo-on-reference-filenames! [filenames db]
+  (let [err (java.io.StringWriter.)]
+    (binding [*err* err]
+      (let [result (kondo/run! (kondo-for-reference-filenames filenames db))]
+        (when-not (string/blank? (str err))
+          (log/info (str err)))
+        result))))
 
 (defn run-kondo-on-text! [text uri db]
   (let [err (java.io.StringWriter.)]

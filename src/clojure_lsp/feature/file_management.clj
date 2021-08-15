@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.file-management
   (:require
+   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.refactor :as f.refactor]
@@ -9,6 +10,7 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (defn ^:private update-analysis [db uri new-analysis]
@@ -54,33 +56,54 @@
                                  :new-text new-text}]}]]
           (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))))
 
-(defn ^:private find-changed-var-definitions [old-analysis new-analysis]
-  (let [old-var-def (filter #(= :var-definitions (:bucket %)) old-analysis)
-        new-var-def (filter #(= :var-definitions (:bucket %)) new-analysis)]
-    (->> old-var-def
-         (filter (fn [{:keys [name fixed-arities]}]
-                   (let [var-def (first (filter #(= name (:name %)) new-var-def))]
-                     (not (= fixed-arities (:fixed-arities var-def)))))))))
+(defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
+  (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
+        new-var-defs (filter #(identical? :var-definitions (:bucket %)) new-local-analysis)
+        compare-fn (fn [other-var-defs {:keys [name fixed-arities]}]
+                     (if-let [var-def (first (filter #(= name (:name %)) other-var-defs))]
+                       (and (not (= fixed-arities (:fixed-arities var-def)))
+                            (not= 'clojure.core/declare (:defined-by var-def)))
+                       true))]
+    (->> (concat
+           (filter (partial compare-fn new-var-defs) old-var-defs)
+           (filter (partial compare-fn old-var-defs) new-var-defs))
+         (medley/distinct-by (juxt :name)))))
 
-(defn ^:private find-references-uris [analysis elements db]
-  (->> elements
-       (map #(q/find-references analysis % false))
-       flatten
-       (map (comp #(shared/filename->uri % db) :filename))))
+(defn ^:private find-changed-var-usages
+  [old-local-analysis new-local-analysis]
+  (let [old-var-usages (filter #(identical? :var-usages (:bucket %)) old-local-analysis)
+        new-var-usages (filter #(identical? :var-usages (:bucket %)) new-local-analysis)
+        compare-fn (fn [other-var-usages current-var-usages var-usage]
+                     (= (count (filter #(= (:name var-usage) (:name %)) current-var-usages))
+                        (count (filter #(= (:name var-usage) (:name %)) other-var-usages))))]
+    (->> (concat
+           (remove (partial compare-fn new-var-usages old-var-usages) old-var-usages)
+           (remove (partial compare-fn old-var-usages new-var-usages) new-var-usages))
+         (medley/distinct-by (juxt :name)))))
 
-(defn ^:private notify-references [old-analysis new-analysis db]
-  (let [changed-var-definitions (find-changed-var-definitions old-analysis new-analysis)
-        references-uri (find-references-uris (:analysis @db) changed-var-definitions db)]
-    (mapv
-      (fn [uri]
-        (when-let [text (get-in @db [:documents uri :text])]
-          (log/debug "Analyzing reference" uri)
-          (when-let [new-analysis (lsp.kondo/run-kondo-on-text! text uri db)]
-            (swap! db (fn [db] (-> db
-                                   (update-analysis uri (:analysis new-analysis))
-                                   (update-findings uri (:findings new-analysis)))))
-            (f.diagnostic/async-lint-file! uri db))))
-      references-uri)))
+(defn ^:private notify-references [filename old-local-analysis new-local-analysis db]
+  (async/go
+    (let [project-analysis (q/filter-project-analysis (:analysis @db))
+          changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
+          references-filenames (->> changed-var-definitions
+                                    (map #(q/find-references project-analysis % false))
+                                    flatten
+                                    (map :filename))
+          changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
+          definitions-filenames (->> changed-var-usages
+                                     (map #(q/find-definition project-analysis %))
+                                     (remove :private)
+                                     (map :filename)
+                                     (remove nil?))
+          filenames (->> definitions-filenames
+                         (concat references-filenames)
+                         (remove #(= filename %))
+                         set)]
+      (when (seq filenames)
+        (log/debug "Analyzing references for files:" filenames)
+        (crawler/analyze-reference-filenames! filenames db)
+        (doseq [filename filenames]
+          (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -124,23 +147,21 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]} db]
-  (let [settings (:settings @db)
-        notify-references? (get-in settings [:notify-references-on-file-change] false)]
-    (loop [state-db @db]
-      (when (>= version (get-in state-db [:documents uri :v] -1))
-        (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
-          (let [filename (shared/uri->filename uri)
-                old-analysis (get-in @db [:analysis filename])]
-            (if (compare-and-set! db state-db (-> state-db
-                                                  (update-analysis uri (:analysis kondo-result))
-                                                  (update-findings uri (:findings kondo-result))
-                                                  (assoc :processing-changes false)
-                                                  (assoc :kondo-config (:config kondo-result))))
-              (do
-                (f.diagnostic/sync-lint-file! uri db)
-                (when notify-references?
-                  (notify-references old-analysis (get-in @db [:analysis filename]) db)))
-              (recur @db))))))))
+  (loop [state-db @db]
+    (when (>= version (get-in state-db [:documents uri :v] -1))
+      (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
+        (let [filename (shared/uri->filename uri)
+              old-local-analysis (get-in @db [:analysis filename])]
+          (if (compare-and-set! db state-db (-> state-db
+                                                (update-analysis uri (:analysis kondo-result))
+                                                (update-findings uri (:findings kondo-result))
+                                                (assoc :processing-changes false)
+                                                (assoc :kondo-config (:config kondo-result))))
+            (do
+              (f.diagnostic/sync-lint-file! uri db)
+              (when (get-in @db [:settings :notify-references-on-file-change] false)
+                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db)))
+            (recur @db)))))))
 
 (defn did-change [uri changes version db]
   (let [old-text (get-in @db [:documents uri :text])

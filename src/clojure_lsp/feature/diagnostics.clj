@@ -135,9 +135,7 @@
 
 (defn lint-project-diagnostics!
   [paths new-analysis kondo-ctx db]
-  (let [project-analysis (->> new-analysis
-                              (group-by :filename)
-                              q/filter-project-analysis)
+  (let [project-analysis (q/filter-project-analysis new-analysis)
         var-definitions (q/find-all-var-definitions project-analysis)
         kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
     (loop [state-db @db]

@@ -13,7 +13,7 @@
   `(try
      (let [~'_result ~@body]
        (when-let [~'_message (and (not (:raw? ~options))
-                             (:message ~'_result))]
+                                  (:message ~'_result))]
          (println ~'_message))
        ~'_result)
      (catch clojure.lang.ExceptionInfo e#

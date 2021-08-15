@@ -1510,8 +1510,9 @@
 <li>Remove diagnostics when files are deleted, properly cleaning server. #513</li>
 <li>Don't add ns form to blank edn files. #515</li>
 <li>Fix initializationOptions parsing for some clients. #516</li>
+<li>Fix refactor 'add missing refer' when there is already that namespace with a alias but no refers.</li>
 <li>
-<p>Fix refactor 'add missing refer' when there is already that namespace with a alias but no refers.</p>
+<p>Improve <code>:notify-references-on-file-change</code> performance and use-cases, still disabled by default for some time.</p>
 </li>
 <li>
 <p>API</p>
@@ -1977,7 +1978,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 14, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 15, 2021</span>
     
   </small>
 </div>

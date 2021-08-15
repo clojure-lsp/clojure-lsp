@@ -5,6 +5,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
@@ -103,7 +104,8 @@
         (log/debug "Analyzing references for files:" filenames)
         (crawler/analyze-reference-filenames! filenames db)
         (doseq [filename filenames]
-          (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))))))
+          (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
+        (producer/refresh-code-lens db)))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.08.16-19.02.30
+
 - Fix `clojure-lsp --version`
 
 ## 2021.08.16-14.47.54

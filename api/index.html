@@ -469,23 +469,43 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#usages" class="md-nav__link">
+    Usages
+  </a>
+  
+    <nav class="md-nav" aria-label="Usages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#cli" class="md-nav__link">
     CLI
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#library" class="md-nav__link">
     Library
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#ci" class="md-nav__link">
     CI
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leiningen" class="md-nav__link">
+    Leiningen
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -561,23 +581,43 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#usages" class="md-nav__link">
+    Usages
+  </a>
+  
+    <nav class="md-nav" aria-label="Usages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#cli" class="md-nav__link">
     CLI
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#library" class="md-nav__link">
     Library
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#ci" class="md-nav__link">
     CI
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leiningen" class="md-nav__link">
+    Leiningen
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -615,9 +655,10 @@
                 <h1 id="api">API<a class="headerlink" href="#api" title="Permanent link">#</a></h1>
 <p>clojure-lsp is commonly used in a text editor, but it has its own API featuring the main features that can be used as a library or via CLI.
 This is a new feature and it's experimental, so things can break at any moment, so please open an issue if find anything wrong.</p>
-<h2 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h2>
+<h2 id="usages">Usages<a class="headerlink" href="#usages" title="Permanent link">#</a></h2>
+<h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp --help</code> should show all available commands and options.</p>
-<h2 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h2>
+<h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">#</a></h3>
 <p>The namespace <a href="https://github.com/clojure-lsp/clojure-lsp/tree/master/src/clojure_lsp/api.clj">clojure-lsp.api</a> should be used as the entrypoint for the same available features of the CLI, feel free to open a issue for missing features.</p>
 <p>Below is an example using the clean-ns feature on a <code>deps.edn</code> project:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:aliases</span> 
@@ -625,9 +666,11 @@ This is a new feature and it's experimental, so things can break at any moment, 
              <span class="ss">:exec-fn</span> <span class="nv">clojure-lsp.api/clean-ns!</span>
              <span class="ss">:exec-args</span> <span class="p">{</span><span class="ss">:dry?</span> <span class="nv">true</span><span class="p">}}}}</span>
 </code></pre></div>
-<h2 id="ci">CI<a class="headerlink" href="#ci" title="Permanent link">#</a></h2>
+<h3 id="ci">CI<a class="headerlink" href="#ci" title="Permanent link">#</a></h3>
 <p>You can use <a href="https://github.com/marketplace/actions/setup-clojure-lsp">setup-clojure-lsp</a> GitHub action to install clojure-lsp in a CI.</p>
 <p>Remember to install your build tool, like <code>clojure</code> or <code>leiningen</code> as well in your CI according to your project to clojure-lsp be able to scan the classpath correctly.</p>
+<h3 id="leiningen">Leiningen<a class="headerlink" href="#leiningen" title="Permanent link">#</a></h3>
+<p>To run clojure-lsp from leiningen easily, check <a href="https://github.com/clojure-lsp/lein-clojure-lsp">lein-clojure-lsp</a> plugin.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
 <ul>
 <li><code>clean-ns</code></li>

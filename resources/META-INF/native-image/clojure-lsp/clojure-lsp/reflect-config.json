@@ -226,6 +226,7 @@
 },
 {
   "name":"org.eclipse.lsp4j.CodeLensWorkspaceCapabilities",
+  "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

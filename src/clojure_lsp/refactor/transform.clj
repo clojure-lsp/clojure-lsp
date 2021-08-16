@@ -606,6 +606,8 @@
           ns-loc (edit/find-namespace zloc)
           ns-zip (zsub/subzip ns-loc)
           existing-ns-require (z/find-value ns-zip z/next qualified-ns-to-add)
+          existing-require-refer (when existing-ns-require
+                                   (z/find-value existing-ns-require z/next ':refer))
           add-require? (and (not existing-ns-require)
                             (not (z/find-value ns-zip z/next :require)))
           require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
@@ -613,19 +615,26 @@
                 (-> require-loc z/rightmost z/node meta :col)
                 5)
           result-loc (if existing-ns-require
-                       (z/subedit-> ns-loc
-                                    (z/find-value z/next qualified-ns-to-add)
-                                    (z/find-value z/next ':refer)
-                                    z/right
-                                    (z/append-child* (n/spaces 1))
-                                    (z/append-child (z/sexpr zloc)))
+                       (if existing-require-refer
+                         (z/subedit-> ns-loc
+                                      (z/find-value z/next qualified-ns-to-add)
+                                      (z/find-value z/next ':refer)
+                                      z/right
+                                      (z/append-child* (n/spaces 1))
+                                      (z/append-child (z/sexpr zloc)))
+                         (z/subedit-> ns-loc
+                                      (z/find-value z/next qualified-ns-to-add)
+                                      z/up
+                                      (z/append-child* (n/spaces 1))
+                                      (z/append-child :refer)
+                                      (z/append-child [refer-to-add])))
                        (z/subedit-> ns-loc
                                     (cond->
                                      add-require? (z/append-child (n/newlines 1))
                                      add-require? (z/append-child (n/spaces 2))
                                      add-require? (z/append-child (list :require)))
                                     (z/find-value z/next :require)
-                                    (z/up)
+                                    z/up
                                     (z/append-child* (n/newlines 1))
                                     (z/append-child* (n/spaces (dec col)))
                                     (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))]

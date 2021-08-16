@@ -85,6 +85,12 @@
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :refer [subset?]]
                                   [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+    (testing "when already exists that ns with alias and no refers"
+      (reset! db/db {})
+      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :as t])) testing") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
+        (is (some? range))
+        (is (= '(ns foo (:require [clojure.test :as t :refer [testing]])) (z/sexpr loc)))))
     (testing "when already exists that ns with another refer"
       (reset! db/db {})
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)

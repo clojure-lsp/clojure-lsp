@@ -87,6 +87,21 @@
       (swap! db update :findings merge (group-by :filename (:findings result))))
     analysis))
 
+(defn analyze-reference-filenames! [filenames db]
+  (let [start-time (System/nanoTime)
+        result (lsp.kondo/run-kondo-on-reference-filenames! filenames db)
+        end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
+        _ (log/info "Files analyzed, took" end-time "secs")
+        analysis (->> (:analysis result)
+                      lsp.kondo/normalize-analysis
+                      (group-by :filename))
+        empty-findings (reduce (fn [map filename] (assoc map filename [])) {} filenames)
+        new-findings (merge empty-findings (group-by :filename (:findings result)))]
+    (swap! db update :analysis merge analysis)
+    (swap! db assoc :kondo-config (:config result))
+    (swap! db update :findings merge new-findings)
+    analysis))
+
 (defn ^:private analyze-classpath! [root-path source-paths settings db]
   (let [project-specs (->> (or (get settings :project-specs) (default-project-specs))
                            (valid-project-specs-with-hash root-path))

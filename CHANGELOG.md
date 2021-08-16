@@ -12,9 +12,12 @@
   - Remove diagnostics when files are deleted, properly cleaning server. #513
   - Don't add ns form to blank edn files. #515
   - Fix initializationOptions parsing for some clients. #516
+  - Fix refactor 'add missing refer' when there is already that namespace with a alias but no refers.
+  - Improve `:notify-references-on-file-change` performance and use-cases, still disabled by default for some time.
   
 - API
   - Rollback printing only via CLI to work with API as well. (can be disabled via :raw? option)
+  - Support for release of lein-clojure-lsp
 
 ## 2021.08.05-19.36.09
 

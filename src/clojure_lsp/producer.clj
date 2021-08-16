@@ -30,3 +30,9 @@
     (->> diagnostic
          (interop/conform-or-log ::interop/publish-diagnostics-params)
          (.publishDiagnostics client))))
+
+(defn refresh-code-lens [db]
+  (when-let [code-lens-capability (get-in @db [:client-capabilities :workspace :code-lens])]
+    (when (.getRefreshSupport code-lens-capability)
+      (let [client ^LanguageClient (:client @db)]
+        (.refreshCodeLenses client)))))

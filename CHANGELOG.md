@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.08.16-12.43.38
+
 - General
   - Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507
   - Bump clj-kondo to fix a issue with clojure-lsp running in a lein process.

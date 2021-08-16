@@ -56,7 +56,7 @@
 
 (defn ^:private project-custom-lint!
   [paths db {:keys [analysis] :as kondo-ctx}]
-  (when (get-in db [:settings :lint-project-files-after-startup?] true)
+  (when (get-in @db [:settings :lint-project-files-after-startup?] true)
     (async/go
       (let [start-time (System/nanoTime)
             new-analysis (group-by :filename (normalize-analysis analysis))]

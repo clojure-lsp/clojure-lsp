@@ -143,7 +143,7 @@
      :port (or (:port db)
                "NREPL only available on :debug profile (`make debug-bin`)")
      :server-version (config/clojure-lsp-version)
-     :clj-kondo-version lsp.kondo/clj-kondo-version
+     :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db)}))
 
 (defn server-info-log []

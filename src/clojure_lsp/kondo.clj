@@ -4,11 +4,13 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
-(def clj-kondo-version "2021.08.07-20210813.083728-8")
+(defn clj-kondo-version []
+  (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
 (def clj-kondo-analysis-batch-size 50)
 

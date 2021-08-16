@@ -15,7 +15,7 @@
 
 (defn ^:private version []
   (->> [(str "clojure-lsp " (config/clojure-lsp-version))
-        (str "clj-kondo " (lsp.kondo/clj-kondo-version))]
+        (str "clj-kondo " lsp.kondo/clj-kondo-version)]
        (string/join \newline)))
 
 (defn ^:private help [options-summary]

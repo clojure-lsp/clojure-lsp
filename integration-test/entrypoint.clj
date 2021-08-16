@@ -21,6 +21,7 @@
       (future-cancel fut))
     ret))
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn run-all [& args]
   (when-not (first args)
     (println "First arg must be path to clojure-lsp binary")

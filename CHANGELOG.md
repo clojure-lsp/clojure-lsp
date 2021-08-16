@@ -17,6 +17,7 @@
   
 - API
   - Rollback printing only via CLI to work with API as well. (can be disabled via :raw? option)
+  - Support for release of lein-clojure-lsp
 
 ## 2021.08.05-19.36.09
 

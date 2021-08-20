@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
+
 ## 2021.08.16-19.02.30
 
 - Fix `clojure-lsp --version`

@@ -24,9 +24,13 @@
                                                        (cond-> [:dir (str root-path)]
                                                          env (conj :env (merge {} (System/getenv) env)))))]
       (if (= 0 exit)
-        (-> out
-            string/trim-newline
-            (string/split sep))
+        (let [paths (-> out
+                         string/split-lines
+                         last
+                         string/trim-newline
+                         (string/split sep))]
+          (log/debug "Classpath found, paths: " paths)
+          paths)
         (do
           (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
           (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)

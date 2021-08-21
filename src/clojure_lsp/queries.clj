@@ -316,6 +316,7 @@
          (filter (comp #(= % :unused-namespace) :type))
          (remove (fn [finding]
                    (some #(and (= :var-usages (:bucket %))
+                               (not (:refer %))
                                (= (:ns finding) (:to %)))
                          local-analysis)))
          (map :ns)

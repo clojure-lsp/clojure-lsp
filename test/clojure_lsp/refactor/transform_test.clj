@@ -388,6 +388,15 @@
                          " (:require"
                          "  [bar :refer [some] ]))"
                          "(some)")))
+  (testing "unused refer and alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [baz]"
+                         "  [bar :refer [some other] :as b]))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [baz]))")))
   (testing "unused refer from single refer but used alias before"
     (test-clean-ns {}
                    (code "(ns foo.bar"

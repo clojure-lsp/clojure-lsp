@@ -264,7 +264,7 @@
              (q/find-unused-aliases (:analysis @db/db) (:findings @db/db) (h/file-path "/a.clj")))))
     (testing "used and unused aliases"
       (h/load-code-and-locs "(ns a (:require [x :as f] [foo] x [bar :as b] [y :refer [m]] [z :refer [o i]])) o")
-      (is (= '#{bar}
+      (is (= '#{y bar}
              (q/find-unused-aliases (:analysis @db/db) (:findings @db/db) (h/file-path "/a.clj"))))))
   (testing "cljc"
     (testing "used require via alias"
@@ -285,7 +285,7 @@
              (q/find-unused-aliases (:analysis @db/db) (:findings @db/db) (h/file-path "/a.cljc")))))
     (testing "used and unused aliases"
       (h/load-code-and-locs "(ns a (:require [x :as f] [foo] x [bar :as b] [y :refer [m]] [z :refer [o i]])) o" (h/file-uri "file:///a.cljc"))
-      (is (= '#{bar}
+      (is (= '#{y bar}
              (q/find-unused-aliases (:analysis @db/db) (:findings @db/db) (h/file-path "/a.cljc")))))
     (testing "used alias in a reader conditional"
       (h/load-code-and-locs "(ns a (:require [y :as o] [x :as f])) #?(:clj f/foo)" (h/file-uri "file:///a.cljc"))

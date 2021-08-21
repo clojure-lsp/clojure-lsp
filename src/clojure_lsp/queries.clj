@@ -310,23 +310,42 @@
           (filter :alias))
         analysis))
 
-(defn find-unused-aliases [findings filename]
-  (->> (get findings filename)
-       (filter (comp #(= % :unused-namespace) :type))
-       (map :ns)
-       set))
+(defn find-unused-aliases [analysis findings filename]
+  (let [local-analysis (get analysis filename)]
+    (->> (get findings filename)
+         (filter (comp #(= % :unused-namespace) :type))
+         (remove (fn [finding]
+                   (some #(and (= :var-usages (:bucket %))
+                               (= (:ns finding) (:to %)))
+                         local-analysis)))
+         (map :ns)
+         set)))
 
-(defn find-unused-refers [findings filename]
-  (->> (get findings filename)
-       (filter (comp #(= % :unused-referred-var) :type))
-       (map #(symbol (-> % :ns str) (-> % :refer str)))
-       set))
+(defn find-unused-refers [analysis findings filename]
+  (let [local-analysis (get analysis filename)]
+    (->> (get findings filename)
+         (filter (comp #(= % :unused-referred-var) :type))
+         (remove (fn [finding]
+                   (> (->> local-analysis
+                           (filter #(and (= :var-usages (:bucket %))
+                                         (= (:refer finding) (:name %))
+                                         (= (:ns finding) (:to %))))
+                           (medley/distinct-by (juxt :name :to :row :col :end-row :end-col))
+                           count)
+                      1)))
+         (map #(symbol (-> % :ns str) (-> % :refer str)))
+         set)))
 
-(defn find-unused-imports [findings filename]
-  (->> (get findings filename)
-       (filter (comp #(= % :unused-import) :type))
-       (map :class)
-       set))
+(defn find-unused-imports [analysis findings filename]
+  (let [local-analysis (get analysis filename)]
+    (->> (get findings filename)
+         (filter (comp #(= % :unused-import) :type))
+         (remove (fn [finding]
+                   (some #(and (= :var-usages (:bucket %))
+                               (= (str (:class finding)) (str (:to %) "." (:name %))))
+                         local-analysis)))
+         (map :class)
+         set)))
 
 (defn find-namespace-definition-by-namespace [analysis namespace]
   (find-last-order-by-project-analysis

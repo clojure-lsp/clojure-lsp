@@ -300,9 +300,22 @@
     (sort-by fn coll)
     coll))
 
+(defn ^:private remove-empty-reader-conditional
+  [new-node]
+  (let [reader-macro? (= :reader-macro (some-> new-node z/up z/up z/tag))
+          empty-reader-macro? (when reader-macro?
+                                (<= (-> new-node z/up z/sexpr count) 1))]
+      (if empty-reader-macro?
+        (-> new-node
+            z/up
+            z/up
+            z/remove)
+        new-node)))
+
 (defn ^:private process-clean-ns
   [ns-loc removed-nodes col ns-inner-blocks-indentation form-type db]
-  (let [sep (n/whitespace-node (apply str (repeat col " ")))
+  (let [removed-nodes (edit/map-children removed-nodes remove-empty-reader-conditional)
+        sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
         forms (->> removed-nodes
                    z/node
@@ -369,7 +382,7 @@
     node))
 
 (defn ^:private remove-unused-requires
-  [unused-aliases unused-refers db nodes]
+  [nodes unused-aliases unused-refers db]
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
         first-node-ns   (when (and single-require?
@@ -406,9 +419,9 @@
                     :keep (some-> require-loc z/right z/node meta :col dec)
                     :else nil)
                   2)
-          removed-nodes (->> require-loc
-                             z/remove
-                             (remove-unused-requires unused-aliases unused-refers db))]
+          removed-nodes (-> require-loc
+                            z/remove
+                            (remove-unused-requires unused-aliases unused-refers db))]
       (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :require db))
     ns-loc))
 

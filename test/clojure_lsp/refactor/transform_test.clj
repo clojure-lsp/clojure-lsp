@@ -194,10 +194,10 @@
    (test-clean-ns db input-code expected-code true))
   ([db input-code expected-code in-form]
    (reset! db/db db)
-   (h/load-code-and-locs input-code)
+   (h/load-code-and-locs input-code (h/file-uri "file:///a.cljc"))
    (let [zloc (when in-form
                 (-> (z/of-string input-code) z/down z/right z/right))
-         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri "file:///a.clj") db/db)]
+         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri "file:///a.cljc") db/db)]
      (is (some? range))
      (is (= expected-code
             (z/root-string loc))))))
@@ -683,7 +683,62 @@
                          "  [java.util Date"
                          "             List]))"
                          "Date."
-                         "List."))))
+                         "List.")))
+  (testing "cljc conditional readers"
+    (testing "remove reader macro after removing unused single require alias"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  #?(:clj [other.zeta :as z])))")
+                     (code "(ns foo.bar)")))
+    (testing "remove reader macro after removing unused require alias"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  #?(:cljs [other.foo :as o]
+                                       [other.foof :as f])"
+                           "  #?(:clj [other.zeta :as z])"
+                           "  [some.bar :as b]))"
+                           "f/foo"
+                           "b/bar")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  #?(:cljs [other.foof :as f])"
+                           "  [some.bar :as b]))"
+                           "f/foo"
+                           "b/bar")))
+    (testing "remove reader macro after removing unused require refer"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  #?(:cljs [other.foo :refer [o]]
+                                       [other.foof :refer [f]])"
+                           "  #?(:clj [other.zeta :refer [z]])"
+                           "  [some.bar :refer [b]]))"
+                           "f"
+                           "b")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  #?(:cljs [other.foof :refer [f]])"
+                           "  [some.bar :refer [b]]))"
+                           "f"
+                           "b")))
+    (testing "remove reader macro after removing unused import"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  #?(:cljs [other.foo O]
+                                       [other.foof F])"
+                           "  #?(:clj [other.zeta Z])"
+                           "  [some.bar B]))"
+                           "F"
+                           "B")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  #?(:cljs [other.foof F])"
+                           "  [some.bar B]))"
+                           "F"
+                           "B")))))
 
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]

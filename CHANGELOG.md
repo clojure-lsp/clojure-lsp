@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
+- General
+  - Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
+  - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)`) after cleaning requires/imports.
 
 ## 2021.08.16-19.02.30
 

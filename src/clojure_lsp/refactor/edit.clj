@@ -75,13 +75,15 @@
     zloc))
 
 (defn map-children [parent-zloc f]
-  (z/subedit->> parent-zloc
-                z/down
-                (iterate (fn [zloc]
-                           (when (not (z/end? zloc))
-                             (-> zloc f z/next))))
-                (take-while identity)
-                last))
+  (if (z/down parent-zloc)
+    (z/subedit->> parent-zloc
+                  z/down
+                  (iterate (fn [zloc]
+                             (when (not (z/end? zloc))
+                               (-> zloc f z/next))))
+                  (take-while identity)
+                  last)
+    parent-zloc))
 
 (defn wrap-around [zloc tag]
   (let [node (z/node zloc)

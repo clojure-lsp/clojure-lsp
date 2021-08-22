@@ -193,11 +193,13 @@
   ([db input-code expected-code]
    (test-clean-ns db input-code expected-code true))
   ([db input-code expected-code in-form]
+   (test-clean-ns db input-code expected-code in-form "file:///a.clj"))
+  ([db input-code expected-code in-form uri]
    (reset! db/db db)
-   (h/load-code-and-locs input-code (h/file-uri "file:///a.cljc"))
+   (h/load-code-and-locs input-code (h/file-uri uri))
    (let [zloc (when in-form
                 (-> (z/of-string input-code) z/down z/right z/right))
-         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri "file:///a.cljc") db/db)]
+         [{:keys [loc range]}] (transform/clean-ns zloc (h/file-uri uri) db/db)]
      (is (some? range))
      (is (= expected-code
             (z/root-string loc))))))
@@ -386,6 +388,15 @@
                          " (:require"
                          "  [bar :refer [some] ]))"
                          "(some)")))
+  (testing "unused refer and alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [baz]"
+                         "  [bar :refer [some other] :as b]))")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [baz]))")))
   (testing "unused refer from single refer but used alias before"
     (test-clean-ns {}
                    (code "(ns foo.bar"
@@ -685,13 +696,15 @@
                          "Date."
                          "List.")))
   (testing "cljc conditional readers"
-    (testing "remove reader macro after removing unused single require alias"
+    (testing "remove reader conditional after removing unused single require alias"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
                            "  #?(:clj [other.zeta :as z])))")
-                     (code "(ns foo.bar)")))
-    (testing "remove reader macro after removing unused require alias"
+                     (code "(ns foo.bar)")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional after removing unused require alias"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
@@ -706,8 +719,10 @@
                            "  #?(:cljs [other.foof :as f])"
                            "  [some.bar :as b]))"
                            "f/foo"
-                           "b/bar")))
-    (testing "remove reader macro after removing unused require refer"
+                           "b/bar")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional after removing unused require refer"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
@@ -722,8 +737,10 @@
                            "  #?(:cljs [other.foof :refer [f]])"
                            "  [some.bar :refer [b]]))"
                            "f"
-                           "b")))
-    (testing "remove reader macro after removing unused import"
+                           "b")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional after removing unused import"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:import"
@@ -738,7 +755,86 @@
                            "  #?(:cljs [other.foof F])"
                            "  [some.bar B]))"
                            "F"
-                           "B")))))
+                           "B")
+                     true
+                     "file:///a.cljc"))
+    (testing "only used required alias in specific lang"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [other.foo :as f]"
+                           "  [other.beta :as b]"
+                           "  [other.zeta :as z]))"
+                           "#?(:clj f/foo)"
+                           "z/o")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [other.foo :as f]"
+                           "  [other.zeta :as z]))"
+                           "#?(:clj f/foo)"
+                           "z/o")
+                     true
+                     "file:///a.cljc"))
+    (testing "only used required refer in specific lang"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [other.foo :refer [f]]"
+                           "  [other.beta :refer [b]]"
+                           "  [other.zeta :refer [z]]))"
+                           "#?(:clj f)"
+                           "z")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  [other.foo :refer [f]]"
+                           "  [other.zeta :refer [z]]))"
+                           "#?(:clj f)"
+                           "z")
+                     true
+                     "file:///a.cljc"))
+    (testing "only used import in specific lang"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [other.foo F]"
+                           "  [other.beta B]"
+                           "  [other.zeta Z]))"
+                           "#?(:clj F)"
+                           "Z")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [other.foo F]"
+                           "  [other.zeta Z]))"
+                           "#?(:clj F)"
+                           "Z")
+                     true
+                     "file:///a.cljc"))
+    (testing "Mixed cases"
+      (test-clean-ns {}
+                     (code "(ns a"
+                           "  (:require"
+                           "   [c.b]"
+                           "   [c.c :refer [x]]"
+                           "   [c.d :refer [f]]"
+                           "   [c.e :refer [b o]]"
+                           "   [c.f :as cf]"
+                           "   [c.g :as cg]))"
+                           "#?(:clj"
+                           "   (do (o)"
+                           "       (f)"
+                           "       cf/asd))")
+                     (code "(ns a"
+                           "  (:require"
+                           "   [c.b]"
+                           "   [c.d :refer [f]]"
+                           "   [c.e :refer [o]]"
+                           "   [c.f :as cf]))"
+                           "#?(:clj"
+                           "   (do (o)"
+                           "       (f)"
+                           "       cf/asd))")
+                     true
+                     "file:///a.cljc"))))
 
 (deftest paredit-test
   (let [zloc (edit/raise (z/find-value (z/of-string "(a (b))") z/next 'b))]

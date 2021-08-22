@@ -303,14 +303,14 @@
 (defn ^:private remove-empty-reader-conditional
   [new-node]
   (let [reader-macro? (= :reader-macro (some-> new-node z/up z/up z/tag))
-          empty-reader-macro? (when reader-macro?
-                                (<= (-> new-node z/up z/sexpr count) 1))]
-      (if empty-reader-macro?
-        (-> new-node
-            z/up
-            z/up
-            z/remove)
-        new-node)))
+        empty-reader-macro? (when reader-macro?
+                              (<= (-> new-node z/up z/sexpr count) 1))]
+    (if empty-reader-macro?
+      (-> new-node
+          z/up
+          z/up
+          z/remove)
+      new-node)))
 
 (defn ^:private process-clean-ns
   [ns-loc removed-nodes col ns-inner-blocks-indentation form-type db]
@@ -352,12 +352,15 @@
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
         removed-refers (remove unused-refers-symbol node-refers)]
     (if (empty? removed-refers)
-      (-> node
-          z/down
-          (z/find-next-value ':refer)
-          z/remove
-          z/right
-          z/remove)
+      (let [ns-only (-> node
+                        z/down
+                        (z/find-next-value ':refer)
+                        z/remove
+                        z/right
+                        z/remove)]
+        (if (> (count (z/child-sexprs (z/up ns-only))) 1)
+          ns-only
+          (z/remove (z/up ns-only))))
       (-> node
           z/down
           (z/find-next-value ':refer)
@@ -508,13 +511,15 @@
   [zloc uri db]
   (let [settings (:settings @db)
         safe-loc (or zloc (z/of-string (get-in @db [:documents uri :text])))
-        ns-loc (edit/find-namespace safe-loc)]
+        ns-loc (edit/find-namespace safe-loc)
+        analysis (:analysis @db)
+        findings (:findings @db)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             filename (shared/uri->filename uri)
-            unused-aliases (q/find-unused-aliases (:findings @db) filename)
-            unused-refers (q/find-unused-refers (:findings @db) filename)
-            unused-imports (q/find-unused-imports (:findings @db) filename)
+            unused-aliases (q/find-unused-aliases analysis findings filename)
+            unused-refers (q/find-unused-refers analysis findings filename)
+            unused-imports (q/find-unused-imports analysis findings filename)
             result-loc (-> ns-loc
                            (clean-requires unused-aliases unused-refers ns-inner-blocks-indentation db)
                            (clean-imports unused-imports ns-inner-blocks-indentation db)

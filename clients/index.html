@@ -375,8 +375,15 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#sublime-text" class="md-nav__link">
-    Sublime Text
+  <a href="#emacs" class="md-nav__link">
+    Emacs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-studio-code" class="md-nav__link">
+    Visual Studio Code
   </a>
   
 </li>
@@ -389,8 +396,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#emacs" class="md-nav__link">
-    Emacs
+  <a href="#sublime-text" class="md-nav__link">
+    Sublime Text
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#intellij" class="md-nav__link">
+    Intellij
   </a>
   
 </li>
@@ -398,20 +412,6 @@
         <li class="md-nav__item">
   <a href="#oni" class="md-nav__link">
     Oni
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#intellij-cursive" class="md-nav__link">
-    Intellij / Cursive
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#visual-studio-code" class="md-nav__link">
-    Visual Studio Code
   </a>
   
 </li>
@@ -577,8 +577,15 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#sublime-text" class="md-nav__link">
-    Sublime Text
+  <a href="#emacs" class="md-nav__link">
+    Emacs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-studio-code" class="md-nav__link">
+    Visual Studio Code
   </a>
   
 </li>
@@ -591,8 +598,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#emacs" class="md-nav__link">
-    Emacs
+  <a href="#sublime-text" class="md-nav__link">
+    Sublime Text
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#intellij" class="md-nav__link">
+    Intellij
   </a>
   
 </li>
@@ -600,20 +614,6 @@
         <li class="md-nav__item">
   <a href="#oni" class="md-nav__link">
     Oni
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#intellij-cursive" class="md-nav__link">
-    Intellij / Cursive
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#visual-studio-code" class="md-nav__link">
-    Visual Studio Code
   </a>
   
 </li>
@@ -643,14 +643,45 @@
                 
                 
                 <h1 id="clients">Clients<a class="headerlink" href="#clients" title="Permanent link">#</a></h1>
-<p>Clients are either editors with built in LSP support like Oni, or an appropriate plugin.
-<em>Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.</em></p>
+<p>Clients are either editors with built in LSP support like Oni or nvim, or an appropriate plugin.
+<strong>Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.</strong></p>
 <p>In general, make sure to configure the client to use stdio and a server launch command like <code>['/usr/local/bin/clojure-lsp']</code>.
 If that fails, you may need to have your client launch inside a shell, so use someting like <code>['bash', '-c', '/usr/local/bin/clojure-lsp']</code>.
-In windows you probably need to rename to <code>clojure-lsp.bat</code>.</p>
+In windows you probably need to use the <code>clojure-lsp.bat</code>.</p>
 <hr />
-<h2 id="sublime-text">Sublime Text<a class="headerlink" href="#sublime-text" title="Permanent link">#</a></h2>
-<p>Clojure LSP can be installed by first installing the <a href="https://packagecontrol.io/packages/LSP">LSP plugin</a> which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions <a href="https://lsp.sublimetext.io/language_servers/#clojure">here</a> to download Clojure LSP and how to configure it in Sublime Text.</p>
+<h2 id="emacs">Emacs<a class="headerlink" href="#emacs" title="Permanent link">#</a></h2>
+<p><a href="https://emacs-lsp.github.io/lsp-mode">lsp-mode</a> has built in support for <code>clojure-lsp</code>. With <code>use-package</code>, add the following to your emacs config:</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-mode</span>
+  <span class="nb">:ensure</span> <span class="no">t</span>
+  <span class="nb">:hook</span> <span class="p">((</span><span class="nv">clojure-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">)</span>
+         <span class="p">(</span><span class="nv">clojurec-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">)</span>
+         <span class="p">(</span><span class="nv">clojurescript-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">))</span>
+  <span class="nb">:config</span>
+  <span class="c1">;; add paths to your local installation of project mgmt tools, like lein</span>
+  <span class="p">(</span><span class="nv">setenv</span> <span class="s">&quot;PATH&quot;</span> <span class="p">(</span><span class="nf">concat</span>
+                   <span class="s">&quot;/usr/local/bin&quot;</span> <span class="nv">path-separator</span>
+                   <span class="p">(</span><span class="nv">getenv</span> <span class="s">&quot;PATH&quot;</span><span class="p">)))</span>
+  <span class="p">(</span><span class="nb">dolist</span> <span class="p">(</span><span class="nv">m</span> <span class="o">&#39;</span><span class="p">(</span><span class="nv">clojure-mode</span>
+               <span class="nv">clojurec-mode</span>
+               <span class="nv">clojurescript-mode</span>
+               <span class="nv">clojurex-mode</span><span class="p">))</span>
+     <span class="p">(</span><span class="nv">add-to-list</span> <span class="ss">&#39;lsp-language-id-configuration</span> <span class="o">`</span><span class="p">(</span><span class="o">,</span><span class="nv">m</span> <span class="o">.</span> <span class="s">&quot;clojure&quot;</span><span class="p">)))</span>
+  <span class="p">(</span><span class="k">setq</span> <span class="nv">lsp-clojure-server-command</span> <span class="o">&#39;</span><span class="p">(</span><span class="s">&quot;/path/to/clojure-lsp&quot;</span><span class="p">)))</span> <span class="c1">;; Optional: In case `clojure-lsp` is not in your $PATH</span>
+</code></pre></div>
+<p>Optionally you can add <code>lsp-ui</code> for UI feedback and <code>company-mode</code> for completion:</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-ui</span>
+  <span class="nb">:ensure</span> <span class="no">t</span>
+  <span class="nb">:commands</span> <span class="nv">lsp-ui-mode</span><span class="p">)</span>
+
+<span class="p">(</span><span class="nb">use-package</span> <span class="nv">company</span>
+  <span class="nb">:ensure</span> <span class="no">t</span><span class="p">)</span>
+</code></pre></div>
+<p>In <code>lsp-mode</code>, <code>lsp-clojure-server-command</code> variable is available to override the command to start the <code>clojure-lsp</code> server, might be necessary to do this on a Windows environment.</p>
+<p>For a detailed guide on how to configure Emacs with LSP, check <a href="https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/">here</a></p>
+<p>For more <code>lsp-mode</code> clojure settings, check <a href="https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/">here</a></p>
+<hr />
+<h2 id="visual-studio-code">Visual Studio Code<a class="headerlink" href="#visual-studio-code" title="Permanent link">#</a></h2>
+<p><a href="https://calva.io/clojure-lsp/">Calva</a> is a extension for VSCode for Clojure Development that includes clojure-lsp.</p>
 <hr />
 <h2 id="vim">Vim<a class="headerlink" href="#vim" title="Permanent link">#</a></h2>
 <p>I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well.</p>
@@ -690,48 +721,14 @@ nmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-line
 nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 </code></pre></div>
 <hr />
-<h2 id="emacs">Emacs<a class="headerlink" href="#emacs" title="Permanent link">#</a></h2>
-<p><a href="https://emacs-lsp.github.io/lsp-mode">lsp-mode</a> has built in support for <code>clojure-lsp</code>. With <code>use-package</code>, add the following to your emacs config:</p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-mode</span>
-  <span class="nb">:ensure</span> <span class="no">t</span>
-  <span class="nb">:hook</span> <span class="p">((</span><span class="nv">clojure-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">)</span>
-         <span class="p">(</span><span class="nv">clojurec-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">)</span>
-         <span class="p">(</span><span class="nv">clojurescript-mode</span> <span class="o">.</span> <span class="nv">lsp</span><span class="p">))</span>
-  <span class="nb">:config</span>
-  <span class="c1">;; add paths to your local installation of project mgmt tools, like lein</span>
-  <span class="p">(</span><span class="nv">setenv</span> <span class="s">&quot;PATH&quot;</span> <span class="p">(</span><span class="nf">concat</span>
-                   <span class="s">&quot;/usr/local/bin&quot;</span> <span class="nv">path-separator</span>
-                   <span class="p">(</span><span class="nv">getenv</span> <span class="s">&quot;PATH&quot;</span><span class="p">)))</span>
-  <span class="p">(</span><span class="nb">dolist</span> <span class="p">(</span><span class="nv">m</span> <span class="o">&#39;</span><span class="p">(</span><span class="nv">clojure-mode</span>
-               <span class="nv">clojurec-mode</span>
-               <span class="nv">clojurescript-mode</span>
-               <span class="nv">clojurex-mode</span><span class="p">))</span>
-     <span class="p">(</span><span class="nv">add-to-list</span> <span class="ss">&#39;lsp-language-id-configuration</span> <span class="o">`</span><span class="p">(</span><span class="o">,</span><span class="nv">m</span> <span class="o">.</span> <span class="s">&quot;clojure&quot;</span><span class="p">)))</span>
-  <span class="p">(</span><span class="k">setq</span> <span class="nv">lsp-clojure-server-command</span> <span class="o">&#39;</span><span class="p">(</span><span class="s">&quot;/path/to/clojure-lsp&quot;</span><span class="p">)))</span> <span class="c1">;; Optional: In case `clojure-lsp` is not in your $PATH</span>
-</code></pre></div>
-<p>Optionally you can add <code>lsp-ui</code> for UI feedback and <code>company-mode</code> for completion:</p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="nb">use-package</span> <span class="nv">lsp-ui</span>
-  <span class="nb">:ensure</span> <span class="no">t</span>
-  <span class="nb">:commands</span> <span class="nv">lsp-ui-mode</span><span class="p">)</span>
-
-<span class="p">(</span><span class="nb">use-package</span> <span class="nv">company</span>
-  <span class="nb">:ensure</span> <span class="no">t</span><span class="p">)</span>
-</code></pre></div>
-<p>In <code>lsp-mode</code>, <code>lsp-clojure-server-command</code> variable is available to override the command to start the <code>clojure-lsp</code> server, might be necessary to do this on a Windows environment.</p>
-<p>For a detailed guide on how to configure Emacs with LSP, check <a href="https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/">here</a></p>
-<p>For more <code>lsp-mode</code> clojure settings, check <a href="https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/">here</a></p>
+<h2 id="sublime-text">Sublime Text<a class="headerlink" href="#sublime-text" title="Permanent link">#</a></h2>
+<p>Clojure LSP can be installed by first installing the <a href="https://packagecontrol.io/packages/LSP">LSP plugin</a> which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions <a href="https://lsp.sublimetext.io/language_servers/#clojure">here</a> to download Clojure LSP and how to configure it in Sublime Text.</p>
+<hr />
+<h2 id="intellij">Intellij<a class="headerlink" href="#intellij" title="Permanent link">#</a></h2>
+<p>https://github.com/gtache/intellij-lsp tested only briefly.</p>
 <hr />
 <h2 id="oni">Oni<a class="headerlink" href="#oni" title="Permanent link">#</a></h2>
 <p>Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni</p>
-<hr />
-<h2 id="intellij-cursive">Intellij / Cursive<a class="headerlink" href="#intellij-cursive" title="Permanent link">#</a></h2>
-<p>https://github.com/gtache/intellij-lsp tested only briefly.</p>
-<hr />
-<h2 id="visual-studio-code">Visual Studio Code<a class="headerlink" href="#visual-studio-code" title="Permanent link">#</a></h2>
-<ul>
-<li>Proof of concept: in the client-vscode directory in this repo.</li>
-<li><a href="https://github.com/BetterThanTomorrow/calva">Calva</a> extension includes clojure-lsp support.</li>
-</ul>
 <hr />
 <h2 id="atom">Atom<a class="headerlink" href="#atom" title="Permanent link">#</a></h2>
 <p>I tried making a client but my hello world attempt didn't seem to work. If someone wants to take this on, I'd be willing to package it here too.</p>

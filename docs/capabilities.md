@@ -5,7 +5,7 @@
 Below are all the currently supported LSP capabilities and their implementation status:
 
 | capability                             | done | notes                                         |
-| ----------                             | ---- | -----                                         |
+|----------------------------------------|------|-----------------------------------------------|
 | initialize                             | √    |                                               |
 | initialized                            | √    |                                               |
 | shutdown                               | √    |                                               |
@@ -65,6 +65,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/semanticTokens/full/delta |      |                                               |
 | textDocument/semanticTokens/range      | √    |                                               |
 | workspace/semanticTokens/refresh       |      |                                               |
+| workspace/codeLens/refresh             | √    |                                               |
 | textDocument/linkedEditingRange        |      |                                               |
 | textDocument/prepareCallHierarchy      | √    |                                               |
 | callHierarchy/incomingCalls            | √    |                                               |
@@ -87,24 +88,25 @@ It should be possible to introduce most of the refactorings [here](https://githu
 Calling `executeCommand` with the following commands and additional args will notify the client with `applyEdit`.
 All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
-| done | command                 | args                                          | notes                           |
-| ---- | -------------------     | ----                                          | -----                           |
-| √    | add-import-to-namespace | `[document-uri, line, column, import-name]`   |                                 |
-| √    | add-missing-libspec     |                                               |                                 |
-| √    | clean-ns                |                                               | :require sort and remove unused |
-| √    | cycle-coll              |                                               |                                 |
-| √    | cycle-privacy           |                                               |                                 |
-| √    | expand-let              |                                               |                                 |
-| √    | extract-function        | `[document-uri, line, column, function-name]` |                                 |
-| √    | inline-symbol           |                                               |                                 |
-| √    | introduce-let           | `[document-uri, line, column, binding-name]`  |                                 |
-| √    | move-to-let             | `[document-uri, line, column, binding-name]`  |                                 |
-| √    | thread-first            |                                               |                                 |
-| √    | thread-first-all        |                                               |                                 |
-| √    | thread-last             |                                               |                                 |
-| √    | thread-last-all         |                                               |                                 |
-| √    | unwind-all              |                                               |                                 |
-| √    | unwind-thread           |                                               |                                 |
+| done | command                 | args                                                                   | notes |
+|------|-------------------------|------------------------------------------------------------------------|-------|
+| √    | add-import-to-namespace | `[document-uri, line, column, import-name]`                            |       |
+| √    | add-missing-libspec     |                                                                        |       |
+| √    | clean-ns                |                                                                        |       |
+| √    | cycle-coll              |                                                                        |       |
+| √    | cycle-privacy           |                                                                        |       |
+| √    | expand-let              |                                                                        |       |
+| √    | extract-function        | `[document-uri, line, column, function-name]`                          |       |
+| √    | inline-symbol           |                                                                        |       |
+| √    | introduce-let           | `[document-uri, line, column, binding-name]`                           |       |
+| √    | move-to-let             | `[document-uri, line, column, binding-name]`                           |       |
+| √    | thread-first            |                                                                        |       |
+| √    | thread-first-all        |                                                                        |       |
+| √    | thread-last             |                                                                        |       |
+| √    | thread-last-all         |                                                                        |       |
+| √    | unwind-all              |                                                                        |       |
+| √    | unwind-thread           |                                                                        |       |
+| √    | resolve-macro-as        | `[document-uri, line, column, resolved-full-symbol kondo-config-path]` |       |
 
 See Vim client section for an example.
 

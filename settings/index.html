@@ -899,6 +899,7 @@
 <li>vector -&gt; array (<code>["src" "test"]</code>)</li>
 </ul>
 <h2 id="all-settings">All settings<a class="headerlink" href="#all-settings" title="Permanent link">#</a></h2>
+<p>You can find all settings and its default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">here</a> and below the docs for each one:</p>
 <table>
 <thead>
 <tr>
@@ -910,18 +911,18 @@
 <tbody>
 <tr>
 <td><code>source-paths</code></td>
-<td>project-local directories to look for clj/cljc/cljs files, if using <code>deps.edn</code>, use <code>:source-aliases</code> instead.</td>
+<td>project-local directories to look for clj/cljc/cljs files, if using <code>deps.edn</code>, <code>project.clj</code> or <code>bb.edn</code>, use <code>:source-aliases</code> instead.</td>
 <td><code>#{"src" "test"}</code></td>
 </tr>
 <tr>
 <td><code>source-aliases</code></td>
-<td>Used for <code>deps.edn</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>. Check the <code>source-aliases discovery</code> section below.</td>
+<td>Used for <code>deps.edn</code> or <code>project.clj</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>. Check the <code>source-aliases discovery</code> section below.</td>
 <td><code>#{:dev :test}</code></td>
 </tr>
 <tr>
 <td><code>linters</code></td>
 <td>clojure-lsp custom linters, check the diagnostics settings section below</td>
-<td><code>{:unused-public-ns {:level :info}}</code></td>
+<td></td>
 </tr>
 <tr>
 <td><code>additional-snippets</code></td>
@@ -1021,6 +1022,10 @@
 </tbody>
 </table>
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
+<p>Default:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:on</span>
+             <span class="ss">:report-duplicates</span> <span class="nv">true</span><span class="p">}}</span>
+</code></pre></div>
 <h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
 make most of features work, you don't have to install clj-kondo to
@@ -1034,17 +1039,22 @@ properly configured in your <code>.clj-kondo/config.edn</code> file.</p>
 </ul>
 <p>Example:</p>
 <p><code>.lsp/config.edn</code>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span>
-                       <span class="ss">:report-duplicates</span> <span class="nv">false</span><span class="p">}}}</span>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:on</span>
+                       <span class="ss">:report-duplicates</span> <span class="nv">true</span><span class="p">}}}</span>
 </code></pre></div></p>
-<p>Note for vim users:</p>
-<p>If you are a (neo)vim user and have <a href="https://github.com/dense-analysis/ale">ale</a> installed as a plugin, you
-<strong>should not</strong> have this configured as a linter <code>let g:ale_linters = {'clojure': ['clj-kondo']}</code> in your vimrc. Having this
-linter enabled via <code>ale</code> will only conflict with the built-in clj-kondo bundled with clojure-lsp.</p>
-<p>For more information about available configurations,
+<details>
+<summary>Note for vim users</summary>
+
+If you are a (neo)vim user and have [ale](https://github.com/dense-analysis/ale) installed as a plugin, you
+**should not** have this configured as a linter `let g:ale_linters = {'clojure': ['clj-kondo']}` in your vimrc. Having this
+linter enabled via `ale` will only conflict with the built-in clj-kondo bundled with clojure-lsp.
+
+</details>
+
+<p>For more information about all clj-kondo available configurations,
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
 <h5 id="custom-clj-kondo-hooks">Custom clj-kondo hooks<a class="headerlink" href="#custom-clj-kondo-hooks" title="Permanent link">#</a></h5>
-<p>Clojure-lsp register custom linters in clj-kondo, those configurations should be done on clj-kondo config files, e.g. (<code>&lt;project&gt;/.clj-kondo/config.edn</code>)</p>
+<p>Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (<code>&lt;project&gt;/.clj-kondo/config.edn</code>), below are the custom linters used:</p>
 <h6 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h6>
 <p>A custom linter that reports public functions/vars not used over the project.</p>
 <p>It has the possible key/values:</p>

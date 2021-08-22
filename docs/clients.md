@@ -1,18 +1,62 @@
 # Clients
 
-Clients are either editors with built in LSP support like Oni, or an appropriate plugin.
-*Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.*
+Clients are either editors with built in LSP support like Oni or nvim, or an appropriate plugin.
+**Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.**
 
 In general, make sure to configure the client to use stdio and a server launch command like `['/usr/local/bin/clojure-lsp']`.
 If that fails, you may need to have your client launch inside a shell, so use someting like `['bash', '-c', '/usr/local/bin/clojure-lsp']`.
-In windows you probably need to rename to `clojure-lsp.bat`.
+In windows you probably need to use the `clojure-lsp.bat`.
 
 ---
-## Sublime Text
 
-Clojure LSP can be installed by first installing the [LSP plugin](https://packagecontrol.io/packages/LSP) which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions [here](https://lsp.sublimetext.io/language_servers/#clojure) to download Clojure LSP and how to configure it in Sublime Text.
+## Emacs
+
+[lsp-mode](https://emacs-lsp.github.io/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
+
+```elisp
+(use-package lsp-mode
+  :ensure t
+  :hook ((clojure-mode . lsp)
+         (clojurec-mode . lsp)
+         (clojurescript-mode . lsp))
+  :config
+  ;; add paths to your local installation of project mgmt tools, like lein
+  (setenv "PATH" (concat
+                   "/usr/local/bin" path-separator
+                   (getenv "PATH")))
+  (dolist (m '(clojure-mode
+               clojurec-mode
+               clojurescript-mode
+               clojurex-mode))
+     (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
+  (setq lsp-clojure-server-command '("/path/to/clojure-lsp"))) ;; Optional: In case `clojure-lsp` is not in your $PATH
+```
+
+Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completion:
+
+```elisp
+(use-package lsp-ui
+  :ensure t
+  :commands lsp-ui-mode)
+
+(use-package company
+  :ensure t)
+```
+
+In `lsp-mode`, `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
+
+For a detailed guide on how to configure Emacs with LSP, check [here](https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/)
+
+For more `lsp-mode` clojure settings, check [here](https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/)
 
 ---
+
+## Visual Studio Code
+
+[Calva](https://calva.io/clojure-lsp/) is a extension for VSCode for Clojure Development that includes clojure-lsp.
+
+---
+
 ## Vim
 
 I prefer https://github.com/neoclide/coc.nvim but both http://github.com/autozimu/LanguageClient-neovim and https://github.com/prabirshrestha/vim-lsp work well.
@@ -63,63 +107,23 @@ nmap <silent> <Leader>c             <Plug>(coc-codeaction-line)
 nmap <silent> gd                    <Plug>(coc-definition)
 ```
 
+---
+
+## Sublime Text
+
+Clojure LSP can be installed by first installing the [LSP plugin](https://packagecontrol.io/packages/LSP) which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions [here](https://lsp.sublimetext.io/language_servers/#clojure) to download Clojure LSP and how to configure it in Sublime Text.
 
 ---
-## Emacs
 
-[lsp-mode](https://emacs-lsp.github.io/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
-
-```elisp
-(use-package lsp-mode
-  :ensure t
-  :hook ((clojure-mode . lsp)
-         (clojurec-mode . lsp)
-         (clojurescript-mode . lsp))
-  :config
-  ;; add paths to your local installation of project mgmt tools, like lein
-  (setenv "PATH" (concat
-                   "/usr/local/bin" path-separator
-                   (getenv "PATH")))
-  (dolist (m '(clojure-mode
-               clojurec-mode
-               clojurescript-mode
-               clojurex-mode))
-     (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
-  (setq lsp-clojure-server-command '("/path/to/clojure-lsp"))) ;; Optional: In case `clojure-lsp` is not in your $PATH
-```
-
-Optionally you can add `lsp-ui` for UI feedback and `company-mode` for completion:
-
-```elisp
-(use-package lsp-ui
-  :ensure t
-  :commands lsp-ui-mode)
-
-(use-package company
-  :ensure t)
-```
-
-In `lsp-mode`, `lsp-clojure-server-command` variable is available to override the command to start the `clojure-lsp` server, might be necessary to do this on a Windows environment.
-
-For a detailed guide on how to configure Emacs with LSP, check [here](https://emacs-lsp.github.io/lsp-mode/tutorials/clojure-guide/)
-
-For more `lsp-mode` clojure settings, check [here](https://emacs-lsp.github.io/lsp-mode/page/lsp-clojure/)
-
----
-## Oni
-
-Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni
-
----
-## Intellij / Cursive
+## Intellij
 
 https://github.com/gtache/intellij-lsp tested only briefly.
 
 ---
-## Visual Studio Code
 
-* Proof of concept: in the client-vscode directory in this repo.
-* [Calva](https://github.com/BetterThanTomorrow/calva) extension includes clojure-lsp support.
+## Oni
+
+Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni
 
 ---
 ## Atom

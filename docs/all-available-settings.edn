@@ -1,0 +1,28 @@
+;; All available settings and its default values
+{:source-paths #{"src" "test"} ;; auto-resolved for deps.edn, project.clj or bb.edn projects
+ :source-aliases #{:dev :test}
+ :linters {:clj-kondo {:level :on
+                       :report-duplicates true}}
+ :additional-snippets []
+ :ignore-classpath-directories false
+ :lint-project-files-after-startup? true
+ :notify-references-on-file-change false ;; Disabled for now for performance reasons
+ :use-metadata-for-privacy? false
+ :clean {:ns-inner-blocks-indentation :next-line
+         :sort {:ns true
+                :require true
+                :import true
+                :refer true}}
+ :semantic-tokens? true
+ :show-docs-arity-on-same-line? false
+ :hover {:hide-file-location? false}
+ :auto-add-ns-to-new-files? true
+ :document-formatting? true
+ :document-range-formatting? true
+ :text-document-sync-kind :full
+ :dependency-scheme :zip
+ :cljfmt {}
+ :project-specs [] ;; Check the default at clojure-lsp.crawler/default-project-specs
+ :lens-segregate-test-references true
+ :sqlite-db-path ".lsp/sqlite.db"
+ :log-path "/tmp/clojure-lsp.*.out"}

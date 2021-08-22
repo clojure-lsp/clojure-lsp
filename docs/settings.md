@@ -41,11 +41,13 @@ If you are using a client which defines InitializationOptions as a json object, 
 
 ## All settings
 
+You can find all settings and its default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn) and below the docs for each one:
+
 | name                                | description                                                                                                                                                                                                                                                                                                                                                                                                          | default                                                                                                              |
 |-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| `source-paths`                      | project-local directories to look for clj/cljc/cljs files, if using `deps.edn`, use `:source-aliases` instead.                                                                                                                                                                                                                                                                                                       | `#{"src" "test"}`                                                                                                    |
-| `source-aliases`                    | Used for `deps.edn` projects, the aliases which clojure-lsp should get the source-paths besides the root level `:paths` and `:extra-paths`. Check the `source-aliases discovery` section below.                                                                                                                                                                                                                      | `#{:dev :test}`                                                                                                      |
-| `linters`                           | clojure-lsp custom linters, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                             | `{:unused-public-ns {:level :info}}`                                                                                 |
+| `source-paths`                      | project-local directories to look for clj/cljc/cljs files, if using `deps.edn`, `project.clj` or `bb.edn`, use `:source-aliases` instead.                                                                                                                                                                                                                                                                            | `#{"src" "test"}`                                                                                                    |
+| `source-aliases`                    | Used for `deps.edn` or `project.clj` projects, the aliases which clojure-lsp should get the source-paths besides the root level `:paths` and `:extra-paths`. Check the `source-aliases discovery` section below.                                                                                                                                                                                                     | `#{:dev :test}`                                                                                                      |
+| `linters`                           | clojure-lsp custom linters, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                             |                                                                                                                      |
 | `additional-snippets`               | Additional user snippets to be available during completing, check the snippets section below                                                                                                                                                                                                                                                                                                                         | `[]`                                                                                                                 |
 | `ignore-classpath-directories`      | will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.                                                                                                                                                                                                             | `false`                                                                                                              |
 | `lint-project-files-after-startup?` | Whether to async lint all project only files after startup to make features like [List project errors](https://emacs-lsp.github.io/lsp-mode/page/main-features/#project-errors-on-modeline) work.                                                                                                                                                                                                                    | `true`                                                                                                               |
@@ -68,6 +70,13 @@ If you are using a client which defines InitializationOptions as a json object, 
 
 ### Diagnostics (linter)
 
+Default:
+
+```clojure
+{:clj-kondo {:level :on
+             :report-duplicates true}}
+```
+
 #### clj-kondo
 
 `clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to
@@ -86,22 +95,25 @@ Example:
 
 `.lsp/config.edn`
 ```clojure
-{:linters {:clj-kondo {:level :off
-                       :report-duplicates false}}}
+{:linters {:clj-kondo {:level :on
+                       :report-duplicates true}}}
 ```
 
-Note for vim users:
+<details>
+<summary>Note for vim users</summary>
 
 If you are a (neo)vim user and have [ale](https://github.com/dense-analysis/ale) installed as a plugin, you
 **should not** have this configured as a linter `let g:ale_linters = {'clojure': ['clj-kondo']}` in your vimrc. Having this
 linter enabled via `ale` will only conflict with the built-in clj-kondo bundled with clojure-lsp.
 
-For more information about available configurations,
+</details>
+
+For more information about all clj-kondo available configurations,
 check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 
 ##### Custom clj-kondo hooks
 
-Clojure-lsp register custom linters in clj-kondo, those configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`)
+Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`), below are the custom linters used:
 
 ###### clojure-lsp/unused-public-var
 

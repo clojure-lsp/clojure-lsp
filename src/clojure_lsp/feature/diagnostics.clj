@@ -32,14 +32,14 @@
 (def deprecated-diagnostic-types
   #{:deprecated-var})
 
-(defn ^:private reg-unused-public-var-elements! [elements reg-finding! config]
+(defn ^:private reg-unused-public-var-elements! [elements reg-finding! kondo-config]
   (mapv (fn [element]
           (let [finding {:filename (:filename element)
                          :row (:name-row element)
                          :col (:name-col element)
                          :end-row (:name-end-row element)
                          :end-col (:name-end-col element)
-                         :level (or (-> config :linters :clojure-lsp/unused-public-var :level) :info)
+                         :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
                          :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
                          :type :clojure-lsp/unused-public-var}]
             (reg-finding! finding)

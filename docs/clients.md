@@ -4,7 +4,7 @@ Clients are either editors with built in LSP support like Oni or nvim, or an app
 **Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.**
 
 In general, make sure to configure the client to use stdio and a server launch command like `['/usr/local/bin/clojure-lsp']`.
-If that fails, you may need to have your client launch inside a shell, so use someting like `['bash', '-c', '/usr/local/bin/clojure-lsp']`.
+If that fails, you may need to have your client launch inside a shell, so use something like `['bash', '-c', '/usr/local/bin/clojure-lsp']`.
 In windows you probably need to use the `clojure-lsp.bat`.
 
 ---

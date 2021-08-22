@@ -1,4 +1,5 @@
 ;; All available settings and its default values
+;; Check the settings documentation section for more details of each one.
 {:source-paths #{"src" "test"} ;; auto-resolved for deps.edn, project.clj or bb.edn projects
  :source-aliases #{:dev :test}
  :linters {:clj-kondo {:level :on

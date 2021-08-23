@@ -1,2 +1,3 @@
 /.cpcache
-/.lsp
+/.lsp/sqlite.db
+/.clj-kondo/.cache

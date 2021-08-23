@@ -1,0 +1,1 @@
+{:linters {:clj-kondo {:ns-exclude-regex ""}}}

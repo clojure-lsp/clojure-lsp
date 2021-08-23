@@ -1529,6 +1529,7 @@
 <li>Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523</li>
 <li>Improve <code>clean-ns</code> to remove empty reader conditionals(<code>#?(:clj)</code>) after cleaning requires/imports.</li>
 <li>Fix <code>clean-ns</code> false-positives removals to cljc files when the alias/refer/import is being used inside a reader conditional.</li>
+<li>Add new setting <code>:linters :clj-kondo :ns-exclude-regex</code> which allows exclude diagnostics/findings for namespaces matching that regex.</li>
 </ul>
 <h2 id="20210816-190230">2021.08.16-19.02.30<a class="headerlink" href="#20210816-190230" title="Permanent link">#</a></h2>
 <ul>
@@ -2018,7 +2019,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 22, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 23, 2021</span>
     
   </small>
 </div>

@@ -1024,7 +1024,8 @@
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
 <p>Default:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:on</span>
-             <span class="ss">:report-duplicates</span> <span class="nv">true</span><span class="p">}}</span>
+             <span class="ss">:report-duplicates</span> <span class="nv">true</span>
+             <span class="ss">:ns-exclude-regex</span> <span class="s">&quot;&quot;</span><span class="p">}}</span>
 </code></pre></div>
 <h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
@@ -1036,11 +1037,13 @@ properly configured in your <code>.clj-kondo/config.edn</code> file.</p>
 <ul>
 <li><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code></li>
 <li><code>:report-duplicates</code> which will show all linters of the same symbol instead of showing only the first spot. Available values: <code>true</code>, <code>false</code> with default value of <code>true</code></li>
+<li><code>ns-exclude-regex</code> which will exclude the diagnostics/findings for namespaces that match this regex.</li>
 </ul>
 <p>Example:</p>
 <p><code>.lsp/config.edn</code>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:on</span>
-                       <span class="ss">:report-duplicates</span> <span class="nv">true</span><span class="p">}}}</span>
+                       <span class="ss">:report-duplicates</span> <span class="nv">true</span>
+                       <span class="ss">:ns-exclude-regex</span> <span class="s">&quot;some-ns.*&quot;</span><span class="p">}}}</span>
 </code></pre></div></p>
 <details>
 <summary>Note for vim users</summary>
@@ -1135,7 +1138,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 22, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 23, 2021</span>
     
   </small>
 </div>

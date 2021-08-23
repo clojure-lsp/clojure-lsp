@@ -7,6 +7,7 @@
   - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)`) after cleaning requires/imports.
   - Fix `clean-ns` false-positives removals to cljc files when the alias/refer/import is being used inside a reader conditional.
   - Add new setting `:linters :clj-kondo :ns-exclude-regex` which allows exclude diagnostics/findings for namespaces matching that regex.
+  - Fix merge of configs resolved for projects with multiple configurations in parent folders and subprojects.
 
 ## 2021.08.16-19.02.30
 

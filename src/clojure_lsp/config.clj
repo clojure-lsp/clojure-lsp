@@ -45,15 +45,16 @@
     (let [file (io/file dir ".lsp" "config.edn")
           parent (.getParentFile dir)]
       (if parent
-        (recur parent (cond-> configs
+        (recur parent (cond->> configs
                         (and (shared/file-exists? file)
                              (not (= (.getAbsolutePath home-dir-file) (.getAbsolutePath file))))
-                        (conj (read-edn-file file))))
+                        (concat [(read-edn-file file)])))
         configs))))
 
 (defn resolve-config [project-root-uri]
-  (let [home-dir-file (get-home-config-file)]
+  (let [home-dir-file (get-home-config-file)
+        project-configs (resolve-project-configs project-root-uri home-dir-file)]
     (reduce shared/deep-merge
             (merge {}
                    (resolve-home-config home-dir-file))
-            (resolve-project-configs project-root-uri home-dir-file))))
+            project-configs)))

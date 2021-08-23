@@ -12,6 +12,7 @@
    [clojure.java.shell :as shell]
    [clojure.string :as string]
    [digest :as digest]
+   [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
    (java.net URI)))
@@ -144,10 +145,10 @@
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
                                         :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
-        raw-settings (merge encoding-settings
-                            client-settings
-                            project-settings
-                            force-settings)
+        raw-settings (medley/deep-merge encoding-settings
+                                        client-settings
+                                        project-settings
+                                        force-settings)
         _ (when-let [log-path (:log-path raw-settings)]
             (logging/update-log-path log-path db))
         settings (-> raw-settings

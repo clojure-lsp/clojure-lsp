@@ -70,14 +70,14 @@
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]
-    (alter-var-root #'*clojure-lsp-process* (constantly (p/process [clojure-lsp-binary])))
+    (alter-var-root #'*clojure-lsp-process* (constantly (p/process [(.getCanonicalPath (io/file clojure-lsp-binary))] {:dir "integration-test/sample-test/"})))
     (alter-var-root #'*stdin* (constantly (io/writer (:in *clojure-lsp-process*))))
     (alter-var-root #'*stdout* (constantly (io/reader (:out *clojure-lsp-process*))))
     (alter-var-root #'*clojure-lsp-listener* (constantly (listen-output!)))))
 
 (defn cli! [& args]
   (let [clojure-lsp-binary (first *command-line-args*)]
-    (alter-var-root #'*clojure-lsp-process* (constantly (p/process (into [clojure-lsp-binary] args))))
+    (alter-var-root #'*clojure-lsp-process* (constantly (p/process (into [(.getCanonicalPath (io/file clojure-lsp-binary))] args) {:dir "integration-test/sample-test/"})))
     (io/reader (:out *clojure-lsp-process*))))
 
 (defn clean! []

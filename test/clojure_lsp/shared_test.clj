@@ -42,6 +42,29 @@
     (is (= (when h/windows? "file:///c:/c.clj")
            (when h/windows? (shared/filename->uri "c:\\c.clj" db/db))))))
 
+(deftest uri->namespace
+  (testing "when don't have a project root"
+    (reset! db/db {})
+    (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
+  (testing "when it has a project root and not a source-path"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{(h/file-uri "file:///user/project/bla")}}
+                        :project-root-uri (h/file-uri "file:///user/project")})
+    (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
+  (testing "when it has a project root and a source-path"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{(h/file-path "/user/project/src")}}
+                        :project-root-uri (h/file-uri "file:///user/project")})
+    (is (= "foo.bar"
+           (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
+  (testing "when it has a project root a source-path on mono repos"
+    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+                                   :source-paths #{(h/file-path "/user/project/src/clj")
+                                                   (h/file-path "/user/project/src/cljs")}}
+                        :project-root-uri (h/file-uri "file:///user/project")})
+    (is (= "foo.bar"
+           (shared/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") db/db)))))
+
 (deftest conform-uri
   (testing "lower case drive letter and encode colons"
     (is (= "file:///c%3A/path"

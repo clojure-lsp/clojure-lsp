@@ -128,6 +128,13 @@
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
            (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
+  (testing "when linter level is not :off but has matching :ns-exclude-regex"
+    (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/a.clj"))
+    (swap! db/db merge {:project-root-uri (h/file-uri "file:///project")
+                        :settings {:source-paths ["/project/src"]
+                                   :linters {:clj-kondo {:ns-exclude-regex "a.*"}}}})
+    (is (= []
+           (#'f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/a.clj") db/db))))
   (testing "when linter level is not :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :error}}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}

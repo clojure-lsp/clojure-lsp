@@ -20,23 +20,6 @@
 (defn ^:private update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
-(defn ^:private uri->namespace [uri db]
-  (let [project-root-uri (:project-root-uri @db)
-        source-paths (get-in @db [:settings :source-paths])
-        in-project? (when project-root-uri
-                      (string/starts-with? uri project-root-uri))
-        file-type (shared/uri->file-type uri)
-        filename (shared/uri->filename uri)]
-    (when (and in-project? (not= :unknown file-type))
-      (->> source-paths
-           (some (fn [source-path]
-                   (when (string/starts-with? filename source-path)
-                     (some-> (shared/relativize-filepath filename source-path)
-                             (->> (re-find #"^(.+)\.\S+$"))
-                             (nth 1)
-                             (string/replace (System/getProperty "file.separator") ".")
-                             (string/replace #"_" "-")))))))))
-
 (defn did-open [uri text db]
   (let [settings (get @db :settings {})]
     (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
@@ -49,7 +32,7 @@
       (f.diagnostic/async-lint-file! uri db))
     (when-let [new-ns (and (string/blank? text)
                            (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
-                           (uri->namespace uri db))]
+                           (shared/uri->namespace uri db))]
       (when (get settings :auto-add-ns-to-new-files? true)
         (let [new-text (format "(ns %s)" new-ns)
               changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
@@ -94,11 +77,11 @@
           changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
           definitions-filenames (->> changed-var-usages
                                      (map #(q/find-definition project-analysis %))
+                                     (remove nil?)
                                      (filter (fn [d]
                                                (and (not (:private d))
                                                     (some #(string/starts-with? (:filename d) %) source-paths))))
-                                     (map :filename)
-                                     (remove nil?))
+                                     (map :filename))
           filenames (->> definitions-filenames
                          (concat references-filenames)
                          (remove #(= filename %))

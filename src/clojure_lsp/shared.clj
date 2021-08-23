@@ -180,6 +180,28 @@
                           (str "." (name file-type))))
       db)))
 
+(defn uri->namespace
+  ([uri db]
+   (uri->namespace uri (uri->filename uri) db))
+  ([uri filename db]
+   (let [project-root-uri (:project-root-uri @db)
+         source-paths (get-in @db [:settings :source-paths])
+         in-project? (when project-root-uri
+                       (string/starts-with? uri project-root-uri))
+         file-type (uri->file-type uri)]
+     (when (and in-project? (not= :unknown file-type))
+       (->> source-paths
+            (some (fn [source-path]
+                    (when (string/starts-with? filename source-path)
+                      (some-> (relativize-filepath filename source-path)
+                              (->> (re-find #"^(.+)\.\S+$"))
+                              (nth 1)
+                              (string/replace (System/getProperty "file.separator") ".")
+                              (string/replace #"_" "-"))))))))))
+
+(defn filename->namespace [filename db]
+  (uri->namespace (filename->uri filename db) filename db))
+
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
     {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}

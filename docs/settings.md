@@ -74,7 +74,8 @@ Default:
 
 ```clojure
 {:clj-kondo {:level :on
-             :report-duplicates true}}
+             :report-duplicates true
+             :ns-exclude-regex ""}}
 ```
 
 #### clj-kondo
@@ -90,13 +91,15 @@ It has the possible key/values:
 
 - `:level` with available values: `:off`, `:on` with default value of `:on`
 - `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true`
+- `ns-exclude-regex` which will exclude the diagnostics/findings for namespaces that match this regex.
 
 Example:
 
 `.lsp/config.edn`
 ```clojure
 {:linters {:clj-kondo {:level :on
-                       :report-duplicates true}}}
+                       :report-duplicates true
+                       :ns-exclude-regex "some-ns.*"}}}
 ```
 
 <details>

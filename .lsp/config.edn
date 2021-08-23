@@ -1,4 +1,5 @@
 {:cljfmt {:indents {#re ".*" [[:block 0]]
                     are [[:inner 0]]}}
  :clean {:ns-inner-blocks-indentation :next-line}
+ :linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
  :use-metadata-for-privacy? true}

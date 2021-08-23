@@ -19,29 +19,6 @@
   (is (= "\n\n (let [a 1\n   b 2]\n   (+ 1 2))\n" (#'f.file-management/replace-text "\n\n (+ 1 2)\n" "(let [a 1\n   b 2]\n   (+ 1 2))" 2 1 2 8)))
   (is (= "(+ 1 1)\n\n" (#'f.file-management/replace-text "(+ 1 1)\n" "\n" 1 0 1 0))))
 
-(deftest uri->namespace
-  (testing "when don't have a project root"
-    (reset! db/db {})
-    (is (nil? (#'f.file-management/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
-  (testing "when it has a project root and not a source-path"
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{(h/file-uri "file:///user/project/bla")}}
-                        :project-root-uri (h/file-uri "file:///user/project")})
-    (is (nil? (#'f.file-management/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
-  (testing "when it has a project root and a source-path"
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{(h/file-path "/user/project/src")}}
-                        :project-root-uri (h/file-uri "file:///user/project")})
-    (is (= "foo.bar"
-           (#'f.file-management/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
-  (testing "when it has a project root a source-path on mono repos"
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{(h/file-path "/user/project/src/clj")
-                                                   (h/file-path "/user/project/src/cljs")}}
-                        :project-root-uri (h/file-uri "file:///user/project")})
-    (is (= "foo.bar"
-           (#'f.file-management/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") db/db)))))
-
 (deftest did-close
   (h/load-code-and-locs "(ns foo) a b c")
   (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///b.clj"))

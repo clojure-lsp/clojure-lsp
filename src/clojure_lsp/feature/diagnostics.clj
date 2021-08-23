@@ -83,18 +83,24 @@
   (or (and row col)
       (log/warn "Invalid clj-kondo finding. Cannot find position data for" finding)))
 
-(defn ^:private kondo-findings->diagnostics [filename findings]
-  (->> (get findings filename)
-       (filter #(= filename (:filename %)))
-       (filter valid-finding?)
-       (mapv kondo-finding->diagnostic)))
+(defn ^:private exclude-ns? [filename linter db]
+  (when-let [namespace (shared/filename->namespace filename db)]
+    (when-let [ns-exclude-regex-str (get-in @db [:settings :linters linter :ns-exclude-regex])]
+      (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
+
+(defn ^:private kondo-findings->diagnostics [filename linter db]
+  (when-not (exclude-ns? filename linter db)
+    (->> (get (:findings @db) filename)
+         (filter #(= filename (:filename %)))
+         (filter valid-finding?)
+         (mapv kondo-finding->diagnostic))))
 
 (defn ^:private find-diagnostics [uri db]
   (let [settings (:settings @db)
         filename (shared/uri->filename uri)]
     (cond-> []
       (not (= :off (get-in settings [:linters :clj-kondo :level])))
-      (concat (kondo-findings->diagnostics filename (:findings @db))))))
+      (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 
 (defn sync-lint-file! [uri db]
   (async/>!! db/diagnostics-chan

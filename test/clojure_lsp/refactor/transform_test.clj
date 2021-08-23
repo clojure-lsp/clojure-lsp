@@ -758,6 +758,39 @@
                            "B")
                      true
                      "file:///a.cljc"))
+    (testing "remove single unused import inside splicing reader conditional"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [java.util Calendar]"
+                           "  #?@(:clj [(java.time DateTime)
+                                        (java.io File)])"
+                           "  #?@(:clj [(java.util Date)])))"
+                           "#?(:clj (do Calendar))")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [java.util Calendar]))"
+                           "#?(:clj (do Calendar))")
+                     true
+                     "file:///a.cljc"))
+    (testing "only used import in specific lang for splicing reader conditional"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [java.util Calendar]"
+                           "  #?@(:clj [(java.time DateTime)
+                                        (java.io File)])"
+                           "  #?@(:clj [(java.util Date)])))"
+                           "#?(:clj (do Calendar Date DateTime)) File")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  [java.util Calendar]"
+                           "  #?@(:clj [(java.time DateTime)
+                                        (java.io File)])"
+                           "  #?@(:clj [(java.util Date)])))"
+                           "#?(:clj (do Calendar Date DateTime)) File")
+                     true
+                     "file:///a.cljc"))
     (testing "only used required alias in specific lang"
       (test-clean-ns {}
                      (code "(ns foo.bar"

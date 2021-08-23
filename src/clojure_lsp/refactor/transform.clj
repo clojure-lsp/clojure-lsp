@@ -303,9 +303,12 @@
 (defn ^:private remove-empty-reader-conditional
   [new-node]
   (let [reader-macro? (= :reader-macro (some-> new-node z/up z/up z/tag))
-        empty-reader-macro? (when reader-macro?
-                              (<= (-> new-node z/up z/sexpr count) 1))]
-    (if empty-reader-macro?
+        empty-reader-conditional? (when reader-macro?
+                              (or (<= (-> new-node z/up z/sexpr count) 1)
+                                  (and (or (= :vector (z/tag new-node))
+                                           (= :list (z/tag new-node)))
+                                       (-> new-node z/sexpr empty?))))]
+    (if empty-reader-conditional?
       (-> new-node
           z/up
           z/up
@@ -430,8 +433,10 @@
 
 (defn ^:private package-import?
   [node]
-  (or (z/vector? node)
-      (z/list? node)))
+  (and (or (z/vector? node)
+           (z/list? node))
+       (not (or (z/vector? (z/next node))
+                (z/list? (z/next node))))))
 
 (defn ^:private remove-unused-package-import
   [node base-package unused-imports]
@@ -750,12 +755,12 @@
                       (z/append-child expr-node))]
     [{:loc defn-edit
       :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+               :end-row form-row
+               :end-col form-col)}
      {:loc (z/of-string "\n\n")
       :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+               :end-row form-row
+               :end-col form-col)}
      {:loc expr-edit
       :range expr-meta}]))
 
@@ -862,9 +867,9 @@
 
       [{:loc defn-edit
         :range (assoc form-pos
-                      :end-row form-row
-                      :end-col form-col)}
+                 :end-row form-row
+                 :end-col form-col)}
        {:loc (z/of-string "\n\n")
         :range (assoc form-pos
-                      :end-row form-row
-                      :end-col form-col)}])))
+                 :end-row form-row
+                 :end-col form-col)}])))

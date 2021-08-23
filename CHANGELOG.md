@@ -4,7 +4,7 @@
 
 - General
   - Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
-  - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)`) after cleaning requires/imports.
+  - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)` or `#?@(:clj [])` on ns form) after cleaning requires/imports.
   - Fix `clean-ns` false-positives removals to cljc files when the alias/refer/import is being used inside a reader conditional.
   - Add new setting `:linters :clj-kondo :ns-exclude-regex` which allows exclude diagnostics/findings for namespaces matching that regex.
   - Fix merge of configs resolved for projects with multiple configurations in parent folders and subprojects.

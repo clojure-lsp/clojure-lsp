@@ -58,7 +58,7 @@ jobs:
           git config --global user.name "Clojure LSP Bot"
           git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
           mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/homebrew-brew.git
           cd homebrew-brew
           bb -o render.clj --version "${{ env.VERSION }}" --mac-sha "${{ env.MAC_SHA256 }}" --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
@@ -84,7 +84,7 @@ jobs:
           git config --global user.name "Clojure LSP Bot"
           git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
           mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/setup-clojure-lsp.git
           cd setup-clojure-lsp
           sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
@@ -112,7 +112,7 @@ jobs:
           git config --global user.name "Clojure LSP Bot"
           git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
           mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
           cd lein-clojure-lsp
           bb tag-patch-for-version "${{ env.VERSION }}"

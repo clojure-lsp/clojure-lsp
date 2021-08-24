@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.08.24-14.41.56
+
 - General
   - Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
   - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)` or `#?@(:clj [])` on ns form) after cleaning requires/imports.

@@ -2,7 +2,7 @@ name: Bump downstreams
 
 on:
   workflow_run:
-    workflows: ["Foo"]
+    workflows: ["Release"]
     types:
       - completed
 
@@ -14,11 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # - uses: jlesquembre/clojars-publish-action@0.4
-      #   env:
-      #     USE_GIT_REF: false
-      #     CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
-      #     CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+      - uses: jlesquembre/clojars-publish-action@0.4
+        env:
+          USE_GIT_REF: false
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
 
   bump-homebrew-formula:
     name: Bump Homebrew formula
@@ -65,7 +65,7 @@ jobs:
           cat clojure-lsp-native.rb
           git add .
           git commit -m "Bump to version: ${{ env.VERSION }}"
-          # git push
+          git push
 
   bump-setup-clojure-lsp:
     name: Bump setup-clojure-lsp Github Action
@@ -90,7 +90,7 @@ jobs:
           sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
           git add README.md .github/workflows/self_check.yml .github/workflows/main.yml
           git commit -m "Bump to version: ${{ env.VERSION }}"
-          # git push
+          git push
 
   bump-lein-clojure-lsp:
     name: Bump lein-clojure-lsp
@@ -115,4 +115,4 @@ jobs:
           sed -i 's/com\.github\.clojure-lsp\/clojure-lsp ".*"/com\.github\.clojure-lsp\/clojure-lsp "${{ env.VERSION }}"/g' project.clj
           git add project.clj
           git commit -m "Bump to version: ${{ env.VERSION }}"
-          # git push
+          git push

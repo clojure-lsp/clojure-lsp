@@ -102,6 +102,9 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
       - name: Update version in files
         env:
           VERSION: ${{ steps.latest-tag.outputs.tag }}
@@ -112,4 +115,4 @@ jobs:
           echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
           cd lein-clojure-lsp
-          make tag-patch-for-version "${{ env.VERSION }}"
+          bb tag-patch-for-version "${{ env.VERSION }}"

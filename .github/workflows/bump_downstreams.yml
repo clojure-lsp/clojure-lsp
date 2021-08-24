@@ -14,11 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: jlesquembre/clojars-publish-action@0.4
-        env:
-          USE_GIT_REF: false
-          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
-          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+      # - uses: jlesquembre/clojars-publish-action@0.4
+      #   env:
+      #     USE_GIT_REF: false
+      #     CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+      #     CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
 
   bump-homebrew-formula:
     name: Bump Homebrew formula
@@ -33,7 +33,7 @@ jobs:
       - name: Download artifacts
         uses: dawidd6/action-download-artifact@v2
         with:
-          workflow: 'Release'
+          workflow: release.yml
           workflow_conclusion: success
 
       - name: Get new version sha256
@@ -112,7 +112,6 @@ jobs:
           echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
           cd lein-clojure-lsp
-          sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
           sed -i 's/com\.github\.clojure-lsp\/clojure-lsp ".*"/com\.github\.clojure-lsp\/clojure-lsp "${{ env.VERSION }}"/g' project.clj
           git add project.clj
           git commit -m "Bump to version: ${{ env.VERSION }}"

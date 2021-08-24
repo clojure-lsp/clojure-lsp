@@ -9,6 +9,9 @@
   - Add new setting `:linters :clj-kondo :ns-exclude-regex` which allows exclude diagnostics/findings for namespaces matching that regex.
   - Fix merge of configs resolved for projects with multiple configurations in parent folders and subprojects.
 
+- Docs
+  - Improved the settings docs with a new link to a file with all available clojure-lsp settings.
+
 ## 2021.08.16-19.02.30
 
 - Fix `clojure-lsp --version`

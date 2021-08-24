@@ -112,7 +112,4 @@ jobs:
           echo "${{ secrets.CLOJURE_LSP_BOT_BREW_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
           cd lein-clojure-lsp
-          sed -i 's/com\.github\.clojure-lsp\/clojure-lsp ".*"/com\.github\.clojure-lsp\/clojure-lsp "${{ env.VERSION }}"/g' project.clj
-          git add project.clj
-          git commit -m "Bump to version: ${{ env.VERSION }}"
-          git push
+          make tag-patch-for-version "${{ env.VERSION }}"

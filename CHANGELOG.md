@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Improve logging during startup for better troubleshooting.
+
 ## 2021.08.24-14.41.56
 
 - General

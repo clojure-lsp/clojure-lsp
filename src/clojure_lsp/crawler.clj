@@ -26,10 +26,10 @@
                                                          env (conj :env (merge {} (System/getenv) env)))))]
       (if (= 0 exit)
         (let [paths (-> out
-                         string/split-lines
-                         last
-                         string/trim-newline
-                         (string/split sep))]
+                        string/split-lines
+                        last
+                        string/trim-newline
+                        (string/split sep))]
           (log/debug "Classpath found, paths: " paths)
           paths)
         (do
@@ -73,23 +73,32 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-paths! [paths public-only? db]
+(defn ^:private analyze-source-paths! [paths db]
   (let [start-time (System/nanoTime)
-        result (if public-only?
-                 (lsp.kondo/run-kondo-on-paths-batch! paths true db)
-                 (lsp.kondo/run-kondo-on-paths! paths false db))
+        result (lsp.kondo/run-kondo-on-paths! paths false db)
         end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
-        _ (log/info "Paths analyzed, took" end-time "secs. Caching for next startups...")
-        kondo-analysis (cond-> (:analysis result)
-                         public-only? (dissoc :namespace-usages :var-usages)
-                         public-only? (update :var-definitions (fn [usages] (remove :private usages))))
+        _ (log/info "Project only paths analyzed, took" end-time "secs.")
+        analysis (->> (:analysis result)
+                      lsp.kondo/normalize-analysis
+                      (group-by :filename))]
+    (swap! db update :analysis merge analysis)
+    (swap! db assoc :kondo-config (:config result))
+    (swap! db update :findings merge (group-by :filename (:findings result)))
+    analysis))
+
+(defn ^:private analyze-external-classpath! [paths db]
+  (let [start-time (System/nanoTime)
+        result (lsp.kondo/run-kondo-on-paths-batch! paths true db)
+        end-time (float (/ (- (System/nanoTime) start-time) 1000000000))
+        _ (log/info "External classpath paths analyzed, took" end-time "secs. Caching for next startups...")
+        kondo-analysis (-> (:analysis result)
+                           (dissoc :namespace-usages :var-usages)
+                           (update :var-definitions (fn [usages] (remove :private usages))))
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
     (swap! db update :analysis merge analysis)
     (swap! db assoc :kondo-config (:config result))
-    (when-not public-only?
-      (swap! db update :findings merge (group-by :filename (:findings result))))
     analysis))
 
 (defn analyze-reference-filenames! [filenames db]
@@ -120,23 +129,14 @@
                                 (mapcat #(lookup-classpath root-path % db))
                                 vec
                                 seq)]
-        (log/info "Analyzing classpath for project root" root-path)
-        (let [adjusted-cp (cond->> classpath
-                            ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
-                            :always (remove (set source-paths)))
-              analysis (analyze-paths! adjusted-cp true db)
+        (let [external-classpath (cond->> classpath
+                                   ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
+                                   :always (remove (set source-paths)))
+              analysis (analyze-external-classpath! external-classpath db)
               start-time (System/nanoTime)]
           (System/gc)
           (log/info "Manual GC after classpath scan took" (float (/ (- (System/nanoTime) start-time) 1000000000)) "seconds")
           (db/save-deps! root-path project-hash classpath analysis db))))))
-
-(defn ^:private analyze-project! [project-root-uri db]
-  (let [root-path (shared/uri->path project-root-uri)
-        settings (:settings @db)
-        source-paths (:source-paths settings)]
-    (analyze-classpath! root-path source-paths settings db)
-    (log/info "Analyzing source paths for project root" root-path)
-    (analyze-paths! source-paths false db)))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
   (let [project-settings (config/resolve-config project-root-uri)
@@ -162,5 +162,7 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (log/info "Analyzing project root:" project-root-uri)
-    (analyze-project! project-root-uri db)))
+    (log/info "Analyzing classpath for project root" root-path)
+    (analyze-classpath! root-path (:source-paths settings) settings db)
+    (log/info "Analyzing source paths for project root" root-path)
+    (analyze-source-paths! (:source-paths settings) db)))

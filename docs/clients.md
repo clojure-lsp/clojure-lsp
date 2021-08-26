@@ -7,6 +7,16 @@ In general, make sure to configure the client to use stdio and a server launch c
 If that fails, you may need to have your client launch inside a shell, so use something like `['bash', '-c', '/usr/local/bin/clojure-lsp']`.
 In windows you probably need to use the `clojure-lsp.bat`.
 
+**TIP**: If your editor is not started from the terminal then it is possible that its `$PATH` is quite different from the one in the shell and clojure-lsp will not be able to find the executables it needs, such as `clojure` and `npx`. To alleviate that, create a wrapper script that sets the `PATH` correctly. Make sure that nothing in the script uses stdin / stdout as these are used for communication with the editor and any extra input/output could mess it up. An example script (also remember to make it executable, e.g. `chmod u+x <script>`):
+
+```bash
+#!/bin/bash -l
+if [ ! -e npx ]; then
+  export PATH=$PATH:/Users/me/.nvm/versions/node/v10.24.1/bin
+fi
+exec /usr/local/bin/clojure-lsp
+```
+
 ---
 
 ## Emacs
@@ -122,6 +132,8 @@ Install the [LSP Support plugin](https://github.com/gtache/intellij-lsp) and con
 1. Go to Preferences / Languages & Frameworks / Language Server Protocol / Server Definitions. Select *Raw command*.
 2. In the *Extension* field enter `clj;cljs;cljc;edn`.
 3. In the *Command* field enter the path to the executable, for instance `/usr/local/bin/clojure-lsp`.
+
+BEWARE: The LSP Support plugin has short timeouts and will kill clojure-lsp silently if it exceeds the limit. It is highly recommended that you increase the *Init* timeout from 10000 (10s) to e.g. 300000 (5 min). The first scan can easily take over a minute on a bigger project. See Preferences / Languages & Frameworks / Language Server Protocol / Timeouts. If the plugin's icon in the status bar (a circle) turns red, it means starting clojure-lsp failed. Click on it and select *Show timeouts* - any limits that were exceeded will be in red.
 
 ---
 

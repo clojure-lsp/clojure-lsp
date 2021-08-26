@@ -725,7 +725,12 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <p>Clojure LSP can be installed by first installing the <a href="https://packagecontrol.io/packages/LSP">LSP plugin</a> which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions <a href="https://lsp.sublimetext.io/language_servers/#clojure">here</a> to download Clojure LSP and how to configure it in Sublime Text.</p>
 <hr />
 <h2 id="intellij">Intellij<a class="headerlink" href="#intellij" title="Permanent link">#</a></h2>
-<p>https://github.com/gtache/intellij-lsp tested only briefly.</p>
+<p>Install the <a href="https://github.com/gtache/intellij-lsp">LSP Support plugin</a> and configure it to launch clojure-lsp for Clojure/Script files:</p>
+<ol>
+<li>Go to Preferences / Languages &amp; Frameworks / Language Server Protocol / Server Definitions. Select <em>Raw command</em>.</li>
+<li>In the <em>Extension</em> field enter <code>clj;cljs;cljc;edn</code>.</li>
+<li>In the <em>Command</em> field enter the path to the executable, for instance <code>/usr/local/bin/clojure-lsp</code>.</li>
+</ol>
 <hr />
 <h2 id="oni">Oni<a class="headerlink" href="#oni" title="Permanent link">#</a></h2>
 <p>Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni</p>
@@ -740,7 +745,7 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 24, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 26, 2021</span>
     
   </small>
 </div>

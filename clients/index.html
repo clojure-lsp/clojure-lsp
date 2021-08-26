@@ -648,6 +648,13 @@
 <p>In general, make sure to configure the client to use stdio and a server launch command like <code>['/usr/local/bin/clojure-lsp']</code>.
 If that fails, you may need to have your client launch inside a shell, so use something like <code>['bash', '-c', '/usr/local/bin/clojure-lsp']</code>.
 In windows you probably need to use the <code>clojure-lsp.bat</code>.</p>
+<p><strong>TIP</strong>: If your editor is not started from the terminal then it is possible that its <code>$PATH</code> is quite different from the one in the shell and clojure-lsp will not be able to find the executables it needs, such as <code>clojure</code> and <code>npx</code>. To alleviate that, create a wrapper script that sets the <code>PATH</code> correctly. Make sure that nothing in the script uses stdin / stdout as these are used for communication with the editor and any extra input/output could mess it up. An example script (also remember to make it executable, e.g. <code>chmod u+x &lt;script&gt;</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash -l</span>
+<span class="k">if</span> <span class="o">[</span> ! -e npx <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:/Users/me/.nvm/versions/node/v10.24.1/bin
+<span class="k">fi</span>
+<span class="nb">exec</span> /usr/local/bin/clojure-lsp
+</code></pre></div>
 <hr />
 <h2 id="emacs">Emacs<a class="headerlink" href="#emacs" title="Permanent link">#</a></h2>
 <p><a href="https://emacs-lsp.github.io/lsp-mode">lsp-mode</a> has built in support for <code>clojure-lsp</code>. With <code>use-package</code>, add the following to your emacs config:</p>
@@ -731,6 +738,7 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <li>In the <em>Extension</em> field enter <code>clj;cljs;cljc;edn</code>.</li>
 <li>In the <em>Command</em> field enter the path to the executable, for instance <code>/usr/local/bin/clojure-lsp</code>.</li>
 </ol>
+<p>BEWARE: The LSP Support plugin has short timeouts and will kill clojure-lsp silently if it exceeds the limit. It is highly recommended that you increase the <em>Init</em> timeout from 10000 (10s) to e.g. 300000 (5 min). The first scan can easily take over a minute on a bigger project. See Preferences / Languages &amp; Frameworks / Language Server Protocol / Timeouts. If the plugin's icon in the status bar (a circle) turns red, it means starting clojure-lsp failed. Click on it and select <em>Show timeouts</em> - any limits that were exceeded will be in red.</p>
 <hr />
 <h2 id="oni">Oni<a class="headerlink" href="#oni" title="Permanent link">#</a></h2>
 <p>Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni</p>

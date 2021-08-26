@@ -29,7 +29,7 @@
                       :exec-args {:dry? true}}
            :format {:exec-fn clojure-lsp.api/format!
                     :exec-args {:dry? true}}
-           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.0.1"}}
+           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
                     :exec-fn americano.cli/javac
                     :exec-args {:source-paths ["src-java"]}}
            :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.278"}}

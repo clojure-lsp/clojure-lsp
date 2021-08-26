@@ -162,4 +162,5 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
+    (log/info "Analyzing project root:" project-root-uri)
     (analyze-project! project-root-uri db)))

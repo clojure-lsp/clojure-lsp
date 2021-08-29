@@ -1,4 +1,5 @@
 (ns clojure-lsp.main
+  (:refer-clojure :exclude [run!])
   (:require
    borkdude.dynaload
    [clojure-lsp.config :as config]
@@ -117,20 +118,27 @@
 (defn ^:private handle-action!
   [action options]
   (if (= "listen" action)
-    (with-out-str (server/run-server!))
-    (let [result
-          (case action
-            "clean-ns" (internal-api/clean-ns! options)
-            "format" (internal-api/format! options)
-            "rename" (with-required-options
-                       options
-                       [:from :to]
-                       internal-api/rename!))]
-      (exit (:result-code result) (:message result)))))
+    (do
+      (with-out-str (server/run-server!))
+      {:exit-code 0})
+    (case action
+      "clean-ns" (internal-api/clean-ns! options)
+      "format" (internal-api/format! options)
+      "rename" (with-required-options
+                 options
+                 [:from :to]
+                 internal-api/rename!))))
 
-(defn -main [& args]
+(defn run!
+  "Entrypoint for clojure-lsp CLI, Use `clojure-lsp.api` for a better API usage."
+  [& args]
   (logging/setup-logging db/db)
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
-      (exit (if ok? 0 1) exit-message)
+      {:result-code (if ok? 0 1)
+       :message exit-message}
       (handle-action! action options))))
+
+(defn -main [& args]
+  (let [{:keys [result-code message]} (apply run! args)]
+    (exit result-code message)))

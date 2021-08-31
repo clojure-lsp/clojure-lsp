@@ -56,26 +56,27 @@
 
 (defn ^:private project-custom-lint!
   [paths db {:keys [analysis] :as kondo-ctx}]
-  (let [start-time (System/nanoTime)
-        new-analysis (group-by :filename (normalize-analysis analysis))]
+  (let [new-analysis (group-by :filename (normalize-analysis analysis))]
     (if (:api? @db)
       (do
         (log/info (format "Starting to lint whole project files..."))
-        (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx)
-        (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000))))
+        (shared/logging-time
+          "Linting whole project files took %s secs"
+          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx)))
       (when (get-in @db [:settings :lint-project-files-after-startup?] true)
         (async/go
-          (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)
-          (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))))
+          (shared/logging-time
+            "Linting whole project files took %s secs"
+            (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)))))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]
-  (let [start-time (System/nanoTime)
-        new-analysis (group-by :filename (normalize-analysis analysis))
-        updated-analysis (merge (:analysis @db) new-analysis)]
-    (doseq [file files]
-      (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx))
-    (log/info (format "Linting references took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))
+  (shared/logging-time
+    "Linting references took %s secs"
+    (let [new-analysis (group-by :filename (normalize-analysis analysis))
+          updated-analysis (merge (:analysis @db) new-analysis)]
+      (doseq [file files]
+        (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx)))))
 
 (defn ^:private single-file-custom-lint!
   [{:keys [analysis] :as kondo-ctx} db]

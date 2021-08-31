@@ -10,6 +10,18 @@
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]))
 
+(defn start-time->end-time-seconds [start-time]
+  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
+
+(defmacro logging-time
+  "Executes `body` logging `message` formatted with the time spent
+  from body."
+  [message & body]
+  `(let [~'start-time (System/nanoTime)
+         ~'result ~@body]
+     (log/info (format ~message (start-time->end-time-seconds ~'start-time)))
+     ~'result))
+
 (defn file-exists? [^java.io.File f]
   (.exists f))
 

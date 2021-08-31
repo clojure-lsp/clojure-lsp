@@ -14,15 +14,6 @@ on:
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_homebrew.yml'
   pull_request:
-    paths-ignore:
-      - '**/README.md'
-      - '**/CHANGELOG.md'
-      - 'resources/CLOJURE_LSP_VERSION'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
-      - '.github/workflows/bump_homebrew.yml'
 
 jobs:
   lint:
@@ -43,6 +34,9 @@ jobs:
 
       - name: Check if namespaces are formatted
         run: make lint-format
+
+      - name: Check if namespaces are formatted
+        run: make lint-diagnostics
 
   unit-test:
     runs-on: ubuntu-latest

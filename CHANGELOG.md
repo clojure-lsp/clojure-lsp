@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- API/CLI
+  - New `diagnostics` command, which return all diagnostics found by clojure-lsp (using clj-kondo). Check the API section for more details.
+
 ## 2021.09.03-00.42.46
 
 - General

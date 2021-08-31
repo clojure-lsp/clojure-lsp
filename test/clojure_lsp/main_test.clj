@@ -37,6 +37,12 @@
       (is (= "foo" (str (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "foo"]))))))
       (is (= nil (:ns-exclude-regex (:options (#'main/parse [])))))
       (is (= nil (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "*invalid-regex*"]))))))
+    (testing "output"
+      (is (= nil (:output (:options (#'main/parse [])))))
+      (is (= 1 (:output (:options (#'main/parse ["--output" "1"])))))
+      (is (= {} (:output (:options (#'main/parse ["-o" "{}"])))))
+      (is (= nil (:output (:options (#'main/parse ["-o" "}"])))))
+      (is (= {:a {:b 1} :c 2} (:output (:options (#'main/parse ["-o" "{:a {:b 1} :c 2}"]))))))
     (testing "from"
       (is (= nil (:from (:options (#'main/parse [])))))
       (is (= nil (:from (:options (#'main/parse ["--from" "abc"])))))

@@ -5,6 +5,9 @@
 - General
   - Improve logging during startup for better troubleshooting.
   - Refactor allowing calls to `clojure-lsp.main/run!` for manually passing args, useful for `lein-clojure-lsp` for example.
+  
+- API/CLI
+  - Use clj-kondo custom lint for API as well, required for correct diagnostics API feature. 
 
 ## 2021.08.24-14.41.56
 

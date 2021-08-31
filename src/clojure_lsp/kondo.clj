@@ -56,12 +56,17 @@
 
 (defn ^:private project-custom-lint!
   [paths db {:keys [analysis] :as kondo-ctx}]
-  (when (get-in @db [:settings :lint-project-files-after-startup?] true)
-    (async/go
-      (let [start-time (System/nanoTime)
-            new-analysis (group-by :filename (normalize-analysis analysis))]
-        (f.diagnostic/lint-project-diagnostics! paths new-analysis kondo-ctx db)
-        (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
+  (let [start-time (System/nanoTime)
+        new-analysis (group-by :filename (normalize-analysis analysis))]
+    (if (:api? @db)
+      (do
+        (log/info (format "Starting to lint whole project files..."))
+        (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx)
+        (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000))))
+      (when (get-in @db [:settings :lint-project-files-after-startup?] true)
+        (async/go
+          (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)
+          (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000))))))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]

@@ -47,6 +47,7 @@
              (recur)))))))
 
 (defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
+  (swap! db/db assoc :api? true)
   (when verbose
     (logging/set-log-to-stdout))
   (when-not (:analysis @db/db)

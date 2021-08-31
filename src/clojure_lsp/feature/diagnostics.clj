@@ -140,6 +140,12 @@
          (group-by :filename))))
 
 (defn lint-project-diagnostics!
+  [new-analysis kondo-ctx]
+  (let [project-analysis (q/filter-project-analysis new-analysis)
+        var-definitions (q/find-all-var-definitions project-analysis)]
+    (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)))
+
+(defn lint-and-publish-project-diagnostics!
   [paths new-analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis new-analysis)
         var-definitions (q/find-all-var-definitions project-analysis)

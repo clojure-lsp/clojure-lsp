@@ -5,6 +5,7 @@
 - General
   - Improve logging during startup for better troubleshooting.
   - Refactor allowing calls to `clojure-lsp.main/run!` for manually passing args, useful for `lein-clojure-lsp` for example.
+  - Internal: Move graalvm configuration to sqlite-jdbc.
   
 - API/CLI
   - Use clj-kondo custom lint for API as well, required for correct diagnostics API feature. 

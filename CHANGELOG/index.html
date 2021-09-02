@@ -1544,12 +1544,18 @@
 <li>Refactor allowing calls to <code>clojure-lsp.main/run!</code> for manually passing args, useful for <code>lein-clojure-lsp</code> for example.</li>
 <li>Internal: Move graalvm configuration to sqlite-jdbc.</li>
 <li>
-<p>Recognize <code>deftest</code> as function definition form</p>
+<p>Recognize <code>deftest</code> as function definition form for refactoring features like <code>extract-function</code>.</p>
 </li>
 <li>
 <p>API/CLI</p>
 </li>
-<li>Use clj-kondo custom lint for API as well, required for correct diagnostics API feature. </li>
+<li>
+<p>Use clj-kondo custom lint for API as well, required for correct diagnostics API feature. </p>
+</li>
+<li>
+<p>Editor</p>
+</li>
+<li>Fix regression, custom <code>source-paths</code> from initializationOptions were not being parsed correctly. #537</li>
 </ul>
 <h2 id="20210824-144156">2021.08.24-14.41.56<a class="headerlink" href="#20210824-144156" title="Permanent link">#</a></h2>
 <ul>

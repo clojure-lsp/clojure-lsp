@@ -22,10 +22,21 @@
   (is (nil? (interop/kwd-string [])))
   (is (nil? (interop/kwd-string nil))))
 
-(deftest clean-keyword-strings-test
-  (is (nil? (interop/clean-keyword-strings [])))
+(deftest parse-source-paths-test
+  (is (nil? (interop/parse-source-paths [])))
+  (is (nil? (interop/parse-source-paths [:foo])))
+  (is (= #{"foo"} (interop/parse-source-paths ["foo" :bar])))
+  (doseq [f ["foo" ":foo"]
+          b ["bar" ":bar"]]
+    (is (= #{"foo" "bar"} (interop/parse-source-paths [f b]))))
+  (doseq [b [:bar 'bar 1 [] nil]]
+    (is (= #{"foo"} (interop/parse-source-paths ["foo" b])))))
+
+(deftest parse-source-aliases-test
+  (is (nil? (interop/parse-source-aliases [])))
+  (is (nil? (interop/parse-source-aliases ['bar])))
   (doseq [f [:foo "foo" ":foo"]
           b [:bar "bar" ":bar"]]
-    (is (= #{:foo :bar} (interop/clean-keyword-strings [f b]))))
+    (is (= #{:foo :bar} (interop/parse-source-aliases [f b]))))
   (doseq [b ['bar 1 [] nil]]
-    (is (= #{:foo} (interop/clean-keyword-strings [:foo b])))))
+    (is (= #{:foo} (interop/parse-source-aliases [:foo b])))))

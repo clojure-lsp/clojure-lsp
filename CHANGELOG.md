@@ -7,6 +7,7 @@
   - Refactor allowing calls to `clojure-lsp.main/run!` for manually passing args, useful for `lein-clojure-lsp` for example.
   - Internal: Move graalvm configuration to sqlite-jdbc.
   - Recognize `deftest` as function definition form for refactoring features like `extract-function`.
+  - Bump Graalvm from 21.1.0 to 21.2.0
   
 - API/CLI
   - Use clj-kondo custom lint for API as well, required for correct diagnostics API feature. 

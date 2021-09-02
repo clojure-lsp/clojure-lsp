@@ -56,6 +56,8 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 
 You can help us keep going and improving it by **[supporting the project](https://github.com/sponsors/clojure-lsp)**
 
+:rocket: Thank you to [Clojurists Together](https://www.clojuriststogether.org/) which is [sponsoring this project during Q3 2021](https://www.clojuriststogether.org/news/q3-2021-funding-announcement/) :rocket:
+
 ### Gold sponsors
 
 <table id="github-sponsors">

@@ -31,7 +31,17 @@
       :else (recur (z/leftmost (z/up op-loc))))))
 
 (def function-definition-symbols
-  '#{defn defn- def defmacro defmulti defonce deftype defrecord s/def s/defn})
+  '#{defn
+     defn-
+     def
+     defmacro
+     defmulti
+     defonce
+     deftest
+     deftype
+     defrecord
+     s/def
+     s/defn})
 
 (defn find-function-definition-name-loc [loc]
   (let [function-loc (apply find-ops-up loc (mapv str function-definition-symbols))]

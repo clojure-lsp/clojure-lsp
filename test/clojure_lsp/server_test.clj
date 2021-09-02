@@ -26,12 +26,23 @@
                        (interop/clj->java
                          {:text-document-sync-kind kind})))]
         (is (= :incremental (:text-document-sync-kind (#'server/client-settings params)))))))
-  (testing "source-paths and source-aliases convert strings"
+  (testing "source-paths accepts strings"
+    (doseq [path [["foo"] [":foo"]]]
+      (let [params (doto (InitializeParams.)
+                     (.setInitializationOptions
+                       (interop/clj->java
+                         {:source-paths path})))]
+        (is (= #{"foo"} (:source-paths (#'server/client-settings params)))))))
+  (testing "source-paths rejects non-strings"
+    (let [params (doto (InitializeParams.)
+                   (.setInitializationOptions
+                     (interop/clj->java
+                       {:source-paths [:foo]})))]
+      (is (nil? (:source-paths (#'server/client-settings params))))))
+  (testing "source-aliases converts strings"
     (doseq [path [[:foo] ["foo"] [":foo"]]]
       (let [params (doto (InitializeParams.)
                      (.setInitializationOptions
                        (interop/clj->java
-                         {:source-paths path
-                          :source-aliases path})))]
-        (is (= #{:foo} (:source-paths (#'server/client-settings params))))
+                         {:source-aliases path})))]
         (is (= #{:foo} (:source-aliases (#'server/client-settings params))))))))

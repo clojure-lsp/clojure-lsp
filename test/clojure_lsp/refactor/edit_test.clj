@@ -114,7 +114,11 @@
     (testing "Implementing nothing" (assert-function-name "(defrecord foo [] (^void bar [] (let [a 1] d)))"))
     (testing "with map" (assert-function-name "(defrecord {:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
     (testing "with meta map" (assert-function-name "(defrecord ^{:asd :ds} foo [] Some (^void bar [] (let [a 1] d)))"))
-    (testing "with meta" (assert-function-name "(defrecord ^:private foo [] Some (^void bar [] (let [a 1] d)))"))))
+    (testing "with meta" (assert-function-name "(defrecord ^:private foo [] Some (^void bar [] (let [a 1] d)))")))
+  (testing "deftest"
+    (testing "simple" (assert-function-name "(deftest foo (is (let [a 1] d)))"))
+    (testing "with meta" (assert-function-name "(deftest ^:pending foo (is (let [a 1] d)))"))
+    (testing "with meta map" (assert-function-name "(deftest ^{:pending true} foo (is (let [a 1] d)))"))))
 
 (deftest find-function-usage-name
   (let [zloc (-> "(defn foo [] (let [a 1] d))" z/of-string (z/find-next-value z/next 'd))]

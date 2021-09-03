@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.09.03-00.42.46
+
 - General
   - Improve logging during startup for better troubleshooting.
   - Refactor allowing calls to `clojure-lsp.main/run!` for manually passing args, useful for `lein-clojure-lsp` for example.

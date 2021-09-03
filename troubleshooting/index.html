@@ -11,7 +11,7 @@
       
       
       
-        <link rel="canonical" href="https://clojure-lsp.github.io/clojure-lsp/troubleshooting/">
+        <link rel="canonical" href="https://clojure-lsp.io/troubleshooting/">
       
       <link rel="shortcut icon" href="../images/logo-light.svg">
       <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.4">
@@ -81,7 +81,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
-    <a href="https://clojure-lsp.github.io/clojure-lsp" title="Clojure LSP" class="md-header-nav__button md-logo" aria-label="Clojure LSP">
+    <a href="https://clojure-lsp.io" title="Clojure LSP" class="md-header-nav__button md-logo" aria-label="Clojure LSP">
       
   <img src="../images/logo-light.svg" alt="logo">
 
@@ -262,7 +262,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://clojure-lsp.github.io/clojure-lsp" title="Clojure LSP" class="md-nav__button md-logo" aria-label="Clojure LSP">
+    <a href="https://clojure-lsp.io" title="Clojure LSP" class="md-nav__button md-logo" aria-label="Clojure LSP">
       
   <img src="../images/logo-light.svg" alt="logo">
 
@@ -698,7 +698,7 @@
 <li><a href="https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server">VSCode/Calva</a></li>
 </ul>
 <h2 id="server-is-not-initializing">Server is not initializing<a class="headerlink" href="#server-is-not-initializing" title="Permanent link">#</a></h2>
-<p>Make sure you have the <a href="https://clojure-lsp.github.io/clojure-lsp/installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>
+<p>Make sure you have the <a href="https://clojure-lsp.io/installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>
 <p>Check if the executable is working running it from the command line, it should start up and start reading from stdin.
 Type <code>{}\n\n</code> and you should get something like:</p>
 <div class="highlight"><pre><span></span><code>$ clojure-lsp
@@ -758,10 +758,10 @@ during server initialize for most features work, so make sure you don't see any 
 <li>If the project root has a <code>build.boot</code> file, it'll run <code>boot show --fake-classpath</code> to get the classpath.</li>
 <li>If the project root has a <code>shadow-cljs.edn</code> file, it'll run <code>npx shadow-cljs classpath</code> to get the classpath.</li>
 </ul>
-<p>If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the <code>project-specs</code> clojure-lsp setting, for more details check the<a href="https://clojure-lsp.github.io/clojure-lsp/settings/">settings section</a>.</p>
+<p>If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the <code>project-specs</code> clojure-lsp setting, for more details check the<a href="https://clojure-lsp.io/settings/">settings section</a>.</p>
 <h3 id="folders-not-being-analyzed">Folders not being analyzed<a class="headerlink" href="#folders-not-being-analyzed" title="Permanent link">#</a></h3>
 <p>By default clojure-lsp searches <code>src</code> and <code>test</code> for clj* files to read into an index.
-If the definition lives under a different source dir, you can define the <code>src-paths</code> setting, for more details check the <a href="https://clojure-lsp.github.io/clojure-lsp/settings/">settings section</a>.</p>
+If the definition lives under a different source dir, you can define the <code>src-paths</code> setting, for more details check the <a href="https://clojure-lsp.io/settings/">settings section</a>.</p>
 <p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.</p>
 <h3 id="wrong-diagnosticslint">Wrong diagnostics/lint<a class="headerlink" href="#wrong-diagnosticslint" title="Permanent link">#</a></h3>
 <ul>
@@ -788,7 +788,7 @@ in your <code>coc-settings.json</code> the line <code>disableDiagnostics</code> 
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 2, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 3, 2021</span>
     
   </small>
 </div>

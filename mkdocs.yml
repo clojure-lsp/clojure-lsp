@@ -1,6 +1,6 @@
 site_name: Clojure LSP
 site_description: Language Server Protocol Implementation for Clojure
-site_url: https://clojure-lsp.github.io/clojure-lsp
+site_url: https://clojure-lsp.io
 
 repo_name: clojure-lsp/clojure-lsp
 repo_url: https://github.com/clojure-lsp/clojure-lsp

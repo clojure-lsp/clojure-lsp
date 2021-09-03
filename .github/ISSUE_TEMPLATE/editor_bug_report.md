@@ -32,7 +32,7 @@ ADD JSON HERE
 </pre>
 </details>
 
-<!-- Fill the template below with the content of the clojure-lsp log if any exceptions/relevant logs, check https://clojure-lsp.github.io/clojure-lsp/troubleshooting/#getting-server-log how to get it -->
+<!-- Fill the template below with the content of the clojure-lsp log if any exceptions/relevant logs, check https://clojure-lsp.io/troubleshooting/#getting-server-log how to get it -->
 
 <details>
  <summary><b>Log - clojure-lsp</b></summary>

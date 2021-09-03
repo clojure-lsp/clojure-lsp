@@ -34,14 +34,14 @@
         "  rename               Rename a symbol and all references across the project, use --from and --to options."
         ""
         ;; "Run \"clojure-lsp help <command>\" for more information about a command."
-        "See https://clojure-lsp.github.io/clojure-lsp/settings/ for detailed documentation."]
+        "See https://clojure-lsp.io/settings/ for detailed documentation."]
        (string/join \newline)))
 
 (defn ^:private cli-options []
   [["-h" "--help" "Print the available commands and its options"]
    [nil "--version" "Print clojure-lsp version"]
    [nil "--verbose" "Use stdout for clojure-lsp logs instead of default log settings"]
-   ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.github.io/clojure-lsp/settings"
+   ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
     :id :settings
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --settings EDN"]

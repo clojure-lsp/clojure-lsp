@@ -14,6 +14,9 @@
   
 - Editor
   - Fix regression, custom `source-paths` from initializationOptions were not being parsed correctly. #537
+  
+- Documentation
+  - New domain for documentation and webpage https://clojure-lsp.io :rocket:
 
 ## 2021.08.24-14.41.56
 

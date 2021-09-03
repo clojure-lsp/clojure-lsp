@@ -148,7 +148,7 @@ Above you can find all available features that clojure-lsp provide with examples
 
 ##### Custom snippets
 
-User can register additional custom snippets, for more information on how to configure it, check the [snippets settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#snippets).
+User can register additional custom snippets, for more information on how to configure it, check the [snippets settings section](https://clojure-lsp.io/settings/#snippets).
 
 ### Code actions
 
@@ -262,4 +262,4 @@ Below you can find the custom linters implemented on clojure-lsp side:
 
 ![](images/features/unused-public-var.png)
 
-For more information on how to configure it, check the [diagnostics settings section](https://clojure-lsp.github.io/clojure-lsp/settings/#diagnostics-linter).
+For more information on how to configure it, check the [diagnostics settings section](https://clojure-lsp.io/settings/#diagnostics-linter).

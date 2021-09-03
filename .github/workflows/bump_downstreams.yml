@@ -69,6 +69,7 @@ jobs:
 
   bump-setup-clojure-lsp:
     name: Bump setup-clojure-lsp Github Action
+    needs: [release-clojars]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -94,6 +95,7 @@ jobs:
 
   bump-lein-clojure-lsp:
     name: Bump lein-clojure-lsp
+    needs: [release-clojars]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:

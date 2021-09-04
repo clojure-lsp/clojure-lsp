@@ -14,6 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.814'
+
       - name: Build prod-jar
         run: make prod-jar
 
@@ -25,6 +30,7 @@ jobs:
 
   bump-homebrew-formula:
     name: Bump Homebrew formula
+    needs: [release-clojars]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-latest
     steps:

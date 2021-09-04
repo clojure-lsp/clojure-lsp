@@ -50,31 +50,6 @@
     options
     (internal-api/clean-ns! options)))
 
-(defn diagnostics
-  "Analyze the project and find all diagnostics (warnings, errors).
-  Options:
-
-  `:project-root` a java.io.File representing the project root.
-
-  `:namespace` a coll of symbols representing the namespaces which should be cleaned,
-  if empty all project namespaces will be considered.
-
-  `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
-
-  `:output` a map with options on how the result should be printed.
-
-  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
-  [{:keys [project-root settings] :as options}]
-  {:pre [(or (nil? project-root)
-             (and (instance? File project-root)
-                  (.exists project-root)))
-         (or (nil? settings)
-             (map? settings))]}
-  (logging/setup-logging db/db)
-  (safe-process-message
-    options
-    (internal-api/diagnostics options)))
-
 (defn format!
   "Format one or more namespaces using cljfmt.
   Options:

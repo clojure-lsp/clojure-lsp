@@ -30,7 +30,6 @@
         "Available commands:"
         "  listen (or empty)    Start clojure-lsp as server, listening to stdin."
         "  clean-ns             Organize ns form, removing unused requires/refers/imports and sorting alphabetically."
-        "  diagnostics          Analyze the project and find all diagnostics (warnings, errors)."
         "  format               Format code using cljfmt."
         "  rename               Rename a symbol and all references across the project, use --from and --to options."
         ""
@@ -69,16 +68,11 @@
     :id :ns-exclude-regex
     :parse-fn re-pattern
     :validate [#(instance? java.util.regex.Pattern %) "Specify a valid string regex after --ns-exclude-regex"]]
-   ["-o" "--output EDN" "Optional settings as edn on how the result should be printed"
-    :id :output
-    :validate [#(try (edn/read-string %) true (catch Exception _ false))
-               "Invalid --output EDN"]
-    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
-   [nil "--from FROM" "Full qualified symbol name, e.g. my-project/my-var. option for rename"
+   [nil "--from FROM" "Full qualified symbol name, e.g. my-project/my-var"
     :id :from
     :parse-fn symbol
     :validate [qualified-ident? "Specify a valid clojure full qualified symbol after --from"]]
-   [nil "--to TO" "Full qualified symbol name, e.g. my-project/my-var. option for rename"
+   [nil "--to TO" "Full qualified symbol name, e.g. my-project/my-var"
     :id :to
     :parse-fn symbol
     :validate [qualified-ident? "Specify a valid clojure full qualified symbol after --to"]]])
@@ -103,7 +97,7 @@
       {:action "listen" :options options}
 
       (and (= 1 (count arguments))
-           (#{"clean-ns" "diagnostics" "format" "rename" "listen"} (first arguments)))
+           (#{"clean-ns" "format" "rename" "listen"} (first arguments)))
       {:action (first arguments) :options options}
 
       :else
@@ -129,7 +123,6 @@
       {:exit-code 0})
     (case action
       "clean-ns" (internal-api/clean-ns! options)
-      "diagnostics" (internal-api/diagnostics options)
       "format" (internal-api/format! options)
       "rename" (with-required-options
                  options

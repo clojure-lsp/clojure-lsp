@@ -56,57 +56,6 @@
         (is (= 0 (:result-code result)))
         (is (= "Nothing to clear!" (:message result)))))))
 
-(deftest diagnostics
-  (testing "when project-root is not a file"
-    (is (thrown? AssertionError
-                 (api/format! {:project-root "integration-test/sample-test"}))))
-  (testing "when project-root is not a existent file"
-    (is (thrown? AssertionError
-                 (api/format! {:project-root (io/file "integration-test/sample-test/bla")}))))
-  (testing "when project-root is a valid file"
-    (testing "when a single namespace is specified"
-      (reset! db/db {})
-      (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")
-                                     :namespace '[sample-test.api.diagnostics.a]
-                                     :raw? true})]
-        (is (= 1 (:result-code result)))
-        (is (= "src/sample_test/api/diagnostics/a.clj:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var" (:message result)))
-        (is (= 1 (count (:diagnostics result))))))
-    (testing "when namespace does not exists"
-      (reset! db/db {})
-      (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")
-                                     :namespace '[sample-test.api.diagnostics.c]
-                                     :raw? true})]
-        (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (:message result)))
-        (is (= 0 (count (:diagnostics result))))))
-    (testing "With canonical-paths output"
-      (reset! db/db {})
-      (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")
-                                     :output {:canonical-paths true}
-                                     :namespace '[sample-test.api.diagnostics.a]
-                                     :raw? true})]
-        (is (= 1 (:result-code result)))
-        (is (= (format "%s:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var"
-                       (.getCanonicalPath (io/file "integration-test/sample-test/src/sample_test/api/diagnostics/a.clj")))
-               (:message result)))
-        (is (= 1 (count (:diagnostics result))))))
-    (testing "when namespace has no diagnostics"
-      (reset! db/db {})
-      (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")
-                                     :namespace '[sample-test.api.diagnostics.b]
-                                     :raw? true})]
-        (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (:message result)))
-        (is (nil? (:diagnostics result)))))
-    (testing "specifying a ns-exclude-regex"
-      (reset! db/db {})
-      (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")
-                                     :ns-exclude-regex #".*"
-                                     :raw? true})]
-        (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (:message result)))))))
-
 (deftest format!
   (testing "when project-root is not a file"
     (is (thrown? AssertionError
@@ -127,6 +76,7 @@
                                  :namespace '[sample-test.api.format.a]
                                  :dry? true
                                  :raw? true})]
+        (println result)
         (is (= 1 (:result-code result)))
         (is (:message result))))
     (testing "when ns does not matches uri"

@@ -37,9 +37,6 @@ lint-clean:
 lint-format:
 	clojure -M:run format --dry --ns-exclude-regex "sample-test.*"
 
-lint-diagnostics:
-	clojure -M:run diagnostics --ns-exclude-regex "sample-test.*"
-
 lint-fix:
 	clojure -M:run clean-ns --ns-exclude-regex "sample-test.*"
 	clojure -M:run format --ns-exclude-regex "sample-test.*"

@@ -120,7 +120,7 @@ nmap <silent> gd                    <Plug>(coc-definition)
 
 ## Nvim
 
-An very detailed document about how configure Nvim as Clojure IDE using fennel, clojure-lsp and conjure.
+An very detailed document about how configure Nvim as Clojure IDE using fennel, clojure-lsp and conjure.  
 [nvim-fennel-lsp-conjure-as-clojure-ide](https://github.com/rafaeldelboni/nvim-fennel-lsp-conjure-as-clojure-ide)
 
 ---

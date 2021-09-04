@@ -72,14 +72,6 @@
         (is (= 1 (:result-code result)))
         (is (= "src/sample_test/api/diagnostics/a.clj:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var" (:message result)))
         (is (= 1 (count (:diagnostics result))))))
-    (testing "unused-public-var custom lint fn"
-      (reset! db/db {})
-      (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")
-                                     :namespace '[sample-test.api.diagnostics.d]
-                                     :raw? true})]
-        (is (= 1 (:result-code result)))
-        (is (= "src/sample_test/api/diagnostics/d.clj:2:6: info: [unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'" (:message result)))
-        (is (= 1 (count (:diagnostics result))))))
     (testing "when namespace does not exists"
       (reset! db/db {})
       (let [result (api/diagnostics {:project-root (io/file "integration-test/sample-test")

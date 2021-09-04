@@ -426,6 +426,7 @@
                              (string/lower-case map-key)
                              (keyword map-key))))))
 
+#_{:clj-kondo/ignore [:deprecated-var]}
 (s/def ::legacy-debean (s/conformer debeaner))
 (s/def ::debean (s/conformer java->clj))
 (s/def ::bean (s/conformer clj->java))

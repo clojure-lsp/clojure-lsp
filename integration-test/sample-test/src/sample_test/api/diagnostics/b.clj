@@ -2,3 +2,5 @@
 
 (defn no-diags []
   1)
+
+(no-diags)

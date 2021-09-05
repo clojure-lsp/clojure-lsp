@@ -2,104 +2,150 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
-    paths-ignore:
-      - '**/README.md'
-      - '**/CHANGELOG.md'
-      - 'resources/CLOJURE_LSP_VERSION'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
-      - '.github/workflows/bump_homebrew.yml'
-  pull_request:
-    paths-ignore:
-      - '**/README.md'
-      - '**/CHANGELOG.md'
-      - 'resources/CLOJURE_LSP_VERSION'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
-      - '.github/workflows/bump_homebrew.yml'
+  #   branches:
+  #     - master
+  #   paths-ignore:
+  #     - '**/README.md'
+  #     - '**/CHANGELOG.md'
+  #     - 'resources/CLOJURE_LSP_VERSION'
+  #     - 'docs/**'
+  #     - 'images/**'
+  #     - 'mkdocs.yml'
+  #     - '.github/workflows/bump_deps.yml'
+  #     - '.github/workflows/bump_homebrew.yml'
+  # pull_request:
+  #   paths-ignore:
+  #     - '**/README.md'
+  #     - '**/CHANGELOG.md'
+  #     - 'resources/CLOJURE_LSP_VERSION'
+  #     - 'docs/**'
+  #     - 'images/**'
+  #     - 'mkdocs.yml'
+  #     - '.github/workflows/bump_deps.yml'
+  #     - '.github/workflows/bump_homebrew.yml'
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v1
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
 
-      - name: Compile java classes
-        run: make classes
+  #     - name: Compile java classes
+  #       run: make classes
 
-      - name: Check if namespaces are clean
-        run: make lint-clean
+  #     - name: Check if namespaces are clean
+  #       run: make lint-clean
 
-      - name: Check if namespaces are formatted
-        run: make lint-format
+  #     - name: Check if namespaces are formatted
+  #       run: make lint-format
 
-  unit-test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8, 11, 15]
-    steps:
-      - uses: actions/checkout@v1
+  # unit-test:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       jdk: [8, 11, 15]
+  #   steps:
+  #     - uses: actions/checkout@v1
 
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
+  #     - name: Set up JDK ${{ matrix.jdk }}
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: ${{ matrix.jdk }}
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
 
-      - name: Run tests
-        run: make test
+  #     - name: Run tests
+  #       run: make test
 
-  jvm-integration-test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8, 11, 15]
-    steps:
-      - uses: actions/checkout@v1
+  # jvm-integration-test:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       jdk: [8, 11, 15]
+  #   steps:
+  #     - uses: actions/checkout@v1
 
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
+  #     - name: Set up JDK ${{ matrix.jdk }}
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: ${{ matrix.jdk }}
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+  #     - name: Install Babashka
+  #       run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Generate embedded binary
-        run: make prod-bin
+  #     - name: Generate embedded binary
+  #       run: make prod-bin
 
-      - name: Run integration tests
-        run: make integration-test
+  #     - name: Run integration tests
+  #       run: make integration-test
+
+  # graalvm-build:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Prepare java
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: 11
+
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
+
+  #     - name: Generate jar and embedded jar
+  #       run: make prod-bin
+
+  #     - name: Install GraalVM
+  #       uses: DeLaGuardo/setup-graalvm@master
+  #       with:
+  #         graalvm-version: 21.2.0.java11
+
+  #     - name: Install native-image component
+  #       run: |
+  #         gu install native-image
+
+  #     - name: Build Linux native image
+  #       env:
+  #         CLOJURE_LSP_JAR: clojure-lsp.jar
+  #         CLOJURE_LSP_XMX: "-J-Xmx6g"
+  #       run: |
+  #         graalvm/native-unix-compile.sh
+
+  #     - name: Compress binary
+  #       uses: svenstaro/upx-action@v2
+  #       with:
+  #         file: clojure-lsp
+
+  #     - name: Upload
+  #       uses: actions/upload-artifact@v2
+  #       with:
+  #         name: clojure-lsp-native
+  #         path: clojure-lsp
 
   graalvm-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.1.0
       - name: Prepare java
         uses: actions/setup-java@v1
         with:
@@ -113,29 +159,35 @@ jobs:
       - name: Generate jar and embedded jar
         run: make prod-bin
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
-
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: uraimo/run-on-arch-action@v2.0.5
         with:
-          graalvm-version: 21.2.0.java11
+          arch: aarch64
+          distro: ubuntu20.04
+          githubToken: ${{ github.token }}
+          setup: |
+            mkdir -p "${PWD}/artifacts"
+            wget -q https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-21.2.0/graalvm-ce-java11-linux-aarch64-21.2.0.tar.gz
+            tar -xzf graalvm-ce-java11-linux-aarch64-21.2.0.tar.gz
+            mv graalvm-ce-java11-21.2.0 graalvm-ce-java11
+          dockerRunArgs: |
+            --volume "${PWD}/graalvm-ce-java11:/graalvm-ce-java11"
+            --volume "${PWD}/artifacts:/artifacts"
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y build-essential
+          run: |
+            export PATH=/graalvm-ce-java11/bin:$PATH
+            export JAVA_HOME=/graalvm-ce-java11
+            export GRAALVM_HOME=/graalvm-ce-java11
+            export CLOJURE_LSP_JAR=clojure-lsp.jar
+            export CLOJURE_LSP_XMX="-J-Xmx4g"
 
-      - name: Install native-image component
-        run: |
-          gu install native-image
+            gu install native-image
+            ./graalvm/native-unix-compile.sh
+            cp clojure-lsp "/artifacts/clojure-lsp"
+            echo "Produced artifact at /artifacts/clojure-lsp"
 
-      - name: Build Linux native image
-        env:
-          CLOJURE_LSP_JAR: clojure-lsp.jar
-          CLOJURE_LSP_XMX: "-J-Xmx6g"
-        run: |
-          graalvm/native-unix-compile.sh
-
-      - name: Compress binary
-        uses: svenstaro/upx-action@v2
-        with:
-          file: clojure-lsp
+      - run: mv "${PWD}/artifacts/clojure-lsp" clojure-lsp
 
       - name: Upload
         uses: actions/upload-artifact@v2

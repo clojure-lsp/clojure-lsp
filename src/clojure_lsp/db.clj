@@ -14,11 +14,14 @@
 
 (def version 1)
 
-(defn ^:private get-sqlite-db-file-path [project-root-path db]
+(defn ^:private get-sqlite-db-file [project-root-path db]
   (let [configured (some-> (get-in @db [:settings :sqlite-db-path])
                            io/file)
-        default (io/file (str project-root-path) ".lsp" "sqlite.db")
-        file (or configured default)]
+        default (io/file (str project-root-path) ".lsp" "sqlite.db")]
+    ^java.io.File (or configured default)))
+
+(defn ^:private get-sqlite-db-file-path [project-root-path db]
+  (let [file (get-sqlite-db-file project-root-path db)]
     (if (.isAbsolute file)
       (.getAbsolutePath file)
       (.getAbsolutePath (io/file (str project-root-path) file)))))
@@ -56,3 +59,9 @@
         (log/warn (format "Could not load project cache from '%s'. This usually happens the first time project is being analyzed." lsp-db-path)))
       (catch Throwable e
         (log/error e (format "Could not load project cache from '%s'" lsp-db-path))))))
+
+(defn db-exists? [project-root-path db]
+  (.exists (get-sqlite-db-file project-root-path db)))
+
+(defn remove-db! [project-root-path db]
+  (io/delete-file (get-sqlite-db-file project-root-path db)))

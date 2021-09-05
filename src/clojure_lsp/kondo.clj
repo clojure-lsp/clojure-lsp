@@ -123,8 +123,8 @@
         result))))
 
 (defn run-kondo-on-paths-batch!
-  "Run kondo on paths by partition the paths, with this we should call
-  kondo more times but we fewer paths to analyze, improving memory."
+  "Run kondo on paths by partitioning the paths, with this we should call
+  kondo more times but with fewer paths to analyze, improving memory."
   [paths public-only? db]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]

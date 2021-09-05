@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Create .clj-kondo folder if not exists in project root. #528
+
 ## 2021.09.04-17.11.44
 
 - Hotfix java classes not present on jar, required for clojure-lsp downstreams.

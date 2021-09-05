@@ -139,6 +139,24 @@
               (System/gc))
             (db/save-deps! root-path project-hash classpath analysis db)))))))
 
+(defn ^:private create-kondo-folder! [clj-kondo-folder]
+  (try
+    (log/info (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
+    (.mkdir clj-kondo-folder)
+    (catch Exception e
+      (log/error "Error when creating '.clj-kondo' dir on project-root" e))))
+
+(defn ^:private setup-pre-analysis!
+  [project-root-uri db]
+  (let [project-root-filename (shared/uri->filename project-root-uri)
+        project-root-path (shared/uri->path project-root-uri)
+        clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
+    (when-not (shared/file-exists? clj-kondo-folder)
+      (create-kondo-folder! clj-kondo-folder)
+      (when (db/db-exists? project-root-path db)
+        (log/info "Removing outdated cached lsp db...")
+        (db/remove-db! project-root-path db)))))
+
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
@@ -163,6 +181,7 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
+    (setup-pre-analysis! project-root-uri db)
     (analyze-classpath! root-path (:source-paths settings) settings db)
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (:source-paths settings) db)))

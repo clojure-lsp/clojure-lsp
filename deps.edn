@@ -32,7 +32,7 @@
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
                     :exec-fn americano.cli/javac
                     :exec-args {:source-paths ["src-java"]}}
-           :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.278"}}
+           :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.297"}}
                       :exec-fn hf.depstar/uberjar
                       :exec-args {:jar "clojure-lsp.jar"
                                   :aot true
@@ -51,7 +51,7 @@
                              :jvm-opts ["-Xmx2g" "-server"]
                              :name "clojure-lsp"}}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}}}
-           :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.278"}}
+           :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.297"}}
                        :exec-fn hf.depstar/uberjar
                        :exec-args {:jar "clojure-lsp.jar"
                                    :aot true

@@ -68,12 +68,20 @@
 (defn did-close [{:keys [textDocument]}]
   (f.file-management/did-close textDocument db/db))
 
-(defn did-change-watched-files [changes]
-  (let [uris (map :uri (filter (comp #{:deleted} :type) changes))]
-    (swap! db/db (fn [db]
-                   (-> db
-                       (update :documents #(apply dissoc % uris))
-                       (update :file-envs #(apply dissoc % uris)))))))
+(defn did-change-watched-files [{:keys [changes]}]
+  (doseq [{:keys [uri type]} changes]
+    (let [filename (shared/uri->filename uri)]
+      (case type
+        :created (f.file-management/did-open uri (slurp filename) db/db)
+        :changed (f.file-management/did-change uri
+                                               [{:text (slurp filename)}]
+                                               (inc (get-in @db/db [:documents uri :v] 0))
+                                               db/db)
+        :deleted (swap! db/db (fn [db]
+                                (-> db
+                                    (shared/dissoc-in [:documents uri])
+                                    (shared/dissoc-in [:analysis filename])
+                                    (shared/dissoc-in [:findings filename]))))))))
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)

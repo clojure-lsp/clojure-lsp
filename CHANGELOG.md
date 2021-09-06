@@ -3,11 +3,44 @@
 ## Unreleased
 
 - General
+  - Create .clj-kondo folder if not exists in project root. #528
+
+- Editor
+  - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536
+
+## 2021.09.04-17.11.44
+
+- Hotfix java classes not present on jar, required for clojure-lsp downstreams.
+
+## 2021.09.03-00.42.46
+
+- General
+  - Improve logging during startup for better troubleshooting.
+  - Refactor allowing calls to `clojure-lsp.main/run!` for manually passing args, useful for `lein-clojure-lsp` for example.
+  - Internal: Move graalvm configuration to sqlite-jdbc.
+  - Recognize `deftest` as function definition form for refactoring features like `extract-function`.
+  - Bump Graalvm from 21.1.0 to 21.2.0
+  
+- API/CLI
+  - Use clj-kondo custom lint for API as well, required for correct diagnostics API feature. 
+  
+- Editor
+  - Fix regression, custom `source-paths` from initializationOptions were not being parsed correctly. #537
+  
+- Documentation
+  - New domain for documentation and webpage https://clojure-lsp.io :rocket:
+
+## 2021.08.24-14.41.56
+
+- General
   - Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
   - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)` or `#?@(:clj [])` on ns form) after cleaning requires/imports.
   - Fix `clean-ns` false-positives removals to cljc files when the alias/refer/import is being used inside a reader conditional.
   - Add new setting `:linters :clj-kondo :ns-exclude-regex` which allows exclude diagnostics/findings for namespaces matching that regex.
   - Fix merge of configs resolved for projects with multiple configurations in parent folders and subprojects.
+
+- Docs
+  - Improved the settings docs with a new link to a file with all available clojure-lsp settings.
 
 ## 2021.08.16-19.02.30
 

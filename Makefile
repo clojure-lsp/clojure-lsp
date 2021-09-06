@@ -19,7 +19,7 @@ debug-bin: clean classes
 	clojure -X:debug-jar
 	clojure -X:bin
 
-prod-jar:
+prod-jar: clean classes
 	clojure -X:prod-jar
 
 prod-bin: clean classes prod-jar
@@ -35,7 +35,7 @@ lint-clean:
 	clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*"
 
 lint-format:
-	clojure -M:run format --ns-exclude-regex "sample-test.*"
+	clojure -M:run format --dry --ns-exclude-regex "sample-test.*"
 
 lint-fix:
 	clojure -M:run clean-ns --ns-exclude-regex "sample-test.*"

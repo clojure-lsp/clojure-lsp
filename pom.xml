@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.08.16-19.02.30</version>
+  <version>2021.09.04-17.11.44</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -76,7 +76,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2021.08.07-20210813.083728-8</version>
+      <version>2021.08.07-20210822.045523-16</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -122,7 +122,7 @@
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
-      <version>3.36.0.1</version>
+      <version>3.36.0.3</version>
     </dependency>
     <dependency>
       <groupId>medley</groupId>
@@ -137,7 +137,7 @@
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-      <version>2.8.7</version>
+      <version>2.8.8</version>
     </dependency>
   </dependencies>
   <repositories>

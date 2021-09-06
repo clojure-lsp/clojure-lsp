@@ -49,11 +49,16 @@
      WorkspaceEdit)
    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
+(def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
+
 (defn document->uri [^TextDocumentIdentifier document]
   (.getUri document))
 
 (defmethod j/from-java DiagnosticSeverity [^DiagnosticSeverity instance]
   (-> instance .name .toLowerCase keyword))
+
+(defmethod j/from-java FileChangeType [^FileChangeType instance]
+  (get watched-files-type-enum (.getValue instance)))
 
 (defmethod j/from-java MessageType [^MessageType instance]
   (-> instance .name .toLowerCase keyword))
@@ -508,12 +513,6 @@
 (s/def ::client-capabilities (s/and ::legacy-debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
-(def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
-(s/def :watched-files/type (s/conformer (fn [^FileChangeType v] (get watched-files-type-enum (.getValue v)))))
-(s/def :watched-files/change (s/and ::legacy-debean (s/keys :req-un [::uri :watched-files/type])))
-(s/def ::watched-files-changes (s/and (s/conformer (fn [vs] (into [] vs)))
-                                      (s/coll-of :watched-files/change)))
-
 (s/def ::server-info-raw ::bean)
 
 (defn conform-or-log [spec value]
@@ -569,6 +568,16 @@
                            (symbol %)))
        (medley/map-vals typify-json)))
 
+(defn parse-source-paths [paths]
+  (when (seq paths)
+    (->> paths
+         (keep #(when (string? %)
+                  (if (string/starts-with? % ":")
+                    (subs % 1)
+                    %)))
+         (into #{})
+         (not-empty))))
+
 (defn kwd-string [s]
   (cond
     (keyword? s) s
@@ -576,19 +585,20 @@
          (string/starts-with? s ":")) (keyword (subs s 1))
     (string? s) (keyword s)))
 
-(defn clean-keyword-strings [coll]
-  (when (seq coll)
-    (->> coll
+(defn parse-source-aliases [aliases]
+  (when (seq aliases)
+    (->> aliases
          (keep kwd-string)
-         (into #{}))))
+         (into #{})
+         (not-empty))))
 
 (defn clean-client-settings [client-settings]
   (let [kwd-keys #(medley/map-keys keyword %)]
     (-> client-settings
         (update :dependency-scheme #(or % "zipfile"))
         (update :text-document-sync-kind kwd-string)
-        (update :source-paths clean-keyword-strings)
-        (update :source-aliases clean-keyword-strings)
+        (update :source-paths parse-source-paths)
+        (update :source-aliases parse-source-aliases)
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
         (update :cljfmt kwd-keys)
         (update-in [:cljfmt :indents] clean-symbol-map)

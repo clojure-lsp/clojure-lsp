@@ -56,21 +56,27 @@
 
 (defn ^:private project-custom-lint!
   [paths db {:keys [analysis] :as kondo-ctx}]
-  (when (get-in @db [:settings :lint-project-files-after-startup?] true)
-    (async/go
-      (let [start-time (System/nanoTime)
-            new-analysis (group-by :filename (normalize-analysis analysis))]
-        (f.diagnostic/lint-project-diagnostics! paths new-analysis kondo-ctx db)
-        (log/info (format "Linting whole project files took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))))
+  (let [new-analysis (group-by :filename (normalize-analysis analysis))]
+    (if (:api? @db)
+      (do
+        (log/info (format "Starting to lint whole project files..."))
+        (shared/logging-time
+          "Linting whole project files took %s secs"
+          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx)))
+      (when (get-in @db [:settings :lint-project-files-after-startup?] true)
+        (async/go
+          (shared/logging-time
+            "Linting whole project files took %s secs"
+            (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)))))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]
-  (let [start-time (System/nanoTime)
-        new-analysis (group-by :filename (normalize-analysis analysis))
-        updated-analysis (merge (:analysis @db) new-analysis)]
-    (doseq [file files]
-      (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx))
-    (log/info (format "Linting references took %sms" (quot (- (System/nanoTime) start-time) 1000000)))))
+  (shared/logging-time
+    "Linting references took %s secs"
+    (let [new-analysis (group-by :filename (normalize-analysis analysis))
+          updated-analysis (merge (:analysis @db) new-analysis)]
+      (doseq [file files]
+        (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx)))))
 
 (defn ^:private single-file-custom-lint!
   [{:keys [analysis] :as kondo-ctx} db]
@@ -117,8 +123,8 @@
         result))))
 
 (defn run-kondo-on-paths-batch!
-  "Run kondo on paths by partition the paths, with this we should call
-  kondo more times but we fewer paths to analyze, improving memory."
+  "Run kondo on paths by partitioning the paths, with this we should call
+  kondo more times but with fewer paths to analyze, improving memory."
   [paths public-only? db]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]

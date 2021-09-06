@@ -20,7 +20,7 @@ Check below how to get the logs for most used clients:
 
 ## Server is not initializing
 
-Make sure you have the [most recent version of `clojure-lsp`](https://clojure-lsp.github.io/clojure-lsp/installation/#native-binary-recommended)
+Make sure you have the [most recent version of `clojure-lsp`](https://clojure-lsp.io/installation/#native-binary-recommended)
 
 Check if the executable is working running it from the command line, it should start up and start reading from stdin.
 Type `{}\n\n` and you should get something like:
@@ -97,12 +97,12 @@ By default clojure-lsp knows how to scan most common clojure projects using the 
 - If the project root has a `build.boot` file, it'll run `boot show --fake-classpath` to get the classpath.
 - If the project root has a `shadow-cljs.edn` file, it'll run `npx shadow-cljs classpath` to get the classpath.
 
-If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the[settings section](https://clojure-lsp.github.io/clojure-lsp/settings/).
+If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the[settings section](https://clojure-lsp.io/settings/).
 
 ### Folders not being analyzed
 
 By default clojure-lsp searches `src` and `test` for clj* files to read into an index.
-If the definition lives under a different source dir, you can define the `src-paths` setting, for more details check the [settings section](https://clojure-lsp.github.io/clojure-lsp/settings/).
+If the definition lives under a different source dir, you can define the `src-paths` setting, for more details check the [settings section](https://clojure-lsp.io/settings/).
 
 It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
 

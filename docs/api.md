@@ -50,4 +50,4 @@ Rename a symbol and all its references across the project.
 
 clojure-lsp will check for `.lsp/config.edn` in the project or home dir, but it's possible to force override the settings via the `:settings` option of the API or `--settings` option of the CLI.
 
-For all available settings, check the [settings section documentation](https://clojure-lsp.github.io/clojure-lsp/settings/).
+For all available settings, check the [settings section documentation](https://clojure-lsp.io/settings/).

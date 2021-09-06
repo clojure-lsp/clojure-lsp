@@ -34,7 +34,7 @@
 
   `dry?` a boolean, when enabled make no changes to files, only report.
 
-  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
@@ -63,7 +63,7 @@
 
   `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
 
-  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
@@ -91,7 +91,7 @@
 
   `dry?` a boolean, when enabled make no changes to files, only report.
 
-  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/"
   [{:keys [project-root settings from to] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)

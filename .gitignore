@@ -6,6 +6,7 @@
 /integration-test/sample-test/.lsp
 /integration-test/sample-test/.cpcache
 /integration-test/sample-test/target
+/integration-test/sample-test/.clj-kondo/.cache
 /out
 /target
 /classes

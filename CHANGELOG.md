@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Create .clj-kondo folder if not exists in project root. #528
+- General
+  - Create .clj-kondo folder if not exists in project root. #528
+
+- Editor
+  - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536
 
 ## 2021.09.04-17.11.44
 

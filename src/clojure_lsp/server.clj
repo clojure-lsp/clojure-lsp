@@ -249,11 +249,7 @@
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
-           (end
-             (some->> params
-                      (.getChanges)
-                      (interop/conform-or-log ::interop/watched-files-changes)
-                      (handlers/did-change-watched-files)))))
+           (async-notification params handlers/did-change-watched-files)))
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
@@ -351,7 +347,7 @@
                  (let [client ^LanguageClient (:client @db/db)]
                    (.registerCapability client
                                         (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                                             (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**")]))])))))))
+                                                                             (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))])))))))
 
     (^CompletableFuture serverInfoRaw []
       (CompletableFuture/completedFuture

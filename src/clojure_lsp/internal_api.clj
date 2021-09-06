@@ -4,6 +4,7 @@
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
@@ -46,6 +47,11 @@
                         (throw (ex-info "Error during project analysis" {:message ~'_ex})))
              (recur)))))))
 
+(defn ^:private project-root->uri [project-root]
+  (-> (or ^java.io.File project-root (io/file ""))
+      .getCanonicalPath
+      (shared/filename->uri db/db)))
+
 (defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
   (swap! db/db assoc :api? true)
   (when verbose
@@ -54,18 +60,16 @@
     (print-with-time
       options
       "Analyzing project..."
-      (let [project-root-file (or ^java.io.File project-root (io/file ""))
-            project-uri (shared/filename->uri (.getCanonicalPath project-root-file) db/db)]
-        (crawler/initialize-project
-          project-uri
-          {:workspace {:workspace-edit {:document-changes true}}}
-          (interop/clean-client-settings {})
-          (merge (shared/assoc-some
-                   {:lint-project-files-after-startup? false
-                    :text-document-sync-kind :full}
-                   :log-path log-path)
-                 settings)
-          db/db)))))
+      (crawler/initialize-project
+        (project-root->uri project-root)
+        {:workspace {:workspace-edit {:document-changes true}}}
+        (interop/clean-client-settings {})
+        (merge (shared/assoc-some
+                 {:lint-project-files-after-startup? false
+                  :text-document-sync-kind :full}
+                 :log-path log-path)
+               settings)
+        db/db))))
 
 (defn ^:private ns->ns+uri [namespace]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
@@ -130,6 +134,48 @@
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
+
+(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output]}]
+  (let [project-path (shared/uri->filename (project-root->uri project-root))]
+    (mapcat (fn [[uri diags]]
+              (let [filename (shared/uri->filename uri)
+                    file-output (if (:canonical-paths output)
+                                  filename
+                                  (shared/relativize-filepath filename project-path))]
+                (map (fn [{:keys [message severity range code]}]
+                       (format "%s:%s:%s: %s: [%s] %s"
+                               file-output
+                               (-> range :start :line)
+                               (-> range :start :character)
+                               (name (f.diagnostic/severity->level severity))
+                               code
+                               message))
+                     diags)))
+            diagnostics)))
+
+(defn diagnostics [{:keys [namespace] :as options}]
+  (setup-analysis! options)
+  (cli-println options "Finding diagnostics...")
+  (let [namespaces (or (seq namespace)
+                       (->> (:analysis @db/db)
+                            q/filter-project-analysis
+                            q/find-all-ns-definition-names
+                            (remove (partial exclude-ns? options))))
+        diags (->> namespaces
+                   (map ns->ns+uri)
+                   (assert-ns-exists-or-drop! options)
+                   (map (fn [{:keys [uri]}]
+                          {:uri uri
+                           :diagnostics (f.diagnostic/find-diagnostics uri db/db)}))
+                   (remove (comp empty? :diagnostics))
+                   (reduce (fn [a {:keys [uri diagnostics]}]
+                             (assoc a uri diagnostics))
+                           {}))]
+    (if (seq diags)
+      {:result-code 1
+       :message (string/join "\n" (diagnostics->diagnostic-messages diags options))
+       :diagnostics diags}
+      {:result-code 0 :message "No diagnostics found!"})))
 
 (defn format! [{:keys [namespace dry?] :as options}]
   (setup-analysis! options)

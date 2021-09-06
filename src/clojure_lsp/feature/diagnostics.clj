@@ -95,7 +95,13 @@
          (filter valid-finding?)
          (mapv kondo-finding->diagnostic))))
 
-(defn ^:private find-diagnostics [uri db]
+(defn severity->level [severity]
+  (case severity
+    1 :error
+    2 :warning
+    3 :info))
+
+(defn find-diagnostics [uri db]
   (let [settings (:settings @db)
         filename (shared/uri->filename uri)]
     (cond-> []

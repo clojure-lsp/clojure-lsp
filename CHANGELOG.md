@@ -7,6 +7,9 @@
 
 - Editor
   - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536
+  
+- API/CLI
+  - New `diagnostics` command, which return all diagnostics found by clojure-lsp (using clj-kondo). Check the API section for more details.
 
 ## 2021.09.04-17.11.44
 

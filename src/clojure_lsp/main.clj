@@ -69,7 +69,7 @@
     :id :ns-exclude-regex
     :parse-fn re-pattern
     :validate [#(instance? java.util.regex.Pattern %) "Specify a valid string regex after --ns-exclude-regex"]]
-   ["-o" "--output EDN" "Optional settings as edn on how the result should be printed"
+   ["-o" "--output EDN" "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics` for all available options to this flag."
     :id :output
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --output EDN"]

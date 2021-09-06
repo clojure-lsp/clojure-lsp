@@ -23,7 +23,14 @@
         (is (not (string/includes? result "src/sample_test/api/diagnostics/b.clj"))))))
   (testing "testing unusued-public-var custom lint"
     (testing "passing multiple namespaces but only one has diagnostics"
+      (with-open [rdr (lsp/cli! "diagnostics"
+                                "--project-root" h/root-project-path
+                                "--namespace" "sample-test.api.diagnostics.d")]
+        (is (string/includes? (slurp rdr) "src/sample_test/api/diagnostics/d.clj:2:6: info: [unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'\n")))))
+  (testing "When output has canonical-paths as true"
     (with-open [rdr (lsp/cli! "diagnostics"
                               "--project-root" h/root-project-path
-                              "--namespace" "sample-test.api.diagnostics.d")]
-      (is (string/includes? (slurp rdr) "src/sample_test/api/diagnostics/d.clj:2:6: info: [unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'\n"))))))
+                              "--output" "{:canonical-paths true}"
+                              "--namespace" "sample-test.api.diagnostics.a")]
+      (is (string/includes? (slurp rdr) (format "%s:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var\n"
+                                                (h/project-path->abs-path "src/sample_test/api/diagnostics/a.clj")))))))

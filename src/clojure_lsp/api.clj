@@ -61,7 +61,8 @@
 
   `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
 
-  `:output` a map with options on how the result should be printed.
+  `:output` a map with options on how the result should be printed, available values are:
+    `:canonical-paths` a boolean if the path should be absolute or not, defaults to false.
 
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
   [{:keys [project-root settings] :as options}]

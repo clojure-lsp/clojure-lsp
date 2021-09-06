@@ -1567,7 +1567,14 @@
                 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <ul>
-<li>Create .clj-kondo folder if not exists in project root. #528</li>
+<li>General</li>
+<li>
+<p>Create .clj-kondo folder if not exists in project root. #528</p>
+</li>
+<li>
+<p>Editor</p>
+</li>
+<li>Fix <code>didChangeWatchedFiles</code> to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536</li>
 </ul>
 <h2 id="20210904-171144">2021.09.04-17.11.44<a class="headerlink" href="#20210904-171144" title="Permanent link">#</a></h2>
 <ul>
@@ -2103,7 +2110,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 5, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 6, 2021</span>
     
   </small>
 </div>

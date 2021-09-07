@@ -5,6 +5,7 @@
 - General
   - Create .clj-kondo folder if not exists in project root. #528
   - Fix exception when `:clojure-lsp/unused-public-var` linter is `:off`. #546
+  - Bump clj-kondo to `2021.08.07-20210903.210340-28` to fix a false-positive with potemkin. https://github.com/clj-kondo/clj-kondo/issues/1370.
 
 - Editor
   - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536

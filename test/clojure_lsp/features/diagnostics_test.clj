@@ -63,6 +63,23 @@
         :end-row 1
         :end-col 23}]
       @findings))
+  (testing "when linter level is :off"
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      "/a.clj"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
+    (h/assert-submaps
+      [{:filename "/a.clj"
+        :level :off
+        :type :clojure-lsp/unused-public-var
+        :message "Unused public var 'some-ns/foo'"
+        :row 1
+        :col 20
+        :end-row 1
+        :end-col 23}]
+      @findings))
   (testing "linter level by default is :info"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!

@@ -13,17 +13,6 @@
     (.equals ^clojure.lang.Symbol a b)
     (.equals ^String a b)))
 
-(defn inside?
-  [start-l start-c
-   check-l check-c
-   end-l end-c]
-  (and (or (< start-l check-l)
-           (and (= start-l check-l)
-                (<= start-c check-c)))
-       (or (< check-l end-l)
-           (and (= check-l end-l)
-                (<= check-c end-c)))))
-
 (defn find-first [pred coll]
   (reduce
     (fn [_ i]
@@ -70,33 +59,31 @@
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
   (let [local-analysis (get analysis filename)]
-    (->>  (filter (fn [{:keys [name-row name-col name-end-row name-end-col scope-end-row scope-end-col bucket]}]
-                    (and (= :locals bucket)
-                         (inside?
-                           name-row name-col
-                           line column
-                           (or scope-end-row name-end-row)
-                           (or scope-end-col name-end-col))))
-                  local-analysis)
-          (map (fn [local]
-                 (find-first #(and (= :local-usages (:bucket %))
-                                   (= (:id local) (:id %))
-                                   (inside?
-                                     line column
-                                     (:name-row %) (:name-col %)
-                                     end-line end-column))
-                             local-analysis)))
-          (remove nil?))))
+    (->> local-analysis
+         (filter (fn [{:keys [bucket] :as element}]
+                   (and (= :locals bucket)
+                        (shared/inside? {:name-row line :name-col column} element))))
+         (map (fn [local]
+                (find-first #(and (= :local-usages (:bucket %))
+                                  (= (:id local) (:id %))
+                                  (shared/inside? %
+                                                  {:name-row line
+                                                   :name-col column
+                                                   :name-end-row end-line
+                                                   :name-end-col end-column}))
+                            local-analysis)))
+         (remove nil?))))
 
 (defn find-var-usages-under-form
   [analysis filename line column end-line end-column]
   (let [local-analysis (get analysis filename)]
-    (filter (fn [{:keys [name-row name-col bucket]}]
+    (filter (fn [{:keys [bucket] :as element}]
               (and (= :var-usages bucket)
-                   (inside?
-                     line column
-                     name-row name-col
-                     end-line end-column)))
+                   (shared/inside? element
+                                   {:name-row line
+                                    :name-col column
+                                    :name-end-row end-line
+                                    :name-end-col end-column})))
             local-analysis)))
 
 (defmulti find-definition

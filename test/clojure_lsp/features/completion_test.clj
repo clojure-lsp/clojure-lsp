@@ -37,6 +37,7 @@
                         (h/file-uri "file:///f.clj"))
   (h/load-code-and-locs (code "(ns g (:require [alpaca.ns :as ba :refer [baq]]))"
                               "(defn bar [baz] ba)"
+                              "(defn qux [bass] ba)"
                               "")
                         (h/file-uri "file:///g.clj"))
 
@@ -93,11 +94,10 @@
        {:label "ba/baff"}
        {:label "ba/barr"}
        {:label "ba/bazz"}
+
        {:label "bar"}
        {:label "bases" :detail "clojure.core/bases"}
-       {:label "baz"}
-       ;; TODO should complete local refer
-       #_{:label "baq"}]
+       {:label "baz"}]
       (f.completion/completion (h/file-uri "file:///g.clj") 2 18 db/db)))
   (testing "complete without prefix return all available completions"
     (is (< 100 (count (f.completion/completion (h/file-uri "file:///g.clj") 3 1 db/db))))))
@@ -254,3 +254,29 @@
         :kind :snippet
         :insert-text-format :snippet}]
       (filter (comp #(= "wrap-in-let-sexpr$" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 3 10 db/db)))))
+
+(deftest completing-locals
+  (h/load-code-and-locs
+    (h/code "(ns foo)"
+            "(defn some [bar]"
+            "  ba"
+            "  (let [baz 1]"
+            "    ba)"
+            "  ba)"
+            "(defn other [bass] 1)"))
+  (testing "outside before let"
+    (h/assert-submaps
+      [{:label "bar" :kind :variable}
+       {:label "bases" :kind :reference :detail "clojure.core/bases"}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 3 5 db/db)))
+  (testing "inside let"
+    (h/assert-submaps
+      [{:label "bar" :kind :variable}
+       {:label "bases" :kind :reference :detail "clojure.core/bases"}
+       {:label "baz" :kind :variable}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 5 7 db/db)))
+  (testing "outside before let"
+    (h/assert-submaps
+      [{:label "bar" :kind :variable}
+       {:label "bases" :kind :reference :detail "clojure.core/bases"}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 6 5 db/db))))

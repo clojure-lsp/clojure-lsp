@@ -97,7 +97,8 @@
       false
 
       (and (= bucket :locals)
-           (not= filename (shared/uri->filename cursor-uri)))
+           (or (not= filename (shared/uri->filename cursor-uri))
+               (not (shared/inside? cursor-element element))))
       false
 
       (and (= bucket :var-definitions)

@@ -113,3 +113,31 @@
   (testing "URI should remain the same as IllegalArgumentException is thrown."
     (is (= "file:///home/foo/bar.jar%%"
            (unescape-uri "file:///home/foo/bar.jar%%")))))
+
+(deftest inside?
+  (testing "when b has end scope"
+    (testing "when a outside before b"
+      (is (= false (shared/inside?
+                     {:name-row 1 :name-col 1}
+                     {:name-row 1 :name-col 2 :scope-end-row 1 :scope-end-col 4}))))
+    (testing "when a outside after b"
+      (is (= false (shared/inside?
+                     {:name-row 2 :name-col 2}
+                     {:name-row 1 :name-col 2 :scope-end-row 1 :scope-end-col 4}))))
+    (testing "when a inside b"
+      (is (= true (shared/inside?
+                    {:name-row 1 :name-col 3}
+                    {:name-row 1 :name-col 2 :scope-end-row 1 :scope-end-col 4})))))
+  (testing "when b doesn't have end scope"
+    (testing "when a outside before b"
+      (is (= false (shared/inside?
+                     {:name-row 1 :name-col 1}
+                     {:name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4}))))
+    (testing "when a outside after b"
+      (is (= false (shared/inside?
+                     {:name-row 2 :name-col 2}
+                     {:name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4}))))
+    (testing "when a inside b"
+      (is (= true (shared/inside?
+                    {:name-row 1 :name-col 3}
+                    {:name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4}))))))

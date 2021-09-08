@@ -224,6 +224,25 @@
     {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
      :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
 
+(defn inside?
+  "Checks if element `a` is inside element `b` scope."
+  [a b]
+  (when (and a b)
+    (let [a-name-row (:name-row a)
+          a-name-col (:name-col a)
+          b-name-row (:name-row b)
+          b-name-col (:name-col b)
+          b-end-row (or (:scope-end-row b)
+                        (:name-end-row b))
+          b-end-col (or (:scope-end-col b)
+                        (:name-end-col b))]
+      (and (or (< b-name-row a-name-row)
+               (and (= b-name-row a-name-row)
+                    (<= b-name-col a-name-col)))
+           (or (< a-name-row b-end-row)
+               (and (= a-name-row b-end-row)
+                    (<= a-name-col b-end-col)))))))
+
 (defn keywordize-first-depth
   [m]
   (into {}

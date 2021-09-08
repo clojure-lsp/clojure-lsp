@@ -44,9 +44,9 @@
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-alp"
     (h/assert-submaps
-      [{:label "alpaca" :kind :property :detail "alpaca.ns"}
+      [{:label "alpha" :kind :variable}
+       {:label "alpaca" :kind :property :detail "alpaca.ns"}
        {:label "alpaca" :kind :property :detail "user"}
-       {:label "alpha" :kind :variable}
        {:label "ba" :detail "alpaca.ns"}]
       (f.completion/completion (h/file-uri "file:///b.clj") 3 3 db/db)))
   (testing "complete-ba"
@@ -91,13 +91,13 @@
   (testing "complete locals"
     (h/assert-submaps
       [{:label "ba" :kind :property}
-       {:label "ba/baff"}
-       {:label "ba/barr"}
-       {:label "ba/bazz"}
-
-       {:label "bar"}
-       {:label "bases" :detail "clojure.core/bases"}
-       {:label "baz"}]
+       {:label "bar" :kind :function}
+       {:label "baz" :kind :variable}
+       {:label "ba" :kind :property}
+       {:label "ba/baff" :kind :variable}
+       {:label "ba/barr" :kind :variable}
+       {:label "ba/bazz" :kind :variable}
+       {:label "bases" :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///g.clj") 2 18 db/db)))
   (testing "complete without prefix return all available completions"
     (is (< 100 (count (f.completion/completion (h/file-uri "file:///g.clj") 3 1 db/db))))))
@@ -272,11 +272,27 @@
   (testing "inside let"
     (h/assert-submaps
       [{:label "bar" :kind :variable}
-       {:label "bases" :kind :reference :detail "clojure.core/bases"}
-       {:label "baz" :kind :variable}]
+       {:label "baz" :kind :variable}
+       {:label "bases" :kind :reference :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 5 7 db/db)))
   (testing "outside before let"
     (h/assert-submaps
       [{:label "bar" :kind :variable}
        {:label "bases" :kind :reference :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 6 5 db/db))))
+
+(deftest completing-sorting
+  (h/load-code-and-locs
+    (h/code "(ns foo)"
+            ":foo"
+            "(def foo 1)"
+            "fo"))
+  (testing "completing replacing $current-form"
+    (h/assert-submaps
+      [{:label "foo", :kind :variable}
+       {:label "foo", :kind :module}
+       {:label ":foo", :kind :keyword, :detail ""}
+       {:label "for", :kind :reference, :detail "clojure.core/for"}
+       {:label "force", :kind :reference, :detail "clojure.core/force"}
+       {:label "format", :kind :reference, :detail "clojure.core/format"}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 4 2 db/db))))

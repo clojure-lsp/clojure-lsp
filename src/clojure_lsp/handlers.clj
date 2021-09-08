@@ -85,8 +85,10 @@
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)
-        col (-> position :character inc)]
-    (f.completion/completion textDocument row col db/db)))
+        col (-> position :character inc)
+        r (f.completion/completion textDocument row col db/db)]
+    (log/info "--->" (some #(= "definition" (:label %)) r))
+    r))
 
 (defn references [{:keys [textDocument position context]}]
   (let [row (-> position :line inc)

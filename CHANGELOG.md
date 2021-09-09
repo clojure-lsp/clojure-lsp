@@ -15,6 +15,8 @@
   
 - API/CLI
   - New `diagnostics` command, which return all diagnostics found by clojure-lsp (using clj-kondo). Check the API section for more details.
+  
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2021.09.04-17.11.44
 

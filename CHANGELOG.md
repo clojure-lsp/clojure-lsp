@@ -6,6 +6,7 @@
   - Create .clj-kondo folder if not exists in project root. #528
   - Fix exception when `:clojure-lsp/unused-public-var` linter is `:off`. #546
   - Bump clj-kondo to `2021.08.07-20210903.210340-28` to fix a false-positive with potemkin. https://github.com/clj-kondo/clj-kondo/issues/1370.
+  - Bump clj-kondo to `2021.08.07-20210909.131804-29` fixing issues with built-in clj-kondo cache not present on graalvm binaries. #548 
   - Exclude `cljs.test/deftest` from unused public vars linter.
 
 - Editor

@@ -1577,8 +1577,10 @@
 <li>
 <p>Editor</p>
 </li>
+<li>Fix <code>didChangeWatchedFiles</code> to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536</li>
+<li>Improve completion only showing valid local vars for current cursor.</li>
 <li>
-<p>Fix <code>didChangeWatchedFiles</code> to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536</p>
+<p>Improve completion sorting adding priority to each item, showing most used symbols like variables and functions first before other completion items.</p>
 </li>
 <li>
 <p>API/CLI</p>
@@ -2119,7 +2121,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 7, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 9, 2021</span>
     
   </small>
 </div>

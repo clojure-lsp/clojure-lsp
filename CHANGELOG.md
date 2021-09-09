@@ -11,6 +11,7 @@
 - Editor
   - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536
   - Improve completion only showing valid local vars for current cursor.
+  - Improve completion sorting adding priority to each item, showing most used symbols like variables and functions first before other completion items.
   
 - API/CLI
   - New `diagnostics` command, which return all diagnostics found by clojure-lsp (using clj-kondo). Check the API section for more details.

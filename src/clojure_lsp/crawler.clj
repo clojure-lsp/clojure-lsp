@@ -11,10 +11,13 @@
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
-   [digest :as digest]
    [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
+   (java.security MessageDigest
+                  DigestInputStream)
+   (java.io File
+            OutputStream)
    (java.net URI)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
@@ -41,12 +44,20 @@
       (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)
       [])))
 
+(defn md5 [^File file]
+  (let [digest (MessageDigest/getInstance "MD5")]
+    (with-open [input-stream (io/input-stream file)
+                digest-stream (DigestInputStream. input-stream digest)
+                output-stream (OutputStream/nullOutputStream)]
+      (io/copy digest-stream output-stream))
+    (format "%032x" (BigInteger. 1 (.digest digest)))))
+
 (defn ^:private valid-project-specs-with-hash [root-path project-specs]
   (keep
     (fn [{:keys [project-path] :as project-spec}]
       (let [project-file (shared/to-file root-path project-path)]
         (when (shared/file-exists? project-file)
-          (assoc project-spec :hash (digest/md5 project-file)))))
+          (assoc project-spec :hash (md5 project-file)))))
     project-specs))
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd

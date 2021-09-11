@@ -14,11 +14,10 @@
    [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
+   (com.google.common.io ByteStreams)
+   (java.net URI)
    (java.security MessageDigest
-                  DigestInputStream)
-   (java.io File
-            OutputStream)
-   (java.net URI)))
+                  DigestInputStream)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
   (log/info (format "Finding classpath via `%s`" (string/join " " classpath-cmd)))
@@ -44,11 +43,11 @@
       (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)
       [])))
 
-(defn md5 [^File file]
+(defn ^:private md5 [^java.io.File file]
   (let [digest (MessageDigest/getInstance "MD5")]
     (with-open [input-stream (io/input-stream file)
                 digest-stream (DigestInputStream. input-stream digest)
-                output-stream (OutputStream/nullOutputStream)]
+                output-stream (ByteStreams/nullOutputStream)]
       (io/copy digest-stream output-stream))
     (format "%032x" (BigInteger. 1 (.digest digest)))))
 

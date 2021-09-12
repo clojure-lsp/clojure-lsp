@@ -1572,8 +1572,11 @@
 <li>Fix exception when <code>:clojure-lsp/unused-public-var</code> linter is <code>:off</code>. #546</li>
 <li>Bump clj-kondo to <code>2021.08.07-20210903.210340-28</code> to fix a false-positive with potemkin. https://github.com/clj-kondo/clj-kondo/issues/1370.</li>
 <li>Bump clj-kondo to <code>2021.08.07-20210909.131804-29</code> fixing issues with built-in clj-kondo cache not present on graalvm binaries. #548 </li>
+<li>Exclude <code>cljs.test/deftest</code> from unused public vars linter.</li>
+<li>Migrate default db file from <code>.lsp/sqlite.db</code> to <code>.lsp/.cache/sqlite.db</code>, this is necessary as in the future we will replace sqlite with other db implementation, for users they just need to consider/gitignore the <code>.lsp/.cache</code> folder, this way any next change on db implementations or any other cache will not affect user.</li>
+<li>Auto migrate existing <code>.lsp/sqlite.db</code> to new <code>.lsp/.cache/sqlite.db</code> to avoid unnecessary project re-scan.</li>
 <li>
-<p>Exclude <code>cljs.test/deftest</code> from unused public vars linter.</p>
+<p>Deprecates <code>:sqlite-db-path</code> in place of <code>:cache-path</code>.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2123,7 +2126,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 11, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 12, 2021</span>
     
   </small>
 </div>

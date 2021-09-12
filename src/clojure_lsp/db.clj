@@ -1,12 +1,12 @@
 (ns clojure-lsp.db
   (:require
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [next.jdbc :as jdbc]
    [next.jdbc.result-set :as rs]
-   [taoensso.timbre :as log]
-   [clojure-lsp.shared :as shared]))
+   [taoensso.timbre :as log]))
 
 (defonce db (atom {:documents {}}))
 (defonce current-changes-chan (async/chan 1))

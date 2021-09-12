@@ -2,7 +2,7 @@
 /.lein-repl-history
 /.lein-failures
 .nrepl-port
-/.lsp/*.db
+/.lsp/.cache
 /integration-test/sample-test/.lsp
 /integration-test/sample-test/.cpcache
 /integration-test/sample-test/target

@@ -26,5 +26,6 @@
  :cljfmt {}
  :lens-segregate-test-references true
  :additional-snippets []
- :sqlite-db-path ".lsp/sqlite.db"
+ :sqlite-db-path ".lsp/sqlite.db" ; deprecated, will be removed soon, use :cache-path instead.
+ :cache-path ".lsp/.cache"
  :log-path "/tmp/clojure-lsp.*.out"}

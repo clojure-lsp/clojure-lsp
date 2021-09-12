@@ -5,7 +5,8 @@
    [clojure.java.io :as io]
    [next.jdbc :as jdbc]
    [next.jdbc.result-set :as rs]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.shared :as shared]))
 
 (defonce db (atom {:documents {}}))
 (defonce current-changes-chan (async/chan 1))
@@ -15,9 +16,11 @@
 (def version 1)
 
 (defn ^:private get-sqlite-db-file [project-root-path db]
-  (let [configured (some-> (get-in @db [:settings :sqlite-db-path])
-                           io/file)
-        default (io/file (str project-root-path) ".lsp" "sqlite.db")]
+  (let [configured (or (some-> (get-in @db [:settings :sqlite-db-path])
+                               io/file)
+                       (some-> (get-in @db [:settings :cache-path])
+                               (io/file "sqlite.db")))
+        default (io/file (str project-root-path) ".lsp" ".cache" "sqlite.db")]
     ^java.io.File (or configured default)))
 
 (defn ^:private get-sqlite-db-file-path [project-root-path db]
@@ -29,6 +32,19 @@
 (defn ^:private make-spec [lsp-db-path]
   {:dbtype "sqlite"
    :dbname lsp-db-path})
+
+(defn ^:private migrate-old-db-file!
+  [project-root-path]
+  (let [old-file (io/file (str project-root-path) ".lsp" "sqlite.db")
+        new-file (io/file (str project-root-path) ".lsp" ".cache" "sqlite.db")]
+    (when (shared/file-exists? old-file)
+      (log/info "Migrating old db file to new .cache folder...")
+      (try
+        (io/make-parents new-file)
+        (io/copy old-file new-file)
+        (io/delete-file old-file)
+        (catch Exception e
+          (log/error "Failed to migrate old db file" e))))))
 
 (defn save-deps! [project-root-path project-hash classpath analysis db]
   (let [lsp-db-path (get-sqlite-db-file-path project-root-path db)
@@ -42,6 +58,7 @@
                             values (?,?,?,?,?);" (str version) (str project-root-path) project-hash (pr-str classpath) (pr-str analysis)]))))
 
 (defn read-deps [project-root-path db]
+  (migrate-old-db-file! project-root-path)
   (let [lsp-db-path (get-sqlite-db-file-path project-root-path db)]
     (try
       (with-open [conn (jdbc/get-connection (make-spec lsp-db-path))]

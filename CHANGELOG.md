@@ -8,6 +8,9 @@
   - Bump clj-kondo to `2021.08.07-20210903.210340-28` to fix a false-positive with potemkin. https://github.com/clj-kondo/clj-kondo/issues/1370.
   - Bump clj-kondo to `2021.08.07-20210909.131804-29` fixing issues with built-in clj-kondo cache not present on graalvm binaries. #548 
   - Exclude `cljs.test/deftest` from unused public vars linter.
+  - Migrate default db file from `.lsp/sqlite.db` to `.lsp/.cache/sqlite.db`, this is necessary as in the future we will replace sqlite with other db implementation, for users they just need to consider/gitignore the `.lsp/.cache` folder, this way any next change on db implementations or any other cache will not affect user.
+  - Auto migrate existing `.lsp/sqlite.db` to new `.lsp/.cache/sqlite.db` to avoid unnecessary project re-scan.
+  - Deprecates `:sqlite-db-path` in place of `:cache-path`.
 
 - Editor
   - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536

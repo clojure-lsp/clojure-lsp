@@ -323,7 +323,9 @@ jobs:
       - name: Retrieve last changelog entry
         id: changelog
         run: |
-          echo "::set-output name=BODY::$(bb get-last-changelog-entry ${{ steps.latest-tag.outputs.tag}})"
+          echo 'CHANGELOG_BODY<<EOF' >> $GITHUB_ENV
+          bb get-last-changelog-entry ${{ steps.latest-tag.outputs.tag}} >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release
@@ -331,7 +333,7 @@ jobs:
         with:
           token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           tag_name: ${{ steps.latest-tag.outputs.tag}}
-          body: ${{ steps.changelog.outputs.BODY }}
+          body: $CHANGELOG_BODY
 
   upload-to-release:
     name: Upload artifacts to release

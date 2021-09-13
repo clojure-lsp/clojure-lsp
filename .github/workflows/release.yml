@@ -317,14 +317,21 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
+      - name: Retrieve last changelog entry
+        id: changelog
+        run: |
+          echo "::set-output name=BODY::$(bb get-last-changelog-entry ${{ steps.latest-tag.outputs.tag}})"
+
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
+          token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           tag_name: ${{ steps.latest-tag.outputs.tag}}
-          release_name: ${{ steps.latest-tag.outputs.tag}}
+          body: ${{ steps.changelog.outputs.BODY }}
 
   upload-to-release:
     name: Upload artifacts to release

@@ -34,7 +34,6 @@ jobs:
 
   bump-homebrew-formula:
     name: Bump Homebrew formula
-    needs: [release-clojars]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-latest
     steps:
@@ -82,7 +81,6 @@ jobs:
 
   bump-setup-clojure-lsp:
     name: Bump setup-clojure-lsp Github Action
-    needs: [release-clojars]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:

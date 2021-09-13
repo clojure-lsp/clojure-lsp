@@ -333,7 +333,7 @@ jobs:
         with:
           token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           tag_name: ${{ steps.latest-tag.outputs.tag}}
-          body: $CHANGELOG_BODY
+          body: ${{ env.CHANGELOG_BODY }}
 
   upload-to-release:
     name: Upload artifacts to release

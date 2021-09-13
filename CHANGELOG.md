@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-## 2021.09.13-22.13.28
-
 - Editor
   - Rollback change on `didChangeWatchedFiles` for `:change` events, avoiding outdated changes overwriting newer changes.
 

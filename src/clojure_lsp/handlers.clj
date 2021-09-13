@@ -73,7 +73,8 @@
     (let [filename (shared/uri->filename uri)]
       (case type
         :created (f.file-management/did-open uri (slurp filename) db/db)
-        :changed (f.file-management/did-change uri
+        ;; TODO Fix outdated changes overwriting newer changes.
+        :changed nil #_(f.file-management/did-change uri
                                                [{:text (slurp filename)}]
                                                (inc (get-in @db/db [:documents uri :v] 0))
                                                db/db)
@@ -81,7 +82,8 @@
                                 (-> db
                                     (shared/dissoc-in [:documents uri])
                                     (shared/dissoc-in [:analysis filename])
-                                    (shared/dissoc-in [:findings filename]))))))))
+                                    (shared/dissoc-in [:findings filename]))))
+        ))))
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)

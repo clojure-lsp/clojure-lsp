@@ -1,5 +1,6 @@
 (ns ci
-  (:require [clojure.string :as string]))
+  (:require
+   [clojure.string :as string]))
 
 (defn ^:private make-literal [a]
   (.replace a "\"" "\\\""))

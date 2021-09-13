@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.09.04-17.11.44</version>
+  <version>2021.09.13-19.32.00</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -36,11 +36,6 @@
           <artifactId>gson</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>digest</groupId>
-      <artifactId>digest</artifactId>
-      <version>1.4.10</version>
     </dependency>
     <dependency>
       <groupId>cljfmt</groupId>
@@ -76,7 +71,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2021.08.07-20210822.045523-16</version>
+      <version>2021.08.07-20210909.131804-29</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>

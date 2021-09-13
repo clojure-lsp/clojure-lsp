@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.09.13-19.32.00
+
 - General
   - Create .clj-kondo folder if not exists in project root. #528
   - Fix exception when `:clojure-lsp/unused-public-var` linter is `:off`. #546

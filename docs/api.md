@@ -42,6 +42,10 @@ Useful for cleaning the namespaces forms of your project, removing any unused re
 
 Useful for formatting the namespaces of your project, using cljfmt and following the rules from the `:cljfmt` clojure-lsp setting.
 
+* `diagnostics`
+
+Bring all diagnostics/lint found by clojure-lsp (using clj-kondo under the hood).
+
 * `rename`
 
 Rename a symbol and all its references across the project.

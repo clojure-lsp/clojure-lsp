@@ -204,7 +204,7 @@
                                  :character (nth arguments 2)}})
 
     (= command "resolve-macro-as")
-    (apply f.resolve-macro/resolve-macro-as! arguments db/db)
+    (apply f.resolve-macro/resolve-macro-as! (concat arguments [db/db]))
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [result (refactor command arguments db/db)]

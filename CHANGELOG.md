@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix `resolve macro as` code action after regression introduced recently.
+
 ## 2021.09.13-22.25.35
 
 - Editor

@@ -158,6 +158,32 @@
        {:name 'map->MyRecord :bucket :var-usages :name-row map-to-r :name-col map-to-c}]
       (q/find-references-from-cursor ana (h/file-path "/a.clj") def-r def-c false))))
 
+(deftest find-references-excluding-function-different-arity
+  (let [code (h/code "(defn foo [] (foo))"
+                     "(defn |bar"
+                     "  ([] (bar 1))"
+                     "  ([_]))"
+                     "(|bar)")
+        [[bar-def-r bar-def-c]
+         [bar-usa-r bar-usa-c]] (h/load-code-and-locs code (h/file-uri "file:///a.clj"))
+        ana (:analysis @db/db)]
+    (testing "from definition"
+      (h/assert-submaps
+        '[{:name-row 5
+           :name bar
+           :filename "/a.clj"
+           :name-col 2
+           :bucket :var-usages}]
+        (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-def-r bar-def-c false)))
+    (testing "from usage"
+      (h/assert-submaps
+        '[{:name-row 5
+           :name bar
+           :filename "/a.clj"
+           :name-col 2
+           :bucket :var-usages}]
+        (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-usa-r bar-usa-c false)))))
+
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"

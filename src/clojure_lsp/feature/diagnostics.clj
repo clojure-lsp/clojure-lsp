@@ -43,8 +43,7 @@
                          :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
                          :message (format "Unused public var '%s/%s'" (:ns element) (:name element))
                          :type :clojure-lsp/unused-public-var}]
-            (reg-finding! finding)
-            finding))
+            (reg-finding! finding)))
         elements))
 
 (defn exclude-public-var? [kondo-config var]
@@ -145,6 +144,7 @@
                       (filter (comp #(= (count %) 0)
                                     #(q/find-references project-analysis % false))))]
     (->> (reg-unused-public-var-elements! elements reg-finding! config)
+         (remove nil?)
          (group-by :filename))))
 
 (defn lint-project-diagnostics!

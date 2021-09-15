@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.09.13-22.13.28</version>
+  <version>2021.09.13-22.25.35</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>

@@ -526,35 +526,6 @@
       (catch Exception ex
         (log/error ex spec value)))))
 
-(defn json->clj [json-element]
-  (cond
-    (nil? json-element)
-    nil
-
-    (.isJsonNull json-element)
-    nil
-
-    (.isJsonArray json-element)
-    (mapv json->clj (iterator-seq (.iterator (.getAsJsonArray json-element))))
-
-    (.isJsonObject json-element)
-    (->> json-element
-         (.getAsJsonObject)
-         (.entrySet)
-         (map (juxt key (comp json->clj val)))
-         (into {}))
-
-    (.isJsonPrimitive json-element)
-    (let [json-primitive (.getAsJsonPrimitive json-element)]
-      (cond
-        (.isString json-primitive) (.getAsString json-primitive)
-        (.isNumber json-primitive) (.getAsLong json-primitive)
-        (.isBoolean json-primitive) (.getAsBoolean json-primitive)
-        :else json-primitive))
-
-    :else
-    json-element))
-
 (defn- typify-json [root]
   (walk/postwalk (fn [n]
                    (if (string? n)

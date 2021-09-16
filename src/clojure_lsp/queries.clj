@@ -169,7 +169,10 @@
             (filter #(safe-equal? (:name element) (:name %)))
             (filter #(safe-equal? (:to element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
-                         (not (identical? :var-definitions (:bucket %)))))
+                         (and (or (not (:from-var %))
+                                  (not= (:from-var %) (:name element))
+                                  (not= (:from %) (:to element)))
+                              (not (identical? :var-definitions (:bucket %))))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 
@@ -189,8 +192,11 @@
                               (contains? names (:name %)))))
             (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
-                         (not (identical? :var-definitions (:bucket %)))
-                         (= (:defined-by %) 'clojure.core/declare)))
+                         (and (or (not (identical? :var-definitions (:bucket %)))
+                                  (= (:defined-by %) 'clojure.core/declare))
+                              (or (not (:from-var %))
+                                  (not= (:from-var %) (:name element))
+                                  (not= (:from %) (:ns element))))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 

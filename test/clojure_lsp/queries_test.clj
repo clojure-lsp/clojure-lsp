@@ -159,30 +159,62 @@
       (q/find-references-from-cursor ana (h/file-path "/a.clj") def-r def-c false))))
 
 (deftest find-references-excluding-function-different-arity
-  (let [code (h/code "(defn foo [] (foo))"
-                     "(defn |bar"
-                     "  ([] (bar 1))"
-                     "  ([_]))"
-                     "(|bar)")
+  (let [a-code (h/code "(ns a)"
+                       "(defn foo [] (foo))"
+                       "(defn |bar"
+                       "  ([] (bar 1))"
+                       "  ([_]))"
+                       "(|bar)")
+        b-code (h/code "(ns b"
+                       "  (:require [a :as aa]))"
+                       "(defn bar []"
+                       "  (|aa/bar))")
         [[bar-def-r bar-def-c]
-         [bar-usa-r bar-usa-c]] (h/load-code-and-locs code (h/file-uri "file:///a.clj"))
+         [bar-usa-r bar-usa-c]] (h/load-code-and-locs a-code (h/file-uri "file:///a.clj"))
+        [[bar-usa-b-r bar-usa-b-c]] (h/load-code-and-locs b-code (h/file-uri "file:///b.clj"))
         ana (:analysis @db/db)]
     (testing "from definition"
       (h/assert-submaps
-        '[{:name-row 5
+        '[{:name-row 6
            :name bar
            :filename "/a.clj"
            :name-col 2
-           :bucket :var-usages}]
+           :bucket :var-usages}
+          {:name-row 4
+           :name bar
+           :filename "/b.clj"
+           :from b
+           :name-col 4
+           :from-var bar}]
         (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-def-r bar-def-c false)))
     (testing "from usage"
       (h/assert-submaps
-        '[{:name-row 5
+        '[{:name-row 6
            :name bar
            :filename "/a.clj"
            :name-col 2
-           :bucket :var-usages}]
-        (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-usa-r bar-usa-c false)))))
+           :bucket :var-usages}
+          {:name-row 4
+           :name bar
+           :filename "/b.clj"
+           :from b
+           :name-col 4
+           :from-var bar}]
+        (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-usa-r bar-usa-c false)))
+    (testing "from other ns"
+      (h/assert-submaps
+        '[{:name-row 6
+           :name bar
+           :filename "/a.clj"
+           :name-col 2
+           :bucket :var-usages}
+          {:name-row 4
+           :name bar
+           :filename "/b.clj"
+           :from b
+           :name-col 4
+           :from-var bar}]
+        (q/find-references-from-cursor ana (h/file-path "/b.clj") bar-usa-b-r bar-usa-b-c false)))))
 
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

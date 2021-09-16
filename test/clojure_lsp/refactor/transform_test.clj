@@ -525,16 +525,32 @@
                            "import1."
                            "apple."
                            "ball.")))
+    (testing "unsorted used imports"
+      (test-clean-ns {}
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  a.c.d.e.A"
+                           "  a.b.c.Z.C"
+                           "  a.b.c.d.Eu"
+                           "  a.b.c.D.Ei))"
+                           "  A C Eu Ei")
+                     (code "(ns foo.bar"
+                           " (:import"
+                           "  a.b.c.D.Ei"
+                           "  a.b.c.d.Eu"
+                           "  a.b.c.Z.C"
+                           "  a.c.d.e.A))"
+                           "  A C Eu Ei")))
     (testing "unsorted used refer"
       (test-clean-ns {}
                      (code "(ns foo.bar"
                            " (:require"
-                           "   [some :refer [foo bar baz]]))"
-                           "   foo bar baz")
+                           "   [some :refer [Dee foo bar baz]]))"
+                           "   foo bar baz Dee")
                      (code "(ns foo.bar"
                            " (:require"
-                           "  [some :refer [bar baz foo]]))"
-                           "   foo bar baz")))
+                           "  [some :refer [bar baz Dee foo]]))"
+                           "   foo bar baz Dee")))
     (testing "unsorted used refer with sort disabled"
       (test-clean-ns {:settings {:clean {:sort {:refer false}}}}
                      (code "(ns foo.bar"

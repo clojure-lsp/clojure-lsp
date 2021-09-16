@@ -327,8 +327,8 @@
                    (sort-by-if-enabled
                      (comp (fn [sexpr]
                              (if (symbol? sexpr)
-                               (str sexpr)
-                               (str (first sexpr)))) n/sexpr)
+                               (string/lower-case sexpr)
+                               (string/lower-case (first sexpr)))) n/sexpr)
                      form-type
                      db)
                    (map-indexed (fn [idx node]
@@ -368,8 +368,11 @@
           z/down
           (z/find-next-value ':refer)
           z/right
-          (z/replace (n/vector-node (interpose (n/whitespace-node " ")
-                                               (vec (sort-by-if-enabled identity :refer db removed-refers)))))
+          (z/replace (->> removed-refers
+                          (sort-by-if-enabled string/lower-case :refer db)
+                          vec
+                          (interpose (n/whitespace-node " "))
+                          n/vector-node))
           z/up))))
 
 (defn ^:private remove-unused-require

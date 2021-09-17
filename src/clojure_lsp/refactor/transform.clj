@@ -320,22 +320,55 @@
   (let [removed-nodes (edit/map-children removed-nodes remove-empty-reader-conditional)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
-        forms (->> removed-nodes
-                   z/node
-                   n/children
-                   (remove n/printable-only?)
-                   (sort-by-if-enabled
-                     (comp (fn [sexpr]
-                             (if (symbol? sexpr)
-                               (string/lower-case sexpr)
-                               (string/lower-case (first sexpr)))) n/sexpr)
-                     form-type
-                     db)
-                   (map-indexed (fn [idx node]
-                                  (if (and (= :same-line ns-inner-blocks-indentation)
-                                           (= idx 0))
-                                    [single-space node]
-                                    [(n/newlines 1) sep node])))
+        pre-nodes (->> removed-nodes
+                       z/node
+                       n/children
+                       (remove n/whitespace?))
+        forms-w-comments (->> pre-nodes
+                              (map-indexed
+                                (fn [idx node]
+                                  (if (some-> (nth pre-nodes (inc idx) nil)
+                                              n/comment?)
+                                    (n/vector-node [node (nth pre-nodes (inc idx))])
+                                    (when (not (n/comment? node))
+                                      node))))
+                              (remove #(or (nil? %)
+                                           (n/printable-only? %)))
+                              (sort-by-if-enabled
+                                (comp
+                                  #(cond
+                                     (symbol? %) (string/lower-case %)
+                                     (vector? (first %)) (string/lower-case (ffirst %))
+                                     :else (string/lower-case (first %)))
+                                  n/sexpr)
+                                form-type
+                                db)
+                              (map
+                                (fn [node]
+                                  (if-let [[n comment] (and (= :vector (n/tag node))
+                                                            (n/children node))]
+                                    (if (and comment (n/comment? comment))
+                                      [n comment]
+                                      [node])
+                                    [node])))
+                              (apply concat))
+        forms (->> forms-w-comments
+                   (map-indexed
+                     (fn [idx node]
+                       (cond
+                         (n/comment? node)
+                         [single-space node]
+
+                         (and (= :same-line ns-inner-blocks-indentation)
+                              (= idx 0))
+                         [single-space node]
+
+                         (some-> (nth forms-w-comments (dec idx) nil)
+                                 n/comment?)
+                         [sep node]
+
+                         :else
+                         [(n/newlines 1) sep node])))
                    (apply concat)
                    (cons (n/keyword-node form-type)))]
     (if (empty? (z/child-sexprs removed-nodes))

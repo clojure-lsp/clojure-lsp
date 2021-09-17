@@ -4,6 +4,7 @@
 
 - General
   - Use lower-case for refer/import/require sorting. #560 #561
+  - Avoid removing comments when sorting/cleaning namespace. #559
 
 - Editor
   - Fix `resolve macro as` code action after regression introduced recently.

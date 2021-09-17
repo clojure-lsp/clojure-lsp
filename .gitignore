@@ -19,3 +19,7 @@
 /clojure-lsp
 /clojure-lsp.jar
 clojure-lsp.build_artifacts.txt
+
+/.classpath
+/.project
+/.settings/

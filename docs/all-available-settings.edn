@@ -15,6 +15,7 @@
                 :import true
                 :refer true}}
  :hover {:hide-file-location? false}
+ :code-lens {:segregate-test-references true}
  :semantic-tokens? true
  :use-metadata-for-privacy? false
  :show-docs-arity-on-same-line? false
@@ -24,7 +25,7 @@
  :dependency-scheme :zip
  :text-document-sync-kind :full
  :cljfmt {}
- :lens-segregate-test-references true
+ :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
  :additional-snippets []
  :sqlite-db-path ".lsp/sqlite.db" ; deprecated, will be removed soon, use :cache-path instead.
  :cache-path ".lsp/.cache"

@@ -5,6 +5,7 @@
 - General
   - Use lower-case for refer/import/require sorting. #560 #561
   - Avoid removing comments when sorting/cleaning namespace. #559
+  - Deprecate `lens-segregate-test-references` in favor to `:code-lens :segregate-test-references`
 
 - Editor
   - Fix `resolve macro as` code action after regression introduced recently.

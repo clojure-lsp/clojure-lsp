@@ -45,7 +45,7 @@
 
 (defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
-        segregate-lens? (get-in @db [:settings :lens-segregate-test-references] true)
+        segregate-lens? (get-in @db [:settings :code-lens :segregate-test-references] true)
         references (q/find-references-from-cursor (:analysis @db) filename row col false)]
     (if segregate-lens?
       (let [source-path (->> (get-in @db [:settings :source-paths])

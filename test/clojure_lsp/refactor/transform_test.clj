@@ -562,6 +562,25 @@
                            "  [some :refer [foo bar baz]]))"
                            "   foo bar baz")))
     (testing "ns children sorting"
+      (testing "keep comments"
+        (test-clean-ns {}
+                       (code "(ns foo"
+                             " (:require"
+                             "  [clojure.set :as set] ;; important comment"
+                             "  [clojure.java.io :as io]"
+                             "  [clojure.edn :as edn]))"
+                             "io/a"
+                             "set/a"
+                             "edn/b")
+                       (code "(ns foo"
+                             " (:require"
+                             "  [clojure.edn :as edn]"
+                             "  [clojure.java.io :as io]"
+                             "  [clojure.set :as set] ;; important comment"
+                             "))"
+                             "io/a"
+                             "set/a"
+                             "edn/b")))
       (testing "import before require"
         (test-clean-ns {}
                        (code "(ns foo.bar"

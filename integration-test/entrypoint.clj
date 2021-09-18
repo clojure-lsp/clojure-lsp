@@ -3,7 +3,8 @@
    [clojure.test :as t]))
 
 (def namespaces
-  '[integration.initialize-test
+  '[
+    integration.initialize-test
     integration.definition-test
     integration.diagnostics-test
     integration.formatting-test
@@ -14,7 +15,8 @@
     integration.api.clean-ns-test
     integration.api.diagnostics-test
     integration.api.format-test
-    integration.api.rename-test])
+    integration.api.rename-test
+    ])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

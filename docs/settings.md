@@ -71,13 +71,7 @@ You can find all settings and its default [here](https://github.com/clojure-lsp/
 
 ### Diagnostics (linter)
 
-Default:
-
-```clojure
-{:clj-kondo {:level :on
-             :report-duplicates true
-             :ns-exclude-regex ""}}
-```
+Default: Check `:linters` in [all-available-settings.edn](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn).
 
 #### clj-kondo
 
@@ -162,15 +156,7 @@ Some features require know the available source paths of your project, where you
 
 ### Clean
 
-Default:
-
-```clojure
-{:ns-inner-blocks-indentation :next-line
- :sort {:ns true
-        :require true
-        :import true
-        :refer true}}
-```
+Default: Check `:clean` in [all-available-settings.edn](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn).
 
 #### ns-inner-blocks-indentation 
 

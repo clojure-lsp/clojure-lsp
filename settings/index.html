@@ -1027,11 +1027,7 @@
 </tbody>
 </table>
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
-<p>Default:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:on</span>
-             <span class="ss">:report-duplicates</span> <span class="nv">true</span>
-             <span class="ss">:ns-exclude-regex</span> <span class="s">&quot;&quot;</span><span class="p">}}</span>
-</code></pre></div>
+<p>Default: Check <code>:linters</code> in <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">all-available-settings.edn</a>.</p>
 <h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
 <p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
 make most of features work, you don't have to install clj-kondo to
@@ -1094,13 +1090,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <li>If your project is not a <code>deps.edn</code> or <code>lein</code> project, a <code>boot</code> project for example, clojure-lsp will use only the <code>:source-paths</code> setting (default <code>#{"src" "test"}</code>) which should point to the folders containing your clojure code.</li>
 </ul>
 <h3 id="clean">Clean<a class="headerlink" href="#clean" title="Permanent link">#</a></h3>
-<p>Default:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:ns-inner-blocks-indentation</span> <span class="ss">:next-line</span>
- <span class="ss">:sort</span> <span class="p">{</span><span class="ss">:ns</span> <span class="nv">true</span>
-        <span class="ss">:require</span> <span class="nv">true</span>
-        <span class="ss">:import</span> <span class="nv">true</span>
-        <span class="ss">:refer</span> <span class="nv">true</span><span class="p">}}</span>
-</code></pre></div>
+<p>Default: Check <code>:clean</code> in <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">all-available-settings.edn</a>.</p>
 <h4 id="ns-inner-blocks-indentation">ns-inner-blocks-indentation<a class="headerlink" href="#ns-inner-blocks-indentation" title="Permanent link">#</a></h4>
 <p>Where to place first require/import following <a href="https://github.com/bbatsov/clojure-style-guide#line-breaks-in-ns">Clojure Style Guide</a>, <code>:same-line</code>, <code>:next-line</code> or <code>:keep</code>.</p>
 <h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>

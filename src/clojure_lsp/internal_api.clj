@@ -94,12 +94,23 @@
   (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}})
   ns+uri)
 
-(defn ^:private edits->diff-string [edits {:keys [raw?]}]
+(defn ^:private find-new-uri-checking-rename
+  [uri edits]
+  (or (some->> edits
+               (filter #(and (= :rename (:kind %))
+                             (= uri (:old-uri %))))
+               first
+               :new-uri)
+      uri))
+
+(defn ^:private edits->diff-string [edits {:keys [raw? project-root]}]
   (->> edits
-       (map (fn [{:keys [uri old-text new-text]}]
-              (if raw?
-                (diff/unified-diff uri old-text new-text)
-                (diff/colorize-diff (diff/unified-diff uri old-text new-text)))))
+       (sort-by #(not= :rename (:kind %)))
+       (map (fn [{:keys [kind uri old-text new-text old-uri new-uri]}]
+              (if (= :rename kind)
+                (diff/rename-diff old-uri new-uri (project-root->uri project-root))
+                (diff/unified-diff uri (find-new-uri-checking-rename uri edits) old-text new-text (project-root->uri project-root)))))
+       (map #(if raw? % (diff/colorize-diff %)))
        (string/join "\n")))
 
 (defn ^:private exclude-ns? [{:keys [ns-exclude-regex]} namespace]
@@ -207,10 +218,15 @@
 
 (defn rename! [{:keys [from to dry?] :as options}]
   (setup-analysis! options)
-  (let [from-name (symbol (name from))
-        from-ns (symbol (namespace from))
+  (let [ns-only? (simple-symbol? from)
+        from-name (when-not ns-only? (symbol (name from)))
+        from-ns (if ns-only?
+                  from
+                  (symbol (namespace from)))
         project-analysis (q/filter-project-analysis (:analysis @db/db))]
-    (if-let [from-element (q/find-element-by-full-name project-analysis from-name from-ns)]
+    (if-let [from-element (if ns-only?
+                            (q/find-namespace-definition-by-namespace project-analysis from-ns)
+                            (q/find-element-by-full-name project-analysis from-name from-ns))]
       (let [uri (shared/filename->uri (:filename from-element) db/db)]
         (open-file! {:uri uri :namespace from-ns})
         (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]

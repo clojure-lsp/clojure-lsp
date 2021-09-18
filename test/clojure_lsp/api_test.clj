@@ -172,22 +172,33 @@
   (testing "when project-root is a valid file"
     (testing "foo option assertions"
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
-                                                :raw? true})))
+                                                :raw?         true})))
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
-                                                :from 'foo
-                                                :raw? true}))))
+                                                :from         'foo
+                                                :raw?         true}))))
     (testing "to option assertions"
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
-                                                :from 'a.rename/foo
-                                                :raw? true})))
+                                                :from         'a.rename/foo
+                                                :raw?         true})))
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
-                                                :from 'a.rename/foo
-                                                :to 'foo
-                                                :raw? true})))))
+                                                :from         'a.rename/foo
+                                                :to           'foo
+                                                :raw?         true})))
+      (is (thrown? AssertionError (api/rename! {:project-root (io/file "integration-test/sample-test")
+                                                :from         'foo
+                                                :to           'a.rename/foo
+                                                :raw?         true})))))
   (testing "renaming a function"
     (reset! db/db {})
-    (with-redefs [spit #(is (= (slurp (string/replace %1 "src" "fixtures/api")) %2))]
-      (api/rename! {:project-root (io/file "integration-test/sample-test")
-                    :from 'rename.a/my-func
-                    :to 'rename.a/your-func
-                    :raw? true}))))
+    (with-redefs [spit #(is (= (slurp (string/replace %1 "src/sample_test" "fixtures/sample_test/api")) %2))]
+      (is (= 0 (:result-code (api/rename! {:project-root (io/file "integration-test/sample-test")
+                                           :from         'sample-test.rename.a/my-func
+                                           :to           'sample-test.rename.a/your-func
+                                           :raw?         true}))))))
+  (testing "renaming a namespace"
+    (reset! db/db {})
+    (is (= 0 (:result-code (api/rename! {:project-root (io/file "integration-test/sample-test")
+                                         :from         'sample-test.rename.a
+                                         :to           'sample-test.rename.b
+                                         :dry?         true
+                                         :raw?         true}))))))

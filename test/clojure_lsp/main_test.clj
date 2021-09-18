@@ -45,11 +45,11 @@
       (is (= {:a {:b 1} :c 2} (:output (:options (#'main/parse ["-o" "{:a {:b 1} :c 2}"]))))))
     (testing "from"
       (is (= nil (:from (:options (#'main/parse [])))))
-      (is (= nil (:from (:options (#'main/parse ["--from" "abc"])))))
+      (is (= 'abc (:from (:options (#'main/parse ["--from" "abc"])))))
       (is (= 'bla/abc (:from (:options (#'main/parse ["--from" "bla/abc"]))))))
     (testing "to"
       (is (= nil (:to (:options (#'main/parse [])))))
-      (is (= nil (:to (:options (#'main/parse ["--to" "abc"])))))
+      (is (= 'abc (:to (:options (#'main/parse ["--to" "abc"])))))
       (is (= 'bla/abc (:to (:options (#'main/parse ["--to" "bla/abc"])))))))
   (testing "commands"
     (is (= "listen" (:action (#'main/parse []))))

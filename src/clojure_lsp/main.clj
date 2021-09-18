@@ -74,14 +74,14 @@
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --output EDN"]
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
-   [nil "--from FROM" "Full qualified symbol name, e.g. my-project/my-var. option for rename"
+   [nil "--from FROM" "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename"
     :id :from
     :parse-fn symbol
-    :validate [qualified-ident? "Specify a valid clojure full qualified symbol after --from"]]
-   [nil "--to TO" "Full qualified symbol name, e.g. my-project/my-var. option for rename"
+    :validate [symbol? "Specify a valid clojure full qualified symbol or the namespace after --from"]]
+   [nil "--to TO" "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename"
     :id :to
     :parse-fn symbol
-    :validate [qualified-ident? "Specify a valid clojure full qualified symbol after --to"]]])
+    :validate [symbol? "Specify a valid clojure full qualified symbol or the namespace after --to"]]])
 
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"

@@ -33,5 +33,5 @@
                               "--project-root" h/root-project-path
                               "--namespace" "sample-test.api.format.a"
                               "--dry")]
-      (is (string/includes? (slurp rdr) a-subject-path))
+      (is (string/includes? (slurp rdr) "src/sample_test/api/format/a.clj"))
       (is (= a-subject-text (slurp a-subject-path))))))

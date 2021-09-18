@@ -111,9 +111,9 @@
 
   `:project-root` a java.io.File representing the project root.
 
-  `:from` the full qualified symbol origin name that should be renamed. e.g. my-project/my-var
+  `:from` the full qualified symbol origin name that should be renamed. e.g. my-project/my-var or my-project.foo for namespaces
 
-  `:to` the full qualified symbol that will replace the original symbol. e.g. my-project/my-var-2
+  `:to` the full qualified symbol that will replace the original symbol. e.g. my-project/my-var-2 or my-project.bar for namespaces
 
   `dry?` a boolean, when enabled make no changes to files, only report.
 
@@ -124,10 +124,12 @@
                   (.exists project-root)))
          (or (nil? settings)
              (map? settings))
-         (and (symbol? from)
-              (qualified-ident? from))
-         (and (symbol? to)
-              (qualified-ident? to))]}
+         (symbol? from)
+         (symbol? to)
+         (or (not (simple-symbol? from))
+             (simple-symbol? to))
+         (or (not (simple-symbol? to))
+             (simple-symbol? from))]}
   (logging/setup-logging db/db)
   (safe-process-message
     options

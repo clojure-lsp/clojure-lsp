@@ -124,10 +124,15 @@
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)}))))
 
-(defn clean! [uri]
-  (async/>!! db/diagnostics-chan
-             {:uri uri
-              :diagnostics []}))
+(defn clean! [uri db]
+  (if (= :test (:env @db))
+    (async/put! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics []})
+    (async/go
+      (async/>! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics []}))))
 
 (defn ^:private lint-project-files [paths db]
   (doseq [path paths]

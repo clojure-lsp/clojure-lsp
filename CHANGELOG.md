@@ -11,6 +11,10 @@
 - Editor
   - Fix `resolve macro as` code action after regression introduced recently.
   - Fix `unused-public-var` not being suppressed during project startup. #554
+  
+- API/CLI
+  - Support renaming namespaces as well with `rename` feature.
+  - Use relative paths instead of absolute paths on diff messages.
 
 ## 2021.09.13-22.25.35
 

@@ -1,7 +1,8 @@
 (ns clojure-lsp.client
   (:require
    [clojure-lsp.feature.file-management :as f.file-management]
-   [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.shared :as shared]
+   [clojure.java.io :as io]
    [taoensso.timbre :as log]))
 
 (defn edit->summary
@@ -19,26 +20,45 @@
                          (-> range :end :line)
                          (-> range :end :character))]
      (when (not= new-full-text old-text)
-       {:uri uri
+       {:kind :change
+        :uri uri
         :version (get-in @db [:documents uri :version] 0)
         :old-text old-text
         :new-text new-full-text}))))
 
-(defn document-change->edit-summary [{:keys [text-document edits]} db]
-  (let [uri (:uri text-document)]
-    (loop [edit-summary nil
-           i 0]
-      (if-let [edit (nth edits i nil)]
-        (when-let [edit-summary (edit->summary db uri edit (:new-text edit-summary))]
-          (recur edit-summary (inc i)))
-        edit-summary))))
+(defn document-change->edit-summary [{:keys [text-document edits kind old-uri new-uri]} db]
+  (if (= "rename" kind)
+    {:kind :rename
+     :new-uri new-uri
+     :old-uri old-uri}
+    (let [uri (:uri text-document)]
+      (loop [edit-summary nil
+             i 0]
+        (if-let [edit (nth edits i nil)]
+          (when-let [edit-summary (edit->summary db uri edit (:new-text edit-summary))]
+            (recur edit-summary (inc i)))
+          edit-summary)))))
 
-(defn apply-workspace-edit-summary!
-  [{:keys [uri new-text version changed?] :as change} db]
+(defn apply-workspace-change-edit-summary!
+  [{:keys [uri new-text version changed?]} db]
   (spit uri new-text)
   (when (and changed?
              (get-in @db [:documents uri :text]))
-    (handlers/did-change {:textDocument {:uri uri
-                                         :version (inc version)}
-                          :contentChanges new-text}))
+    (f.file-management/did-change uri new-text (inc version) db)))
+
+(defn ^:private apply-workspace-rename-edit-summary!
+  [{:keys [old-uri new-uri]} db]
+  (let [old-file (-> old-uri shared/uri->filename io/file)
+        new-file (-> new-uri shared/uri->filename io/file)]
+    (io/make-parents new-file)
+    (io/copy old-file new-file)
+    (io/delete-file old-file)
+    (f.file-management/did-close old-uri db)
+    (f.file-management/did-open new-uri (slurp new-file) db)))
+
+(defn apply-workspace-edit-summary!
+  [change db]
+  (if (= :rename (:kind change))
+    (apply-workspace-rename-edit-summary! change db)
+    (apply-workspace-change-edit-summary! change db))
   change)

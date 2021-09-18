@@ -12,15 +12,31 @@
   (str/join "\n" ss))
 
 (defn unified-diff
-  ([uri original revised]
-   (unified-diff uri original revised 3))
-  ([uri original revised context]
-   (unlines (DiffUtils/generateUnifiedDiff
-              (->> uri shared/uri->filename (str "a"))
-              (->> uri shared/uri->filename (str "b"))
-              (lines original)
-              (DiffUtils/diff (lines original) (lines revised))
-              context))))
+  ([old-uri new-uri original revised project-root-uri]
+   (unified-diff old-uri new-uri original revised project-root-uri 3))
+  ([old-uri new-uri original revised project-root-uri context]
+   (let [project-path (shared/uri->filename project-root-uri)]
+     (unlines (DiffUtils/generateUnifiedDiff
+                (str "a/" (-> old-uri
+                              shared/uri->filename
+                              (shared/relativize-filepath project-path)))
+                (str "b/" (-> new-uri
+                              shared/uri->filename
+                              (shared/relativize-filepath project-path)))
+                (lines original)
+                (DiffUtils/diff (lines original) (lines revised))
+                context)))))
+
+(defn rename-diff
+  [old-uri new-uri project-root-uri]
+  (let [project-path (shared/uri->filename project-root-uri)]
+    (->> [(str "rename from " (-> old-uri
+                                  shared/uri->filename
+                                  (shared/relativize-filepath project-path)))
+          (str "rename to " (-> new-uri
+                                shared/uri->filename
+                                (shared/relativize-filepath project-path)))]
+         unlines)))
 
 (def ^:private ansi-colors
   {:reset "[0m"
@@ -34,6 +50,8 @@
 
 (defn colorize-diff [diff-text]
   (-> diff-text
+      (str/replace #"(?m)^(rename from .*)$"  (colorize "$1" :yellow))
+      (str/replace #"(?m)^(rename to .*)$"  (colorize "$1" :yellow))
       (str/replace #"(?m)^(\-\-\-\sa.*)$"  (colorize "$1" :yellow))
       (str/replace #"(?m)^(\+\+\+\sb.*)$"  (colorize "$1" :yellow))
       (str/replace #"(?m)^(@@.*@@)$"       (colorize "$1" :cyan))

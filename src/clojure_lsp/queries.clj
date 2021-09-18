@@ -349,7 +349,7 @@
 
 (defn find-element-by-full-name [analysis name ns]
   (find-last-order-by-project-analysis
-    #(and (= :var-definitions (:bucket %))
+    #(and (identical? :var-definitions (:bucket %))
           (= ns (:ns %))
           (= name (:name %)))
     analysis))

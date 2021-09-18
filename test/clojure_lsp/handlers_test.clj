@@ -320,24 +320,6 @@
              (map :message (:diagnostics %))))))
   (is true))
 
-(deftest test-formatting
-  (reset! db/db {:documents {(h/file-uri "file:///a.clj") {:text "(a  )\n(b c d)"}}})
-  (is (= "(a)\n(b c d)"
-         (:new-text (first (handlers/formatting {:textDocument (h/file-uri "file:///a.clj")}))))))
-
-(deftest test-formatting-noop
-  (reset! db/db {:documents {(h/file-uri "file:///a.clj") {:text "(a)\n(b c d)"}}})
-  (let [r (handlers/formatting {:textDocument (h/file-uri "file:///a.clj")})]
-    (is (empty? r))
-    (is (vector? r))))
-
-(deftest test-range-formatting
-  (reset! db/db {:documents {(h/file-uri "file:///a.clj") {:text "(a  )\n(b c d)"}}})
-  (is (= [{:range {:start {:line 0 :character 0}
-                   :end {:line 0 :character 5}}
-           :new-text "(a)"}]
-         (handlers/range-formatting (h/file-uri "file:///a.clj") {:row 1 :col 1 :end-row 1 :end-col 4}))))
-
 (deftest test-code-actions-handle
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")

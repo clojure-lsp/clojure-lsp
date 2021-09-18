@@ -1,10 +1,9 @@
 {:remove-surrounding-whitespace? true
  :remove-trailing-whitespace? true
- :remove-consecutive-blank-lines? false
+ :remove-consecutive-blank-lines? true
  :insert-missing-whitespace? true
  :align-associative? false
- :indents {#"^reg-" [[:inner 0]]
-           #"^:(require|import)" [[:block 0]]}
+ :indents {#re ".*" [[:block 0]]}
  :test-code
  (comment
    (:require

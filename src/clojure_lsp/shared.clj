@@ -1,5 +1,6 @@
 (ns clojure-lsp.shared
   (:require
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -223,6 +224,9 @@
   (when element
     {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
      :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
+
+(defn full-file-range []
+  (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."

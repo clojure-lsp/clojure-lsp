@@ -24,6 +24,7 @@
  :document-range-formatting? true
  :dependency-scheme :zip
  :text-document-sync-kind :full
+ :cljfmt-config-path ".cljfmt.edn"
  :cljfmt {}
  :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
  :additional-snippets []

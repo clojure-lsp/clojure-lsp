@@ -572,6 +572,7 @@
         (update :source-paths parse-source-paths)
         (update :source-aliases parse-source-aliases)
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
+        (update :cljfmt-config-path #(or % ".cljfmt.edn"))
         (update :cljfmt kwd-keys)
         (update-in [:cljfmt :indents] clean-symbol-map)
         (update :document-formatting? (fnil identity true))

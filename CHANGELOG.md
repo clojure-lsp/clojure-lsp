@@ -6,6 +6,7 @@
   - Use lower-case for refer/import/require sorting. #560 #561
   - Avoid removing comments when sorting/cleaning namespace. #559
   - Deprecate `lens-segregate-test-references` in favor to `:code-lens :segregate-test-references`
+  - Check for a default `.cljfmt.edn` config file for cljfmt config settings if no `:cljfmt-config-path` was provided.
 
 - Editor
   - Fix `resolve macro as` code action after regression introduced recently.

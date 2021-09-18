@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers
   (:require
-   [cljfmt.core :as cljfmt]
    [clojure-lsp.config :as config]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
@@ -10,6 +9,7 @@
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
@@ -24,16 +24,11 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])
   (:import
    [java.net
     URL
     JarURLConnection]))
-
-(defn ^:private full-file-range []
-  (shared/->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defmacro process-after-changes [& body]
   `(let [~'_time (System/nanoTime)]
@@ -118,10 +113,10 @@
     [{:name (or (some-> namespace-definition :name name)
                 filename)
       :kind (f.document-symbol/element->symbol-kind namespace-definition)
-      :range (full-file-range)
+      :range (shared/full-file-range)
       :selection-range (if namespace-definition
                          (shared/->scope-range namespace-definition)
-                         (full-file-range))
+                         (shared/full-file-range))
       :children (->> (q/find-var-definitions analysis filename true)
                      (mapv (fn [e]
                              {:name            (-> e :name name)
@@ -222,24 +217,11 @@
     (f.signature-help/signature-help textDocument line column db/db)))
 
 (defn formatting [{:keys [textDocument]}]
-  (let [{:keys [text]} (get-in @db/db [:documents textDocument])
-        new-text (cljfmt/reformat-string
-                   text
-                   (get-in @db/db [:settings :cljfmt]))]
-    (if (= new-text text)
-      []
-      [{:range (full-file-range)
-        :new-text new-text}])))
+  (f.format/formatting textDocument db/db))
 
 (defn range-formatting [doc-id format-pos]
   (process-after-changes
-    (let [{:keys [text]} (get-in @db/db [:documents doc-id])
-          cljfmt-settings (get-in @db/db [:settings :cljfmt])
-          forms (parser/find-top-forms-in-range text format-pos)]
-      (mapv (fn [form-loc]
-              {:range (shared/->range (-> form-loc z/node meta))
-               :new-text (n/string (cljfmt/reformat-form (z/node form-loc) cljfmt-settings))})
-            forms))))
+    (f.format/range-formatting doc-id format-pos db/db)))
 
 (defmulti extension (fn [method _] method))
 

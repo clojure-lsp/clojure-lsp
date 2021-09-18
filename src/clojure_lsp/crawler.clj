@@ -1,6 +1,5 @@
 (ns clojure-lsp.crawler
   (:require
-   [cljfmt.main :as cljfmt.main]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -183,8 +182,7 @@
         settings (-> raw-settings
                      (update :project-specs #(or % (default-project-specs)))
                      (update :source-aliases #(or % source-paths/default-source-aliases))
-                     (update :source-paths (partial source-paths/process-source-paths root-path raw-settings))
-                     (update :cljfmt cljfmt.main/merge-default-options))]
+                     (update :source-paths (partial source-paths/process-source-paths root-path raw-settings)))]
     (swap! db assoc
            :project-root-uri project-root-uri
            :project-settings project-settings

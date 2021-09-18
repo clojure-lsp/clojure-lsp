@@ -9,6 +9,21 @@
 
 (h/reset-db-after-test)
 
+(deftest analyze-project!
+  (testing "when project-root is not a file"
+    (is (thrown? AssertionError
+                 (api/analyze-project! {:project-root "integration-test/sample-test"}))))
+  (testing "when project-root is not a existent file"
+    (is (thrown? AssertionError
+                 (api/analyze-project! {:project-root (io/file "integration-test/sample-test/bla")}))))
+  (testing "when project was not analyzed before, analyzes and return a truthy value"
+    (reset! db/db {})
+    (is (api/analyze-project! {:project-root (io/file "integration-test/sample-test")
+                               :raw? true})))
+  (testing "when project was already analyzed before return a falsey value"
+    (is (not (api/analyze-project! {:project-root (io/file "integration-test/sample-test")
+                                    :raw? true})))))
+
 (deftest clean-ns!
   (testing "when project-root is not a file"
     (is (thrown? AssertionError

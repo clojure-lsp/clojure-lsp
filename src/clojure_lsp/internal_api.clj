@@ -69,7 +69,8 @@
                   :text-document-sync-kind :full}
                  :log-path log-path)
                settings)
-        db/db))))
+        db/db)
+      true)))
 
 (defn ^:private ns->ns+uri [namespace]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
@@ -116,6 +117,8 @@
 (defn ^:private exclude-ns? [{:keys [ns-exclude-regex]} namespace]
   (and ns-exclude-regex
        (re-matches ns-exclude-regex (str namespace))))
+
+(def analyze-project! setup-analysis!)
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
   (setup-analysis! options)

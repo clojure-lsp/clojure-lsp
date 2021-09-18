@@ -20,6 +20,24 @@
        (some-> e# ex-data :message println)
        e#)))
 
+(defn analyze-project!
+  "Analyze project caching analysis for future API calls. Useful for REPL usage for example.
+  Options:
+
+  `:project-root` a java.io.File representing the project root.
+
+  `settings` map of settings following https://clojure-lsp.io/settings/"
+  [{:keys [project-root settings] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists project-root)))
+         (or (nil? settings)
+             (map? settings))]}
+  (logging/setup-logging db/db)
+  (safe-process-message
+    options
+    (internal-api/analyze-project! options)))
+
 (defn clean-ns!
   "Organize ns form, removing unused requires/refers/imports and sorting
   alphabetically.

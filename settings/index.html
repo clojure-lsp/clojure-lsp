@@ -995,8 +995,13 @@
 <td><code>zip</code></td>
 </tr>
 <tr>
+<td><code>cljfmt-config-path</code></td>
+<td>Where to find cljfmt configuration for formatting. A path relative to project root or an absolute path. Use <code>#re</code> for regex inside the cljfmt configuration file.</td>
+<td><code>.cljfmt.edn</code></td>
+</tr>
+<tr>
 <td><code>cljfmt</code></td>
-<td>Used for formatting, json encoded configuration for <a href="https://github.com/weavejester/cljfmt">cljfmt</a></td>
+<td>If no <code>:cljfmt-config-path</code> is provided, used this for formatting, json encoded configuration for <a href="https://github.com/weavejester/cljfmt">cljfmt</a></td>
 <td><code>{}</code></td>
 </tr>
 <tr>
@@ -1138,7 +1143,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 17, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 18, 2021</span>
     
   </small>
 </div>

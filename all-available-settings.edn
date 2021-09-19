@@ -13,7 +13,7 @@
          :sort {:ns true
                 :require true
                 :import true
-                :refer true}}
+                :refer {:max-line-length 80}}}
  :hover {:hide-file-location? false}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true

@@ -13,9 +13,7 @@
 Example:
 ```clojure
 {:cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
- :auto-add-ns-to-new-files? false
- :project-specs [{:project-path "deps.edn"
-                  :classpath-cmd ["clojure" "-A:dev" "-Spath"]}]}
+ :auto-add-ns-to-new-files? false}
 ```
 
 ---
@@ -64,10 +62,36 @@ You can find all settings and its default [here](https://github.com/clojure-lsp/
 | `dependency-scheme`                     | How the dependencies should be linked, `jar` will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of `clojure/dependencyContents` with the jar uri and the server will return the jar entry's contents. [Similar to java clients](https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298) | `zip`                                                                                                                |
 | `cljfmt-config-path`                    | Where to find cljfmt configuration for formatting. A path relative to project root or an absolute path. Use `#re` for regex inside the cljfmt configuration file.                                                                                                                                                                                                                                                                                                              | `.cljfmt.edn`                                                                                                        |
 | `cljfmt`                                | If no `:cljfmt-config-path` is provided, used this for formatting, json encoded configuration for [cljfmt](https://github.com/weavejester/cljfmt)                                                                                                                                                                                                                                                                    | `{}`                                                                                                                 |
-| `project-specs`                         | A vector of a map with `project-path` and `classpath-cmd`, defining how `clojure-lsp` should find your project classpath. the `project-path` should be a file and the `classpath-cmd` the command to run to get the classpath                                                                                                                                                                                        | Check the default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60) |
+| `project-specs`                         | A vector of a map with `project-path` and `classpath-cmd`, defining how `clojure-lsp` should find your project classpath. the `project-path` should be a file and the `classpath-cmd` the command to run to get the classpath                                                                                                                                                                                        | Check `Classpath scan` section below |
 | `code-lens` `segregate-test-references` | Segregate main references from test references with option to disable                                                                                                                                                                                                                                                                                                                                                | `true`                                                                                                               |
 | `cache-path`                            | Where to store the project's analysis cache, used to speed up next `clojure-lsp` startup. A path relative to project root or an absolute path.                                                                                                                                                                                                                                                                       | `.lsp/.cache`                                                                                                        |
 | `log-path`                              | A absolute path to a file where clojure-lsp should log.                                                                                                                                                                                                                                                                                                                                                              | A JVM tmp path, usually `/tmp/clojure-lsp.*.out`                                                                     |
+
+### Classpath scan
+
+clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project to pass to clj-kondo later. 
+
+You can configure how clojure-lsp should find the classpath with the `project-specs` setting, check the default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60).
+
+Supported project types at the moment are:
+
+- `leiningen`: If a `project.clj` is found at the project root, clojure-lsp will run `lein classpath`.
+- `deps`: If a `deps.edn` is found at the project root, clojure-lsp will run `clojure -Spath`.
+- `boot`: If a `build.boot` is found at the project root, clojure-lsp will run `boot show --fake-classpath`.
+- `shadow-cljs`: If a `shadow-cljs.edn` is found at the project root, clojure-lsp will run `npx shadow-cljs classpath`.
+- `babashka`: If a `bb.edn` is found at the project root, clojure-lsp will run `bb print-deps --format classpath`.
+
+Note that it's possible to have more and one project type at the same time e.g. deps + babashka, clojure-lsp will merge the classpath and everything should works fine.
+
+Make sure to have these programs available on the `PATH` environment variable used by your editor, otherwise clojure-lsp will warn about a classpath scan fail, causing a lot of features to not work properly. 
+
+Alternatively, you can configure the `project-specs` specific for your project, for example:
+
+`.lsp/config.edn`
+```clojure
+{:project-specs [{:project-path "deps.edn"
+                  :classpath-cmd ["clojure" "-A:dev" "-Spath"]}]}
+```
 
 ### Diagnostics (linter)
 

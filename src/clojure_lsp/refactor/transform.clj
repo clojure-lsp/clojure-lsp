@@ -382,11 +382,53 @@
                    (z/replace (with-meta (n/list-node forms)
                                          (-> removed-nodes z/node meta)))))))
 
+(defn refer-node-with-add-new-lines [nodes]
+  (->> (cons (first nodes) nodes)
+       (partition 2 1)
+       (mapv (fn [[[_ prev] [n curr]]]
+               (if (= prev curr) [n false] [n true])))))
+
+(defn ^:private sort-refers-checking-new-lines
+  [root-node initial-sep-spaces db nodes]
+  (let [sorted-refers (->> nodes
+                           (sort-by-if-enabled (comp string/lower-case n/sexpr) :refer db))
+        init-refer-sep (+ initial-sep-spaces
+                          (-> root-node z/down z/sexpr str count)
+                          12)]
+    (->> sorted-refers
+         (map-indexed (fn [idx refer-node]
+                        (let [end-col (->> sorted-refers
+                                           (take idx)
+                                           (map (comp count str n/sexpr))
+                                           (interpose 1)
+                                           (reduce + 0)
+                                           (+ init-refer-sep (-> refer-node n/sexpr str count)))
+                              max-line-length (get-in @db [:settings :clean :sort :refer :max-line-length] 80)]
+                          (if (and max-line-length
+                                   (> max-line-length 0))
+                            (let [lines-n (if (> (quot end-col max-line-length) 0)
+                                            (+ init-refer-sep end-col)
+                                            end-col)]
+                              [refer-node (quot lines-n max-line-length)])
+                            [refer-node 0]))))
+         refer-node-with-add-new-lines
+         (map (fn [[refer-node add-new-line?]]
+                (if add-new-line?
+                  [refer-node [(n/newlines 1)
+                               (n/whitespace-node (string/join "" (repeat (dec (dec init-refer-sep)) " ")))
+                               refer-node]]
+                  [refer-node [(n/whitespace-node " ") refer-node]])))
+         (mapv last)
+         (apply concat)
+         rest)))
+
 (defn ^:private remove-unused-refers
-  [node unused-refers db]
-  (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/sexpr)
+  [node unused-refers initial-sep-spaces db]
+  (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/node n/children)
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
-        removed-refers (remove unused-refers-symbol node-refers)]
+        removed-refers (->> node-refers
+                            (remove n/printable-only?)
+                            (remove (comp unused-refers-symbol n/sexpr)))]
     (if (empty? removed-refers)
       (let [ns-only (-> node
                         z/down
@@ -402,14 +444,12 @@
           (z/find-next-value ':refer)
           z/right
           (z/replace (->> removed-refers
-                          (sort-by-if-enabled string/lower-case :refer db)
-                          vec
-                          (interpose (n/whitespace-node " "))
+                          (sort-refers-checking-new-lines node initial-sep-spaces db)
                           n/vector-node))
           z/up))))
 
 (defn ^:private remove-unused-require
-  [node unused-aliases unused-refers db]
+  [node unused-aliases unused-refers initial-sep-spaces db]
   (cond
     (not (z/vector? node))
     node
@@ -418,13 +458,13 @@
     (z/remove node)
 
     (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
-    (remove-unused-refers node unused-refers db)
+    (remove-unused-refers node unused-refers initial-sep-spaces db)
 
     :else
     node))
 
 (defn ^:private remove-unused-requires
-  [nodes unused-aliases unused-refers db]
+  [nodes unused-aliases unused-refers initial-sep-spaces db]
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
         first-node-ns   (when (and single-require?
@@ -450,7 +490,7 @@
                                    (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
-      (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers db)))))
+      (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers initial-sep-spaces db)))))
 
 (defn ^:private clean-requires
   [ns-loc unused-aliases unused-refers ns-inner-blocks-indentation db]
@@ -463,7 +503,7 @@
                   2)
           removed-nodes (-> require-loc
                             z/remove
-                            (remove-unused-requires unused-aliases unused-refers db))]
+                            (remove-unused-requires unused-aliases unused-refers col db))]
       (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :require db))
     ns-loc))
 

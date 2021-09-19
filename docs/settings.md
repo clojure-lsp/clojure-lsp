@@ -178,7 +178,9 @@ Whether to enable sort of `:import` form.
 
 ##### refer
 
-Whether to enable sort of `:import` form.
+Whether to enable sort of `:refer` form.
+
+- `:max-line-length`: the max refers to keep at same line before breaking the line. Default `80`.
 
 ### Snippets
 

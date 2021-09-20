@@ -2,7 +2,8 @@
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [taoensso.timbre :as log]))
 
 (def line-break "\n\n----\n\n")
 (def opening-code "```clojure\n")
@@ -69,15 +70,19 @@
 
 (defn hover [filename line column db]
   (let [analysis (:analysis @db)
-        element (q/find-element-under-cursor analysis filename line column)
+        element (loop [try-column column]
+                  (if-let [usage (q/find-element-under-cursor analysis filename line try-column)]
+                    usage
+                    (when (pos? try-column)
+                      (recur (dec try-column)))))
         definition (when element (q/find-definition analysis element))]
     (cond
       definition
-      {:range (shared/->range element)
+      {:range (shared/->scope-range element)
        :contents (hover-documentation definition db)}
 
       element
-      {:range (shared/->range element)
+      {:range (shared/->scope-range element)
        :contents (hover-documentation element db)}
 
       :else

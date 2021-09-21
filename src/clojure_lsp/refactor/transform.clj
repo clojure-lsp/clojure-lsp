@@ -952,8 +952,8 @@
                                            (cons (create-function-arg (z/node (z/left (z/up zloc))) -1))
                                            vec)
                  inside-thread-last? (-> args
-                                          (conj (create-function-arg (z/node (z/left (z/up zloc))) (count args)))
-                                          vec)
+                                         (conj (create-function-arg (z/node (z/left (z/up zloc))) (count args)))
+                                         vec)
                  :else args)
           expr-loc (z/up (edit/find-op zloc))
           form-loc (edit/to-top expr-loc)

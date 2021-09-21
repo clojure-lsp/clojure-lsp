@@ -33,6 +33,7 @@
      MessageType
      ParameterInformation
      Position
+     ProgressParams
      PublishDiagnosticsParams
      Range
      RenameFile
@@ -46,6 +47,10 @@
      TextEdit
      VersionedTextDocumentIdentifier
      WatchKind
+     WorkDoneProgressBegin
+     WorkDoneProgressKind
+     WorkDoneProgressReport
+     WorkDoneProgressEnd
      WorkspaceEdit)
    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
@@ -312,6 +317,38 @@
 (s/def ::show-message (s/and (s/keys :req-un [:show-message/type
                                               :show-message/message])
                              (s/conformer #(MessageParams. (:type %) (:message %)))))
+
+(def work-done-progress-kind-enum
+  {:begin WorkDoneProgressKind/begin
+   :report WorkDoneProgressKind/report
+   :end WorkDoneProgressKind/end})
+
+(s/def :work-done-progress/kind (s/and keyword?
+                                       work-done-progress-kind-enum))
+
+(s/def ::work-done-progress (s/and (s/keys :req-un [:work-done-progress/kind])
+                                   (s/conformer (fn [w]
+                                                  (case (:kind w)
+                                                    :begin (doto (WorkDoneProgressBegin.)
+                                                             (.setTitle (:title w))
+                                                             (.setCancellable (:cancelable w))
+                                                             (.setMessage (:message w))
+                                                             (.setPercentage (int (:percentage w))))
+                                                    :report (doto (WorkDoneProgressReport.)
+                                                             (.setCancellable (:cancelable w))
+                                                             (.setMessage (:message w))
+                                                             (.setPercentage (int (:percentage w))))
+                                                    :end (doto (WorkDoneProgressEnd.)
+                                                             (.setMessage (:message w))))))))
+
+(s/def :progress/token string?)
+
+(s/def :progress/value ::work-done-progress)
+
+(s/def ::notify-progress (s/and (s/keys :req-un [:progress/token
+                                                 :progress/value])
+                                (s/conformer #(ProgressParams. (Either/forLeft (:token %))
+                                                               (Either/forLeft (:value %))))))
 
 (s/def :code-action/title string?)
 

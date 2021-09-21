@@ -82,6 +82,21 @@
         (.isDirectory e) :directory
         :else :unkown))
 
+(defn ^:private report-startup-progress
+  ([percentage db]
+   (report-startup-progress percentage nil db))
+  ([percentage message db]
+   (let [progress (case percentage
+                    0 {:kind :begin
+                       :title message
+                       :percentage percentage}
+                    100 {:kind :end}
+                    {:kind :report
+                     :message message
+                     :percentage percentage})]
+     (producer/notify-progress {:token "clojure-lsp"
+                                :value progress} db))))
+
 (defn ^:private analyze-source-paths! [paths db]
   (let [result (shared/logging-time
                  "Project only paths analyzed, took %s secs"
@@ -94,10 +109,20 @@
     (swap! db update :findings merge (group-by :filename (:findings result)))
     analysis))
 
-(defn ^:private analyze-external-classpath! [paths db]
-  (let [result (shared/logging-time
+(defn ^:private report-batch-analysis-percentage
+  [start-progress-percentage fulfill-progress-percentage db index count]
+  (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
+    (report-startup-progress
+      (+ start-progress-percentage (/ (* index real-percentage) count))
+      "Analyzing external classpath"
+      db)))
+
+(defn ^:private analyze-external-classpath!
+  [paths start-progress-percentage fulfill-progress-percentage db]
+  (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage db)
+        result (shared/logging-time
                  "External classpath paths analyzed, took %s secs. Caching for next startups..."
-                 (lsp.kondo/run-kondo-on-paths-batch! paths true db))
+                 (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback db))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages)
                            (update :var-definitions (fn [usages] (remove :private usages))))
@@ -129,6 +154,7 @@
         project-hash (reduce str (map :hash project-specs))
         loaded (db/read-deps root-path db)
         use-db-analysis? (= (:project-hash loaded) project-hash)]
+    (report-startup-progress 15 "Discovering classpath" db)
     (if use-db-analysis?
       (do
         (log/info "Using cached classpath for project root" root-path)
@@ -139,10 +165,11 @@
                                   (mapcat #(lookup-classpath root-path % db))
                                   vec
                                   seq)]
+          (report-startup-progress 20 "External classpath" db)
           (let [external-classpath (cond->> classpath
                                      ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
                                      :always (remove (set source-paths)))
-                analysis (analyze-external-classpath! external-classpath db)]
+                analysis (analyze-external-classpath! external-classpath 20 80 db)]
             (shared/logging-time
               "Manual GC after classpath scan took %s secs"
               (System/gc))
@@ -167,6 +194,7 @@
         (db/remove-db! project-root-path db)))))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
+  (report-startup-progress 0 db)
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -189,7 +217,11 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
+    (report-startup-progress 5 db)
     (setup-pre-analysis! project-root-uri db)
+    (report-startup-progress 10 db)
     (analyze-classpath! root-path (:source-paths settings) settings db)
     (log/info "Analyzing source paths for project root" root-path)
-    (analyze-source-paths! (:source-paths settings) db)))
+    (report-startup-progress 90 "Analyzing project files" db)
+    (analyze-source-paths! (:source-paths settings) db)
+    (report-startup-progress 100 db)))

@@ -125,7 +125,7 @@
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
-  [paths public-only? db]
+  [paths public-only? update-callback db]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
@@ -135,6 +135,7 @@
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
                           (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
+                          (update-callback (inc index) batch-count)
                           (run-kondo-on-paths! batch-paths public-only? db)))
            (reduce shared/deep-merge)))))
 

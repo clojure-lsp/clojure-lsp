@@ -15,6 +15,7 @@
   - Fix `unused-public-var` not being suppressed during project startup. #554
   - Improve `hover` feature to return elements when inside a function call. #569
   - Fix `create-private-function` command and code action to consider when new function is inside thread macros.
+  - Support `$/progress` LSP feature, sending notifications for client when server is starting, improving the feedback for the user.
   
 - API/CLI
   - Support renaming namespaces as well with `rename` feature.

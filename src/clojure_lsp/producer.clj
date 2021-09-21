@@ -1,7 +1,8 @@
 (ns clojure-lsp.producer
   (:require
    [clojure-lsp.interop :as interop]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.db :as db])
   (:import
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams)
@@ -36,3 +37,9 @@
     (when (.getRefreshSupport code-lens-capability)
       (let [client ^LanguageClient (:client @db)]
         (.refreshCodeLenses client)))))
+
+(defn notify-progress [progress db]
+  (when-let [client ^LanguageClient (:client @db)]
+     (->> progress
+          (interop/conform-or-log ::interop/notify-progress)
+          (.notifyProgress client))))

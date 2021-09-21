@@ -1210,6 +1210,30 @@
           _ (h/load-code-and-locs code)
           results (transform/create-function zloc db/db)]
       (is (= "(defn- my-func\n  [b arg2]\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results)))))))
+  (testing "creating from a thread first macro with single arg"
+    (reset! db/db {})
+    (let [code "(-> b my-func)"
+          zloc (z/find-value (z/of-string code) z/next 'my-func)
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc db/db)]
+      (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results)))))))
+  (testing "creating from a thread first macro with multiple args"
+    (reset! db/db {})
+    (let [code "(-> b (my-func a 3))"
+          zloc (z/find-value (z/of-string code) z/next 'my-func)
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc db/db)]
+      (is (= "(defn- my-func\n  [b a arg2]\n  )" (z/string (:loc (first results)))))
+      (is (= "\n\n" (z/string (:loc (last results)))))))
+  (testing "creating from a thread last macro with multiple args"
+    (reset! db/db {})
+    (let [code "(->> b (my-func a 3))"
+          zloc (z/find-value (z/of-string code) z/next 'my-func)
+          _ (h/load-code-and-locs code)
+          results (transform/create-function zloc db/db)]
+      (is (= "(defn- my-func\n  [a arg2 b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results))))))))
 
 (deftest inline-symbol

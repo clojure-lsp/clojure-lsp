@@ -910,27 +910,51 @@
   (and zloc
        (#{:list :token} (z/tag zloc))))
 
+(def ^:private thread-first-macro-symbols '#{-> some->})
+(def ^:private thread-last-macro-symbols '#{->> some->>})
+(def ^:private thread-macro-symbols '#{-> ->> some-> some->>})
+
+(defn ^:private create-function-arg [node index]
+  (if (and (= :token (n/tag node))
+           (symbol? (n/sexpr node)))
+    (n/sexpr node)
+    (symbol (str "arg" (inc index)))))
+
 (defn create-function [zloc db]
   (when (can-create-function? zloc)
-    (let [fn-form (if (= :token (z/tag zloc))
-                    (z/up zloc)
-                    zloc)
-          fn-name (z/string (z/down fn-form))
-          privacy-meta? (get-in @db [:settings :use-metadata-for-privacy?] false)
-          new-fn-str (if privacy-meta?
+    (let [token? (= :token (z/tag zloc))
+          thread? (thread-macro-symbols (if token?
+                                          (z/sexpr (z/down (z/up zloc)))
+                                          (z/sexpr zloc)))
+          inside-thread-first? (and (z/leftmost? zloc)
+                                    (thread-first-macro-symbols (z/sexpr (z/down (z/up (z/up zloc))))))
+          inside-thread-last? (and (z/leftmost? zloc)
+                                   (thread-last-macro-symbols (z/sexpr (z/down (z/up (z/up zloc))))))
+          fn-form (if token? (z/up zloc) zloc)
+          fn-name (cond
+                    (and thread? token?) (z/string zloc)
+                    thread? (z/string (z/down fn-form))
+                    :else (z/string (z/down fn-form)))
+          new-fn-str (if (get-in @db [:settings :use-metadata-for-privacy?] false)
                        (format "(defn ^:private %s)" (symbol fn-name))
                        (format "(defn- %s)\n\n" (symbol fn-name)))
           args (->> fn-form
                     z/node
                     n/children
                     (drop 1)
-                    (filter (complement n/whitespace?))
+                    (remove n/whitespace?)
                     (map-indexed (fn [index node]
-                                   (if (and (= :token (n/tag node))
-                                            (symbol? (n/sexpr node)))
-                                     (n/sexpr node)
-                                     (symbol (str "arg" (inc index))))))
+                                   (create-function-arg node index)))
                     vec)
+          args (cond
+                 thread? (pop args)
+                 inside-thread-first? (->> args
+                                           (cons (create-function-arg (z/node (z/left (z/up zloc))) -1))
+                                           vec)
+                 inside-thread-last? (-> args
+                                          (conj (create-function-arg (z/node (z/left (z/up zloc))) (count args)))
+                                          vec)
+                 :else args)
           expr-loc (z/up (edit/find-op zloc))
           form-loc (edit/to-top expr-loc)
           {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))

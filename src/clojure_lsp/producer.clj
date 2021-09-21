@@ -1,8 +1,7 @@
 (ns clojure-lsp.producer
   (:require
    [clojure-lsp.interop :as interop]
-   [taoensso.timbre :as log]
-   [clojure-lsp.db :as db])
+   [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams)

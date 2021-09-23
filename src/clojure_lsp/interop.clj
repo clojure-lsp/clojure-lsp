@@ -335,11 +335,11 @@
                                                              (.setMessage (:message w))
                                                              (.setPercentage (int (:percentage w))))
                                                     :report (doto (WorkDoneProgressReport.)
-                                                             (.setCancellable (:cancelable w))
-                                                             (.setMessage (:message w))
-                                                             (.setPercentage (int (:percentage w))))
+                                                              (.setCancellable (:cancelable w))
+                                                              (.setMessage (:message w))
+                                                              (.setPercentage (int (:percentage w))))
                                                     :end (doto (WorkDoneProgressEnd.)
-                                                             (.setMessage (:message w))))))))
+                                                           (.setMessage (:message w))))))))
 
 (s/def :progress/token string?)
 

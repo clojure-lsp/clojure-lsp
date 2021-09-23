@@ -39,6 +39,6 @@
 
 (defn notify-progress [progress db]
   (when-let [client ^LanguageClient (:client @db)]
-     (->> progress
-          (interop/conform-or-log ::interop/notify-progress)
-          (.notifyProgress client))))
+    (->> progress
+         (interop/conform-or-log ::interop/notify-progress)
+         (.notifyProgress client))))

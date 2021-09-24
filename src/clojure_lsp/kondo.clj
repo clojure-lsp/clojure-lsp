@@ -1,7 +1,6 @@
 (ns clojure-lsp.kondo
   (:require
    [clj-kondo.core :as kondo]
-   [clj-kondo.impl.core :as kondo.impl]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]

@@ -175,20 +175,23 @@
                             q/filter-project-analysis
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
-        diags (->> namespaces
-                   (map ns->ns+uri)
-                   (assert-ns-exists-or-drop! options)
-                   (map (fn [{:keys [uri]}]
-                          {:uri uri
-                           :diagnostics (f.diagnostic/find-diagnostics uri db/db)}))
-                   (remove (comp empty? :diagnostics))
-                   (reduce (fn [a {:keys [uri diagnostics]}]
-                             (assoc a uri diagnostics))
-                           {}))]
-    (if (seq diags)
-      {:result-code 1
-       :message (string/join "\n" (diagnostics->diagnostic-messages diags options))
-       :diagnostics diags}
+        diags-by-uri (->> namespaces
+                          (map ns->ns+uri)
+                          (assert-ns-exists-or-drop! options)
+                          (map (fn [{:keys [uri]}]
+                                 {:uri uri
+                                  :diagnostics (f.diagnostic/find-diagnostics uri db/db)}))
+                          (remove (comp empty? :diagnostics))
+                          (reduce (fn [a {:keys [uri diagnostics]}]
+                                    (assoc a uri diagnostics))
+                                  {}))
+        diags (mapcat val diags-by-uri)
+        errors? (some (comp #(= 1 %) :severity) diags)
+        warnings? (some (comp #(= 2 %) :severity) diags)]
+    (if (seq diags-by-uri)
+      {:result-code (cond errors? 3 warnings? 2 :else 0)
+       :message (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options))
+       :diagnostics diags-by-uri}
       {:result-code 0 :message "No diagnostics found!"})))
 
 (defn format! [{:keys [namespace dry?] :as options}]

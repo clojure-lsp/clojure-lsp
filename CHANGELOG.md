@@ -9,6 +9,7 @@
   - Deprecate `lens-segregate-test-references` in favor to `:code-lens :segregate-test-references`
   - Check for a default `.cljfmt.edn` config file for cljfmt config settings if no `:cljfmt-config-path` was provided. #563
   - Bump clj-kondo to `2021.09.16-20210919.160121-5` fixing false-positives with potemkin import-var analysis.
+  - Re-scan whole project if any clj-kondo config changed for better consistence. #331
 
 - Editor
   - Fix `resolve macro as` code action after regression introduced recently.

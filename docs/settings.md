@@ -93,6 +93,12 @@ Alternatively, you can configure the `project-specs` specific for your project, 
                   :classpath-cmd ["clojure" "-A:dev" "-Spath"]}]}
 ```
 
+Note that clojure-lsp will make this scan to save the cache when:
+
+- The project has no cache (`.lsp/.cache`)
+- The project deps file (`project.clj` for example) changed. 
+- The clj-kondo config has changed. 
+
 ### Diagnostics (linter)
 
 Default: Check `:linters` in [all-available-settings.edn](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn).

@@ -46,16 +46,22 @@
         (catch Exception e
           (log/error "Failed to migrate old db file" e))))))
 
-(defn save-deps! [project-root-path project-hash classpath analysis db]
+(defn save-deps! [project-root-path project-hash kondo-config-hash classpath analysis db]
   (let [lsp-db-path (get-sqlite-db-file-path project-root-path db)
         db-spec (make-spec lsp-db-path)]
     (io/make-parents (:dbname db-spec))
     (with-open [conn (jdbc/get-connection db-spec)]
       (jdbc/execute! conn ["drop table if exists project;"])
-      (jdbc/execute! conn ["create table project (version text, root text unique, hash text, classpath text, analysis text);"])
+      (jdbc/execute! conn ["create table project (version text, root text unique, hash text, kondo_config_hash text, classpath text, analysis text);"])
       (jdbc/execute! conn ["insert or replace into project
-                            (version, root, hash, classpath, analysis)
-                            values (?,?,?,?,?);" (str version) (str project-root-path) project-hash (pr-str classpath) (pr-str analysis)]))))
+                            (version, root, hash, kondo_config_hash, classpath, analysis)
+                            values (?,?,?,?,?,?);"
+                           (str version)
+                           (str project-root-path)
+                           project-hash
+                           kondo-config-hash
+                           (pr-str classpath)
+                           (pr-str analysis)]))))
 
 (defn read-deps [project-root-path db]
   (migrate-old-db-file! project-root-path)
@@ -64,14 +70,15 @@
       (with-open [conn (jdbc/get-connection (make-spec lsp-db-path))]
         (let [project-row
               (-> (jdbc/execute! conn
-                                 ["select root, hash, classpath, analysis from project where root = ? and version = ?"
+                                 ["select root, hash, kondo_config_hash, classpath, analysis from project where root = ? and version = ?"
                                   (str project-root-path)
                                   (str version)]
                                  {:builder-fn rs/as-unqualified-lower-maps})
                   (nth 0))]
           {:analysis (edn/read-string (:analysis project-row))
            :classpath (edn/read-string (:classpath project-row))
-           :project-hash (:hash project-row)}))
+           :project-hash (:hash project-row)
+           :kondo-config-hash (:kondo_config_hash project-row)}))
       (catch org.sqlite.SQLiteException _
         (log/warn (format "Could not load project cache from '%s'. This usually happens the first time project is being analyzed." lsp-db-path)))
       (catch Throwable e

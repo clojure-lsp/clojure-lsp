@@ -152,13 +152,15 @@
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-hash (reduce str (map :hash project-specs))
-        loaded (db/read-deps root-path db)
-        use-db-analysis? (= (:project-hash loaded) project-hash)]
+        kondo-config-hash (lsp.kondo/config-hash (str root-path))
+        db-cache (db/read-deps root-path db)
+        use-db-analysis? (and (= (:project-hash db-cache) project-hash)
+                              (= (:kondo-config-hash db-cache) kondo-config-hash))]
     (report-startup-progress 15 "Discovering classpath" db)
     (if use-db-analysis?
       (do
         (log/info "Using cached classpath for project root" root-path)
-        (swap! db update :analysis merge (:analysis loaded)))
+        (swap! db update :analysis merge (:analysis db-cache)))
       (do
         (log/info "Analyzing classpath for project root" root-path)
         (when-let [classpath (->> project-specs
@@ -173,7 +175,7 @@
             (shared/logging-time
               "Manual GC after classpath scan took %s secs"
               (System/gc))
-            (db/save-deps! root-path project-hash classpath analysis db)))))))
+            (db/save-deps! root-path project-hash kondo-config-hash classpath analysis db)))))))
 
 (defn ^:private create-kondo-folder! [clj-kondo-folder]
   (try

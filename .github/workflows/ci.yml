@@ -89,7 +89,7 @@ jobs:
         run: make integration-test
 
   graalvm-build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     strategy:
       fail-fast: false
     steps:
@@ -113,7 +113,8 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm-version: 21.2.0.java11
+          graalvm: 21.2.0
+          java: java11
 
       - name: Install native-image component
         run: |

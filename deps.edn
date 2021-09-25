@@ -19,7 +19,7 @@
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
         medley/medley {:mvn/version "1.3.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
-        clj-kondo/clj-kondo {:mvn/version "2021.09.16-20210923.183934-11"}}
+        clj-kondo/clj-kondo {:mvn/version "2021.09.25"}}
  :paths ["src" "classes" "resources"]
  :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.887"}}
                   :extra-paths ["test"]

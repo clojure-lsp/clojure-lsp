@@ -846,6 +846,12 @@
   "allDeclaredFields":true
 },
 {
+  "name":"org.eclipse.lsp4j.ProgressParams",
+  "allPublicMethods":true,
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.SignatureHelpCapabilities",
   "allDeclaredFields":true,
   "allPublicMethods":true,
@@ -1057,6 +1063,26 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.WorkDoneProgressNotification",
+  "allPublicMethods":true,
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.WorkDoneProgressBegin",
+  "allPublicMethods":true,
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.WorkDoneProgressEnd",
+  "allPublicMethods":true,
+  "allDeclaredFields":true
+},
+{
+  "name":"org.eclipse.lsp4j.WorkDoneProgressReport",
+  "allPublicMethods":true,
+  "allDeclaredFields":true
+},
+{
   "name":"org.eclipse.lsp4j.adapters.CodeActionResponseAdapter",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
@@ -1082,6 +1108,10 @@
 },
 {
   "name":"org.eclipse.lsp4j.adapters.PrepareRenameResponseAdapter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.adapters.ProgressNotificationAdapter",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

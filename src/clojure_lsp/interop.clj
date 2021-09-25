@@ -49,6 +49,7 @@
      WatchKind
      WorkDoneProgressBegin
      WorkDoneProgressKind
+     WorkDoneProgressNotification
      WorkDoneProgressReport
      WorkDoneProgressEnd
      WorkspaceEdit)
@@ -347,8 +348,8 @@
 
 (s/def ::notify-progress (s/and (s/keys :req-un [:progress/token
                                                  :progress/value])
-                                (s/conformer #(ProgressParams. (Either/forLeft (:token %))
-                                                               (Either/forLeft (:value %))))))
+                                (s/conformer #(ProgressParams. (Either/forLeft ^String (:token %))
+                                                               (Either/forLeft ^WorkDoneProgressNotification (:value %))))))
 
 (s/def :code-action/title string?)
 

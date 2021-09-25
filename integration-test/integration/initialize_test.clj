@@ -39,5 +39,12 @@
 
       (lsp/request! (fixture/initialize-request))))
 
+  (h/assert-submap
+    {:token "clojure-lsp"
+     :value {:kind "begin"
+             :title "Resolving project"
+             :percentage 0}}
+    (lsp/await-notification :$/progress))
+
   (testing "initialized notification"
     (lsp/notify! (fixture/initialized-notification))))

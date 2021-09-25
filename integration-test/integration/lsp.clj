@@ -135,3 +135,19 @@
           (do
             (Thread/sleep 500)
             (recur)))))))
+
+(defn await-notification [method]
+  (loop []
+    (let [method-str (keyname method)
+          notification (first (filter #(= method-str (:method %)) @server-notifications))]
+      (if notification
+        (do
+          (swap! server-notifications
+                 (fn [n]
+                   (->> n
+                        (remove #(= method-str (:method %)))
+                        vec)))
+          (:params notification))
+        (do
+          (Thread/sleep 500)
+          (recur))))))

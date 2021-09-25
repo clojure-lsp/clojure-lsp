@@ -196,7 +196,7 @@
         (db/remove-db! project-root-path db)))))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
-  (report-startup-progress 0 db)
+  (report-startup-progress 0 "Resolving project" db)
   (let [project-settings (config/resolve-config project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath

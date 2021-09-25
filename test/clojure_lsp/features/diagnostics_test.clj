@@ -179,3 +179,101 @@
                         :severity 1
                         :source "clj-kondo"}]
                       (#'f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") db/db))))
+
+(deftest test-find-diagnostics
+  (testing "wrong arity"
+    (testing "for argument destructuring"
+      (h/clean-db!)
+      (let [code "(defn foo ([x] x) ([x y] (x y)))
+                  (defn bar [y & rest] ((foo y y y) (bar rest)))
+                  (defn baz [{x :x y :y :as long}
+                             {:keys [k v] :as short}
+                             [_ a b]]
+                    (x y k v a b long short))
+                  (baz :broken :brokken [nil :ok :okay])
+                  (baz {bar baz foo :no?})
+                  (bar)
+                  (bar {:a [:b]})
+                  (bar :one-fish :two-fish :red-fish :blue-fish)
+                  [foo]
+                  {foo 1 2 3}
+                  [foo 1 (foo 5 6 7)]
+                  (foo)
+                  (foo 1)
+                  (foo 1 ['a 'b])
+                  (foo 1 2 3 {:k 1 :v 2})"]
+        (h/load-code-and-locs code)
+        (h/diagnostics
+          #(is (= ["user/foo is called with 3 args but expects 1 or 2"
+                   "user/baz is called with 1 arg but expects 3"
+                   "user/bar is called with 0 args but expects 1 or more"
+                   "user/foo is called with 3 args but expects 1 or 2"
+                   "user/foo is called with 0 args but expects 1 or 2"
+                   "user/foo is called with 4 args but expects 1 or 2"]
+                  (map :message (:diagnostics %)))))))
+    (testing "for threading macros"
+      (h/clean-db!)
+      (let [code "(defn foo ([x] x) ([x y z] (z x y)))
+                  (defn bar [] :bar)
+                  (defn baz [arg & rest] (apply arg rest))
+                  (->> :test
+                       (foo)
+                       (foo 1)
+                       (bar))
+                  (-> 1
+                      (baz)
+                      (->> (baz)
+                           (foo 1 2))
+                      (baz :p :q :r)
+                      bar)
+                  (cond-> 0
+                    int? (bar :a :b)
+                    false (foo)
+                    :else (baz 3))
+                  (doto 1
+                    (foo)
+                    (foo 1)
+                    (bar))"]
+        (h/load-code-and-locs code)
+
+        (h/diagnostics
+          #(is (= ["user/foo is called with 2 args but expects 1 or 3"
+                   "user/bar is called with 1 arg but expects 0"
+                   "user/bar is called with 1 arg but expects 0"
+                   "user/bar is called with 3 args but expects 0"
+                   "user/foo is called with 2 args but expects 1 or 3"
+                   "user/bar is called with 1 arg but expects 0"]
+                  (map :message (:diagnostics %)))))))
+    (testing "with annotations"
+      (h/clean-db!)
+      (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
+                  (defn ^:private bar ^String [^Class x & rest] (str x rest))
+                  (foo foo)
+                  (foo foo foo)
+                  (bar :a)
+                  (bar :a :b)"]
+        (h/load-code-and-locs code)
+        (h/diagnostics
+          #(is (= ["user/foo is called with 2 args but expects 1"]
+                  (map :message (:diagnostics %)))))))
+    (testing "for schema defs"
+      (h/clean-db!)
+      (let [code "(ns user (:require [schema.core :as s]))
+                  (s/defn foo :- s/Str
+                    [x :- Long y :- Long]
+                    (str x y))
+                  (foo)
+                  (foo 1 2)
+                  (foo 1)"]
+        (h/load-code-and-locs code)
+        (h/diagnostics
+          #(is (= ["user/foo is called with 0 args but expects 2"
+                   "user/foo is called with 1 arg but expects 2"]
+                  (map :message (:diagnostics %))))))))
+  (testing "custom unused namespace declaration"
+    (h/clean-db!)
+    (h/load-code-and-locs "(ns foo.bar)")
+    (h/diagnostics
+      #(is (empty?
+             (map :message (:diagnostics %))))))
+  (is true))

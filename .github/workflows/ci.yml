@@ -89,7 +89,7 @@ jobs:
         run: make integration-test
 
   graalvm-build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:

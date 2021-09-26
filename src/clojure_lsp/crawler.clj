@@ -19,28 +19,29 @@
                   DigestInputStream)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
-  (log/info (format "Finding classpath via `%s`" (string/join " " classpath-cmd)))
-  (try
-    (let [sep (re-pattern (System/getProperty "path.separator"))
-          {:keys [exit out err]} (apply shell/sh (into classpath-cmd
-                                                       (cond-> [:dir (str root-path)]
-                                                         env (conj :env (merge {} (System/getenv) env)))))]
-      (if (= 0 exit)
-        (let [paths (-> out
-                        string/split-lines
-                        last
-                        string/trim-newline
-                        (string/split sep))]
-          (log/debug "Classpath found, paths: " paths)
-          paths)
-        (do
-          (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-          (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)
-          [])))
-    (catch Exception e
-      (log/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-      (producer/window-show-message "Classpath lookup failed in clojure-lsp. Some features may not work correctly." :warning db)
-      [])))
+  (let [command (string/join " " classpath-cmd)]
+    (log/info (format "Finding classpath via `%s`" command))
+    (try
+      (let [sep (re-pattern (System/getProperty "path.separator"))
+            {:keys [exit out err]} (apply shell/sh (into classpath-cmd
+                                                         (cond-> [:dir (str root-path)]
+                                                           env (conj :env (merge {} (System/getenv) env)))))]
+        (if (= 0 exit)
+          (let [paths (-> out
+                          string/split-lines
+                          last
+                          string/trim-newline
+                          (string/split sep))]
+            (log/debug "Classpath found, paths: " paths)
+            paths)
+          (do
+            (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
+            (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work correctly." command) :warning db)
+            [])))
+      (catch Exception e
+        (log/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
+        (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work correctly." command) :warning db)
+        []))))
 
 (defn ^:private md5 [^java.io.File file]
   (let [digest (MessageDigest/getInstance "MD5")]

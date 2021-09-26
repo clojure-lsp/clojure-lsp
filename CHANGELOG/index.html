@@ -1602,8 +1602,9 @@
 <li>Deprecate <code>lens-segregate-test-references</code> in favor to <code>:code-lens :segregate-test-references</code></li>
 <li>Check for a default <code>.cljfmt.edn</code> config file for cljfmt config settings if no <code>:cljfmt-config-path</code> was provided. #563</li>
 <li>Bump clj-kondo to <code>2021.09.25</code> fixing false-positives with potemkin import-var analysis.</li>
+<li>Re-scan whole project if any clj-kondo config changed for better consistence. #331</li>
 <li>
-<p>Re-scan whole project if any clj-kondo config changed for better consistence. #331</p>
+<p>Fix clojure-lsp not initializing when empty <code>project.clj</code>. #579</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2189,7 +2190,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 25, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 26, 2021</span>
     
   </small>
 </div>

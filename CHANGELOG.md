@@ -10,6 +10,7 @@
   - Check for a default `.cljfmt.edn` config file for cljfmt config settings if no `:cljfmt-config-path` was provided. #563
   - Bump clj-kondo to `2021.09.25` fixing false-positives with potemkin import-var analysis.
   - Re-scan whole project if any clj-kondo config changed for better consistence. #331
+  - Fix clojure-lsp not initializing when empty `project.clj`. #579
 
 - Editor
   - Fix `resolve macro as` code action after regression introduced recently.

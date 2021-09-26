@@ -230,6 +230,20 @@
               :deps-source-paths #{"some" "paths"}
               :source-paths #{"some" "paths" "scripts"}}
              (#'source-paths/resolve-source-paths root-path {} nil)))))
+  (testing "when there is a deps.edn with :paths and empty project.clj"
+    (with-redefs [shared/to-file #(case %2
+                                    "deps.edn" (io/file "deps")
+                                    "project.clj" (io/file "lein")
+                                    nil)
+                  shared/file-exists? (complement nil?)
+                  z/of-file (constantly nil)
+                  config/read-edn-file #(if (= "deps" (.getName %1))
+                                          {:paths ["some" "paths"]}
+                                          nil)]
+      (is (= {:origins #{:deps-edn :empty-leiningen}
+              :deps-source-paths #{"some" "paths"}
+              :source-paths #{"some" "paths" "src" "test"}}
+             (#'source-paths/resolve-source-paths root-path {} nil)))))
   (testing "when there is no file, fallback to default source paths"
     (with-redefs [shared/to-file (constantly nil)
                   shared/file-exists? (complement nil?)]

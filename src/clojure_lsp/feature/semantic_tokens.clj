@@ -10,7 +10,7 @@
    :function
    :macro
    :keyword
-   :constant
+   :class
    :variable
    :method])
 
@@ -42,7 +42,7 @@
 (defn ^:private var-usage-element->absolute-tokens
   [{:keys [alias name-col to] :as element}]
   (cond
-    (= :clj-kondo/unknown-namespace to)
+    (identical? :clj-kondo/unknown-namespace to)
     nil
 
     alias
@@ -60,7 +60,7 @@
   (->> elements
        (sort-by (juxt :name-row :name-col))
        (map
-         (fn [{:keys [name bucket macro] :as element}]
+         (fn [{:keys [name bucket macro to] :as element}]
            (cond
              (and (= bucket :var-usages)
                   macro)
@@ -68,7 +68,11 @@
 
              (and (= bucket :var-usages)
                   (Character/isUpperCase (.charAt ^String (str name) 0)))
-             [(element->absolute-token element :constant)]
+             [(element->absolute-token element :class)]
+
+             (and (identical? :clj-kondo/unknown-namespace to)
+                  (.equals \. (.charAt ^String (str name) 0)))
+             [(element->absolute-token element :method)]
 
              (= bucket :var-usages)
              (var-usage-element->absolute-tokens element)

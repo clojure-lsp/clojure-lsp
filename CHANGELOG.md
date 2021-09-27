@@ -18,6 +18,7 @@
   - Improve `hover` feature to return elements when inside a function call. #569
   - Fix `create-private-function` command and code action to consider when new function is inside thread macros.
   - Support `$/progress` LSP feature, sending notifications for client when server is starting, improving the feedback for the user.
+  - Improve semantic tokens support for java classes and methods.
   
 - API/CLI
   - Support renaming namespaces as well with `rename` feature.

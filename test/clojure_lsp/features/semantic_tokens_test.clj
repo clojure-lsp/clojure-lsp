@@ -116,6 +116,17 @@
             1 0 6 4 -1
             1 1 6 4 -1]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
+  ;; TODO need more java kondo analysis
+  #_(testing "java static methods for method + class tokens"
+    (h/load-code-and-locs (code "(ns some.ns)"
+                                "(Character/isUpperCase \"some-string\")"))
+    (is (= [1 1 21 1 -1]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
+  (testing "java methods for method tokens"
+    (h/load-code-and-locs (code "(ns some.ns)"
+                                "(.equals \"some-string\" \"other-string\")"))
+    (is (= [1 1 7 6 -1]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "keywords for keyword tokens"
     (h/load-code-and-locs (code "(ns some.ns)"
                                 ":foo"

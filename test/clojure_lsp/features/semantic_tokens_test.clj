@@ -107,7 +107,7 @@
     (is (= [1 0 2 0 -1
             0 3 12 1 -1]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
-  (testing "java classes for function tokens"
+  #_(testing "java classes for function tokens"
     (h/load-code-and-locs (code "(ns some.ns)"
                                 "^java.lang.String \"\""
                                 "String"

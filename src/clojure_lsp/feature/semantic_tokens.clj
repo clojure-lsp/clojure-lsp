@@ -66,9 +66,11 @@
                   macro)
              [(element->absolute-token element :macro)]
 
-             (and (= bucket :var-usages)
-                  (Character/isUpperCase (.charAt ^String (str name) 0)))
-             [(element->absolute-token element :class)]
+             ;; TODO needs better way to know it's class related
+             ;; (and (= bucket :var-usages)
+             ;;      (not alias)
+             ;;      (Character/isUpperCase (.charAt ^String (str name) 0)))
+             ;; [(element->absolute-token element :class)]
 
              (and (identical? :clj-kondo/unknown-namespace to)
                   (.equals \. (.charAt ^String (str name) 0)))

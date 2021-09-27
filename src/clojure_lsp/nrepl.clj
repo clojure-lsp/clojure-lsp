@@ -5,14 +5,8 @@
 
 (def start-server (dynaload 'nrepl.server/start-server))
 
-(defn ^:private find-dot-nrepl-port-file []
-  (try
-    (slurp ".nrepl-port")
-    (catch Exception _)))
-
 (defn ^:private repl-port []
-  (or (find-dot-nrepl-port-file)
-      (:port (start-server))))
+  (:port (start-server)))
 
 (defn setup-nrepl [db]
   (try

@@ -11,7 +11,8 @@
    :macro
    :keyword
    :constant
-   :variable])
+   :variable
+   :method])
 
 (def token-types-str
   (->> token-types

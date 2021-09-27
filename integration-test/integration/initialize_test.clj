@@ -23,7 +23,7 @@
         :codeActionProvider {:codeActionKinds ["quickfix" "refactor" "refactor.extract" "refactor.inline" "refactor.rewrite" "source" "source.organizeImports"]
                              :resolveProvider true}
         :hoverProvider true
-        :semanticTokensProvider {:legend {:tokenTypes ["type" "function" "macro" "keyword" "constant" "variable"]
+        :semanticTokensProvider {:legend {:tokenTypes ["type" "function" "macro" "keyword" "class" "variable" "method"]
                                           :tokenModifiers []}
                                  :range true
                                  :full true}

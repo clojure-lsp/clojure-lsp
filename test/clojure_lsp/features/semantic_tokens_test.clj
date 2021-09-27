@@ -108,14 +108,14 @@
             0 3 12 1 -1]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   #_(testing "java classes for function tokens"
-    (h/load-code-and-locs (code "(ns some.ns)"
-                                "^java.lang.String \"\""
-                                "String"
-                                "^String \"\""))
-    (is (= [1 1 16 1 -1
-            1 0 6 4 -1
-            1 1 6 4 -1]
-           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
+      (h/load-code-and-locs (code "(ns some.ns)"
+                                  "^java.lang.String \"\""
+                                  "String"
+                                  "^String \"\""))
+      (is (= [1 1 16 1 -1
+              1 0 6 4 -1
+              1 1 6 4 -1]
+             (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   ;; TODO need more java kondo analysis
   #_(testing "java static methods for method + class tokens"
       (h/load-code-and-locs (code "(ns some.ns)"

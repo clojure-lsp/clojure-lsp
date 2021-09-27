@@ -10,6 +10,26 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
+(deftest find-other-colls
+  (testing "map"
+    (is (= [:vector :set :list]
+           (transform/find-other-colls (z/of-string "{:a 1}")))))
+  (testing "set"
+    (is (= [:list :map :vector]
+           (transform/find-other-colls (z/of-string "#{:a 1}")))))
+  (testing "list"
+    (is (= [:map :vector :set]
+           (transform/find-other-colls (z/of-string "(1 2 3)")))))
+  (testing "vector"
+    (is (= [:set :list :map]
+           (transform/find-other-colls (z/of-string "[1 2 3]")))))
+  (testing "commented code"
+    (is (= nil
+           (transform/find-other-colls (z/of-string "#_{:a 1}")))))
+  (testing "invalid code"
+    (is (= [:vector :set :list]
+           (transform/find-other-colls (z/of-string "{:a }"))))))
+
 (deftest resolve-best-alias-suggestion
   (testing "alias not exists"
     (is (= #{"foo"} (#'transform/resolve-best-alias-suggestions "foo" '#{bar})))

@@ -22,12 +22,12 @@
         zip-edits))
 
 (defn find-other-colls [zloc]
-  (let [sexpr (z/sexpr zloc)]
+  (when (z/sexpr-able? zloc)
     (cond
-      (map? sexpr) [:vector :set :list]
-      (vector? sexpr) [:set :list :map]
-      (set? sexpr) [:list :map :vector]
-      (list? sexpr) [:map :vector :set])))
+      (z/map? zloc) [:vector :set :list]
+      (z/vector? zloc) [:set :list :map]
+      (z/set? zloc) [:list :map :vector]
+      (z/list? zloc) [:map :vector :set])))
 
 (defn change-coll
   "Change collection to specified collection"

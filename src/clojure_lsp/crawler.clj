@@ -161,13 +161,17 @@
     (if use-db-analysis?
       (do
         (log/info "Using cached classpath for project root" root-path)
-        (swap! db update :analysis merge (:analysis db-cache)))
+        (swap! db (fn [state-db]
+                    (-> state-db
+                        (update :analysis merge (:analysis db-cache))
+                        (assoc :classpath (:classpath db-cache))))))
       (do
         (log/info "Analyzing classpath for project root" root-path)
         (when-let [classpath (->> project-specs
                                   (mapcat #(lookup-classpath root-path % db))
                                   vec
                                   seq)]
+          (swap! db assoc :classpath classpath)
           (report-startup-progress 20 "External classpath" db)
           (let [external-classpath (cond->> classpath
                                      ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
@@ -185,7 +189,7 @@
     (catch Exception e
       (log/error "Error when creating '.clj-kondo' dir on project-root" e))))
 
-(defn ^:private setup-pre-analysis!
+(defn ^:private ensure-kondo-config-dir-exists!
   [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
         project-root-path (shared/uri->path project-root-uri)
@@ -198,7 +202,7 @@
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
   (report-startup-progress 0 "Resolving project" db)
-  (let [project-settings (config/resolve-config project-root-uri)
+  (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
                                                                        (re-find #"^/[A-Z]:/")
@@ -221,10 +225,18 @@
            :settings settings
            :client-capabilities client-capabilities)
     (report-startup-progress 5 db)
-    (setup-pre-analysis! project-root-uri db)
+    (ensure-kondo-config-dir-exists! project-root-uri db)
     (report-startup-progress 10 db)
     (analyze-classpath! root-path (:source-paths settings) settings db)
+    (report-startup-progress 90 "Resolving config paths" db)
+    (when-let [classpath-settings (config/resolve-from-classpath-config-paths (:classpath @db) settings)]
+      (swap! db assoc
+             :settings (medley/deep-merge settings
+                                          classpath-settings
+                                          project-settings
+                                          force-settings)
+             :classpath-configs classpath-settings))
     (log/info "Analyzing source paths for project root" root-path)
-    (report-startup-progress 90 "Analyzing project files" db)
+    (report-startup-progress 95 "Analyzing project files" db)
     (analyze-source-paths! (:source-paths settings) db)
     (report-startup-progress 100 db)))

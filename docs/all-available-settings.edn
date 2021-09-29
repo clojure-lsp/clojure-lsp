@@ -26,8 +26,9 @@
  :text-document-sync-kind :full
  :cljfmt-config-path ".cljfmt.edn"
  :cljfmt {}
- :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
  :additional-snippets []
+ :classpath-config-paths []
+ :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
  :sqlite-db-path ".lsp/sqlite.db" ; deprecated, will be removed soon, use :cache-path instead.
  :cache-path ".lsp/.cache"
  :log-path "/tmp/clojure-lsp.*.out"}

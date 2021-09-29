@@ -4,7 +4,11 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import
+   [java.util.jar JarFile JarFile$JarFileEntry]))
+
+(set! *warn-on-reflection* true)
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
@@ -51,10 +55,52 @@
                         (concat [(read-edn-file file)])))
         configs))))
 
-(defn resolve-config [project-root-uri]
+(defn resolve-for-root [project-root-uri]
   (let [home-dir-file (get-home-config-file)
         project-configs (resolve-project-configs project-root-uri home-dir-file)]
     (reduce shared/deep-merge
             (merge {}
                    (resolve-home-config home-dir-file))
             project-configs)))
+
+(defn ^:private jar-file->config
+  [^java.io.File file config-paths]
+  (with-open [jar (JarFile. file)]
+    (->> (enumeration-seq (.entries jar))
+         (filter (fn [^JarFile$JarFileEntry entry]
+                   (let [entry-name (.getName entry)]
+                     (and (string/starts-with? entry-name "clojure-lsp.exports")
+                          (string/includes? entry-name "config.edn")))))
+         (mapv (fn [^JarFile$JarFileEntry config-entry]
+                 (let [[_ group artifact] (string/split (.getName config-entry) #"/")]
+                   (when (some #(and (string/starts-with? % group)
+                                     (string/ends-with? % artifact)) config-paths)
+                     (log/info (format "Resolving found clojure-lsp config for '%s/%s' in classpath" group artifact))
+                     (edn/read-string {:readers {'re re-pattern}}
+                                      (slurp (.getInputStream jar config-entry))))))))))
+
+(defn ^:private deep-merge-fixing-cljfmt [a b]
+  (let [deep-merged (shared/deep-merge a b)]
+    (if (-> deep-merged :cljfmt :indents)
+      (let [cljfmt-a (-> a :cljfmt :indents)
+            cljfmt-b (-> b :cljfmt :indents)]
+        (-> deep-merged
+            (update-in [:cljfmt :indents] merge cljfmt-a cljfmt-b)))
+      deep-merged)))
+
+(defn resolve-from-classpath-config-paths [classpath {:keys [classpath-config-paths]}]
+  (when-let [cp-config-paths (and (coll? classpath-config-paths)
+                                  (seq classpath-config-paths))]
+    (shared/logging-time
+      "Finding classpath configs took %s secs"
+      (when-let [jar-files (->> classpath
+                                (filter #(string/ends-with? % ".jar"))
+                                distinct
+                                (map io/file)
+                                (filter shared/file-exists?))]
+        (when-let [configs (->> jar-files
+                                (map #(jar-file->config % cp-config-paths))
+                                flatten
+                                (remove nil?)
+                                seq)]
+          (reduce deep-merge-fixing-cljfmt configs))))))

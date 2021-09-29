@@ -5,6 +5,8 @@
    [clojure.java.io :as io]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn edit->summary
   ([db uri edit]
    (edit->summary db uri edit nil))

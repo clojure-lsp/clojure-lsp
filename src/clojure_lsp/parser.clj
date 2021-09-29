@@ -6,6 +6,8 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro zspy [loc]
   `(do

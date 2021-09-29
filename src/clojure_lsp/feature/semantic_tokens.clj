@@ -5,6 +5,8 @@
   (:import
    [clojure.lang PersistentVector]))
 
+(set! *warn-on-reflection* true)
+
 (def token-types
   [:type
    :function

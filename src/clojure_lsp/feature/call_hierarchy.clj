@@ -10,6 +10,8 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private element-by-uri->call-hierarchy-item
   [{uri :uri {:keys [ns filename name-row name-col arglist-strs deprecated] value :name :as element} :element} db]
   (let [range (shared/->range element)

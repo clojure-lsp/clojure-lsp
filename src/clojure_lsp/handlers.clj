@@ -30,6 +30,8 @@
     URL
     JarURLConnection]))
 
+(set! *warn-on-reflection* true)
+
 (defmacro process-after-changes [& body]
   `(let [~'_time (System/nanoTime)]
      (loop []

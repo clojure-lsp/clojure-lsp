@@ -5,6 +5,8 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn client-changes [changes db]
   (if (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes])
     {:document-changes changes}

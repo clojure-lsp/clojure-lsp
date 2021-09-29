@@ -12,6 +12,8 @@
    (org.eclipse.lsp4j
      CodeActionKind)))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private find-alias-suggestion [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]

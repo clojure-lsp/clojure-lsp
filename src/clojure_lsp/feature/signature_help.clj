@@ -12,6 +12,8 @@
   (:import
    [clojure.lang PersistentVector]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private function-loc->arglist-nodes [zloc]
   (->> zloc
        z/up

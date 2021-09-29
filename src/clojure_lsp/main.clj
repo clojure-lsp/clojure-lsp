@@ -14,6 +14,8 @@
    [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private version []
   (->> [(str "clojure-lsp " (config/clojure-lsp-version))
         (str "clj-kondo " (lsp.kondo/clj-kondo-version))]

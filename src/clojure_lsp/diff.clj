@@ -5,6 +5,8 @@
   (:import
    [difflib DiffUtils]))
 
+(set! *warn-on-reflection* true)
+
 (defn- lines [s]
   (str/split s #"\n"))
 

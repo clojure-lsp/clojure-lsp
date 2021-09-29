@@ -2,6 +2,8 @@
   (:require
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 #_{:clj-kondo/ignore [:unresolved-var]}
 (defn setup-logging [db]
   (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]

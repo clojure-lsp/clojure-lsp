@@ -13,6 +13,8 @@
    [rewrite-clj.zip.subedit :as zsub]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
           (let [loc (:loc zip-edit)]

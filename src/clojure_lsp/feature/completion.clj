@@ -13,6 +13,8 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (def priority-kw->number
   {:simple-cursor 1
    :keyword 2

@@ -5,6 +5,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (def line-break "\n\n----\n\n")
 (def opening-code "```clojure\n")
 (def closing-code "\n```")

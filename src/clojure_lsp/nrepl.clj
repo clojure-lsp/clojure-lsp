@@ -3,6 +3,8 @@
    [borkdude.dynaload :refer [dynaload]]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (def start-server (dynaload 'nrepl.server/start-server))
 
 (defn ^:private repl-port []

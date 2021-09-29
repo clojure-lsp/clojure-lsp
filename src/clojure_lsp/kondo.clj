@@ -9,6 +9,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn clj-kondo-version []
   (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 

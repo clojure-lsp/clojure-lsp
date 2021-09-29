@@ -11,6 +11,8 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (def ^:private excluded-macros
   '{clojure.core *
     clojure.core.async *

@@ -3,6 +3,8 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
+(set! *warn-on-reflection* true)
+
 (defn top? [loc]
   (= :forms (z/tag (z/up loc))))
 

@@ -6,6 +6,8 @@
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private safe-equal?
   "Fast equals for string and symbols."
   [a b]

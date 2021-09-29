@@ -8,6 +8,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private rename-keyword
   [replacement
    db

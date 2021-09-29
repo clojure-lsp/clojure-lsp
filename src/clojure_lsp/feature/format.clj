@@ -9,6 +9,8 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private resolve-cljfmt-config [db]
   (let [config-path (get-in @db [:settings :cljfmt-config-path])
         cljfmt-config-file (io/file config-path)]

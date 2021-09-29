@@ -18,6 +18,8 @@
    (java.security MessageDigest
                   DigestInputStream)))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
   (let [command (string/join " " classpath-cmd)]
     (log/info (format "Finding classpath via `%s`" command))
@@ -85,7 +87,7 @@
 
 (defn ^:private report-startup-progress
   [percentage message report-callback db]
-  (let [progress (case percentage
+  (let [progress (case (int percentage)
                    0 {:kind :begin
                       :title message
                       :percentage percentage}
@@ -185,7 +187,7 @@
               (System/gc))
             (db/save-deps! root-path project-hash kondo-config-hash classpath analysis db)))))))
 
-(defn ^:private create-kondo-folder! [clj-kondo-folder]
+(defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
     (log/info (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
     (.mkdir clj-kondo-folder)

@@ -14,6 +14,8 @@
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private update-analysis [db uri new-analysis]
   (assoc-in db [:analysis (shared/uri->filename uri)] (lsp.kondo/normalize-analysis new-analysis)))
 

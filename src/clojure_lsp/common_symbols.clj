@@ -1,5 +1,7 @@
 (ns clojure-lsp.common-symbols)
 
+(set! *warn-on-reflection* true)
+
 (def java-lang-syms
   '#{Appendable,
      AutoCloseable,

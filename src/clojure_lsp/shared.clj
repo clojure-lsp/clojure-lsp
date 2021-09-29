@@ -11,6 +11,8 @@
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]))
 
+(set! *warn-on-reflection* true)
+
 (defn start-time->end-time-seconds [start-time]
   (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
 
@@ -118,7 +120,7 @@
       (string/replace #"^[a-z]:\\" string/upper-case)))
 
 (defn- unescape-uri
-  [uri]
+  [^String uri]
   (try
     (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
     (catch UnsupportedOperationException e

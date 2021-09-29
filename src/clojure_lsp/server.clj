@@ -70,6 +70,8 @@
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
 
+(set! *warn-on-reflection* true)
+
 (defonce formatting (atom false))
 
 (defmacro ^:private start [id & body]
@@ -289,7 +291,7 @@
       (recur)
       (do
         (log/info "Parent process" ppid "is not running - exiting server")
-        (.exit server)))))
+        (.exit ^LanguageServer server)))))
 
 (def server
   (proxy [ClojureExtensions LanguageServer ExtraMethods] []
@@ -379,7 +381,7 @@
     (getWorkspaceService []
       (LSPWorkspaceService.))))
 
-(defn ^:private tee-system-in [system-in]
+(defn ^:private tee-system-in [^java.io.InputStream system-in]
   (let [buffer-size 1024
         os (java.io.PipedOutputStream.)
         is (java.io.PipedInputStream. os)]
@@ -395,7 +397,7 @@
           (log/error e "in thread"))))
     is))
 
-(defn ^:private tee-system-out [system-out]
+(defn ^:private tee-system-out [^java.io.OutputStream system-out]
   (let [buffer-size 1024
         is (java.io.PipedInputStream.)
         os (java.io.PipedOutputStream. is)]

@@ -46,7 +46,6 @@
      TextDocumentIdentifier
      TextEdit
      VersionedTextDocumentIdentifier
-     WatchKind
      WorkDoneProgressBegin
      WorkDoneProgressKind
      WorkDoneProgressNotification
@@ -54,6 +53,8 @@
      WorkDoneProgressEnd
      WorkspaceEdit)
    (org.eclipse.lsp4j.jsonrpc.messages Either)))
+
+(set! *warn-on-reflection* true)
 
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
 
@@ -67,9 +68,6 @@
   (get watched-files-type-enum (.getValue instance)))
 
 (defmethod j/from-java MessageType [^MessageType instance]
-  (-> instance .name .toLowerCase keyword))
-
-(defmethod j/from-java WatchKind [^WatchKind instance]
   (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java CompletionItemKind [^CompletionItemKind instance]
@@ -178,8 +176,8 @@
                                                     %))))
 (s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
                                (s/conformer #(if-let [changes (:changes %)]
-                                               (WorkspaceEdit. changes)
-                                               (WorkspaceEdit. (:document-changes %))))))
+                                               (WorkspaceEdit. ^java.util.Map changes)
+                                               (WorkspaceEdit. ^java.util.List (:document-changes %))))))
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))
@@ -293,7 +291,7 @@
 
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
-                      (s/conformer #(Hover. (:contents %1) (:range %1)))))
+                      (s/conformer #(Hover. ^java.util.List (:contents %1) ^Range (:range %1)))))
 
 (s/def :command/title string?)
 (s/def :command/command string?)
@@ -390,7 +388,7 @@
 (s/def ::semantic-tokens (s/and (s/keys :req-un [::data]
                                         :opt-un [::result-id])
                                 (s/conformer #(doto (SemanticTokens. (:result-id %1)
-                                                                     (java.util.ArrayList. (:data %1)))))))
+                                                                     (java.util.ArrayList. ^clojure.lang.PersistentVector (:data %1)))))))
 
 (s/def ::call-hierarchy-item (s/and (s/keys :req-un [::name :symbol/kind ::uri ::range ::selection-range]
                                             :opt-un [::tags ::detail ::data])

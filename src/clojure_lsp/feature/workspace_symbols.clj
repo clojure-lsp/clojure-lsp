@@ -7,6 +7,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private fuzzy-search [^String query col get-against]
   (let [query (string/lower-case query)]
     (->> (for [doc col]

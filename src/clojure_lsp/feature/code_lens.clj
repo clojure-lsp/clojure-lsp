@@ -6,6 +6,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private references->string [references s]
   (let [count (count references)
         msg (str count s)]

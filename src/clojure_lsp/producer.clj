@@ -4,8 +4,11 @@
    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
-     ApplyWorkspaceEditParams)
+     ApplyWorkspaceEditParams
+     CodeLensWorkspaceCapabilities)
    (org.eclipse.lsp4j.services LanguageClient)))
+
+(set! *warn-on-reflection* true)
 
 (defn window-show-message
   ([message type db]
@@ -32,7 +35,7 @@
          (.publishDiagnostics client))))
 
 (defn refresh-code-lens [db]
-  (when-let [code-lens-capability (get-in @db [:client-capabilities :workspace :code-lens])]
+  (when-let [code-lens-capability ^CodeLensWorkspaceCapabilities (get-in @db [:client-capabilities :workspace :code-lens])]
     (when (.getRefreshSupport code-lens-capability)
       (let [client ^LanguageClient (:client @db)]
         (.refreshCodeLenses client)))))

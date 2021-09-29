@@ -8,6 +8,8 @@
    [next.jdbc.result-set :as rs]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defonce db (atom {:documents {}}))
 (defonce current-changes-chan (async/chan 1))
 (defonce diagnostics-chan (async/chan 1))
@@ -24,7 +26,7 @@
     ^java.io.File (or configured default)))
 
 (defn ^:private get-sqlite-db-file-path [project-root-path db]
-  (let [file (get-sqlite-db-file project-root-path db)]
+  (let [file ^java.io.File (get-sqlite-db-file project-root-path db)]
     (if (.isAbsolute file)
       (.getAbsolutePath file)
       (.getAbsolutePath (io/file (str project-root-path) file)))))
@@ -85,7 +87,7 @@
         (log/error e (format "Could not load project cache from '%s'" lsp-db-path))))))
 
 (defn db-exists? [project-root-path db]
-  (.exists (get-sqlite-db-file project-root-path db)))
+  (shared/file-exists? (get-sqlite-db-file project-root-path db)))
 
 (defn remove-db! [project-root-path db]
   (io/delete-file (get-sqlite-db-file project-root-path db)))

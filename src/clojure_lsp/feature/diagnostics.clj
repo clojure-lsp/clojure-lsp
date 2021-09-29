@@ -9,6 +9,8 @@
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest
      cljs.test/deftest
@@ -97,7 +99,7 @@
          (mapv kondo-finding->diagnostic))))
 
 (defn severity->level [severity]
-  (case severity
+  (case (int severity)
     1 :error
     2 :warning
     3 :info))

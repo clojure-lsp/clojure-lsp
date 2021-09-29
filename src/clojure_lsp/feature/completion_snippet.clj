@@ -5,6 +5,8 @@
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn known-snippets [settings]
   [{:label "comment$"
     :detail "Create comment block"

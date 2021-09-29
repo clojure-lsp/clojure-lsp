@@ -26,6 +26,7 @@
   - Use relative paths instead of absolute paths on diff messages.
   - Add `analyze-project!` to analyze whole project only and cache analysis, useful for REPL usage for example. 
   - Follow same exit status from clj-kondo for `diagnostics` feature. #572
+  - Improve start project feedback reporting the percentage and specific message.
 
 ## 2021.09.13-22.25.35
 

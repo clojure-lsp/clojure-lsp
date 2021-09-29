@@ -84,19 +84,20 @@
         :else :unkown))
 
 (defn ^:private report-startup-progress
-  ([percentage db]
-   (report-startup-progress percentage nil db))
-  ([percentage message db]
-   (let [progress (case percentage
-                    0 {:kind :begin
-                       :title message
-                       :percentage percentage}
-                    100 {:kind :end}
-                    {:kind :report
-                     :message message
-                     :percentage percentage})]
-     (producer/notify-progress {:token "clojure-lsp"
-                                :value progress} db))))
+  [percentage message report-callback db]
+  (let [progress (case percentage
+                   0 {:kind :begin
+                      :title message
+                      :percentage percentage}
+                   100 {:kind :end
+                        :message message
+                        :percentage 100}
+                   {:kind :report
+                    :message message
+                    :percentage percentage})]
+    (producer/notify-progress {:token "clojure-lsp"
+                               :value progress} db)
+    (report-callback progress)))
 
 (defn ^:private analyze-source-paths! [paths db]
   (let [result (shared/logging-time
@@ -111,16 +112,17 @@
     analysis))
 
 (defn ^:private report-batch-analysis-percentage
-  [start-progress-percentage fulfill-progress-percentage db index count]
+  [start-progress-percentage fulfill-progress-percentage report-callback db index count]
   (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
     (report-startup-progress
       (+ start-progress-percentage (/ (* index real-percentage) count))
       "Analyzing external classpath"
+      report-callback
       db)))
 
 (defn ^:private analyze-external-classpath!
-  [paths start-progress-percentage fulfill-progress-percentage db]
-  (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage db)
+  [paths start-progress-percentage fulfill-progress-percentage report-callback db]
+  (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage report-callback db)
         result (shared/logging-time
                  "External classpath paths analyzed, took %s secs. Caching for next startups..."
                  (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback db))
@@ -148,16 +150,18 @@
     (swap! db update :findings merge new-findings)
     analysis))
 
-(defn ^:private analyze-classpath! [root-path source-paths settings db]
+(defn ^:private analyze-classpath! [root-path source-paths settings report-callback db]
+  (report-startup-progress 8 "Finding project specs" report-callback db)
   (let [project-specs (->> (or (get settings :project-specs) (default-project-specs))
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-hash (reduce str (map :hash project-specs))
         kondo-config-hash (lsp.kondo/config-hash (str root-path))
+        _ (report-startup-progress 10 "Finding cache" report-callback db)
         db-cache (db/read-deps root-path db)
         use-db-analysis? (and (= (:project-hash db-cache) project-hash)
                               (= (:kondo-config-hash db-cache) kondo-config-hash))]
-    (report-startup-progress 15 "Discovering classpath" db)
+    (report-startup-progress 15 "Discovering classpath" report-callback db)
     (if use-db-analysis?
       (do
         (log/info "Using cached classpath for project root" root-path)
@@ -172,11 +176,10 @@
                                   vec
                                   seq)]
           (swap! db assoc :classpath classpath)
-          (report-startup-progress 20 "External classpath" db)
           (let [external-classpath (cond->> classpath
                                      ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
                                      :always (remove (set source-paths)))
-                analysis (analyze-external-classpath! external-classpath 20 80 db)]
+                analysis (analyze-external-classpath! external-classpath 15 80 report-callback db)]
             (shared/logging-time
               "Manual GC after classpath scan took %s secs"
               (System/gc))
@@ -200,8 +203,8 @@
         (log/info "Removing outdated cached lsp db...")
         (db/remove-db! project-root-path db)))))
 
-(defn initialize-project [project-root-uri client-capabilities client-settings force-settings db]
-  (report-startup-progress 0 "Resolving project" db)
+(defn initialize-project [project-root-uri client-capabilities client-settings force-settings report-callback db]
+  (report-startup-progress 0 "Resolving project" report-callback db)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -224,11 +227,10 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (report-startup-progress 5 db)
+    (report-startup-progress 5 "Finding kondo config" report-callback db)
     (ensure-kondo-config-dir-exists! project-root-uri db)
-    (report-startup-progress 10 db)
-    (analyze-classpath! root-path (:source-paths settings) settings db)
-    (report-startup-progress 90 "Resolving config paths" db)
+    (analyze-classpath! root-path (:source-paths settings) settings report-callback db)
+    (report-startup-progress 90 "Resolving config paths" report-callback db)
     (when-let [classpath-settings (config/resolve-from-classpath-config-paths (:classpath @db) settings)]
       (swap! db assoc
              :settings (medley/deep-merge settings
@@ -237,6 +239,6 @@
                                           force-settings)
              :classpath-configs classpath-settings))
     (log/info "Analyzing source paths for project root" root-path)
-    (report-startup-progress 95 "Analyzing project files" db)
+    (report-startup-progress 95 "Analyzing project files" report-callback db)
     (analyze-source-paths! (:source-paths settings) db)
-    (report-startup-progress 100 db)))
+    (report-startup-progress 100 "Project analyzed" report-callback db)))

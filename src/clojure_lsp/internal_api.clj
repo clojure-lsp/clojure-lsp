@@ -11,10 +11,11 @@
    [clojure-lsp.logging :as logging]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [>! alts!! chan go timeout]]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
+
+(set! *warn-on-reflection* true)
 
 (defn ^:private cli-print [& msg]
   (apply print msg)
@@ -24,28 +25,11 @@
   (when-not (:raw? options)
     (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
-(defmacro ^:private print-with-time [options msg & body]
-  `(if (or (:raw? ~options)
-           (:verbose ~options))
-     (do
-       (cli-println ~options ~msg)
-       ~@body)
-     (let [~'_time (System/nanoTime)
-           ~'_result-ch (chan)]
-       (go
-         (try
-           ~@body
-           (>! ~'_result-ch [:success])
-           (catch Exception e#
-             (>! ~'_result-ch [:error e#]))))
-       (loop []
-         (cli-print (str "\r" ~@msg " " (quot (- (System/nanoTime) ~'_time) 1000000) "ms"))
-         (let [[~'_result ~'_ex] (first (alts!! [(timeout 100) ~'_result-ch]))]
-           (case ~'_result
-             :success (cli-println ~options "")
-             :error (do (cli-println ~options "")
-                        (throw (ex-info "Error during project analysis" {:message ~'_ex})))
-             (recur)))))))
+(defmacro ^:private safe-analyze [& body]
+  `(try
+     ~@body
+     (catch Exception e#
+       (throw (ex-info "Error during project analysis" {:message e#})))))
 
 (defn ^:private project-root->uri [project-root]
   (-> (or ^java.io.File project-root (io/file ""))
@@ -57,9 +41,7 @@
   (when verbose
     (logging/set-log-to-stdout))
   (when-not (:analysis @db/db)
-    (print-with-time
-      options
-      "Analyzing project..."
+    (safe-analyze
       (crawler/initialize-project
         (project-root->uri project-root)
         {:workspace {:workspace-edit {:document-changes true}}}
@@ -69,6 +51,11 @@
                   :text-document-sync-kind :full}
                  :log-path log-path)
                settings)
+        (fn report-callback [{:keys [title message percentage]}]
+          (when-not (:raw? options)
+            (cli-print (format "\r[%3d%s] %-28s" (int percentage) "%" (or title message)))
+            (when (= 100 percentage)
+              (cli-println options ""))))
         db/db)
       true)))
 

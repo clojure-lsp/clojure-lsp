@@ -41,7 +41,7 @@
 
 (defn initialize [project-root-uri client-capabilities client-settings]
   (when project-root-uri
-    (crawler/initialize-project project-root-uri client-capabilities client-settings {} db/db)))
+    (crawler/initialize-project project-root-uri client-capabilities client-settings {} identity db/db)))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)

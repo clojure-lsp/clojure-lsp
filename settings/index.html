@@ -383,6 +383,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#classpath-config-paths" class="md-nav__link">
+    Classpath config paths
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#all-settings" class="md-nav__link">
     All settings
   </a>
@@ -718,6 +725,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#classpath-config-paths" class="md-nav__link">
+    Classpath config paths
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#all-settings" class="md-nav__link">
     All settings
   </a>
@@ -883,11 +897,12 @@
                 
                 
                 <h1 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h1>
-<p><code>clojure-lsp</code> settings are picked up on server start and can be configured via 3 ways:</p>
+<p><code>clojure-lsp</code> settings are picked up only on server start and can be configured via 4 ways:</p>
 <ul>
-<li><strong>Project configuration</strong></li>
-<li><strong>Global configuration</strong></li>
-<li><strong>LSP InitializationOptions</strong></li>
+<li><a href="#project">Project configuration</a></li>
+<li><a href="#global">Global configuration</a></li>
+<li><a href="#initialization-options">LSP InitializationOptions</a></li>
+<li><a href="#classpath-config-paths">Classpath config paths</a></li>
 </ul>
 <h3 id="project">Project<a class="headerlink" href="#project" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp</code> will look for project specific settings in a file called <code>.lsp/config.edn</code>. It will search from your project root folder up the directory structure so you can have multiple projects share the same settings.</p>
@@ -910,6 +925,18 @@
 <li>set -&gt; array (<code>["src" "test"]</code>)</li>
 <li>vector -&gt; array (<code>["src" "test"]</code>)</li>
 </ul>
+<h3 id="classpath-config-paths">Classpath config paths<a class="headerlink" href="#classpath-config-paths" title="Permanent link">#</a></h3>
+<p>When starting the server, clojure-lsp will search for a specific path <code>clojure-lsp.exports/&lt;group-id&gt;/&lt;artifact-id&gt;/config.edn</code> for extra configurations in the classpath, only if you set the setting <code>:classpath-config-paths</code> containing that <code>group/artifact</code>. Example:</p>
+<p>Lib <code>my-org/my-lib</code> could have a clojure-lsp config edn that makes sense for the usages of that lib, making available on the classpath:</p>
+<p><code>my-lib/resources/clojure-lsp.exports/my-org/my-lib/config.edn</code>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:cljfmt</span> <span class="p">{</span><span class="ss">:indents</span> <span class="p">{</span><span class="nv">foo</span> <span class="p">[[</span><span class="ss">:block</span> <span class="mi">0</span><span class="p">]]}}}</span>
+</code></pre></div></p>
+<p>and then if your project use/has the <code>my-org/my-lib</code> inside your classpath, you could add the setting</p>
+<p><code>your-project/.lsp/config.edn</code>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:classpath-config-paths</span> <span class="p">[</span><span class="s">&quot;my-org/my-lib&quot;</span><span class="p">]}</span>
+</code></pre></div></p>
+<p>And then clojure-lsp will merge the configuration from the lib with the other configurations from your project.</p>
+<p>This is useful if you have some rule to apply to clojure-lsp for multiple projects, mostly using via API for linting for example, and want to move the common configuration to some place instead of adding to each project that needs that.</p>
 <h2 id="all-settings">All settings<a class="headerlink" href="#all-settings" title="Permanent link">#</a></h2>
 <p>You can find all settings and its default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">here</a> and below the docs for each one:</p>
 <table>
@@ -1025,6 +1052,11 @@
 <td><code>code-lens</code> <code>segregate-test-references</code></td>
 <td>Segregate main references from test references with option to disable</td>
 <td><code>true</code></td>
+</tr>
+<tr>
+<td><code>classpath-config-paths</code></td>
+<td>List of extra configurations to load from classpath, for more info, check <a href="#classpath-config-paths">Classpath config paths</a> section.</td>
+<td><code>[]</code></td>
 </tr>
 <tr>
 <td><code>cache-path</code></td>
@@ -1172,7 +1204,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 27, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 29, 2021</span>
     
   </small>
 </div>

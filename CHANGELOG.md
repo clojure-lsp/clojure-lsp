@@ -28,6 +28,8 @@
   - Follow same exit status from clj-kondo for `diagnostics` feature. #572
   - Improve start project feedback reporting the percentage and specific message.
 
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
 ## 2021.09.13-22.25.35
 
 - Editor

@@ -54,7 +54,7 @@
      WorkspaceEdit)
    (org.eclipse.lsp4j.jsonrpc.messages Either)))
 
-(set! *warn-on-reflection* true)
+;; (set! *warn-on-reflection* true)
 
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
 
@@ -291,7 +291,7 @@
 
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
-                      (s/conformer #(Hover. ^java.util.List (:contents %1) ^Range (:range %1)))))
+                      (s/conformer #(Hover. (:contents %1) ^Range (:range %1)))))
 
 (s/def :command/title string?)
 (s/def :command/command string?)

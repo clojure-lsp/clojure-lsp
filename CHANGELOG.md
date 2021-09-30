@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Hot fix hover content wrong type hinting.
+
 ## 2021.09.30-12.28.16
 
 - General

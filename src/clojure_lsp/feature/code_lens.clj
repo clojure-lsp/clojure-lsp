@@ -34,7 +34,8 @@
   (let [analysis (:analysis @db)
         kondo-config (:kondo-config @db)
         filename (shared/uri->filename uri)]
-    (->> (concat (var-definitions-lens filename kondo-config analysis)
+    (->> (concat (q/find-namespace-definitions analysis filename)
+                 (var-definitions-lens filename kondo-config analysis)
                  (keyword-definitions-lens filename kondo-config analysis))
          (map (fn [element]
                 {:range (shared/->range element)

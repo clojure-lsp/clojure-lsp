@@ -18,16 +18,18 @@
                                "(s/defn baz []\n"
                                "  (bar 2 3))\n"))
     (swap! db/db assoc :kondo-config {})
-    (is (= (list {:range
-                  {:start {:line 1 :character 5} :end {:line 1 :character 8}}
-                  :data [(h/file-uri "file:///a.clj") 2 6]}
-                 {:range
-                  {:start {:line 2 :character 7} :end {:line 2 :character 11}}
-                  :data [(h/file-uri "file:///a.clj") 3 8]}
-                 {:range
-                  {:start {:line 4 :character 6} :end {:line 4 :character 9}}
-                  :data [(h/file-uri "file:///a.clj") 5 7]})
-           (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") db/db))))
+    (h/assert-submaps
+      [{}
+       {:range
+        {:start {:line 1 :character 5} :end {:line 1 :character 8}}
+        :data [(h/file-uri "file:///a.clj") 2 6]}
+       {:range
+        {:start {:line 2 :character 7} :end {:line 2 :character 11}}
+        :data [(h/file-uri "file:///a.clj") 3 8]}
+       {:range
+        {:start {:line 4 :character 6} :end {:line 4 :character 9}}
+        :data [(h/file-uri "file:///a.clj") 5 7]}]
+      (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") db/db)))
   (testing "defrecord"
     (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
                                   "(MyRecord)"
@@ -43,13 +45,24 @@
                                   "(r/reg-event-db ::event identity)"
                                   "(r/reg-sub ::sub identity)"))
     (swap! db/db assoc :kondo-config {})
-    (is (= [{:range
-             {:start {:line 1, :character 16}, :end {:line 1, :character 23}},
-             :data [(h/file-uri "file:///a.clj") 2 17]}
-            {:range
-             {:start {:line 2, :character 11}, :end {:line 2, :character 16}},
-             :data [(h/file-uri "file:///a.clj") 3 12]}]
-           (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") db/db)))))
+    (h/assert-submaps
+      [{}
+       {:range
+        {:start {:line 1, :character 16}, :end {:line 1, :character 23}},
+        :data [(h/file-uri "file:///a.clj") 2 17]}
+       {:range
+        {:start {:line 2, :character 11}, :end {:line 2, :character 16}},
+        :data [(h/file-uri "file:///a.clj") 3 12]}]
+      (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") db/db)))
+  (testing "namespaces definitions"
+    (h/load-code-and-locs (h/code "(ns foo) (def a)"))
+    (h/load-code-and-locs (h/code "(ns bar (:require [foo :as f])) f/a"))
+    (swap! db/db assoc :kondo-config {})
+    (h/assert-submaps
+      [{:range
+        {:start {:line 0, :character 4}, :end {:line 0, :character 7}}
+        :data [(h/file-uri "file:///a.clj") 1 5]}]
+      (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") db/db))))
 
 (deftest test-code-lens-resolve
   (h/load-code-and-locs (str "(ns some-ns)\n"

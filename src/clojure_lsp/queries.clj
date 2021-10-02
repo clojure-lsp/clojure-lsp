@@ -343,6 +343,14 @@
          (map :class)
          set)))
 
+(defn find-namespace-definitions [analysis filename]
+  (into []
+        (comp
+          (mapcat val)
+          (filter #(= (:filename %) filename))
+          (filter #(identical? :namespace-definitions (:bucket %))))
+        analysis))
+
 (defn find-namespace-definition-by-namespace [analysis namespace]
   (find-last-order-by-project-analysis
     #(and (= (:bucket %) :namespace-definitions)

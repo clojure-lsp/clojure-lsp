@@ -21,7 +21,7 @@
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
         clj-kondo/clj-kondo {:mvn/version "2021.09.25"}}
  :paths ["src" "classes" "resources"]
- :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.887"}}
+ :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.902"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :clean-ns {:exec-fn clojure-lsp.api/clean-ns!

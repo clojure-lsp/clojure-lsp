@@ -21,10 +21,8 @@
   (io/file (str project-root) ".lsp" "sqlite.db"))
 
 (defn ^:private get-datalevin-db-file [project-root-path db]
-  (let [configured (or (some-> (get-in @db [:settings :sqlite-db-path])
-                               io/file)
-                       (some-> (get-in @db [:settings :cache-path])
-                               (io/file "sqlite.db")))
+  (let [configured (some-> (get-in @db [:settings :cache-path])
+                           io/file)
         default (io/file (str project-root-path) ".lsp" ".cache")]
     ^java.io.File (or configured default)))
 
@@ -44,24 +42,28 @@
 
 (defn save-deps! [project-root-path project-hash kondo-config-hash classpath analysis db]
   (remove-old-db-file! project-root-path)
-  (let [datalevin-db (make-db project-root-path db)]
-    (d/open-dbi datalevin-db analysis-table-name)
-    (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]])
-    (d/transact-kv datalevin-db [[:put analysis-table-name :project-analysis {:version version
-                                                                :project-root (str project-root-path)
-                                                                :project-hash project-hash
-                                                                :kondo-config-hash kondo-config-hash
-                                                                :classpath classpath
-                                                                :analysis analysis}]])
-    (d/close-kv datalevin-db)))
+  (shared/logging-time
+    "DB datalevin save took %s secs"
+    (let [datalevin-db (make-db project-root-path db)]
+      (d/open-dbi datalevin-db analysis-table-name)
+      (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]])
+      (d/transact-kv datalevin-db [[:put analysis-table-name :project-analysis {:version version
+                                                                                :project-root (str project-root-path)
+                                                                                :project-hash project-hash
+                                                                                :kondo-config-hash kondo-config-hash
+                                                                                :classpath classpath
+                                                                                :analysis analysis}]])
+      (d/close-kv datalevin-db))))
 
 (defn read-deps [project-root-path db]
-  (let [db (make-db project-root-path db)]
-    (d/open-dbi db analysis-table-name)
-    (when-let [project-analysis (d/get-value db analysis-table-name :project-analysis)]
-      (when (and (= (str project-root-path) (:project-root project-analysis))
-                 (= version (:version project-analysis)))
-        project-analysis))))
+  (shared/logging-time
+    "DB datalevin read took %s secs"
+    (let [db (make-db project-root-path db)]
+      (d/open-dbi db analysis-table-name)
+      (when-let [project-analysis (d/get-value db analysis-table-name :project-analysis)]
+        (when (and (= (str project-root-path) (:project-root project-analysis))
+                   (= version (:version project-analysis)))
+          project-analysis)))))
 
 (defn db-exists? [project-root-path db]
   (shared/file-exists? (get-datalevin-db-file project-root-path db)))

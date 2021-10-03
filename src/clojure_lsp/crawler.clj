@@ -161,9 +161,11 @@
                                   vec
                                   seq)]
           (swap! db assoc :classpath classpath)
-          (let [external-classpath (cond->> classpath
-                                     ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f))))
-                                     :always (remove (set source-paths)))
+          (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
+                external-classpath (cond->> (->> classpath
+                                                 (remove (set source-paths-abs))
+                                                 (remove (set source-paths)))
+                                     ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
                 analysis (analyze-external-classpath! external-classpath 15 80 report-callback db)]
             (shared/logging-time
               "Manual GC after classpath scan took %s secs"

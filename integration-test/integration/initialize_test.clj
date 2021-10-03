@@ -42,7 +42,7 @@
   (h/assert-submap
     {:token "clojure-lsp"
      :value {:kind "begin"
-             :title "Resolving project"
+             :title "clojure-lsp"
              :percentage 0}}
     (lsp/await-notification :$/progress))
 

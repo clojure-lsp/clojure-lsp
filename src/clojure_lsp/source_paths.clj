@@ -129,13 +129,12 @@
 
 (defn process-source-paths [root-path settings settings-source-paths]
   (let [{:keys [origins source-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path settings settings-source-paths)]
-    (condp set/subset? origins
-      #{:settings} (log/info "Using given source-paths:" settings-source-paths)
-      #{:deps-edn} (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths)
-      #{:leiningen} (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths)
-      #{:bb} (log/info "Automatically resolved source-paths from bb.edn:" bb-source-paths)
-      #{:empty-deps-edn} (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths)
-      #{:empty-leinigen} (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths)
-      #{:empty-bb} (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths)
-      #{:default} (log/info "Using default source-paths:" default-source-paths))
+    (when (contains? origins :settings) (log/info "Using given source-paths:" settings-source-paths))
+    (when (contains? origins :deps-edn) (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths))
+    (when (contains? origins :leiningen) (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths))
+    (when (contains? origins :bb) (log/info "Automatically resolved source-paths from bb.edn:" bb-source-paths))
+    (when (contains? origins :empty-deps-edn) (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :empty-leiningen) (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :empty-bb) (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :default) (log/info "Using default source-paths:" default-source-paths))
     (mapv #(->> % (shared/to-file root-path) .getAbsolutePath str) source-paths)))

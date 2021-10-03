@@ -41,9 +41,30 @@
            (recur)
            ~@body)))))
 
-(defn initialize [project-root-uri client-capabilities client-settings]
+(defn ^:private report-startup-progress
+  [work-done-token percentage message db]
+  (let [progress (case (int percentage)
+                   0 {:kind :begin
+                      :title message
+                      :percentage percentage}
+                   100 {:kind :end
+                        :message message
+                        :percentage 100}
+                   {:kind :report
+                    :message message
+                    :percentage percentage})]
+    (producer/notify-progress {:token (or work-done-token "clojure-lsp")
+                               :value progress} db)))
+
+(defn initialize [project-root-uri client-capabilities client-settings work-done-token]
   (when project-root-uri
-    (crawler/initialize-project project-root-uri client-capabilities client-settings {} identity db/db)))
+    (crawler/initialize-project
+      project-root-uri
+      client-capabilities
+      client-settings
+      {}
+      (partial report-startup-progress work-done-token)
+      db/db)))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)

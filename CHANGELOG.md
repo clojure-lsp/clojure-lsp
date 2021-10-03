@@ -7,6 +7,7 @@
   
 - General
   - Improve intialization feedback report messages.
+  - Consider `dev` and `test` alias for deps.edn projects as project-specs during classpath lookup. #586
 
 ## 2021.09.30-15.28.01
 

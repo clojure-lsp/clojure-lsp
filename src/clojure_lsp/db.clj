@@ -39,7 +39,8 @@
   [project-root-path]
   (let [old-file (io/file (str project-root-path) ".lsp" "sqlite.db")
         new-file (io/file (str project-root-path) ".lsp" ".cache" "sqlite.db")]
-    (when (shared/file-exists? old-file)
+    (when (and (shared/file-exists? old-file)
+               (not (shared/file-exists? new-file)))
       (log/info "Migrating old db file to new .cache folder...")
       (try
         (io/make-parents new-file)

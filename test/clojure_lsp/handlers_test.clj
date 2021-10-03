@@ -30,6 +30,7 @@
     (h/clean-db!)
     (let [_ (h/load-code-and-locs "(ns a) (when)")]
       (is (some? (get-in @db/db [:analysis (h/file-path "/a.clj")])))
+      (Thread/sleep 500)
       (h/diagnostics
         #(h/assert-submaps
            [{:code "missing-body-in-when"}

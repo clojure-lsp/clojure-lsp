@@ -18,7 +18,7 @@
 (def version 1)
 
 (defn ^:private get-sqlite-db-file [project-root]
-  (io/file (str project-root) ".lsp" "sqlite.db"))
+  (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
 (defn ^:private get-datalevin-db-file [project-root-path db]
   (let [configured (some-> (get-in @db [:settings :cache-path])

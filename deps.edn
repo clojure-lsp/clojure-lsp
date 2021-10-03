@@ -44,7 +44,8 @@
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"
                                "-Dclojure.spec.skip-macros=true"]
-                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}
+                    :extra-deps {org.clojars.huahaiy/datalevin-native {:mvn/version "0.5.22"}
+                                 com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}
            :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
                  :exec-fn deps-bin.deps-bin/bin
                  :exec-args {:jar "clojure-lsp.jar"

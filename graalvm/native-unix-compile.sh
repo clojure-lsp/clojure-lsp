@@ -15,9 +15,11 @@ then
 fi
 
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}
+export DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
 
 args=("-jar" "$CLOJURE_LSP_JAR"
       "-H:+ReportExceptionStackTraces"
+      "-H:CLibraryPath=${DTLV_LIB_EXTRACT_DIR}"
       "--verbose"
       "--no-fallback"
       "--native-image-info"

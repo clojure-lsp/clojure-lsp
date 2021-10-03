@@ -56,14 +56,17 @@
       (d/close-kv datalevin-db))))
 
 (defn read-deps [project-root-path db]
-  (shared/logging-time
-    "DB datalevin read took %s secs"
-    (let [db (make-db project-root-path db)]
-      (d/open-dbi db analysis-table-name)
-      (when-let [project-analysis (d/get-value db analysis-table-name :project-analysis)]
-        (when (and (= (str project-root-path) (:project-root project-analysis))
-                   (= version (:version project-analysis)))
-          project-analysis)))))
+  (try
+    (shared/logging-time
+      "DB datalevin read took %s secs"
+      (let [db (make-db project-root-path db)]
+        (d/open-dbi db analysis-table-name)
+        (when-let [project-analysis (d/get-value db analysis-table-name :project-analysis)]
+          (when (and (= (str project-root-path) (:project-root project-analysis))
+                     (= version (:version project-analysis)))
+            project-analysis))))
+    (catch Throwable e
+      (log/error "Could not load project cache from DB" e))))
 
 (defn db-exists? [project-root-path db]
   (shared/file-exists? (get-datalevin-db-file project-root-path db)))

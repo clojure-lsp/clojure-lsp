@@ -36,6 +36,12 @@
       .getCanonicalPath
       (shared/filename->uri db/db)))
 
+(defn initialize-report-callback [options percentage message _db]
+  (when-not (:raw? options)
+    (cli-print (format "\r[%3d%s] %-28s" (int percentage) "%" message))
+    (when (= 100 percentage)
+      (cli-println options ""))))
+
 (defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
   (swap! db/db assoc :api? true)
   (when verbose
@@ -51,11 +57,7 @@
                   :text-document-sync-kind :full}
                  :log-path log-path)
                settings)
-        (fn report-callback [{:keys [title message percentage]}]
-          (when-not (:raw? options)
-            (cli-print (format "\r[%3d%s] %-28s" (int percentage) "%" (or title message)))
-            (when (= 100 percentage)
-              (cli-println options ""))))
+        (partial initialize-report-callback options)
         db/db)
       true)))
 

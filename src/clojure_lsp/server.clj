@@ -302,7 +302,8 @@
                  (log/info "Initializing...")
                  (handlers/initialize (.getRootUri params)
                                       (client-capabilities params)
-                                      (client-settings params))
+                                      (client-settings params)
+                                      (some-> (.getWorkDoneToken params) .get str))
                  (when-let [parent-process-id (.getProcessId params)]
                    (start-parent-process-liveness-probe! parent-process-id this))
                  (let [settings (:settings @db/db)]

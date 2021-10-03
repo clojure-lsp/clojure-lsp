@@ -14,13 +14,13 @@
 (deftest initialize
   (testing "detects URI format with lower-case drive letter and encoded colons"
     (h/clean-db!)
-    (handlers/initialize "file:///c%3A/project/root" {} {})
+    (handlers/initialize "file:///c%3A/project/root" {} {} nil)
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
            (get-in @db/db [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
     (h/clean-db!)
-    (handlers/initialize "file:///C:/project/root" {} {})
+    (handlers/initialize "file:///C:/project/root" {} {} nil)
     (is (= {:encode-colons-in-path?   false
             :upper-case-drive-letter? true}
            (get-in @db/db [:settings :uri-format])))))

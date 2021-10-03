@@ -85,22 +85,6 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private report-startup-progress
-  [percentage message report-callback db]
-  (let [progress (case (int percentage)
-                   0 {:kind :begin
-                      :title message
-                      :percentage percentage}
-                   100 {:kind :end
-                        :message message
-                        :percentage 100}
-                   {:kind :report
-                    :message message
-                    :percentage percentage})]
-    (producer/notify-progress {:token "clojure-lsp"
-                               :value progress} db)
-    (report-callback progress)))
-
 (defn ^:private analyze-source-paths! [paths db]
   (let [result (shared/logging-time
                  "Project only paths analyzed, took %s secs"
@@ -116,10 +100,9 @@
 (defn ^:private report-batch-analysis-percentage
   [start-progress-percentage fulfill-progress-percentage report-callback db index count]
   (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
-    (report-startup-progress
+    (report-callback
       (+ start-progress-percentage (/ (* index real-percentage) count))
       "Analyzing external classpath"
-      report-callback
       db)))
 
 (defn ^:private analyze-external-classpath!
@@ -153,17 +136,17 @@
     analysis))
 
 (defn ^:private analyze-classpath! [root-path source-paths settings report-callback db]
-  (report-startup-progress 8 "Finding project specs" report-callback db)
+  (report-callback 8 "Finding project specs" db)
   (let [project-specs (->> (or (get settings :project-specs) (default-project-specs))
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-hash (reduce str (map :hash project-specs))
         kondo-config-hash (lsp.kondo/config-hash (str root-path))
-        _ (report-startup-progress 10 "Finding cache" report-callback db)
+        _ (report-callback 10 "Finding cache" db)
         db-cache (db/read-deps root-path db)
         use-db-analysis? (and (= (:project-hash db-cache) project-hash)
                               (= (:kondo-config-hash db-cache) kondo-config-hash))]
-    (report-startup-progress 15 "Discovering classpath" report-callback db)
+    (report-callback 15 "Discovering classpath" db)
     (if use-db-analysis?
       (do
         (log/info "Using cached classpath for project root" root-path)
@@ -206,7 +189,7 @@
         (db/remove-db! project-root-path db)))))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings report-callback db]
-  (report-startup-progress 0 "Resolving project" report-callback db)
+  (report-callback 0 "clojure-lsp" db)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -229,10 +212,10 @@
            :client-settings client-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (report-startup-progress 5 "Finding kondo config" report-callback db)
+    (report-callback 5 "Finding kondo config" db)
     (ensure-kondo-config-dir-exists! project-root-uri db)
     (analyze-classpath! root-path (:source-paths settings) settings report-callback db)
-    (report-startup-progress 90 "Resolving config paths" report-callback db)
+    (report-callback 90 "Resolving config paths" db)
     (when-let [classpath-settings (config/resolve-from-classpath-config-paths (:classpath @db) settings)]
       (swap! db assoc
              :settings (medley/deep-merge settings
@@ -241,6 +224,6 @@
                                           force-settings)
              :classpath-configs classpath-settings))
     (log/info "Analyzing source paths for project root" root-path)
-    (report-startup-progress 95 "Analyzing project files" report-callback db)
+    (report-callback 95 "Analyzing project files" db)
     (analyze-source-paths! (:source-paths settings) db)
-    (report-startup-progress 100 "Project analyzed" report-callback db)))
+    (report-callback 100 "Project analyzed" db)))

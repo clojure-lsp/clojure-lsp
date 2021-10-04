@@ -83,7 +83,7 @@ jobs:
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
       - name: Generate embedded binary
-        run: make debug-bin
+        run: make prod-bin
 
       - name: Run integration tests
         run: make integration-test

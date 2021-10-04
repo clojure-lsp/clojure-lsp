@@ -50,7 +50,8 @@
                  :exec-fn deps-bin.deps-bin/bin
                  :exec-args {:jar "clojure-lsp.jar"
                              :jvm-opts ["-Xmx2g" "-server"]
-                             :name "clojure-lsp"}}
+                             :name "clojure-lsp"
+                             :skip-realign true}}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}}}
            :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                        :exec-fn hf.depstar/uberjar

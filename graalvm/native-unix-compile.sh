@@ -10,12 +10,13 @@ fi
 if [[ ! -f "$CLOJURE_LSP_JAR" ]]
 then
     make classes
-    make prod-jar
+    make prod-jar-for-native
     CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
 fi
 
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}
-export DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
+DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
+export DTLV_LIB_EXTRACT_DIR=$DTLV_LIB_EXTRACT_DIR
 
 args=("-jar" "$CLOJURE_LSP_JAR"
       "-H:+ReportExceptionStackTraces"

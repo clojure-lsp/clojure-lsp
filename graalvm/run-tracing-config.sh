@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-clojure -X:prod-jar
+clojure -X:prod-jar-for-native
 GRAAL_VM_DOCKER_IMAGE=springci/graalvm-ce:20.2-dev-java11
 
 jar=$(ls clojure-lsp.jar)

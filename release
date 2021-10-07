@@ -10,7 +10,7 @@ CURRENT_TAG=$(git describe --tags --abbrev=0)
 sed -i "s/<version>$CURRENT_TAG<\/version>/<version>$VERSION<\/version>/g" pom.xml
 echo "$VERSION" > resources/CLOJURE_LSP_VERSION
 sed -i "s/## Unreleased/## Unreleased\n\n## $VERSION/g" CHANGELOG.md
-make prod-jar
+make prod-jar-for-native
 git add resources/CLOJURE_LSP_VERSION CHANGELOG.md pom.xml
 git commit -m "Release: $VERSION"
 git tag "$VERSION"

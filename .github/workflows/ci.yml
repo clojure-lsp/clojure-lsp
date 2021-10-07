@@ -104,8 +104,8 @@ jobs:
         with:
           cli: '1.10.3.814'
 
-      - name: Generate jar and embedded jar
-        run: make prod-bin
+      - name: Generate jar
+        run: make prod-jar-for-native
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash

@@ -10,9 +10,9 @@
         borkdude/rewrite-edn {:mvn/version "0.0.2" :exclusions [rewrite-clj/rewrite-clj]}
         com.taoensso/timbre {:mvn/version "5.1.2"}
         org.clojure/core.async {:mvn/version "1.3.622"}
-        org.xerial/sqlite-jdbc {:mvn/version "3.36.0.3"}
-        seancorfield/next.jdbc {:mvn/version "1.2.659"}
         borkdude/dynaload {:mvn/version "0.2.2"}
+        datalevin/datalevin {:mvn/version "0.5.25"}
+        org.clojure/java.data {:mvn/version "1.0.86"}
         cljfmt/cljfmt {:mvn/version "0.8.0"
                        :exclusions [rewrite-cljs/rewrite-cljs
                                     com.googlecode.java-diff-utils/diffutils]}
@@ -37,19 +37,28 @@
                                   :aot true
                                   :sync-pom true
                                   :jvm-opts ["-Xmx2g" "-server"]
-                                  :main-class clojure-lsp.main
-                                  :aliases [:native]}}
+                                  :main-class clojure-lsp.main}}
+           :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                                 :exec-fn hf.depstar/uberjar
+                                 :exec-args {:jar "clojure-lsp.jar"
+                                             :aot true
+                                             :sync-pom true
+                                             :jvm-opts ["-Xmx2g" "-server"]
+                                             :main-class clojure-lsp.main
+                                             :aliases [:native]}}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"
                                "-Dclojure.spec.skip-macros=true"]
-                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}
+                    :extra-deps {org.clojars.huahaiy/datalevin-native {:mvn/version "0.5.25"}
+                                 com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}
            :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
                  :exec-fn deps-bin.deps-bin/bin
                  :exec-args {:jar "clojure-lsp.jar"
                              :jvm-opts ["-Xmx2g" "-server"]
-                             :name "clojure-lsp"}}
+                             :name "clojure-lsp"
+                             :skip-realign true}}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}}}
            :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                        :exec-fn hf.depstar/uberjar

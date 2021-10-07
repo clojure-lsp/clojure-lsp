@@ -22,6 +22,9 @@ debug-bin: clean classes
 prod-jar: clean classes
 	clojure -X:prod-jar
 
+prod-jar-for-native: clean classes
+	clojure -X:prod-jar-for-native
+
 prod-bin: clean classes prod-jar
 	clojure -X:bin
 
@@ -55,4 +58,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all debug-bin prod-bin prod-native test integration-test local-webpage clean release
+.PHONY: all debug-bin prod-jar prod-jar-for-native prod-bin prod-native test integration-test local-webpage clean release

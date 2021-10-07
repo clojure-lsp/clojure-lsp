@@ -1096,7 +1096,22 @@
           [{:keys [loc range]}] (transform/expand-let zloc)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
-      (is (= (str "(def foo (let [a 1]\n          (fn [bar] a 2)))") (z/root-string loc))))))
+      (is (= (str "(def foo (let [a 1]\n          (fn [bar] a 2)))") (z/root-string loc)))))
+  (testing "with list in front of let"
+    (let [code "(+ (* 3 3) (let [x 4] (* x x)))"
+          zloc (-> code z/of-string (z/find-value z/next 'let))
+          [{:keys [loc range]}] (transform/expand-let zloc)]
+      (is (some? range))
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= "(let [x 4]\n (+ (* 3 3) (* x x)))" (z/root-string loc)))))
+  (testing "with list in front of let and more than an expr in let body"
+    (let [code "(+ (* 3 3) (let [x 4] (something 1)\n (* x x)))"
+          zloc (-> code z/of-string (z/find-value z/next 'let))
+          [{:keys [loc range]}] (transform/expand-let zloc)]
+      (is (some? range))
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= "(let [x 4]\n (+ (* 3 3) (something 1)\n (* x x)))"
+             (z/root-string loc))))))
 
 (deftest find-missing-import
   (testing "when usage is a java constructor"

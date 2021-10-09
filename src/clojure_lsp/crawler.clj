@@ -7,6 +7,7 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
+   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
@@ -170,7 +171,8 @@
             (shared/logging-time
               "Manual GC after classpath scan took %s secs"
               (System/gc))
-            (db/save-deps! root-path project-hash kondo-config-hash classpath analysis db)))))))
+            (async/go
+              (db/save-deps! root-path project-hash kondo-config-hash classpath analysis db))))))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try

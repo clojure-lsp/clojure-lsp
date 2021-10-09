@@ -43,7 +43,7 @@
 (defn save-deps! [project-root-path project-hash kondo-config-hash classpath analysis db]
   (remove-old-db-file! project-root-path)
   (shared/logging-time
-    "DB datalevin save took %s secs"
+    "Saving analysis cache to Datalevin db took %s secs"
     (let [datalevin-db (make-db project-root-path db)]
       (d/open-dbi datalevin-db analysis-table-name)
       (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]])
@@ -58,7 +58,7 @@
 (defn read-deps [project-root-path db]
   (try
     (shared/logging-time
-      "DB datalevin read took %s secs"
+      "Reading analysis cache from Datalevin db took %s secs"
       (let [db (make-db project-root-path db)]
         (d/open-dbi db analysis-table-name)
         (when-let [project-analysis (d/get-value db analysis-table-name :project-analysis)]

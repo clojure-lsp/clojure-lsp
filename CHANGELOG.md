@@ -7,11 +7,11 @@
   - Consider `dev` and `test` alias for deps.edn projects as project-specs during classpath lookup. #586
   - Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.
   - Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.
+  - Async save the analysis to cache db to make startup faster.
   
 - Editor
   - Add reference code lens for ns forms. #578
   - Fix expand-let bug that occurs when a list form precedes let. #590
-
 
 ## 2021.09.30-15.28.01
 

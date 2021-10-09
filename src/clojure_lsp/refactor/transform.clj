@@ -285,11 +285,16 @@
           (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))]
             [{:range parent-meta
               :loc (-> let-loc
+                       (z/insert-child ::dummy) ; prepend dummy element to let form
                        (z/splice) ; splice in let
+                       (z/right)
                        (z/remove) ; remove let
-                       (z/next)
+                       (z/right)
                        (z/remove) ; remove binding
                        (z/find z/up #(= (z/tag %) :list)) ; go to parent form container
+                       (z/edit->
+                         (z/find-value z/next ::dummy)
+                         (z/remove)) ; remove dummy element
                        (edit/wrap-around :list) ; wrap with new let list
                        (z/insert-child* (n/spaces col)) ; insert let and bindings backwards
                        (z/insert-child* (n/newlines 1)) ; insert let and bindings backwards

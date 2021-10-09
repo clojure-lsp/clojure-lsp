@@ -1627,8 +1627,9 @@
 <li>Improve intialization feedback report messages.</li>
 <li>Consider <code>dev</code> and <code>test</code> alias for deps.edn projects as project-specs during classpath lookup. #586</li>
 <li>Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.</li>
+<li>Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.</li>
 <li>
-<p>Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.</p>
+<p>Async save the analysis to cache db to make startup faster.</p>
 </li>
 <li>
 <p>Editor</p>

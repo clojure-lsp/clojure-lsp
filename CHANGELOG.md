@@ -10,6 +10,7 @@
   
 - Editor
   - Add reference code lens for ns forms. #578
+  - Fix expand-let bug that occurs when a list form precedes let. #590
 
 
 ## 2021.09.30-15.28.01

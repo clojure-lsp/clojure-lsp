@@ -1032,10 +1032,7 @@
             :else nil))))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]
-  (let [diagnostic-code (if (= "unused-public-var" diagnostic-code)
-                          "clojure-lsp/unused-public-var"
-                          diagnostic-code)
-        form-zloc (z/up (edit/find-op zloc))
+  (let [form-zloc (z/up (edit/find-op zloc))
         {form-row :row form-col :col :as form-pos} (-> form-zloc z/node meta)
         loc-w-comment (z/edit-> form-zloc
                                 (z/insert-left (n/uneval-node (cond-> [(n/map-node [(n/keyword-node :clj-kondo/ignore)

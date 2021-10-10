@@ -93,7 +93,7 @@
                                      :namespace '[sample-test.api.diagnostics.d]
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "src/sample_test/api/diagnostics/d.clj:2:6: info: [unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'" (:message result)))
+        (is (= "src/sample_test/api/diagnostics/d.clj:2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'" (:message result)))
         (is (= 1 (count (:diagnostics result))))))
     (testing "when namespace does not exists"
       (reset! db/db {})

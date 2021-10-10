@@ -26,7 +26,7 @@
       (with-open [rdr (lsp/cli! "diagnostics"
                                 "--project-root" h/root-project-path
                                 "--namespace" "sample-test.api.diagnostics.d")]
-        (is (string/includes? (slurp rdr) "src/sample_test/api/diagnostics/d.clj:2:6: info: [unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'\n")))))
+        (is (string/includes? (slurp rdr) "src/sample_test/api/diagnostics/d.clj:2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'\n")))))
   (testing "When output has canonical-paths as true"
     (with-open [rdr (lsp/cli! "diagnostics"
                               "--project-root" h/root-project-path

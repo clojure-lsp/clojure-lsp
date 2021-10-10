@@ -392,3 +392,19 @@
   (testing "when not inside a macro usage"
     (is (not-any? #(= (:title %) "Resolve macro 'some-ns/foo' as...")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 4) (h/file-uri "file:///a.clj") 4 4 [] {} db/db)))))
+
+(deftest suppress-diagnostic-code-actions
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                ""
+                                "(def ^:private a 1)"))
+  (testing "unused-private-var"
+    (is (some #(= (:title %) "Suppress 'unused-private-var' diagnostic")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3)
+                                  (h/file-uri "file:///a.clj")
+                                  3
+                                  3
+                                  [{:code "unused-private-var"
+                                    :message "Unused private var: a"
+                                    :range {:start {:line 3 :character 11}}}]
+                                  {:workspace {:workspace-edit true}}
+                                  db/db)))))

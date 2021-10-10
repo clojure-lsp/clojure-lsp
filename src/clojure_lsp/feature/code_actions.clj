@@ -7,6 +7,7 @@
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
+   [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
@@ -78,7 +79,7 @@
          :position position}))))
 
 (defn resolve-code-action
-  [{{:keys [id uri line character chosen-alias coll]} :data :as code-action}
+  [{{:keys [id uri line character chosen-alias coll diagnostic-code]} :data :as code-action}
    zloc
    db]
   (->
@@ -142,6 +143,11 @@
              {:command {:title     "Thread last all"
                         :command   "thread-last-all"
                         :arguments [uri line character]}}
+
+             "refactor-suppress-diagnostic"
+             {:command {:title "Suppress diagnostic"
+                        :command "suppress-diagnostic"
+                        :arguments [uri line character diagnostic-code]}}
 
              "clean-ns"
              {:command {:title     "Clean namespace"
@@ -259,6 +265,19 @@
           :line line
           :character character}})
 
+(defn ^:private suppress-diagnostic-actions [diagnostics uri]
+  (->> diagnostics
+       (map (fn [{:keys [code]
+                  {{:keys [line character]} :start} :range}]
+              {:title (format "Suppress '%s' diagnostic" code)
+               :kind CodeActionKind/QuickFix
+               :data {:id "refactor-suppress-diagnostic"
+                      :uri uri
+                      :line line
+                      :character character
+                      :diagnostic-code code}}))
+       (medley/distinct-by :title)))
+
 (defn ^:private create-private-function-action [uri function-to-create]
   {:title (format "Create private function '%s'" (:name function-to-create))
    :kind CodeActionKind/QuickFix
@@ -277,7 +296,7 @@
 
 (defn all [zloc uri row col diagnostics client-capabilities db]
   (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
-        resolve-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
+        resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function? (r.transform/find-function-form zloc)
         function-to-create (find-function-to-create uri diagnostics db)
         inside-let? (r.transform/find-let-form zloc)
@@ -325,8 +344,12 @@
       (conj (thread-first-all-action uri line character)
             (thread-last-all-action uri line character))
 
+      (and workspace-edit-capability?
+           (seq diagnostics))
+      (into (suppress-diagnostic-actions diagnostics uri))
+
       workspace-edit-capability?
       (conj (clean-ns-action uri line character))
 
-      (not resolve-support?)
+      (not resolve-action-support?)
       (->> (map #(resolve-code-action % zloc db))))))

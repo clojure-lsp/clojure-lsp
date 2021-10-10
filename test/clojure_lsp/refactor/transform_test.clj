@@ -1367,3 +1367,48 @@
       (is (= 2 (count results)))
       (is (= [nil] (map (comp z/string :loc) a-results)))
       (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results))))))
+
+(deftest suppress-diagnostic
+  (testing "when op has no spaces"
+    (reset! db/db {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (let [code (h/code "(ns bla)"
+                       ""
+                       "(defn foo [b]"
+                       "  (+ 1 2))"
+                       "(foo 1)")
+          zloc (z/find-value (z/of-string code) z/next 'b)
+          _ (h/load-code-and-locs code)
+          results (transform/suppress-diagnostic zloc "unused-var")
+          results-to-assert (map #(update % :loc z/string) results)]
+      (h/assert-submaps
+        [{:loc "#_{:clj-kondo/ignore [:unused-var]}\n"
+          :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
+        results-to-assert)))
+  (testing "when op has spaces"
+    (reset! db/db {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (let [code (h/code "(ns bla)"
+                       ""
+                       "(defn foo [b]"
+                       "  (+ c 1 2))"
+                       "(foo 1)")
+          zloc (z/find-value (z/of-string code) z/next 'c)
+          _ (h/load-code-and-locs code)
+          results (transform/suppress-diagnostic zloc "unresolved-var")
+          results-to-assert (map #(update % :loc z/string) results)]
+      (h/assert-submaps
+        [{:loc "#_{:clj-kondo/ignore [:unresolved-var]}\n  "
+          :range {:row 4 :col 3 :end-row 4 :end-col 3}}]
+        results-to-assert)))
+  (testing "when diagnostic is from clojure-lsp"
+    (reset! db/db {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (let [code (h/code "(ns bla)"
+                       ""
+                       "(def foo 1)")
+          zloc (z/find-value (z/of-string code) z/next 'foo)
+          _ (h/load-code-and-locs code)
+          results (transform/suppress-diagnostic zloc "unused-public-var")
+          results-to-assert (map #(update % :loc z/string) results)]
+      (h/assert-submaps
+        [{:loc "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}\n"
+          :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
+        results-to-assert))))

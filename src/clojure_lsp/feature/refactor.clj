@@ -67,6 +67,9 @@
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
 
+(defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
+  (apply r.transform/suppress-diagnostic loc [args]))
+
 (defmethod refactor :create-function [{:keys [loc db]}]
   (r.transform/create-function loc db))
 

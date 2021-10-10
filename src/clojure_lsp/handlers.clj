@@ -142,12 +142,17 @@
                          (shared/full-file-range))
       :children (->> (q/find-var-definitions analysis filename true)
                      (mapv (fn [e]
-                             {:name            (-> e :name name)
-                              :kind            (f.document-symbol/element->symbol-kind e)
-                              :range           (shared/->scope-range e)
-                              :selection-range (shared/->range e)})))}]))
+                             (shared/assoc-some
+                               {:name (-> e :name name)
+                                :kind (f.document-symbol/element->symbol-kind e)
+                                :range (shared/->scope-range e)
+                                :selection-range (shared/->range e)
+                                :tags (cond-> []
+                                        (:deprecated e) (conj 1))}
+                               :detail (when (:private e)
+                                         "private")))))}]))
 
-(defn document-highlight [{:keys [textDocument position]}]
+(defn ^:deprecated document-highlight [{:keys [textDocument position]}]
   (process-after-changes
     (let [line (-> position :line inc)
           column (-> position :character inc)

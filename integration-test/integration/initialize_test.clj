@@ -27,6 +27,7 @@
                                             "unwind-all"
                                             "move-to-let"
                                             "clean-ns"
+                                            "suppress-diagnostic"
                                             "thread-last"
                                             "introduce-let"
                                             "unwind-thread"

@@ -18,14 +18,14 @@
       [{:range {:start {:line 2 :character 6}
                 :end {:line 2 :character 9}}
         :severity 3
-        :code "unused-public-var"
+        :code "clojure-lsp/unused-public-var"
         :source "clojure-lsp"
         :message "Unused public var 'sample-test.diagnostics.unused-public-var/foo'"
         :tags [1]}
        {:range {:start {:line 5 :character 5}
                 :end {:line 5 :character 8}}
         :severity 3
-        :code "unused-public-var"
+        :code "clojure-lsp/unused-public-var"
         :source "clojure-lsp"
         :message "Unused public var 'sample-test.diagnostics.unused-public-var/bar'"
         :tags [1]}]

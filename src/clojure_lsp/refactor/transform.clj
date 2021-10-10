@@ -13,9 +13,7 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log])
-  (:import
-   (org.eclipse.lsp4j MessageActionItem)))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 
@@ -1025,7 +1023,7 @@
 
             (< 1 (count test-source-paths))
             (let [actions (mapv #(hash-map :title %) source-paths)
-                  chosen-source-path (.getTitle ^MessageActionItem @(producer/window-show-message-request "Which source-path?" :info actions db))]
+                  chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
               (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
             ;; No source paths besides current one

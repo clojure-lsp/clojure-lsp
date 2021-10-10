@@ -4,6 +4,7 @@
    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
+     MessageActionItem
      ApplyWorkspaceEditParams
      CodeLensWorkspaceCapabilities)
    (org.eclipse.lsp4j.services LanguageClient)))
@@ -23,11 +24,13 @@
 (defn window-show-message-request
   [message type actions db]
   (when-let [client ^LanguageClient (:client @db)]
-    (->> {:type type
-          :message message
-          :actions actions}
-         (interop/conform-or-log ::interop/show-message-request)
-         (.showMessageRequest client))))
+    (let [result (->> {:type type
+                       :message message
+                       :actions actions}
+                      (interop/conform-or-log ::interop/show-message-request)
+                      (.showMessageRequest client)
+                      .get)]
+      (.getTitle ^MessageActionItem result))))
 
 (defn workspace-apply-edit [edit db]
   (let [client ^LanguageClient (:client @db)]

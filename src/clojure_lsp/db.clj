@@ -4,7 +4,8 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [datalevin.core :as d]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.settings :as settings]))
 
 (set! *warn-on-reflection* true)
 
@@ -21,7 +22,7 @@
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
 (defn ^:private get-datalevin-db-file [project-root-path db]
-  (let [configured (some-> (get-in @db [:settings :cache-path])
+  (let [configured (some-> (settings/get db [:cache-path])
                            io/file)
         default (io/file (str project-root-path) ".lsp" ".cache")]
     ^java.io.File (or configured default)))

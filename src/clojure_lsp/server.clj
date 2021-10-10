@@ -11,7 +11,8 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop thread timeout]]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.settings :as settings])
   (:import
    (clojure_lsp
      ClojureExtensions
@@ -306,7 +307,7 @@
                                       (some-> (.getWorkDoneToken params) .get str))
                  (when-let [parent-process-id (.getProcessId params)]
                    (start-parent-process-liveness-probe! parent-process-id this))
-                 (let [settings (:settings @db/db)]
+                 (let [settings (settings/all db/db)]
                    (CompletableFuture/completedFuture
                      (InitializeResult. (doto (ServerCapabilities.)
                                           (.setDocumentHighlightProvider true)

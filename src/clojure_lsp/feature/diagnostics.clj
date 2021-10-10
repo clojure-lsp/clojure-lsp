@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
@@ -90,7 +91,7 @@
 
 (defn ^:private exclude-ns? [filename linter db]
   (when-let [namespace (shared/filename->namespace filename db)]
-    (when-let [ns-exclude-regex-str (get-in @db [:settings :linters linter :ns-exclude-regex])]
+    (when-let [ns-exclude-regex-str (settings/get db [:linters linter :ns-exclude-regex])]
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 
 (defn ^:private kondo-findings->diagnostics [filename linter db]
@@ -107,10 +108,9 @@
     3 :info))
 
 (defn find-diagnostics [uri db]
-  (let [settings (:settings @db)
-        filename (shared/uri->filename uri)]
+  (let [filename (shared/uri->filename uri)]
     (cond-> []
-      (not (= :off (get-in settings [:linters :clj-kondo :level])))
+      (not (= :off (settings/get db [:linters :clj-kondo :level])))
       (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 
 (defn sync-lint-file! [uri db]

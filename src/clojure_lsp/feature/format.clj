@@ -3,6 +3,7 @@
    [cljfmt.core :as cljfmt]
    [cljfmt.main :as cljfmt.main]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -12,12 +13,12 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private resolve-cljfmt-config [db]
-  (let [config-path (get-in @db [:settings :cljfmt-config-path])
+  (let [config-path (settings/get db [:cljfmt-config-path])
         cljfmt-config-file (io/file config-path)]
     (cljfmt.main/merge-default-options
       (if (shared/file-exists? cljfmt-config-file)
         (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))
-        (get-in @db [:settings :cljfmt] {})))))
+        (settings/get db [:cljfmt] {})))))
 
 (defn formatting [uri db]
   (let [{:keys [text]} (get-in @db [:documents uri])

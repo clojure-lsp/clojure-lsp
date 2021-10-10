@@ -7,6 +7,7 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
@@ -23,28 +24,27 @@
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn did-open [uri text db allow-create-ns]
-  (let [settings (get @db :settings {})]
-    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
-      (swap! db (fn [state-db]
-                  (-> state-db
-                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                      (update-analysis uri (:analysis kondo-result))
-                      (update-findings uri (:findings kondo-result))
-                      (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-lint-file! uri db))
-    (when-let [new-ns (and allow-create-ns
-                           (string/blank? text)
-                           (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
-                           (not (:processing-work-edit-for-new-files @db))
-                           (shared/uri->namespace uri db))]
-      (when (get settings :auto-add-ns-to-new-files? true)
-        (let [new-text (format "(ns %s)" new-ns)
-              changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
-                        :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
-                                 :new-text new-text}]}]]
-          (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))
-    (when (:processing-work-edit-for-new-files @db)
-      (swap! db assoc :processing-work-edit-for-new-files false))))
+  (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
+    (swap! db (fn [state-db]
+                (-> state-db
+                    (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
+                    (update-analysis uri (:analysis kondo-result))
+                    (update-findings uri (:findings kondo-result))
+                    (assoc :kondo-config (:config kondo-result)))))
+    (f.diagnostic/async-lint-file! uri db))
+  (when-let [new-ns (and allow-create-ns
+                         (string/blank? text)
+                         (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
+                         (not (:processing-work-edit-for-new-files @db))
+                         (shared/uri->namespace uri db))]
+    (when (settings/get db [:auto-add-ns-to-new-files?] true)
+      (let [new-text (format "(ns %s)" new-ns)
+            changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
+                      :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
+                               :new-text new-text}]}]]
+        (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))
+  (when (:processing-work-edit-for-new-files @db)
+    (swap! db assoc :processing-work-edit-for-new-files false)))
 
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
@@ -74,7 +74,7 @@
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis db]
   (async/go
     (let [project-analysis (q/filter-project-analysis (:analysis @db))
-          source-paths (get-in @db [:settings :source-paths])
+          source-paths (settings/get db [:source-paths])
           changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
           references-filenames (->> changed-var-definitions
                                     (map #(q/find-references project-analysis % false))
@@ -153,7 +153,7 @@
                                                 (assoc :kondo-config (:config kondo-result))))
             (do
               (f.diagnostic/sync-lint-file! uri db)
-              (when (get-in @db [:settings :notify-references-on-file-change] false)
+              (when (settings/get db [:notify-references-on-file-change] false)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db)))
             (recur @db)))))))
 

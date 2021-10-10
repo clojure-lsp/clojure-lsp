@@ -1,5 +1,6 @@
 (ns clojure-lsp.shared
   (:require
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
@@ -164,7 +165,7 @@
   Jar files are given the `jar:file` or `zipfile` scheme depending on the
   `:dependency-scheme` setting."
   [^String filename db]
-  (let [jar-scheme? (= "jar" (get-in @db [:settings :dependency-scheme]))
+  (let [jar-scheme? (= "jar" (settings/get db [:dependency-scheme]))
         [_ jar-filepath nested-file] (re-find jar-filename-regex filename)]
     (conform-uri
       (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
@@ -172,7 +173,7 @@
           (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
         (.toString (filepath->uri-obj filename)))
-      (get-in @db [:settings :uri-format]))))
+      (settings/get db [:uri-format]))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
@@ -212,7 +213,7 @@
    (uri->namespace uri (uri->filename uri) db))
   ([uri filename db]
    (let [project-root-uri (:project-root-uri @db)
-         source-paths (get-in @db [:settings :source-paths])
+         source-paths (settings/get db [:source-paths])
          in-project? (when project-root-uri
                        (string/starts-with? uri project-root-uri))
          file-type (uri->file-type uri)]

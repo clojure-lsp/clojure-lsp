@@ -3,7 +3,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.settings :as settings]))
 
 (set! *warn-on-reflection* true)
 
@@ -35,7 +36,7 @@
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db]
   (let [[content-format] (get-in @db [:client-capabilities :text-document :hover :content-format])
-        show-docs-arity-on-same-line? (get-in @db [:settings :show-docs-arity-on-same-line?])
+        show-docs-arity-on-same-line? (settings/get db [:show-docs-arity-on-same-line?])
         hide-filename? (get-in @db [:settings :hover :hide-file-location?])
         join-char (if show-docs-arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs

@@ -24,7 +24,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.settings :as settings])
   (:import
    [java.net
     URL
@@ -172,7 +173,7 @@
      :project-settings (:project-settings db)
      :classpath-configs (:classpath-configs db)
      :client-settings (:client-settings db)
-     :final-settings (:settings db)
+     :final-settings (settings/all db)
      :port (or (:port db)
                "NREPL only available on :debug profile (`make debug-bin`)")
      :server-version (config/clojure-lsp-version)

@@ -3,11 +3,11 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as transform]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]
-   [clojure-lsp.shared :as shared]))
+   [rewrite-clj.zip :as z]))
 
 (defn code [& strings] (string/join "\n" strings))
 

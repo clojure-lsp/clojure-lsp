@@ -152,7 +152,7 @@
                                :detail (when (:private e)
                                          "private")))))}]))
 
-(defn ^:deprecated document-highlight [{:keys [textDocument position]}]
+(defn document-highlight [{:keys [textDocument position]}]
   (process-after-changes
     (let [line (-> position :line inc)
           column (-> position :character inc)

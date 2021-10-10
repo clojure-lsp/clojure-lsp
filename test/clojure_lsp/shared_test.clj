@@ -144,6 +144,6 @@
 
 (deftest namespace+source-path->filename
   (is (= "/project/test/some/cool_ns.clj"
-        (shared/namespace+source-path->filename "some.cool-ns" "/project/test" :clj)))
+         (shared/namespace+source-path->filename "some.cool-ns" "/project/test" :clj)))
   (is (= "/project/test/some/cool_ns.clj"
-        (shared/namespace+source-path->filename "some.cool-ns" "/project/test/" :clj))))
+         (shared/namespace+source-path->filename "some.cool-ns" "/project/test/" :clj))))

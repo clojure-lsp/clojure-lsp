@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.common-symbols :as common-sym]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
@@ -12,9 +13,9 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]
-   [clojure-lsp.producer :as producer])
-  (:import (org.eclipse.lsp4j MessageActionItem)))
+   [taoensso.timbre :as log])
+  (:import
+   (org.eclipse.lsp4j MessageActionItem)))
 
 (set! *warn-on-reflection* true)
 

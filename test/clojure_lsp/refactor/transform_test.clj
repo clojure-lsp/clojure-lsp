@@ -1406,7 +1406,7 @@
                        "(def foo 1)")
           zloc (z/find-value (z/of-string code) z/next 'foo)
           _ (h/load-code-and-locs code)
-          results (transform/suppress-diagnostic zloc "unused-public-var")
+          results (transform/suppress-diagnostic zloc "clojure-lsp/unused-public-var")
           results-to-assert (map #(update % :loc z/string) results)]
       (h/assert-submaps
         [{:loc "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}\n"

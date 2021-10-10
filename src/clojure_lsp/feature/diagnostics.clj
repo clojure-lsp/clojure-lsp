@@ -72,7 +72,9 @@
              (unnecessary-diagnostic-types type) (conj 1)
              (deprecated-diagnostic-types type) (conj 2))
      :message message
-     :code (name type)
+     :code (if-let [n (namespace type)]
+             (str n "/" (name type))
+             (name type))
      :severity (case level
                  :error   1
                  :warning 2

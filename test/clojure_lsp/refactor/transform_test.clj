@@ -1321,8 +1321,8 @@
                 results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
             (h/assert-submap
               {(h/file-uri "file:///project/test/some/ns_test.clj")
-               [{:loc "\n\n(deftest foo-test\n  (is (= 1 1)))",
-                 :range {:row 2 :col 1 :end-row 5 :end-col 1}}]}
+               [{:loc "\n(deftest foo-test\n  (is (= 1 1)))",
+                 :range {:row 3 :col 1 :end-row 5 :end-col 1}}]}
               results-to-assert)))))))
 
 (deftest inline-symbol

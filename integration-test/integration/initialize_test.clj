@@ -18,7 +18,25 @@
         :referencesProvider true
         :callHierarchyProvider true
         :renameProvider true
-        :executeCommandProvider {:commands ["add-missing-libspec" "add-import-to-namespace" "cycle-privacy" "change-coll" "thread-last-all" "unwind-all" "move-to-let" "clean-ns" "thread-last" "introduce-let" "unwind-thread" "thread-first-all" "thread-first" "inline-symbol" "extract-function" "cycle-coll" "expand-let" "create-function"]}
+        :executeCommandProvider {:commands ["add-missing-libspec"
+                                            "add-import-to-namespace"
+                                            "cycle-privacy"
+                                            "create-test"
+                                            "change-coll"
+                                            "thread-last-all"
+                                            "unwind-all"
+                                            "move-to-let"
+                                            "clean-ns"
+                                            "thread-last"
+                                            "introduce-let"
+                                            "unwind-thread"
+                                            "thread-first-all"
+                                            "thread-first"
+                                            "inline-symbol"
+                                            "extract-function"
+                                            "cycle-coll"
+                                            "expand-let"
+                                            "create-function"]}
         :signatureHelpProvider {:triggerCharacters []}
         :codeActionProvider {:codeActionKinds ["quickfix" "refactor" "refactor.extract" "refactor.inline" "refactor.rewrite" "source" "source.organizeImports"]
                              :resolveProvider true}

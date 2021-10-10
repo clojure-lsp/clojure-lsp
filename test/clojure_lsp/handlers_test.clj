@@ -70,11 +70,13 @@
                  :children [{:name "bar"
                              :kind :variable
                              :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
-                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
+                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
+                             :tags []}
                             {:name "baz"
                              :kind :variable
                              :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}}]}]]
+                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
+                             :tags []}]}]]
     (testing "clj files"
       (h/load-code-and-locs code)
       (h/assert-submaps result

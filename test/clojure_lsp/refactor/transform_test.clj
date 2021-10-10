@@ -6,7 +6,8 @@
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [clojure-lsp.shared :as shared]))
 
 (defn code [& strings] (string/join "\n" strings))
 
@@ -1270,6 +1271,59 @@
           results (transform/create-function zloc db/db)]
       (is (= "(defn- my-func\n  [a arg2 b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results))))))))
+
+(defn update-map [m f]
+  (into {} (for [[k v] m] [k (f v)])))
+
+(deftest create-test-test
+  (testing "when only one available source-path besides current"
+    (testing "when the test file doesn't exists for clj file"
+      (reset! db/db {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                     :project-root-uri (h/file-uri "file:///project")})
+      (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
+            zloc (z/find-value (z/of-string code) z/next 'foo)
+            _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
+            results-by-uri (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+            results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (h/assert-submap
+          {(h/file-uri "file:///project/test/some/ns_test.clj")
+           [{:loc "(ns some.ns-test\n  (:require\n   [clojure.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
+             :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
+          results-to-assert)))
+    (testing "when the test file doesn't exists for cljs file"
+      (reset! db/db {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                     :project-root-uri (h/file-uri "file:///project")})
+      (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
+            zloc (z/find-value (z/of-string code) z/next 'foo)
+            _ (h/load-code-and-locs code "file:///project/src/some/ns.cljs")
+            results-by-uri (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
+            results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (h/assert-submap
+          {(h/file-uri "file:///project/test/some/ns_test.cljs")
+           [{:loc "(ns some.ns-test\n  (:require\n   [cljs.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
+             :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
+          results-to-assert)))
+    (testing "when the test file exists for clj file"
+      (reset! db/db {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                     :project-root-uri (h/file-uri "file:///project")})
+      (let [test-code (h/code "(ns some.ns-test)"
+                              "(deftest some-other-test)")]
+        (with-redefs [shared/file-exists? (constantly true)
+                      slurp (constantly test-code)]
+          (let [_ (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
+                code "(ns some.ns) (defn foo [b] (+ 1 2))"
+                zloc (z/find-value (z/of-string code) z/next 'foo)
+                _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
+                results-by-uri (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+                results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            (h/assert-submap
+              {(h/file-uri "file:///project/test/some/ns_test.clj")
+               [{:loc "\n\n(deftest foo-test\n  (is (= 1 1)))",
+                 :range {:row 2 :col 1 :end-row 5 :end-col 1}}]}
+              results-to-assert)))))))
 
 (deftest inline-symbol
   (testing "simple let"

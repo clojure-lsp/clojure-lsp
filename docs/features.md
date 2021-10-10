@@ -225,6 +225,7 @@ Commands that change/refactor the code, most of them are available via code acti
 ##### Thread last all *
 ##### Unwind all
 ##### Unwind thread
+##### Create test
 
 #### Resolve macro as *
 

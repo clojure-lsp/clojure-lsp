@@ -56,7 +56,7 @@
     (io/copy old-file new-file)
     (io/delete-file old-file)
     (f.file-management/did-close old-uri db)
-    (f.file-management/did-open new-uri (slurp new-file) db)))
+    (f.file-management/did-open new-uri (slurp new-file) db false)))
 
 (defn apply-workspace-edit-summary!
   [change db]

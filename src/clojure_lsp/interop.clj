@@ -29,7 +29,9 @@
      Location
      MarkedString
      MarkupContent
+     MessageActionItem
      MessageParams
+     ShowMessageRequestParams
      MessageType
      ParameterInformation
      Position
@@ -316,6 +318,21 @@
 (s/def ::show-message (s/and (s/keys :req-un [:show-message/type
                                               :show-message/message])
                              (s/conformer #(MessageParams. (:type %) (:message %)))))
+
+(s/def :show-message-request-action/title string?)
+
+(s/def :show-message-request/action (s/and (s/keys :req-un [:show-message-request-action/title])
+                                           (s/conformer #(MessageActionItem. (:title %)))))
+
+(s/def :show-message-request/actions (s/coll-of :show-message-request/action))
+
+(s/def ::show-message-request (s/and (s/keys :req-un [:show-message/type
+                                                      :show-message/message]
+                                             :opt-un [:show-message-request/actions])
+                                     (s/conformer #(doto (ShowMessageRequestParams.)
+                                                     (.setMessage (:message %))
+                                                     (.setType (:type %))
+                                                     (.setActions (:actions %))))))
 
 (def work-done-progress-kind-enum
   {:begin WorkDoneProgressKind/begin

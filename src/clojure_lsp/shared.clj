@@ -195,6 +195,18 @@
                           (str "." (name file-type))))
       db)))
 
+(defn namespace+source-path->filename
+  [namespace source-path file-type]
+  (let [source-path-w-slash (if (string/ends-with? source-path (System/getProperty "file.separator"))
+                              source-path
+                              (str source-path (System/getProperty "file.separator")))]
+    (str source-path-w-slash
+         (-> namespace
+             (string/replace #"\." (System/getProperty "file.separator"))
+             (string/replace #"-" "_"))
+         "."
+         (name file-type))))
+
 (defn uri->namespace
   ([uri db]
    (uri->namespace uri (uri->filename uri) db))

@@ -107,6 +107,7 @@ All commands expect the first three args to be `[document-uri, line, column]` (e
 | √    | unwind-all              |                                                                        |       |
 | √    | unwind-thread           |                                                                        |       |
 | √    | resolve-macro-as        | `[document-uri, line, column, resolved-full-symbol kondo-config-path]` |       |
+| √    | create-test             |                                                                        |       |
 
 See Vim client section for an example.
 

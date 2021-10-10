@@ -1,7 +1,8 @@
 (ns clojure-lsp.producer
   (:require
    [clojure-lsp.interop :as interop]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.db :as db])
   (:import
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams
@@ -19,6 +20,15 @@
      (->> message-content
           (interop/conform-or-log ::interop/show-message)
           (.showMessage client)))))
+
+(defn window-show-message-request
+  [message type actions db]
+  (when-let [client ^LanguageClient (:client @db)]
+    (->> {:type type
+          :message message
+          :actions actions}
+         (interop/conform-or-log ::interop/show-message-request)
+         (.showMessageRequest client))))
 
 (defn workspace-apply-edit [edit db]
   (let [client ^LanguageClient (:client @db)]

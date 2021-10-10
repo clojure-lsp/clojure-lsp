@@ -69,7 +69,7 @@
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)
         text (:text textDocument)]
-    (f.file-management/did-open uri text db/db))
+    (f.file-management/did-open uri text db/db true))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -90,7 +90,7 @@
   (doseq [{:keys [uri type]} changes]
     (let [filename (shared/uri->filename uri)]
       (case type
-        :created (f.file-management/did-open uri (slurp filename) db/db)
+        :created (f.file-management/did-open uri (slurp filename) db/db false)
         ;; TODO Fix outdated changes overwriting newer changes.
         :changed nil #_(f.file-management/did-change uri
                                                      [{:text (slurp filename)}]

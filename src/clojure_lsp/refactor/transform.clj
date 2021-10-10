@@ -5,13 +5,16 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
+   [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.producer :as producer])
+  (:import (org.eclipse.lsp4j MessageActionItem)))
 
 (set! *warn-on-reflection* true)
 
@@ -980,3 +983,49 @@
         :range (assoc form-pos
                       :end-row form-row
                       :end-col form-col)}])))
+
+(defn ^:private create-test-for-source-path
+  [uri function-name-loc source-path db]
+  (let [file-type (shared/uri->file-type uri)
+        function-name (z/sexpr function-name-loc)
+        namespace (shared/uri->namespace uri db)
+        namespace-test (str namespace "-test")
+        test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
+        test-uri (shared/filename->uri test-filename db)
+        test-namespace-file (io/file test-filename)]
+    (if (shared/file-exists? test-namespace-file)
+      (let [existing-text (slurp test-uri)
+            lines (count (string/split existing-text #"\n"))
+            test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
+            test-zloc (z/up (z/of-string (str "\n" test-text)))]
+        {test-uri [{:loc test-zloc
+                    :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]})
+      (let [ns-text (format "(ns %s\n  (:require\n   [%s.test :refer [deftest is]]\n   [%s :as subject]))"
+                            namespace-test
+                            (if (= :cljs file-type) "cljs" "clojure")
+                            namespace)
+            test-text (format "(deftest %s\n  (is (= true\n         (subject/foo))))"
+                              (str function-name "-test"))
+            test-zloc (z/up (z/of-string (str ns-text "\n\n" test-text)))]
+        (swap! db assoc :processing-work-edit-for-new-files true)
+        {test-uri [{:loc test-zloc
+                    :range (-> test-zloc z/node meta)}]}))))
+
+(defn create-test [zloc uri db]
+  (when-let [function-name-loc (edit/find-function-definition-name-loc zloc)]
+    (let [{:keys [source-paths]} (:settings @db)]
+      (when-let [current-source-path (->> source-paths
+                                          (filter #(string/starts-with? (shared/uri->filename uri) %))
+                                          first)]
+        (let [test-source-paths (remove #(= current-source-path %) source-paths)]
+          (cond
+            (= 1 (count test-source-paths))
+            (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
+
+            (< 1 (count test-source-paths))
+            (let [actions (mapv #(hash-map :title %) source-paths)
+                  chosen-source-path (.getTitle ^MessageActionItem @(producer/window-show-message-request "Which source-path?" :info actions db))]
+              (create-test-for-source-path uri function-name-loc chosen-source-path db))
+
+            ;; No source paths besides current one
+            :else nil))))))

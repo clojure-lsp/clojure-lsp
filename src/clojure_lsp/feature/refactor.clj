@@ -70,6 +70,9 @@
 (defmethod refactor :create-function [{:keys [loc db]}]
   (r.transform/create-function loc db))
 
+(defmethod refactor :create-test [{:keys [loc uri db]}]
+  (r.transform/create-test loc uri db))
+
 (def available-refactors
   (->> refactor
        methods

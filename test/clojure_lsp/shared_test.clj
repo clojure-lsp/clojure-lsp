@@ -141,3 +141,9 @@
       (is (= true (shared/inside?
                     {:name-row 1 :name-col 3}
                     {:name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4}))))))
+
+(deftest namespace+source-path->filename
+  (is (= "/project/test/some/cool_ns.clj"
+        (shared/namespace+source-path->filename "some.cool-ns" "/project/test" :clj)))
+  (is (= "/project/test/some/cool_ns.clj"
+        (shared/namespace+source-path->filename "some.cool-ns" "/project/test/" :clj))))

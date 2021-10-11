@@ -22,10 +22,10 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings])
+   [taoensso.timbre :as log])
   (:import
    [java.net
     URL

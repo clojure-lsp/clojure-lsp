@@ -8,7 +8,7 @@
 
 (defn ^:private get-refreshed-settings [db]
   (let [{:keys [project-root-uri settings force-settings]} @db
-        new-project-settings {}#_(config/resolve-for-root project-root-uri)]
+        new-project-settings (config/resolve-for-root project-root-uri)]
     (medley/deep-merge settings
                        new-project-settings
                        force-settings)))
@@ -19,7 +19,9 @@
   (memoize/ttl get-refreshed-settings :ttl/threshold ttl-threshold-milis))
 
 (defn all [db]
-  (memoized-settings db))
+  (if (= :test (:env @db))
+    (get-refreshed-settings db)
+    (memoized-settings db)))
 
 (defn get
   "Memorize get settings from db.
@@ -27,5 +29,7 @@
   ([db kws]
    (get db kws nil))
   ([db kws default]
-   (let [settings (memoized-settings db)]
+   (let [settings (if (= :test (:env @db))
+                    (get-refreshed-settings db)
+                    (memoized-settings db))]
      (get-in settings kws default))))

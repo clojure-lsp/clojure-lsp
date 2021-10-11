@@ -2,13 +2,13 @@
   (:require
    [clj-kondo.core :as kondo]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings]))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 

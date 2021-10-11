@@ -5,6 +5,7 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -13,8 +14,7 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings]))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 

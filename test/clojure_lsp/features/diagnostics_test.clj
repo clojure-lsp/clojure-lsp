@@ -3,7 +3,8 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [medley.core :as medley]))
 
 (def findings (atom []))
 
@@ -142,17 +143,17 @@
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///b.clj"))
   (testing "when linter level is :off"
-    (swap! db/db merge {:settings {:linters {:clj-kondo {:level :off}}}})
+    (swap! db/db medley/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
            (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
-  #_(testing "when linter level is not :off but has matching :ns-exclude-regex"
+  (testing "when linter level is not :off but has matching :ns-exclude-regex"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/a.clj"))
     (swap! db/db merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths ["/project/src"]
                                    :linters {:clj-kondo {:ns-exclude-regex "a.*"}}}})
     (is (= []
            (#'f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/a.clj") db/db))))
-  #_(testing "when linter level is not :off"
+  (testing "when linter level is not :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :error}}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
                         :message "Unused private var some-ns/foo"
@@ -161,7 +162,7 @@
                         :severity 2
                         :source "clj-kondo"}]
                       (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
-  #_(testing "when linter is not specified"
+  (testing "when linter is not specified"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
                         :message "Unused private var some-ns/foo"
@@ -170,7 +171,7 @@
                         :severity 2
                         :source "clj-kondo"}]
                       (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
-  #_(testing "when inside expression?"
+  (testing "when inside expression?"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
                         :message "clojure.core/assert is called with 0 args but expects 1 or 2"

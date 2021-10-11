@@ -7,7 +7,10 @@
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
+   [medley.core :as medley]
    [rewrite-clj.zip :as z]))
+
+(h/reset-db-after-test)
 
 (defn code [& strings] (string/join "\n" strings))
 
@@ -55,21 +58,21 @@
         (is (some? range))
         (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
     (testing "common ns aliases"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
-        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
               [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
-        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
               [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
@@ -78,14 +81,14 @@
                        "            [clojure.set :as set]))") (z/string loc))))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
-        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
               [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (code "(ns foo "
                        "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
-        (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
               [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
           (is (some? range))
@@ -94,36 +97,36 @@
                        "            [clojure.set :as set]))") (z/string loc)))))))
   (testing "common refers"
     (testing "when require doesn't exists"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo) deftest") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.test :refer [deftest]])) (z/sexpr loc)))))
     (testing "when already exists another require"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.set :refer [subset?]])) deftest") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :refer [subset?]]
                                   [clojure.test :refer [deftest]])) (z/sexpr loc)))))
     (testing "when already exists that ns with alias and no refers"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :as t])) testing") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.test :as t :refer [testing]])) (z/sexpr loc)))))
     (testing "when already exists that ns with another refer"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.test :refer [deftest testing]])) (z/sexpr loc)))))
     (testing "we don't add existing refers"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [testing]])) testing") z/rightmost)]
         (is (= nil (transform/add-missing-libspec zloc db/db)))))
     (testing "we can add multiple refers"
-      (reset! db/db {})
+      (h/clean-db!)
       (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest testing]])) is") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
@@ -131,7 +134,7 @@
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
           [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
@@ -139,21 +142,21 @@
                    "  (:import"
                    "    java.util.Date))") (z/root-string loc)))))
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
-    (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+    (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
           [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import java.util.Date))") (z/root-string loc)))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
-    (reset! db/db {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+    (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
           [{:keys [loc range]}] (transform/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (code "(ns foo.bar "
                    "  (:import java.util.Date))") (z/root-string loc)))))
   (testing "when there is a :import form already"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [zloc (-> (z/of-string (code "(ns foo.bar "
                                       "  (:import "
                                       "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
@@ -164,14 +167,14 @@
                    "    java.util.Calendar"
                    "    java.util.Date))") (z/root-string loc)))))
   (testing "when there is already that :import imported"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [zloc (-> (z/of-string (code "(ns foo.bar "
                                       "  (:import "
                                       "    java.util.Date)) Date.")) (z/find-value z/next 'Date.))]
       (is (= nil
              (transform/add-import-to-namespace zloc "java.util.Date" db/db)))))
   (testing "when there is only a :require form"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [zloc (-> (z/of-string (code "(ns foo.bar"
                                       "  (:require"
                                       "    [foo.baz :as baz])) Date.")) (z/find-value z/next 'Date.))
@@ -183,7 +186,7 @@
                    "  (:import"
                    "    java.util.Date))") (z/root-string loc)))))
   (testing "when there is a :require form and :import form"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [zloc (-> (z/of-string (code "(ns foo.bar"
                                       "  (:require"
                                       "    [foo.baz :as baz])"
@@ -216,7 +219,8 @@
   ([db input-code expected-code in-form]
    (test-clean-ns db input-code expected-code in-form "file:///a.clj"))
   ([db input-code expected-code in-form uri]
-   (reset! db/db db)
+   (h/clean-db!)
+   (swap! db/db medley/deep-merge db)
    (h/load-code-and-locs input-code (h/file-uri uri))
    (let [zloc (when in-form
                 (-> (z/of-string input-code) z/down z/right z/right))
@@ -1142,7 +1146,7 @@
 
 (deftest cycle-privacy-test
   (testing "without-setting"
-    (reset! db/db {:settings {}})
+    (swap! db/db medley/deep-merge {:settings {}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
                               (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "defn-")))
@@ -1156,7 +1160,7 @@
                               (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "a"))))
   (testing "with-setting"
-    (reset! db/db {:settings {:use-metadata-for-privacy? true}})
+    (swap! db/db medley/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
                               (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "^:private a")))
@@ -1187,7 +1191,7 @@
 
 (deftest extract-function-test
   (testing "simple extract"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(defn a [b] (let [c 1] (b c)))"
           zloc (z/find-value (z/of-string code) z/next 'let)
           _ (h/load-code-and-locs code)
@@ -1199,7 +1203,7 @@
       (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
       (is (= "(foo b)" (z/string (:loc (last results)))))))
   (testing "multiple locals extract"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code (code "(let [a 1 b 2 c 3]"
                      "  (+ 1 a))")
           zloc (-> (z/of-string code)
@@ -1216,7 +1220,7 @@
 
 (deftest create-function-test
   (testing "creating with no args"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(defn a [b] (my-func))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
@@ -1224,7 +1228,7 @@
       (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating with no args from the function definition"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(defn a [b] (my-func))"
           zloc (z/up (z/find-value (z/of-string code) z/next 'my-func))
           _ (h/load-code-and-locs code)
@@ -1232,7 +1236,7 @@
       (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating with 1 known arg"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(defn a [b] (my-func b))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
@@ -1240,7 +1244,7 @@
       (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating with 1 known arg and a unknown arg"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(defn a [b] (my-func b (+ 1 2)))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
@@ -1248,7 +1252,7 @@
       (is (= "(defn- my-func\n  [b arg2]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating from a thread first macro with single arg"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(-> b my-func)"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
@@ -1256,7 +1260,7 @@
       (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating from a thread first macro with multiple args"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(-> b (my-func a 3))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
@@ -1264,7 +1268,7 @@
       (is (= "(defn- my-func\n  [b a arg2]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results)))))))
   (testing "creating from a thread last macro with multiple args"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [code "(->> b (my-func a 3))"
           zloc (z/find-value (z/of-string code) z/next 'my-func)
           _ (h/load-code-and-locs code)
@@ -1278,9 +1282,9 @@
 (deftest create-test-test
   (testing "when only one available source-path besides current"
     (testing "when the test file doesn't exists for clj file"
-      (reset! db/db {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                     :project-root-uri (h/file-uri "file:///project")})
+      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                      :project-root-uri (h/file-uri "file:///project")})
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
@@ -1292,9 +1296,9 @@
              :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
           results-to-assert)))
     (testing "when the test file doesn't exists for cljs file"
-      (reset! db/db {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                     :project-root-uri (h/file-uri "file:///project")})
+      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                      :project-root-uri (h/file-uri "file:///project")})
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.cljs")
@@ -1306,9 +1310,9 @@
              :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
           results-to-assert)))
     (testing "when the test file exists for clj file"
-      (reset! db/db {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                     :project-root-uri (h/file-uri "file:///project")})
+      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                      :project-root-uri (h/file-uri "file:///project")})
       (let [test-code (h/code "(ns some.ns-test)"
                               "(deftest some-other-test)")]
         (with-redefs [shared/file-exists? (constantly true)
@@ -1327,7 +1331,7 @@
 
 (deftest inline-symbol
   (testing "simple let"
-    (reset! db/db {})
+    (h/clean-db!)
     (h/load-code-and-locs "(let [something 1] something something)")
     (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
           a-results (get results (h/file-uri "file:///a.clj"))]
@@ -1342,7 +1346,7 @@
                   (update :loc z/string)
                   (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "multiple binding let"
-    (reset! db/db {})
+    (h/clean-db!)
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
     (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
           a-results (get results (h/file-uri "file:///a.clj"))]
@@ -1357,7 +1361,7 @@
                   (update :loc z/string)
                   (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "def in another file"
-    (reset! db/db {})
+    (h/clean-db!)
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
           results (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db)
@@ -1370,7 +1374,7 @@
 
 (deftest suppress-diagnostic
   (testing "when op has no spaces"
-    (reset! db/db {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! db/db medley/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code (h/code "(ns bla)"
                        ""
                        "(defn foo [b]"
@@ -1385,7 +1389,7 @@
           :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
         results-to-assert)))
   (testing "when op has spaces"
-    (reset! db/db {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! db/db medley/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code (h/code "(ns bla)"
                        ""
                        "(defn foo [b]"
@@ -1400,7 +1404,7 @@
           :range {:row 4 :col 3 :end-row 4 :end-col 3}}]
         results-to-assert)))
   (testing "when diagnostic is from clojure-lsp"
-    (reset! db/db {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! db/db medley/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code (h/code "(ns bla)"
                        ""
                        "(def foo 1)")

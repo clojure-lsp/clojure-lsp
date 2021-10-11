@@ -1,11 +1,11 @@
 (ns clojure-lsp.db
   (:require
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [datalevin.core :as d]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings]))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 

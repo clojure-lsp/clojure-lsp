@@ -4,19 +4,20 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
+   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
 
 (deftest project-analysis
   (testing "when dependency-scheme is zip"
-    (reset! db/db {})
+    (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 2 (count (q/filter-project-analysis (:analysis @db/db))))))
   (testing "when dependency-scheme is jar"
-    (swap! db/db merge {:settings {:dependency-scheme "jar"}})
+    (swap! db/db medley/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
@@ -24,13 +25,13 @@
 
 (deftest external-analysis
   (testing "when dependency-scheme is zip"
-    (reset! db/db {})
+    (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 1 (count (q/filter-external-analysis (:analysis @db/db))))))
   (testing "when dependency-scheme is jar"
-    (swap! db/db merge {:settings {:dependency-scheme "jar"}})
+    (swap! db/db medley/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
@@ -38,13 +39,13 @@
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"
-    (reset! db/db {})
+    (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (let [element (#'q/find-last-order-by-project-analysis #(= 'foo.bar (:name %)) (:analysis @db/db))]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
-    (reset! db/db {})
+    (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))

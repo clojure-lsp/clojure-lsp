@@ -1,10 +1,10 @@
 (ns clojure-lsp.feature.hover
   (:require
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings]))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 

@@ -5,6 +5,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
+   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
@@ -207,9 +208,10 @@
                                               {:new-text "::xx/bar" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on a namespace"
-      (reset! db/db {:project-root-uri (h/file-uri "file:///my-project")
-                     :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
-                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+      (swap! db/db medley/deep-merge
+             {:project-root-uri (h/file-uri "file:///my-project")
+              :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
+              :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
       (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
       (is (= {:document-changes
               [{:text-document {:version 0

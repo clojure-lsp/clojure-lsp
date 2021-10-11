@@ -8,6 +8,7 @@
   - Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.
   - Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.
   - Async save the analysis to cache db to make startup faster.
+  - Support Auto refresh settings memoizing with a ttl of 1 second avoiding the need of restarting server when changing configs. #502
   
 - Editor
   - Add reference code lens for ns forms. #578

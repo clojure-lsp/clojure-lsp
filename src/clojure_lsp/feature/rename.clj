@@ -3,6 +3,7 @@
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -114,7 +115,7 @@
   (let [filename (shared/uri->filename uri)
         references (q/find-references-from-cursor (:analysis @db) filename row col true)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias :keywords} :bucket) references))
-        source-paths (get-in @db [:settings :source-paths])]
+        source-paths (settings/get db [:source-paths])]
     (when (can-rename? definition references source-paths)
       (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
             changes (rename-changes definition references replacement db)

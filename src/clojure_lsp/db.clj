@@ -1,5 +1,6 @@
 (ns clojure-lsp.db
   (:require
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
@@ -21,7 +22,7 @@
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
 (defn ^:private get-datalevin-db-file [project-root-path db]
-  (let [configured (some-> (get-in @db [:settings :cache-path])
+  (let [configured (some-> (settings/get db [:cache-path])
                            io/file)
         default (io/file (str project-root-path) ".lsp" ".cache")]
     ^java.io.File (or configured default)))

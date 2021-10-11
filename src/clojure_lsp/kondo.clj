@@ -2,6 +2,7 @@
   (:require
    [clj-kondo.core :as kondo]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
@@ -65,7 +66,7 @@
         (shared/logging-time
           "Linting whole project files took %s secs"
           (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx)))
-      (when (get-in @db [:settings :lint-project-files-after-startup?] true)
+      (when (settings/get db [:lint-project-files-after-startup?] true)
         (async/go
           (shared/logging-time
             "Linting whole project files took %s secs"
@@ -97,7 +98,7 @@
                          :canonical-paths true}}}
       (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
                                            (partial project-custom-lint! paths db)))
-      (with-additional-config (:settings @db))))
+      (with-additional-config (settings/all db))))
 
 (defn kondo-for-reference-filenames [filenames db]
   (-> (kondo-for-paths filenames db false)
@@ -114,7 +115,7 @@
                                     :locals true
                                     :keywords true}
                          :canonical-paths true}}}
-      (with-additional-config (:settings @db))))
+      (with-additional-config (settings/all db))))
 
 (defn run-kondo-on-paths! [paths external-analysis-only? db]
   (let [err (java.io.StringWriter.)]

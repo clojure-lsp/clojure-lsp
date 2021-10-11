@@ -22,6 +22,7 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
    [taoensso.timbre :as log])
@@ -170,9 +171,9 @@
   (let [db @db/db]
     {:project-root-uri (:project-root-uri db)
      :project-settings (:project-settings db)
-     :classpath-configs (:classpath-configs db)
+     :classpath-settings (:classpath-settings db)
      :client-settings (:client-settings db)
-     :final-settings (:settings db)
+     :final-settings (settings/all db)
      :port (or (:port db)
                "NREPL only available on :debug profile (`make debug-bin`)")
      :server-version (config/clojure-lsp-version)

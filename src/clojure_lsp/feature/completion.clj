@@ -7,6 +7,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [clojure.walk :as walk]
@@ -304,7 +305,7 @@
 (defn completion [uri row col db]
   (let [filename (shared/uri->filename uri)
         {:keys [text]} (get-in @db [:documents uri])
-        settings (:settings @db)
+        settings (settings/all db)
         analysis (:analysis @db)
         current-ns-elements (get analysis filename)
         support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)

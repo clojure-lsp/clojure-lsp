@@ -5,6 +5,7 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -305,7 +306,7 @@
                        (edit/join-let))}]))))))
 
 (defn ^:private sort-by-if-enabled [fn type db coll]
-  (if (get-in @db [:settings :clean :sort type] true)
+  (if (settings/get db [:clean :sort type] true)
     (sort-by fn coll)
     coll))
 
@@ -412,7 +413,7 @@
                                            (interpose 1)
                                            (reduce + 0)
                                            (+ init-refer-sep (-> refer-node n/sexpr str count)))
-                              max-line-length (get-in @db [:settings :clean :sort :refer :max-line-length] 80)]
+                              max-line-length (settings/get db [:clean :sort :refer :max-line-length] 80)]
                           (if (and max-line-length
                                    (> max-line-length 0))
                             (let [lines-n (if (> (quot end-col max-line-length) 0)
@@ -568,8 +569,8 @@
     ns-loc))
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]
-  (or (get-in @db [:settings :clean :ns-inner-blocks-indentation])
-      (if (get-in @db [:settings :keep-require-at-start?])
+  (or (settings/get db [:clean :ns-inner-blocks-indentation])
+      (if (settings/get db [:keep-require-at-start?])
         :same-line
         :next-line)))
 
@@ -599,7 +600,7 @@
 
 (defn clean-ns
   [zloc uri db]
-  (let [settings (:settings @db)
+  (let [settings (settings/all db)
         safe-loc (or zloc (z/of-string (get-in @db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)
         analysis (:analysis @db)
@@ -857,7 +858,7 @@
   (when-let [oploc (find-function-form zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
-                             (not (get-in @db [:settings :use-metadata-for-privacy?])))
+                             (not (settings/get db [:use-metadata-for-privacy?])))
           switch-defn? (= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?
@@ -944,7 +945,7 @@
                     (and thread? token?) (z/string zloc)
                     thread? (z/string (z/down fn-form))
                     :else (z/string (z/down fn-form)))
-          new-fn-str (if (get-in @db [:settings :use-metadata-for-privacy?] false)
+          new-fn-str (if (settings/get db [:use-metadata-for-privacy?] false)
                        (format "(defn ^:private %s)" (symbol fn-name))
                        (format "(defn- %s)\n\n" (symbol fn-name)))
           args (->> fn-form
@@ -1012,7 +1013,7 @@
 
 (defn create-test [zloc uri db]
   (when-let [function-name-loc (edit/find-function-definition-name-loc zloc)]
-    (let [{:keys [source-paths]} (:settings @db)]
+    (let [source-paths (settings/get db [:source-paths])]
       (when-let [current-source-path (->> source-paths
                                           (filter #(string/starts-with? (shared/uri->filename uri) %))
                                           first)]

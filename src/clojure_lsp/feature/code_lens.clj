@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
@@ -48,10 +49,10 @@
 
 (defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
-        segregate-lens? (get-in @db [:settings :code-lens :segregate-test-references] true)
+        segregate-lens? (settings/get db [:code-lens :segregate-test-references] true)
         references (q/find-references-from-cursor (:analysis @db) filename row col false)]
     (if segregate-lens?
-      (let [source-path (->> (get-in @db [:settings :source-paths])
+      (let [source-path (->> (settings/get db [:source-paths])
                              (filter #(string/starts-with? filename %))
                              first)
             main-references (filter (complement (partial test-reference? source-path)) references)

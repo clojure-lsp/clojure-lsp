@@ -212,8 +212,9 @@
                      (update :source-paths (partial source-paths/process-source-paths root-path raw-settings)))]
     (swap! db assoc
            :project-root-uri project-root-uri
-           :project-settings project-settings
            :client-settings client-settings
+           :project-settings project-settings
+           :force-settings force-settings
            :settings settings
            :client-capabilities client-capabilities)
     (report-callback 5 "Finding kondo config" db)
@@ -226,7 +227,7 @@
                                           classpath-settings
                                           project-settings
                                           force-settings)
-             :classpath-configs classpath-settings))
+             :classpath-settings classpath-settings))
     (log/info "Analyzing source paths for project root" root-path)
     (report-callback 95 "Analyzing project files" db)
     (analyze-source-paths! (:source-paths settings) db)

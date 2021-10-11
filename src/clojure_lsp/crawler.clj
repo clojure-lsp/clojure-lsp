@@ -227,10 +227,7 @@
                                           classpath-settings
                                           project-settings
                                           force-settings)
-             :classpath-settings classpath-settings
-             :fixed-settings (medley/deep-merge encoding-settings
-                                                client-settings
-                                                classpath-settings)))
+             :classpath-settings classpath-settings))
     (log/info "Analyzing source paths for project root" root-path)
     (report-callback 95 "Analyzing project files" db)
     (analyze-source-paths! (:source-paths settings) db)

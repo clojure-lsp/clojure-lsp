@@ -7,9 +7,9 @@
    [taoensso.timbre :as log]))
 
 (defn ^:private get-refreshed-settings [db]
-  (let [{:keys [project-root-uri fixed-settings force-settings]} @db
-        new-project-settings (config/resolve-for-root project-root-uri)]
-    (medley/deep-merge fixed-settings
+  (let [{:keys [project-root-uri settings force-settings]} @db
+        new-project-settings {}#_(config/resolve-for-root project-root-uri)]
+    (medley/deep-merge settings
                        new-project-settings
                        force-settings)))
 

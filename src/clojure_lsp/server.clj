@@ -9,10 +9,10 @@
    [clojure-lsp.interop :as interop]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop thread timeout]]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings])
+   [taoensso.timbre :as log])
   (:import
    (clojure_lsp
      ClojureExtensions

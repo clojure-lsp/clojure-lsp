@@ -56,12 +56,13 @@
         configs))))
 
 (defn resolve-for-root [project-root-uri]
-  (let [home-dir-file (get-home-config-file)
-        project-configs (resolve-project-configs project-root-uri home-dir-file)]
-    (reduce shared/deep-merge
-            (merge {}
-                   (resolve-home-config home-dir-file))
-            project-configs)))
+  (when project-root-uri
+    (let [home-dir-file (get-home-config-file)
+          project-configs (resolve-project-configs project-root-uri home-dir-file)]
+      (reduce shared/deep-merge
+              (merge {}
+                     (resolve-home-config home-dir-file))
+              project-configs))))
 
 (defn ^:private jar-file->config
   [^java.io.File file config-paths]

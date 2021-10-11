@@ -171,7 +171,7 @@
   (let [db @db/db]
     {:project-root-uri (:project-root-uri db)
      :project-settings (:project-settings db)
-     :classpath-configs (:classpath-configs db)
+     :classpath-settings (:classpath-settings db)
      :client-settings (:client-settings db)
      :final-settings (settings/all db)
      :port (or (:port db)

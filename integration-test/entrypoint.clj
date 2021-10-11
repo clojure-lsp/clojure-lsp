@@ -6,6 +6,7 @@
   '[integration.initialize-test
     integration.definition-test
     integration.diagnostics-test
+    integration.settings-change-test
     integration.formatting-test
     integration.rename-test
     integration.document-highlight-test

@@ -329,7 +329,7 @@
                                                                         (doto (SemanticTokensWithRegistrationOptions.)
                                                                           (.setLegend (doto (SemanticTokensLegend.
                                                                                               semantic-tokens/token-types-str
-                                                                                              semantic-tokens/token-modifiers)))
+                                                                                              semantic-tokens/token-modifiers-str)))
                                                                           (.setRange true)
                                                                           (.setFull true))))
                                           (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)

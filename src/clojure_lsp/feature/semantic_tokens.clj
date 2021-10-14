@@ -22,9 +22,12 @@
        vec))
 
 (def token-modifiers
-  [])
+  [:definition])
 
-(def token-modifier -1)
+(def token-modifiers-str
+  (->> token-modifiers
+       (map name)
+       vec))
 
 (defn ^:private element-inside-range?
   [{element-row :name-row element-end-row :name-end-row}
@@ -33,19 +36,41 @@
        (<= element-end-row name-end-row)))
 
 (defn ^:private element->absolute-token
-  [{:keys [name-row name-col name-end-col]}
-   token-type]
-  [(dec name-row)
-   (dec name-col)
-   (- name-end-col name-col)
-   (.indexOf ^PersistentVector token-types token-type)
-   token-modifier])
+  ([element token-type]
+   (element->absolute-token element token-type nil))
+  ([{:keys [name-row name-col name-end-col]}
+    token-type
+    token-modifier-bit]
+   [(dec name-row)
+    (dec name-col)
+    (- name-end-col name-col)
+    (.indexOf ^PersistentVector token-types token-type)
+    (or token-modifier-bit 0)]))
+
+(defn ^:private var-definition-element->absolute-tokens
+  [{:keys [defined-by] :as element}]
+  (cond
+
+    defined-by
+    [(element->absolute-token element :function 1)]
+
+    :else
+    nil))
 
 (defn ^:private var-usage-element->absolute-tokens
-  [{:keys [alias name-col to] :as element}]
+  [{:keys [name alias macro name-col to] :as element}]
   (cond
-    (identical? :clj-kondo/unknown-namespace to)
-    nil
+    (and macro
+         (not alias))
+    [(element->absolute-token element :macro)]
+
+    (and macro
+         alias)
+    (let [slash-pos (+ name-col (count (str alias)))
+          alias-pos (assoc element :name-end-col slash-pos)
+          name-pos (assoc element :name-col (inc slash-pos))]
+      [(element->absolute-token alias-pos :type)
+       (element->absolute-token name-pos :macro)])
 
     alias
     (let [slash-pos (+ name-col (count (str alias)))
@@ -53,6 +78,13 @@
           name-pos (assoc element :name-col (inc slash-pos))]
       [(element->absolute-token alias-pos :type)
        (element->absolute-token name-pos :function)])
+
+    (and (identical? :clj-kondo/unknown-namespace to)
+         (.equals \. (.charAt ^String (str name) 0)))
+    [(element->absolute-token element :method)]
+
+    (identical? :clj-kondo/unknown-namespace to)
+    nil
 
     :else
     [(element->absolute-token element :function)]))
@@ -62,24 +94,19 @@
   (->> elements
        (sort-by (juxt :name-row :name-col))
        (map
-         (fn [{:keys [name bucket macro to] :as element}]
+         (fn [{:keys [bucket] :as element}]
            (cond
-             (and (= bucket :var-usages)
-                  macro)
-             [(element->absolute-token element :macro)]
-
              ;; TODO needs better way to know it's class related
              ;; (and (= bucket :var-usages)
              ;;      (not alias)
              ;;      (Character/isUpperCase (.charAt ^String (str name) 0)))
              ;; [(element->absolute-token element :class)]
 
-             (and (identical? :clj-kondo/unknown-namespace to)
-                  (.equals \. (.charAt ^String (str name) 0)))
-             [(element->absolute-token element :method)]
-
              (= bucket :var-usages)
              (var-usage-element->absolute-tokens element)
+
+             (= bucket :var-definitions)
+             (var-definition-element->absolute-tokens element)
 
              (#{:locals :local-usages} bucket)
              [(element->absolute-token element :variable)]

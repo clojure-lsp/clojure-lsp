@@ -168,17 +168,17 @@
   (f.workspace-symbols/workspace-symbols query db/db))
 
 (defn ^:private server-info []
-  (let [db @db/db]
-    {:project-root-uri (:project-root-uri db)
-     :project-settings (:project-settings db)
-     :classpath-settings (:classpath-settings db)
-     :client-settings (:client-settings db)
-     :final-settings (settings/all db)
-     :port (or (:port db)
+  (let [db-value @db/db]
+    {:project-root-uri (:project-root-uri db-value)
+     :project-settings (:project-settings db-value)
+     :classpath-settings (:classpath-settings db-value)
+     :client-settings (:client-settings db-value)
+     :final-settings (settings/all db/db)
+     :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-bin`)")
      :server-version (config/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
-     :log-path (:log-path db)}))
+     :log-path (:log-path db-value)}))
 
 (defn server-info-log []
   (producer/window-show-message

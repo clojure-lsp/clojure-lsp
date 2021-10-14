@@ -16,6 +16,7 @@
   - Add new command to create test for function at point. #582
   - Add `private` to documentSymbol to make clear that a var or function is  `private`.
   - Add new code action `Suppress xxx diagnostic`, adding clj-kondo comment code to ignore the diagnostic. #591
+  - Add more semantic tokens: aliases for macros, variable and function definitions.
 
 ## 2021.09.30-15.28.01
 

@@ -39,11 +39,25 @@
                                             "expand-let"
                                             "create-function"]}
         :signatureHelpProvider {:triggerCharacters []}
-        :codeActionProvider {:codeActionKinds ["quickfix" "refactor" "refactor.extract" "refactor.inline" "refactor.rewrite" "source" "source.organizeImports"]
+        :codeActionProvider {:codeActionKinds ["quickfix"
+                                               "refactor"
+                                               "refactor.extract"
+                                               "refactor.inline"
+                                               "refactor.rewrite"
+                                               "source"
+                                               "source.organizeImports"]
                              :resolveProvider true}
         :hoverProvider true
-        :semanticTokensProvider {:legend {:tokenTypes ["type" "function" "macro" "keyword" "class" "variable" "method"]
-                                          :tokenModifiers []}
+        :semanticTokensProvider {:legend {:tokenTypes ["namespace"
+                                                       "type"
+                                                       "function"
+                                                       "macro"
+                                                       "keyword"
+                                                       "class"
+                                                       "variable"
+                                                       "method"
+                                                       "event"]
+                                          :tokenModifiers ["definition"]}
                                  :range true
                                  :full true}
         :codeLensProvider {:resolveProvider true}

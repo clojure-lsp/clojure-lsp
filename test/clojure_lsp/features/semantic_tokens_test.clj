@@ -82,7 +82,8 @@
             0 4 3 2 1
             1 0 3 2 0
             1 0 1 1 0
-            0 2 3 2 0
+            0 1 1 8 0
+            0 1 3 2 0
             2 0 3 2 0
             1 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
@@ -111,14 +112,16 @@
                                 "fb/some-foo-bar"))
     (is (= [0 4 7 0 0
             1 0 2 1 0
-            0 3 12 2 0]
+            0 2 1 8 0
+            0 1 12 2 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "type alias for macro tokens"
     (h/load-code-and-locs (code "(ns some.ns (:require [clojure.test :as test]))"
                                 "test/deftest"))
     (is (= [0 4 7 0 0
             1 0 4 1 0
-            0 5 7 3 0]
+            0 4 1 8 0
+            0 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   #_(testing "java classes for function tokens"
       (h/load-code-and-locs (code "(ns some.ns)"

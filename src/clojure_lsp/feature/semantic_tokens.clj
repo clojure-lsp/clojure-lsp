@@ -15,7 +15,8 @@
    :keyword
    :class
    :variable
-   :method])
+   :method
+   :event])
 
 (def token-types-str
   (->> token-types
@@ -67,17 +68,21 @@
 
     (and macro
          alias)
-    (let [slash-pos (+ name-col (count (str alias)))
-          alias-pos (assoc element :name-end-col slash-pos)
-          name-pos (assoc element :name-col (inc slash-pos))]
+    (let [slash (+ name-col (count (str alias)))
+          alias-pos (assoc element :name-end-col slash)
+          slash-pos (assoc element :name-col slash :name-end-col (inc slash))
+          name-pos (assoc element :name-col (inc slash))]
       [(element->absolute-token alias-pos :type)
+       (element->absolute-token slash-pos :event)
        (element->absolute-token name-pos :macro)])
 
     alias
-    (let [slash-pos (+ name-col (count (str alias)))
-          alias-pos (assoc element :name-end-col slash-pos)
-          name-pos (assoc element :name-col (inc slash-pos))]
+    (let [slash (+ name-col (count (str alias)))
+          slash-pos (assoc element :name-col slash :name-end-col (inc slash))
+          alias-pos (assoc element :name-end-col slash)
+          name-pos (assoc element :name-col (inc slash))]
       [(element->absolute-token alias-pos :type)
+       (element->absolute-token slash-pos :event)
        (element->absolute-token name-pos :function)])
 
     (and (identical? :clj-kondo/unknown-namespace to)

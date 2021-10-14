@@ -42,24 +42,24 @@
 (defn code [& strings] (clojure.string/join "\n" strings))
 
 (deftest usage->absolute-token
-  (is (= [6 3 3 1 0]
+  (is (= [6 3 3 2 0]
          (#'semantic-tokens/element->absolute-token refered-usage-a
                                                     :function))))
 
 (deftest absolute-token->relative-token
   (testing "without previous token"
-    (is (= [6 3 3 1 0]
+    (is (= [6 3 3 2 0]
            (#'semantic-tokens/absolute-token->relative-token refered-tokens
                                                              0
                                                              (->token refered-usage-a :function)))))
   (testing "same line token"
-    (is (= [0 7 3 1 0]
+    (is (= [0 7 3 2 0]
            (#'semantic-tokens/absolute-token->relative-token refered-tokens
                                                              1
                                                              (->token refered-usage-b :function)))))
 
   (testing "other line token"
-    (is (= [2 2 3 1 0]
+    (is (= [2 2 3 2 0]
            (#'semantic-tokens/absolute-token->relative-token refered-tokens
                                                              2
                                                              (->token refered-usage-c :function))))))
@@ -76,45 +76,49 @@
             ""
             "bla"
             "(comment)"))
-    (is (= [1 35 3 1 0
-            2 1 3 2 0
-            0 4 3 1 1
-            1 0 3 1 0
-            1 0 1 0 0
-            0 2 3 1 0
-            2 0 3 1 0
-            1 1 7 2 0]
+    (is (= [0 4 7 0 0
+            1 35 3 2 0
+            2 1 3 3 0
+            0 4 3 2 1
+            1 0 3 2 0
+            1 0 1 1 0
+            0 2 3 2 0
+            2 0 3 2 0
+            1 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "macro refered tokens"
     (h/load-code-and-locs
       (code "(ns some.ns (:require [clojure.test :refer [deftest]]))"
             "(deftest some-test 1)"))
-    (is (= [0 44 7 2 0
-            1 1 7 2 0
-            0 8 9 1 1]
+    (is (= [0 4 7 0 0
+            0 40 7 3 0
+            1 1 7 3 0
+            0 8 9 2 1]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "macro core tokens"
     (h/load-code-and-locs (code "(comment 1)"))
-    (is (= [0 1 7 2 0]
+    (is (= [0 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "function declared tokens"
     (h/load-code-and-locs (code "(def foo 1)"
                                 "foo"))
-    (is (= [0 1 3 2 0
-            0 4 3 1 1
-            1 0 3 1 0]
+    (is (= [0 1 3 3 0
+            0 4 3 2 1
+            1 0 3 2 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "type alias for function tokens"
     (h/load-code-and-locs (code "(ns some.ns (:require [foo.bar :as fb]))"
                                 "fb/some-foo-bar"))
-    (is (= [1 0 2 0 0
-            0 3 12 1 0]
+    (is (= [0 4 7 0 0
+            1 0 2 1 0
+            0 3 12 2 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "type alias for macro tokens"
     (h/load-code-and-locs (code "(ns some.ns (:require [clojure.test :as test]))"
                                 "test/deftest"))
-    (is (= [1 0 4 0 0
-            0 5 7 2 0]
+    (is (= [0 4 7 0 0
+            1 0 4 1 0
+            0 5 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   #_(testing "java classes for function tokens"
       (h/load-code-and-locs (code "(ns some.ns)"
@@ -134,24 +138,26 @@
   (testing "java methods for method tokens"
     (h/load-code-and-locs (code "(ns some.ns)"
                                 "(.equals \"some-string\" \"other-string\")"))
-    (is (= [1 1 7 6 0]
+    (is (= [0 4 7 0 0
+            1 1 7 7 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "keywords for keyword tokens"
     (h/load-code-and-locs (code "(ns some.ns)"
                                 ":foo"
                                 ":some.ns/foo"
                                 "::foo"))
-    (is (= [1 0 4 3 0
-            1 0 12 3 0
-            1 0 5 3 0]
+    (is (= [0 4 7 0 0
+            1 0 4 4 0
+            1 0 12 4 0
+            1 0 5 4 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "locals destructuring for variable tokens"
     (h/load-code-and-locs (code "(fn [{:keys [foo bar]}])"))
-    (is (= [0 1 2 2 0
-            0 5 5 3 0
-            0 0 5 3 0
-            0 7 3 5 0
-            0 4 3 5 0]
+    (is (= [0 1 2 3 0
+            0 5 5 4 0
+            0 0 5 4 0
+            0 7 3 6 0
+            0 4 3 6 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db)))))
 
 (deftest range-tokens
@@ -162,6 +168,6 @@
             "baz"
             "(comment)"
             "baz"))
-    (is (= [2 0 3 1 0
-            1 1 7 2 0]
+    (is (= [2 0 3 2 0
+            1 1 7 3 0]
            (semantic-tokens/range-tokens (h/file-uri "file:///a.clj") {:name-row 3 :name-col 0 :name-end-row 4 :name-end-col 0} db/db)))))

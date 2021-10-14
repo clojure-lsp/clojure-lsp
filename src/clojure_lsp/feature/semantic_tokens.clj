@@ -8,7 +8,8 @@
 (set! *warn-on-reflection* true)
 
 (def token-types
-  [:type
+  [:namespace
+   :type
    :function
    :macro
    :keyword
@@ -110,6 +111,9 @@
 
              (#{:locals :local-usages} bucket)
              [(element->absolute-token element :variable)]
+
+             (= bucket :namespace-definitions)
+             [(element->absolute-token element :namespace)]
 
              (and (= bucket :keywords)
                   (not (:str element))

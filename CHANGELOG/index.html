@@ -1629,8 +1629,9 @@
 <li>Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.</li>
 <li>Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.</li>
 <li>Async save the analysis to cache db to make startup faster.</li>
+<li>Support Auto refresh settings memoizing with a ttl of 1 second avoiding the need of restarting server when changing configs. #502</li>
 <li>
-<p>Support Auto refresh settings memoizing with a ttl of 1 second avoiding the need of restarting server when changing configs. #502</p>
+<p>Bump clj-kondo to <code>2021.09.26-20211015.212311-11</code> adding new <code>gen-class</code> linter and other fixes/improvements.</p>
 </li>
 <li>
 <p>Editor</p>

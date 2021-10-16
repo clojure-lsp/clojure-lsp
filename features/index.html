@@ -1502,7 +1502,7 @@
 <h3 id="custom-message-to-client-during-any-server-process">Custom message to client during any server process<a class="headerlink" href="#custom-message-to-client-during-any-server-process" title="Permanent link">#</a></h3>
 <p>During some process, <code>clojure-lsp</code> send messages to client informing some proccess, warning or error.</p>
 <h2 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h2>
-<p>Most linters come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp uses under the hood to lint the code and retrieve the analysis to
+<p>All linters besides the ones below come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
 make most of features work.</p>
 <p>Every linter configuration should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kodno for the project. For more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>.</p>
 <p>Below you can find the custom linters implemented on clojure-lsp side that uses the <code>:custom-lint-fn</code> from clj-kondo:</p>

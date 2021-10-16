@@ -5,7 +5,8 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [medley.core :as medley]))
 
 (h/reset-db-after-test)
 
@@ -406,5 +407,23 @@
                                   [{:code "unused-private-var"
                                     :message "Unused private var: a"
                                     :range {:start {:line 3 :character 11}}}]
+                                  {:workspace {:workspace-edit true}}
+                                  db/db)))))
+
+(deftest create-test-code-actions
+  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                  :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                  :project-root-uri (h/file-uri "file:///project")})
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                ""
+                                "(defn foo [] 1)")
+                        "file:///project/src/some_ns.clj")
+  (testing "inside function"
+    (is (some #(= (:title %) "Create test for 'foo'")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///project/src/some_ns.clj") 3 6)
+                                  (h/file-uri "file:///project/src/some_ns.clj")
+                                  3
+                                  6
+                                  []
                                   {:workspace {:workspace-edit true}}
                                   db/db)))))

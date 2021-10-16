@@ -1327,7 +1327,17 @@
               {(h/file-uri "file:///project/test/some/ns_test.clj")
                [{:loc "\n(deftest foo-test\n  (is (= 1 1)))",
                  :range {:row 3 :col 1 :end-row 5 :end-col 1}}]}
-              results-to-assert)))))))
+              results-to-assert)))))
+    (testing "when the current source path is already a test"
+      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                      :project-root-uri (h/file-uri "file:///project")})
+      (let [code "(ns some.ns-test) (deftest foo [b] (+ 1 2))"
+            zloc (z/find-value (z/of-string code) z/next 'foo)
+            _ (h/load-code-and-locs code "file:///project/test/some/ns_test.clj")
+            results-by-uri (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
+        (is (= nil
+               results-by-uri))))))
 
 (deftest inline-symbol
   (testing "simple let"

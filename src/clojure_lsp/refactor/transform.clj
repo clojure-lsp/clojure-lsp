@@ -1011,24 +1011,33 @@
         {test-uri [{:loc test-zloc
                     :range (-> test-zloc z/node meta)}]}))))
 
-(defn create-test [zloc uri db]
+(defn can-create-test? [zloc uri db]
   (when-let [function-name-loc (edit/find-function-definition-name-loc zloc)]
     (let [source-paths (settings/get db [:source-paths])]
       (when-let [current-source-path (->> source-paths
-                                          (filter #(string/starts-with? (shared/uri->filename uri) %))
+                                          (filter #(and (string/starts-with? (shared/uri->filename uri) %)
+                                                        (not (string/includes? % "test"))))
                                           first)]
-        (let [test-source-paths (remove #(= current-source-path %) source-paths)]
-          (cond
-            (= 1 (count test-source-paths))
-            (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
+        {:source-paths source-paths
+         :current-source-path current-source-path
+         :function-name-loc function-name-loc}))))
 
-            (< 1 (count test-source-paths))
-            (let [actions (mapv #(hash-map :title %) source-paths)
-                  chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
-              (create-test-for-source-path uri function-name-loc chosen-source-path db))
+(defn create-test [zloc uri db]
+  (when-let [{:keys [source-paths
+                     current-source-path
+                     function-name-loc]} (can-create-test? zloc uri db)]
+    (let [test-source-paths (remove #(= current-source-path %) source-paths)]
+      (cond
+        (= 1 (count test-source-paths))
+        (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
+
+        (< 1 (count test-source-paths))
+        (let [actions (mapv #(hash-map :title %) source-paths)
+              chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
+          (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
             ;; No source paths besides current one
-            :else nil))))))
+        :else nil))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]
   (let [form-zloc (z/up (edit/find-op zloc))

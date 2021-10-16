@@ -14,6 +14,7 @@
   - Add reference code lens for ns forms. #578
   - Fix expand-let bug that occurs when a list form precedes let. #590
   - Add new command to create test for function at point. #582
+  - Add new code action to create test for current function/var
   - Add `private` to documentSymbol to make clear that a var or function is  `private`.
   - Add new code action `Suppress xxx diagnostic`, adding clj-kondo comment code to ignore the diagnostic. #591
   - Add more semantic tokens: aliases for macros, variable and function definitions.

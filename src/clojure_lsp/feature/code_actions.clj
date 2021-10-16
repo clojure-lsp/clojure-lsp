@@ -8,6 +8,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [medley.core :as medley]
+   [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
@@ -149,6 +150,11 @@
                         :command "suppress-diagnostic"
                         :arguments [uri line character diagnostic-code]}}
 
+             "refactor-create-test"
+             {:command {:title     "Create test"
+                        :command   "create-test"
+                        :arguments [uri line character]}}
+
              "clean-ns"
              {:command {:title     "Clean namespace"
                         :command   "clean-ns"
@@ -278,6 +284,14 @@
                       :diagnostic-code code}}))
        (medley/distinct-by :title)))
 
+(defn ^:private create-test-action [function-name-loc uri line character]
+  {:title (format "Create test for '%s'" (z/string function-name-loc))
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-create-test"
+          :uri uri
+          :line line
+          :character character}})
+
 (defn ^:private create-private-function-action [uri function-to-create]
   {:title (format "Create private function '%s'" (:name function-to-create))
    :kind CodeActionKind/QuickFix
@@ -304,6 +318,7 @@
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col)
         inline-symbol? (r.transform/inline-symbol? definition db)
         can-thread? (r.transform/can-thread? zloc)
+        can-create-test? (r.transform/can-create-test? zloc uri db)
         macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db)
         line (dec row)
         character (dec col)
@@ -347,6 +362,10 @@
       (and workspace-edit-capability?
            (seq diagnostics))
       (into (suppress-diagnostic-actions diagnostics uri))
+
+      (and workspace-edit-capability?
+           can-create-test?)
+      (conj (create-test-action (:function-name-loc can-create-test?) uri line character))
 
       workspace-edit-capability?
       (conj (clean-ns-action uri line character))

@@ -254,7 +254,7 @@ During some process, `clojure-lsp` send messages to client informing some procce
 
 ## Diagnostics (linter)
 
-Most linters come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp uses under the hood to lint the code and retrieve the analysis to
+All linters besides the ones below come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
 make most of features work.
 
 Every linter configuration should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kodno for the project. For more information on how to configure clj-kondo check [here](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).

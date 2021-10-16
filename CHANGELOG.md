@@ -9,6 +9,7 @@
   - Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.
   - Async save the analysis to cache db to make startup faster.
   - Support Auto refresh settings memoizing with a ttl of 1 second avoiding the need of restarting server when changing configs. #502
+  - Bump clj-kondo to `2021.09.26-20211015.212311-11` adding new `gen-class` linter and other fixes/improvements.
   
 - Editor
   - Add reference code lens for ns forms. #578

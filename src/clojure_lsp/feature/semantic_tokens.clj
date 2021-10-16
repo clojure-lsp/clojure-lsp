@@ -34,8 +34,8 @@
 (defn ^:private element-inside-range?
   [{element-row :name-row element-end-row :name-end-row}
    {:keys [name-row name-end-row]}]
-  (and (>= element-row name-row)
-       (<= element-end-row name-end-row)))
+  (and (>= ^Long element-row ^Long name-row)
+       (<= ^Long element-end-row ^Long name-end-row)))
 
 (defn ^:private element->absolute-token
   ([element token-type]
@@ -43,9 +43,9 @@
   ([{:keys [name-row name-col name-end-col]}
     token-type
     token-modifier-bit]
-   [(dec name-row)
-    (dec name-col)
-    (- name-end-col name-col)
+   [(dec ^Long name-row)
+    (dec ^Long name-col)
+    (- ^Long name-end-col ^Long name-col)
     (.indexOf ^PersistentVector token-types token-type)
     (or token-modifier-bit 0)]))
 
@@ -136,15 +136,15 @@
       (nil? previous-row)
       token
 
-      (= previous-row row)
+      (= ^Long previous-row ^Long row)
       [0
-       (- col previous-col)
+       (- ^Long col ^Long previous-col)
        length
        token-type
        token-modifier]
 
       :else
-      [(- row previous-row)
+      [(- ^Long row ^Long previous-row)
        col
        length
        token-type

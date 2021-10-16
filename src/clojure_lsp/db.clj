@@ -60,9 +60,9 @@
   (try
     (shared/logging-time
       "Reading analysis cache from Datalevin db took %s secs"
-      (let [db (make-db project-root-path db)]
-        (d/open-dbi db analysis-table-name)
-        (when-let [project-analysis (d/get-value db analysis-table-name :project-analysis)]
+      (let [datalevin-db (make-db project-root-path db)]
+        (d/open-dbi datalevin-db analysis-table-name)
+        (when-let [project-analysis (d/get-value datalevin-db analysis-table-name :project-analysis)]
           (when (and (= (str project-root-path) (:project-root project-analysis))
                      (= version (:version project-analysis)))
             project-analysis))))

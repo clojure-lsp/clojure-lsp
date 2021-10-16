@@ -24,10 +24,6 @@
  :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.902"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
-           :clean-ns {:exec-fn clojure-lsp.api/clean-ns!
-                      :exec-args {:dry? true}}
-           :format {:exec-fn clojure-lsp.api/format!
-                    :exec-args {:dry? true}}
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
                     :exec-fn americano.cli/javac
                     :exec-args {:source-paths ["src-java"]}}
@@ -36,7 +32,8 @@
                       :exec-args {:jar "clojure-lsp.jar"
                                   :aot true
                                   :sync-pom true
-                                  :jvm-opts ["-Xmx2g" "-server"]
+                                  :jvm-opts ["-Xmx2g" "-server"
+                                             "--add-opens" "java.base/java.nio=ALL-UNNAMED"]
                                   :main-class clojure-lsp.main}}
            :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                                  :exec-fn hf.depstar/uberjar
@@ -56,7 +53,8 @@
            :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
                  :exec-fn deps-bin.deps-bin/bin
                  :exec-args {:jar "clojure-lsp.jar"
-                             :jvm-opts ["-Xmx2g" "-server"]
+                             :jvm-opts ["-Xmx2g" "-server"
+                                        "--add-opens" "java.base/java.nio=ALL-UNNAMED"]
                              :name "clojure-lsp"
                              :skip-realign true}}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}}}
@@ -64,8 +62,10 @@
                        :exec-fn hf.depstar/uberjar
                        :exec-args {:jar "clojure-lsp.jar"
                                    :aot true
-                                   :jvm-opts ["-Xmx2g" "-server"]
+                                   :jvm-opts ["-Xmx2g" "-server"
+                                              "--add-opens" "java.base/java.nio=ALL-UNNAMED"]
                                    :main-class clojure-lsp.main
                                    :aliases [:debug]}}
            :run {:main-opts ["-m" "clojure-lsp.main"]
-                 :jvm-opts ["-Xmx2g" "-server"]}}}
+                 :jvm-opts ["-Xmx2g" "-server"
+                            "--add-opens" "java.base/java.nio=ALL-UNNAMED"]}}}

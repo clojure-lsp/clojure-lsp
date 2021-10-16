@@ -328,6 +328,33 @@
                          "   [foo  :as f]"
                          "   [bar :as b]))")
                    (code "(ns foo.bar)")))
+  (testing "with duplicate require with different and unused alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [bar :as b]"
+                         "  [foo :as f]"
+                         "  [foo :as fa]))"
+                         "f/bar b/bar")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [bar :as b]"
+                         "  [foo :as f]))"
+                         "f/bar b/bar")))
+  (testing "with duplicate require with both used alias"
+    (test-clean-ns {}
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [bar :as b]"
+                         "  [foo :as f]"
+                         "  [foo :as fa]))"
+                         "f/bar fa/bar b/bar")
+                   (code "(ns foo.bar"
+                         " (:require"
+                         "  [bar :as b]"
+                         "  [foo :as f]"
+                         "  [foo :as fa]))"
+                         "f/bar fa/bar b/bar")))
   (testing "with refer at require"
     (test-clean-ns {}
                    (code "(ns foo.bar"

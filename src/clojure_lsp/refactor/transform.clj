@@ -326,7 +326,7 @@
       new-node)))
 
 (defn ^:private process-clean-ns
-  [ns-loc removed-nodes col ns-inner-blocks-indentation form-type db]
+  [ns-loc removed-nodes col form-type clean-ctx]
   (let [removed-nodes (edit/map-children removed-nodes remove-empty-reader-conditional)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
@@ -352,7 +352,7 @@
                                      :else (string/lower-case (first %)))
                                   n/sexpr)
                                 form-type
-                                db)
+                                (:db clean-ctx))
                               (map
                                 (fn [node]
                                   (if-let [[n comment] (and (= :vector (n/tag node))
@@ -369,7 +369,7 @@
                          (n/comment? node)
                          [single-space node]
 
-                         (and (= :same-line ns-inner-blocks-indentation)
+                         (and (= :same-line (:ns-inner-blocks-indentation clean-ctx))
                               (= idx 0))
                          [single-space node]
 
@@ -458,23 +458,43 @@
                           n/vector-node))
           z/up))))
 
-(defn ^:private remove-unused-require
-  [node unused-aliases unused-refers initial-sep-spaces db]
-  (cond
-    (not (z/vector? node))
-    node
-
-    (contains? unused-aliases (-> node z/down z/leftmost z/sexpr))
-    (z/remove node)
-
-    (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
-    (remove-unused-refers node unused-refers initial-sep-spaces db)
-
-    :else
+(defn ^:private remove-unused-duplicate-requires
+  [node {:keys [filename db]}]
+  (if-let [alias (some-> node
+                         z/down
+                         (z/find-next-value ':as)
+                         z/right
+                         z/sexpr)]
+    (let [local-analysis (get-in @db [:analysis filename])
+          used-alias? (some #(and (= :var-usages (:bucket %))
+                                  (= alias (:alias %)))
+                            local-analysis)]
+      (if used-alias?
+        node
+        (z/remove node)))
     node))
 
+(defn ^:private remove-unused-require
+  [node {:keys [unused-aliases unused-refers duplicate-requires db] :as clean-ctx} initial-sep-spaces]
+  (let [namespace-expr (some-> node z/down z/leftmost z/sexpr)]
+    (cond
+      (not (z/vector? node))
+      node
+
+      (contains? unused-aliases namespace-expr)
+      (z/remove node)
+
+      (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
+      (remove-unused-refers node unused-refers initial-sep-spaces db)
+
+      (contains? duplicate-requires namespace-expr)
+      (remove-unused-duplicate-requires node clean-ctx)
+
+      :else
+      node)))
+
 (defn ^:private remove-unused-requires
-  [nodes unused-aliases unused-refers initial-sep-spaces db]
+  [nodes {:keys [unused-aliases unused-refers] :as clean-ctx} initial-sep-spaces]
   (let [single-require? (= 1 (count (z/child-sexprs nodes)))
         first-node      (z/next nodes)
         first-node-ns   (when (and single-require?
@@ -500,12 +520,12 @@
                                    (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
-      (edit/map-children nodes #(remove-unused-require % unused-aliases unused-refers initial-sep-spaces db)))))
+      (edit/map-children nodes #(remove-unused-require % clean-ctx initial-sep-spaces)))))
 
 (defn ^:private clean-requires
-  [ns-loc unused-aliases unused-refers ns-inner-blocks-indentation db]
+  [ns-loc clean-ctx]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
-    (let [col (or (case ns-inner-blocks-indentation
+    (let [col (or (case (:ns-inner-blocks-indentation clean-ctx)
                     :same-line (some-> require-loc z/node meta :end-col)
                     :next-line (some-> require-loc z/node meta :col dec)
                     :keep (some-> require-loc z/right z/node meta :col dec)
@@ -513,8 +533,8 @@
                   2)
           removed-nodes (-> require-loc
                             z/remove
-                            (remove-unused-requires unused-aliases unused-refers col db))]
-      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :require db))
+                            (remove-unused-requires clean-ctx col))]
+      (process-clean-ns ns-loc removed-nodes col :require clean-ctx))
     ns-loc))
 
 (defn ^:private package-import?
@@ -555,7 +575,7 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc unused-imports ns-inner-blocks-indentation db]
+  [ns-loc {:keys [ns-inner-blocks-indentation unused-imports] :as clean-ctx}]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (if import-loc
                 (if (= :same-line ns-inner-blocks-indentation)
@@ -565,7 +585,7 @@
           removed-nodes (-> import-loc
                             z/remove
                             (edit/map-children #(remove-unused-import % unused-imports)))]
-      (process-clean-ns ns-loc removed-nodes col ns-inner-blocks-indentation :import db))
+      (process-clean-ns ns-loc removed-nodes col :import clean-ctx))
     ns-loc))
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]
@@ -611,9 +631,17 @@
             unused-aliases (q/find-unused-aliases analysis findings filename)
             unused-refers (q/find-unused-refers analysis findings filename)
             unused-imports (q/find-unused-imports analysis findings filename)
+            duplicate-requires (q/find-duplicate-requires findings filename)
+            clean-ctx {:db db
+                       :filename filename
+                       :unused-aliases unused-aliases
+                       :unused-refers unused-refers
+                       :unused-imports unused-imports
+                       :duplicate-requires duplicate-requires
+                       :ns-inner-blocks-indentation ns-inner-blocks-indentation}
             result-loc (-> ns-loc
-                           (clean-requires unused-aliases unused-refers ns-inner-blocks-indentation db)
-                           (clean-imports unused-imports ns-inner-blocks-indentation db)
+                           (clean-requires clean-ctx)
+                           (clean-imports clean-ctx)
                            (sort-ns-children settings))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))

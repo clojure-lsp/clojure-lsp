@@ -343,6 +343,12 @@
          (map :class)
          set)))
 
+(defn find-duplicate-requires [findings filename]
+  (->> (get findings filename)
+       (filter (comp #(identical? :duplicate-require %) :type))
+       (map :duplicate-ns)
+       set))
+
 (defn find-namespace-definitions [analysis filename]
   (into []
         (comp

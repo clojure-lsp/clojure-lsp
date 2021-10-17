@@ -12,7 +12,8 @@
    [clojure.java.shell :as shell]
    [clojure.string :as string]
    [medley.core :as medley]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.feature.clojuredocs :as f.clojuredocs])
   (:import
    (com.google.common.io ByteStreams)
    (java.net URI)
@@ -228,6 +229,8 @@
                                           project-settings
                                           force-settings)
              :classpath-settings classpath-settings))
+    (async/go
+      (f.clojuredocs/refresh-cache! db))
     (log/info "Analyzing source paths for project root" root-path)
     (report-callback 95 "Analyzing project files" db)
     (analyze-source-paths! (:source-paths settings) db)

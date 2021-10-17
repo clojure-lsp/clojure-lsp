@@ -14,7 +14,8 @@
                 :require true
                 :import true
                 :refer {:max-line-length 80}}}
- :hover {:hide-file-location? false}
+ :hover {:hide-file-location? false
+         :clojuredocs true}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
  :use-metadata-for-privacy? false

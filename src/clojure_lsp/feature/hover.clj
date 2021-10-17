@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.hover
   (:require
+   [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -33,11 +34,39 @@
                                    (map #(drop-whitespace indentation %) (rest lines)))]
         (string/join "\n" unindented-lines)))))
 
+(defn ^:private clojuredocs->hover-docs
+  [{:keys [doc examples see-alsos notes]}
+   doc-line]
+  (string/join
+    "\n\n"
+    (cond-> []
+      doc-line (conj doc-line)
+      (and (not doc-line)
+           doc) (conj doc)
+      (seq examples) (conj "__Examples:__"
+                           (->> examples
+                                (map #(str opening-code % closing-code))
+                                (string/join "\n---\n")))
+      (seq see-alsos) (conj "__See also:__"
+                            (->> see-alsos
+                                 (map (fn [see-also]
+                                        (let [name (name see-also)
+                                              ns (namespace see-also)]
+                                          (format "[%s](https://clojuredocs.org/%s/%s)"
+                                                  (str ns "/" name)
+                                                  ns
+                                                  name))))
+                                 (string/join "\n\n")))
+      (seq notes) (conj "__Notes:__"
+                        (->> notes
+                             (map #(str %))
+                             (string/join "\n---\n"))))))
+
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db]
   (let [[content-format] (get-in @db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (settings/get db [:show-docs-arity-on-same-line?])
-        hide-filename? (get-in @db [:settings :hover :hide-file-location?])
+        hide-filename? (settings/get db [:hover :hide-file-location?] true)
         join-char (if show-docs-arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)
@@ -50,11 +79,18 @@
         doc-line (when (seq doc)
                    (if markdown?
                      (docstring->formatted-markdown doc)
-                     doc))]
+                     doc))
+        clojuredocs (f.clojuredocs/find-docs-for sym-name sym-ns db)]
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
-                doc-line (str line-break doc-line)
+                clojuredocs
+                (str "\n\n" (clojuredocs->hover-docs clojuredocs doc-line))
+
+                (and (not clojuredocs)
+                     doc-line)
+                (str "\n\n" doc-line)
+
                 (and filename (not hide-filename?))
                 (str (format "%s*[%s](%s)*"
                              line-break

@@ -26,6 +26,10 @@ Above you can find all available features that clojure-lsp provide with examples
 
 <img src="../images/features/document-highlight.gif" width=340>
 
+### Documentation and clojuredocs integration
+
+<img src="../images/features/hover-clojuredocs.png">
+
 ### Completion
 
 <img src="../images/features/completion.gif" width=340>

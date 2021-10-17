@@ -66,7 +66,7 @@
   [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db]
   (let [[content-format] (get-in @db [:client-capabilities :text-document :hover :content-format])
         show-docs-arity-on-same-line? (settings/get db [:show-docs-arity-on-same-line?])
-        hide-filename? (settings/get db [:hover :hide-file-location?] true)
+        hide-filename? (settings/get db [:hover :hide-file-location?])
         join-char (if show-docs-arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)

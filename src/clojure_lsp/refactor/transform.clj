@@ -348,8 +348,8 @@
                                 (comp
                                   #(cond
                                      (symbol? %) (string/lower-case %)
-                                     (vector? (first %)) (string/lower-case (ffirst %))
-                                     :else (string/lower-case (first %)))
+                                     (vector? (first %)) (some-> % ffirst string/lower-case)
+                                     :else (some-> % first string/lower-case))
                                   n/sexpr)
                                 form-type
                                 (:db clean-ctx))

@@ -231,6 +231,20 @@
 
 (deftest clean-ns-test
   (testing "with :ns-inner-blocks-indentation on next line"
+    (testing "With require comments"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "   [foo  :as f]"
+                           "   ;; [bar :as b]"
+                           "   baz))"
+                           "f/foo")
+                     (code "(ns foo.bar"
+                           " (:require"
+                           "  baz"
+                           "  [foo  :as f] ;; [bar :as b]"
+                           "))"
+                           "f/foo")))
     (testing "without requires at start"
       (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (code "(ns foo.bar"

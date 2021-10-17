@@ -15,6 +15,7 @@
   "https://github.com/clojure-emacs/clojuredocs-export-edn/raw/master/exports/export.compact.edn")
 
 (def ^:private connect-timeout-ms 1000)
+(def ^:private read-timeout-ms 30000)
 
 (defn ^:private test-remote-url [^String url]
   (if-not (.startsWith url "http")
@@ -22,6 +23,7 @@
     (let [url (URL. url)
           conn ^HttpsURLConnection (.openConnection url)]
       (.setConnectTimeout conn connect-timeout-ms)
+      (.setReadTimeout conn read-timeout-ms)
       (try
         (.connect conn)
         [true]

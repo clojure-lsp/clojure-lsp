@@ -1,11 +1,11 @@
 (ns clojure-lsp.feature.clojuredocs
   "clojuredocs integration inspired on orchard implementation."
   (:require
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings])
+   [taoensso.timbre :as log])
   (:import
    (java.io IOException)
    (java.net URL)

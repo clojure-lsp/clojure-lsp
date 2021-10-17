@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.producer :as producer]
@@ -12,8 +13,7 @@
    [clojure.java.shell :as shell]
    [clojure.string :as string]
    [medley.core :as medley]
-   [taoensso.timbre :as log]
-   [clojure-lsp.feature.clojuredocs :as f.clojuredocs])
+   [taoensso.timbre :as log])
   (:import
    (com.google.common.io ByteStreams)
    (java.net URI)

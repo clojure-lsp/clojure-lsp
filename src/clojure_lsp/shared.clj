@@ -28,6 +28,11 @@
 (defn file-exists? [^java.io.File f]
   (.exists f))
 
+(defn slurp-filename
+  "Slurp filename f. Used for be able to with-refefs this function."
+  [^String f]
+  (slurp f))
+
 (defn assoc-some
   "Assoc[iate] if the value is not nil. "
   ([m k v]
@@ -155,8 +160,14 @@
 
 (def jar-filename-regex #"^(.*\.jar):(.*)")
 
-(defn external-file? [filename]
+(defn ^:private external-file? [filename]
   (boolean (re-find jar-filename-regex filename)))
+
+(defn project-filename? [filename source-paths]
+  (and filename
+       (or (-> filename name external-file?)
+           (and (seq source-paths)
+                (not-any? #(string/starts-with? filename %) source-paths)))))
 
 (defn filename->uri
   "Converts an absolute file path into a file URI string.

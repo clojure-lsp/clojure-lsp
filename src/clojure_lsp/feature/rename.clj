@@ -113,7 +113,7 @@
 (defn rename
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
-        references (q/find-references-from-cursor (:analysis @db) filename row col true)
+        references (q/find-references-from-cursor (:analysis @db) filename row col true db)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias :keywords} :bucket) references))
         source-paths (settings/get db [:source-paths])]
     (when (can-rename? definition references source-paths)

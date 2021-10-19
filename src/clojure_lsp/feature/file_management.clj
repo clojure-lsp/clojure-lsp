@@ -73,16 +73,16 @@
 
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis db]
   (async/go
-    (let [project-analysis (q/filter-project-analysis (:analysis @db))
+    (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
           source-paths (settings/get db [:source-paths])
           changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
           references-filenames (->> changed-var-definitions
-                                    (map #(q/find-references project-analysis % false))
+                                    (map #(q/find-references project-analysis % false db))
                                     flatten
                                     (map :filename))
           changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
           definitions-filenames (->> changed-var-usages
-                                     (map #(q/find-definition project-analysis %))
+                                     (map #(q/find-definition project-analysis % db))
                                      (remove nil?)
                                      (filter (fn [d]
                                                (and (not (:private d))

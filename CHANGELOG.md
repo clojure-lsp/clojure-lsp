@@ -12,6 +12,7 @@
   - Bump clj-kondo adding new `gen-class` linter and other fixes/improvements. Fixes #589
   - Remove unused duplicate require if any. #527 
   - Fix crash on clean-ns when ns contains comments.
+  - Improve project analysis filter to check source-paths. #597
   
 - Editor
   - Add reference code lens for ns forms. #578

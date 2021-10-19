@@ -65,7 +65,7 @@
         (log/info (format "Starting to lint whole project files..."))
         (shared/logging-time
           "Linting whole project files took %s secs"
-          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx)))
+          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
       (when (settings/get db [:lint-project-files-after-startup?] true)
         (async/go
           (shared/logging-time
@@ -79,13 +79,13 @@
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
       (doseq [file files]
-        (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx)))))
+        (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx db)))))
 
 (defn ^:private single-file-custom-lint!
   [{:keys [analysis] :as kondo-ctx} db]
   (let [filename (-> analysis :var-definitions first :filename)
         updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
-    (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx)))
+    (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db)))
 
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true

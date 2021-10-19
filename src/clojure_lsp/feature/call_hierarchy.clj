@@ -49,7 +49,7 @@
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
-  (when-let [definition (q/find-definition (:analysis @db) element)]
+  (when-let [definition (q/find-definition (:analysis @db) element db)]
     (let [def-filename (:filename definition)
           definition-uri (if (shared/plain-uri? def-filename)
                            def-filename
@@ -58,7 +58,7 @@
        :element definition})))
 
 (defn incoming [uri row col db]
-  (->> (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false)
+  (->> (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)
        (map (partial element->incoming-usage-by-uri db))
        (remove nil?)
        (mapv (fn [element-by-uri]

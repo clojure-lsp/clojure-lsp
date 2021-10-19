@@ -62,7 +62,7 @@
       true)))
 
 (defn ^:private ns->ns+uri [namespace]
-  (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace))]
+  (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace db/db))]
     {:namespace namespace
      :uri (shared/filename->uri filename db/db)}
     {:namespace namespace}))
@@ -113,8 +113,7 @@
   (setup-analysis! options)
   (cli-println options "Checking namespaces...")
   (let [namespaces (or (seq namespace)
-                       (->> (:analysis @db/db)
-                            q/filter-project-analysis
+                       (->> (q/filter-project-analysis (:analysis @db/db) db/db)
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
         ns+uris (map ns->ns+uri namespaces)
@@ -160,8 +159,7 @@
   (setup-analysis! options)
   (cli-println options "Finding diagnostics...")
   (let [namespaces (or (seq namespace)
-                       (->> (:analysis @db/db)
-                            q/filter-project-analysis
+                       (->> (q/filter-project-analysis (:analysis @db/db) db/db)
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
         diags-by-uri (->> namespaces
@@ -187,8 +185,7 @@
   (setup-analysis! options)
   (cli-println options "Formatting namespaces...")
   (let [namespaces (or (seq namespace)
-                       (->> (:analysis @db/db)
-                            q/filter-project-analysis
+                       (->> (q/filter-project-analysis (:analysis @db/db) db/db)
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
         ns+uris (map ns->ns+uri namespaces)
@@ -218,10 +215,10 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))
-        project-analysis (q/filter-project-analysis (:analysis @db/db))]
+        project-analysis (q/filter-project-analysis (:analysis @db/db) db/db)]
     (if-let [from-element (if ns-only?
-                            (q/find-namespace-definition-by-namespace project-analysis from-ns)
-                            (q/find-element-by-full-name project-analysis from-name from-ns))]
+                            (q/find-namespace-definition-by-namespace project-analysis from-ns db/db)
+                            (q/find-element-by-full-name project-analysis from-name from-ns db/db))]
       (let [uri (shared/filename->uri (:filename from-element) db/db)]
         (open-file! {:uri uri :namespace from-ns})
         (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]

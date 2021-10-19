@@ -114,7 +114,7 @@
                     usage
                     (when (pos? try-column)
                       (recur (dec try-column)))))
-        definition (when element (q/find-definition analysis element))]
+        definition (when element (q/find-definition analysis element db))]
     (cond
       definition
       {:range (shared/->scope-range element)

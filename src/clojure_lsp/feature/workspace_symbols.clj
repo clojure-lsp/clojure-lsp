@@ -46,8 +46,7 @@
        (map :members)))
 
 (defn workspace-symbols [query db]
-  (->> (:analysis @db)
-       q/filter-project-analysis
+  (->> (q/filter-project-analysis (:analysis @db) db)
        vals
        flatten
        (filter f.document-symbol/declaration?)

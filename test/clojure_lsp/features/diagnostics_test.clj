@@ -19,7 +19,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}}
+      db/db)
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :info
@@ -36,7 +37,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}}
+      db/db)
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :warning
@@ -53,7 +55,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}}
+      db/db)
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :error
@@ -70,7 +73,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}}
+      db/db)
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :off
@@ -87,7 +91,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {}})
+       :config {}}
+      db/db)
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :info
@@ -104,7 +109,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}}
+      db/db)
     (h/assert-submaps
       []
       @findings))
@@ -114,7 +120,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}}
+      db/db)
     (h/assert-submaps
       []
       @findings))
@@ -124,7 +131,8 @@
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}}
+      db/db)
     (h/assert-submaps
       []
       @findings))
@@ -134,7 +142,8 @@
       "/b.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {}})
+       :config {}}
+      db/db)
     (h/assert-submaps
       []
       @findings)))

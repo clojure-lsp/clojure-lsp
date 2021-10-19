@@ -913,8 +913,8 @@
 
 (defn inline-symbol
   [uri row col db]
-  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col)
-        references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false)
+  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
+        references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)
         def-uri (shared/filename->uri (:filename definition) db)
         def-text (get-in @db [:documents def-uri :text])
         def-loc (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
@@ -1022,7 +1022,7 @@
         test-uri (shared/filename->uri test-filename db)
         test-namespace-file (io/file test-filename)]
     (if (shared/file-exists? test-namespace-file)
-      (let [existing-text (slurp test-uri)
+      (let [existing-text (shared/slurp-filename test-uri)
             lines (count (string/split existing-text #"\n"))
             test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
             test-zloc (z/up (z/of-string (str "\n" test-text)))]

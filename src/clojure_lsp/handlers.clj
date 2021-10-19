@@ -114,7 +114,7 @@
     (mapv (fn [reference]
             {:uri (shared/filename->uri (:filename reference) db/db)
              :range (shared/->range reference)})
-          (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context)))))
+          (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db/db))))
 
 (defn completion-resolve-item [item]
   (f.completion/resolve-item item db/db))
@@ -125,7 +125,7 @@
 
 (defn definition [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)]
-    (when-let [d (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column)]
+    (when-let [d (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column db/db)]
       {:uri (shared/filename->uri (:filename d) db/db)
        :range (shared/->range d)})))
 
@@ -159,7 +159,7 @@
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
           scoped-analysis (select-keys (:analysis @db/db) [filename])
-          references (q/find-references-from-cursor scoped-analysis filename line column true)]
+          references (q/find-references-from-cursor scoped-analysis filename line column true db/db)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -191,7 +191,7 @@
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)
         element (q/find-element-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))
-        definition (when element (q/find-definition analysis element))
+        definition (when element (q/find-definition analysis element db/db))
         data (shared/assoc-some {}
                                 :element element
                                 :definition definition

@@ -1351,13 +1351,14 @@
              :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
           results-to-assert)))
     (testing "when the test file exists for clj file"
-      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                 (h/file-path "/project/test")}}
                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [test-code (h/code "(ns some.ns-test)"
                               "(deftest some-other-test)")]
         (with-redefs [shared/file-exists? (constantly true)
-                      slurp (constantly test-code)]
+                      shared/slurp-filename (constantly test-code)]
           (let [_ (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
                 code "(ns some.ns) (defn foo [b] (+ 1 2))"
                 zloc (z/find-value (z/of-string code) z/next 'foo)

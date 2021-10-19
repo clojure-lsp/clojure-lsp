@@ -36,7 +36,7 @@
     (let [filename (shared/uri->filename uri)
           analysis (:analysis @db)
           element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)
-          definition (q/find-definition analysis element)]
+          definition (q/find-definition analysis element db)]
       (when (:macro definition)
         (let [excluded-vars (get excluded-macros (:ns definition))]
           (when (and (not= excluded-vars '*)

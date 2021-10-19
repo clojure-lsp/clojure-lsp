@@ -147,26 +147,26 @@
           (sync-lint-file! uri db))))))
 
 (defn ^:private unused-public-vars-lint!
-  [var-definitions project-analysis {:keys [config reg-finding!]}]
+  [var-definitions project-analysis {:keys [config reg-finding!]} db]
   (let [elements (->> var-definitions
                       (remove (partial exclude-public-var? config))
                       (filter (comp #(= (count %) 0)
-                                    #(q/find-references project-analysis % false))))]
+                                    #(q/find-references project-analysis % false db))))]
     (->> (reg-unused-public-var-elements! elements reg-finding! config)
          (remove nil?)
          (group-by :filename))))
 
 (defn lint-project-diagnostics!
-  [new-analysis kondo-ctx]
-  (let [project-analysis (q/filter-project-analysis new-analysis)
+  [new-analysis kondo-ctx db]
+  (let [project-analysis (q/filter-project-analysis new-analysis db)
         var-definitions (q/find-all-var-definitions project-analysis)]
-    (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)))
+    (unused-public-vars-lint! var-definitions project-analysis kondo-ctx db)))
 
 (defn lint-and-publish-project-diagnostics!
   [paths new-analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis new-analysis)
+  (let [project-analysis (q/filter-project-analysis new-analysis db)
         var-definitions (q/find-all-var-definitions project-analysis)
-        kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)]
+        kondo-findings (unused-public-vars-lint! var-definitions project-analysis kondo-ctx db)]
     (loop [state-db @db]
       (let [cur-findings (:findings state-db)
             new-findings (merge-with #(->> (into %1 %2)
@@ -178,7 +178,7 @@
           (recur @db))))))
 
 (defn unused-public-var-lint-for-single-file!
-  [filename analysis kondo-ctx]
-  (let [project-analysis (q/filter-project-analysis analysis)
+  [filename analysis kondo-ctx db]
+  (let [project-analysis (q/filter-project-analysis analysis db)
         var-definitions (q/find-var-definitions project-analysis filename false)]
-    (unused-public-vars-lint! var-definitions project-analysis kondo-ctx)))
+    (unused-public-vars-lint! var-definitions project-analysis kondo-ctx db)))

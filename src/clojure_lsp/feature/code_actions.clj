@@ -315,7 +315,7 @@
         function-to-create (find-function-to-create uri diagnostics db)
         inside-let? (r.transform/find-let-form zloc)
         other-colls (r.transform/find-other-colls zloc)
-        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col)
+        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol? (r.transform/inline-symbol? definition db)
         can-thread? (r.transform/can-thread? zloc)
         can-create-test? (r.transform/can-create-test? zloc uri db)

@@ -186,7 +186,7 @@
     :info
     db/db))
 
-(def server-info-raw server-info)
+(def server-info-raw #'server-info)
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)

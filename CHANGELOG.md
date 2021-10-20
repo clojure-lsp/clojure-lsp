@@ -7,7 +7,7 @@
   - Consider `dev` and `test` alias for deps.edn projects as project-specs during classpath lookup. #586
   - Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.
   - Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.
-  - Async save the analysis to cache db to make startup faster.
+  - Make the cache analysis save async to make startup faster.
   - Support Auto refresh settings memoizing with a ttl of 1 second avoiding the need of restarting server when changing configs. #502
   - Bump clj-kondo adding new `gen-class` linter and other fixes/improvements. Fixes #589
   - Remove unused duplicate require if any. #527 

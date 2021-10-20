@@ -11,6 +11,8 @@
    (java.net URL)
    (javax.net.ssl HttpsURLConnection)))
 
+(set! *warn-on-reflection* true)
+
 (def ^:private clojuredocs-edn-file-url
   "https://github.com/clojure-emacs/clojuredocs-export-edn/raw/master/exports/export.compact.edn")
 

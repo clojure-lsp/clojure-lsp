@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-## 2021.10.20-14.52.55
+## 2021.10.20-16.49.47
 
 - Editor
   - Hot fix clojuredocs on graalvm native image.
+  - Bump clj-kondo to `2021.10.20-20211020.123254-3` to fix a specific issue with cljs.
 
 ## 2021.10.20-13.04.11
   

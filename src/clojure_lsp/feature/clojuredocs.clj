@@ -50,7 +50,7 @@
                                                      slurp
                                                      edn/read-string)})))
         (catch Exception e
-          (log/error "Error refreshing clojruedocs." e)
+          (log/error "Error refreshing clojuredocs information." e)
           nil)
         (finally
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))

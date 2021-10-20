@@ -518,8 +518,8 @@
 <p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:</p>
 <ul>
 <li>Create a test for your bug/feature, then implement the code following the test (TDD).</li>
-<li><code>clojure-lsp</code> starts a NREPL server if built with <code>clj -X:debug-jar &amp;&amp; clj -X:bin</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>clojure/serverInfo/log</code> custom LSP method.</li>
-<li>Build <code>clojure-lsp</code> with your changes and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
+<li><code>clojure-lsp</code> starts a NREPL server if built with <code>make</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>clojure/serverInfo/log</code> custom LSP method.</li>
+<li>Build <code>clojure-lsp</code> with your changes running just <code>make</code> and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
 <li>For debugging purposes, there is two custom LSP methods <code>clojure/serverInfo/log</code> and <code>clojure/cursorInfo/log</code>.</li>
 </ul>
                 

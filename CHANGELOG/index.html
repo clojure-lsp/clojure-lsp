@@ -1628,7 +1628,7 @@
 <li>Consider <code>dev</code> and <code>test</code> alias for deps.edn projects as project-specs during classpath lookup. #586</li>
 <li>Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.</li>
 <li>Change cache db from sqlite to datalevin for faster startup + better graalvm compatibility.</li>
-<li>Async save the analysis to cache db to make startup faster.</li>
+<li>Make the cache analysis save async to make startup faster.</li>
 <li>Support Auto refresh settings memoizing with a ttl of 1 second avoiding the need of restarting server when changing configs. #502</li>
 <li>Bump clj-kondo adding new <code>gen-class</code> linter and other fixes/improvements. Fixes #589</li>
 <li>Remove unused duplicate require if any. #527 </li>
@@ -2254,7 +2254,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 19, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 20, 2021</span>
     
   </small>
 </div>

@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#development" class="md-skip">
+        <a href="#clojure-lsp-development" class="md-skip">
           Skip to content
         </a>
       
@@ -378,9 +378,65 @@
       
     
     
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Development
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
     <a href="./" class="md-nav__link md-nav__link--active">
       Development
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-clojure-way" class="md-nav__link">
+    The Clojure Way
+  </a>
+  
+    <nav class="md-nav" aria-label="The Clojure Way">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visual-studio-code-with-calva" class="md-nav__link">
+    Visual Studio Code with Calva
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#emacs-with-cider" class="md-nav__link">
+    Emacs with CIDER
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#your-favorite-editor" class="md-nav__link">
+    Your Favorite Editor
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
     
   </li>
 
@@ -499,6 +555,48 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-clojure-way" class="md-nav__link">
+    The Clojure Way
+  </a>
+  
+    <nav class="md-nav" aria-label="The Clojure Way">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visual-studio-code-with-calva" class="md-nav__link">
+    Visual Studio Code with Calva
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#emacs-with-cider" class="md-nav__link">
+    Emacs with CIDER
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#your-favorite-editor" class="md-nav__link">
+    Your Favorite Editor
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -514,14 +612,48 @@
                   </a>
                 
                 
-                <h1 id="development">Development<a class="headerlink" href="#development" title="Permanent link">#</a></h1>
-<p>For <code>clojure-lsp</code> development, there are 3 possible ways of finding a bug or implementing a new feature:</p>
+                <h1 id="clojure-lsp-development">clojure-lsp Development<a class="headerlink" href="#clojure-lsp-development" title="Permanent link">#</a></h1>
+<p>There are several ways of finding and fixing a bug or implementing a new feature:</p>
 <ul>
+<li><a href="#the-clojure-way">The Clojure Way</a></li>
 <li>Create a test for your bug/feature, then implement the code following the test (TDD).</li>
-<li><code>clojure-lsp</code> starts a NREPL server if built with <code>make</code>, with that it's possible to change the code of a running instance and see the changes on your client in real time. To get the NREPL port, you can check the <code>/tmp/clojure-lsp.*.out</code> log, it will print the NREPL port on server startup or you can get it via <code>clojure/serverInfo/log</code> custom LSP method.</li>
-<li>Build <code>clojure-lsp</code> with your changes running just <code>make</code> and test it manually in your client, this is the slowest option, but it makes sense for final tests.</li>
-<li>For debugging purposes, there is two custom LSP methods <code>clojure/serverInfo/log</code> and <code>clojure/cursorInfo/log</code>.</li>
+<li>Build <code>clojure-lsp</code> using <code>make</code> each time you have made changes, and test it manually in your client. This is the slowest option.</li>
 </ul>
+<p>Whichever development path you choose: For final testing, it is good to rebuild the binary with <code>make</code>.</p>
+<p>There are two custom LSP methods <code>clojure/serverInfo/log</code> and <code>clojure/cursorInfo/log</code>. They can assist in debugging.</p>
+<h2 id="the-clojure-way">The Clojure Way<a class="headerlink" href="#the-clojure-way" title="Permanent link">#</a></h2>
+<p>With a <strong>clojure-lsp + <a href="https://nrepl.org">nREPL</a></strong> powered Clojure editor you can modify your editor session's clojure-lsp server using the Clojure REPL. These are the steps:</p>
+<ol>
+<li>Configure your editor to use the <code>clojure-lsp</code> executable from this project</li>
+<li><code>make</code> - to build the clojure-lsp executable</li>
+<li>Have your editor restart its clojure-lsp server</li>
+<li>Issue the clojure-lsp <code>serverInfo</code> command</li>
+<li>Find the <code>port</code> entry in the output</li>
+<li>Connect your editors nREPL client to this port</li>
+<li>Hack away!</li>
+</ol>
+<p><strong>Seeing is believing.</strong> An easy way to convince yourself that you can actually change clojure-lsp mid-flight is to:</p>
+<ol>
+<li>Modify the <code>server-info</code> function in <code>src/clojure_lsp/handlers.clj</code><ul>
+<li>Say, you add a <code>:foo :bar</code> entry to the map returned</li>
+</ul>
+</li>
+<li>Evaluate the new <code>server-info</code> function definition</li>
+<li>Issue the clojure-lsp <code>serverInfo</code> command</li>
+<li>Find <code>:foo :bar</code> in the output</li>
+</ol>
+<p>You have just modified the LSP server powering your editor while it was running! This is the Clojure way. No recompiling and restarting and reloading. That is some other, non-Clojure, way.</p>
+<p>The details in how to perform these steps can vary a bit between the various Clojure editors/plugins.</p>
+<h3 id="visual-studio-code-with-calva">Visual Studio Code with Calva<a class="headerlink" href="#visual-studio-code-with-calva" title="Permanent link">#</a></h3>
+<ul>
+<li>This project comes with <a href="https://calva.io">Calva</a> configuration to use the <code>clojure-lsp</code> executable built in step 2 above. You can skip step 1.</li>
+<li>To restart the clojure-lsp server, use the VS Code command <strong>Developer: Reload Window</strong></li>
+<li>The <strong>Hack away!</strong> step needs to start with you issuing the command <strong>Calva: Load Current File and Dependencies</strong>.</li>
+</ul>
+<h3 id="emacs-with-cider">Emacs with CIDER<a class="headerlink" href="#emacs-with-cider" title="Permanent link">#</a></h3>
+<p>TBD. PR welcome.</p>
+<h3 id="your-favorite-editor">Your Favorite Editor<a class="headerlink" href="#your-favorite-editor" title="Permanent link">#</a></h3>
+<p>TBD. PR welcome.</p>
                 
                   
                     

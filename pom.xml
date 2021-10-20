@@ -81,7 +81,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2021.10.19</version>
+      <version>2021.10.20-20211020.123254-3</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>

@@ -4,6 +4,9 @@
 
 ## 2021.10.20-14.52.55
 
+- Editor
+  - Hot fix clojuredocs on graalvm native image.
+
 ## 2021.10.20-13.04.11
   
 - General

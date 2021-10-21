@@ -32,6 +32,8 @@
   - Add more semantic tokens: aliases for macros, variable and function definitions.
   - Add [clojuredocs](https://clojuredocs.org/) information during symbol hover. #571
 
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
 ## 2021.09.30-15.28.01
 
 - Editor

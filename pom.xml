@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.10.20-14.52.55</version>
+  <version>2021.10.20-16.49.47</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -16,11 +16,6 @@
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.10.3</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.clj-easy</groupId>
-      <artifactId>graal-build-time</artifactId>
-      <version>0.1.4</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -41,11 +36,6 @@
           <artifactId>gson</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.clojars.huahaiy</groupId>
-      <artifactId>datalevin-native</artifactId>
-      <version>0.5.25</version>
     </dependency>
     <dependency>
       <groupId>cljfmt</groupId>

@@ -1,13 +1,14 @@
 (ns clojure-lsp.nrepl
   (:require
    [borkdude.dynaload :refer [dynaload]]
-   [cider.nrepl :refer [cider-nrepl-handler]]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 
 (def start-server (dynaload 'nrepl.server/start-server))
 
+(def cider-nrepl-handler (dynaload 'cider.nrepl/cider-nrepl-handler))
+  
 (defn ^:private repl-port []
   (:port (start-server :handler cider-nrepl-handler)))
 

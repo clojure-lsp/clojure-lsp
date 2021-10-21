@@ -53,7 +53,7 @@
 (defn ^:private supports-clj-core? [uri]
   (#{:cljc :clj} (shared/uri->file-type uri)))
 
-(defn ^:private element->completion-item-kind [{:keys [bucket fixed-arities defined-by]}]
+(defn ^:private element->completion-item-kind [{:keys [bucket arglist-strs macro]}]
   (cond
     (#{:namespace-definitions
        :namespace-usages} bucket)
@@ -66,8 +66,7 @@
     :keyword
 
     (and (#{:var-definitions} bucket)
-         (or fixed-arities
-             (= defined-by 'clojure.core/defmacro)))
+         (or arglist-strs macro))
     :function
 
     (#{:var-definitions :var-usages :locals} bucket)

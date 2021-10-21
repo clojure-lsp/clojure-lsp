@@ -55,7 +55,8 @@
                              :jvm-opts ["-Xmx2g" "-server"]
                              :name "clojure-lsp"
                              :skip-realign true}}
-           :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}}}
+           :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}
+                                cider/cider-nrepl {:mvn/version,"0.26.0"}}}
            :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                        :exec-fn hf.depstar/uberjar
                        :exec-args {:jar "clojure-lsp.jar"

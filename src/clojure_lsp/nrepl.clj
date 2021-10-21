@@ -7,8 +7,10 @@
 
 (def start-server (dynaload 'nrepl.server/start-server))
 
+(def cider-nrepl-handler (dynaload 'cider.nrepl/cider-nrepl-handler))
+
 (defn ^:private repl-port []
-  (:port (start-server)))
+  (:port (start-server :handler cider-nrepl-handler)))
 
 (defn setup-nrepl [db]
   (try

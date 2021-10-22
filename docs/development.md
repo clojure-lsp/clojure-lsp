@@ -12,7 +12,11 @@ There are two custom LSP methods `clojure/serverInfo/log` and `clojure/cursorInf
 
 ## The Clojure Way
 
-With a **clojure-lsp + [nREPL](https://nrepl.org)** powered Clojure editor you can modify your editor session's clojure-lsp server using the Clojure REPL. These are the steps:
+With a **clojure-lsp + [nREPL](https://nrepl.org)** powered Clojure editor you can modify your editor session's clojure-lsp server using the Clojure REPL.
+
+Here's demo video: https://www.youtube.com/watch?v=4UvT0yqBDw8
+
+These are the steps:
 
 1. Configure your editor to use the `clojure-lsp` executable from this project
 1. `make` - to build the clojure-lsp executable

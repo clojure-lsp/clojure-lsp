@@ -22,6 +22,8 @@ Above you can find all available features that clojure-lsp provide with examples
 
 <img src="../images/features/rename.gif" width=340>
 
+Also, it's possible to live rename symbols on the same buffer with `linkedEditingRange` feature.
+
 ### Document highlight on hover showing symbol usages
 
 <img src="../images/features/document-highlight.gif" width=340>

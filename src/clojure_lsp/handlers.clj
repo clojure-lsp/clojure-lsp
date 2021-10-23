@@ -327,7 +327,7 @@
         col (inc (-> item :range :start :character))]
     (f.call-hierarchy/outgoing uri row col db/db)))
 
-(defn linked-editing-range
+(defn linked-editing-ranges
   [{:keys [textDocument position]}]
   (let [row (-> position :line inc)
         col (-> position :character inc)]

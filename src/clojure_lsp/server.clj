@@ -18,7 +18,8 @@
      ClojureExtensions
      ExtraMethods
      CursorInfoParams)
-   (java.util.concurrent CompletableFuture)
+   (java.util.concurrent CompletableFuture
+                         CompletionException)
    (java.util.function Supplier)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCallsParams
@@ -68,6 +69,7 @@
      TextDocumentSyncKind
      TextDocumentSyncOptions
      WorkspaceSymbolParams)
+   (org.eclipse.lsp4j.jsonrpc ResponseErrorException)
    (org.eclipse.lsp4j.launch LSPLauncher)
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
@@ -85,7 +87,9 @@
   `(try
      ~expr
      (catch Throwable ex#
-       (log/error ex#))
+       (if (instance? ResponseErrorException ex#)
+         (throw (CompletionException. ex#))
+         (log/error ex#)))
      (finally
        (try
          (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
@@ -242,7 +246,7 @@
 
   (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
     (start :linkedEditingRange
-           (async-request params handlers/linked-editing-range ::interop/linked-editing-ranges))))
+           (async-request params handlers/linked-editing-ranges ::interop/linked-editing-ranges))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService

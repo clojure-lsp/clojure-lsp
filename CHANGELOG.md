@@ -14,6 +14,7 @@
 - Editor
   - Hot fix clojuredocs on graalvm native image.
   - Bump clj-kondo to `2021.10.20-20211020.123254-3` to fix a specific issue with cljs.
+  - Implement support to return to client LSP Errors, making user UX better since clojure-lsp can return specific errors for specific exceptions.
 
 ## 2021.10.20-13.04.11
   

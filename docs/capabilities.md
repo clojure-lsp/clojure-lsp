@@ -66,7 +66,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/semanticTokens/range      | √    |                                               |
 | workspace/semanticTokens/refresh       |      |                                               |
 | workspace/codeLens/refresh             | √    |                                               |
-| textDocument/linkedEditingRange        |      |                                               |
+| textDocument/linkedEditingRange        | √    |                                               |
 | textDocument/prepareCallHierarchy      | √    |                                               |
 | callHierarchy/incomingCalls            | √    |                                               |
 | callHierarchy/outgoingCalls            | √    |                                               |

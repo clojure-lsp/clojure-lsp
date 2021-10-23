@@ -111,7 +111,9 @@
     (if response
       (do
         (swap! server-responses dissoc @client-request-id)
-        (:result response))
+        (if (:error response)
+          response
+          (:result response)))
       (do
         (Thread/sleep 500)
         (recur (get @server-responses @client-request-id))))))

@@ -40,6 +40,7 @@
      PublishDiagnosticsParams
      Range
      RenameFile
+     ResponseErrorCode
      SemanticTokens
      SignatureHelp
      SignatureInformation
@@ -55,7 +56,11 @@
      WorkDoneProgressReport
      WorkDoneProgressEnd
      WorkspaceEdit)
-   (org.eclipse.lsp4j.jsonrpc.messages Either)))
+   (org.eclipse.lsp4j.jsonrpc
+     ResponseErrorException)
+   (org.eclipse.lsp4j.jsonrpc.messages
+     Either
+     ResponseError)))
 
 ;; (set! *warn-on-reflection* true)
 
@@ -94,6 +99,26 @@
       .toString
       json/read-str
       walk/keywordize-keys))
+
+(defn respond-with-error [e]
+  (let [error (ResponseError. (.getValue ^ResponseErrorCode (:code e))
+                              (:message e)
+                              nil)]
+    (log/error "Responding with error " error)
+    (throw (ResponseErrorException. error))))
+
+(def error-code-enum
+  {:invalid-params ResponseErrorCode/InvalidParams})
+
+(s/def :error/code (s/and keyword?
+                          error-code-enum
+                          (s/conformer #(get error-code-enum %))))
+(s/def :error/message string?)
+
+(s/def ::error (s/and (s/keys :req-un [:error/code :error/message])
+                      (s/conformer respond-with-error)))
+
+(s/def ::response-error (s/and (s/keys :req-un [::error])))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -441,11 +466,14 @@
 
 (s/def :linked-editing-range/ranges (s/coll-of ::range))
 
-(s/def ::linked-editing-ranges (s/and (s/keys :req-un [:linked-editing-range/ranges]
-                                              :opt-un [::word-pattern])
-                                      (s/conformer #(doto (LinkedEditingRanges.)
-                                                      (.setRanges (:ranges %1))
-                                                      (.setWordPattern (:word-pattern %1))))))
+(s/def ::linked-editing-ranges
+  (s/and (s/or :error ::response-error
+               :ranges (s/and (s/keys :req-un [:linked-editing-range/ranges]
+                                      :opt-un [::word-pattern])
+                              (s/conformer #(doto (LinkedEditingRanges.)
+                                              (.setRanges (:ranges %1))
+                                              (.setWordPattern (:word-pattern %1))))))
+         (s/conformer second)))
 
 (defn stringify-keys-and-vals
   "Recursively transforms all map keys and values from keywords to strings."
@@ -586,7 +614,9 @@
           (log/error (s/explain-data spec value))
           result))
       (catch Exception ex
-        (log/error ex spec value)))))
+        (if (instance? ResponseErrorException ex)
+          (throw ex)
+          (log/error ex spec value))))))
 
 (defn- typify-json [root]
   (walk/postwalk (fn [n]

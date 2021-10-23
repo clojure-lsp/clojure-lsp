@@ -15,11 +15,12 @@
                 :import true
                 :refer {:max-line-length 80}}}
  :hover {:hide-file-location? false
+         :arity-on-same-line? false
          :clojuredocs true}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
  :use-metadata-for-privacy? false
- :show-docs-arity-on-same-line? false
+ :show-docs-arity-on-same-line? false ; deprecated, will be removed soon, use :hover :arity-on-same-line?
  :auto-add-ns-to-new-files? true
  :document-formatting? true
  :document-range-formatting? true

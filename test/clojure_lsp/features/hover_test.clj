@@ -64,11 +64,31 @@
                                   line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
                    (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col db/db))))))
+        (testing "hover arity-on-same-line? enabled"
+          (testing "plain"
+            (swap! db/db medley/deep-merge {:settings {:show-docs-arity-on-same-line? false
+                                                       :hover {:arity-on-same-line? true}}
+                                            :client-capabilities nil})
+            (is (= [{:language "clojure" :value (str sym " " sig)}
+                    doc
+                    filename]
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col db/db)))))
+
+          (testing "markdown"
+            (swap! db/db medley/deep-merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+            (is (= {:kind  "markdown"
+                    :value (join [start-code (str sym " " sig) end-code
+                                  ""
+                                  doc
+                                  line-break
+                                  (str "*[" filename "](file:///a.clj)*")])}
+                   (:contents (f.hover/hover (h/file-path "/a.clj") foo-row foo-col db/db))))))
 
         (testing "hide-filename? enabled"
           (testing "plain"
             (swap! db/db medley/deep-merge {:settings {:show-docs-arity-on-same-line? false
                                                        :hover {:hide-file-location? true
+                                                               :arity-on-same-line? false
                                                                :clojuredocs false}}
                                             :client-capabilities nil})
             (is (= [{:language "clojure" :value sym}
@@ -78,6 +98,7 @@
           (testing "markdown"
             (swap! db/db medley/deep-merge {:settings {:show-docs-arity-on-same-line? false
                                                        :hover {:hide-file-location? true
+                                                               :arity-on-same-line? false
                                                                :clojuredocs false}}
                                             :client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
             (is (= {:kind  "markdown"
@@ -94,6 +115,7 @@
           (testing "plain"
             (swap! db/db medley/deep-merge {:settings {:show-docs-arity-on-same-line? false
                                                        :hover {:hide-file-location? false
+                                                               :arity-on-same-line? false
                                                                :clojuredocs false}}
                                             :client-capabilities nil})
             (is (= [{:language "clojure" :value sym}

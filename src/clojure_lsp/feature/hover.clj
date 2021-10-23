@@ -65,9 +65,10 @@
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db]
   (let [[content-format] (get-in @db [:client-capabilities :text-document :hover :content-format])
-        show-docs-arity-on-same-line? (settings/get db [:show-docs-arity-on-same-line?])
+        arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
+                                (settings/get db [:show-docs-arity-on-same-line?]))
         hide-filename? (settings/get db [:hover :hide-file-location?])
-        join-char (if show-docs-arity-on-same-line? " " "\n")
+        join-char (if arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)
                             (string/join join-char))
@@ -101,11 +102,11 @@
         (and filename (not hide-filename?)) (cons filename)
         doc-line (cons doc-line)
         (and signatures
-             (not show-docs-arity-on-same-line?))
+             (not arity-on-same-line?))
         (cons {:language "clojure"
                :value signatures})
         sym (cons {:language "clojure"
-                   :value (if show-docs-arity-on-same-line? sym-line sym)})))))
+                   :value (if arity-on-same-line? sym-line sym)})))))
 
 (defn hover [filename line column db]
   (let [analysis (:analysis @db)

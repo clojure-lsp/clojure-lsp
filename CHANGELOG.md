@@ -4,6 +4,9 @@
 
 - General
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
+  
+- Editor
+  - Deprecates setting `:show-docs-arity-on-same-line?` in favour of `:hover` `:arity-on-same-line?`.
 
 ## 2021.10.20-16.49.47
 

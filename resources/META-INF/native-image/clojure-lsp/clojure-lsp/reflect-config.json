@@ -416,6 +416,8 @@
 },
 {
   "name":"org.eclipse.lsp4j.DidCloseTextDocumentParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

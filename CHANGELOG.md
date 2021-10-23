@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- General
+  - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
+  
+- Editor
+  - Deprecates setting `:show-docs-arity-on-same-line?` in favour of `:hover` `:arity-on-same-line?`.
+
 ## 2021.10.20-16.49.47
 
 - Editor
@@ -31,6 +37,8 @@
   - Add new code action `Suppress xxx diagnostic`, adding clj-kondo comment code to ignore the diagnostic. #591
   - Add more semantic tokens: aliases for macros, variable and function definitions.
   - Add [clojuredocs](https://clojuredocs.org/) information during symbol hover. #571
+
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2021.09.30-15.28.01
 

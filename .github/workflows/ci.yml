@@ -124,6 +124,7 @@ jobs:
         env:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
+          CLOJURE_LSP_STATIC: "true"
         run: |
           graalvm/native-unix-compile.sh
 

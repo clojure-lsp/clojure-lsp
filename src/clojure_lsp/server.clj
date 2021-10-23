@@ -52,6 +52,7 @@
      InitializeParams
      InitializeResult
      InitializedParams
+     LinkedEditingRangeParams
      ReferenceParams
      Registration
      RegistrationParams
@@ -237,7 +238,11 @@
 
   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
     (start :callHierarchyOutgoingCalls
-           (async-request params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls))))
+           (async-request params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls)))
+
+  (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
+    (start :linkedEditingRange
+           (async-request params handlers/linked-editing-range ::interop/linked-editing-ranges))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -314,6 +319,7 @@
                                           (.setHoverProvider true)
                                           (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                           (.setCallHierarchyProvider true)
+                                          (.setLinkedEditingRangeProvider true)
                                           (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
                                                                     (.setResolveProvider true)))
                                           (.setCodeLensProvider (CodeLensOptions. true))

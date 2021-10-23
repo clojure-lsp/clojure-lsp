@@ -33,6 +33,7 @@
      MessageParams
      ShowMessageRequestParams
      MessageType
+     LinkedEditingRanges
      ParameterInformation
      Position
      ProgressParams
@@ -437,6 +438,14 @@
 
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 (s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
+
+(s/def :linked-editing-range/ranges (s/coll-of ::range))
+
+(s/def ::linked-editing-ranges (s/and (s/keys :req-un [:linked-editing-range/ranges]
+                                             :opt-un [::word-pattern])
+                                             (s/conformer #(doto (LinkedEditingRanges.)
+                                                             (.setRanges (:ranges %1))
+                                                             (.setWordPattern (:word-pattern %1))))))
 
 (defn stringify-keys-and-vals
   "Recursively transforms all map keys and values from keywords to strings."

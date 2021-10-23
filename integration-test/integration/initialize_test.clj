@@ -17,6 +17,7 @@
         :documentRangeFormattingProvider true
         :referencesProvider true
         :callHierarchyProvider true
+        :linkedEditingRangeProvider true
         :renameProvider true
         :executeCommandProvider {:commands ["add-missing-libspec"
                                             "add-import-to-namespace"

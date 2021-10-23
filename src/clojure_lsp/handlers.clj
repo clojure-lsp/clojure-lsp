@@ -11,6 +11,7 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
@@ -325,3 +326,9 @@
         row (inc (-> item :range :start :line))
         col (inc (-> item :range :start :character))]
     (f.call-hierarchy/outgoing uri row col db/db)))
+
+(defn linked-editing-range
+  [{:keys [textDocument position]}]
+  (let [row (-> position :line inc)
+        col (-> position :character inc)]
+    (f.linked-editing-range/ranges textDocument row col db/db)))

@@ -6,7 +6,8 @@
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
   
 - Editor
-  - Deprecates setting `:show-docs-arity-on-same-line?` in favour of `:hover` `:arity-on-same-line?`.
+  - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.
+  - Add support to new LSP `LinkedEditingRange` feature.
 
 ## 2021.10.20-16.49.47
 

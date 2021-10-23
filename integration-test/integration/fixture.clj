@@ -54,6 +54,11 @@
                 {:textDocument {:uri (h/file->uri (h/source-path->file path))}
                  :position {:line row :character col}}))
 
+(defn linked-editing-range-request [path row col]
+  (lsp-json-rpc :textDocument/linkedEditingRange
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}}))
+
 (defn initialized-notification []
   (lsp-json-rpc :initialized {}))
 

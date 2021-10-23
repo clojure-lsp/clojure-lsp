@@ -11,6 +11,7 @@
     integration.rename-test
     integration.document-highlight-test
     integration.document-symbol-test
+    integration.linked-editing-range-test
     integration.api.version-test
     integration.api.clean-ns-test
     integration.api.diagnostics-test

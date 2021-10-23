@@ -1179,8 +1179,7 @@
 },
 {
   "name":"org.eclipse.lsp4j.jsonrpc.messages.ResponseError",
-  "allDeclaredFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
+  "allDeclaredFields":true
 },
 {
   "name":"org.eclipse.lsp4j.services.LanguageClient",

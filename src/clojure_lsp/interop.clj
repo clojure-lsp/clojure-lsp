@@ -62,7 +62,7 @@
      Either
      ResponseError)))
 
-;; (set! *warn-on-reflection* true)
+(set! *warn-on-reflection* true)
 
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
 
@@ -102,7 +102,7 @@
 
 (defn respond-with-error [e]
   (let [error (ResponseError. (.getValue ^ResponseErrorCode (:code e))
-                              (:message e)
+                              ^String (:message e)
                               nil)]
     (log/error "Responding with error " error)
     (throw (ResponseErrorException. error))))
@@ -319,7 +319,14 @@
 
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
-                      (s/conformer #(Hover. (:contents %1) ^Range (:range %1)))))
+                      (s/conformer (fn [hover]
+                                     (let [contents (:contents hover)
+                                           range ^Range (:range hover)]
+                                       (if (instance? MarkupContent contents)
+                                         (Hover. ^MarkupContent contents
+                                                 range)
+                                         (Hover. ^java.util.List contents
+                                                 range)))))))
 
 (s/def :command/title string?)
 (s/def :command/command string?)

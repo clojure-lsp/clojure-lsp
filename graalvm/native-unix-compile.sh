@@ -14,7 +14,7 @@ then
     CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
 fi
 
-CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx4g"}
+CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx8g"}
 DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
 export DTLV_LIB_EXTRACT_DIR=$DTLV_LIB_EXTRACT_DIR
 

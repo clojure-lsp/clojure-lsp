@@ -33,6 +33,13 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.ClojuredocsParams",
+  "allDeclaredMethods":true,
+  "allPublicMethods": true,
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"com.google.gson.JsonObject",
   "allPublicMethods":true
 },

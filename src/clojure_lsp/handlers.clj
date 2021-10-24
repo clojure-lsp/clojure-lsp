@@ -4,6 +4,7 @@
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
+   [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.feature.completion :as f.completion]
@@ -205,6 +206,15 @@
 (defn cursor-info-log [{:keys [textDocument position]}]
   (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)]) db/db))
 
+(defn ^:private clojuredocs [sym-name sym-ns]
+  (let [db-value @db/db]
+    (def db-value db-value)
+    (def sym-name sym-name)
+    (def sym-ns sym-ns)
+    (f.clojuredocs/find-docs-for sym-name sym-ns db-value)))
+
+(def clojuredocs-raw #'clojuredocs)
+
 (defn ^:private refactor [refactoring [doc-id line character args] db]
   (let [row                        (inc (int line))
         col                        (inc (int character))
@@ -229,6 +239,10 @@
     (cursor-info-log {:textDocument (nth arguments 0)
                       :position {:line (nth arguments 1)
                                  :character (nth arguments 2)}})
+    (= command "clojuredocs")
+    (clojuredocs-raw {:symName (nth arguments 0)
+                      :symNs {:line (nth arguments 1)
+                              :character (nth arguments 2)}})
 
     (= command "resolve-macro-as")
     (apply f.resolve-macro/resolve-macro-as! (concat arguments [db/db]))

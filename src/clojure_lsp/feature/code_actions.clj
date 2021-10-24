@@ -16,19 +16,19 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private find-alias-suggestion [uri db diagnostic]
+(defn ^:private find-require-suggestion [uri missing-requires db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (->> (r.transform/find-alias-suggestion diagnostic-zloc db)
+      (->> (r.transform/find-require-suggestions diagnostic-zloc missing-requires db)
            (map (fn [{:keys [ns alias]}]
                   {:ns ns
                    :alias alias
                    :position position}))))))
 
-(defn ^:private find-alias-suggestions [uri diagnostics db]
+(defn ^:private find-require-suggestions [uri diagnostics missing-requires db]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)]
     (->> unresolved-ns-diags
-         (map (partial find-alias-suggestion uri db))
+         (map (partial find-require-suggestion uri missing-requires db))
          flatten
          (remove nil?))))
 
@@ -184,7 +184,7 @@
 (defn ^:private missing-require-actions
   [uri missing-requires]
   (map (fn [{:keys [missing-require position]}]
-         {:title      (str "Add missing '" missing-require "' require")
+         {:title      (str "Add require '" missing-require "' for existing alias")
           :kind       CodeActionKind/QuickFix
           :preferred? true
           :data       {:id        "add-missing-require"
@@ -195,7 +195,7 @@
 
 (defn ^:private missing-import-actions [uri missing-imports]
   (map (fn [{:keys [missing-import position]}]
-         {:title      (str "Add missing '" missing-import "' import")
+         {:title      (str "Add import '" missing-import "'")
           :kind       CodeActionKind/QuickFix
           :preferred? true
           :data       {:id        "add-missing-import"
@@ -324,7 +324,7 @@
         character (dec col)
         missing-requires (find-missing-requires uri diagnostics db)
         missing-imports (find-missing-imports uri diagnostics db)
-        alias-suggestions (find-alias-suggestions uri diagnostics db)]
+        alias-suggestions (find-require-suggestions uri diagnostics missing-requires db)]
     (cond-> []
 
       (seq missing-requires)

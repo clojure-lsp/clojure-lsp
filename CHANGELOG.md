@@ -8,6 +8,7 @@
 - Editor
   - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.
   - Add support to new LSP `LinkedEditingRange` feature.
+  - Improve suggested `Add require ...` code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614
 
 ## 2021.10.20-16.49.47
 

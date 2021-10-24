@@ -34,7 +34,7 @@
     (is (= [:vector :set :list]
            (transform/find-other-colls (z/of-string "{:a }"))))))
 
-(deftest resolve-best-alias-suggestion
+(deftest resolve-best-alias-suggestions
   (testing "alias not exists"
     (is (= #{"foo"} (#'transform/resolve-best-alias-suggestions "foo" '#{bar})))
     (is (= #{"string"} (#'transform/resolve-best-alias-suggestions "clojure.string" '#{foo bar})))
@@ -49,9 +49,56 @@
     (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{})))
     (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{bar})))))
 
+(deftest resolve-best-namespaces-suggestions
+  (testing "when alias segments match namespaces in the order"
+    (is (= #{"foo.dar.zas"} (#'transform/resolve-best-namespaces-suggestions
+                             "d.z" '#{foo.bar.baz
+                                      foo.dar.zas})))
+    (is (= #{"foo.dar.zas"} (#'transform/resolve-best-namespaces-suggestions
+                             "da.zas" '#{foo.bar.baz
+                                         foo.dar.zas})))
+    (is (= #{} (#'transform/resolve-best-namespaces-suggestions
+                "dai.zas" '#{foo.bar.baz
+                             foo.dar.zas})))
+    (is (= #{"foo.dar.zas"
+             "foo.dow.zsr"} (#'transform/resolve-best-namespaces-suggestions
+                             "d.z" '#{foo.dar.zas
+                                      foo.bar.baz
+                                      foo.dow.zsr})))
+    (is (= #{"foo.dar.zas"
+             "foo.dow.zsr"} (#'transform/resolve-best-namespaces-suggestions
+                             "f.d.z" '#{foo.dar.zas
+                                        baz.dar.zas
+                                        zaz.dar.zas
+                                        foo.bar.baz
+                                        foo.dow.zsr})))
+    (is (= #{"foo.bar"} (#'transform/resolve-best-namespaces-suggestions
+                         "foo.bar" '#{foo.bar.zas
+                                      foo.bar
+                                      foo.bar-test})))))
+
+(deftest find-require-suggestions
+  (testing "Suggested namespaces"
+    (h/load-code-and-locs "(ns project.some.cool.namespace)")
+    (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
+    (h/load-code-and-locs "(ns project.some.cool.namespace-test)" "file:///c.clj")
+    (h/assert-submaps
+      [{:ns "project.some.cool.namespace"
+        :alias "s.cool.namespace"}
+       {:ns "other-project.some.coolio.namespace"
+        :alias "s.cool.namespace"}]
+      (transform/find-require-suggestions (z/of-string "s.cool.namespace/foo") [] db/db)))
+  (testing "Suggested alias"
+    (h/load-code-and-locs "(ns project.some.cool.namespace)")
+    (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
+    (h/assert-submaps
+      [{:ns "project.some.cool.namespace"
+        :alias "namespace"}]
+      (transform/find-require-suggestions (z/of-string "project.some.cool.namespace/foo") [] db/db))))
+
 (deftest add-missing-libspec
   (testing "aliases"
-    (testing "known namespaces in project"
+    (testing "known aliases in project"
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
       (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]

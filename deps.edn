@@ -21,7 +21,7 @@
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
         clj-kondo/clj-kondo {:mvn/version "2021.10.20-20211020.123254-3"}}
  :paths ["src" "classes" "resources"]
- :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.902"}}
+ :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.945"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}

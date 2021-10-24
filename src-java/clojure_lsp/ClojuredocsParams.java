@@ -5,10 +5,9 @@ import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler;
 
 public class ClojuredocsParams {
 
-    //@NonNull
+    @NonNull
     private String symName;
 
-    //@NonNull
     private String symNs;
 
     public String getSymName() {

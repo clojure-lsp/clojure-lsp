@@ -206,14 +206,8 @@
 (defn cursor-info-log [{:keys [textDocument position]}]
   (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)]) db/db))
 
-(defn ^:private clojuredocs [sym-name sym-ns]
-  (let [db-value @db/db]
-    (def db-value db-value)
-    (def sym-name sym-name)
-    (def sym-ns sym-ns)
-    (f.clojuredocs/find-docs-for sym-name sym-ns db-value)))
-
-(def clojuredocs-raw #'clojuredocs)
+(defn clojuredocs-raw [{:keys [symName symNs]}]
+  (f.clojuredocs/find-docs-for symName symNs db/db))
 
 (defn ^:private refactor [refactoring [doc-id line character args] db]
   (let [row                        (inc (int line))

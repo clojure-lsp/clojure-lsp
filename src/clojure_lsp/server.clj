@@ -380,10 +380,10 @@
              (future
                (sync-notification params handlers/cursor-info-log))))
 
-    (^CompletableFuture clojureDocsRaw [^ClojuredocsParams params]
-      (CompletableFuture/completedFuture
-        (->> (handlers/clojuredocs-raw)
-             (interop/conform-or-log ::interop/clojuredocs-raw))))
+    (^CompletableFuture clojuredocsRaw [^ClojuredocsParams params]
+      (start :clojuredocsRaw
+             (CompletableFuture/completedFuture
+               (sync-request params handlers/clojuredocs-raw ::interop/clojuredocs-raw))))
 
     (^CompletableFuture shutdown []
       (log/info "Shutting down")

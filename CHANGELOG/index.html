@@ -1659,7 +1659,7 @@
 <p>Editor</p>
 </li>
 <li>Deprecates setting <code>:show-docs-arity-on-same-line?</code> in favor of <code>:hover</code> <code>:arity-on-same-line?</code>.</li>
-<li>Add support to new LSP <code>LinkedEditingRange</code> feature.</li>
+<li>Add support to new LSP <code>LinkedEditingRange</code> feature. #341</li>
 <li>Improve suggested <code>Add require ...</code> code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614</li>
 <li>Change <code>:notify-references-on-file-change</code> default from <code>false</code> to <code>true</code>, we had some performance improvements and I've been testing this for some time now and didn't see any new issues with that. This should improve a lot the UX when user change any code that is references on other files, updating the diagnostics for those files as well.</li>
 </ul>

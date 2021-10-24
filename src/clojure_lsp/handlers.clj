@@ -239,10 +239,6 @@
     (cursor-info-log {:textDocument (nth arguments 0)
                       :position {:line (nth arguments 1)
                                  :character (nth arguments 2)}})
-    (= command "clojuredocs")
-    (clojuredocs-raw {:symName (nth arguments 0)
-                      :symNs {:line (nth arguments 1)
-                              :character (nth arguments 2)}})
 
     (= command "resolve-macro-as")
     (apply f.resolve-macro/resolve-macro-as! (concat arguments [db/db]))

@@ -5,7 +5,7 @@
  :project-specs [] ;; Check the default at clojure-lsp.crawler/default-project-specs
  :ignore-classpath-directories false
  :lint-project-files-after-startup? true
- :notify-references-on-file-change false ;; Disabled for now for performance reasons
+ :notify-references-on-file-change true
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""}}

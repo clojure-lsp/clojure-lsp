@@ -14,7 +14,8 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import [clojure.lang PersistentVector]))
 
 (set! *warn-on-reflection* true)
 
@@ -666,10 +667,9 @@
       (get common-sym/common-refers->info (z/sexpr zloc)))))
 
 (defn find-missing-require [zloc db]
-  (let [ns-str (some-> zloc z/sexpr namespace)]
-    (if ns-str
-      (find-missing-alias-require zloc db)
-      (find-missing-refer-require zloc))))
+  (if (some-> zloc z/sexpr namespace)
+    (find-missing-alias-require zloc db)
+    (find-missing-refer-require zloc)))
 
 (defn ^:private find-class-name [zloc]
   (let [sexpr (z/sexpr zloc)
@@ -780,10 +780,9 @@
 
 (defn add-missing-libspec
   [zloc db]
-  (let [ns-str (some-> zloc z/sexpr namespace)]
-    (if ns-str
-      (add-missing-alias-ns zloc db)
-      (add-missing-refer zloc))))
+  (if (some-> zloc z/sexpr namespace)
+    (add-missing-alias-ns zloc db)
+    (add-missing-refer zloc)))
 
 (defn ^:private resolve-best-alias-suggestion
   [ns-str all-aliases drop-core?]
@@ -809,21 +808,75 @@
         #{alias})
       #{alias})))
 
-(defn find-alias-suggestion [zloc db]
+(defn ^:private sub-segment?
+  [def-segs alias-segs]
+  (loop [def-segs def-segs
+         alias-segs alias-segs
+         i 0
+         j 0
+         found-first-match? false]
+    (if (empty? def-segs)
+      (empty? alias-segs)
+      (when-let [alias-seg (nth alias-segs i nil)]
+        (if-let [def-seg (nth def-segs j nil)]
+          (if (string/starts-with? def-seg alias-seg)
+            (recur (subvec def-segs (inc j))
+                   (subvec alias-segs (inc i))
+                   0
+                   0
+                   true)
+            (recur def-segs
+                   alias-segs
+                   i
+                   (inc j)
+                   found-first-match?))
+          (when-not found-first-match?
+            (recur def-segs
+                   alias-segs
+                   (inc i)
+                   0
+                   found-first-match?)))))))
+
+(comment
+  (sub-segment? ["foo" "bar" "daz"]
+                ["b" "d"]
+                ))
+
+(defn ^:private resolve-best-namespaces-suggestions
+  [ns-str ns-definitions]
+  (let [ns-segments (string/split ns-str #"\.")
+        all-definition-segments (map (comp #(string/split % #"\.") str) ns-definitions)]
+
+    (->> all-definition-segments
+         (filter #(sub-segment? % ns-segments))
+         (map #(string/join "." %))
+         set
+         )))
+
+(defn find-alias-suggestions [zloc db]
   (when-let [ns-str (some-> zloc z/sexpr namespace)]
     (let [analysis (:analysis @db)
           ns-definitions (q/find-all-ns-definition-names analysis)
           all-aliases (->> (q/find-all-aliases analysis)
                            (map :alias)
                            set)]
-      (when (contains? ns-definitions (symbol ns-str))
-        (->> (resolve-best-alias-suggestions ns-str all-aliases)
-             (map (fn [suggestion]
-                    {:ns ns-str
-                     :alias suggestion})))))))
+      (cond-> []
+
+        (contains? ns-definitions (symbol ns-str))
+        (concat
+          (->> (resolve-best-alias-suggestions ns-str all-aliases)
+               (map (fn [suggestion]
+                      {:ns ns-str
+                       :alias suggestion}))))
+
+        (not (contains? ns-definitions (symbol ns-str)))
+        (concat (->> (resolve-best-namespaces-suggestions ns-str ns-definitions)
+                     (map (fn [suggestion]
+                            {:ns suggestion
+                             :alias ns-str}))))))))
 
 (defn add-alias-suggestion [zloc chosen-alias db]
-  (->> (find-alias-suggestion zloc db)
+  (->> (find-alias-suggestions zloc db)
        (filter (comp #(= chosen-alias %) :alias))
        (map (fn [{:keys [ns alias]}]
               (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))

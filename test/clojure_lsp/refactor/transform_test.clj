@@ -34,7 +34,7 @@
     (is (= [:vector :set :list]
            (transform/find-other-colls (z/of-string "{:a }"))))))
 
-(deftest resolve-best-alias-suggestion
+(deftest resolve-best-alias-suggestions
   (testing "alias not exists"
     (is (= #{"foo"} (#'transform/resolve-best-alias-suggestions "foo" '#{bar})))
     (is (= #{"string"} (#'transform/resolve-best-alias-suggestions "clojure.string" '#{foo bar})))
@@ -49,9 +49,18 @@
     (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{})))
     (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{bar})))))
 
+(deftest resolve-best-namespaces-suggestions
+  (testing ""
+    (is (= #{"foo.dar.zas"} (#'transform/resolve-best-namespaces-suggestions "d.z" '#{foo.bar.baz
+                                                                                      foo.dar.zas})))
+    (is (= #{"foo.dar.zas"
+             "foo.dow.zsr"} (#'transform/resolve-best-namespaces-suggestions "d.z" '#{foo.dar.zas
+                                                                                      foo.bar.baz
+                                                                                      foo.dow.zsr})))))
+
 (deftest add-missing-libspec
   (testing "aliases"
-    (testing "known namespaces in project"
+    (testing "known aliases in project"
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
       (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
@@ -63,6 +72,12 @@
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
         (is (some? range))
         (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
+    (testing "Suggested namespaces"
+      (h/load-code-and-locs "(ns project.some.cool.namespace)")
+      (let [zloc (-> (z/of-string "(ns project.foo) s.cool.namespace/foo") z/rightmost)
+            [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
+        (is (some? range))
+        (is (= '(ns project.foo (:require [project.some.cool.namespace :as s.cool.namespace])) (z/sexpr loc)))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
         (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})

@@ -19,7 +19,7 @@
 (defn ^:private find-alias-suggestion [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (->> (r.transform/find-alias-suggestion diagnostic-zloc db)
+      (->> (r.transform/find-alias-suggestions diagnostic-zloc db)
            (map (fn [{:keys [ns alias]}]
                   {:ns ns
                    :alias alias

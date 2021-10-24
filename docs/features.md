@@ -161,7 +161,7 @@ User can register additional custom snippets, for more information on how to con
 | Name                               | Example                                                              |
 |------------------------------------|----------------------------------------------------------------------|
 | Clean namespace require/imports    | <img src="../images/features/clean-ns.gif" width=360>                |
-| Add missing require                | <img src="../images/features/add-missing-require.gif" width=360>     |
+| Add require                        | <img src="../images/features/add-missing-require.gif" width=360>     |
 | Add known common require           | <img src="../images/features/add-common-require.gif" width=360>      |
 | Add known common import            | <img src="../images/features/add-common-import.gif" width=360>       |
 | Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
@@ -215,7 +215,7 @@ Commands that change/refactor the code, most of them are available via code acti
 
 ##### Clean namespace *
 ##### Add import to namespace
-##### Add missing namespace *
+##### Add missing require *
 ##### Cycle privacy of def/defn
 ##### Cycle collection (#{}, {}, [], ())
 ##### Change collection to {}, (), #{}, []

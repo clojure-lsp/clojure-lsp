@@ -57,8 +57,10 @@
 (defn find-last-by-pos
   [zloc pos]
   (let [forms (find-forms zloc (fn [loc]
-                                 (in-range?
-                                   (-> loc z/node meta) pos)))
+                                 (when (or (-> loc z/node meta)
+                                           (string/ends-with? (z/string loc) "/"))
+                                   (in-range?
+                                     (-> loc z/node meta) pos))))
         disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
                                        (> (count forms) 1))]
     (if disconsider-reader-macro?

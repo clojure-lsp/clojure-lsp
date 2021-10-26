@@ -1364,8 +1364,27 @@
       (is (= "(defn- my-func\n  [a arg2 b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results))))))))
 
-(defn update-map [m f]
+(defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
+
+(deftest can-create-test?
+  (testing "when on multiples functions"
+    (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                               (h/file-path "/project/test")}}})
+    (is (= {:source-paths #{"/project/src" "/project/test"},
+            :current-source-path "/project/src",
+            :function-name-loc "bar"}
+           (update (transform/can-create-test? (-> (z/of-string (h/code "(ns foo)"
+                                                                        "(defn bar []"
+                                                                        "  2)"
+                                                                        "(defn baz []"
+                                                                        "  3)"
+                                                                        "(defn zaz []"
+                                                                        "  4)"))
+                                                   (z/find-value z/next '2))
+                                               "file:///project/src/foo.clj"
+                                               db/db)
+                   :function-name-loc z/string)))))
 
 (deftest create-test-test
   (testing "when only one available source-path besides current"

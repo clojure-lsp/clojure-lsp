@@ -221,20 +221,21 @@
                             (q/find-element-by-full-name project-analysis from-name from-ns db/db))]
       (let [uri (shared/filename->uri (:filename from-element) db/db)]
         (open-file! {:uri uri :namespace from-ns})
-        (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
-          (if-let [edits (->> document-changes
-                              (map #(client/document-change->edit-summary % db/db))
-                              (remove nil?)
-                              seq)]
-            (if dry?
-              {:result-code 0
-               :message (edits->diff-string edits options)
-               :edits edits}
-              (do
-                (mapv #(client/apply-workspace-edit-summary! % db/db) edits)
+        (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
+          (if document-changes
+            (if-let [edits (->> document-changes
+                                (map #(client/document-change->edit-summary % db/db))
+                                (remove nil?)
+                                seq)]
+              (if dry?
                 {:result-code 0
-                 :message (format "Renamed %s to %s" from to)
-                 :edits edits}))
-            {:result-code 1 :message "Nothing to rename"})
-          {:result-code 1 :message (format "Could not rename %s to %s" from to)}))
+                 :message (edits->diff-string edits options)
+                 :edits edits}
+                (do
+                  (mapv #(client/apply-workspace-edit-summary! % db/db) edits)
+                  {:result-code 0
+                   :message (format "Renamed %s to %s" from to)
+                   :edits edits}))
+              {:result-code 1 :message "Nothing to rename"})
+            {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))})))
       {:result-code 1 :message (format "Symbol %s not found in project" from)})))

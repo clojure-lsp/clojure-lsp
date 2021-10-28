@@ -202,10 +202,19 @@
                                                         :text-document-edit (Either/forLeft (second c))
                                                         :rename-file (Either/forRight (second c))))
                                                     %))))
-(s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
-                               (s/conformer #(if-let [changes (:changes %)]
-                                               (WorkspaceEdit. ^java.util.Map changes)
-                                               (WorkspaceEdit. ^java.util.List (:document-changes %))))))
+
+(s/def ::workspace-edit
+  (s/and (s/keys :opt-un [::document-changes ::changes])
+         (s/conformer #(if-let [changes (:changes %)]
+                         (WorkspaceEdit. ^java.util.Map changes)
+                         (WorkspaceEdit. ^java.util.List (:document-changes %))))))
+
+(s/def ::workspace-edit-or-error
+  (s/and (s/or :error ::response-error
+               :changes ::workspace-edit
+               :document-changes ::workspace-edit)
+         (s/conformer second)))
+
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))
@@ -401,7 +410,7 @@
 
 (s/def :code-action/title string?)
 
-(s/def :code-action/edit ::workspace-edit)
+(s/def :code-action/edit ::workspace-edit-or-error)
 
 (def code-action-kind
   [CodeActionKind/QuickFix
@@ -474,12 +483,15 @@
 (s/def :linked-editing-range/ranges (s/coll-of ::range))
 
 (s/def ::linked-editing-ranges
+  (s/and (s/keys :req-un [:linked-editing-range/ranges]
+                 :opt-un [::word-pattern])
+         (s/conformer #(doto (LinkedEditingRanges.)
+                         (.setRanges (:ranges %1))
+                         (.setWordPattern (:word-pattern %1))))))
+
+(s/def ::linked-editing-ranges-or-error
   (s/and (s/or :error ::response-error
-               :ranges (s/and (s/keys :req-un [:linked-editing-range/ranges]
-                                      :opt-un [::word-pattern])
-                              (s/conformer #(doto (LinkedEditingRanges.)
-                                              (.setRanges (:ranges %1))
-                                              (.setWordPattern (:word-pattern %1))))))
+               :ranges ::linked-editing-ranges)
          (s/conformer second)))
 
 (defn stringify-keys-and-vals
@@ -501,12 +513,6 @@
   (->> clj-map
        stringify-keys-and-vals
        (j/to-java java.util.Map)))
-
-;; (.toString (clj->java {:a 1
-;;                        :b :bla
-;;                        :c {:d "a"
-;;                            :e "b"}
-;;                        :d #{"as" "ba"}}))
 
 (defn java->clj [inst]
   (let [converted (j/from-java inst)]

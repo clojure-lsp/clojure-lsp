@@ -15,8 +15,10 @@
                                                    (h/file-uri "file:///a.cljc"))]
     (testing "should not rename plain keywords"
       (let [[row col] a-start
-            changes (:changes (f.rename/rename (h/file-uri "file:///a.cljc") ":b" row col db/db))]
-        (is (= nil changes))))
+            result (f.rename/rename (h/file-uri "file:///a.cljc") ":b" row col db/db)]
+        (is (= {:error {:code :invalid-params
+                        :message "Can't rename, only namespaced keywords can be renamed."}}
+               result))))
 
     (testing "should rename local in destructure not keywords"
       (let [[row col] a-binding-start

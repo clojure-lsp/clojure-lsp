@@ -160,7 +160,7 @@
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
-           (async-request params handlers/rename ::interop/workspace-edit)))
+           (async-request params handlers/rename ::interop/workspace-edit-or-error)))
 
   (^CompletableFuture hover [_ ^HoverParams params]
     (start :hover
@@ -246,7 +246,7 @@
 
   (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
     (start :linkedEditingRange
-           (async-request params handlers/linked-editing-ranges ::interop/linked-editing-ranges))))
+           (async-request params handlers/linked-editing-ranges ::interop/linked-editing-ranges-or-error))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService

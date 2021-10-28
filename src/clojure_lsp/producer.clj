@@ -35,7 +35,7 @@
 (defn workspace-apply-edit [edit db]
   (let [client ^LanguageClient (:client @db)]
     (->> edit
-         (interop/conform-or-log ::interop/workspace-edit)
+         (interop/conform-or-log ::interop/workspace-edit-or-error)
          ApplyWorkspaceEditParams.
          (.applyEdit client)
          .get)))

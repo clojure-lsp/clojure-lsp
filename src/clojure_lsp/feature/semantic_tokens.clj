@@ -1,7 +1,8 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
    [clojure-lsp.shared :as shared]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure.string :as string])
   (:import
    [clojure.lang PersistentVector]))
 
@@ -24,11 +25,32 @@
        vec))
 
 (def token-modifiers
-  [:definition])
+  [:definition :defaultLibrary])
 
 (def token-modifiers-str
   (->> token-modifiers
        (map name)
+       vec))
+
+(defn ^:private rpad-seq [s n x]
+  (take n (concat s (repeat x))))
+
+(defn ^:private token-modifiers->decimal-bit
+  [modifiers]
+  (as-> token-modifiers $
+    (mapv #(if (contains? (set modifiers) %) 1 0) $)
+    (rpad-seq $ 8 "0")
+    (reverse $)
+    (string/join "" $)
+    (Integer/parseInt $ 2)))
+
+(defn ^:private decimal-bit->token-modifiers
+  [decimal-bit]
+  (->> decimal-bit
+       Integer/toBinaryString
+       reverse
+       (map-indexed #(when (= \1 %2) (nth token-modifiers %1)))
+       (remove nil?)
        vec))
 
 (defn ^:private element-inside-range?
@@ -39,61 +61,67 @@
 
 (defn ^:private element->absolute-token
   ([element token-type]
-   (element->absolute-token element token-type nil))
+   (element->absolute-token element token-type []))
   ([{:keys [name-row name-col name-end-col]}
     token-type
-    token-modifier-bit]
+    token-modifier]
    [(dec ^Long name-row)
     (dec ^Long name-col)
     (- ^Long name-end-col ^Long name-col)
     (.indexOf ^PersistentVector token-types token-type)
-    (or token-modifier-bit 0)]))
+    (token-modifiers->decimal-bit token-modifier)]))
 
 (defn ^:private var-definition-element->absolute-tokens
   [{:keys [defined-by] :as element}]
   (cond
 
     defined-by
-    [(element->absolute-token element :function 1)]
+    [(element->absolute-token element :function [:definition])]
 
     :else
     nil))
 
 (defn ^:private var-usage-element->absolute-tokens
   [{:keys [name alias macro name-col to] :as element}]
-  (cond
-    (and macro
-         (not alias))
-    [(element->absolute-token element :macro)]
+  (let [name-str ^String (str name)]
+    (cond
+      (and macro
+           (not alias))
+      [(element->absolute-token element :macro)]
 
-    (and macro
-         alias)
-    (let [slash (+ name-col (count (str alias)))
-          alias-pos (assoc element :name-end-col slash)
-          slash-pos (assoc element :name-col slash :name-end-col (inc slash))
-          name-pos (assoc element :name-col (inc slash))]
-      [(element->absolute-token alias-pos :type)
-       (element->absolute-token slash-pos :event)
-       (element->absolute-token name-pos :macro)])
+      (and macro
+           alias)
+      (let [slash (+ name-col (count (str alias)))
+            alias-pos (assoc element :name-end-col slash)
+            slash-pos (assoc element :name-col slash :name-end-col (inc slash))
+            name-pos (assoc element :name-col (inc slash))]
+        [(element->absolute-token alias-pos :type)
+         (element->absolute-token slash-pos :event)
+         (element->absolute-token name-pos :macro)])
 
-    alias
-    (let [slash (+ name-col (count (str alias)))
-          slash-pos (assoc element :name-col slash :name-end-col (inc slash))
-          alias-pos (assoc element :name-end-col slash)
-          name-pos (assoc element :name-col (inc slash))]
-      [(element->absolute-token alias-pos :type)
-       (element->absolute-token slash-pos :event)
-       (element->absolute-token name-pos :function)])
+      alias
+      (let [slash (+ name-col (count (str alias)))
+            slash-pos (assoc element :name-col slash :name-end-col (inc slash))
+            alias-pos (assoc element :name-end-col slash)
+            name-pos (assoc element :name-col (inc slash))]
+        [(element->absolute-token alias-pos :type)
+         (element->absolute-token slash-pos :event)
+         (element->absolute-token name-pos :function)])
 
-    (and (identical? :clj-kondo/unknown-namespace to)
-         (.equals \. (.charAt ^String (str name) 0)))
-    [(element->absolute-token element :method)]
+      (and (identical? :clj-kondo/unknown-namespace to)
+           (.equals \. (.charAt name-str 0)))
+      [(element->absolute-token element :method)]
 
-    (identical? :clj-kondo/unknown-namespace to)
-    nil
+      (identical? :clj-kondo/unknown-namespace to)
+      nil
 
-    :else
-    [(element->absolute-token element :function)]))
+      (and (string/starts-with? name-str "*")
+           (string/ends-with? name-str "*")
+           (> (count name-str) 2))
+      [(element->absolute-token element :variable [:defaultLibrary])]
+
+      :else
+      [(element->absolute-token element :function)])))
 
 (defn ^:private elements->absolute-tokens
   [elements]
@@ -171,4 +199,4 @@
        elements->absolute-tokens
        (mapv (fn [[_ _ _ type modifier]]
                {:token-type (nth token-types type type)
-                :token-modifier (nth token-modifiers modifier modifier)}))))
+                :token-modifier (decimal-bit->token-modifiers modifier)}))))

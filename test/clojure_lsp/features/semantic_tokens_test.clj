@@ -100,12 +100,18 @@
     (h/load-code-and-locs (code "(comment 1)"))
     (is (= [0 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
-  (testing "function declared tokens"
+  (testing "function definition tokens"
     (h/load-code-and-locs (code "(def foo 1)"
                                 "foo"))
     (is (= [0 1 3 3 0
             0 4 3 2 1
             1 0 3 2 0]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
+  (testing "variable with defaultLibrary modifier tokens"
+    (h/load-code-and-locs (code "(def *anything*) *anything*"))
+    (is (= [0 1 3 3 0
+            0 4 10 2 1
+            0 12 10 6 2]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "type alias for function tokens"
     (h/load-code-and-locs (code "(ns some.ns (:require [foo.bar :as fb]))"

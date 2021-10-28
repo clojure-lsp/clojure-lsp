@@ -58,7 +58,8 @@
                                                        "variable"
                                                        "method"
                                                        "event"]
-                                          :tokenModifiers ["definition"]}
+                                          :tokenModifiers ["definition"
+                                                           "defaultLibrary"]}
                                  :range true
                                  :full true}
         :codeLensProvider {:resolveProvider true}

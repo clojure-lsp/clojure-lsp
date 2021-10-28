@@ -5,6 +5,7 @@
 - General
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
   - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.
+  - Bump datalevin from 0.5.26 to 0.5.27.
   
 - Editor
   - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.

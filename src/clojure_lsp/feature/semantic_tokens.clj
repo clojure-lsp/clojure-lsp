@@ -123,6 +123,22 @@
       :else
       [(element->absolute-token element :function)])))
 
+(defn ^:private keywords->absolute-tokens
+  [{:keys [ns name-col auto-resolved] :as element}]
+  (cond
+    (and ns
+         (not auto-resolved))
+    (let [slash (+ 1 name-col (count (str ns)))
+          ns-pos (assoc element :name-end-col slash)
+          slash-pos (assoc element :name-col slash :name-end-col (inc slash))
+          name-pos (assoc element :name-col (inc slash))]
+      [(element->absolute-token ns-pos :type)
+       (element->absolute-token slash-pos :event)
+       (element->absolute-token name-pos :keyword)])
+
+    :else
+    [(element->absolute-token element :keyword)]))
+
 (defn ^:private elements->absolute-tokens
   [elements]
   (->> elements
@@ -151,7 +167,7 @@
              (and (= bucket :keywords)
                   (not (:str element))
                   (not (:keys-destructuring element)))
-             [(element->absolute-token element :keyword)])))
+             (keywords->absolute-tokens element))))
        (remove nil?)
        (mapcat identity)))
 

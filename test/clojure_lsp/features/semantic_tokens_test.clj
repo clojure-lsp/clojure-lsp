@@ -157,7 +157,9 @@
                                 "::foo"))
     (is (= [0 4 7 0 0
             1 0 4 4 0
-            1 0 12 4 0
+            1 0 8 1 0
+            0 8 1 8 0
+            0 1 3 4 0
             1 0 5 4 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "locals destructuring for variable tokens"

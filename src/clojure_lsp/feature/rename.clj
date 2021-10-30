@@ -112,7 +112,7 @@
     (and (seq source-paths)
          (not-any? #(string/starts-with? (:filename definition) %) source-paths))
     {:error {:code :invalid-params
-             :message "Can't rename, not valid source-paths. Are project source-paths configued correctly?"}}
+             :message "Can't rename, invalid source-paths. Are project :source-paths configured correctly?"}}
 
     (and (= :keywords (:bucket definition))
          (not (:ns definition)))

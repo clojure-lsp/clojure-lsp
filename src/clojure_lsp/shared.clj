@@ -1,6 +1,5 @@
 (ns clojure-lsp.shared
   (:require
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]

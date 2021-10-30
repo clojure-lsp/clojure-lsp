@@ -6,7 +6,7 @@
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
   - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.
   - Bump datalevin from 0.5.26 to 0.5.27.
-  - Improve semantic tokens for dynamic vars, function definitions and namespaced keywords.
+  - Improve semantic tokens for dynamic vars, function definitions, namespaced and aliased keywords.
   - Fix bug where `:source-paths` settings could be hot-reloaded with wrong-value.
   
 - Editor

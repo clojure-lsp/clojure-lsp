@@ -124,11 +124,13 @@
       [(element->absolute-token element :function)])))
 
 (defn ^:private keywords->absolute-tokens
-  [{:keys [ns name-col auto-resolved] :as element}]
+  [{:keys [ns alias name-col auto-resolved namespace-from-prefix] :as element}]
   (cond
     (and ns
-         (not auto-resolved))
-    (let [slash (+ 1 name-col (count (str ns)))
+         (or (not auto-resolved)
+             alias)
+         (not namespace-from-prefix))
+    (let [slash (+ (if alias 2 1) name-col (count (str (or alias ns))))
           ns-pos (assoc element :name-end-col slash)
           slash-pos (assoc element :name-col slash :name-end-col (inc slash))
           name-pos (assoc element :name-col (inc slash))]

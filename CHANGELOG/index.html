@@ -1656,8 +1656,9 @@
 <li>Fix wrong parse of code when code contains namespaced maps like <code>#:foo{:bar 1}</code>. This issue was affecting a lot of features for example code actions.</li>
 <li>Bump datalevin from 0.5.26 to 0.5.27.</li>
 <li>Improve semantic tokens for dynamic vars, function definitions, namespaced and aliased keywords.</li>
+<li>Fix bug where <code>:source-paths</code> settings could be hot-reloaded with wrong-value.</li>
 <li>
-<p>Fix bug where <code>:source-paths</code> settings could be hot-reloaded with wrong-value.</p>
+<p>Add support for <code>window/showDocument</code> LSP method, used on <code>create-test</code> command/code action after creating the test to show the test file.</p>
 </li>
 <li>
 <p>Editor</p>

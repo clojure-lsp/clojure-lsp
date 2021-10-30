@@ -42,6 +42,7 @@
      RenameFile
      ResponseErrorCode
      SemanticTokens
+     ShowDocumentParams
      SignatureHelp
      SignatureInformation
      SymbolKind
@@ -407,6 +408,12 @@
                                                  :progress/value])
                                 (s/conformer #(ProgressParams. (Either/forLeft ^String (:token %))
                                                                (Either/forLeft ^WorkDoneProgressNotification (:value %))))))
+
+(s/def ::show-document-request
+  (s/and (s/keys :req-un [::uri]
+                 :opt-un [::take-focus?])
+         (s/conformer #(doto (ShowDocumentParams. (:uri %))
+                         (.setTakeFocus (:take-focus? %))))))
 
 (s/def :code-action/title string?)
 

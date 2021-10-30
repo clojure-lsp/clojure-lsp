@@ -234,10 +234,13 @@
     (apply f.resolve-macro/resolve-macro-as! (concat arguments [db/db]))
 
     (some #(= % command) f.refactor/available-refactors)
-    (when-let [result (refactor command arguments db/db)]
+    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
       (if (:client @db/db)
-        (producer/workspace-apply-edit result db/db)
-        result))))
+        (do
+          (producer/workspace-apply-edit edit db/db)
+          (when show-document-after-edit
+            (producer/show-document-request show-document-after-edit db/db)))
+        edit))))
 
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)

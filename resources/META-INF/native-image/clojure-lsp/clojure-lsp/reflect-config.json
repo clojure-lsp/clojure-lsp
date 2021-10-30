@@ -242,6 +242,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.WindowClientCapabilities",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.CodeLensOptions",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
@@ -670,6 +675,14 @@
 },
 {
   "name":"org.eclipse.lsp4j.MessageActionItem",
+  "allDeclaredFields":true,
+  "allDeclaredMethods":true,
+  "allPublicMethods":true,
+  "allDeclaredConstructors":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.ShowDocumentParams",
   "allDeclaredFields":true,
   "allDeclaredMethods":true,
   "allPublicMethods":true,

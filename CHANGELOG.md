@@ -8,6 +8,7 @@
   - Bump datalevin from 0.5.26 to 0.5.27.
   - Improve semantic tokens for dynamic vars, function definitions, namespaced and aliased keywords.
   - Fix bug where `:source-paths` settings could be hot-reloaded with wrong-value.
+  - Add support for `window/showDocument` LSP method, used on `create-test` command/code action after creating the test to show the test file.
   
 - Editor
   - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.

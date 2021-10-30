@@ -12,6 +12,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | exit                                   | √    |                                               |
 | $/cancelRequest                        |      |                                               |
 | $/progress                             | √    |                                               |
+| window/showDocument                    | √    |                                               |
 | window/showMessage                     | √    |                                               |
 | window/showMessageRequest              |      |                                               |
 | window/logMessage                      |      |                                               |

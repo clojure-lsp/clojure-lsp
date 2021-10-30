@@ -1395,8 +1395,8 @@
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
-            results-by-uri (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
-            results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+            results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.clj")
            [{:loc "(ns some.ns-test\n  (:require\n   [clojure.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
@@ -1409,8 +1409,8 @@
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.cljs")
-            results-by-uri (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
-            results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
+            results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.cljs")
            [{:loc "(ns some.ns-test\n  (:require\n   [cljs.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
@@ -1429,8 +1429,8 @@
                 code "(ns some.ns) (defn foo [b] (+ 1 2))"
                 zloc (z/find-value (z/of-string code) z/next 'foo)
                 _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
-                results-by-uri (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
-                results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+                {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+                results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
             (h/assert-submap
               {(h/file-uri "file:///project/test/some/ns_test.clj")
                [{:loc "\n(deftest foo-test\n  (is (= 1 1)))",
@@ -1443,15 +1443,15 @@
       (let [code "(ns some.ns-test) (deftest foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/test/some/ns_test.clj")
-            results-by-uri (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
+            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
         (is (= nil
-               results-by-uri))))))
+               changes-by-uri))))))
 
 (deftest inline-symbol
   (testing "simple let"
     (h/clean-db!)
     (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -1466,7 +1466,7 @@
   (testing "multiple binding let"
     (h/clean-db!)
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -1482,7 +1482,7 @@
     (h/clean-db!)
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db)
+          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db))
           a-results (get results (h/file-uri "file:///a.clj"))
           b-results (get results (h/file-uri "file:///b.clj"))]
       (is (map? results))

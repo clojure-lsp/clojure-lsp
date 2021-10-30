@@ -88,14 +88,13 @@
            (case id
 
              "add-missing-require"
-             (let [missing-require-edit (f.refactor/call-refactor {:loc         zloc
-                                                                   :refactoring :add-missing-libspec
-                                                                   :uri         uri
-                                                                   :version     0
-                                                                   :row         (inc line)
-                                                                   :col         (inc character)}
-                                                                  db)]
-               {:edit missing-require-edit})
+             (f.refactor/call-refactor {:loc         zloc
+                                        :refactoring :add-missing-libspec
+                                        :uri         uri
+                                        :version     0
+                                        :row         (inc line)
+                                        :col         (inc character)}
+                                       db)
 
              "add-missing-import"
              (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc db) db)]

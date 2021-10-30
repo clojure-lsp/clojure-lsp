@@ -6,7 +6,8 @@
    (org.eclipse.lsp4j
      MessageActionItem
      ApplyWorkspaceEditParams
-     CodeLensWorkspaceCapabilities)
+     CodeLensWorkspaceCapabilities
+     WindowClientCapabilities)
    (org.eclipse.lsp4j.services LanguageClient)))
 
 (set! *warn-on-reflection* true)
@@ -57,3 +58,12 @@
     (->> progress
          (interop/conform-or-log ::interop/notify-progress)
          (.notifyProgress client))))
+
+(defn show-document-request [uri db]
+  (log/info "Requesting to show on edtitor the document" uri)
+  (when-let [client ^LanguageClient (:client @db)]
+    (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
+      (->> {:uri uri
+            :take-focus? true}
+           (interop/conform-or-log ::interop/show-document-request)
+           (.showDocument client)))))

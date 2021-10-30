@@ -989,14 +989,15 @@
                        :col (:col start-pos)
                        :end-row (:end-row end-pos)
                        :end-col (:end-col end-pos)}]
-        (reduce
-          (fn [accum {:keys [filename] :as element}]
-            (update accum
-                    (shared/filename->uri filename db)
-                    (fnil conj [])
-                    {:loc val-loc :range element}))
-          {def-uri [{:loc nil :range def-range}]}
-          references)))))
+        {:changes-by-uri
+         (reduce
+           (fn [accum {:keys [filename] :as element}]
+             (update accum
+                     (shared/filename->uri filename db)
+                     (fnil conj [])
+                     {:loc val-loc :range element}))
+           {def-uri [{:loc nil :range def-range}]}
+           references)}))))
 
 (defn can-create-function? [zloc]
   (and zloc
@@ -1080,8 +1081,10 @@
             lines (count (string/split existing-text #"\n"))
             test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
             test-zloc (z/up (z/of-string (str "\n" test-text)))]
-        {test-uri [{:loc test-zloc
-                    :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]})
+        {:show-document-after-edit test-uri
+         :changes-by-uri
+         {test-uri [{:loc test-zloc
+                     :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]}})
       (let [ns-text (format "(ns %s\n  (:require\n   [%s.test :refer [deftest is]]\n   [%s :as subject]))"
                             namespace-test
                             (if (= :cljs file-type) "cljs" "clojure")
@@ -1090,8 +1093,9 @@
                               (str function-name "-test"))
             test-zloc (z/up (z/of-string (str ns-text "\n\n" test-text)))]
         (swap! db assoc :processing-work-edit-for-new-files true)
-        {test-uri [{:loc test-zloc
-                    :range (-> test-zloc z/node meta)}]}))))
+        {:show-document-after-edit test-uri
+         :changes-by-uri {test-uri [{:loc test-zloc
+                                     :range (-> test-zloc z/node meta)}]}}))))
 
 (defn can-create-test? [zloc uri db]
   (when-let [function-name-loc (edit/find-function-definition-name-loc zloc)]
@@ -1115,7 +1119,9 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
+              _ (log/info "===>" actions)
               chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
+          (log/info "-->" chosen-source-path)
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
             ;; No source paths besides current one

@@ -129,7 +129,7 @@
                  :diagnostics (find-diagnostics uri db)}))))
 
 (defn clean! [uri db]
-  (if (#{:unit-test :api-test}(:env @db))
+  (if (#{:unit-test :api-test} (:env @db))
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics []})

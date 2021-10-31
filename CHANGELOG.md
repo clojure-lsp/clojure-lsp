@@ -19,6 +19,7 @@
   - Add new `Unwind thread once` and `Unwind whole thread` code actions to undo a thread call.
   - Improve code actions performance request async all actions.
   - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
+  - Fix missing keywords rename/references for destructured keywords.
 
 ## 2021.10.20-16.49.47
 

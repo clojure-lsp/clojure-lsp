@@ -20,11 +20,47 @@
                         :message "Can't rename, only namespaced keywords can be renamed."}}
                result))))
 
-    (testing "should rename local in destructure not keywords"
+    (testing "should rename local in destructure but not keywords"
       (let [[row col] a-binding-start
             changes (:changes (f.rename/rename (h/file-uri "file:///a.cljc") ":b" row col db/db))]
-        (is (= {(h/file-uri "file:///a.cljc") [{:new-text "b" :range (h/->range a-binding-start a-binding-stop)}
-                                               {:new-text "b" :range (h/->range a-local-usage-start a-local-usage-stop)}]}
+        (is (= {(h/file-uri "file:///a.cljc")
+                [{:new-text "b" :range (h/->range a-binding-start a-binding-stop)}
+                 {:new-text "b" :range (h/->range a-local-usage-start a-local-usage-stop)}]}
+               changes))))))
+
+(deftest rename-destructuring-keywords
+  (let [[a-start a-stop
+         a-binding-start a-binding-stop] (h/load-code-and-locs
+                                           "|:a/b| (let [{:keys [|:a/b|]} {}] b)"
+                                           (h/file-uri "file:///a.cljc"))
+        [b-start b-stop
+         b-binding-start b-binding-stop] (h/load-code-and-locs
+                                           "|:c/d| (let [{:keys [|c/d|]} {}] d)"
+                                           (h/file-uri "file:///b.cljc"))
+        [c-start c-stop
+         c-binding-start c-binding-stop] (h/load-code-and-locs
+                                           "|:e/f| (let [{:e/keys [|f|]} {}] f)"
+                                           (h/file-uri "file:///c.cljc"))]
+    (testing "should rename local in destructure with ':' and keywords if namespaced"
+      (let [[row col] a-start
+            changes (:changes (f.rename/rename (h/file-uri "file:///a.cljc") ":a/c" row col db/db))]
+        (is (= {(h/file-uri "file:///a.cljc")
+                [{:new-text ":a/c" :range (h/->range a-start a-stop)}
+                 {:new-text ":a/c" :range (h/->range a-binding-start a-binding-stop)}]}
+               changes))))
+    (testing "should rename local in destructure without ':' and keywords if namespaced"
+      (let [[row col] b-start
+            changes (:changes (f.rename/rename (h/file-uri "file:///b.cljc") ":c/e" row col db/db))]
+        (is (= {(h/file-uri "file:///b.cljc")
+                [{:new-text ":c/e" :range (h/->range b-start b-stop)}
+                 {:new-text "c/e" :range (h/->range b-binding-start b-binding-stop)}]}
+               changes))))
+    (testing "should rename local in destructure with namespace on :keys"
+      (let [[row col] c-start
+            changes (:changes (f.rename/rename (h/file-uri "file:///c.cljc") ":e/f" row col db/db))]
+        (is (= {(h/file-uri "file:///c.cljc")
+                [{:new-text ":e/f" :range (h/->range c-start c-stop)}
+                 {:new-text "f" :range (h/->range c-binding-start c-binding-stop)}]}
                changes))))))
 
 (deftest rename-keywords-corner-cases

@@ -207,6 +207,11 @@
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 
+(let [{:keys [:foo/bar]} {:foo/bar 2}]
+  bar)
+
+(let [{:foo/keys [bar]} {:foo/bar 2}])
+
 (defmethod find-references :keywords
   [analysis {:keys [ns name] :as _element} include-declaration? db]
   (let [project-analysis (filter-project-analysis analysis db)]
@@ -217,7 +222,6 @@
               (filter #(identical? :keywords (:bucket %)))
               (filter #(safe-equal? name (:name %)))
               (filter #(safe-equal? ns (:ns %)))
-              (filter #(not (:keys-destructuring %)))
               (filter #(or include-declaration?
                            (not (:reg %))))
               (medley/distinct-by (juxt :filename :name :row :col)))
@@ -301,6 +305,15 @@
        (filter #(and (identical? :keywords (:bucket %))
                      (:reg %)))
        (medley/distinct-by (juxt :ns :name :row :col))))
+
+(defn find-local-by-destructured-keyword [analysis filename keyword-element]
+  (->> (get analysis filename)
+       (filter #(and (identical? :locals (:bucket %))
+                     (= (:name-row %) (:name-row keyword-element))
+                     (= (:name-col %) (:name-col keyword-element))
+                     (= (:name-end-row %) (:name-end-row keyword-element))
+                     (= (:name-end-col %) (:name-end-col keyword-element))))
+       first))
 
 (defn find-all-ns-definition-names [analysis]
   (into #{}

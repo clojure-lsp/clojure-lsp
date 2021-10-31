@@ -16,7 +16,8 @@
    db
    {:keys [ns alias name filename
            name-col name-end-col
-           namespace-from-prefix] :as reference}]
+           namespace-from-prefix
+           keys-destructuring] :as reference}]
   (let [ref-doc-uri (shared/filename->uri filename db)
         version (get-in @db [:documents ref-doc-uri :v] 0)
         ;; Extracts the name of the keyword
@@ -27,7 +28,23 @@
         ;; The 2 accounts for the 2 colons in same-namespace qualified keyword
         qualified-same-ns? (= (- name-end-col name-col)
                               (+ 2 (count name)))
+        ;; we find the locals analysis since when destructuring we have both
+        ;; keyword and a locals analysis for the same position
+        local-element (when keys-destructuring
+                        (q/find-local-by-destructured-keyword (:analysis @db) filename reference))
         text (cond
+               (and local-element
+                    (string/includes? (:str local-element) "/")
+                    (string/starts-with? (:str local-element) ":"))
+               (str ":" ns "/" replacement-name)
+
+               (and local-element
+                    (string/includes? (:str local-element) "/"))
+               (str ns "/" replacement-name)
+
+               local-element
+               (str replacement-name)
+
                alias
                (str "::" alias "/" replacement-name)
 

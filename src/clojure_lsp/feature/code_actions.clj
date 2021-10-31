@@ -144,6 +144,16 @@
                         :command   "thread-last-all"
                         :arguments [uri line character]}}
 
+             "refactor-unwind-thread"
+             {:command {:title     "Unwind thread once"
+                        :command   "unwind-thread"
+                        :arguments [uri line character]}}
+
+             "refactor-unwind-all"
+             {:command {:title     "Unwind whole thread"
+                        :command   "unwind-all"
+                        :arguments [uri line character]}}
+
              "refactor-suppress-diagnostic"
              {:command {:title "Suppress diagnostic"
                         :command "suppress-diagnostic"
@@ -270,6 +280,22 @@
           :line line
           :character character}})
 
+(defn ^:private unwind-thread-action [uri line character]
+  {:title "Unwind thread once"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-unwind-thread"
+          :uri uri
+          :line line
+          :character character}})
+
+(defn ^:private unwind-all-action [uri line character]
+  {:title "Unwind whole thread"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-unwind-all"
+          :uri uri
+          :line line
+          :character character}})
+
 (defn ^:private suppress-diagnostic-actions [diagnostics uri]
   (->> diagnostics
        (map (fn [{:keys [code]
@@ -308,7 +334,9 @@
           :character col}})
 
 (defn all [zloc uri row col diagnostics client-capabilities db]
-  (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
+  (let [line (dec row)
+        character (dec col)
+        workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function? (r.transform/find-function-form zloc)
         function-to-create (find-function-to-create uri diagnostics db)
@@ -317,10 +345,9 @@
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol? (r.transform/inline-symbol? definition db)
         can-thread? (r.transform/can-thread? zloc)
+        can-unwind-thread? (r.transform/can-unwind-thread? zloc)
         can-create-test? (r.transform/can-create-test? zloc uri db)
         macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db)
-        line (dec row)
-        character (dec col)
         missing-requires (find-missing-requires uri diagnostics db)
         missing-imports (find-missing-imports uri diagnostics db)
         alias-suggestions (find-require-suggestions uri diagnostics missing-requires db)]
@@ -357,6 +384,10 @@
       can-thread?
       (conj (thread-first-all-action uri line character)
             (thread-last-all-action uri line character))
+
+      can-unwind-thread?
+      (conj (unwind-thread-action uri line character)
+            (unwind-all-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))

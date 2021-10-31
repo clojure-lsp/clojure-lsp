@@ -1217,14 +1217,35 @@
       (is (= 'java.util.Date full-package)))))
 
 (deftest unwind-thread-test
-  (let [zloc (z/of-string "(-> a b (c) d)")
-        [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
-        [{loc2 :loc}] (transform/unwind-thread loc1)
-        [{loc3 :loc}] (transform/unwind-thread loc2)]
-    (is (some? range))
-    (is (= "(-> (b a) (c) d)" (z/string loc1)))
-    (is (= "(-> (c (b a)) d)" (z/string loc2)))
-    (is (= "(d (c (b a)))" (z/string loc3)))))
+  (testing "from thread position"
+    (let [zloc (z/of-string "(-> a b (c) d)")
+          [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+          [{loc2 :loc}] (transform/unwind-thread loc1)
+          [{loc3 :loc}] (transform/unwind-thread loc2)]
+      (is (some? range))
+      (is (= "(-> (b a) (c) d)" (z/string loc1)))
+      (is (= "(-> (c (b a)) d)" (z/string loc2)))
+      (is (= "(d (c (b a)))" (z/string loc3)))))
+  (testing "from inner calls position"
+    (let [zloc (-> (z/of-string "(-> a b (c) d)")
+                   (z/find-next-value z/next 'd))
+          [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+          [{loc2 :loc}] (transform/unwind-thread loc1)
+          [{loc3 :loc}] (transform/unwind-thread loc2)]
+      (is (some? range))
+      (is (= "(-> (b a) (c) d)" (z/string loc1)))
+      (is (= "(-> (c (b a)) d)" (z/string loc2)))
+      (is (= "(d (c (b a)))" (z/string loc3)))))
+  (testing "from inner calls position"
+    (let [zloc (-> (z/of-string "(a (-> a b (c) d))")
+                   (z/find-next-value z/next 'c))
+          [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+          [{loc2 :loc}] (transform/unwind-thread loc1)
+          [{loc3 :loc}] (transform/unwind-thread loc2)]
+      (is (some? range))
+      (is (= "(-> (b a) (c) d)" (z/string loc1)))
+      (is (= "(-> (c (b a)) d)" (z/string loc2)))
+      (is (= "(d (c (b a)))" (z/string loc3))))))
 
 (deftest unwind-all-test
   (let [zloc (z/of-string "(->> (a) b (c x y) d)")

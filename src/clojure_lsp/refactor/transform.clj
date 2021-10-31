@@ -150,36 +150,47 @@
   [zloc]
   (thread-all zloc '->>))
 
+(def thread-first-symbols #{'-> 'some->})
+
+(def thread-symbols (set/union thread-first-symbols
+                               #{'->> 'some->>}))
+
+(defn can-unwind-thread? [zloc]
+  (let [thread-loc (apply edit/find-ops-up zloc (map str thread-symbols))
+        thread-sym (when thread-loc
+                     (thread-symbols
+                       (z/sexpr thread-loc)))]
+    (when thread-sym
+      {:thread-loc thread-loc
+       :thread-sym thread-sym})))
+
 (defn unwind-thread
   [zloc]
-  (let [thread-loc (if (= (z/tag zloc) :list)
-                     (z/next zloc)
-                     zloc)
-        thread-sym (#{'-> '->> 'some-> 'some->>} (z/sexpr thread-loc))]
-    (when thread-sym
-      (let [val-loc (z/right thread-loc)
-            target-loc (z/right val-loc)
-            extra? (z/right target-loc)
-            insert-fn (if (string/ends-with? (name thread-sym) "->")
-                        z/insert-right
-                        (fn [loc node] (-> loc
-                                           (z/rightmost)
-                                           (z/insert-right node))))]
-        (when (and val-loc target-loc)
-          (let [result-loc (-> thread-loc
-                               z/up
-                               (z/subedit->
-                                 z/down
-                                 z/right
-                                 z/remove
-                                 z/right
-                                 (cond-> (not= :list (z/tag target-loc)) (edit/wrap-around :list))
-                                 (z/down)
-                                 (insert-fn (z/node val-loc))
-                                 (z/up)
-                                 (cond-> (not extra?) (edit/raise))))]
-            [{:range (meta (z/node (z/up thread-loc)))
-              :loc result-loc}]))))))
+  (when-let [{:keys [thread-loc thread-sym]} (can-unwind-thread? zloc)]
+    (let [val-loc (z/right thread-loc)
+          target-loc (z/right val-loc)
+          extra? (z/right target-loc)
+          insert-fn (if (some #(string/ends-with? (name thread-sym) (str %))
+                              thread-first-symbols)
+                      z/insert-right
+                      (fn [loc node] (-> loc
+                                         (z/rightmost)
+                                         (z/insert-right node))))]
+      (when (and val-loc target-loc)
+        (let [result-loc (-> thread-loc
+                             z/up
+                             (z/subedit->
+                               z/down
+                               z/right
+                               z/remove
+                               z/right
+                               (cond-> (not= :list (z/tag target-loc)) (edit/wrap-around :list))
+                               (z/down)
+                               (insert-fn (z/node val-loc))
+                               (z/up)
+                               (cond-> (not extra?) (edit/raise))))]
+          [{:range (meta (z/node (z/up thread-loc)))
+            :loc result-loc}])))))
 
 (defn unwind-all
   [zloc]

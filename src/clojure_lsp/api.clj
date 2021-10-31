@@ -8,6 +8,8 @@
   (:import
    [java.io File]))
 
+(set! *warn-on-reflection* true)
+
 (defmacro ^:private safe-process-message
   [options & body]
   `(try
@@ -21,16 +23,30 @@
        e#)))
 
 (defn analyze-project!
-  "Analyze project caching analysis for future API calls. Useful for REPL usage for example.
-  Options:
+  "Analyze project caching analysis for future API calls. Useful for REPL
+  usage for example.
+
+  This will analyze the whole project and external dependencies with
+  clj-kondo caching its analysis for next other API calls.
+  All features need analysis and will call this internally if the project
+  was not analyzed before.
+
+  **Options**
 
   `:project-root` a java.io.File representing the project root.
 
-  `settings` map of settings following https://clojure-lsp.io/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/analyze-project! {:project-root (io/file \".\")
+                                     :settings {:classpath-config-paths [\"other-company/other-project\"]}})
+  ```"
   [{:keys [project-root settings] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
-                  (.exists project-root)))
+                  (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))]}
   (logging/setup-logging db/db)
@@ -39,9 +55,10 @@
     (internal-api/analyze-project! options)))
 
 (defn clean-ns!
-  "Organize ns form, removing unused requires/refers/imports and sorting
-  alphabetically.
-  Options:
+  "Organize `ns` form, removing unused requires/refers/imports and sorting
+  alphabetically by default.
+
+  **Options**
 
   `:project-root` a java.io.File representing the project root.
 
@@ -50,13 +67,20 @@
 
   `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
 
-  `dry?` a boolean, when enabled make no changes to files, only report.
+  `dry?` a boolean, when enabled make no side-effects (no changes to files), only report.
 
-  `settings` map of settings following https://clojure-lsp.io/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/clean-ns! {:project-root (io/file \".\")
+                              :namespace '[my-project.foo my-project.bar]})
+  ```"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
-                  (.exists project-root)))
+                  (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))
          (or (nil? namespace)
@@ -69,8 +93,11 @@
     (internal-api/clean-ns! options)))
 
 (defn diagnostics
-  "Analyze the project and find all diagnostics (warnings, errors).
-  Options:
+  "Find all project diagnostics (warnings, errors and infos).
+  Returns all clj-kondo lint plus custom linters configured by clojure-lsp like
+  clojure-lsp/unused-public-var for example.
+
+  **Options**
 
   `:project-root` a java.io.File representing the project root.
 
@@ -82,11 +109,19 @@
   `:output` a map with options on how the result should be printed, available values are:
     `:canonical-paths` a boolean if the path should be absolute or not, defaults to false.
 
-  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/"
+  `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/diagnostics {:project-root (io/file \".\")
+                                :namespace '[my-project.foo my-project.bar]
+                                :output {:canonical-paths true}})
+  ```"
   [{:keys [project-root settings] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
-                  (.exists project-root)))
+                  (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))]}
   (logging/setup-logging db/db)
@@ -95,23 +130,31 @@
     (internal-api/diagnostics options)))
 
 (defn format!
-  "Format one or more namespaces using cljfmt.
-  Options:
+  "Format one or more namespaces using cljfmt internally.
+
+  **Options**
 
   `:project-root` a java.io.File representing the project root.
 
   `:namespace` a coll of symbols representing the namespaces which should be cleaned,
   if empty all project namespaces will be considered.
 
-  `dry?` a boolean, when enabled make no changes to files, only report.
+  `dry?` a boolean, when enabled make no side-effects (no changes to files), only report.
 
   `:ns-exclude-regex` a string regex representing the namespaces that should be excluded during this call.
 
-  `settings` map of settings following https://clojure-lsp.io/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/format! {:project-root (io/file \".\")
+                            :namespace '[my-project.foo my-project.bar]})
+  ```"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
-                  (.exists project-root)))
+                  (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))
          (or (nil? namespace)
@@ -125,7 +168,8 @@
 
 (defn rename!
   "Rename a symbol and its definitions across the project.
-  Options:
+
+  **Options**
 
   `:project-root` a java.io.File representing the project root.
 
@@ -133,13 +177,21 @@
 
   `:to` the full qualified symbol that will replace the original symbol. e.g. my-project/my-var-2 or my-project.bar for namespaces
 
-  `dry?` a boolean, when enabled make no changes to files, only report.
+  `dry?` a boolean, when enabled make no side-effects (no changes to files), only report.
 
-  `settings` map of settings following https://clojure-lsp.io/settings/"
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/rename! {:project-root (io/file \".\")
+                            :from         'my-project.some/foo
+                            :to           'my-project.some/bar})
+  ```"
   [{:keys [project-root settings from to] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
-                  (.exists project-root)))
+                  (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))
          (symbol? from)

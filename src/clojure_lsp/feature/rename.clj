@@ -102,21 +102,35 @@
 
     (mapv (partial rename-other replacement db) references)))
 
-(defn ^:private can-rename?
+(defn ^:private rename-status
   [definition references source-paths]
-  (and (seq references)
-       (or (not (seq source-paths))
-           (some #(string/starts-with? (:filename definition) %) source-paths))
-       (not (and (= :keywords (:bucket definition))
-                 (not (:ns definition))))))
+  (cond
+    (empty? references)
+    {:error {:message "Can't rename, no other references found."
+             :code :invalid-params}}
+
+    (and (seq source-paths)
+         (not-any? #(string/starts-with? (:filename definition) %) source-paths))
+    {:error {:code :invalid-params
+             :message "Can't rename, invalid source-paths. Are project :source-paths configured correctly?"}}
+
+    (and (= :keywords (:bucket definition))
+         (not (:ns definition)))
+    {:error {:code :invalid-params
+             :message "Can't rename, only namespaced keywords can be renamed."}}
+
+    :else
+    {:result :success}))
 
 (defn rename
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
         references (q/find-references-from-cursor (:analysis @db) filename row col true db)
         definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias :keywords} :bucket) references))
-        source-paths (settings/get db [:source-paths])]
-    (when (can-rename? definition references source-paths)
+        source-paths (settings/get db [:source-paths])
+        {:keys [error] :as result} (rename-status definition references source-paths)]
+    (if error
+      result
       (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
             changes (rename-changes definition references replacement db)
             doc-changes (->> changes

@@ -248,6 +248,14 @@
                      (<= name-col column name-end-col)))
               (get analysis filename)))
 
+(defn find-all-elements-under-cursor
+  [analysis filename line column]
+  (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
+                ;; TODO Probably should use q/inside? instead
+            (and (<= name-row line name-end-row)
+                 (<= name-col column name-end-col)))
+          (get analysis filename)))
+
 (defn find-definition-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]

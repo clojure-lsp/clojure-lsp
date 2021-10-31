@@ -33,6 +33,13 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.ClojuredocsParams",
+  "allDeclaredMethods":true,
+  "allPublicMethods": true,
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"com.google.gson.JsonObject",
   "allPublicMethods":true
 },
@@ -238,6 +245,11 @@
 },
 {
   "name":"org.eclipse.lsp4j.CodeLensWorkspaceCapabilities",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.WindowClientCapabilities",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
@@ -670,6 +682,14 @@
 },
 {
   "name":"org.eclipse.lsp4j.MessageActionItem",
+  "allDeclaredFields":true,
+  "allDeclaredMethods":true,
+  "allPublicMethods":true,
+  "allDeclaredConstructors":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.ShowDocumentParams",
   "allDeclaredFields":true,
   "allDeclaredMethods":true,
   "allPublicMethods":true,

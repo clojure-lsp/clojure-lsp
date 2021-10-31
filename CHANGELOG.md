@@ -4,10 +4,21 @@
 
 - General
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
+  - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.
+  - Bump datalevin from 0.5.26 to 0.5.27.
+  - Improve semantic tokens for dynamic vars, function definitions, namespaced and aliased keywords.
+  - Fix bug where `:source-paths` settings could be hot-reloaded with wrong-value.
+  - Add support for `window/showDocument` LSP method, used on `create-test` command/code action after creating the test to show the test file.
   
 - Editor
   - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.
-  - Add support to new LSP `LinkedEditingRange` feature.
+  - Add support to new LSP `LinkedEditingRange` feature. #341
+  - Improve suggested `Add require ...` code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614
+  - Change `:notify-references-on-file-change` default from `false` to `true`, we had some performance improvements and I've been testing this for some time now and didn't see any new issues with that. This should improve a lot the UX when user change any code that is references on other files, updating the diagnostics for those files as well.
+  - Improve rename feature UX to output errors when it's not possible rename.
+  - Add new `Unwind thread once` and `Unwind whole thread` code actions to undo a thread call.
+  - Improve code actions performance request async all actions.
+  - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
 
 ## 2021.10.20-16.49.47
 

@@ -1,6 +1,5 @@
 (ns clojure-lsp.shared
   (:require
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -27,6 +26,9 @@
 
 (defn file-exists? [^java.io.File f]
   (.exists f))
+
+(defn directory? [^java.io.File f]
+  (.isDirectory f))
 
 (defn slurp-filename
   "Slurp filename f. Used for be able to with-refefs this function."
@@ -218,6 +220,13 @@
          "."
          (name file-type))))
 
+(defn path->folder-with-slash [^String path]
+  (if (directory? (io/file path))
+    (if (string/ends-with? path (System/getProperty "file.separator"))
+      path
+      (str path (System/getProperty "file.separator")))
+    path))
+
 (defn uri->namespace
   ([uri db]
    (uri->namespace uri (uri->filename uri) db))
@@ -230,7 +239,7 @@
      (when (and in-project? (not= :unknown file-type))
        (->> source-paths
             (some (fn [source-path]
-                    (when (string/starts-with? filename source-path)
+                    (when (string/starts-with? filename (path->folder-with-slash source-path))
                       (some-> (relativize-filepath filename source-path)
                               (->> (re-find #"^(.+)\.\S+$"))
                               (nth 1)

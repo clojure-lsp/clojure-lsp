@@ -34,7 +34,7 @@
     (is (= [:vector :set :list]
            (transform/find-other-colls (z/of-string "{:a }"))))))
 
-(deftest resolve-best-alias-suggestion
+(deftest resolve-best-alias-suggestions
   (testing "alias not exists"
     (is (= #{"foo"} (#'transform/resolve-best-alias-suggestions "foo" '#{bar})))
     (is (= #{"string"} (#'transform/resolve-best-alias-suggestions "clojure.string" '#{foo bar})))
@@ -49,9 +49,56 @@
     (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{})))
     (is (= #{"bar"} (#'transform/resolve-best-alias-suggestions "foo.bar.core" '#{bar})))))
 
+(deftest resolve-best-namespaces-suggestions
+  (testing "when alias segments match namespaces in the order"
+    (is (= #{"foo.dar.zas"} (#'transform/resolve-best-namespaces-suggestions
+                             "d.z" '#{foo.bar.baz
+                                      foo.dar.zas})))
+    (is (= #{"foo.dar.zas"} (#'transform/resolve-best-namespaces-suggestions
+                             "da.zas" '#{foo.bar.baz
+                                         foo.dar.zas})))
+    (is (= #{} (#'transform/resolve-best-namespaces-suggestions
+                "dai.zas" '#{foo.bar.baz
+                             foo.dar.zas})))
+    (is (= #{"foo.dar.zas"
+             "foo.dow.zsr"} (#'transform/resolve-best-namespaces-suggestions
+                             "d.z" '#{foo.dar.zas
+                                      foo.bar.baz
+                                      foo.dow.zsr})))
+    (is (= #{"foo.dar.zas"
+             "foo.dow.zsr"} (#'transform/resolve-best-namespaces-suggestions
+                             "f.d.z" '#{foo.dar.zas
+                                        baz.dar.zas
+                                        zaz.dar.zas
+                                        foo.bar.baz
+                                        foo.dow.zsr})))
+    (is (= #{"foo.bar"} (#'transform/resolve-best-namespaces-suggestions
+                         "foo.bar" '#{foo.bar.zas
+                                      foo.bar
+                                      foo.bar-test})))))
+
+(deftest find-require-suggestions
+  (testing "Suggested namespaces"
+    (h/load-code-and-locs "(ns project.some.cool.namespace)")
+    (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
+    (h/load-code-and-locs "(ns project.some.cool.namespace-test)" "file:///c.clj")
+    (h/assert-submaps
+      [{:ns "project.some.cool.namespace"
+        :alias "s.cool.namespace"}
+       {:ns "other-project.some.coolio.namespace"
+        :alias "s.cool.namespace"}]
+      (transform/find-require-suggestions (z/of-string "s.cool.namespace/foo") [] db/db)))
+  (testing "Suggested alias"
+    (h/load-code-and-locs "(ns project.some.cool.namespace)")
+    (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
+    (h/assert-submaps
+      [{:ns "project.some.cool.namespace"
+        :alias "namespace"}]
+      (transform/find-require-suggestions (z/of-string "project.some.cool.namespace/foo") [] db/db))))
+
 (deftest add-missing-libspec
   (testing "aliases"
-    (testing "known namespaces in project"
+    (testing "known aliases in project"
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
       (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
             [{:keys [loc range]}] (transform/add-missing-libspec zloc db/db)]
@@ -1170,14 +1217,35 @@
       (is (= 'java.util.Date full-package)))))
 
 (deftest unwind-thread-test
-  (let [zloc (z/of-string "(-> a b (c) d)")
-        [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
-        [{loc2 :loc}] (transform/unwind-thread loc1)
-        [{loc3 :loc}] (transform/unwind-thread loc2)]
-    (is (some? range))
-    (is (= "(-> (b a) (c) d)" (z/string loc1)))
-    (is (= "(-> (c (b a)) d)" (z/string loc2)))
-    (is (= "(d (c (b a)))" (z/string loc3)))))
+  (testing "from thread position"
+    (let [zloc (z/of-string "(-> a b (c) d)")
+          [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+          [{loc2 :loc}] (transform/unwind-thread loc1)
+          [{loc3 :loc}] (transform/unwind-thread loc2)]
+      (is (some? range))
+      (is (= "(-> (b a) (c) d)" (z/string loc1)))
+      (is (= "(-> (c (b a)) d)" (z/string loc2)))
+      (is (= "(d (c (b a)))" (z/string loc3)))))
+  (testing "from inner calls position"
+    (let [zloc (-> (z/of-string "(-> a b (c) d)")
+                   (z/find-next-value z/next 'd))
+          [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+          [{loc2 :loc}] (transform/unwind-thread loc1)
+          [{loc3 :loc}] (transform/unwind-thread loc2)]
+      (is (some? range))
+      (is (= "(-> (b a) (c) d)" (z/string loc1)))
+      (is (= "(-> (c (b a)) d)" (z/string loc2)))
+      (is (= "(d (c (b a)))" (z/string loc3)))))
+  (testing "from inner calls position"
+    (let [zloc (-> (z/of-string "(a (-> a b (c) d))")
+                   (z/find-next-value z/next 'c))
+          [{loc1 :loc :keys [range]}] (transform/unwind-thread zloc)
+          [{loc2 :loc}] (transform/unwind-thread loc1)
+          [{loc3 :loc}] (transform/unwind-thread loc2)]
+      (is (some? range))
+      (is (= "(-> (b a) (c) d)" (z/string loc1)))
+      (is (= "(-> (c (b a)) d)" (z/string loc2)))
+      (is (= "(d (c (b a)))" (z/string loc3))))))
 
 (deftest unwind-all-test
   (let [zloc (z/of-string "(->> (a) b (c x y) d)")
@@ -1317,8 +1385,27 @@
       (is (= "(defn- my-func\n  [a arg2 b]\n  )" (z/string (:loc (first results)))))
       (is (= "\n\n" (z/string (:loc (last results))))))))
 
-(defn update-map [m f]
+(defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
+
+(deftest can-create-test?
+  (testing "when on multiples functions"
+    (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                               (h/file-path "/project/test")}}})
+    (is (= {:source-paths #{"/project/src" "/project/test"},
+            :current-source-path "/project/src",
+            :function-name-loc "bar"}
+           (update (transform/can-create-test? (-> (z/of-string (h/code "(ns foo)"
+                                                                        "(defn bar []"
+                                                                        "  2)"
+                                                                        "(defn baz []"
+                                                                        "  3)"
+                                                                        "(defn zaz []"
+                                                                        "  4)"))
+                                                   (z/find-value z/next '2))
+                                               "file:///project/src/foo.clj"
+                                               db/db)
+                   :function-name-loc z/string)))))
 
 (deftest create-test-test
   (testing "when only one available source-path besides current"
@@ -1329,8 +1416,8 @@
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
-            results-by-uri (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
-            results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+            results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.clj")
            [{:loc "(ns some.ns-test\n  (:require\n   [clojure.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
@@ -1343,8 +1430,8 @@
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.cljs")
-            results-by-uri (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
-            results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
+            results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.cljs")
            [{:loc "(ns some.ns-test\n  (:require\n   [cljs.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
@@ -1363,8 +1450,8 @@
                 code "(ns some.ns) (defn foo [b] (+ 1 2))"
                 zloc (z/find-value (z/of-string code) z/next 'foo)
                 _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
-                results-by-uri (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
-                results-to-assert (update-map results-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+                {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+                results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
             (h/assert-submap
               {(h/file-uri "file:///project/test/some/ns_test.clj")
                [{:loc "\n(deftest foo-test\n  (is (= 1 1)))",
@@ -1377,15 +1464,15 @@
       (let [code "(ns some.ns-test) (deftest foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/test/some/ns_test.clj")
-            results-by-uri (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
+            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
         (is (= nil
-               results-by-uri))))))
+               changes-by-uri))))))
 
 (deftest inline-symbol
   (testing "simple let"
     (h/clean-db!)
     (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -1400,7 +1487,7 @@
   (testing "multiple binding let"
     (h/clean-db!)
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db)
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -1416,7 +1503,7 @@
     (h/clean-db!)
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db)
+          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db))
           a-results (get results (h/file-uri "file:///a.clj"))
           b-results (get results (h/file-uri "file:///b.clj"))]
       (is (map? results))

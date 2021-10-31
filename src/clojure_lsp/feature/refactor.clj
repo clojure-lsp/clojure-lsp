@@ -94,13 +94,16 @@
             (= :clean-ns refactoring))
       (cond
         (map? result)
-        (let [changes (vec (for [[doc-id sub-results] result]
+        (let [{:keys [changes-by-uri show-document-after-edit]} result
+              changes (vec (for [[doc-id sub-results] changes-by-uri]
                              {:text-document {:uri doc-id :version version}
-                              :edits (mapv #(update % :range shared/->range) (r.transform/result sub-results))}))]
-          (client-changes changes db))
+                              :edits (mapv #(update % :range shared/->range)
+                                           (r.transform/result sub-results))}))]
+          {:show-document-after-edit show-document-after-edit
+           :edit (client-changes changes db)})
 
         (seq result)
-        (refactor-client-seq-changes uri version result db)
+        {:edit (refactor-client-seq-changes uri version result db)}
 
         (empty? result)
         (log/warn refactoring "made no changes" (z/string loc))

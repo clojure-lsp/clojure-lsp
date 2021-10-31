@@ -119,7 +119,7 @@
               :diagnostics (find-diagnostics uri db)}))
 
 (defn async-lint-file! [uri db]
-  (if (= :test (:env @db)) ;; Avoid async on test which cause flakeness
+  (if (#{:unit-test :api-test} (:env @db)) ;; Avoid async on test which cause flakeness
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)})
@@ -129,7 +129,7 @@
                  :diagnostics (find-diagnostics uri db)}))))
 
 (defn clean! [uri db]
-  (if (= :test (:env @db))
+  (if (#{:unit-test :api-test} (:env @db))
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics []})

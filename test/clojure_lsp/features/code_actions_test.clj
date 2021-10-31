@@ -72,7 +72,7 @@
                              "Date/parse")
                         (h/file-uri "file:///c.clj"))
   (testing "when it has not unresolved-namespace diagnostic"
-    (is (not-any? #(string/starts-with? (:title %) "Add missing")
+    (is (not-any? #(string/starts-with? (:title %) "Add require")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 2 10)
                                       (h/file-uri "file:///c.clj")
                                       2
@@ -80,7 +80,7 @@
                                       [] {}
                                       db/db))))
   (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add missing 'some-ns' require")
+    (is (some #(= (:title %) "Add require 'some-ns' for existing alias")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 3 11)
                                   (h/file-uri "file:///c.clj")
                                   3
@@ -89,7 +89,7 @@
                                     :range {:start {:line 2 :character 10}}}] {}
                                   db/db))))
   (testing "when it has unresolved-namespace but cannot find namespace"
-    (is (not-any? #(string/starts-with? (:title %) "Add missing")
+    (is (not-any? #(string/starts-with? (:title %) "Add require")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 2 11)
                                       (h/file-uri "file:///c.clj")
                                       2
@@ -98,7 +98,7 @@
                                         :range {:start {:line 1 :character 10}}}] {}
                                       db/db))))
   (testing "when it has unresolved-symbol and it's a known refer"
-    (is (some #(= (:title %) "Add missing 'clojure.test' require")
+    (is (some #(= (:title %) "Add require 'clojure.test' for existing alias")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 2)
                                   (h/file-uri "file:///c.clj")
                                   4
@@ -107,7 +107,7 @@
                                     :range {:start {:line 3 :character 1}}}] {}
                                   db/db))))
   (testing "when it has unresolved-symbol but it's not a known refer"
-    (is (not-any? #(string/starts-with? (:title %) "Add missing")
+    (is (not-any? #(string/starts-with? (:title %) "Add require")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 11)
                                       (h/file-uri "file:///c.clj")
                                       4
@@ -127,7 +127,7 @@
                              "Date/parse")
                         (h/file-uri "file:///c.clj"))
   (testing "when it has no unresolved-symbol diagnostic"
-    (is (not-any? #(string/starts-with? (:title %) "Add missing")
+    (is (not-any? #(string/starts-with? (:title %) "Add import")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 5 2)
                                       (h/file-uri "file:///c.clj")
                                       5
@@ -136,7 +136,7 @@
                                       db/db))))
 
   (testing "when it has unresolved-symbol but it's not a common import"
-    (is (not-any? #(string/starts-with? (:title %) "Add missing")
+    (is (not-any? #(string/starts-with? (:title %) "Add import")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 5 2)
                                       (h/file-uri "file:///c.clj")
                                       5
@@ -146,7 +146,7 @@
                                         :range {:start {:line 4 :character 2}}}] {}
                                       db/db))))
   (testing "when it has unresolved-symbol and it's a common import"
-    (is (some #(= (:title %) "Add missing 'java.util.Date' import")
+    (is (some #(= (:title %) "Add import 'java.util.Date'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 6 2)
                                   (h/file-uri "file:///c.clj")
                                   6
@@ -156,7 +156,7 @@
                                     :range {:start {:line 5 :character 2}}}] {}
                                   db/db))))
   (testing "when it has unresolved-namespace and it's a common import via method"
-    (is (some #(= (:title %) "Add missing 'java.util.Date' import")
+    (is (some #(= (:title %) "Add import 'java.util.Date'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 7 2)
                                   (h/file-uri "file:///c.clj")
                                   7
@@ -345,6 +345,26 @@
   (testing "when on a non-list node"
     (is (some #(= (:title %) "Thread last all")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))))
+
+(deftest unwind-thread-action
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "(def foo)"
+                                "(->> (+ 0 1)"
+                                "     (+ 2)"
+                                "     (+ 3))")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when not in a thread"
+    (is (not-any? #(= (:title %) "Unwind thread once")
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
+  (testing "when inside thread call"
+    (is (some #(= (:title %) "Unwind thread once")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db))))
+  (testing "when inside thread symbol"
+    (is (some #(= (:title %) "Unwind thread once")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 2) (h/file-uri "file:///a.clj") 3 2 [] {} db/db))))
+  (testing "when inside any threading call"
+    (is (some #(= (:title %) "Unwind thread once")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 5 7) (h/file-uri "file:///a.clj") 5 7 [] {} db/db)))))
 
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"

@@ -16,19 +16,19 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private find-alias-suggestion [uri db diagnostic]
+(defn ^:private find-require-suggestion [uri missing-requires db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (->> (r.transform/find-alias-suggestion diagnostic-zloc db)
+      (->> (r.transform/find-require-suggestions diagnostic-zloc missing-requires db)
            (map (fn [{:keys [ns alias]}]
                   {:ns ns
                    :alias alias
                    :position position}))))))
 
-(defn ^:private find-alias-suggestions [uri diagnostics db]
+(defn ^:private find-require-suggestions [uri diagnostics missing-requires db]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)]
     (->> unresolved-ns-diags
-         (map (partial find-alias-suggestion uri db))
+         (map (partial find-require-suggestion uri missing-requires db))
          flatten
          (remove nil?))))
 
@@ -88,14 +88,13 @@
            (case id
 
              "add-missing-require"
-             (let [missing-require-edit (f.refactor/call-refactor {:loc         zloc
-                                                                   :refactoring :add-missing-libspec
-                                                                   :uri         uri
-                                                                   :version     0
-                                                                   :row         (inc line)
-                                                                   :col         (inc character)}
-                                                                  db)]
-               {:edit missing-require-edit})
+             (f.refactor/call-refactor {:loc         zloc
+                                        :refactoring :add-missing-libspec
+                                        :uri         uri
+                                        :version     0
+                                        :row         (inc line)
+                                        :col         (inc character)}
+                                       db)
 
              "add-missing-import"
              (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc db) db)]
@@ -145,6 +144,16 @@
                         :command   "thread-last-all"
                         :arguments [uri line character]}}
 
+             "refactor-unwind-thread"
+             {:command {:title     "Unwind thread once"
+                        :command   "unwind-thread"
+                        :arguments [uri line character]}}
+
+             "refactor-unwind-all"
+             {:command {:title     "Unwind whole thread"
+                        :command   "unwind-all"
+                        :arguments [uri line character]}}
+
              "refactor-suppress-diagnostic"
              {:command {:title "Suppress diagnostic"
                         :command "suppress-diagnostic"
@@ -184,7 +193,7 @@
 (defn ^:private missing-require-actions
   [uri missing-requires]
   (map (fn [{:keys [missing-require position]}]
-         {:title      (str "Add missing '" missing-require "' require")
+         {:title      (str "Add require '" missing-require "' for existing alias")
           :kind       CodeActionKind/QuickFix
           :preferred? true
           :data       {:id        "add-missing-require"
@@ -195,7 +204,7 @@
 
 (defn ^:private missing-import-actions [uri missing-imports]
   (map (fn [{:keys [missing-import position]}]
-         {:title      (str "Add missing '" missing-import "' import")
+         {:title      (str "Add import '" missing-import "'")
           :kind       CodeActionKind/QuickFix
           :preferred? true
           :data       {:id        "add-missing-import"
@@ -271,6 +280,22 @@
           :line line
           :character character}})
 
+(defn ^:private unwind-thread-action [uri line character]
+  {:title "Unwind thread once"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-unwind-thread"
+          :uri uri
+          :line line
+          :character character}})
+
+(defn ^:private unwind-all-action [uri line character]
+  {:title "Unwind whole thread"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-unwind-all"
+          :uri uri
+          :line line
+          :character character}})
+
 (defn ^:private suppress-diagnostic-actions [diagnostics uri]
   (->> diagnostics
        (map (fn [{:keys [code]
@@ -309,63 +334,68 @@
           :character col}})
 
 (defn all [zloc uri row col diagnostics client-capabilities db]
-  (let [workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
-        resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
-        inside-function? (r.transform/find-function-form zloc)
-        function-to-create (find-function-to-create uri diagnostics db)
-        inside-let? (r.transform/find-let-form zloc)
-        other-colls (r.transform/find-other-colls zloc)
-        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
-        inline-symbol? (r.transform/inline-symbol? definition db)
-        can-thread? (r.transform/can-thread? zloc)
-        can-create-test? (r.transform/can-create-test? zloc uri db)
-        macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db)
-        line (dec row)
+  (let [line (dec row)
         character (dec col)
-        missing-requires (find-missing-requires uri diagnostics db)
-        missing-imports (find-missing-imports uri diagnostics db)
-        alias-suggestions (find-alias-suggestions uri diagnostics db)]
+        workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
+        resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
+        inside-function?* (future (r.transform/find-function-form zloc))
+        function-to-create* (future (find-function-to-create uri diagnostics db))
+        inside-let?* (future (r.transform/find-let-form zloc))
+        other-colls* (future (r.transform/find-other-colls zloc))
+        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
+        inline-symbol?* (future (r.transform/inline-symbol? definition db))
+        can-thread?* (future (r.transform/can-thread? zloc))
+        can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
+        can-create-test?* (future (r.transform/can-create-test? zloc uri db))
+        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db))
+        missing-requires* (future (find-missing-requires uri diagnostics db))
+        missing-imports* (future (find-missing-imports uri diagnostics db))
+        alias-suggestions* (future (find-require-suggestions uri diagnostics @missing-requires* db))]
     (cond-> []
 
-      (seq missing-requires)
-      (into (missing-require-actions uri missing-requires))
+      (seq @missing-requires*)
+      (into (missing-require-actions uri @missing-requires*))
 
-      (seq missing-imports)
-      (into (missing-import-actions uri missing-imports))
+      (seq @missing-imports*)
+      (into (missing-import-actions uri @missing-imports*))
 
-      (seq alias-suggestions)
-      (into (alias-suggestion-actions uri alias-suggestions))
+      (seq @alias-suggestions*)
+      (into (alias-suggestion-actions uri @alias-suggestions*))
 
-      function-to-create
-      (conj (create-private-function-action uri function-to-create))
+      @function-to-create*
+      (conj (create-private-function-action uri @function-to-create*))
 
-      macro-sym
-      (conj (resolve-macro-as-action uri row col macro-sym))
+      @macro-sym*
+      (conj (resolve-macro-as-action uri row col @macro-sym*))
 
-      inline-symbol?
+      @inline-symbol?*
       (conj (inline-symbol-action uri line character))
 
-      other-colls
-      (into (change-colls-actions uri line character other-colls))
+      @other-colls*
+      (into (change-colls-actions uri line character @other-colls*))
 
-      inside-let?
+      @inside-let?*
       (conj (move-to-let-action uri line character))
 
-      inside-function?
+      @inside-function?*
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
 
-      can-thread?
+      @can-thread?*
       (conj (thread-first-all-action uri line character)
             (thread-last-all-action uri line character))
+
+      @can-unwind-thread?*
+      (conj (unwind-thread-action uri line character)
+            (unwind-all-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))
       (into (suppress-diagnostic-actions diagnostics uri))
 
       (and workspace-edit-capability?
-           can-create-test?)
-      (conj (create-test-action (:function-name-loc can-create-test?) uri line character))
+           @can-create-test?*)
+      (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
 
       workspace-edit-capability?
       (conj (clean-ns-action uri line character))

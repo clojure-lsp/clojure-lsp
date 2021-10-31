@@ -11,7 +11,7 @@
         com.taoensso/timbre {:mvn/version "5.1.2"}
         org.clojure/core.async {:mvn/version "1.3.622"}
         borkdude/dynaload {:mvn/version "0.2.2"}
-        datalevin/datalevin {:mvn/version "0.5.26"}
+        datalevin/datalevin {:mvn/version "0.5.27"}
         org.clojure/java.data {:mvn/version "1.0.92"}
         cljfmt/cljfmt {:mvn/version "0.8.0"
                        :exclusions [rewrite-cljs/rewrite-cljs
@@ -47,7 +47,7 @@
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"
                                "-Dclojure.spec.skip-macros=true"]
-                    :extra-deps {org.clojars.huahaiy/datalevin-native {:mvn/version "0.5.26"}
+                    :extra-deps {org.clojars.huahaiy/datalevin-native {:mvn/version "0.5.27"}
                                  com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}
            :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
                  :exec-fn deps-bin.deps-bin/bin

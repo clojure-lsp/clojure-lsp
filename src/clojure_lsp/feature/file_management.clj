@@ -153,7 +153,7 @@
                                                 (assoc :kondo-config (:config kondo-result))))
             (do
               (f.diagnostic/sync-lint-file! uri db)
-              (when (settings/get db [:notify-references-on-file-change] false)
+              (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db)))
             (recur @db)))))))
 

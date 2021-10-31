@@ -18,7 +18,7 @@
   - Improve rename feature UX to output errors when it's not possible rename.
   - Add new `Unwind thread once` and `Unwind whole thread` code actions to undo a thread call.
   - Improve code actions performance request async all actions.
-  - Add new LSP custom method `clojure/cursordocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
+  - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
 
 ## 2021.10.20-16.49.47
 

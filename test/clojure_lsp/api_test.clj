@@ -70,13 +70,36 @@
         (is (= 0 (:result-code result)))
         (is (= "Nothing to clear!" (:message result)))))))
 
+(deftest definition
+  (testing "when project-root is not a file"
+    (is (thrown? AssertionError
+                 (api/definition {:project-root "integration-test/sample-test"}))))
+  (testing "when project-root is not a existent file"
+    (is (thrown? AssertionError
+                 (api/definition {:project-root (io/file "integration-test/sample-test/bla")}))))
+  (testing "when project-root is a valid file"
+    (testing "when a invalid symbol is specified"
+      (h/clean-db! :api-test)
+      (let [result (api/definition {:project-root (io/file "integration-test/sample-test")
+                                    :symbol 'sample-test.api.definition.foo/bar
+                                    :raw? true})]
+        (is (= 1 (:result-code result)))
+        (is (= "Symbol sample-test.api.definition.foo/bar not found in project" (:message result)))))
+    (testing "when a valid symbol without definition is specified"
+      (h/clean-db! :api-test)
+      (let [result (api/definition {:project-root (io/file "integration-test/sample-test")
+                                    :symbol 'sample-test.api.definition.foo/bar
+                                    :raw? true})]
+        (is (= 1 (:result-code result)))
+        (is (= "Symbol sample-test.api.definition.foo/bar not found in project" (:message result)))))))
+
 (deftest diagnostics
   (testing "when project-root is not a file"
     (is (thrown? AssertionError
-                 (api/format! {:project-root "integration-test/sample-test"}))))
+                 (api/diagnostics {:project-root "integration-test/sample-test"}))))
   (testing "when project-root is not a existent file"
     (is (thrown? AssertionError
-                 (api/format! {:project-root (io/file "integration-test/sample-test/bla")}))))
+                 (api/diagnostics {:project-root (io/file "integration-test/sample-test/bla")}))))
   (testing "when project-root is a valid file"
     (testing "when a single namespace is specified"
       (h/clean-db! :api-test)

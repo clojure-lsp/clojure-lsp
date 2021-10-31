@@ -74,8 +74,7 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/clean-ns! {:project-root (io/file \".\")
-                              :namespace '[my-project.foo my-project.bar]})
+  (clojure-lsp.api/clean-ns! {:namespace '[my-project.foo my-project.bar]})
   ```"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
@@ -114,8 +113,7 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/diagnostics {:project-root (io/file \".\")
-                                :namespace '[my-project.foo my-project.bar]
+  (clojure-lsp.api/diagnostics {:namespace '[my-project.foo my-project.bar]
                                 :output {:canonical-paths true}})
   ```"
   [{:keys [project-root settings] :as options}]
@@ -148,8 +146,7 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/format! {:project-root (io/file \".\")
-                            :namespace '[my-project.foo my-project.bar]})
+  (clojure-lsp.api/format! {:namespace '[my-project.foo my-project.bar]})
   ```"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)
@@ -184,8 +181,7 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/rename! {:project-root (io/file \".\")
-                            :from         'my-project.some/foo
+  (clojure-lsp.api/rename! {:from         'my-project.some/foo
                             :to           'my-project.some/bar})
   ```"
   [{:keys [project-root settings from to] :as options}]

@@ -625,6 +625,7 @@
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
 (s/def ::server-info-raw ::bean)
+(s/def ::clojuredocs-raw ::bean)
 
 (defn conform-or-log [spec value]
   (when value

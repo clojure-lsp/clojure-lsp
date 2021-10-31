@@ -125,3 +125,4 @@ Other clients might provide a higher level interface to `workspace/executeComman
 | clojure/serverInfo/raw |                                | Use to retrieve from server the server configuration information      |
 | clojure/serverInfo/log |                                | Use to log to user the server configuration information               |
 | clojure/cursorInfo/log | `[document-uri, line, column]` | Use to log to user the debugging information for the symbol at cursor |
+| clojure/clojuredocs/raw | `[symbol-name, symbol-ns]` | Use to retreive any Clojuredocs entry. Will return `null` if no entry found.  |

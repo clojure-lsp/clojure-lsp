@@ -207,11 +207,6 @@
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 
-(let [{:keys [:foo/bar]} {:foo/bar 2}]
-  bar)
-
-(let [{:foo/keys [bar]} {:foo/bar 2}])
-
 (defmethod find-references :keywords
   [analysis {:keys [ns name] :as _element} include-declaration? db]
   (let [project-analysis (filter-project-analysis analysis db)]

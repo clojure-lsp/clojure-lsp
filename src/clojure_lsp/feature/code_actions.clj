@@ -338,54 +338,54 @@
         character (dec col)
         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
-        inside-function? (r.transform/find-function-form zloc)
-        function-to-create (find-function-to-create uri diagnostics db)
-        inside-let? (r.transform/find-let-form zloc)
-        other-colls (r.transform/find-other-colls zloc)
+        inside-function?* (future (r.transform/find-function-form zloc))
+        function-to-create* (future (find-function-to-create uri diagnostics db))
+        inside-let?* (future (r.transform/find-let-form zloc))
+        other-colls* (future (r.transform/find-other-colls zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
-        inline-symbol? (r.transform/inline-symbol? definition db)
-        can-thread? (r.transform/can-thread? zloc)
-        can-unwind-thread? (r.transform/can-unwind-thread? zloc)
-        can-create-test? (r.transform/can-create-test? zloc uri db)
-        macro-sym (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db)
-        missing-requires (find-missing-requires uri diagnostics db)
-        missing-imports (find-missing-imports uri diagnostics db)
-        alias-suggestions (find-require-suggestions uri diagnostics missing-requires db)]
+        inline-symbol?* (future (r.transform/inline-symbol? definition db))
+        can-thread?* (future (r.transform/can-thread? zloc))
+        can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
+        can-create-test?* (future (r.transform/can-create-test? zloc uri db))
+        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db))
+        missing-requires* (future (find-missing-requires uri diagnostics db))
+        missing-imports* (future (find-missing-imports uri diagnostics db))
+        alias-suggestions* (future (find-require-suggestions uri diagnostics @missing-requires* db))]
     (cond-> []
 
-      (seq missing-requires)
-      (into (missing-require-actions uri missing-requires))
+      (seq @missing-requires*)
+      (into (missing-require-actions uri @missing-requires*))
 
-      (seq missing-imports)
-      (into (missing-import-actions uri missing-imports))
+      (seq @missing-imports*)
+      (into (missing-import-actions uri @missing-imports*))
 
-      (seq alias-suggestions)
-      (into (alias-suggestion-actions uri alias-suggestions))
+      (seq @alias-suggestions*)
+      (into (alias-suggestion-actions uri @alias-suggestions*))
 
-      function-to-create
-      (conj (create-private-function-action uri function-to-create))
+      @function-to-create*
+      (conj (create-private-function-action uri @function-to-create*))
 
-      macro-sym
-      (conj (resolve-macro-as-action uri row col macro-sym))
+      @macro-sym*
+      (conj (resolve-macro-as-action uri row col @macro-sym*))
 
-      inline-symbol?
+      @inline-symbol?*
       (conj (inline-symbol-action uri line character))
 
-      other-colls
-      (into (change-colls-actions uri line character other-colls))
+      @other-colls*
+      (into (change-colls-actions uri line character @other-colls*))
 
-      inside-let?
+      @inside-let?*
       (conj (move-to-let-action uri line character))
 
-      inside-function?
+      @inside-function?*
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
 
-      can-thread?
+      @can-thread?*
       (conj (thread-first-all-action uri line character)
             (thread-last-all-action uri line character))
 
-      can-unwind-thread?
+      @can-unwind-thread?*
       (conj (unwind-thread-action uri line character)
             (unwind-all-action uri line character))
 
@@ -394,8 +394,8 @@
       (into (suppress-diagnostic-actions diagnostics uri))
 
       (and workspace-edit-capability?
-           can-create-test?)
-      (conj (create-test-action (:function-name-loc can-create-test?) uri line character))
+           @can-create-test?*)
+      (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
 
       workspace-edit-capability?
       (conj (clean-ns-action uri line character))

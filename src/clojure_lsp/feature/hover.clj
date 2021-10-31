@@ -81,7 +81,7 @@
                    (if markdown?
                      (docstring->formatted-markdown doc)
                      doc))
-        clojuredocs (f.clojuredocs/find-docs-for sym-name sym-ns db)]
+        clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db)]
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)

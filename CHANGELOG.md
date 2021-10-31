@@ -16,6 +16,9 @@
   - Improve suggested `Add require ...` code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614
   - Change `:notify-references-on-file-change` default from `false` to `true`, we had some performance improvements and I've been testing this for some time now and didn't see any new issues with that. This should improve a lot the UX when user change any code that is references on other files, updating the diagnostics for those files as well.
   - Improve rename feature UX to output errors when it's not possible rename.
+  - Add new `Unwind thread once` and `Unwind whole thread` code actions to undo a thread call.
+  - Improve code actions performance request async all actions.
+  - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
 
 ## 2021.10.20-16.49.47
 

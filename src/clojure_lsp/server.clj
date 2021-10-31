@@ -17,7 +17,8 @@
    (clojure_lsp
      ClojureExtensions
      ExtraMethods
-     CursorInfoParams)
+     CursorInfoParams
+     ClojuredocsParams)
    (java.util.concurrent CompletableFuture
                          CompletionException)
    (java.util.function Supplier)
@@ -378,6 +379,11 @@
       (start :cursor-info-log
              (future
                (sync-notification params handlers/cursor-info-log))))
+
+    (^CompletableFuture clojuredocsRaw [^ClojuredocsParams params]
+      (start :clojuredocsRaw
+             (CompletableFuture/completedFuture
+               (sync-request params handlers/clojuredocs-raw ::interop/clojuredocs-raw))))
 
     (^CompletableFuture shutdown []
       (log/info "Shutting down")

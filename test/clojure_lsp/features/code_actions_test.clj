@@ -346,6 +346,26 @@
     (is (some #(= (:title %) "Thread last all")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))))
 
+(deftest unwind-thread-action
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "(def foo)"
+                                "(->> (+ 0 1)"
+                                "     (+ 2)"
+                                "     (+ 3))")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when not in a thread"
+    (is (not-any? #(= (:title %) "Unwind thread once")
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
+  (testing "when inside thread call"
+    (is (some #(= (:title %) "Unwind thread once")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db))))
+  (testing "when inside thread symbol"
+    (is (some #(= (:title %) "Unwind thread once")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 2) (h/file-uri "file:///a.clj") 3 2 [] {} db/db))))
+  (testing "when inside any threading call"
+    (is (some #(= (:title %) "Unwind thread once")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 5 7) (h/file-uri "file:///a.clj") 5 7 [] {} db/db)))))
+
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")

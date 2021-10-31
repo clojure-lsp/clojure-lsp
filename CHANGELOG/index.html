@@ -1656,9 +1656,8 @@
 <li>Fix wrong parse of code when code contains namespaced maps like <code>#:foo{:bar 1}</code>. This issue was affecting a lot of features for example code actions.</li>
 <li>Bump datalevin from 0.5.26 to 0.5.27.</li>
 <li>Improve semantic tokens for dynamic vars, function definitions, namespaced and aliased keywords.</li>
-<li>Fix bug where <code>:source-paths</code> settings could be hot-reloaded with wrong-value.</li>
 <li>
-<p>Add support for <code>window/showDocument</code> LSP method, used on <code>create-test</code> command/code action after creating the test to show the test file.</p>
+<p>Fix bug where <code>:source-paths</code> settings could be hot-reloaded with wrong-value.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -1668,8 +1667,9 @@
 <li>Improve suggested <code>Add require ...</code> code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614</li>
 <li>Change <code>:notify-references-on-file-change</code> default from <code>false</code> to <code>true</code>, we had some performance improvements and I've been testing this for some time now and didn't see any new issues with that. This should improve a lot the UX when user change any code that is references on other files, updating the diagnostics for those files as well.</li>
 <li>Improve rename feature UX to output errors when it's not possible rename.</li>
+<li>Add support for <code>window/showDocument</code> LSP method, used on <code>create-test</code> command/code action after creating the test to show the test file.</li>
 <li>Add new <code>Unwind thread once</code> and <code>Unwind whole thread</code> code actions to undo a thread call.</li>
-<li>Improve code actions performance request async all actions.</li>
+<li>Improve code actions performance requesting async all actions.</li>
 <li>Add new LSP custom method <code>clojure/clojuredocs/raw</code> which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise <code>null</code>.</li>
 <li>Fix missing keywords rename/references for destructured keywords.</li>
 </ul>

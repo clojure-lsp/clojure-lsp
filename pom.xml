@@ -144,4 +144,10 @@
   <build>
     <sourceDirectory>src</sourceDirectory>
   </build>
+  <scm>
+    <url>https://github.com/clojure-lsp/clojure-lsp</url>
+    <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
+    <tag>2021.10.20-16.49.47</tag>
+  </scm>
 </project>

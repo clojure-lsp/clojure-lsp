@@ -23,6 +23,8 @@
   - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
   - Fix missing keywords rename/references for destructured keywords.
 
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
 ## 2021.10.20-16.49.47
 
 - Editor

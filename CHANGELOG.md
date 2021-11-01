@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-## 2021.11.01-12.31.34
-
 - General
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
   - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.
@@ -22,6 +20,9 @@
   - Improve code actions performance requesting async all actions.
   - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
   - Fix missing keywords rename/references for destructured keywords.
+  
+- CLI
+  - Show error/warning message when a classpath scan fail during analysis. Fixes #626
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

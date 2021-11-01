@@ -17,10 +17,12 @@
    (window-show-message {:message message :type type} db))
   ([message-content db]
    (log/info message-content)
-   (when-let [client ^LanguageClient (:client @db)]
+   (if-let [client ^LanguageClient (:client @db)]
      (->> message-content
           (interop/conform-or-log ::interop/show-message)
-          (.showMessage client)))))
+          (.showMessage client))
+     (when-let [messages-fn (:messages-fn @db)]
+       (messages-fn message-content)))))
 
 (defn window-show-message-request
   [message type actions db]

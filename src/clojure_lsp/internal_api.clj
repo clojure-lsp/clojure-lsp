@@ -25,6 +25,9 @@
   (when-not (:raw? options)
     (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
+(defn ^:private show-message-cli [options {:keys [message type]}]
+  (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message)))
+
 (defmacro ^:private safe-analyze [& body]
   `(try
      ~@body
@@ -43,7 +46,9 @@
       (cli-println options ""))))
 
 (defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
-  (swap! db/db assoc :api? true)
+  (swap! db/db assoc
+         :api? true
+         :messages-fn #(show-message-cli options %))
   (when verbose
     (logging/set-log-to-stdout))
   (when-not (:analysis @db/db)

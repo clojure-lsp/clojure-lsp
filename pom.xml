@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.10.20-16.49.47</version>
+  <version>2021.11.01-12.31.34</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -16,6 +16,11 @@
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.10.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.clj-easy</groupId>
+      <artifactId>graal-build-time</artifactId>
+      <version>0.1.4</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -36,6 +41,11 @@
           <artifactId>gson</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.clojars.huahaiy</groupId>
+      <artifactId>datalevin-native</artifactId>
+      <version>0.5.27</version>
     </dependency>
     <dependency>
       <groupId>cljfmt</groupId>
@@ -81,12 +91,12 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>30.1.1-jre</version>
+      <version>31.0.1-jre</version>
     </dependency>
     <dependency>
       <groupId>datalevin</groupId>
       <artifactId>datalevin</artifactId>
-      <version>0.5.25</version>
+      <version>0.5.27</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -106,7 +116,7 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.0.2</version>
+      <version>0.1.0</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>
@@ -132,7 +142,7 @@
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-      <version>2.8.8</version>
+      <version>2.8.9</version>
     </dependency>
   </dependencies>
   <repositories>
@@ -148,6 +158,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2021.10.20-16.49.47</tag>
+    <tag>2021.11.01-12.31.34</tag>
   </scm>
 </project>

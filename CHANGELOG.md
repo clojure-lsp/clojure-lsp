@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.11.01-12.31.34
+
 - General
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
   - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.

@@ -120,16 +120,22 @@
     (mapv (partial rename-other replacement db) references)))
 
 (defn ^:private rename-status
-  [definition references source-paths]
+  [definition references source-paths client-capabilities]
   (cond
     (empty? references)
     {:error {:message "Can't rename, no other references found."
              :code :invalid-params}}
 
-    (and (seq source-paths)
+    (and (= :namespace-definitions (:bucket definition))
+         (seq source-paths)
          (not-any? #(string/starts-with? (:filename definition) %) source-paths))
     {:error {:code :invalid-params
-             :message "Can't rename, invalid source-paths. Are project :source-paths configured correctly?"}}
+             :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
+
+    (and (= :namespace-definitions (:bucket definition))
+         (not (get-in client-capabilities [:workspace :workspace-edit :document-changes])))
+    {:error {:code :invalid-params
+             :message "Can't rename namespace, client does not support file renames."}}
 
     (and (= :keywords (:bucket definition))
          (not (:ns definition)))
@@ -143,9 +149,17 @@
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
         references (q/find-references-from-cursor (:analysis @db) filename row col true db)
-        definition (first (filter (comp #{:locals :var-definitions :namespace-definitions :namespace-alias :keywords} :bucket) references))
+        definition (->> references
+                        (filter (comp #{:locals
+                                        :var-definitions
+                                        :namespace-definitions
+                                        :namespace-alias
+                                        :keywords}
+                                      :bucket))
+                        first)
         source-paths (settings/get db [:source-paths])
-        {:keys [error] :as result} (rename-status definition references source-paths)]
+        client-capabilities (:client-capabilities @db)
+        {:keys [error] :as result} (rename-status definition references source-paths client-capabilities)]
     (if error
       result
       (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
@@ -156,8 +170,7 @@
                              (map (fn [[text-document edits]]
                                     {:text-document text-document
                                      :edits (mapv #(dissoc % :text-document) edits)})))]
-        (if (and (= (:bucket definition) :namespace-definitions)
-                 (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes]))
+        (if (= (:bucket definition) :namespace-definitions)
           (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
             (swap! db (fn [db] (-> db
                                    (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))

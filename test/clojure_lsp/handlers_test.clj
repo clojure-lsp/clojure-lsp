@@ -206,26 +206,7 @@
         (is (= {(h/file-uri "file:///b.clj") [{:new-text "xx" :range (h/->range balias-start balias-stop)}
                                               {:new-text "xx/bar" :range (h/->range ba1-start bbar-stop)}
                                               {:new-text "::xx/bar" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
-               changes))))
-    (testing "on a namespace"
-      (swap! db/db medley/deep-merge
-             {:project-root-uri (h/file-uri "file:///my-project")
-              :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
-              :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-      (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
-      (is (= {:document-changes
-              [{:text-document {:version 0
-                                :uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")}
-                :edits [{:range
-                         {:start {:line 0 :character 4}
-                          :end {:line 0 :character 15}}
-                         :new-text "foo.baz-qux"}]}
-               {:kind "rename"
-                :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
-                :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
-             (handlers/rename {:textDocument (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
-                               :position {:line 0 :character 4}
-                               :newName "foo.baz-qux"}))))))
+               changes))))))
 
 (deftest test-code-actions-handle
   (h/load-code-and-locs (str "(ns some-ns)\n"

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Improve rename feature to not heavily rely on valid source-paths for most cases.
+
 ## 2021.11.02-15.24.47
 
 - General

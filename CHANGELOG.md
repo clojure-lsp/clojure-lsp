@@ -4,6 +4,7 @@
 
 - General
   - Improve rename feature to not heavily rely on valid source-paths for most cases.
+  - Fix setTrace exception logs for graalvm native images.
 
 ## 2021.11.02-15.24.47
 

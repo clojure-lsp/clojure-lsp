@@ -417,6 +417,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.SetTraceParams",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.DidChangeTextDocumentParams",
   "allDeclaredFields":true,
   "allPublicMethods":true,

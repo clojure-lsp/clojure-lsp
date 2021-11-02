@@ -23,6 +23,7 @@
   
 - CLI
   - Show error/warning message when a classpath scan fail during analysis. Fixes #626
+  - Add coloring to `diagnostics` output matching diagnostic severity.
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

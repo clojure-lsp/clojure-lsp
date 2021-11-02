@@ -107,6 +107,12 @@
     2 :warning
     3 :info))
 
+(defn severity->color [severity]
+  (case (int severity)
+    1 :red
+    2 :yellow
+    3 :cyan))
+
 (defn find-diagnostics [uri db]
   (let [filename (shared/uri->filename uri)]
     (cond-> []

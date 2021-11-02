@@ -142,7 +142,7 @@
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
 
-(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output]}]
+(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]}]
   (let [project-path (shared/uri->filename (project-root->uri project-root))]
     (mapcat (fn [[uri diags]]
               (let [filename (shared/uri->filename uri)
@@ -150,13 +150,14 @@
                                   filename
                                   (shared/relativize-filepath filename project-path))]
                 (map (fn [{:keys [message severity range code]}]
-                       (format "%s:%s:%s: %s: [%s] %s"
-                               file-output
-                               (-> range :start :line)
-                               (-> range :start :character)
-                               (name (f.diagnostic/severity->level severity))
-                               code
-                               message))
+                       (cond-> (format "%s:%s:%s: %s: [%s] %s"
+                                       file-output
+                                       (-> range :start :line)
+                                       (-> range :start :character)
+                                       (name (f.diagnostic/severity->level severity))
+                                       code
+                                       message)
+                         (not raw?) (diff/colorize (f.diagnostic/severity->color severity))))
                      diags)))
             diagnostics)))
 

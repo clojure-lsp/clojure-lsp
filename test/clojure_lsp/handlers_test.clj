@@ -221,7 +221,7 @@
                              "Date.")
                         (h/file-uri "file:///c.clj"))
   (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add require 'some-ns' for existing alias")
+    (is (some #(= (:title %) "Add require '[some-ns :as sns]'")
               (handlers/code-actions
                 {:textDocument (h/file-uri "file:///c.clj")
                  :context {:diagnostics [{:code "unresolved-namespace"

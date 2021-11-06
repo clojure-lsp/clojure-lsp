@@ -9,6 +9,7 @@
   
 - Editor
   - Fix "Add require" code actions adding multiple requires instead of the selected.
+  - Improve "Add require" wording, making it easier to understand what each different action will do.
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

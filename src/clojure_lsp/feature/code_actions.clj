@@ -35,9 +35,8 @@
 (defn ^:private find-missing-require [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (when-let [missing-require (r.transform/find-missing-require diagnostic-zloc db)]
-        {:missing-require missing-require
-         :position position}))))
+      (when-let [missing-require (r.transform/find-missing-ns-require diagnostic-zloc db)]
+        (assoc missing-require :position position)))))
 
 (defn ^:private find-missing-requires [uri diagnostics db]
   (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
@@ -180,7 +179,7 @@
 (defn ^:private alias-suggestion-actions
   [uri alias-suggestions]
   (map (fn [{:keys [ns alias position]}]
-         {:title      (str "Add require '" ns "' as '" alias "'")
+         {:title      (str "Add require '[" ns " :as " alias "]'")
           :kind       CodeActionKind/QuickFix
           :preferred? true
           :data       {:id "add-alias-suggestion-require"
@@ -193,8 +192,8 @@
 
 (defn ^:private missing-require-actions
   [uri missing-requires]
-  (map (fn [{:keys [missing-require position]}]
-         {:title      (str "Add require '" missing-require "' for existing alias")
+  (map (fn [{:keys [ns alias refer position]}]
+         {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
           :kind       CodeActionKind/QuickFix
           :preferred? true
           :data       {:id        "add-missing-require"

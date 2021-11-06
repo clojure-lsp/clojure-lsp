@@ -26,7 +26,7 @@
                                 "(medley.core/foo 1 2)"
                                 "(clojure.data.json/bar 1 2)"))
   (testing "simple ns"
-    (is (some #(= (:title %) "Add require 'clojure.set' as 'set'")
+    (is (some #(= (:title %) "Add require '[clojure.set :as set]'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 4)
                                   (h/file-uri "file:///a.clj")
                                   2
@@ -35,7 +35,7 @@
                                     :range {:start {:line 1 :character 3}}}] {}
                                   db/db))))
   (testing "core ns"
-    (is (some #(= (:title %) "Add require 'medley.core' as 'medley'")
+    (is (some #(= (:title %) "Add require '[medley.core :as medley]'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 4)
                                   (h/file-uri "file:///a.clj")
                                   3
@@ -51,8 +51,8 @@
                                      [{:code "unresolved-namespace"
                                        :range {:start {:line 3 :character 3}}}] {}
                                      db/db)]
-      (is (some #(= (:title %) "Add require 'clojure.data.json' as 'json'") result))
-      (is (some #(= (:title %) "Add require 'clojure.data.json' as 'data.json'") result)))))
+      (is (some #(= (:title %) "Add require '[clojure.data.json :as json]'") result))
+      (is (some #(= (:title %) "Add require '[clojure.data.json :as data.json]'") result)))))
 
 (deftest add-missing-namespace-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -80,7 +80,7 @@
                                       [] {}
                                       db/db))))
   (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add require 'some-ns' for existing alias")
+    (is (some #(= (:title %) "Add require '[some-ns :as sns]'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 3 11)
                                   (h/file-uri "file:///c.clj")
                                   3
@@ -98,7 +98,7 @@
                                         :range {:start {:line 1 :character 10}}}] {}
                                       db/db))))
   (testing "when it has unresolved-symbol and it's a known refer"
-    (is (some #(= (:title %) "Add require 'clojure.test' for existing alias")
+    (is (some #(= (:title %) "Add require '[clojure.test :refer [deftest]]'")
               (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 2)
                                   (h/file-uri "file:///c.clj")
                                   4

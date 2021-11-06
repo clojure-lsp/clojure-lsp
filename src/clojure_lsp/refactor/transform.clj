@@ -657,7 +657,7 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(defn ^:private find-missing-alias-require [zloc db]
+(defn ^:private find-missing-ns-alias-require [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
         alias->info (->> (q/find-all-aliases (:analysis @db))
                          (group-by :alias))
@@ -667,19 +667,24 @@
                           (->> [(get common-sym/common-alias->info require-alias)]
                                (remove nil?)))]
     (when (= 1 (count possibilities))
-      (some-> possibilities first name symbol))))
+      {:ns (some-> possibilities first name symbol)
+       :alias require-alias})))
 
-(defn ^:private find-missing-refer-require [zloc]
+(defn ^:private find-missing-ns-refer-require [zloc]
   (let [refer-to-add (-> zloc z/sexpr symbol)
         ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)]
     (when (not (z/find-value ns-zip z/next refer-to-add))
-      (get common-sym/common-refers->info (z/sexpr zloc)))))
+      (when-let [refer (get common-sym/common-refers->info (z/sexpr zloc))]
+        {:ns refer
+         :refer refer-to-add}))))
 
-(defn find-missing-require [zloc db]
+(defn find-missing-ns-require
+  "Returns map with found ns and alias or refer."
+  [zloc db]
   (if (some-> zloc z/sexpr namespace)
-    (find-missing-alias-require zloc db)
-    (find-missing-refer-require zloc)))
+    (find-missing-ns-alias-require zloc db)
+    (find-missing-ns-refer-require zloc)))
 
 (defn ^:private find-class-name [zloc]
   (let [sexpr (z/sexpr zloc)
@@ -744,11 +749,11 @@
 
 (defn ^:private add-missing-alias-ns [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        qualified-ns-to-add (find-missing-alias-require zloc db)]
+        qualified-ns-to-add (:ns (find-missing-ns-alias-require zloc db))]
     (add-known-libspec zloc require-alias qualified-ns-to-add db)))
 
 (defn ^:private add-missing-refer [zloc]
-  (when-let [qualified-ns-to-add (find-missing-refer-require zloc)]
+  (when-let [qualified-ns-to-add (:ns (find-missing-ns-refer-require zloc))]
     (let [refer-to-add (-> zloc z/sexpr symbol)
           ns-loc (edit/find-namespace zloc)
           ns-zip (zsub/subzip ns-loc)

@@ -16,19 +16,22 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private find-require-suggestion [uri missing-requires db diagnostic]
+(defn ^:private find-require-suggestions [uri missing-requires db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
       (->> (r.transform/find-require-suggestions diagnostic-zloc missing-requires db)
-           (map (fn [{:keys [ns alias]}]
-                  {:ns ns
-                   :alias alias
-                   :position position}))))))
+           (map #(assoc % :position position))))))
 
-(defn ^:private find-require-suggestions [uri diagnostics missing-requires db]
-  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)]
-    (->> unresolved-ns-diags
-         (map (partial find-require-suggestion uri missing-requires db))
+(defn ^:private find-all-require-suggestions [uri diagnostics missing-requires db]
+  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
+        unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
+    (->> (cond-> []
+
+           (seq unresolved-ns-diags)
+           (into (map (partial find-require-suggestions uri missing-requires db)) unresolved-ns-diags)
+
+           (seq unresolved-symbol-diags)
+           (into (map (partial find-require-suggestions uri missing-requires db)) unresolved-symbol-diags))
          flatten
          (remove nil?))))
 
@@ -79,7 +82,7 @@
          :position position}))))
 
 (defn resolve-code-action
-  [{{:keys [id uri line character chosen-alias chosen-ns coll diagnostic-code]} :data :as code-action}
+  [{{:keys [id uri line character chosen-alias chosen-ns chosen-refer coll diagnostic-code]} :data :as code-action}
    zloc
    db]
   (->
@@ -99,8 +102,8 @@
              (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc db) db)]
                {:edit missing-import-edit})
 
-             "add-alias-suggestion-require"
-             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-ns chosen-alias db) db)]
+             "add-require-suggestion"
+             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-require-suggestion zloc chosen-ns chosen-alias chosen-refer db) db)]
                {:edit alias-suggestion-edit})
 
              "refactor-create-private-function"
@@ -176,17 +179,18 @@
              {}))
     (dissoc :data)))
 
-(defn ^:private alias-suggestion-actions
+(defn ^:private require-suggestion-actions
   [uri alias-suggestions]
-  (map (fn [{:keys [ns alias position]}]
-         {:title      (str "Add require '[" ns " :as " alias "]'")
+  (map (fn [{:keys [ns alias refer position]}]
+         {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
           :kind       CodeActionKind/QuickFix
           :preferred? true
-          :data       {:id "add-alias-suggestion-require"
+          :data       {:id "add-require-suggestion"
                        :uri uri
                        :line (:line position)
                        :character (:character position)
                        :chosen-alias alias
+                       :chosen-refer refer
                        :chosen-ns ns}})
        alias-suggestions))
 
@@ -350,7 +354,7 @@
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db))
         missing-requires* (future (find-missing-requires uri diagnostics db))
         missing-imports* (future (find-missing-imports uri diagnostics db))
-        alias-suggestions* (future (find-require-suggestions uri diagnostics @missing-requires* db))]
+        alias-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))]
     (cond-> []
 
       (seq @missing-requires*)
@@ -360,7 +364,7 @@
       (into (missing-import-actions uri @missing-imports*))
 
       (seq @alias-suggestions*)
-      (into (alias-suggestion-actions uri @alias-suggestions*))
+      (into (require-suggestion-actions uri @alias-suggestions*))
 
       @function-to-create*
       (conj (create-private-function-action uri @function-to-create*))

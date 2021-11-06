@@ -742,15 +742,20 @@
   (when-let [import-name (find-missing-import zloc)]
     (add-form-to-namespace zloc (symbol import-name) :import import-name db)))
 
-(defn add-known-libspec
-  [zloc ns-to-add qualified-ns-to-add db]
-  (when (and qualified-ns-to-add ns-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add db)))
+(defn add-known-alias
+  [zloc alias-to-add qualified-ns-to-add db]
+  (when (and qualified-ns-to-add alias-to-add)
+    (add-form-to-namespace zloc [qualified-ns-to-add :as alias-to-add] :require alias-to-add db)))
+
+(defn add-known-refer
+  [zloc refer-to-add qualified-ns-to-add db]
+  (when (and qualified-ns-to-add refer-to-add)
+    (add-form-to-namespace zloc [qualified-ns-to-add :refer [refer-to-add]] :require refer-to-add db)))
 
 (defn ^:private add-missing-alias-ns [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
         qualified-ns-to-add (:ns (find-missing-ns-alias-require zloc db))]
-    (add-known-libspec zloc require-alias qualified-ns-to-add db)))
+    (add-known-alias zloc require-alias qualified-ns-to-add db)))
 
 (defn ^:private add-missing-refer [zloc]
   (when-let [qualified-ns-to-add (:ns (find-missing-ns-refer-require zloc))]
@@ -864,52 +869,78 @@
          (map #(string/join "." %))
          set)))
 
+(defn ^:private find-alias-require-suggestions [alias-str missing-requires db]
+  (let [analysis (:analysis @db)
+        ns-definitions (q/find-all-ns-definition-names analysis)
+        all-aliases (->> (q/find-all-aliases analysis)
+                         (map :alias)
+                         set)]
+    (cond->> []
+
+      (contains? ns-definitions (symbol alias-str))
+      (concat
+        (->> (resolve-best-alias-suggestions alias-str all-aliases)
+             (map (fn [suggestion]
+                    {:ns alias-str
+                     :alias suggestion}))))
+
+      (not (contains? ns-definitions (symbol alias-str)))
+      (concat (->> (resolve-best-namespaces-suggestions alias-str ns-definitions)
+                   (map (fn [suggestion]
+                          {:ns suggestion
+                           :alias alias-str}))))
+
+      :always
+      (remove (fn [sugestion]
+                (some #(= (str (:ns %))
+                          (str (:ns sugestion)))
+                      missing-requires))))))
+
+(defn ^:private find-refer-require-suggestions [refer missing-requires db]
+  (let [analysis (:analysis @db)
+        all-valid-refers (->> (q/find-all-var-definitions analysis)
+                              (filter #(= refer (:name %))))]
+    (cond->> []
+      (seq all-valid-refers)
+      (concat (->> all-valid-refers
+                   (map (fn [element]
+                          {:ns (str (:ns element))
+                           :refer (str refer)}))))
+      :always
+      (remove (fn [element]
+                (some #(= (str (:ns %))
+                          (str (:ns element)))
+                      missing-requires))))))
+
 (defn find-require-suggestions [zloc missing-requires db]
-  (when-let [alias-str (some-> zloc z/sexpr namespace)]
-    (let [analysis (:analysis @db)
-          ns-definitions (q/find-all-ns-definition-names analysis)
-          all-aliases (->> (q/find-all-aliases analysis)
-                           (map :alias)
-                           set)]
-      (cond->> []
+  (when-let [sexpr (z/sexpr zloc)]
+    (if-let [alias-str (namespace sexpr)]
+      (find-alias-require-suggestions alias-str missing-requires db)
+      (find-refer-require-suggestions sexpr missing-requires db))))
 
-        (contains? ns-definitions (symbol alias-str))
-        (concat
-          (->> (resolve-best-alias-suggestions alias-str all-aliases)
-               (map (fn [suggestion]
-                      {:ns alias-str
-                       :alias suggestion}))))
-
-        (not (contains? ns-definitions (symbol alias-str)))
-        (concat (->> (resolve-best-namespaces-suggestions alias-str ns-definitions)
-                     (map (fn [suggestion]
-                            {:ns suggestion
-                             :alias alias-str}))))
-
-        :always
-        (remove (fn [sugestion]
-                  (some #(= (str (:missing-require %))
-                            (str (:ns sugestion)))
-                        missing-requires)))))))
-
-(defn add-alias-suggestion [zloc chosen-ns chosen-alias db]
+(defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
   (->> (find-require-suggestions zloc [] db)
-       (filter #(and (= chosen-alias (:alias %))
-                     (= chosen-ns (:ns %))))
-       (map (fn [{:keys [ns alias]}]
+       (filter #(and (or (= chosen-alias (str (:alias %)))
+                         (= chosen-refer (str (:refer %))))
+                     (= chosen-ns (str (:ns %)))))
+       (map (fn [{:keys [ns alias refer]}]
               (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))
                                                                   (symbol? (z/sexpr %))
-                                                                  (= ns (-> % z/sexpr namespace))))]
-                (concat (add-known-libspec zloc (symbol alias) (symbol ns) db)
-                        (->> ns-usages-nodes
-                             (map (fn [node]
-                                    (z/replace node (-> (str alias "/" (-> node z/sexpr name))
-                                                        symbol
-                                                        n/token-node
-                                                        (with-meta (meta (z/node  node)))))))
-                             (map (fn [loc]
-                                    {:range (meta (z/node loc))
-                                     :loc loc})))))))
+                                                                  (= ns (-> % z/sexpr namespace))))
+                    known-require (if alias
+                                    (add-known-alias zloc (symbol alias) (symbol ns) db)
+                                    (add-known-refer zloc (symbol refer) (symbol ns) db))]
+                (concat known-require
+                        (when alias
+                          (->> ns-usages-nodes
+                               (map (fn [node]
+                                      (z/replace node (-> (str alias "/" (-> node z/sexpr name))
+                                                          symbol
+                                                          n/token-node
+                                                          (with-meta (meta (z/node  node)))))))
+                               (map (fn [loc]
+                                      {:range (meta (z/node loc))
+                                       :loc loc}))))))))
        flatten))
 
 (defn extract-function

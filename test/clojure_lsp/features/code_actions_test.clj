@@ -54,6 +54,34 @@
       (is (some #(= (:title %) "Add require '[clojure.data.json :as json]'") result))
       (is (some #(= (:title %) "Add require '[clojure.data.json :as data.json]'") result)))))
 
+(deftest add-refer-suggestion-code-actions
+  (h/load-code-and-locs "(ns clojure.set) (defn union [])" (h/file-uri "file:///clojure.core.clj"))
+  (h/load-code-and-locs "(ns medley.core) (def unit) (defn uni [])" (h/file-uri "file:///medley.core.clj"))
+  (h/load-code-and-locs "(ns some (:require [clojure.set :refer [union]]))" (h/file-uri "file:///some.clj"))
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(unit 1)"
+                                "(union #{} #{})"))
+  (testing "single suggestion"
+    (is (some #(= (:title %) "Add require '[medley.core :refer [unit]]'")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 3)
+                                  (h/file-uri "file:///a.clj")
+                                  2
+                                  3
+                                  [{:code "unresolved-symbol"
+                                    :message "Unresolved symbol: unit"
+                                    :range {:start {:line 1 :character 2}}}] {}
+                                  db/db))))
+  (testing "multiple suggestions"
+    (is (some #(= (:title %) "Add require '[clojure.set :refer [union]]'")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3)
+                                  (h/file-uri "file:///a.clj")
+                                  3
+                                  3
+                                  [{:code "unresolved-symbol"
+                                    :message "Unresolved symbol: union"
+                                    :range {:start {:line 2 :character 2}}}] {}
+                                  db/db)))))
+
 (deftest add-missing-namespace-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")

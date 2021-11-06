@@ -94,7 +94,14 @@
     (h/assert-submaps
       [{:ns "project.some.cool.namespace"
         :alias "namespace"}]
-      (transform/find-require-suggestions (z/of-string "project.some.cool.namespace/foo") [] db/db))))
+      (transform/find-require-suggestions (z/of-string "project.some.cool.namespace/foo") [] db/db)))
+  (testing "Suggested refers"
+    (h/load-code-and-locs "(ns project.some.cool.namespace) (def bla 1) (def blow 2)")
+    (h/load-code-and-locs "(ns other-project.some.coolio.namespace) (def bli)" "file:///b.clj")
+    (h/assert-submaps
+      [{:ns "project.some.cool.namespace"
+        :refer "blow"}]
+      (transform/find-require-suggestions (z/of-string "blow") [] db/db))))
 
 (deftest add-missing-libspec
   (testing "aliases"

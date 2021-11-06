@@ -221,8 +221,8 @@
                  (fn [element]
                    (let [require-edit (some-> cursor-loc
                                               (r.transform/add-known-alias (symbol (str (:alias element)))
-                                                                             (symbol (str (:to element)))
-                                                                             db)
+                                                                           (symbol (str (:to element)))
+                                                                           db)
                                               r.transform/result)]
                      (cond-> (element->completion-item element nil :required-alias)
                        (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))))

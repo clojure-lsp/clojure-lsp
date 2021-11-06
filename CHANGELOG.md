@@ -6,6 +6,7 @@
   - Improve rename feature to not heavily rely on valid source-paths for most cases.
   - Fix setTrace exception logs for graalvm native images.
   - Huge improvements on namespaces renames and references find. #573
+  - Fix warnings during datalevin access.
   
 - Editor
   - Fix "Add require" code actions adding multiple requires instead of the selected.

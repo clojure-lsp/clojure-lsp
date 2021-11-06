@@ -887,9 +887,10 @@
                             (str (:ns sugestion)))
                         missing-requires)))))))
 
-(defn add-alias-suggestion [zloc chosen-alias db]
+(defn add-alias-suggestion [zloc chosen-ns chosen-alias db]
   (->> (find-require-suggestions zloc [] db)
-       (filter (comp #(= chosen-alias %) :alias))
+       (filter #(and (= chosen-alias (:alias %))
+                     (= chosen-ns (:ns %))))
        (map (fn [{:keys [ns alias]}]
               (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))
                                                                   (symbol? (z/sexpr %))

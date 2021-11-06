@@ -80,7 +80,7 @@
          :position position}))))
 
 (defn resolve-code-action
-  [{{:keys [id uri line character chosen-alias coll diagnostic-code]} :data :as code-action}
+  [{{:keys [id uri line character chosen-alias chosen-ns coll diagnostic-code]} :data :as code-action}
    zloc
    db]
   (->
@@ -101,7 +101,7 @@
                {:edit missing-import-edit})
 
              "add-alias-suggestion-require"
-             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-alias db) db)]
+             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-alias-suggestion zloc chosen-ns chosen-alias db) db)]
                {:edit alias-suggestion-edit})
 
              "refactor-create-private-function"
@@ -187,7 +187,8 @@
                        :uri uri
                        :line (:line position)
                        :character (:character position)
-                       :chosen-alias alias}})
+                       :chosen-alias alias
+                       :chosen-ns ns}})
        alias-suggestions))
 
 (defn ^:private missing-require-actions

@@ -3,42 +3,39 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]
-   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 
-(defn code [& strings] (string/join "\n" strings))
-
 (deftest test-completion
-  (h/load-code-and-locs (code "(ns alpaca.ns (:require [user :as alpaca]))"
-                              "(alpaca/)"
-                              "(def barr)"
-                              "(def bazz)") (h/file-uri "file:///a.cljc"))
-  (h/load-code-and-locs (code "(ns user)"
-                              "(def alpha)"
-                              "alp"
-                              "ba") (h/file-uri "file:///b.clj"))
-  (h/load-code-and-locs (code "(ns alpaca.ns)"
-                              "(def baff)") (h/file-uri "file:///c.cljs"))
-  (h/load-code-and-locs (code "(ns d (:require [alpaca.ns :as alpaca])) frequen"
-                              "(def bar \"some good docs\"123)"
-                              "(defn barbaz [a b] 123)"
-                              "(def some 123)")
+  (h/load-code-and-locs (h/code "(ns alpaca.ns (:require [user :as alpaca]))"
+                                "(alpaca/)"
+                                "(def barr)"
+                                "(def bazz)") (h/file-uri "file:///a.cljc"))
+  (h/load-code-and-locs (h/code "(ns user)"
+                                "(def alpha)"
+                                "alp"
+                                "ba") (h/file-uri "file:///b.clj"))
+  (h/load-code-and-locs (h/code "(ns alpaca.ns)"
+                                "(def baff)") (h/file-uri "file:///c.cljs"))
+  (h/load-code-and-locs (h/code "(ns d (:require [alpaca.ns :as alpaca])) frequen"
+                                "(def bar \"some good docs\"123)"
+                                "(defn barbaz [a b] 123)"
+                                "(def some 123)")
                         (h/file-uri "file:///d.clj"))
-  (h/load-code-and-locs (code "(ns e (:require [alpaca.ns :refer [ba]]"
-                              "                [d :as d-alias]))"
-                              "Syste"
-                              "d-alias/b"
-                              "123")
+  (h/load-code-and-locs (h/code "(ns e (:require [alpaca.ns :refer [ba]]"
+                                "                [d :as d-alias]))"
+                                "Syste"
+                                "d-alias/b"
+                                "123")
                         (h/file-uri "file:///e.clj"))
-  (h/load-code-and-locs (code "(ns f (:require [alpaca.ns :refer [ba]]"
-                              "                 alp))")
+  (h/load-code-and-locs (h/code "(ns f (:require [alpaca.ns :refer [ba]]"
+                                "                 alp))")
                         (h/file-uri "file:///f.clj"))
-  (h/load-code-and-locs (code "(ns g (:require [alpaca.ns :as ba :refer [baq]]))"
-                              "(defn bar [baz] ba)"
-                              "(defn qux [bass] ba)"
-                              "")
+  (h/load-code-and-locs (h/code "(ns g (:require [alpaca.ns :as ba :refer [baq]]))"
+                                "(defn bar [baz] ba)"
+                                "(defn qux [bass] ba)"
+                                "")
                         (h/file-uri "file:///g.clj"))
 
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})

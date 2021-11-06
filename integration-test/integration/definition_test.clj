@@ -37,14 +37,18 @@
         (lsp/request! (fixture/definition-request "definition/b.clj" 3 4)))))
 
   (testing "keywords"
-    (testing "do not find definition of local simple keyword"
+    (testing "definition of local simple keyword is the keyword itself"
       (h/assert-submap
-        nil
+        {:uri (h/source-path->uri "definition/b.clj")
+         :range {:start {:line 5 :character 0}
+                 :end {:line 5 :character 7}}}
         (lsp/request! (fixture/definition-request "definition/b.clj" 5 2))))
 
-    (testing "do not find definition of invalid local namespaced keyword"
+    (testing "definition of invalid local namespaced keyword is the keyword itself"
       (h/assert-submap
-        nil
+        {:uri (h/source-path->uri "definition/b.clj")
+         :range {:start {:line 7 :character 0}
+                 :end {:line 7 :character 8}}}
         (lsp/request! (fixture/definition-request "definition/b.clj" 7 2))))
 
     (testing "find definition of valid other ns namespaced keyword"

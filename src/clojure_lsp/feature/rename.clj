@@ -66,6 +66,19 @@
      :new-text text
      :text-document {:version version :uri ref-doc-uri}}))
 
+(defn ^:private rename-ns-definition
+  [replacement
+   db
+   reference]
+  (let [ref-doc-id (shared/filename->uri (:filename reference) db)
+        version (get-in @db [:documents ref-doc-id :v] 0)
+        text (if (identical? :keywords (:bucket reference))
+               (str ":" replacement "/" (:name reference))
+               replacement)]
+    {:range (shared/->range reference)
+     :new-text text
+     :text-document {:version version :uri ref-doc-id}}))
+
 (defn ^:private rename-alias [replacement db reference]
   (let [alias? (= :namespace-alias (:bucket reference))
         keyword? (= :keywords (:bucket reference))
@@ -108,6 +121,9 @@
   [definition references replacement db]
   (condp = (:bucket definition)
 
+    :namespace-definitions
+    (mapv (partial rename-ns-definition replacement db) references)
+
     :namespace-alias
     (mapv (partial rename-alias replacement db) references)
 
@@ -149,14 +165,7 @@
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
         references (q/find-references-from-cursor (:analysis @db) filename row col true db)
-        definition (->> references
-                        (filter (comp #{:locals
-                                        :var-definitions
-                                        :namespace-definitions
-                                        :namespace-alias
-                                        :keywords}
-                                      :bucket))
-                        first)
+        definition (q/find-definition-from-cursor (:analysis @db) filename row col db)
         source-paths (settings/get db [:source-paths])
         client-capabilities (:client-capabilities @db)
         {:keys [error] :as result} (rename-status definition references source-paths client-capabilities)]

@@ -4,9 +4,12 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
+   [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
+
+(h/reset-db-after-test)
 
 (deftest resolve-deps-source-paths
   (testing "when on not a deps.edn project"

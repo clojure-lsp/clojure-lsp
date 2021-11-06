@@ -2,10 +2,13 @@
   (:require
    [clojure-lsp.interop :as interop]
    [clojure-lsp.server :as server]
+   [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]])
   (:import
    (org.eclipse.lsp4j
      InitializeParams)))
+
+(h/reset-db-after-test)
 
 (deftest test-client-settings
   (testing "initializationOptions are null"

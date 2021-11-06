@@ -121,14 +121,15 @@
 
 (defmethod find-definition :keywords
   [analysis element db]
-  (when (:ns element)
-    (find-last-order-by-project-analysis
-      #(and (= (:bucket %) :keywords)
-            (= (:name %) (:name element))
-            (:reg %)
-            (= (:ns %) (:ns element)))
-      analysis
-      db)))
+  (or (when (:ns element)
+        (find-last-order-by-project-analysis
+          #(and (= (:bucket %) :keywords)
+                (= (:name %) (:name element))
+                (:reg %)
+                (= (:ns %) (:ns element)))
+          analysis
+          db))
+      element))
 
 (defmethod find-definition :default
   [_analysis element _db]
@@ -149,8 +150,28 @@
     (into []
           (comp
             (mapcat val)
-            (filter #(= (:name %) name))
-            (filter #(identical? :namespace-usages (:bucket %))))
+            (filter #(or (and (identical? :namespace-usages (:bucket %))
+                              (= (:name %) name))
+                         (and (identical? :keywords (:bucket %))
+                              (= (:ns %) name)
+                              (not (:auto-resolved %))
+                              (not (:namespace-from-prefix %))))))
+          analysis)))
+
+(defmethod find-references :namespace-usages
+  [analysis {:keys [name] :as element} include-declaration? _db]
+  (concat
+    (when include-declaration?
+      [element])
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(or (and (identical? :namespace-definitions (:bucket %))
+                              (= (:name %) name))
+                         (and (identical? :keywords (:bucket %))
+                              (= (:ns %) name)
+                              (not (:auto-resolved %))
+                              (not (:namespace-from-prefix %))))))
           analysis)))
 
 (defmethod find-references :namespace-alias

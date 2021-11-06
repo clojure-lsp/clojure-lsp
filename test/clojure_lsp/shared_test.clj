@@ -6,6 +6,8 @@
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
+(h/reset-db-after-test)
+
 (deftest uri->filename
   (testing "should decode special characters in file URI"
     (is (= (h/file-path "/path+/encoded characters!")

@@ -58,7 +58,8 @@
   [zloc pos]
   (let [forms (find-forms zloc (fn [loc]
                                  (when (or (-> loc z/node meta)
-                                           (string/ends-with? (z/string loc) "/"))
+                                           (string/ends-with? (z/string loc) "/")
+                                           (string/ends-with? (z/string loc) ":"))
                                    (in-range?
                                      (-> loc z/node meta) pos))))
         disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
@@ -73,25 +74,44 @@
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 
+(defn ^:private handle-end-slash-code [text exception]
+  (when-let [[_ token] (->> exception
+                            Throwable->map
+                            :cause
+                            (re-matches #"Invalid symbol: (.*\/)."))]
+    (let [token-pattern (re-pattern (str token "(\\s|\\n|\\))"))]
+      (when-let [[_ extra-token] (re-find token-pattern text)]
+        (-> text
+            (string/replace-first token-pattern (str token "_" extra-token))
+            z/of-string
+            (z/edit->
+              (z/find-next-value z/next (symbol (str token "_")))
+              (z/replace (n/token-node (symbol token))))
+            z/up)))))
+
+(defn ^:private handle-single-colon-code [text exception]
+  (let [cause (->> exception Throwable->map :cause)]
+    (when (or (re-matches #"\[line (\d+), col (\d+)\] A single colon is not a valid keyword." cause)
+              (re-matches #"\[line (\d+), col (\d+)\] Invalid keyword: ." cause))
+      (let [colon-pattern (re-pattern ":(\\s|\\n|\\))")]
+        (when-let [[_ extra-token] (re-find colon-pattern text)]
+          (-> text
+              (string/replace-first colon-pattern (str ":___" extra-token))
+              z/of-string
+              (z/edit->
+                (z/find-next-value z/next :___)
+                (z/replace (n/token-node (symbol ":"))))
+              z/up))))))
+
 (defn ^:private safe-zloc-of-string [text]
   (try
     (z/of-string text)
     (catch clojure.lang.ExceptionInfo e
-      (if-let [[_ token] (->> e
-                              Throwable->map
-                              :cause
-                              (re-matches #"Invalid symbol: (.*\/)."))]
-        (let [token-pattern (re-pattern (str token "(\\s|\\n|\\))"))]
-          (if-let [[_ extra-token] (re-find token-pattern text)]
-            (-> text
-                (string/replace-first token-pattern (str token "_" extra-token))
-                z/of-string
-                (z/edit->
-                  (z/find-next-value z/next (symbol (str token "_")))
-                  (z/replace (n/token-node (symbol token))))
-                z/up)
-            (throw e)))
-        (throw e)))))
+      (if-let [node (handle-end-slash-code text e)]
+        node
+        (if-let [node (handle-single-colon-code text e)]
+          node
+          (throw e))))))
 
 (defn loc-at-pos [code row col]
   (some-> code

@@ -67,7 +67,7 @@
                            :change 1
                            :save {:includeText true}}
         :completionProvider {:resolveProvider true
-                             :triggerCharacters []}
+                             :triggerCharacters [":" "/"]}
         :documentSymbolProvider true
         :definitionProvider true
         :documentHighlightProvider true}}

@@ -325,6 +325,7 @@
                        (if cursor-loc
                          (z/sexpr cursor-loc)
                          ""))
+        keyword-value? (keyword? cursor-value)
         matches-fn (partial matches-cursor? cursor-value)
         inside-require? (edit/inside-require? cursor-loc)
         inside-refer? (edit/inside-refer? cursor-loc)
@@ -333,7 +334,7 @@
         cursor-value-or-ns (if (qualified-ident? cursor-value)
                              (namespace cursor-value)
                              (if (or (symbol? cursor-value)
-                                     (keyword? cursor-value))
+                                     keyword-value?)
                                (name cursor-value)
                                (str cursor-value)))
         cursor-full-ns? (when cursor-value-or-ns
@@ -359,7 +360,8 @@
         cursor-full-ns?
         (into (with-elements-from-full-ns cursor-value-or-ns analysis))
 
-        cursor-value-or-ns
+        (and cursor-value-or-ns
+             (not keyword-value?))
         (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
 
         simple-cursor?

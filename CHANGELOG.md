@@ -7,6 +7,7 @@
   - Fix setTrace exception logs for graalvm native images.
   - Huge improvements on namespaces renames and references find. #573
   - Fix warnings during datalevin access.
+  - Improve freezing for some macos cases. #631
   
 - Editor
   - Fix "Add require" code actions adding multiple requires instead of the selected.

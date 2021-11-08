@@ -8,6 +8,7 @@
   - Huge improvements on namespaces renames and references find. #573
   - Fix warnings during datalevin access.
   - Improve freezing for some macos cases. #631
+  - Bump clj-kondo improve code parsing and clojure-lsp keywords completion. #630
   
 - Editor
   - Fix "Add require" code actions adding multiple requires instead of the selected.

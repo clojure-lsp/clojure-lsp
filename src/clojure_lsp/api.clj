@@ -165,14 +165,15 @@
 
 (defn rename!
   "Rename a symbol and its definitions across the project.
+  The symbol can be a full qualified symbol or a namespace only.
 
   **Options**
 
   `:project-root` a java.io.File representing the project root.
 
-  `:from` the full qualified symbol origin name that should be renamed. e.g. my-project/my-var or my-project.foo for namespaces
+  `:from` the full qualified symbol origin name that should be renamed. e.g. my-project.foo/my-var or my-project.foo for namespaces
 
-  `:to` the full qualified symbol that will replace the original symbol. e.g. my-project/my-var-2 or my-project.bar for namespaces
+  `:to` the full qualified symbol that will replace the original symbol. e.g. my-project.bar/my-var-2 or my-project.bar for namespaces
 
   `dry?` a boolean, when enabled make no side-effects (no changes to files), only report.
 
@@ -181,8 +182,8 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/rename! {:from         'my-project.some/foo
-                            :to           'my-project.some/bar})
+  (clojure-lsp.api/rename! {:from 'my-project.some/foo
+                            :to 'my-project.some/bar})
   ```"
   [{:keys [project-root settings from to] :as options}]
   {:pre [(or (nil? project-root)

@@ -47,7 +47,7 @@
    :yellow "[033m"
    :cyan  "[036m"})
 
-(defn- colorize [s color]
+(defn colorize [s color]
   (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))
 
 (defn colorize-diff [diff-text]

@@ -1,9 +1,12 @@
 (ns clojure-lsp.interop-test
   (:require
    [clojure-lsp.interop :as interop]
+   [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is]])
   (:import
    (org.eclipse.lsp4j TextDocumentIdentifier)))
+
+(h/reset-db-after-test)
 
 (deftest document->uri
   (is (= ""

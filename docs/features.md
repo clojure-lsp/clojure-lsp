@@ -22,6 +22,8 @@ Above you can find all available features that clojure-lsp provide with examples
 
 <img src="../images/features/rename.gif" width=340>
 
+Also, it's possible to live rename symbols on the same buffer with `linkedEditingRange` feature.
+
 ### Document highlight on hover showing symbol usages
 
 <img src="../images/features/document-highlight.gif" width=340>
@@ -159,7 +161,7 @@ User can register additional custom snippets, for more information on how to con
 | Name                               | Example                                                              |
 |------------------------------------|----------------------------------------------------------------------|
 | Clean namespace require/imports    | <img src="../images/features/clean-ns.gif" width=360>                |
-| Add missing require                | <img src="../images/features/add-missing-require.gif" width=360>     |
+| Add require                        | <img src="../images/features/add-missing-require.gif" width=360>     |
 | Add known common require           | <img src="../images/features/add-common-require.gif" width=360>      |
 | Add known common import            | <img src="../images/features/add-common-import.gif" width=360>       |
 | Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
@@ -213,7 +215,7 @@ Commands that change/refactor the code, most of them are available via code acti
 
 ##### Clean namespace *
 ##### Add import to namespace
-##### Add missing namespace *
+##### Add missing require *
 ##### Cycle privacy of def/defn
 ##### Cycle collection (#{}, {}, [], ())
 ##### Change collection to {}, (), #{}, []

@@ -12,8 +12,9 @@ Below are all the currently supported LSP capabilities and their implementation 
 | exit                                   | √    |                                               |
 | $/cancelRequest                        |      |                                               |
 | $/progress                             | √    |                                               |
+| window/showDocument                    | √    |                                               |
 | window/showMessage                     | √    |                                               |
-| window/showMessageRequest              |      |                                               |
+| window/showMessageRequest              | √    |                                               |
 | window/logMessage                      |      |                                               |
 | window/workDoneProgress/create         |      |                                               |
 | window/workDoneProgress/cancel         |      |                                               |
@@ -66,7 +67,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/semanticTokens/range      | √    |                                               |
 | workspace/semanticTokens/refresh       |      |                                               |
 | workspace/codeLens/refresh             | √    |                                               |
-| textDocument/linkedEditingRange        |      |                                               |
+| textDocument/linkedEditingRange        | √    |                                               |
 | textDocument/prepareCallHierarchy      | √    |                                               |
 | callHierarchy/incomingCalls            | √    |                                               |
 | callHierarchy/outgoingCalls            | √    |                                               |
@@ -124,3 +125,4 @@ Other clients might provide a higher level interface to `workspace/executeComman
 | clojure/serverInfo/raw |                                | Use to retrieve from server the server configuration information      |
 | clojure/serverInfo/log |                                | Use to log to user the server configuration information               |
 | clojure/cursorInfo/log | `[document-uri, line, column]` | Use to log to user the debugging information for the symbol at cursor |
+| clojure/clojuredocs/raw | `[symbol-name, symbol-ns]` | Use to retreive any Clojuredocs entry. Will return `null` if no entry found.  |

@@ -17,8 +17,10 @@
    (clojure_lsp
      ClojureExtensions
      ExtraMethods
-     CursorInfoParams)
-   (java.util.concurrent CompletableFuture)
+     CursorInfoParams
+     ClojuredocsParams)
+   (java.util.concurrent CompletableFuture
+                         CompletionException)
    (java.util.function Supplier)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCallsParams
@@ -52,6 +54,7 @@
      InitializeParams
      InitializeResult
      InitializedParams
+     LinkedEditingRangeParams
      ReferenceParams
      Registration
      RegistrationParams
@@ -67,6 +70,7 @@
      TextDocumentSyncKind
      TextDocumentSyncOptions
      WorkspaceSymbolParams)
+   (org.eclipse.lsp4j.jsonrpc ResponseErrorException)
    (org.eclipse.lsp4j.launch LSPLauncher)
    (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
   (:gen-class))
@@ -84,7 +88,9 @@
   `(try
      ~expr
      (catch Throwable ex#
-       (log/error ex#))
+       (if (instance? ResponseErrorException ex#)
+         (throw (CompletionException. ex#))
+         (log/error ex#)))
      (finally
        (try
          (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
@@ -155,7 +161,7 @@
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
-           (async-request params handlers/rename ::interop/workspace-edit)))
+           (async-request params handlers/rename ::interop/workspace-edit-or-error)))
 
   (^CompletableFuture hover [_ ^HoverParams params]
     (start :hover
@@ -237,7 +243,11 @@
 
   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
     (start :callHierarchyOutgoingCalls
-           (async-request params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls))))
+           (async-request params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls)))
+
+  (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
+    (start :linkedEditingRange
+           (async-request params handlers/linked-editing-ranges ::interop/linked-editing-ranges-or-error))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -314,6 +324,7 @@
                                           (.setHoverProvider true)
                                           (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                           (.setCallHierarchyProvider true)
+                                          (.setLinkedEditingRangeProvider true)
                                           (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
                                                                     (.setResolveProvider true)))
                                           (.setCodeLensProvider (CodeLensOptions. true))
@@ -368,6 +379,11 @@
       (start :cursor-info-log
              (future
                (sync-notification params handlers/cursor-info-log))))
+
+    (^CompletableFuture clojuredocsRaw [^ClojuredocsParams params]
+      (start :clojuredocsRaw
+             (CompletableFuture/completedFuture
+               (sync-request params handlers/clojuredocs-raw ::interop/clojuredocs-raw))))
 
     (^CompletableFuture shutdown []
       (log/info "Shutting down")

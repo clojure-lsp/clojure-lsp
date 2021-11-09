@@ -3,14 +3,10 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.test-helper :as h]
-   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
-
-(defn code [& strings] (string/join "\n" strings))
 
 (deftest initialize
   (testing "detects URI format with lower-case drive letter and encoded colons"
@@ -122,30 +118,30 @@
 (deftest test-rename
   (let [[abar-start abar-stop
          akw-start akwbar-start akwbar-stop
-         abaz-start abaz-stop] (h/load-code-and-locs (code "(ns a.aa)"
-                                                           "(def |bar| |::|bar|)"
-                                                           "(def ^:m |baz| 1)") (h/file-uri "file:///a.clj"))
+         abaz-start abaz-stop] (h/load-code-and-locs (h/code "(ns a.aa)"
+                                                             "(def |bar| |::|bar|)"
+                                                             "(def ^:m |baz| 1)") (h/file-uri "file:///a.clj"))
         [balias-start balias-stop
          ba1-start _ba1-stop
          bbar-start bbar-stop
-         ba2-kw-start ba2-kw-stop] (h/load-code-and-locs (code "(ns b.bb (:require [a.aa :as |aa|]))"
-                                                               "(def x |aa|/|bar|)"
-                                                               "|::aa/bar|"
-                                                               ":aa/bar") (h/file-uri "file:///b.clj"))
+         ba2-kw-start ba2-kw-stop] (h/load-code-and-locs (h/code "(ns b.bb (:require [a.aa :as |aa|]))"
+                                                                 "(def x |aa|/|bar|)"
+                                                                 "|::aa/bar|"
+                                                                 ":aa/bar") (h/file-uri "file:///b.clj"))
         [cbar-start cbar-stop
-         cbaz-start cbaz-stop] (h/load-code-and-locs (code "(ns c.cc (:require [a.aa :as aa]))"
-                                                           "(def x aa/|bar|)"
-                                                           "^:xab aa/|baz|") (h/file-uri "file:///c.clj"))
-        [d-name-kw-start d-name-kw-stop] (h/load-code-and-locs (code "(ns d.dd)"
-                                                                     "(def name |::name|)") (h/file-uri "file:///d.clj"))
+         cbaz-start cbaz-stop] (h/load-code-and-locs (h/code "(ns c.cc (:require [a.aa :as aa]))"
+                                                             "(def x aa/|bar|)"
+                                                             "^:xab aa/|baz|") (h/file-uri "file:///c.clj"))
+        [d-name-kw-start d-name-kw-stop] (h/load-code-and-locs (h/code "(ns d.dd)"
+                                                                       "(def name |::name|)") (h/file-uri "file:///d.clj"))
         [kw-aliased-start kw-aliased-stop
-         kw-unaliased-start kw-unaliased-stop] (h/load-code-and-locs (code "(ns e.ee (:require [d.dd :as dd]))"
-                                                                           "(def name |::dd/name|)"
-                                                                           "(def other-name |:d.dd/name|)") (h/file-uri "file:///e.clj"))
-        [main-uname-kw-start main-uname-kw-end] (h/load-code-and-locs (code "(ns main (:require [user :as u]))"
-                                                                            "(def name |::u/name|)") (h/file-uri "file:///main.cljc"))
-        [uname-kw-start uname-kw-end] (h/load-code-and-locs (code "(ns user)"
-                                                                  "(def name |::name|)") (h/file-uri "file:///user.cljc"))]
+         kw-unaliased-start kw-unaliased-stop] (h/load-code-and-locs (h/code "(ns e.ee (:require [d.dd :as dd]))"
+                                                                             "(def name |::dd/name|)"
+                                                                             "(def other-name |:d.dd/name|)") (h/file-uri "file:///e.clj"))
+        [main-uname-kw-start main-uname-kw-end] (h/load-code-and-locs (h/code "(ns main (:require [user :as u]))"
+                                                                              "(def name |::u/name|)") (h/file-uri "file:///main.cljc"))
+        [uname-kw-start uname-kw-end] (h/load-code-and-locs (h/code "(ns user)"
+                                                                    "(def name |::name|)") (h/file-uri "file:///user.cljc"))]
     (testing "on symbol without namespace"
       (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///a.clj")
                                                 :position (h/->position abar-start)
@@ -206,26 +202,7 @@
         (is (= {(h/file-uri "file:///b.clj") [{:new-text "xx" :range (h/->range balias-start balias-stop)}
                                               {:new-text "xx/bar" :range (h/->range ba1-start bbar-stop)}
                                               {:new-text "::xx/bar" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
-               changes))))
-    (testing "on a namespace"
-      (swap! db/db medley/deep-merge
-             {:project-root-uri (h/file-uri "file:///my-project")
-              :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
-              :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-      (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
-      (is (= {:document-changes
-              [{:text-document {:version 0
-                                :uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")}
-                :edits [{:range
-                         {:start {:line 0 :character 4}
-                          :end {:line 0 :character 15}}
-                         :new-text "foo.baz-qux"}]}
-               {:kind "rename"
-                :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
-                :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
-             (handlers/rename {:textDocument (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
-                               :position {:line 0 :character 4}
-                               :newName "foo.baz-qux"}))))))
+               changes))))))
 
 (deftest test-code-actions-handle
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -244,7 +221,7 @@
                              "Date.")
                         (h/file-uri "file:///c.clj"))
   (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add missing 'some-ns' require")
+    (is (some #(= (:title %) "Add require '[some-ns :as sns]'")
               (handlers/code-actions
                 {:textDocument (h/file-uri "file:///c.clj")
                  :context {:diagnostics [{:code "unresolved-namespace"

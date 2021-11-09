@@ -25,6 +25,9 @@
   (when-not (:raw? options)
     (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
+(defn ^:private show-message-cli [options {:keys [message type]}]
+  (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message)))
+
 (defmacro ^:private safe-analyze [& body]
   `(try
      ~@body
@@ -43,7 +46,9 @@
       (cli-println options ""))))
 
 (defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
-  (swap! db/db assoc :api? true)
+  (swap! db/db assoc
+         :api? true
+         :messages-fn #(show-message-cli options %))
   (when verbose
     (logging/set-log-to-stdout))
   (when-not (:analysis @db/db)
@@ -137,7 +142,7 @@
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
 
-(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output]}]
+(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]}]
   (let [project-path (shared/uri->filename (project-root->uri project-root))]
     (mapcat (fn [[uri diags]]
               (let [filename (shared/uri->filename uri)
@@ -145,13 +150,14 @@
                                   filename
                                   (shared/relativize-filepath filename project-path))]
                 (map (fn [{:keys [message severity range code]}]
-                       (format "%s:%s:%s: %s: [%s] %s"
-                               file-output
-                               (-> range :start :line)
-                               (-> range :start :character)
-                               (name (f.diagnostic/severity->level severity))
-                               code
-                               message))
+                       (cond-> (format "%s:%s:%s: %s: [%s] %s"
+                                       file-output
+                                       (-> range :start :line)
+                                       (-> range :start :character)
+                                       (name (f.diagnostic/severity->level severity))
+                                       code
+                                       message)
+                         (not raw?) (diff/colorize (f.diagnostic/severity->color severity))))
                      diags)))
             diagnostics)))
 
@@ -221,20 +227,21 @@
                             (q/find-element-by-full-name project-analysis from-name from-ns db/db))]
       (let [uri (shared/filename->uri (:filename from-element) db/db)]
         (open-file! {:uri uri :namespace from-ns})
-        (if-let [{:keys [document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
-          (if-let [edits (->> document-changes
-                              (map #(client/document-change->edit-summary % db/db))
-                              (remove nil?)
-                              seq)]
-            (if dry?
-              {:result-code 0
-               :message (edits->diff-string edits options)
-               :edits edits}
-              (do
-                (mapv #(client/apply-workspace-edit-summary! % db/db) edits)
+        (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
+          (if document-changes
+            (if-let [edits (->> document-changes
+                                (map #(client/document-change->edit-summary % db/db))
+                                (remove nil?)
+                                seq)]
+              (if dry?
                 {:result-code 0
-                 :message (format "Renamed %s to %s" from to)
-                 :edits edits}))
-            {:result-code 1 :message "Nothing to rename"})
-          {:result-code 1 :message (format "Could not rename %s to %s" from to)}))
+                 :message (edits->diff-string edits options)
+                 :edits edits}
+                (do
+                  (mapv #(client/apply-workspace-edit-summary! % db/db) edits)
+                  {:result-code 0
+                   :message (format "Renamed %s to %s" from to)
+                   :edits edits}))
+              {:result-code 1 :message "Nothing to rename"})
+            {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))})))
       {:result-code 1 :message (format "Symbol %s not found in project" from)})))

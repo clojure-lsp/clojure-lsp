@@ -24,18 +24,24 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
-(defn clean-db! []
-  (reset! db/db {:env :test})
-  (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
-  (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
-  (alter-var-root #'db/edits-chan (constantly (async/chan 1))))
+(defn clean-db!
+  ([]
+   (clean-db! :unit-test))
+  ([env]
+   (reset! db/db {:env env})
+   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+   (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
+   (alter-var-root #'db/edits-chan (constantly (async/chan 1)))))
 
-(defn reset-db-after-test []
-  (use-fixtures
-    :each
-    (fn [f]
-      (clean-db!)
-      (f))))
+(defn reset-db-after-test
+  ([]
+   (reset-db-after-test :unit-test))
+  ([env]
+   (use-fixtures
+     :each
+     (fn [f]
+       (clean-db! env)
+       (f)))))
 
 (defn assert-submap [expected actual]
   (is (= expected

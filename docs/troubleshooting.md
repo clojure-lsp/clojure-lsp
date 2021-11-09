@@ -7,8 +7,6 @@ clojure-lsp logs most of what is doing to a file which location could be found:
 - on `:log-path` if specified in your clojure-lsp config, for example: `{:log-path "/tmp/clojure-lsp.out"}`
 - Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out`
 
-Below are the common issues ordered by the most important to specific ones:
-
 ## Client<->Server log
 
 All LSP clients should provide a way to get the jsonrpc logs between client and server, this helps debug the requests and responses content and time.

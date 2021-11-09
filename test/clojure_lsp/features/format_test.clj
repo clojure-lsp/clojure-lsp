@@ -6,6 +6,8 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
+(h/reset-db-after-test)
+
 (deftest test-formatting
   (h/load-code-and-locs "(a  )\n(b c d)")
   (testing "when custom config file doesn't exists"

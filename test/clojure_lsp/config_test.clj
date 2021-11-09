@@ -5,6 +5,8 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
+(h/reset-db-after-test)
+
 (deftest resolve-config
   (testing "when user doesn't have a home config or a project config"
     (with-redefs [config/get-property (constantly nil)

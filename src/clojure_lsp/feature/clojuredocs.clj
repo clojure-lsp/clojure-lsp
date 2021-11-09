@@ -56,8 +56,7 @@
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))
 
 (defn find-docs-for [sym-name sym-ns db]
-  (when (and sym-ns
-             (settings/get db [:hover :clojuredocs] true))
+  (when sym-ns
     (let [full-keyword (keyword (str sym-ns) (str sym-name))]
       (if-let [cache (-> @db :clojuredocs :cache)]
         (get cache full-keyword)
@@ -65,3 +64,7 @@
           (async/go
             (refresh-cache! db))
           nil)))))
+
+(defn find-hover-docs-for [sym-name sym-ns db]
+  (when (settings/get db [:hover :clojuredocs] true)
+    (find-docs-for sym-name sym-ns db)))

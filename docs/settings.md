@@ -205,8 +205,8 @@ For information on how to troubleshoot the linter, check the [troubleshooting se
 
 Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.
 
-- If your project is a `lein` project, clojure-lsp will scan the `project.clj` file for `:source-paths`, `:test-paths` and the paths from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` manually.
-- If your project is a `deps.edn`, clojure-lsp will scan the `deps.edn` file for `:paths`, `:extra-paths` and the paths from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` manually.
+- If your project is a `lein` project, clojure-lsp will scan the `project.clj` file for `:source-paths`, `:test-paths` and the optional `source-paths` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
+- If your project is a `deps.edn`, clojure-lsp will scan the `deps.edn` file for `:paths`, `:extra-paths` and the `paths` and `extra-paths` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
 - If your project is not a `deps.edn` or `lein` project, a `boot` project for example, clojure-lsp will use only the `:source-paths` setting (default `#{"src" "test"}`) which should point to the folders containing your clojure code.
 
 ### Clean

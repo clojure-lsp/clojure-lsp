@@ -6,8 +6,8 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -62,25 +62,6 @@
         (when (shared/file-exists? project-file)
           (assoc project-spec :hash (md5 project-file)))))
     project-specs))
-
-(defn ^:private classpath-cmd->windows-safe-classpath-cmd
-  [classpath]
-  (if shared/windows-os?
-    (into ["powershell.exe" "-NoProfile"] classpath)
-    classpath))
-
-(defn ^:private default-project-specs []
-  (->> [{:project-path "project.clj"
-         :classpath-cmd ["lein" "classpath"]}
-        {:project-path "deps.edn"
-         :classpath-cmd ["clojure" "-A:dev:test" "-Spath"]}
-        {:project-path "build.boot"
-         :classpath-cmd ["boot" "show" "--fake-classpath"]}
-        {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
-        {:project-path "bb.edn"
-         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
-       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
@@ -139,7 +120,7 @@
 
 (defn ^:private analyze-classpath! [root-path source-paths settings report-callback db]
   (report-callback 8 "Finding project specs" db)
-  (let [project-specs (->> (or (get settings :project-specs) (default-project-specs))
+  (let [project-specs (->> (:project-specs settings)
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
         project-hash (reduce str (map :hash project-specs))
@@ -197,6 +178,7 @@
   (report-callback 0 "clojure-lsp" db)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
+        env (:env @db)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
@@ -207,10 +189,7 @@
                                         force-settings)
         _ (when-let [log-path (:log-path raw-settings)]
             (logging/update-log-path log-path db))
-        settings (-> raw-settings
-                     (update :project-specs #(or % (default-project-specs)))
-                     (update :source-aliases #(or % source-paths/default-source-aliases))
-                     (update :source-paths (partial source-paths/process-source-paths root-path raw-settings)))]
+        settings (settings/udpate-with-default-settings nil raw-settings project-root-uri env)]
     (swap! db assoc
            :project-root-uri project-root-uri
            :client-settings client-settings

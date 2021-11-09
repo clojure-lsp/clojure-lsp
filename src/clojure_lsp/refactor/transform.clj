@@ -150,36 +150,47 @@
   [zloc]
   (thread-all zloc '->>))
 
+(def thread-first-symbols #{'-> 'some->})
+
+(def thread-symbols (set/union thread-first-symbols
+                               #{'->> 'some->>}))
+
+(defn can-unwind-thread? [zloc]
+  (let [thread-loc (apply edit/find-ops-up zloc (map str thread-symbols))
+        thread-sym (when thread-loc
+                     (thread-symbols
+                       (z/sexpr thread-loc)))]
+    (when thread-sym
+      {:thread-loc thread-loc
+       :thread-sym thread-sym})))
+
 (defn unwind-thread
   [zloc]
-  (let [thread-loc (if (= (z/tag zloc) :list)
-                     (z/next zloc)
-                     zloc)
-        thread-sym (#{'-> '->> 'some-> 'some->>} (z/sexpr thread-loc))]
-    (when thread-sym
-      (let [val-loc (z/right thread-loc)
-            target-loc (z/right val-loc)
-            extra? (z/right target-loc)
-            insert-fn (if (string/ends-with? (name thread-sym) "->")
-                        z/insert-right
-                        (fn [loc node] (-> loc
-                                           (z/rightmost)
-                                           (z/insert-right node))))]
-        (when (and val-loc target-loc)
-          (let [result-loc (-> thread-loc
-                               z/up
-                               (z/subedit->
-                                 z/down
-                                 z/right
-                                 z/remove
-                                 z/right
-                                 (cond-> (not= :list (z/tag target-loc)) (edit/wrap-around :list))
-                                 (z/down)
-                                 (insert-fn (z/node val-loc))
-                                 (z/up)
-                                 (cond-> (not extra?) (edit/raise))))]
-            [{:range (meta (z/node (z/up thread-loc)))
-              :loc result-loc}]))))))
+  (when-let [{:keys [thread-loc thread-sym]} (can-unwind-thread? zloc)]
+    (let [val-loc (z/right thread-loc)
+          target-loc (z/right val-loc)
+          extra? (z/right target-loc)
+          insert-fn (if (some #(string/ends-with? (name thread-sym) (str %))
+                              thread-first-symbols)
+                      z/insert-right
+                      (fn [loc node] (-> loc
+                                         (z/rightmost)
+                                         (z/insert-right node))))]
+      (when (and val-loc target-loc)
+        (let [result-loc (-> thread-loc
+                             z/up
+                             (z/subedit->
+                               z/down
+                               z/right
+                               z/remove
+                               z/right
+                               (cond-> (not= :list (z/tag target-loc)) (edit/wrap-around :list))
+                               (z/down)
+                               (insert-fn (z/node val-loc))
+                               (z/up)
+                               (cond-> (not extra?) (edit/raise))))]
+          [{:range (meta (z/node (z/up thread-loc)))
+            :loc result-loc}])))))
 
 (defn unwind-all
   [zloc]
@@ -646,7 +657,7 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
-(defn ^:private find-missing-alias-require [zloc db]
+(defn ^:private find-missing-ns-alias-require [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
         alias->info (->> (q/find-all-aliases (:analysis @db))
                          (group-by :alias))
@@ -656,20 +667,24 @@
                           (->> [(get common-sym/common-alias->info require-alias)]
                                (remove nil?)))]
     (when (= 1 (count possibilities))
-      (some-> possibilities first name symbol))))
+      {:ns (some-> possibilities first name symbol)
+       :alias require-alias})))
 
-(defn ^:private find-missing-refer-require [zloc]
+(defn ^:private find-missing-ns-refer-require [zloc]
   (let [refer-to-add (-> zloc z/sexpr symbol)
         ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)]
     (when (not (z/find-value ns-zip z/next refer-to-add))
-      (get common-sym/common-refers->info (z/sexpr zloc)))))
+      (when-let [refer (get common-sym/common-refers->info (z/sexpr zloc))]
+        {:ns refer
+         :refer refer-to-add}))))
 
-(defn find-missing-require [zloc db]
-  (let [ns-str (some-> zloc z/sexpr namespace)]
-    (if ns-str
-      (find-missing-alias-require zloc db)
-      (find-missing-refer-require zloc))))
+(defn find-missing-ns-require
+  "Returns map with found ns and alias or refer."
+  [zloc db]
+  (if (some-> zloc z/sexpr namespace)
+    (find-missing-ns-alias-require zloc db)
+    (find-missing-ns-refer-require zloc)))
 
 (defn ^:private find-class-name [zloc]
   (let [sexpr (z/sexpr zloc)
@@ -727,18 +742,23 @@
   (when-let [import-name (find-missing-import zloc)]
     (add-form-to-namespace zloc (symbol import-name) :import import-name db)))
 
-(defn add-known-libspec
-  [zloc ns-to-add qualified-ns-to-add db]
-  (when (and qualified-ns-to-add ns-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :as ns-to-add] :require ns-to-add db)))
+(defn add-known-alias
+  [zloc alias-to-add qualified-ns-to-add db]
+  (when (and qualified-ns-to-add alias-to-add)
+    (add-form-to-namespace zloc [qualified-ns-to-add :as alias-to-add] :require alias-to-add db)))
+
+(defn add-known-refer
+  [zloc refer-to-add qualified-ns-to-add db]
+  (when (and qualified-ns-to-add refer-to-add)
+    (add-form-to-namespace zloc [qualified-ns-to-add :refer [refer-to-add]] :require refer-to-add db)))
 
 (defn ^:private add-missing-alias-ns [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
-        qualified-ns-to-add (find-missing-alias-require zloc db)]
-    (add-known-libspec zloc require-alias qualified-ns-to-add db)))
+        qualified-ns-to-add (:ns (find-missing-ns-alias-require zloc db))]
+    (add-known-alias zloc require-alias qualified-ns-to-add db)))
 
 (defn ^:private add-missing-refer [zloc]
-  (when-let [qualified-ns-to-add (find-missing-refer-require zloc)]
+  (when-let [qualified-ns-to-add (:ns (find-missing-ns-refer-require zloc))]
     (let [refer-to-add (-> zloc z/sexpr symbol)
           ns-loc (edit/find-namespace zloc)
           ns-zip (zsub/subzip ns-loc)
@@ -780,10 +800,9 @@
 
 (defn add-missing-libspec
   [zloc db]
-  (let [ns-str (some-> zloc z/sexpr namespace)]
-    (if ns-str
-      (add-missing-alias-ns zloc db)
-      (add-missing-refer zloc))))
+  (if (some-> zloc z/sexpr namespace)
+    (add-missing-alias-ns zloc db)
+    (add-missing-refer zloc)))
 
 (defn ^:private resolve-best-alias-suggestion
   [ns-str all-aliases drop-core?]
@@ -809,36 +828,119 @@
         #{alias})
       #{alias})))
 
-(defn find-alias-suggestion [zloc db]
-  (when-let [ns-str (some-> zloc z/sexpr namespace)]
-    (let [analysis (:analysis @db)
-          ns-definitions (q/find-all-ns-definition-names analysis)
-          all-aliases (->> (q/find-all-aliases analysis)
-                           (map :alias)
-                           set)]
-      (when (contains? ns-definitions (symbol ns-str))
-        (->> (resolve-best-alias-suggestions ns-str all-aliases)
-             (map (fn [suggestion]
-                    {:ns ns-str
-                     :alias suggestion})))))))
+(defn ^:private sub-segment?
+  [alias-segs def-segs]
+  (loop [def-segs def-segs
+         alias-segs alias-segs
+         i 0
+         j 0
+         found-first-match? false]
+    (if (empty? def-segs)
+      (empty? alias-segs)
+      (when-let [alias-seg (nth alias-segs i nil)]
+        (if-let [def-seg (nth def-segs j nil)]
+          (if (string/starts-with? def-seg alias-seg)
+            (recur (subvec def-segs (inc j))
+                   (subvec alias-segs (inc i))
+                   0
+                   0
+                   true)
+            (if found-first-match?
+              nil
+              (recur def-segs
+                     alias-segs
+                     i
+                     (inc j)
+                     found-first-match?)))
+          (when found-first-match?
+            (recur def-segs
+                   alias-segs
+                   (inc i)
+                   0
+                   found-first-match?)))))))
 
-(defn add-alias-suggestion [zloc chosen-alias db]
-  (->> (find-alias-suggestion zloc db)
-       (filter (comp #(= chosen-alias %) :alias))
-       (map (fn [{:keys [ns alias]}]
+(defn ^:private resolve-best-namespaces-suggestions
+  [alias-str ns-definitions]
+  (let [alias-segments (string/split alias-str #"\.")
+        all-definition-segments (map (comp #(string/split % #"\.") str) ns-definitions)]
+    (->> all-definition-segments
+         (filter #(sub-segment? alias-segments %))
+         (filter #(not (string/ends-with? (last %) "-test")))
+         (map #(string/join "." %))
+         set)))
+
+(defn ^:private find-alias-require-suggestions [alias-str missing-requires db]
+  (let [analysis (:analysis @db)
+        ns-definitions (q/find-all-ns-definition-names analysis)
+        all-aliases (->> (q/find-all-aliases analysis)
+                         (map :alias)
+                         set)]
+    (cond->> []
+
+      (contains? ns-definitions (symbol alias-str))
+      (concat
+        (->> (resolve-best-alias-suggestions alias-str all-aliases)
+             (map (fn [suggestion]
+                    {:ns alias-str
+                     :alias suggestion}))))
+
+      (not (contains? ns-definitions (symbol alias-str)))
+      (concat (->> (resolve-best-namespaces-suggestions alias-str ns-definitions)
+                   (map (fn [suggestion]
+                          {:ns suggestion
+                           :alias alias-str}))))
+
+      :always
+      (remove (fn [sugestion]
+                (some #(= (str (:ns %))
+                          (str (:ns sugestion)))
+                      missing-requires))))))
+
+(defn ^:private find-refer-require-suggestions [refer missing-requires db]
+  (let [analysis (:analysis @db)
+        all-valid-refers (->> (q/find-all-var-definitions analysis)
+                              (filter #(= refer (:name %))))]
+    (cond->> []
+      (seq all-valid-refers)
+      (concat (->> all-valid-refers
+                   (map (fn [element]
+                          {:ns (str (:ns element))
+                           :refer (str refer)}))))
+      :always
+      (remove (fn [element]
+                (some #(= (str (:ns %))
+                          (str (:ns element)))
+                      missing-requires))))))
+
+(defn find-require-suggestions [zloc missing-requires db]
+  (when-let [sexpr (z/sexpr zloc)]
+    (if-let [alias-str (namespace sexpr)]
+      (find-alias-require-suggestions alias-str missing-requires db)
+      (find-refer-require-suggestions sexpr missing-requires db))))
+
+(defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
+  (->> (find-require-suggestions zloc [] db)
+       (filter #(and (or (= chosen-alias (str (:alias %)))
+                         (= chosen-refer (str (:refer %))))
+                     (= chosen-ns (str (:ns %)))))
+       (map (fn [{:keys [ns alias refer]}]
               (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))
                                                                   (symbol? (z/sexpr %))
-                                                                  (= ns (-> % z/sexpr namespace))))]
-                (concat (add-known-libspec zloc (symbol alias) (symbol ns) db)
-                        (->> ns-usages-nodes
-                             (map (fn [node]
-                                    (z/replace node (-> (str alias "/" (-> node z/sexpr name))
-                                                        symbol
-                                                        n/token-node
-                                                        (with-meta (meta (z/node  node)))))))
-                             (map (fn [loc]
-                                    {:range (meta (z/node loc))
-                                     :loc loc})))))))
+                                                                  (= ns (-> % z/sexpr namespace))))
+                    known-require (if alias
+                                    (add-known-alias zloc (symbol alias) (symbol ns) db)
+                                    (add-known-refer zloc (symbol refer) (symbol ns) db))]
+                (concat known-require
+                        (when alias
+                          (->> ns-usages-nodes
+                               (map (fn [node]
+                                      (z/replace node (-> (str alias "/" (-> node z/sexpr name))
+                                                          symbol
+                                                          n/token-node
+                                                          (with-meta (meta (z/node  node)))))))
+                               (map (fn [loc]
+                                      {:range (meta (z/node loc))
+                                       :loc loc}))))))))
        flatten))
 
 (defn extract-function
@@ -935,14 +1037,15 @@
                        :col (:col start-pos)
                        :end-row (:end-row end-pos)
                        :end-col (:end-col end-pos)}]
-        (reduce
-          (fn [accum {:keys [filename] :as element}]
-            (update accum
-                    (shared/filename->uri filename db)
-                    (fnil conj [])
-                    {:loc val-loc :range element}))
-          {def-uri [{:loc nil :range def-range}]}
-          references)))))
+        {:changes-by-uri
+         (reduce
+           (fn [accum {:keys [filename] :as element}]
+             (update accum
+                     (shared/filename->uri filename db)
+                     (fnil conj [])
+                     {:loc val-loc :range element}))
+           {def-uri [{:loc nil :range def-range}]}
+           references)}))))
 
 (defn can-create-function? [zloc]
   (and zloc
@@ -1026,8 +1129,10 @@
             lines (count (string/split existing-text #"\n"))
             test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
             test-zloc (z/up (z/of-string (str "\n" test-text)))]
-        {test-uri [{:loc test-zloc
-                    :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]})
+        {:show-document-after-edit test-uri
+         :changes-by-uri
+         {test-uri [{:loc test-zloc
+                     :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]}})
       (let [ns-text (format "(ns %s\n  (:require\n   [%s.test :refer [deftest is]]\n   [%s :as subject]))"
                             namespace-test
                             (if (= :cljs file-type) "cljs" "clojure")
@@ -1036,8 +1141,9 @@
                               (str function-name "-test"))
             test-zloc (z/up (z/of-string (str ns-text "\n\n" test-text)))]
         (swap! db assoc :processing-work-edit-for-new-files true)
-        {test-uri [{:loc test-zloc
-                    :range (-> test-zloc z/node meta)}]}))))
+        {:show-document-after-edit test-uri
+         :changes-by-uri {test-uri [{:loc test-zloc
+                                     :range (-> test-zloc z/node meta)}]}}))))
 
 (defn can-create-test? [zloc uri db]
   (when-let [function-name-loc (edit/find-function-definition-name-loc zloc)]
@@ -1061,7 +1167,9 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
+              _ (log/info "===>" actions)
               chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
+          (log/info "-->" chosen-source-path)
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
             ;; No source paths besides current one

@@ -17,6 +17,7 @@
         :documentRangeFormattingProvider true
         :referencesProvider true
         :callHierarchyProvider true
+        :linkedEditingRangeProvider true
         :renameProvider true
         :executeCommandProvider {:commands ["add-missing-libspec"
                                             "add-import-to-namespace"
@@ -57,7 +58,8 @@
                                                        "variable"
                                                        "method"
                                                        "event"]
-                                          :tokenModifiers ["definition"]}
+                                          :tokenModifiers ["definition"
+                                                           "defaultLibrary"]}
                                  :range true
                                  :full true}
         :codeLensProvider {:resolveProvider true}

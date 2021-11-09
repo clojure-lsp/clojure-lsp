@@ -6,6 +6,8 @@
    [clojure.string :as clojure.string]
    [clojure.test :refer [deftest is testing]]))
 
+(h/reset-db-after-test)
+
 (defn ^:private ->token
   [usage token-type]
   (#'semantic-tokens/element->absolute-token usage token-type))
@@ -100,12 +102,18 @@
     (h/load-code-and-locs (code "(comment 1)"))
     (is (= [0 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
-  (testing "function declared tokens"
+  (testing "function definition tokens"
     (h/load-code-and-locs (code "(def foo 1)"
                                 "foo"))
     (is (= [0 1 3 3 0
             0 4 3 2 1
             1 0 3 2 0]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
+  (testing "variable with defaultLibrary modifier tokens"
+    (h/load-code-and-locs (code "(def *anything*) *anything*"))
+    (is (= [0 1 3 3 0
+            0 4 10 2 1
+            0 12 10 6 2]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "type alias for function tokens"
     (h/load-code-and-locs (code "(ns some.ns (:require [foo.bar :as fb]))"
@@ -145,14 +153,25 @@
             1 1 7 7 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "keywords for keyword tokens"
-    (h/load-code-and-locs (code "(ns some.ns)"
+    (h/load-code-and-locs (code "(ns some.ns (:require [foo :as foo]))"
                                 ":foo"
                                 ":some.ns/foo"
-                                "::foo"))
+                                "::foo"
+                                "#:some.ns{:foo 1 :bar/foo 2}"
+                                "::foo/something"))
     (is (= [0 4 7 0 0
             1 0 4 4 0
-            1 0 12 4 0
-            1 0 5 4 0]
+            1 0 8 1 0
+            0 8 1 8 0
+            0 1 3 4 0
+            1 0 5 4 0
+            1 10 4 4 0
+            0 7 4 1 0
+            0 4 1 8 0
+            0 1 3 4 0
+            1 0 5 1 0
+            0 5 1 8 0
+            0 1 9 4 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
   (testing "locals destructuring for variable tokens"
     (h/load-code-and-locs (code "(fn [{:keys [foo bar]}])"))

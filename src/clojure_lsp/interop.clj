@@ -33,13 +33,16 @@
      MessageParams
      ShowMessageRequestParams
      MessageType
+     LinkedEditingRanges
      ParameterInformation
      Position
      ProgressParams
      PublishDiagnosticsParams
      Range
      RenameFile
+     ResponseErrorCode
      SemanticTokens
+     ShowDocumentParams
      SignatureHelp
      SignatureInformation
      SymbolKind
@@ -54,9 +57,13 @@
      WorkDoneProgressReport
      WorkDoneProgressEnd
      WorkspaceEdit)
-   (org.eclipse.lsp4j.jsonrpc.messages Either)))
+   (org.eclipse.lsp4j.jsonrpc
+     ResponseErrorException)
+   (org.eclipse.lsp4j.jsonrpc.messages
+     Either
+     ResponseError)))
 
-;; (set! *warn-on-reflection* true)
+(set! *warn-on-reflection* true)
 
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
 
@@ -93,6 +100,26 @@
       .toString
       json/read-str
       walk/keywordize-keys))
+
+(defn respond-with-error [e]
+  (let [error (ResponseError. (.getValue ^ResponseErrorCode (:code e))
+                              ^String (:message e)
+                              nil)]
+    (log/error "Responding with error " error)
+    (throw (ResponseErrorException. error))))
+
+(def error-code-enum
+  {:invalid-params ResponseErrorCode/InvalidParams})
+
+(s/def :error/code (s/and keyword?
+                          error-code-enum
+                          (s/conformer #(get error-code-enum %))))
+(s/def :error/message string?)
+
+(s/def ::error (s/and (s/keys :req-un [:error/code :error/message])
+                      (s/conformer respond-with-error)))
+
+(s/def ::response-error (s/and (s/keys :req-un [::error])))
 
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
@@ -176,10 +203,19 @@
                                                         :text-document-edit (Either/forLeft (second c))
                                                         :rename-file (Either/forRight (second c))))
                                                     %))))
-(s/def ::workspace-edit (s/and (s/keys :opt-un [::document-changes ::changes])
-                               (s/conformer #(if-let [changes (:changes %)]
-                                               (WorkspaceEdit. ^java.util.Map changes)
-                                               (WorkspaceEdit. ^java.util.List (:document-changes %))))))
+
+(s/def ::workspace-edit
+  (s/and (s/keys :opt-un [::document-changes ::changes])
+         (s/conformer #(if-let [changes (:changes %)]
+                         (WorkspaceEdit. ^java.util.Map changes)
+                         (WorkspaceEdit. ^java.util.List (:document-changes %))))))
+
+(s/def ::workspace-edit-or-error
+  (s/and (s/or :error ::response-error
+               :changes ::workspace-edit
+               :document-changes ::workspace-edit)
+         (s/conformer second)))
+
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 (s/def ::references (s/coll-of ::location))
@@ -293,7 +329,14 @@
 
 (s/def ::hover (s/and (s/keys :req-un [::contents]
                               :opt-un [::range])
-                      (s/conformer #(Hover. (:contents %1) ^Range (:range %1)))))
+                      (s/conformer (fn [hover]
+                                     (let [contents (:contents hover)
+                                           range ^Range (:range hover)]
+                                       (if (instance? MarkupContent contents)
+                                         (Hover. ^MarkupContent contents
+                                                 range)
+                                         (Hover. ^java.util.List contents
+                                                 range)))))))
 
 (s/def :command/title string?)
 (s/def :command/command string?)
@@ -366,9 +409,15 @@
                                 (s/conformer #(ProgressParams. (Either/forLeft ^String (:token %))
                                                                (Either/forLeft ^WorkDoneProgressNotification (:value %))))))
 
+(s/def ::show-document-request
+  (s/and (s/keys :req-un [::uri]
+                 :opt-un [::take-focus?])
+         (s/conformer #(doto (ShowDocumentParams. (:uri %))
+                         (.setTakeFocus (:take-focus? %))))))
+
 (s/def :code-action/title string?)
 
-(s/def :code-action/edit ::workspace-edit)
+(s/def :code-action/edit ::workspace-edit-or-error)
 
 (def code-action-kind
   [CodeActionKind/QuickFix
@@ -438,6 +487,20 @@
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 (s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
 
+(s/def :linked-editing-range/ranges (s/coll-of ::range))
+
+(s/def ::linked-editing-ranges
+  (s/and (s/keys :req-un [:linked-editing-range/ranges]
+                 :opt-un [::word-pattern])
+         (s/conformer #(doto (LinkedEditingRanges.)
+                         (.setRanges (:ranges %1))
+                         (.setWordPattern (:word-pattern %1))))))
+
+(s/def ::linked-editing-ranges-or-error
+  (s/and (s/or :error ::response-error
+               :ranges ::linked-editing-ranges)
+         (s/conformer second)))
+
 (defn stringify-keys-and-vals
   "Recursively transforms all map keys and values from keywords to strings."
   [m]
@@ -457,12 +520,6 @@
   (->> clj-map
        stringify-keys-and-vals
        (j/to-java java.util.Map)))
-
-;; (.toString (clj->java {:a 1
-;;                        :b :bla
-;;                        :c {:d "a"
-;;                            :e "b"}
-;;                        :d #{"as" "ba"}}))
 
 (defn java->clj [inst]
   (let [converted (j/from-java inst)]
@@ -568,6 +625,7 @@
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
 (s/def ::server-info-raw ::bean)
+(s/def ::clojuredocs-raw ::bean)
 
 (defn conform-or-log [spec value]
   (when value
@@ -577,7 +635,9 @@
           (log/error (s/explain-data spec value))
           result))
       (catch Exception ex
-        (log/error ex spec value)))))
+        (if (instance? ResponseErrorException ex)
+          (throw ex)
+          (log/error ex spec value))))))
 
 (defn- typify-json [root]
   (walk/postwalk (fn [n]

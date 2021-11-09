@@ -3,16 +3,53 @@
 ## Unreleased
 
 - General
-  - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
+  - Improve rename feature to not heavily rely on valid source-paths for most cases.
+  - Fix setTrace exception logs for graalvm native images.
+  - Huge improvements on namespaces renames and references find. #573
+  - Fix warnings during datalevin access.
+  - Improve freezing for some macos cases. #631
+  - Bump clj-kondo improve code parsing and clojure-lsp keywords completion. #630
   
 - Editor
-  - Deprecates setting `:show-docs-arity-on-same-line?` in favour of `:hover` `:arity-on-same-line?`.
+  - Fix "Add require" code actions adding multiple requires instead of the selected.
+  - Improve "Add require" wording, making it easier to understand what each different action will do.
+  - Smart check all available refers to require, adding refer options to `Add require` code actions. #627
+
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
+## 2021.11.02-15.24.47
+
+- General
+  - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
+  - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.
+  - Bump datalevin from 0.5.26 to 0.5.27.
+  - Improve semantic tokens for dynamic vars, function definitions, namespaced and aliased keywords.
+  - Fix bug where `:source-paths` settings could be hot-reloaded with wrong-value.
+  
+- Editor
+  - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.
+  - Add support to new LSP `LinkedEditingRange` feature. #341
+  - Improve suggested `Add require ...` code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614
+  - Change `:notify-references-on-file-change` default from `false` to `true`, we had some performance improvements and I've been testing this for some time now and didn't see any new issues with that. This should improve a lot the UX when user change any code that is references on other files, updating the diagnostics for those files as well.
+  - Improve rename feature UX to output errors when it's not possible rename.
+  - Add support for `window/showDocument` LSP method, used on `create-test` command/code action after creating the test to show the test file.
+  - Add new `Unwind thread once` and `Unwind whole thread` code actions to undo a thread call.
+  - Improve code actions performance requesting async all actions.
+  - Add new LSP custom method `clojure/clojuredocs/raw` which takes a symbol and a namespace (both strings) and returns any Clojuredocs entry found, otherwise `null`.
+  - Fix missing keywords rename/references for destructured keywords.
+  
+- CLI
+  - Show error/warning message when a classpath scan fail during analysis. Fixes #626
+  - Add coloring to `diagnostics` output matching diagnostic severity.
+
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2021.10.20-16.49.47
 
 - Editor
   - Hot fix clojuredocs on graalvm native image.
   - Bump clj-kondo to `2021.10.20-20211020.123254-3` to fix a specific issue with cljs.
+  - Implement support to return to client LSP Errors, making user UX better since clojure-lsp can return specific errors for specific exceptions.
 
 ## 2021.10.20-13.04.11
   

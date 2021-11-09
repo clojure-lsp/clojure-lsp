@@ -4,6 +4,7 @@
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
+   [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.feature.completion :as f.completion]
@@ -11,6 +12,7 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
@@ -190,18 +192,22 @@
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)
-        element (q/find-element-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))
-        definition (when element (q/find-definition analysis element db/db))
+        elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))
         data (shared/assoc-some {}
-                                :element element
-                                :definition definition
-                                :semantic-tokens (when element
-                                                   (f.semantic-tokens/element->token-type element)))]
+                                :elements (mapv (fn [e]
+                                                  (shared/assoc-some
+                                                    {:element e}
+                                                    :definition (q/find-definition analysis e db/db)
+                                                    :semantic-tokens (f.semantic-tokens/element->token-type e)))
+                                                elements))]
     {:type    :info
      :message (with-out-str (pprint/pprint data))}))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
   (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)]) db/db))
+
+(defn clojuredocs-raw [{:keys [symName symNs]}]
+  (f.clojuredocs/find-docs-for symName symNs db/db))
 
 (defn ^:private refactor [refactoring [doc-id line character args] db]
   (let [row                        (inc (int line))
@@ -232,10 +238,13 @@
     (apply f.resolve-macro/resolve-macro-as! (concat arguments [db/db]))
 
     (some #(= % command) f.refactor/available-refactors)
-    (when-let [result (refactor command arguments db/db)]
+    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
       (if (:client @db/db)
-        (producer/workspace-apply-edit result db/db)
-        result))))
+        (do
+          (producer/workspace-apply-edit edit db/db)
+          (when show-document-after-edit
+            (producer/show-document-request show-document-after-edit db/db)))
+        edit))))
 
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)
@@ -325,3 +334,9 @@
         row (inc (-> item :range :start :line))
         col (inc (-> item :range :start :character))]
     (f.call-hierarchy/outgoing uri row col db/db)))
+
+(defn linked-editing-ranges
+  [{:keys [textDocument position]}]
+  (let [row (-> position :line inc)
+        col (-> position :character inc)]
+    (f.linked-editing-range/ranges textDocument row col db/db)))

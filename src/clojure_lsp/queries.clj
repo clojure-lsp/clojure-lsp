@@ -121,14 +121,15 @@
 
 (defmethod find-definition :keywords
   [analysis element db]
-  (when (:ns element)
-    (find-last-order-by-project-analysis
-      #(and (= (:bucket %) :keywords)
-            (= (:name %) (:name element))
-            (:reg %)
-            (= (:ns %) (:ns element)))
-      analysis
-      db)))
+  (or (when (:ns element)
+        (find-last-order-by-project-analysis
+          #(and (= (:bucket %) :keywords)
+                (= (:name %) (:name element))
+                (:reg %)
+                (= (:ns %) (:ns element)))
+          analysis
+          db))
+      element))
 
 (defmethod find-definition :default
   [_analysis element _db]
@@ -149,8 +150,28 @@
     (into []
           (comp
             (mapcat val)
-            (filter #(= (:name %) name))
-            (filter #(identical? :namespace-usages (:bucket %))))
+            (filter #(or (and (identical? :namespace-usages (:bucket %))
+                              (= (:name %) name))
+                         (and (identical? :keywords (:bucket %))
+                              (= (:ns %) name)
+                              (not (:auto-resolved %))
+                              (not (:namespace-from-prefix %))))))
+          analysis)))
+
+(defmethod find-references :namespace-usages
+  [analysis {:keys [name] :as element} include-declaration? _db]
+  (concat
+    (when include-declaration?
+      [element])
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(or (and (identical? :namespace-definitions (:bucket %))
+                              (= (:name %) name))
+                         (and (identical? :keywords (:bucket %))
+                              (= (:ns %) name)
+                              (not (:auto-resolved %))
+                              (not (:namespace-from-prefix %))))))
           analysis)))
 
 (defmethod find-references :namespace-alias
@@ -217,7 +238,6 @@
               (filter #(identical? :keywords (:bucket %)))
               (filter #(safe-equal? name (:name %)))
               (filter #(safe-equal? ns (:ns %)))
-              (filter #(not (:keys-destructuring %)))
               (filter #(or include-declaration?
                            (not (:reg %))))
               (medley/distinct-by (juxt :filename :name :row :col)))
@@ -247,6 +267,14 @@
                 (and (<= name-row line name-end-row)
                      (<= name-col column name-end-col)))
               (get analysis filename)))
+
+(defn find-all-elements-under-cursor
+  [analysis filename line column]
+  (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
+                ;; TODO Probably should use q/inside? instead
+            (and (<= name-row line name-end-row)
+                 (<= name-col column name-end-col)))
+          (get analysis filename)))
 
 (defn find-definition-from-cursor [analysis filename line column db]
   (try
@@ -293,6 +321,15 @@
        (filter #(and (identical? :keywords (:bucket %))
                      (:reg %)))
        (medley/distinct-by (juxt :ns :name :row :col))))
+
+(defn find-local-by-destructured-keyword [analysis filename keyword-element]
+  (->> (get analysis filename)
+       (filter #(and (identical? :locals (:bucket %))
+                     (= (:name-row %) (:name-row keyword-element))
+                     (= (:name-col %) (:name-col keyword-element))
+                     (= (:name-end-row %) (:name-end-row keyword-element))
+                     (= (:name-end-col %) (:name-end-col keyword-element))))
+       first))
 
 (defn find-all-ns-definition-names [analysis]
   (into #{}

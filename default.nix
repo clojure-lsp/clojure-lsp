@@ -7,21 +7,47 @@ stdenv.mkDerivation rec {
   version = "master";
   buildInputs = [ gcc graalvm11-ce clojure ];
 
-  # TODO: Build jar instead of fetch
-  jar = fetchurl {
-    url = "https://github.com/clojure-lsp/clojure-lsp/releases/download/2021.11.02-15.24.47/clojure-lsp.jar";
-    sha256 = "sha256-k0mzibcLAspklCPE6f2qsUm9bwSvcJRgWecMBq7mpF0=";
+  GRAALVM_HOME = graalvm11-ce;
+  CLOJURE_LSP_XMX = "-J-Xmx8g";
+
+  clojureDependenciesSha256 = "sha256-8seX3pNYvEuA+c89Msgs7tzlbHPwY+uphd7xl7n3MAA=";
+  fetchedClojureDeps = stdenv.mkDerivation {
+    name = "clojure-lsp-${version}-clojure-deps";
+    buildInputs = [ clojure ];
+    inherit src;
+
+    buildPhase = ''
+      export HOME=$(mktemp -d)
+      mkdir -p $out/.m2/repository
+      clojure -A:javac:prod-jar-for-native:native -Spath
+      cp -rf /build/.m2 $out/
+    '';
+
+    installPhase = ''
+      find $out -type f \
+        -name \*.lastUpdated -or \
+        -name resolver-status.properties -or \
+        -name _remote.repositories \
+        -delete
+    '';
+
+    dontFixup = true;
+    outputHashAlgo = "sha256";
+    outputHashMode = "recursive";
+    outputHash = clojureDependenciesSha256;
   };
 
-  GRAALVM_HOME = graalvm11-ce;
-  CLOJURE_LSP_JAR = jar;
-  CLOJURE_LSP_XMX = "-J-Xmx8g";
+  CLJ_CONFIG = ''{:mvn/local-repo "${fetchedClojureDeps}/.m2/repository"}'';
 
   buildPhase = ''
     runHook preBuild
     export HOME=$(mktemp -d)
-    # FIXME: Failed to read artifact descriptor for org.clojure:clojure:jar:1.10.3
-    # make prod-jar-for-native
+
+    ;;TODO working until here
+    clojure -Sdeps '{:mvn/local-repo "${fetchedClojureDeps}/.m2/repository"}' -A:javac:prod-jar-for-native:native -X:javac
+    clojure -Sdeps '{:mvn/local-repo "${fetchedClojureDeps}/.m2/repository"}' -A:javac:prod-jar-for-native:native -X:prod-jar-for-native
+
+    CLOJURE_LSP_JAR = clojure-lsp.jar;
 
     DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
     export DTLV_LIB_EXTRACT_DIR=$DTLV_LIB_EXTRACT_DIR

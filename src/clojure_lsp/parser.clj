@@ -103,15 +103,32 @@
                 (z/replace (n/token-node (symbol ":"))))
               z/up))))))
 
+(defn ^:private handle-keyword-with-end-slash-code [text exception]
+  (when-let [[_ token] (->> exception
+                            Throwable->map
+                            :cause
+                            (re-matches #".*Invalid keyword: (.+\/)."))]
+    (let [token-pattern (re-pattern (str ":" token "(\\s|\\n|\\))"))]
+      (when-let [[_ extra-token] (re-find token-pattern text)]
+        (-> text
+            (string/replace-first token-pattern (str ":" token "_" extra-token))
+            z/of-string
+            (z/edit->
+              (z/find-next-value z/next (keyword (str token "_")))
+              (z/replace (n/keyword-node (keyword token))))
+            z/up)))))
+
 (defn ^:private safe-zloc-of-string [text]
   (try
     (z/of-string text)
     (catch clojure.lang.ExceptionInfo e
       (if-let [node (handle-end-slash-code text e)]
         node
-        (if-let [node (handle-single-colon-code text e)]
+        (if-let [node (handle-keyword-with-end-slash-code text e)]
           node
-          (throw e))))))
+          (if-let [node (handle-single-colon-code text e)]
+            node
+            (throw e)))))))
 
 (defn loc-at-pos [code row col]
   (some-> code

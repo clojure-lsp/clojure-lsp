@@ -1167,9 +1167,7 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
-              _ (log/info "===>" actions)
               chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
-          (log/info "-->" chosen-source-path)
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
             ;; No source paths besides current one

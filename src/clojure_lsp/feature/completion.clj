@@ -11,6 +11,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [clojure.walk :as walk]
+   [medley.core :as medley]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
@@ -287,7 +288,7 @@
                          :detail (str "java.util." sym)
                          :priority :java})))))
 
-(defn ^:private with-snippets [cursor-loc text row col settings]
+(defn ^:private with-snippets [cursor-loc matches-fn text row col settings]
   (let [next-loc (parser/safe-loc-at-pos text row (inc col))]
     (->> (concat
            (f.completion-snippet/known-snippets settings)
@@ -295,10 +296,15 @@
          (map #(assoc %
                       :kind :snippet
                       :priority :snippet
-                      :insert-text-format :snippet)))))
+                      :insert-text-format :snippet))
+         (filter (comp matches-fn :label)))))
 
-(defn- sort-completion-results [results]
-  (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail) results))
+(defn ^:private sorting-and-distincting-items [items]
+  (->> items
+       (medley/distinct-by (juxt :label :kind :detail))
+       (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail))
+       (map #(dissoc % :priority))
+       not-empty))
 
 (defn completion [uri row col db]
   (let [filename (shared/uri->filename uri)
@@ -338,52 +344,40 @@
                                (name cursor-value)
                                (str cursor-value)))
         cursor-full-ns? (when cursor-value-or-ns
-                          (contains? (q/find-all-ns-definition-names analysis) (symbol cursor-value-or-ns)))]
-    (cond
-      inside-refer?
-      (->> (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
-           (into #{})
-           set
-           sort-completion-results
-           not-empty)
+                          (contains? (q/find-all-ns-definition-names analysis) (symbol cursor-value-or-ns)))
+        items (cond
+                inside-refer?
+                (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
 
-      inside-require?
-      (->> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
-           (into #{})
-           set
-           sort-completion-results
-           (map #(dissoc % :priority))
-           not-empty)
+                inside-require?
+                (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
 
-      :else
-      (cond-> #{}
-        cursor-full-ns?
-        (into (with-elements-from-full-ns cursor-value-or-ns analysis))
+                :else
+                (cond-> []
+                  cursor-full-ns?
+                  (into (with-elements-from-full-ns cursor-value-or-ns analysis))
 
-        (and cursor-value-or-ns
-             (not keyword-value?))
-        (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
+                  (and cursor-value-or-ns
+                       (not keyword-value?))
+                  (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
 
-        simple-cursor?
-        (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements row col))
-            (into (with-clojure-core-items matches-fn analysis)))
+                  (or simple-cursor?
+                      keyword-value?)
+                  (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements row col))
+                      (into (with-clojure-core-items matches-fn analysis)))
 
-        (and simple-cursor?
-             (supports-cljs? uri))
-        (into (with-clojurescript-items matches-fn analysis))
+                  (and simple-cursor?
+                       (supports-cljs? uri))
+                  (into (with-clojurescript-items matches-fn analysis))
 
-        (and simple-cursor?
-             (supports-clj-core? uri))
-        (into (with-java-items matches-fn))
+                  (and simple-cursor?
+                       (supports-clj-core? uri))
+                  (into (with-java-items matches-fn))
 
-        support-snippets?
-        (into (with-snippets cursor-loc text row col settings))
-
-        :always
-        (->> set
-             sort-completion-results
-             (map #(dissoc % :priority))
-             not-empty)))))
+                  (and support-snippets?
+                       simple-cursor?)
+                  (into (with-snippets cursor-loc matches-fn text row col settings))))]
+    (sorting-and-distincting-items items)))
 
 (defn ^:private resolve-item-by-ns
   [{{:keys [name ns filename]} :data :as item} db]

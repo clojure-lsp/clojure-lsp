@@ -1,31 +1,61 @@
-{ lib, stdenv, graalvm11-ce, babashka, fetchurl, fetchFromGitHub, clojure
+{ lib, stdenv, graalvm11-ce, gcc, babashka, fetchurl, fetchFromGitHub, clojure
 , writeScript, jre, makeWrapper }:
 
 stdenv.mkDerivation rec {
   src = ./.;
   pname = "clojure-lsp";
   version = "master";
-  buildInputs = [ graalvm11-ce clojure ];
-
-  # TODO: Build jar instead of fetch
-  jar = fetchurl {
-    url =
-      "https://github.com/clojure-lsp/clojure-lsp/releases/download/2021.10.20-13.04.11/clojure-lsp.jar";
-    sha256 = "1p2mf1mzxyj9csx4vf1yf37630dpp7q3kl1fdzdkpdaq8j2ax7d9";
-  };
+  buildInputs = [ gcc graalvm11-ce clojure ];
 
   GRAALVM_HOME = graalvm11-ce;
-  CLOJURE_LSP_JAR = jar;
-  CLOJURE_LSP_XMX = "-J-Xmx4g";
+  CLOJURE_LSP_XMX = "-J-Xmx8g";
+
+  clojureDependenciesSha256 =
+    "sha256-8seX3pNYvEuA+c89Msgs7tzlbHPwY+uphd7xl7n3MAA=";
+  fetchedClojureDeps = stdenv.mkDerivation {
+    name = "clojure-lsp-${version}-clojure-deps";
+    buildInputs = [ clojure ];
+    inherit src;
+
+    buildPhase = ''
+      export HOME=$(mktemp -d)
+      mkdir -p $out/.m2/repository
+      clojure -A:javac:prod-jar-for-native:native -Spath
+      cp -rf /build/.m2 $out/
+    '';
+
+    installPhase = ''
+      find $out -type f \
+        -name \*.lastUpdated -or \
+        -name resolver-status.properties -or \
+        -name _remote.repositories \
+        -delete
+    '';
+
+    dontFixup = true;
+    outputHashAlgo = "sha256";
+    outputHashMode = "recursive";
+    outputHash = clojureDependenciesSha256;
+  };
+
+  CLJ_CONFIG = ''{:mvn/local-repo "${fetchedClojureDeps}/.m2/repository"}'';
 
   buildPhase = ''
-    export HOME=$(mktemp -d)
     runHook preBuild
-    # FIXME: Failed to read artifact descriptor for org.clojure:clojure:jar:1.10.3
-    # make prod-jar-for-native
+    export HOME=$(mktemp -d)
+
+    ;;TODO working until here
+    clojure -Sdeps '{:mvn/local-repo "${fetchedClojureDeps}/.m2/repository"}' -A:javac:prod-jar-for-native:native -X:javac
+    clojure -Sdeps '{:mvn/local-repo "${fetchedClojureDeps}/.m2/repository"}' -A:javac:prod-jar-for-native:native -X:prod-jar-for-native
+
+    CLOJURE_LSP_JAR = clojure-lsp.jar;
+
+    DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
+    export DTLV_LIB_EXTRACT_DIR=$DTLV_LIB_EXTRACT_DIR
 
     args=("-jar" "$CLOJURE_LSP_JAR"
           "-H:CLibraryPath=${graalvm11-ce.lib}/lib"
+          "-H:CLibraryPath=$DTLV_LIB_EXTRACT_DIR"
           "-H:+ReportExceptionStackTraces"
           "--verbose"
           "--no-fallback"
@@ -52,5 +82,4 @@ stdenv.mkDerivation rec {
     runHook postCheck
     unset HOME
   '';
-
 }

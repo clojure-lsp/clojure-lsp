@@ -82,13 +82,11 @@
     (is (= nil (f.completion/completion (h/file-uri "file:///e.clj") 5 3 db/db))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
-      [{:label "alpaca.ns" :kind :module}
-       {:label "alpaca.ns" :kind :module}]
+      [{:label "alpaca.ns" :kind :module}]
       (f.completion/completion (h/file-uri "file:///f.clj") 2 21 db/db)))
   (testing "complete locals"
     (h/assert-submaps
-      [{:label "ba" :kind :property}
-       {:label "bar" :kind :function}
+      [{:label "bar" :kind :function}
        {:label "baz" :kind :variable}
        {:label "ba" :kind :property}
        {:label "ba/baff" :kind :variable}
@@ -286,8 +284,8 @@
             "fo"))
   (testing "completing replacing $current-form"
     (h/assert-submaps
-      [{:label "foo", :kind :variable}
-       {:label "foo", :kind :module}
+      [{:label "foo", :kind :module}
+       {:label "foo", :kind :variable}
        {:label ":foo", :kind :keyword, :detail ""}
        {:label "for", :kind :reference, :detail "clojure.core/for"}
        {:label "force", :kind :reference, :detail "clojure.core/force"}

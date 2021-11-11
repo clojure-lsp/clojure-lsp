@@ -352,7 +352,7 @@
                                                                                 :incremental TextDocumentSyncKind/Incremental
                                                                                 TextDocumentSyncKind/Full))
                                                                   (.setSave (SaveOptions. true))))
-                                          (.setCompletionProvider (CompletionOptions. true []))))))))))
+                                          (.setCompletionProvider (CompletionOptions. true [":" "/"]))))))))))
 
     (^void initialized [^InitializedParams params]
       (start :initialized

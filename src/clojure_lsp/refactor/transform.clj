@@ -66,9 +66,10 @@
           :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
       [])))
 
-(defn thread-sym
-  [zloc sym top-meta]
-  (let [movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
+(defn ^:private thread-sym
+  [zloc sym top-meta db]
+  (let [keep-parens-when-threading? (settings/get db [:keep-parens-when-threading?] false)
+        movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
     (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)
             parent-op (z/sexpr (z/left zloc))
@@ -84,7 +85,8 @@
                              (z/remove))
                            (z/up)
                            ((fn [loc] (cond-> loc
-                                        (edit/single-child? loc)
+                                        (and (edit/single-child? loc)
+                                             (not keep-parens-when-threading?))
                                         (-> z/down edit/raise)
 
                                         threaded?
@@ -121,34 +123,34 @@
                            (some-> zloc z/up z/next z/sexpr))))))
 
 (defn thread-first
-  [zloc]
+  [zloc db]
   (when (can-thread? zloc)
-    (thread-sym zloc '-> (meta (z/node zloc)))))
+    (thread-sym zloc '-> (meta (z/node zloc)) db)))
 
 (defn thread-last
-  [zloc]
+  [zloc db]
   (when (can-thread? zloc)
-    (thread-sym zloc '->> (meta (z/node zloc)))))
+    (thread-sym zloc '->> (meta (z/node zloc)) db)))
 
 (defn thread-all
-  [zloc sym]
+  [zloc sym db]
   (when (can-thread? zloc)
     (let [zloc (if (= (z/tag zloc) :list) zloc (z/up zloc))
           top-meta (meta (z/node zloc))
-          [{top-range :range} :as result] (thread-sym zloc sym top-meta)]
+          [{top-range :range} :as result] (thread-sym zloc sym top-meta db)]
       (loop [[{:keys [loc]} :as result] result]
         (let [next-loc (z/right (z/down loc))]
           (if (and (can-thread-list? next-loc) (z/right (z/down next-loc)))
-            (recur (thread-sym next-loc sym top-meta))
+            (recur (thread-sym next-loc sym top-meta db))
             (assoc-in result [0 :range] top-range)))))))
 
 (defn thread-first-all
-  [zloc]
-  (thread-all zloc '->))
+  [zloc db]
+  (thread-all zloc '-> db))
 
 (defn thread-last-all
-  [zloc]
-  (thread-all zloc '->>))
+  [zloc db]
+  (thread-all zloc '->> db))
 
 (def thread-first-symbols #{'-> 'some->})
 

@@ -49,17 +49,17 @@
 (defmethod refactor :move-to-let [{:keys [loc args]}]
   (apply r.transform/move-to-let loc [args]))
 
-(defmethod refactor :thread-first [{:keys [loc]}]
-  (r.transform/thread-first loc))
+(defmethod refactor :thread-first [{:keys [loc db]}]
+  (r.transform/thread-first loc db))
 
-(defmethod refactor :thread-first-all [{:keys [loc]}]
-  (r.transform/thread-first-all loc))
+(defmethod refactor :thread-first-all [{:keys [loc db]}]
+  (r.transform/thread-first-all loc db))
 
-(defmethod refactor :thread-last [{:keys [loc]}]
-  (r.transform/thread-last loc))
+(defmethod refactor :thread-last [{:keys [loc db]}]
+  (r.transform/thread-last loc db))
 
-(defmethod refactor :thread-last-all [{:keys [loc]}]
-  (r.transform/thread-last-all loc))
+(defmethod refactor :thread-last-all [{:keys [loc db]}]
+  (r.transform/thread-last-all loc db))
 
 (defmethod refactor :unwind-all [{:keys [loc]}]
   (r.transform/unwind-all loc))

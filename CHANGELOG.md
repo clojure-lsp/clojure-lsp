@@ -15,6 +15,7 @@
   - Fix "Add require" code actions adding multiple requires instead of the selected.
   - Improve "Add require" wording, making it easier to understand what each different action will do.
   - Smart check all available refers to require, adding refer options to `Add require` code actions. #627
+  - Avoid adding duplicate requires when adding a new require via code action. #639
   - Add setting `keep-parens-when-threading?` to keep parens for single arity functions when threading. #636
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)

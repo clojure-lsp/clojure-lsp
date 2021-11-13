@@ -267,6 +267,61 @@
     (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
       (is (= nil (transform/add-common-import-to-namespace zloc db/db))))))
 
+(deftest add-require-suggestion-test
+  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
+  (testing "alias"
+    (testing "on empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar)\nstr/a") (z/find-value z/next 'str/a))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" "str" nil db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar "
+                     "  (:require"
+                     "    [clojure.string :as str]))")
+               (z/root-string loc)))))
+    (testing "on non empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.java.io :as io]))\nstr/a") (z/find-value z/next 'str/a))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" "str" nil db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.java.io :as io]"
+                     "   [clojure.string :as str]))")
+               (z/root-string loc))))))
+  (testing "refer"
+    (testing "on empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar)\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar "
+                     "  (:require"
+                     "    [clojure.string :refer [split]]))")
+               (z/root-string loc)))))
+    (testing "on non empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.java.io :as io]))\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.java.io :as io]"
+                     "   [clojure.string :refer [split]]))")
+               (z/root-string loc)))))
+    (testing "on existing ns with alias"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.string :as str]))\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :as str :refer [split]]))")
+               (z/root-string loc)))))
+    (testing "on existing ns with refers"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.string :refer [join]]))\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :refer [join split]]))")
+               (z/root-string loc)))))))
+
 (defn- test-clean-ns
   ([db input-code expected-code]
    (test-clean-ns db input-code expected-code true))

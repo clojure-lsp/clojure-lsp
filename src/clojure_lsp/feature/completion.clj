@@ -288,16 +288,21 @@
                          :detail (str "java.util." sym)
                          :priority :java})))))
 
-(defn ^:private with-snippets [cursor-loc matches-fn text row col settings]
-  (let [next-loc (parser/safe-loc-at-pos text row (inc col))]
-    (->> (concat
-           (f.completion-snippet/known-snippets settings)
-           (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
-         (map #(assoc %
-                      :kind :snippet
-                      :priority :snippet
-                      :insert-text-format :snippet))
-         (filter (comp matches-fn :label)))))
+(defn ^:private merging-snippets [items cursor-loc matches-fn text row col settings]
+  (let [next-loc (parser/safe-loc-at-pos text row (inc col))
+        snippet-items-by-label (->> (concat
+                                      (f.completion-snippet/known-snippets settings)
+                                      (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
+                                    (map #(assoc %
+                                                 :kind :snippet
+                                                 :priority :snippet
+                                                 :insert-text-format :snippet))
+                                    (filter (comp matches-fn :label))
+                                    (reduce #(assoc %1 (:label %2) %2) {}))]
+    (map (fn [item]
+           (or (get snippet-items-by-label (:label item))
+               item))
+         items)))
 
 (defn ^:private sorting-and-distincting-items [items]
   (->> items
@@ -376,7 +381,7 @@
 
                   (and support-snippets?
                        simple-cursor?)
-                  (into (with-snippets cursor-loc matches-fn text row col settings))))]
+                  (merging-snippets cursor-loc matches-fn text row col settings)))]
     (sorting-and-distincting-items items)))
 
 (defn ^:private resolve-item-by-ns

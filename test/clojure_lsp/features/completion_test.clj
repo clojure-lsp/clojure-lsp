@@ -210,23 +210,28 @@
 (deftest completing-known-snippets
   (h/load-code-and-locs
     (h/code "(ns foo)"
-            "comment$"))
+            "comment"))
 
   (testing "completing comment snippet when client does not support snippets"
     (swap! db/db merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false}}}}})
     (h/assert-submaps
-      []
-      (f.completion/completion (h/file-uri "file:///a.clj") 2 9 db/db)))
+      [{:label "comment"
+        :kind :reference
+        :data {"filename" "/clojure.core.clj"
+               "name" "comment"
+               "ns" "clojure.core"}
+        :detail "clojure.core/comment"}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 2 8 db/db)))
 
   (testing "completing with snippets enable return all available snippets"
     (swap! db/db merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
     (h/assert-submaps
-      [{:label "comment$"
-        :detail "Create comment block"
+      [{:label "comment"
+        :detail "clojure.core/comment"
         :insert-text "(comment\n  $0\n  )"
-        :kind :snippet
+        :kind :reference
         :insert-text-format :snippet}]
-      (filter (comp #(= "comment$" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 9 db/db)))))
+      (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 db/db)))))
 
 (deftest completing-user-snippets
   (h/load-code-and-locs

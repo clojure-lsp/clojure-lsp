@@ -298,12 +298,19 @@
                                                  :priority :snippet
                                                  :insert-text-format :snippet))
                                     (filter (comp matches-fn :label))
-                                    (reduce #(assoc %1 (:label %2) %2) {}))]
-    (map (fn [item]
-           (if-let [snippet-item (get snippet-items-by-label (:label item))]
-             (shared/assoc-some snippet-item :detail (:detail item))
-             item))
-         items)))
+                                    (reduce #(assoc %1 (:label %2) %2) {}))
+        items-by-label (reduce #(assoc %1 (:label %2) %2) {} items)]
+    (concat
+      (map (fn [item]
+             (if-let [snippet-item (get snippet-items-by-label (:label item))]
+               (shared/assoc-some snippet-item
+                                  :detail (:detail item)
+                                  :data (:data item)
+                                  :kind (:kind item))
+               item))
+           items)
+      (remove #(get items-by-label (:label %))
+              (vals snippet-items-by-label)))))
 
 (defn ^:private sorting-and-distincting-items [items]
   (->> items

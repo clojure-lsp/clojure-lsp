@@ -6,7 +6,8 @@
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.memoize :as memoize]
    [medley.core :as medley]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.classpath :as classpath]))
 
 (set! *warn-on-reflection* true)
 
@@ -20,7 +21,9 @@
   (->> [{:project-path "project.clj"
          :classpath-cmd ["lein" "classpath"]}
         {:project-path "deps.edn"
-         :classpath-cmd ["clojure" "-A:dev:test" "-Spath"]}
+         :classpath-cmd ["clojure" "-A:dev:test" "-Spath"]
+         :fallback-fn #'classpath/lookup-deps-edn
+         :fallback-extra-args ["-A:dev:test"]}
         {:project-path "build.boot"
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"

@@ -300,8 +300,9 @@
                                     (filter (comp matches-fn :label))
                                     (reduce #(assoc %1 (:label %2) %2) {}))]
     (map (fn [item]
-           (or (get snippet-items-by-label (:label item))
-               item))
+           (if-let [snippet-item (get snippet-items-by-label (:label item))]
+             (shared/assoc-some snippet-item :detail (:detail item))
+             item))
          items)))
 
 (defn ^:private sorting-and-distincting-items [items]

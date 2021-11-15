@@ -228,7 +228,7 @@
     (h/assert-submaps
       [{:label "comment"
         :detail "clojure.core/comment"
-        :insert-text "(comment\n  $0\n  )"
+        :insert-text "(comment\n  ${0:body}\n  )"
         :kind :reference
         :insert-text-format :snippet}]
       (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 db/db)))))

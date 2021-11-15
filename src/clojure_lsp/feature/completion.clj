@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.completion
   (:require
    [clojure-lsp.common-symbols :as common-sym]
+   [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.parser :as parser]
@@ -221,9 +222,9 @@
                (mapv
                  (fn [element]
                    (let [require-edit (some-> cursor-loc
-                                              (r.transform/add-known-alias (symbol (str (:alias element)))
-                                                                           (symbol (str (:to element)))
-                                                                           db)
+                                              (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
+                                                                                     (symbol (str (:to element)))
+                                                                                     db)
                                               r.transform/result)]
                      (cond-> (element->completion-item element nil :required-alias)
                        (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))))
@@ -239,7 +240,7 @@
              (map
                (fn [[element-ns completion-item]]
                  (let [require-edit (some-> cursor-loc
-                                            (r.transform/add-known-alias (symbol cursor-alias) element-ns db)
+                                            (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
                                             r.transform/result)]
                    (cond-> completion-item
                      (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))))

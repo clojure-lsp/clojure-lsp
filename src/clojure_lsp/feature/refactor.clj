@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.refactor
   (:require
+   [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
@@ -23,7 +24,7 @@
   (r.transform/add-missing-libspec loc db))
 
 (defmethod refactor :clean-ns [{:keys [loc uri db]}]
-  (r.transform/clean-ns loc uri db))
+  (f.clean-ns/clean-ns-edits loc uri db))
 
 (defmethod refactor :cycle-coll [{:keys [loc]}]
   (r.transform/cycle-coll loc))

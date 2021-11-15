@@ -438,7 +438,7 @@
         launcher (LSPLauncher/createServerLauncher server is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
-    (nrepl/setup-nrepl db/db)
+    (nrepl/setup-dev-nrepl db/db)
     (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
     (go-loop [edit (<! db/edits-chan)]
       (producer/workspace-apply-edit edit db/db)

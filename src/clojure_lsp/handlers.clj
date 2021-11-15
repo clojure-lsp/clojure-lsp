@@ -27,7 +27,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.nrepl :as nrepl])
   (:import
    [java.net
     URL
@@ -193,7 +194,7 @@
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)
         elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))
-        data (shared/assoc-some {}
+        data (shared/assoc-some {:nrepl (nrepl/test-eval db/db)}
                                 :elements (mapv (fn [e]
                                                   (shared/assoc-some
                                                     {:element e}

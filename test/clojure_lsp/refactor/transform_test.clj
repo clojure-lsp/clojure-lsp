@@ -267,6 +267,61 @@
     (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
       (is (= nil (transform/add-common-import-to-namespace zloc db/db))))))
 
+(deftest add-require-suggestion-test
+  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
+  (testing "alias"
+    (testing "on empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar)\nstr/a") (z/find-value z/next 'str/a))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" "str" nil db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar "
+                     "  (:require"
+                     "    [clojure.string :as str]))")
+               (z/root-string loc)))))
+    (testing "on non empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.java.io :as io]))\nstr/a") (z/find-value z/next 'str/a))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" "str" nil db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.java.io :as io]"
+                     "   [clojure.string :as str]))")
+               (z/root-string loc))))))
+  (testing "refer"
+    (testing "on empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar)\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar "
+                     "  (:require"
+                     "    [clojure.string :refer [split]]))")
+               (z/root-string loc)))))
+    (testing "on non empty ns"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.java.io :as io]))\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.java.io :as io]"
+                     "   [clojure.string :refer [split]]))")
+               (z/root-string loc)))))
+    (testing "on existing ns with alias"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.string :as str]))\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :as str :refer [split]]))")
+               (z/root-string loc)))))
+    (testing "on existing ns with refers"
+      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.string :refer [join]]))\nsplit") (z/find-value z/next 'split))
+            [{:keys [loc range]}] (transform/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
+        (is (some? range))
+        (is (= (code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :refer [join split]]))")
+               (z/root-string loc)))))))
+
 (defn- test-clean-ns
   ([db input-code expected-code]
    (test-clean-ns db input-code expected-code true))
@@ -1071,12 +1126,12 @@
 
 (deftest thread-test
   (let [zloc (z/of-string "(remove nil? (filter :id (map (comp now doit) xs)))")]
-    (let [[{:keys [loc]}] (transform/thread-last zloc)]
+    (let [[{:keys [loc]}] (transform/thread-last zloc db/db)]
       (is (= '->> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(->> (filter :id (map (comp now doit) xs))"
                                 "     (remove nil?))"])
              (z/root-string loc))))
-    (let [[{:keys [loc]}] (transform/thread-last-all zloc)]
+    (let [[{:keys [loc]}] (transform/thread-last-all zloc db/db)]
       (is (= '->> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(->> xs"
                                 "     (map (comp now doit))"
@@ -1084,12 +1139,12 @@
                                 "     (remove nil?))"])
              (z/root-string loc)))))
   (let [zloc (z/of-string "(assoc (dissoc (update m :xs reverse) :bye) :hello :world)")]
-    (let [[{:keys [loc]}] (transform/thread-first zloc)]
+    (let [[{:keys [loc]}] (transform/thread-first zloc db/db)]
       (is (= '-> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(-> (dissoc (update m :xs reverse) :bye)"
                                 "    (assoc :hello :world))"])
              (z/root-string loc))))
-    (let [[{:keys [loc]}] (transform/thread-first-all zloc)]
+    (let [[{:keys [loc]}] (transform/thread-first-all zloc db/db)]
       (is (= '-> (z/sexpr (z/down loc))))
       (is (= (string/join "\n" ["(-> m"
                                 "    (update :xs reverse)"
@@ -1097,16 +1152,29 @@
                                 "    (assoc :hello :world))"])
              (z/root-string loc)))))
   (let [zloc (z/of-string "(interpose (spaces) (foo))")
-        [{:keys [loc]} :as _result] (transform/thread-last-all zloc)]
+        [{:keys [loc]} :as _result] (transform/thread-last-all zloc db/db)]
     (is (= '->> (z/sexpr (z/down loc))))
     (is (= "(->> (foo)\n     (interpose (spaces)))" (z/root-string loc))))
   (let [zloc (z/of-string "[:a :b]")
-        result (transform/thread-last-all zloc)]
+        result (transform/thread-last-all zloc db/db)]
     (is (nil? result)))
   (let [zloc (z/of-string "(get-in foo [:a :b])")
-        [{:keys [loc]} :as _result] (transform/thread-last-all zloc)]
+        [{:keys [loc]} :as _result] (transform/thread-last-all zloc db/db)]
     (is (= '->> (z/sexpr (z/down loc))))
-    (is (= "(->> [:a :b]\n     (get-in foo))" (z/root-string loc)))))
+    (is (= "(->> [:a :b]\n     (get-in foo))" (z/root-string loc))))
+  (testing "Removing unecessary parens when 1 arg"
+    (h/clean-db!)
+    (let [zloc (z/of-string "(bar (foo [1 2]))")
+          [{:keys [loc]}] (transform/thread-last-all zloc db/db)]
+      (is (= '->> (z/sexpr (z/down loc))))
+      (is (= "(->> [1 2]\n     foo\n     bar)" (z/root-string loc)))))
+  (testing "Not removing unecessary parens when 1 arg"
+    (h/clean-db!)
+    (swap! db/db medley/deep-merge {:settings {:keep-parens-when-threading? true}})
+    (let [zloc (z/of-string "(bar (foo [1 2]))")
+          [{:keys [loc]}] (transform/thread-last-all zloc db/db)]
+      (is (= '->> (z/sexpr (z/down loc))))
+      (is (= "(->> [1 2]\n     (foo)\n     (bar))" (z/root-string loc))))))
 
 (deftest move-to-let-test
   (let [zloc (z/rightmost (z/down (z/of-string "(let [a 1] a)")))

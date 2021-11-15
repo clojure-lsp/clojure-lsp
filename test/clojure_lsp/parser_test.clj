@@ -28,7 +28,14 @@
   (is (= "(ns foo) foo/bar" (z/string (z/up (#'parser/safe-zloc-of-string "(ns foo) foo/bar")))))
   (is (= "(ns foo) foo/ (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) foo/ (+ 1 2)"))))
   (is (= "(ns foo) foo/\n(+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) foo/\n(+ 1 2)"))))
-  (is (= "(ns foo) (foo/)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (foo/)")))))
+  (is (= "(ns foo) (foo/)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (foo/)"))))
+  (is (= "(ns foo) :\n" (z/string (#'parser/safe-zloc-of-string "(ns foo) :\n"))))
+  (is (= "(ns foo) : " (z/string (#'parser/safe-zloc-of-string "(ns foo) : "))))
+  (is (= "(ns foo) (:)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (:)"))))
+  (is (= "(ns foo)\n:\n" (z/string (#'parser/safe-zloc-of-string "(ns foo)\n:\n"))))
+  (is (= "(ns foo) :foo/ (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) :foo/ (+ 1 2)"))))
+  (is (= "(ns foo) (:foo/) (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (:foo/) (+ 1 2)"))))
+  (is (= ":user/username\n:user/\n123" (z/string (#'parser/safe-zloc-of-string ":user/username\n:user/\n123")))))
 
 (deftest find-loc-at-pos-test
   (testing "valid code"

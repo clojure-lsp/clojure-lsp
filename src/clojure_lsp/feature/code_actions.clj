@@ -354,7 +354,7 @@
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db))
         missing-requires* (future (find-missing-requires uri diagnostics db))
         missing-imports* (future (find-missing-imports uri diagnostics db))
-        alias-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))]
+        require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))]
     (cond-> []
 
       (seq @missing-requires*)
@@ -363,8 +363,8 @@
       (seq @missing-imports*)
       (into (missing-import-actions uri @missing-imports*))
 
-      (seq @alias-suggestions*)
-      (into (require-suggestion-actions uri @alias-suggestions*))
+      (seq @require-suggestions*)
+      (into (require-suggestion-actions uri @require-suggestions*))
 
       @function-to-create*
       (conj (create-private-function-action uri @function-to-create*))

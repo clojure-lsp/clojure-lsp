@@ -22,6 +22,7 @@
  :use-metadata-for-privacy? false
  :show-docs-arity-on-same-line? false ; deprecated, will be removed soon, use :hover :arity-on-same-line?
  :auto-add-ns-to-new-files? true
+ :keep-parens-when-threading? false
  :document-formatting? true
  :document-range-formatting? true
  :dependency-scheme :zip

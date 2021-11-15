@@ -66,9 +66,10 @@
           :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
       [])))
 
-(defn thread-sym
-  [zloc sym top-meta]
-  (let [movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
+(defn ^:private thread-sym
+  [zloc sym top-meta db]
+  (let [keep-parens-when-threading? (settings/get db [:keep-parens-when-threading?] false)
+        movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
     (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)
             parent-op (z/sexpr (z/left zloc))
@@ -84,7 +85,8 @@
                              (z/remove))
                            (z/up)
                            ((fn [loc] (cond-> loc
-                                        (edit/single-child? loc)
+                                        (and (edit/single-child? loc)
+                                             (not keep-parens-when-threading?))
                                         (-> z/down edit/raise)
 
                                         threaded?
@@ -121,34 +123,34 @@
                            (some-> zloc z/up z/next z/sexpr))))))
 
 (defn thread-first
-  [zloc]
+  [zloc db]
   (when (can-thread? zloc)
-    (thread-sym zloc '-> (meta (z/node zloc)))))
+    (thread-sym zloc '-> (meta (z/node zloc)) db)))
 
 (defn thread-last
-  [zloc]
+  [zloc db]
   (when (can-thread? zloc)
-    (thread-sym zloc '->> (meta (z/node zloc)))))
+    (thread-sym zloc '->> (meta (z/node zloc)) db)))
 
 (defn thread-all
-  [zloc sym]
+  [zloc sym db]
   (when (can-thread? zloc)
     (let [zloc (if (= (z/tag zloc) :list) zloc (z/up zloc))
           top-meta (meta (z/node zloc))
-          [{top-range :range} :as result] (thread-sym zloc sym top-meta)]
+          [{top-range :range} :as result] (thread-sym zloc sym top-meta db)]
       (loop [[{:keys [loc]} :as result] result]
         (let [next-loc (z/right (z/down loc))]
           (if (and (can-thread-list? next-loc) (z/right (z/down next-loc)))
-            (recur (thread-sym next-loc sym top-meta))
+            (recur (thread-sym next-loc sym top-meta db))
             (assoc-in result [0 :range] top-range)))))))
 
 (defn thread-first-all
-  [zloc]
-  (thread-all zloc '->))
+  [zloc db]
+  (thread-all zloc '-> db))
 
 (defn thread-last-all
-  [zloc]
-  (thread-all zloc '->>))
+  [zloc db]
+  (thread-all zloc '->> db))
 
 (def thread-first-symbols #{'-> 'some->})
 
@@ -704,105 +706,99 @@
        find-class-name
        (get common-sym/java-util-imports)))
 
-(defn ^:private add-form-to-namespace [zloc form-to-add form-type form-to-check-exists db]
-  (let [ns-loc (edit/find-namespace zloc)
+(defn ^:private add-to-namespace
+  [zloc type ns sym db]
+  (let [form-type (case type
+                    :require-refer :require
+                    :require-alias :require
+                    :import :import)
+        ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
         cursor-sym (z/sexpr zloc)
         need-to-add? (and (not (z/find-value ns-zip z/next cursor-sym))
-                          (not (z/find-value ns-zip z/next form-to-add))
-                          (not (z/find-value ns-zip z/next form-to-check-exists)))]
-    (when (and form-to-add need-to-add?)
+                          (or ns
+                              (not (z/find-value ns-zip z/next sym)))
+                          (or (not (z/find-value ns-zip z/next ns))
+                              (not (z/find-value ns-zip z/next sym))))]
+    (when (and sym need-to-add?)
       (let [add-form-type? (not (z/find-value ns-zip z/next form-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next form-type)
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             col (if form-type-loc
-                  (:col (meta (z/node (z/rightmost form-type-loc))))
+                  (-> form-type-loc z/rightmost z/node meta :col)
                   (if (= :same-line ns-inner-blocks-indentation)
                     2
                     5))
-            result-loc (z/subedit-> ns-zip
-                                    (cond->
-                                     add-form-type? (z/append-child (n/newlines 1))
-                                     add-form-type? (z/append-child (n/spaces 2))
-                                     add-form-type? (z/append-child (list form-type)))
-                                    (z/find-value z/next form-type)
-                                    (z/up)
-                                    (cond->
-                                     (or (not add-form-type?)
-                                         (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
-                                    (z/append-child* (n/spaces (dec col)))
-                                    (z/append-child form-to-add))]
+            form-to-add (case type
+                          :require-refer [ns :refer [sym]]
+                          :require-alias [ns :as sym]
+                          :import sym)
+            existing-refer-ns (and (= type :require-refer)
+                                   (z/find-value ns-zip z/next ns))
+            existing-require-refer (when existing-refer-ns
+                                     (z/find-value existing-refer-ns z/next ':refer))
+
+            result-loc (if existing-refer-ns
+                         (if existing-require-refer
+                           (z/subedit-> ns-zip
+                                        (z/find-value z/next ns)
+                                        (z/find-value z/next ':refer)
+                                        z/right
+                                        (z/append-child* (n/spaces 1))
+                                        (z/append-child sym))
+                           (z/subedit-> ns-zip
+                                        (z/find-value z/next ns)
+                                        z/up
+                                        (z/append-child* (n/spaces 1))
+                                        (z/append-child :refer)
+                                        (z/append-child [sym])))
+                         (z/subedit-> ns-zip
+                                      (cond->
+                                       add-form-type? (z/append-child (n/newlines 1))
+                                       add-form-type? (z/append-child (n/spaces 2))
+                                       add-form-type? (z/append-child (list form-type)))
+                                      (z/find-value z/next form-type)
+                                      (z/up)
+                                      (cond->
+                                       (or (not add-form-type?)
+                                           (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                      (z/append-child* (n/spaces (dec col)))
+                                      (z/append-child form-to-add)))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
 (defn add-import-to-namespace [zloc import-name db]
-  (add-form-to-namespace zloc (symbol import-name) :import import-name db))
+  (add-to-namespace zloc :import nil (symbol import-name) db))
 
 (defn add-common-import-to-namespace [zloc db]
   (when-let [import-name (find-missing-import zloc)]
-    (add-form-to-namespace zloc (symbol import-name) :import import-name db)))
+    (add-to-namespace zloc :import nil (symbol import-name) db)))
 
 (defn add-known-alias
   [zloc alias-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add alias-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :as alias-to-add] :require alias-to-add db)))
+    (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db)))
 
 (defn add-known-refer
   [zloc refer-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add refer-to-add)
-    (add-form-to-namespace zloc [qualified-ns-to-add :refer [refer-to-add]] :require refer-to-add db)))
+    (add-to-namespace zloc :require-refer qualified-ns-to-add refer-to-add db)))
 
 (defn ^:private add-missing-alias-ns [zloc db]
   (let [require-alias (some-> zloc z/sexpr namespace symbol)
         qualified-ns-to-add (:ns (find-missing-ns-alias-require zloc db))]
     (add-known-alias zloc require-alias qualified-ns-to-add db)))
 
-(defn ^:private add-missing-refer [zloc]
-  (when-let [qualified-ns-to-add (:ns (find-missing-ns-refer-require zloc))]
-    (let [refer-to-add (-> zloc z/sexpr symbol)
-          ns-loc (edit/find-namespace zloc)
-          ns-zip (zsub/subzip ns-loc)
-          existing-ns-require (z/find-value ns-zip z/next qualified-ns-to-add)
-          existing-require-refer (when existing-ns-require
-                                   (z/find-value existing-ns-require z/next ':refer))
-          add-require? (and (not existing-ns-require)
-                            (not (z/find-value ns-zip z/next :require)))
-          require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)
-          col (if require-loc
-                (-> require-loc z/rightmost z/node meta :col)
-                5)
-          result-loc (if existing-ns-require
-                       (if existing-require-refer
-                         (z/subedit-> ns-loc
-                                      (z/find-value z/next qualified-ns-to-add)
-                                      (z/find-value z/next ':refer)
-                                      z/right
-                                      (z/append-child* (n/spaces 1))
-                                      (z/append-child (z/sexpr zloc)))
-                         (z/subedit-> ns-loc
-                                      (z/find-value z/next qualified-ns-to-add)
-                                      z/up
-                                      (z/append-child* (n/spaces 1))
-                                      (z/append-child :refer)
-                                      (z/append-child [refer-to-add])))
-                       (z/subedit-> ns-loc
-                                    (cond->
-                                     add-require? (z/append-child (n/newlines 1))
-                                     add-require? (z/append-child (n/spaces 2))
-                                     add-require? (z/append-child (list :require)))
-                                    (z/find-value z/next :require)
-                                    z/up
-                                    (z/append-child* (n/newlines 1))
-                                    (z/append-child* (n/spaces (dec col)))
-                                    (z/append-child [qualified-ns-to-add :refer [refer-to-add]])))]
-      [{:range (meta (z/node result-loc))
-        :loc result-loc}])))
+(defn ^:private add-missing-refer-ns [zloc db]
+  (let [require-refer (some-> zloc z/sexpr symbol)
+        qualified-ns-to-add (:ns (find-missing-ns-refer-require zloc))]
+    (add-known-refer zloc require-refer qualified-ns-to-add db)))
 
 (defn add-missing-libspec
   [zloc db]
   (if (some-> zloc z/sexpr namespace)
     (add-missing-alias-ns zloc db)
-    (add-missing-refer zloc)))
+    (add-missing-refer-ns zloc db)))
 
 (defn ^:private resolve-best-alias-suggestion
   [ns-str all-aliases drop-core?]
@@ -1167,9 +1163,7 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
-              _ (log/info "===>" actions)
               chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
-          (log/info "-->" chosen-source-path)
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
             ;; No source paths besides current one

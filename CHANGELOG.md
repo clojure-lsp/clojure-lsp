@@ -8,12 +8,16 @@
   - Huge improvements on namespaces renames and references find. #573
   - Fix warnings during datalevin access.
   - Improve freezing for some macos cases. #631
-  - Bump clj-kondo improve code parsing and clojure-lsp keywords completion. #630
+  - Bump clj-kondo improve code parsing.
+  - Big improvements on keyword completions. #630
   
 - Editor
   - Fix "Add require" code actions adding multiple requires instead of the selected.
   - Improve "Add require" wording, making it easier to understand what each different action will do.
   - Smart check all available refers to require, adding refer options to `Add require` code actions. #627
+  - Add setting `keep-parens-when-threading?` to keep parens for single arity functions when threading. #636
+  - Avoid adding duplicate requires when adding a new require via code action. #640
+  - Improve common known snippets to replace completion items, improving completion UX. #638
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

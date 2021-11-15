@@ -138,7 +138,7 @@
   (when (and qualified-ns-to-add alias-to-add)
     (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db)))
 
-(defn add-known-refer
+(defn ^:private add-known-refer
   [zloc refer-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add refer-to-add)
     (add-to-namespace zloc :require-refer qualified-ns-to-add refer-to-add db)))

@@ -69,7 +69,7 @@
     :detail "Create use"
     :insert-text "(:use [${1:namespace} :only [$0]])"}])
 
-(defn replace-snippets-vars [snippet next-loc]
+(defn ^:private replace-snippets-vars [snippet next-loc]
   (let [current-sexpr (or (some-> next-loc z/string)
                           "")]
     (string/replace snippet "$current-form" current-sexpr)))

@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.refactor
   (:require
+   [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
@@ -18,10 +19,10 @@
 (defmulti refactor :refactoring)
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args db]}]
-  (apply r.transform/add-import-to-namespace loc [args db]))
+  (apply f.add-missing-libspec/add-import-to-namespace loc [args db]))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc db]}]
-  (r.transform/add-missing-libspec loc db))
+  (f.add-missing-libspec/add-missing-libspec loc db))
 
 (defmethod refactor :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))

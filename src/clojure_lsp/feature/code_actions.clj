@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.code-actions
   (:require
+   [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.parser :as parser]
@@ -19,7 +20,7 @@
 (defn ^:private find-require-suggestions [uri missing-requires db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (->> (r.transform/find-require-suggestions diagnostic-zloc missing-requires db)
+      (->> (f.add-missing-libspec/find-require-suggestions diagnostic-zloc missing-requires db)
            (map #(assoc % :position position))))))
 
 (defn ^:private find-all-require-suggestions [uri diagnostics missing-requires db]
@@ -38,7 +39,7 @@
 (defn ^:private find-missing-require [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (when-let [missing-require (r.transform/find-missing-ns-require diagnostic-zloc db)]
+      (when-let [missing-require (f.add-missing-libspec/find-missing-ns-require diagnostic-zloc db)]
         (assoc missing-require :position position)))))
 
 (defn ^:private find-missing-requires [uri diagnostics db]
@@ -56,7 +57,7 @@
 (defn ^:private find-missing-import [uri db diagnostic]
   (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
     (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (when-let [missing-import (r.transform/find-missing-import diagnostic-zloc)]
+      (when-let [missing-import (f.add-missing-libspec/find-missing-import diagnostic-zloc)]
         {:missing-import missing-import
          :position position}))))
 
@@ -99,11 +100,11 @@
                                        db)
 
              "add-missing-import"
-             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-common-import-to-namespace zloc db) db)]
+             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-common-import-to-namespace zloc db) db)]
                {:edit missing-import-edit})
 
              "add-require-suggestion"
-             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (r.transform/add-require-suggestion zloc chosen-ns chosen-alias chosen-refer db) db)]
+             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-require-suggestion zloc chosen-ns chosen-alias chosen-refer db) db)]
                {:edit alias-suggestion-edit})
 
              "refactor-create-private-function"

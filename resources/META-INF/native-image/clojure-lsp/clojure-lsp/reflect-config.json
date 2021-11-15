@@ -33,7 +33,7 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.ClojuredocsParams",
+  "name":"clojure_lsp.ClojuredocsParams",
   "allDeclaredMethods":true,
   "allPublicMethods": true,
   "allDeclaredFields":true,

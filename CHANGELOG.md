@@ -8,7 +8,7 @@
   - Huge improvements on namespaces renames and references find. #573
   - Fix warnings during datalevin access.
   - Improve freezing for some macos cases. #631
-  - Bump clj-kondo improve code parsing.
+  - Bump clj-kondo to `2021.10.20-20211116.110002-7` improving code parsing and other fixes.
   - Big improvements on keyword completions. #630
   
 - Editor

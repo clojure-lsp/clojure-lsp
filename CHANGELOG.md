@@ -5,16 +5,16 @@
 - General
   - Improve rename feature to not heavily rely on valid source-paths for most cases.
   - Fix setTrace exception logs for graalvm native images.
-  - Huge improvements on namespaces renames and references find. #573
-  - Fix warnings during datalevin access.
-  - Improve freezing for some macos cases. #631
+  - Huge improvements on namespaces renames and namespaces references find. #573
+  - Fix/Remove warnings during datalevin access.
+  - Improve freezing for some MacOS cases. #631
   - Bump clj-kondo to `2021.10.20-20211116.110002-7` improving code parsing and other fixes.
-  - Big improvements on keyword completions. #630
   
 - Editor
   - Fix "Add require" code actions adding multiple requires instead of the selected.
   - Improve "Add require" wording, making it easier to understand what each different action will do.
   - Smart check all available refers to require, adding refer options to `Add require` code actions. #627
+  - Big improvements on keyword completions. #630
   - Add setting `keep-parens-when-threading?` to keep parens for single arity functions when threading. #636
   - Avoid adding duplicate requires when adding a new require via code action. #640
   - Improve common known snippets to replace completion items, improving completion UX. #638

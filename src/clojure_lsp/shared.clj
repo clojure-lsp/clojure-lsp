@@ -20,7 +20,7 @@
   from body."
   [message & body]
   `(let [~'start-time (System/nanoTime)
-         ~'result ~@body]
+         ~'result (do ~@body)]
      (log/info (format ~message (start-time->end-time-seconds ~'start-time)))
      ~'result))
 

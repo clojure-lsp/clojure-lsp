@@ -174,7 +174,7 @@
       result
       (shared/->range element))))
 
-  (defn rename
+(defn rename
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
         references (q/find-references-from-cursor (:analysis @db) filename row col true db)

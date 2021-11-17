@@ -18,7 +18,7 @@
         :referencesProvider true
         :callHierarchyProvider true
         :linkedEditingRangeProvider true
-        :renameProvider true
+        :renameProvider {:prepareRename true}
         :executeCommandProvider {:commands ["add-missing-libspec"
                                             "add-import-to-namespace"
                                             "cycle-privacy"

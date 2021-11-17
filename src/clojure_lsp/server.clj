@@ -55,10 +55,12 @@
      InitializeResult
      InitializedParams
      LinkedEditingRangeParams
+     PrepareRenameParams
      ReferenceParams
      Registration
      RegistrationParams
      RenameParams
+     RenameOptions
      SaveOptions
      SemanticTokensLegend
      SemanticTokensParams
@@ -158,6 +160,10 @@
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem
            (async-request item handlers/completion-resolve-item ::interop/completion-item)))
+
+  (^CompletableFuture prepareRename [_ ^PrepareRenameParams params]
+    (start :prepare-rename
+           (async-request params handlers/prepare-rename ::interop/prepare-rename-or-error)))
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
@@ -329,7 +335,7 @@
                                                                     (.setResolveProvider true)))
                                           (.setCodeLensProvider (CodeLensOptions. true))
                                           (.setReferencesProvider true)
-                                          (.setRenameProvider true)
+                                          (.setRenameProvider (RenameOptions. true))
                                           (.setDefinitionProvider true)
                                           (.setDocumentFormattingProvider ^Boolean (:document-formatting? settings))
                                           (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting? settings))

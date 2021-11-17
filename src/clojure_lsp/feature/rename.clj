@@ -161,7 +161,20 @@
     :else
     {:result :success}))
 
-(defn rename
+(defn prepare-rename
+  [uri row col db]
+  (let [filename (shared/uri->filename uri)
+        element (q/find-element-under-cursor (:analysis @db) filename row col)
+        references (q/find-references-from-cursor (:analysis @db) filename row col true db)
+        definition (q/find-definition-from-cursor (:analysis @db) filename row col db)
+        source-paths (settings/get db [:source-paths])
+        client-capabilities (:client-capabilities @db)
+        {:keys [error] :as result} (rename-status definition references source-paths client-capabilities)]
+    (if error
+      result
+      (shared/->range element))))
+
+  (defn rename
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
         references (q/find-references-from-cursor (:analysis @db) filename row col true db)

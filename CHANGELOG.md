@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Add support for LSP method `textDocument/prepareRename` which it's the proper way to check if the rename will work correctly. #642 
+
 ## 2021.11.16-16.52.14
 
 - General

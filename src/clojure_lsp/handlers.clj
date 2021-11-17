@@ -121,6 +121,10 @@
 (defn completion-resolve-item [item]
   (f.completion/resolve-item item db/db))
 
+(defn prepare-rename [{:keys [textDocument position]}]
+  (let [[row col] (shared/position->line-column position)]
+    (f.rename/prepare-rename textDocument row col db/db)))
+
 (defn rename [{:keys [textDocument position newName]}]
   (let [[row col] (shared/position->line-column position)]
     (f.rename/rename textDocument newName row col db/db)))

@@ -41,6 +41,7 @@
      Range
      RenameFile
      ResponseErrorCode
+     PrepareRenameResult
      SemanticTokens
      ShowDocumentParams
      SignatureHelp
@@ -156,6 +157,17 @@
 (s/def ::documentation (s/and (s/or :string string?
                                     :markup-content ::markup-content)
                               (s/conformer second)))
+
+(s/def :prepare-rename/placeholder string?)
+(s/def ::prepare-rename (s/and (s/keys :req-un [:prepare-rename/placeholder ::range])
+                               (s/conformer #(PrepareRenameResult. (:range %) (:placeholder %)))))
+
+(s/def ::prepare-rename-or-error
+  (s/and (s/or :error ::response-error
+               :range ::prepare-rename
+               :start ::range)
+         (s/conformer second)))
+
 (s/def ::completion-item (s/and (s/keys :req-un [::label]
                                         :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
                                                  :completion-item/kind ::documentation ::data

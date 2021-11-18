@@ -7,7 +7,7 @@ Below are all available `clojure-lsp` installation methods, after installed, fol
 We have a custom tap using the native compiled binaries for users that use homebrew:
 
 ```bash
-brew remove clojure-lsp # if you have old clojure-lsp installed via brew
+brew remove clojure-lsp-native # if you have old clojure-lsp installed via brew
 brew install clojure-lsp/brew/clojure-lsp-native
 ```
 

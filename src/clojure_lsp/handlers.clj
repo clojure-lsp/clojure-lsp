@@ -196,19 +196,23 @@
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [analysis (:analysis @db/db)
-        elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))
-        data (shared/assoc-some {}
-                                :elements (mapv (fn [e]
-                                                  (shared/assoc-some
-                                                    {:element e}
-                                                    :definition (q/find-definition analysis e db/db)
-                                                    :semantic-tokens (f.semantic-tokens/element->token-type e)))
-                                                elements))]
-    {:type    :info
-     :message (with-out-str (pprint/pprint data))}))
+        elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))]
+    (shared/assoc-some {}
+                       :elements (mapv (fn [e]
+                                         (shared/assoc-some
+                                           {:element e}
+                                           :definition (q/find-definition analysis e db/db)
+                                           :semantic-tokens (f.semantic-tokens/element->token-type e)))
+                                       elements))))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
-  (producer/window-show-message (cursor-info [textDocument (:line position) (:character position)]) db/db))
+  (producer/window-show-message
+    (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
+    :info
+    db/db))
+
+(defn cursor-info-raw [{:keys [textDocument position]}]
+  (cursor-info [textDocument (:line position) (:character position)]))
 
 (defn clojuredocs-raw [{:keys [symName symNs]}]
   (f.clojuredocs/find-docs-for symName symNs db/db))

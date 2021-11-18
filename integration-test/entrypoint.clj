@@ -16,7 +16,8 @@
     integration.api.clean-ns-test
     integration.api.diagnostics-test
     integration.api.format-test
-    integration.api.rename-test])
+    integration.api.rename-test
+    integration.cursor-info-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

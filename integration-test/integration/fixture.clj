@@ -59,6 +59,11 @@
                 {:textDocument {:uri (h/file->uri (h/source-path->file path))}
                  :position {:line row :character col}}))
 
+(defn cursor-info-raw-request [path row col]
+  (lsp-json-rpc "clojure/cursorInfo/raw"
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}}))
+
 (defn initialized-notification []
   (lsp-json-rpc :initialized {}))
 

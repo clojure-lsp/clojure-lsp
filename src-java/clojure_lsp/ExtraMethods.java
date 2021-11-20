@@ -19,6 +19,9 @@ public interface ExtraMethods {
     @JsonNotification("clojure/serverInfo/log")
     void serverInfoLog();
 
+    @JsonRequest("clojure/cursorInfo/raw")
+    CompletableFuture<Object> cursorInfoRaw(CursorInfoParams cursorInfoParams);
+    
     @JsonNotification("clojure/cursorInfo/log")
     void cursorInfoLog(CursorInfoParams cursorInfoParams);
 

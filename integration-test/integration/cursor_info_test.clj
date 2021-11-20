@@ -1,13 +1,13 @@
 (ns integration.cursor-info-test
   (:require
-   [clojure.test :refer [deftest testing is]]
+   [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
    [integration.lsp :as lsp]))
 
 (lsp/clean-after-test)
 
-(deftest definition
+(deftest cursor-info
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
@@ -15,8 +15,8 @@
 
   (testing "cursor info on empty line"
     (h/assert-submap
-     {:elements []}
-     (lsp/request! (fixture/cursor-info-raw-request "cursor_info/a.clj" 1 2))))
+      {:elements []}
+      (lsp/request! (fixture/cursor-info-raw-request "cursor_info/a.clj" 1 2))))
 
   (testing "cursor info on local var"
     (let [definition-bucket (-> (fixture/cursor-info-raw-request "cursor_info/a.clj" 3 2)

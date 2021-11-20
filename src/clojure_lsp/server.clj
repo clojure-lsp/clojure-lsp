@@ -385,7 +385,7 @@
       (start :cursorInfoRaw
              (CompletableFuture/completedFuture
                (sync-request params handlers/cursor-info-raw ::interop/cursor-info-raw))))
-    
+
     (^void cursorInfoLog [^CursorInfoParams params]
       (start :cursor-info-log
              (future

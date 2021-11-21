@@ -62,7 +62,7 @@ This is useful if you have some rule to apply to clojure-lsp for multiple projec
 
 ## All settings
 
-You can find all settings and its default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn) and below the docs for each one:
+You can find all settings and its default values [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn) and below the docs for each one:
 
 | name                                    | description                                                                                                                                                                                                                                                                                                                                                                                                          | default                                          |
 |-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
@@ -80,7 +80,7 @@ You can find all settings and its default [here](https://github.com/clojure-lsp/
 | `hover` `hide-file-location?`           | Whether to show the full filename and path on hover.                                                                                                                                                                                                                                                                                                                                                                 | `false`                                          |
 | `hover` `clojuredocs`                   | Whether to get clojuredocs information on hover, the clojuredocs content is cached.                                                                                                                                                                                                                                                                                                                                  | `true`                                           |
 | `auto-add-ns-to-new-files?`             | Whether to automatically add the `ns` form in new blank files.                                                                                                                                                                                                                                                                                                                                                       | `true`                                           |
-| `keep-parens-when-threading?`           | Whether to keep parenthesis when threading single arity functions.                                                                                                                                                                                                                                                                                                                                               | `false`                                          |
+| `keep-parens-when-threading?`           | Whether to keep parenthesis when threading single arity functions.                                                                                                                                                                                                                                                                                                                                                   | `false`                                          |
 | `document-formatting?`                  | if true or not present, document formatting is provided.                                                                                                                                                                                                                                                                                                                                                             | `true`                                           |
 | `document-range-formatting?`            | if true or not present, document range formatting is provided.                                                                                                                                                                                                                                                                                                                                                       | `true`                                           |
 | `text-document-sync-kind`               | The sync kind during document changes, if client should send whole buffer or just related changes. Should be `:full` or `:incremental`                                                                                                                                                                                                                                                                               | `:full`                                          |
@@ -89,6 +89,7 @@ You can find all settings and its default [here](https://github.com/clojure-lsp/
 | `cljfmt`                                | If no `:cljfmt-config-path` is provided, used this for formatting, json encoded configuration for [cljfmt](https://github.com/weavejester/cljfmt)                                                                                                                                                                                                                                                                    | `{}`                                             |
 | `project-specs`                         | A vector of a map with `project-path` and `classpath-cmd`, defining how `clojure-lsp` should find your project classpath. the `project-path` should be a file and the `classpath-cmd` the command to run to get the classpath                                                                                                                                                                                        | Check `Classpath scan` section below             |
 | `code-lens` `segregate-test-references` | Segregate main references from test references with option to disable                                                                                                                                                                                                                                                                                                                                                | `true`                                           |
+| `stubs`                                 | Stub generation related settings, check [stub generation](#stub-generation) section.                                                                                                                                                                                                                                                                                                                                 |                                                  |
 | `classpath-config-paths`                | List of extra configurations to load from classpath, for more info, check [Classpath config paths](#classpath-config-paths) section.                                                                                                                                                                                                                                                                                 | `[]`                                             |
 | `cache-path`                            | Where to store the project's analysis cache, used to speed up next `clojure-lsp` startup. A path relative to project root or an absolute path.                                                                                                                                                                                                                                                                       | `.lsp/.cache`                                    |
 | `log-path`                              | A absolute path to a file where clojure-lsp should log.                                                                                                                                                                                                                                                                                                                                                              | A JVM tmp path, usually `/tmp/clojure-lsp.*.out` |
@@ -242,7 +243,7 @@ Whether to enable sort of `:refer` form.
 
 Besides the **19** built-in snippets, it's possible to configure custom additional snippets via `:additional-snippets` setting:
 
-- `:name` the name to use while completing to reach that snippet, preferably with a `$` sufix to indicate a snippet.
+- `:name` the name to use while completing to reach that snippet.
 - `:detail` Custom text to show along with the completion name.
 - `:snippet` The body of the snippet, besides any text it can contains:
     - `$1`, `$2`, ... as the tabstops representing each place where user may change the content.
@@ -252,7 +253,7 @@ Besides the **19** built-in snippets, it's possible to configure custom addition
 Example:
 
 ```clojure
-{:additional-snippets [{:name "wrap-let-sexpr$"
+{:additional-snippets [{:name "wrap-let-sexpr"
                         :detail "Wrap current sexpr in let"
                         :snippet "(let [$1] $0$current-form)"}]}
 ```
@@ -267,3 +268,30 @@ It should return a completion item that after applied should result in:
 ```clojure
 (let [|] (+ 1 2))
 ```
+
+### Stub generation
+
+It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.
+The available settings inside `:stubs` are:
+
+- `:generation` for auto stubs generation:
+    - `:namespaces` the namespaces to generate and analyze stubs, empty by default disabling stub generation.
+    - `:output-dir` the output where to generate the stubs, by default `.lsp/.cache/stubs`
+    - `java-command` the path to java command to spawn the stub process, default use `java` from `$PATH`.
+- `:extra-dirs`, dirs to analyze to consider as part of manual generated stubs. Empty by default.
+
+Example:
+
+```clojure
+{:stubs {:generation {:namespaces #{"datomic.api"}}}}
+```
+
+This should generate stubs for `datomic.api` namespace only on `.lsp/.cache/stubs` and clojure-lsp should analyze that during startup to provide completion, hover and other features.
+
+Or to use manual generated stubs:
+
+```clojure
+{:stubs {:extra-dirs [".my-stubs"]}}
+```
+
+clojure-lsp will generate no stubs with that, but analyze that folder and consider it as manual generated stubs.

@@ -3,6 +3,7 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
+   [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.producer :as producer]
@@ -123,10 +124,11 @@
   (let [project-specs (->> (:project-specs settings)
                            (valid-project-specs-with-hash root-path))
         ignore-directories? (get settings :ignore-classpath-directories)
+        stubs-namespaces (->> settings :stubs :generation :namespaces (map str) set)
         project-hash (reduce str (map :hash project-specs))
         kondo-config-hash (lsp.kondo/config-hash (str root-path))
         _ (report-callback 10 "Finding cache" db)
-        db-cache (db/read-deps root-path db)
+        db-cache (db/read-cache root-path db)
         use-db-analysis? (and (= (:project-hash db-cache) project-hash)
                               (= (:kondo-config-hash db-cache) kondo-config-hash))]
     (report-callback 15 "Discovering classpath" db)
@@ -136,7 +138,8 @@
         (swap! db (fn [state-db]
                     (-> state-db
                         (update :analysis merge (:analysis db-cache))
-                        (assoc :classpath (:classpath db-cache))))))
+                        (assoc :classpath (:classpath db-cache))
+                        (assoc :stubs-generation-namespaces (:stubs-generation-namespaces db-cache))))))
       (do
         (log/info "Analyzing classpath for project root" root-path)
         (when-let [classpath (->> project-specs
@@ -154,7 +157,15 @@
               "Manual GC after classpath scan took %s secs"
               (System/gc))
             (async/go
-              (db/save-deps! root-path project-hash kondo-config-hash classpath analysis db))))))))
+              (-> {:version db/version
+                   :project-root (str root-path)
+                   :project-hash project-hash
+                   :kondo-config-hash kondo-config-hash
+                   :classpath classpath
+                   :stubs-generation-namespaces stubs-namespaces
+                   :analysis analysis}
+                  (db/upsert-cache! db)))))
+        (swap! db assoc :full-scan-analysis-startup true)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
@@ -211,6 +222,9 @@
     (async/go
       (f.clojuredocs/refresh-cache! db))
     (log/info "Analyzing source paths for project root" root-path)
+    (when (stubs/check-stubs? settings)
+      (report-callback 92 "Analyzing stubs" db)
+      (stubs/generate-and-analyze-stubs! settings db))
     (report-callback 95 "Analyzing project files" db)
     (analyze-source-paths! (:source-paths settings) db)
     (report-callback 100 "Project analyzed" db)))

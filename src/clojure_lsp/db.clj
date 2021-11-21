@@ -41,22 +41,17 @@
     (when (shared/file-exists? old-db-file)
       (io/delete-file old-db-file))))
 
-(defn save-deps! [project-root-path project-hash kondo-config-hash classpath analysis db]
-  (remove-old-db-file! project-root-path)
+(defn upsert-cache! [{:keys [project-root] :as project-cache} db]
+  (remove-old-db-file! project-root)
   (shared/logging-time
-    "Saving analysis cache to Datalevin db took %s secs"
-    (let [datalevin-db (make-db project-root-path db)]
+    "Upserting analysis cache to Datalevin db took %s secs"
+    (let [datalevin-db (make-db project-root db)]
       (d/open-dbi datalevin-db analysis-table-name)
-      (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]])
-      (d/transact-kv datalevin-db [[:put analysis-table-name :project-analysis {:version version
-                                                                                :project-root (str project-root-path)
-                                                                                :project-hash project-hash
-                                                                                :kondo-config-hash kondo-config-hash
-                                                                                :classpath classpath
-                                                                                :analysis analysis}]])
+      (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]
+                                   [:put analysis-table-name :project-analysis project-cache]])
       (d/close-kv datalevin-db))))
 
-(defn read-deps [project-root-path db]
+(defn read-cache [project-root-path db]
   (try
     (shared/logging-time
       "Reading analysis cache from Datalevin db took %s secs"

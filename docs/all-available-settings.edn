@@ -20,7 +20,6 @@
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
  :use-metadata-for-privacy? false
- :show-docs-arity-on-same-line? false ; deprecated, will be removed soon, use :hover :arity-on-same-line?
  :auto-add-ns-to-new-files? true
  :keep-parens-when-threading? false
  :document-formatting? true
@@ -29,8 +28,13 @@
  :text-document-sync-kind :full
  :cljfmt-config-path ".cljfmt.edn"
  :cljfmt {}
+ :stubs {:generation {:namespaces #{}
+                      :output-dir ".lsp/.cache/stubs"
+                      :java-command "java"}
+         :extra-dirs []}
  :additional-snippets []
  :classpath-config-paths []
+ :show-docs-arity-on-same-line? false ; deprecated, will be removed soon, use :hover :arity-on-same-line?
  :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
  :sqlite-db-path ".lsp/sqlite.db" ; deprecated, will be removed soon, use :cache-path instead.
  :cache-path ".lsp/.cache"

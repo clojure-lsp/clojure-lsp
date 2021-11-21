@@ -806,6 +806,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#stub-generation" class="md-nav__link">
+    Stub generation
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1253,6 +1260,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#stub-generation" class="md-nav__link">
+    Stub generation
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1304,97 +1318,97 @@
 </thead>
 <tbody>
     <tr>
-        <td><code>comment$</code></td>
+        <td><code>comment</code></td>
         <td>Create comment block</td>
         <td><code>(comment\n  $0\n  )</code></td>
     </tr>
     <tr>
-        <td><code>condp$</code></td>
+        <td><code>condp</code></td>
         <td>Create condp</td>
         <td><code>(condp ${1:pred} ${2:expr}\n $0)</code></td>
     </tr>
     <tr>
-        <td><code>def$</code></td>
+        <td><code>def</code></td>
         <td>Create def</td>
         <td><code>(def ${1:name} $0)</code></td>
     </tr>
     <tr>
-        <td><code>defmethod$</code></td>
+        <td><code>defmethod</code></td>
         <td>Create defmethod</td>
         <td><code>(defmethod ${1:name} ${2:match}\n [${3:args}]\n $0)</code></td>
     </tr>
     <tr>
-        <td><code>defmulti$</code></td>
+        <td><code>defmulti</code></td>
         <td>Create defmulti</td>
         <td><code>(defmulti ${1:name} ${2:dispatch-fn})</code></td>
     </tr>
     <tr>
-        <td><code>defn-$</code></td>
+        <td><code>defn-</code></td>
         <td>Create private function</td>
         <td><code>(defn%s ${1:name} [$2]\n  $0)</code></td>
     </tr>
     <tr>
-        <td><code>defn$</code></td>
+        <td><code>defn</code></td>
         <td>Create public function</td>
         <td><code>(defn ${1:foo} [$2]\n  $0)</code></td>
     </tr>
     <tr>
-        <td><code>defprotocol$</code></td>
+        <td><code>defprotocol</code></td>
         <td>Create defprotocol</td>
         <td><code>(defprotocol ${1:Name}\n $0)</code></td>
     </tr>
     <tr>
-        <td><code>defrecord$</code></td>
+        <td><code>defrecord</code></td>
         <td>Create defrecord</td>
         <td><code>(defrecord ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)</code></td>
     </tr>
     <tr>
-        <td><code>deftype$</code></td>
+        <td><code>deftype</code></td>
         <td>Create deftype</td>
         <td><code>(deftype ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)</code></td>
     </tr>
     <tr>
-        <td><code>fn$</code></td>
+        <td><code>fn</code></td>
         <td>Create fn</td>
         <td><code>(fn [${1:arg-list}] $0)</code></td>
     </tr>
     <tr>
-        <td><code>if$</code></td>
+        <td><code>if</code></td>
         <td>Create if</td>
         <td><code>(if ${1:test-expr}\n ${2:then-expr}\n ${3:else-expr})</code></td>
     </tr>
     <tr>
-        <td><code>import$</code></td>
+        <td><code>import</code></td>
         <td>Create import</td>
         <td><code>(:import [${1:package}])</code></td>
     </tr>
     <tr>
-        <td><code>kwargs$</code></td>
+        <td><code>kwargs</code></td>
         <td>Create keyword args</td>
         <td><code>{:keys [${1:keys}] :or {${2:defaults}}}</code></td>
     </tr>
     <tr>
-        <td><code>let$</code></td>
+        <td><code>let</code></td>
         <td>Create let</td>
         <td><code>(let [$0])</code></td>
     </tr>
     <tr>
-        <td><code>letfn$</code></td>
+        <td><code>letfn</code></td>
         <td>Create letfn</td>
         <td><code>(letfn [(${1:name} [${2:args}]\n $0)])</code></td>
     </tr>
     <tr>
-        <td><code>ns$</code></td>
+        <td><code>ns</code></td>
         <td>Create ns</td>
         <td><code>(ns $1\n  $0)</code></td>
     </tr>
     <tr>
-        <td><code>require$</code></td>
+        <td><code>require</code></td>
         <td>Create require</td>
         <td><code>(:require [${1:namespace} :as [$0]])</code></td>
     </tr>
     <tr>
-        <td><code>use$</code></td>
+        <td><code>use</code></td>
         <td>Create use</td>
         <td><code>(:use [${1:namespace} :only [$0]])</code></td>
     </tr>
@@ -1517,7 +1531,7 @@
 <h5 id="cursor-information">Cursor information<a class="headerlink" href="#cursor-information" title="Permanent link">#</a></h5>
 <p>Return debug information about the element at point.</p>
 <h3 id="custom-message-to-client-during-any-server-process">Custom message to client during any server process<a class="headerlink" href="#custom-message-to-client-during-any-server-process" title="Permanent link">#</a></h3>
-<p>During some process, <code>clojure-lsp</code> send messages to client informing some proccess, warning or error.</p>
+<p>During some process, <code>clojure-lsp</code> send messages to client informing some process, warning or error.</p>
 <h2 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h2>
 <p>All linters besides the ones below come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
 make most of features work.</p>
@@ -1526,6 +1540,9 @@ make most of features work.</p>
 <h3 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h3>
 <p><img alt="" src="../images/features/unused-public-var.png" /></p>
 <p>For more information on how to configure it, check the <a href="https://clojure-lsp.io/settings/#diagnostics-linter">diagnostics settings section</a>.</p>
+<h2 id="stub-generation">Stub generation<a class="headerlink" href="#stub-generation" title="Permanent link">#</a></h2>
+<p>It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like <code>datomic.api</code>, with that clojure-lsp will be able to make most features work with those dependencies.
+For more information check the <a href="../settings.md#stub-generation">stubs settings section</a>.</p>
                 
                   
                     
@@ -1534,7 +1551,7 @@ make most of features work.</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 20, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 21, 2021</span>
     
   </small>
 </div>

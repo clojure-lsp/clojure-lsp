@@ -532,6 +532,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#stub-generation" class="md-nav__link">
+    Stub generation
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -874,6 +881,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#stub-generation" class="md-nav__link">
+    Stub generation
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -938,7 +952,7 @@
 <p>And then clojure-lsp will merge the configuration from the lib with the other configurations from your project.</p>
 <p>This is useful if you have some rule to apply to clojure-lsp for multiple projects, mostly using via API for linting for example, and want to move the common configuration to some place instead of adding to each project that needs that.</p>
 <h2 id="all-settings">All settings<a class="headerlink" href="#all-settings" title="Permanent link">#</a></h2>
-<p>You can find all settings and its default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">here</a> and below the docs for each one:</p>
+<p>You can find all settings and its default values <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">here</a> and below the docs for each one:</p>
 <table>
 <thead>
 <tr>
@@ -1064,6 +1078,11 @@
 <td><code>true</code></td>
 </tr>
 <tr>
+<td><code>stubs</code></td>
+<td>Stub generation related settings, check <a href="#stub-generation">stub generation</a> section.</td>
+<td></td>
+</tr>
+<tr>
 <td><code>classpath-config-paths</code></td>
 <td>List of extra configurations to load from classpath, for more info, check <a href="#classpath-config-paths">Classpath config paths</a> section.</td>
 <td><code>[]</code></td>
@@ -1186,7 +1205,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <h3 id="snippets">Snippets<a class="headerlink" href="#snippets" title="Permanent link">#</a></h3>
 <p>Besides the <strong>19</strong> built-in snippets, it's possible to configure custom additional snippets via <code>:additional-snippets</code> setting:</p>
 <ul>
-<li><code>:name</code> the name to use while completing to reach that snippet, preferably with a <code>$</code> sufix to indicate a snippet.</li>
+<li><code>:name</code> the name to use while completing to reach that snippet.</li>
 <li><code>:detail</code> Custom text to show along with the completion name.</li>
 <li><code>:snippet</code> The body of the snippet, besides any text it can contains:<ul>
 <li><code>$1</code>, <code>$2</code>, ... as the tabstops representing each place where user may change the content.</li>
@@ -1196,7 +1215,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 </li>
 </ul>
 <p>Example:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:additional-snippets</span> <span class="p">[{</span><span class="ss">:name</span> <span class="s">&quot;wrap-let-sexpr$&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:additional-snippets</span> <span class="p">[{</span><span class="ss">:name</span> <span class="s">&quot;wrap-let-sexpr&quot;</span>
                         <span class="ss">:detail</span> <span class="s">&quot;Wrap current sexpr in let&quot;</span>
                         <span class="ss">:snippet</span> <span class="s">&quot;(let [$1] $0$current-form)&quot;</span><span class="p">}]}</span>
 </code></pre></div>
@@ -1206,6 +1225,26 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <p>It should return a completion item that after applied should result in:</p>
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">|</span><span class="p">]</span> <span class="p">(</span><span class="nb">+ </span><span class="mi">1</span> <span class="mi">2</span><span class="p">))</span>
 </code></pre></div>
+<h3 id="stub-generation">Stub generation<a class="headerlink" href="#stub-generation" title="Permanent link">#</a></h3>
+<p>It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like <code>datomic.api</code>, with that clojure-lsp will be able to make most features work with those dependencies.
+The available settings inside <code>:stubs</code> are:</p>
+<ul>
+<li><code>:generation</code> for auto stubs generation:<ul>
+<li><code>:namespaces</code> the namespaces to generate and analyze stubs, empty by default disabling stub generation.</li>
+<li><code>:output-dir</code> the output where to generate the stubs, by default <code>.lsp/.cache/stubs</code></li>
+<li><code>java-command</code> the path to java command to spawn the stub process, default use <code>java</code> from <code>$PATH</code>.</li>
+</ul>
+</li>
+<li><code>:extra-dirs</code>, dirs to analyze to consider as part of manual generated stubs. Empty by default.</li>
+</ul>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:stubs</span> <span class="p">{</span><span class="ss">:generation</span> <span class="p">{</span><span class="ss">:namespaces</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;datomic.api&quot;</span><span class="p">}}}}</span>
+</code></pre></div>
+<p>This should generate stubs for <code>datomic.api</code> namespace only on <code>.lsp/.cache/stubs</code> and clojure-lsp should analyze that during startup to provide completion, hover and other features.</p>
+<p>Or to use manual generated stubs:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:stubs</span> <span class="p">{</span><span class="ss">:extra-dirs</span> <span class="p">[</span><span class="s">&quot;.my-stubs&quot;</span><span class="p">]}}</span>
+</code></pre></div>
+<p>clojure-lsp will generate no stubs with that, but analyze that folder and consider it as manual generated stubs.</p>
                 
                   
                     
@@ -1214,7 +1253,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 20, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 21, 2021</span>
     
   </small>
 </div>

@@ -3,10 +3,10 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
-   [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 
@@ -459,7 +459,7 @@
                                   db/db)))))
 
 (deftest create-test-code-actions
-  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+  (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                   :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                   :project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs (h/code "(ns some-ns)"

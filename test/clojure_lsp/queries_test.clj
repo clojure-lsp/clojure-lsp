@@ -2,9 +2,9 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
@@ -17,7 +17,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 2 (count (q/filter-project-analysis (:analysis @db/db) db/db)))))
   (testing "when dependency-scheme is jar"
-    (swap! db/db medley/deep-merge {:settings {:dependency-scheme "jar"}})
+    (swap! db/db shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
@@ -31,7 +31,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 1 (count (q/filter-external-analysis (:analysis @db/db) db/db)))))
   (testing "when dependency-scheme is jar"
-    (swap! db/db medley/deep-merge {:settings {:dependency-scheme "jar"}})
+    (swap! db/db shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))

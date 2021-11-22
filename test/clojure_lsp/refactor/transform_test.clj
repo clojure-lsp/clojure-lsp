@@ -7,7 +7,6 @@
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 
 (h/reset-db-after-test)
@@ -88,7 +87,7 @@
       (is (= "(->> [1 2]\n     foo\n     bar)" (z/root-string loc)))))
   (testing "Not removing unecessary parens when 1 arg"
     (h/clean-db!)
-    (swap! db/db medley/deep-merge {:settings {:keep-parens-when-threading? true}})
+    (swap! db/db shared/deep-merge {:settings {:keep-parens-when-threading? true}})
     (let [zloc (z/of-string "(bar (foo [1 2]))")
           [{:keys [loc]}] (transform/thread-last-all zloc db/db)]
       (is (= '->> (z/sexpr (z/down loc))))
@@ -238,7 +237,7 @@
 
 (deftest cycle-privacy-test
   (testing "without-setting"
-    (swap! db/db medley/deep-merge {:settings {}})
+    (swap! db/db shared/deep-merge {:settings {}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
                               (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "defn-")))
@@ -252,7 +251,7 @@
                               (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "a"))))
   (testing "with-setting"
-    (swap! db/db medley/deep-merge {:settings {:use-metadata-for-privacy? true}})
+    (swap! db/db shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (let [[{:keys [loc]}] (-> (z/find-value (z/of-string "(defn a [])") z/next 'a)
                               (transform/cycle-privacy db/db))]
       (is (= (z/string loc) "^:private a")))
@@ -373,7 +372,7 @@
 
 (deftest can-create-test?
   (testing "when on multiples functions"
-    (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+    (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                (h/file-path "/project/test")}}})
     (is (= {:source-paths #{"/project/src" "/project/test"},
             :current-source-path "/project/src",
@@ -393,7 +392,7 @@
 (deftest create-test-test
   (testing "when only one available source-path besides current"
     (testing "when the test file doesn't exists for clj file"
-      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+      (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
@@ -407,7 +406,7 @@
              :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
           results-to-assert)))
     (testing "when the test file doesn't exists for cljs file"
-      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+      (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
@@ -421,7 +420,7 @@
              :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
           results-to-assert)))
     (testing "when the test file exists for clj file"
-      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+      (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                  (h/file-path "/project/test")}}
                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                       :project-root-uri (h/file-uri "file:///project")})
@@ -441,7 +440,7 @@
                  :range {:row 3 :col 1 :end-row 5 :end-col 1}}]}
               results-to-assert)))))
     (testing "when the current source path is already a test"
-      (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+      (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [code "(ns some.ns-test) (deftest foo [b] (+ 1 2))"
@@ -496,7 +495,7 @@
 
 (deftest suppress-diagnostic
   (testing "when op has no spaces"
-    (swap! db/db medley/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code (h/code "(ns bla)"
                        ""
                        "(defn foo [b]"
@@ -511,7 +510,7 @@
           :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
         results-to-assert)))
   (testing "when op has spaces"
-    (swap! db/db medley/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code (h/code "(ns bla)"
                        ""
                        "(defn foo [b]"
@@ -526,7 +525,7 @@
           :range {:row 4 :col 3 :end-row 4 :end-col 3}}]
         results-to-assert)))
   (testing "when diagnostic is from clojure-lsp"
-    (swap! db/db medley/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code (h/code "(ns bla)"
                        ""
                        "(def foo 1)")

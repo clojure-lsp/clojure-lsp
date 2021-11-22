@@ -2,9 +2,9 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]))
+   [clojure.test :refer [deftest is testing]]))
 
 (def findings (atom []))
 
@@ -152,7 +152,7 @@
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///b.clj"))
   (testing "when linter level is :off"
-    (swap! db/db medley/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
+    (swap! db/db shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
            (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
   (testing "when linter level is not :off but has matching :ns-exclude-regex"

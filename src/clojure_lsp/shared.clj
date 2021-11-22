@@ -3,6 +3,7 @@
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
+   [clojure.set :as set]
    [clojure.string :as string]
    [taoensso.timbre :as log])
   (:import
@@ -11,6 +12,37 @@
    [java.nio.file Paths]))
 
 (set! *warn-on-reflection* true)
+
+(defn deep-merge
+  "Recursively merges maps together.
+  Improved version of medley deep-merge concating colls instead of overwriting."
+  ([])
+  ([a] a)
+  ([a b]
+   (when (or a b)
+     (letfn [(merge-entry [m e]
+               (let [k  (key e)
+                     v' (val e)]
+                 (if (contains? m k)
+                   (assoc m k (let [v (get m k)]
+                                (cond
+                                  (and (map? v) (map? v'))
+                                  (deep-merge v v')
+
+                                  (and (set? v) (set? v'))
+                                  (set/union v v')
+
+                                  (and (vector? v) (coll? v'))
+                                  (vec (concat v v'))
+
+                                  (and (coll? v) (coll? v'))
+                                  (concat v v')
+
+                                  :else v')))
+                   (assoc m k v'))))]
+       (reduce merge-entry (or a {}) (seq b)))))
+  ([a b & more]
+   (reduce deep-merge (or a {}) (cons b more))))
 
 (defn start-time->end-time-seconds [start-time]
   (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
@@ -309,13 +341,6 @@
                            (recur nil))
           (= ch in) (recur new-val))))
     out))
-
-(defn deep-merge [a b]
-  (merge-with (fn [x y]
-                (cond (map? y) (deep-merge x y)
-                      (vector? y) (concat x y)
-                      :else y))
-              a b))
 
 (defn to-file ^java.io.File
   [^java.nio.file.Path path

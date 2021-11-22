@@ -13,7 +13,6 @@
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
-   [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
    (com.google.common.io ByteStreams)
@@ -194,7 +193,7 @@
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
                                         :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
-        raw-settings (medley/deep-merge encoding-settings
+        raw-settings (shared/deep-merge encoding-settings
                                         client-settings
                                         project-settings
                                         force-settings)
@@ -214,7 +213,7 @@
     (report-callback 90 "Resolving config paths" db)
     (when-let [classpath-settings (config/resolve-from-classpath-config-paths (:classpath @db) settings)]
       (swap! db assoc
-             :settings (medley/deep-merge settings
+             :settings (shared/deep-merge settings
                                           classpath-settings
                                           project-settings
                                           force-settings)

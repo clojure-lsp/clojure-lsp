@@ -2,9 +2,9 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.rename :as f.rename]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 
@@ -86,7 +86,7 @@
 (deftest rename-namespaces
   (testing "when client has valid source-paths but no document-changes capability"
     (h/clean-db!)
-    (swap! db/db medley/deep-merge
+    (swap! db/db shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes false}}}})
@@ -97,7 +97,7 @@
       (f.rename/rename (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 db/db)))
   (testing "when client has document-changes capability but no valid source-paths"
     (h/clean-db!)
-    (swap! db/db medley/deep-merge
+    (swap! db/db shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/bla")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
@@ -108,7 +108,7 @@
       (f.rename/rename (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 db/db)))
   (testing "when source-paths are valid and client capabilities has document-changes"
     (h/clean-db!)
-    (swap! db/db medley/deep-merge
+    (swap! db/db shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})

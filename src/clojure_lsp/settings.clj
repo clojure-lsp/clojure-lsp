@@ -5,7 +5,6 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.memoize :as memoize]
-   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
@@ -53,7 +52,7 @@
 (defn ^:private get-refreshed-settings [db]
   (let [{:keys [project-root-uri settings force-settings env]} @db
         new-project-settings (config/resolve-for-root project-root-uri)]
-    (medley/deep-merge settings
+    (shared/deep-merge settings
                        (udpate-with-default-settings settings new-project-settings project-root-uri env)
                        force-settings)))
 

@@ -8,6 +8,14 @@
 
 (h/reset-db-after-test)
 
+(deftest deep-merge
+  (testing "simple deep merge"
+    (is (= {:a {:b 2 :c 3}} (shared/deep-merge {:a {:b 2}} {:a {:c 3}}))))
+  (testing "concating colls"
+    (is (= {:a {:b [1 2 3 4] :c 3}} (shared/deep-merge {:a {:b [1 2]}} {:a {:b [3 4] :c 3}})))
+    (is (= {:a {:b [1 2 3 4] :c 3}} (shared/deep-merge {:a {:b #{1 2}}} {:a {:b [3 4] :c 3}})))
+    (is (= {:a {:b [1 2 4 3] :c 3}} (shared/deep-merge {:a {:b [1 2]}} {:a {:b #{3 4} :c 3}})))))
+
 (deftest uri->filename
   (testing "should decode special characters in file URI"
     (is (= (h/file-path "/path+/encoded characters!")
@@ -37,7 +45,7 @@
     (is (= (if h/windows? "zipfile:///c:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") db/db))))
   (testing "when it is a jar via jarfile"
-    (swap! db/db medley/deep-merge {:settings {:dependency-scheme "jar"}})
+    (swap! db/db shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (is (= (if h/windows? "jar:file:///c:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") db/db))))
   (testing "Windows URIs"
@@ -50,12 +58,12 @@
     (h/clean-db!)
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
   (testing "when it has a project root and not a source-path"
-    (swap! db/db medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! db/db shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                :source-paths #{(h/file-uri "file:///user/project/bla")}}
                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
   (testing "when it has a project root and a source-path"
-    (swap! db/db medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! db/db shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                :source-paths #{(h/file-path "/user/project/src")}}
                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"

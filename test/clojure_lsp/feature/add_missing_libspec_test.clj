@@ -2,9 +2,9 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 
 (h/reset-db-after-test)
@@ -94,14 +94,14 @@
         (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
-        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
               [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (h/code "(ns foo "
                          "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
-        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
               [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
           (is (some? range))
@@ -110,14 +110,14 @@
                          "            [clojure.set :as set]))") (z/string loc))))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
-        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
               [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
           (is (some? range))
           (is (= (h/code "(ns foo "
                          "  (:require [clojure.set :as set]))") (z/string loc)))))
       (testing "next requires follow the same pattern"
-        (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
               [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
           (is (some? range))
@@ -171,14 +171,14 @@
                      "  (:import"
                      "    java.util.Date))") (z/root-string loc)))))
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
-    (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+    (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
           [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))
       (is (= (h/code "(ns foo.bar "
                      "  (:import java.util.Date))") (z/root-string loc)))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
-    (swap! db/db medley/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+    (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
           [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
       (is (some? range))

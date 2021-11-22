@@ -49,3 +49,18 @@
                    (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
        (doseq [[r# m#] (map vector res# maps#)]
          (assert-submap m# r#)))))
+
+(defn delete-folder
+  "Recursively delete a directory."
+  [^String filename]
+  (let [file ^java.io.File (io/file filename)]
+    (when (.isDirectory file)
+      (run! delete-folder (.listFiles file)))
+    (io/delete-file file true)))
+
+(defn delete-project-file
+  [path]
+  (->> path
+       (str "integration-test/sample-test/src/sample_test/")
+       io/as-relative-path
+       delete-folder))

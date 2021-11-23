@@ -74,13 +74,26 @@
            (into (map (partial find-missing-import uri db) unresolved-symbol-diags)))
          (remove nil?))))
 
-(defn ^:private find-function-to-create [uri diagnostics db]
+(defn ^:private find-private-function-to-create [uri diagnostics db]
   (when-let [{{{:keys [line character] :as position} :start} :range :as diag} (->> diagnostics
                                                                                    (filter #(= "unresolved-symbol" (:code %)))
                                                                                    first)]
     (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
-      (when (r.transform/can-create-function? diag-loc)
+      (when (r.transform/can-create-private-function? diag-loc)
         {:name (last (string/split (:message diag) #"Unresolved symbol: "))
+         :position position}))))
+
+(defn ^:private find-public-function-to-create [zloc uri diagnostics db]
+  (when-let [{{{:keys [line character] :as position} :start} :range} (->> diagnostics
+                                                                          (filter #(or (= "unresolved-var" (:code %))
+                                                                                       (and (= "unresolved-namespace" (:code %))
+                                                                                            (some-> zloc z/sexpr namespace))))
+                                                                          first)]
+    (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
+      (when-let [{:keys [new-ns ns name]} (r.transform/can-create-public-function? diag-loc uri db)]
+        {:ns ns
+         :new-ns new-ns
+         :name name
          :position position}))))
 
 (defn resolve-code-action
@@ -109,6 +122,11 @@
                {:edit alias-suggestion-edit})
 
              "refactor-create-private-function"
+             {:command {:title     "Create function"
+                        :command   "create-function"
+                        :arguments [uri line character]}}
+
+             "refactor-create-public-function"
              {:command {:title     "Create function"
                         :command   "create-function"
                         :arguments [uri line character]}}
@@ -344,6 +362,16 @@
           :line      (:line (:position function-to-create))
           :character (:character (:position function-to-create))}})
 
+(defn ^:private create-public-function-action [uri {:keys [name new-ns ns position]}]
+  {:title (if new-ns
+            (format "Create namespace '%s' and '%s' function" new-ns name)
+            (format "Create function '%s' on '%s'" name ns))
+   :kind CodeActionKind/QuickFix
+   :data {:id "refactor-create-public-function"
+          :uri uri
+          :line      (:line position)
+          :character (:character position)}})
+
 (defn ^:private resolve-macro-as-action [uri row col macro-sym]
   {:title (format "Resolve macro '%s' as..." (str macro-sym))
    :kind CodeActionKind/QuickFix
@@ -358,7 +386,8 @@
         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function?* (future (r.transform/find-function-form zloc))
-        function-to-create* (future (find-function-to-create uri diagnostics db))
+        private-function-to-create* (future (find-private-function-to-create uri diagnostics db))
+        public-function-to-create* (future (find-public-function-to-create zloc uri diagnostics db))
         inside-let?* (future (r.transform/find-let-form zloc))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
@@ -382,8 +411,11 @@
       (seq @require-suggestions*)
       (into (require-suggestion-actions uri @require-suggestions*))
 
-      @function-to-create*
-      (conj (create-private-function-action uri @function-to-create*))
+      @private-function-to-create*
+      (conj (create-private-function-action uri @private-function-to-create*))
+
+      @public-function-to-create*
+      (conj (create-public-function-action uri @public-function-to-create*))
 
       @macro-sym*
       (conj (resolve-macro-as-action uri row col @macro-sym*))

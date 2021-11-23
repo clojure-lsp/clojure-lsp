@@ -33,12 +33,12 @@
 (defn filter-project-analysis [analysis db]
   (let [source-paths (settings/get db [:source-paths])]
     (->> analysis
-         (remove-keys #(shared/project-filename? % source-paths)))))
+         (remove-keys #(shared/external-filename? % source-paths)))))
 
 (defn filter-external-analysis [analysis db]
   (let [source-paths (settings/get db [:source-paths])]
     (->> analysis
-         (remove-keys (complement #(shared/project-filename? % source-paths))))))
+         (remove-keys (complement #(shared/external-filename? % source-paths))))))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]
   (or (find-last pred? (mapcat val (filter-project-analysis analysis db)))
@@ -401,10 +401,16 @@
 
 (defn find-namespace-definition-by-namespace [analysis namespace db]
   (find-last-order-by-project-analysis
-    #(and (= (:bucket %) :namespace-definitions)
+    #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) namespace))
     analysis
     db))
+
+(defn find-namespace-usage-by-alias [analysis filename alias]
+  (->> (get analysis filename)
+       (filter #(and (identical? :namespace-usages (:bucket %))
+                     (= alias (:alias %))))
+       last))
 
 (defn find-element-by-full-name [analysis name ns db]
   (find-last-order-by-project-analysis

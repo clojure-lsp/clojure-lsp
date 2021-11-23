@@ -309,66 +309,108 @@
       (is (= "(defn foo [a]\n  (+ 1 a))" (z/string (:loc (first results)))))
       (is (= "(foo a)" (z/string (:loc (last results))))))))
 
-(deftest create-function-test
-  (testing "creating with no args"
-    (h/clean-db!)
-    (let [code "(defn a [b] (my-func))"
-          zloc (z/find-value (z/of-string code) z/next 'my-func)
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results)))))))
-  (testing "creating with no args from the function definition"
-    (h/clean-db!)
-    (let [code "(defn a [b] (my-func))"
-          zloc (z/up (z/find-value (z/of-string code) z/next 'my-func))
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  []\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results)))))))
-  (testing "creating with 1 known arg"
-    (h/clean-db!)
-    (let [code "(defn a [b] (my-func b))"
-          zloc (z/find-value (z/of-string code) z/next 'my-func)
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results)))))))
-  (testing "creating with 1 known arg and a unknown arg"
-    (h/clean-db!)
-    (let [code "(defn a [b] (my-func b (+ 1 2)))"
-          zloc (z/find-value (z/of-string code) z/next 'my-func)
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  [b arg2]\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results)))))))
-  (testing "creating from a thread first macro with single arg"
-    (h/clean-db!)
-    (let [code "(-> b my-func)"
-          zloc (z/find-value (z/of-string code) z/next 'my-func)
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  [b]\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results)))))))
-  (testing "creating from a thread first macro with multiple args"
-    (h/clean-db!)
-    (let [code "(-> b (my-func a 3))"
-          zloc (z/find-value (z/of-string code) z/next 'my-func)
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  [b a arg2]\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results)))))))
-  (testing "creating from a thread last macro with multiple args"
-    (h/clean-db!)
-    (let [code "(->> b (my-func a 3))"
-          zloc (z/find-value (z/of-string code) z/next 'my-func)
-          _ (h/load-code-and-locs code)
-          results (transform/create-function zloc db/db)]
-      (is (= "(defn- my-func\n  [a arg2 b]\n  )" (z/string (:loc (first results)))))
-      (is (= "\n\n" (z/string (:loc (last results))))))))
-
 (defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
+
+(deftest create-function-test
+  (testing "function on same file"
+    (testing "creating with no args"
+      (h/clean-db!)
+      (let [code "(defn a [b] (my-func))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func []\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating with no args from the function definition"
+      (h/clean-db!)
+      (let [code "(defn a [b] (my-func))"
+            zloc (z/up (z/find-value (z/of-string code) z/next 'my-func))
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func []\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating with 1 known arg"
+      (h/clean-db!)
+      (let [code "(defn a [b] (my-func b))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [b]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating with 1 known arg and a unknown arg"
+      (h/clean-db!)
+      (let [code "(defn a [b] (my-func b (+ 1 2)))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [b arg2]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating from a thread first macro with single arg"
+      (h/clean-db!)
+      (let [code "(-> b my-func)"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [b]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating from a thread first macro with multiple args"
+      (h/clean-db!)
+      (let [code "(-> b (my-func a 3))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [b a arg2]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating from a thread last macro with multiple args"
+      (h/clean-db!)
+      (let [code "(->> b (my-func a 3))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [a arg2 b]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results))))))))
+  (testing "on other files"
+    (testing "when namespace is already required and exists"
+      (h/clean-db!)
+      (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
+      (let [code "(ns foo (:require [bar :as b])) (b/something)"
+            zloc (z/find-value (z/of-string code) z/next 'b/something)
+            _ (h/load-code-and-locs code)
+            {:keys [changes-by-uri]} (transform/create-function zloc "file:///a.clj" db/db)
+            result (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (is (= {(h/file-uri "file:///bar.clj")
+                [{:loc "(defn something []\n  )"
+                  :range {:row 999999 :col 1
+                          :end-row 999999 :end-col 1}}
+                 {:loc "\n"
+                  :range {:row 999999 :col 1
+                          :end-row 999999 :end-col 1}}]}
+               result))))
+    (testing "when namespace is not required and not exists"
+      (h/clean-db!)
+      (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                 (h/file-path "/project/test")}}})
+      (let [code "(ns foo (:require [bar :as b])) (b/something)"
+            zloc (z/find-value (z/of-string code) z/next 'b/something)
+            _ (h/load-code-and-locs code "file:///project/src/foo.clj")
+            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" db/db)
+            result (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (is (= [{:kind "create"
+                 :uri (h/file-uri "file:///project/src/bar.clj")
+                 :options {:overwrite? false, :ignore-if-exists? true}}]
+               resource-changes))
+        (is (= {(h/file-uri "file:///project/src/bar.clj")
+                [{:loc "(ns b)\n"
+                  :range {:row 1 :col 1
+                          :end-row 1 :end-col 1}}
+                 {:loc "(defn something []\n  )"
+                  :range {:row 999999 :col 1
+                          :end-row 999999 :end-col 1}}
+                 {:loc "\n"
+                  :range {:row 999999 :col 1
+                          :end-row 999999 :end-col 1}}]}
+               result))))))
 
 (deftest can-create-test?
   (testing "when on multiples functions"
@@ -398,8 +440,12 @@
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
-            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
             results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (is (= [{:kind "create"
+                 :uri (h/file-uri "file:///project/test/some/ns_test.clj")
+                 :options {:overwrite? false :ignore-if-exists? true}}]
+               resource-changes))
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.clj")
            [{:loc "(ns some.ns-test\n  (:require\n   [clojure.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
@@ -412,8 +458,12 @@
       (let [code "(ns some.ns) (defn foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/src/some/ns.cljs")
-            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
             results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (is (= [{:kind "create"
+                 :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
+                 :options {:overwrite? false :ignore-if-exists? true}}]
+               resource-changes))
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.cljs")
            [{:loc "(ns some.ns-test\n  (:require\n   [cljs.test :refer [deftest is]]\n   [some.ns :as subject]))\n\n(deftest foo-test\n  (is (= true\n         (subject/foo))))",
@@ -432,8 +482,9 @@
                 code "(ns some.ns) (defn foo [b] (+ 1 2))"
                 zloc (z/find-value (z/of-string code) z/next 'foo)
                 _ (h/load-code-and-locs code "file:///project/src/some/ns.clj")
-                {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
                 results-to-assert (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            (is (= nil resource-changes))
             (h/assert-submap
               {(h/file-uri "file:///project/test/some/ns_test.clj")
                [{:loc "\n(deftest foo-test\n  (is (= 1 1)))",
@@ -446,9 +497,9 @@
       (let [code "(ns some.ns-test) (deftest foo [b] (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'foo)
             _ (h/load-code-and-locs code "file:///project/test/some/ns_test.clj")
-            {:keys [changes-by-uri]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
-        (is (= nil
-               changes-by-uri))))))
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
+        (is (= nil resource-changes))
+        (is (= nil changes-by-uri))))))
 
 (deftest inline-symbol
   (testing "simple let"

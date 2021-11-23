@@ -5,6 +5,7 @@
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
+   [medley.core :as medley]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
@@ -76,8 +77,8 @@
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc [args]))
 
-(defmethod refactor :create-function [{:keys [loc db]}]
-  (r.transform/create-function loc db))
+(defmethod refactor :create-function [{:keys [loc uri db]}]
+  (r.transform/create-function loc uri db))
 
 (defmethod refactor :create-test [{:keys [loc uri db]}]
   (r.transform/create-test loc uri db))
@@ -91,7 +92,7 @@
 
 (defn refactor-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
-                  :edits (mapv #(update % :range shared/->range) (r.transform/result result))}]]
+                  :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
     (client-changes changes db)))
 
 (defn call-refactor [{:keys [loc uri refactoring row col version] :as data} db]
@@ -100,11 +101,14 @@
             (= :clean-ns refactoring))
       (cond
         (map? result)
-        (let [{:keys [changes-by-uri show-document-after-edit]} result
-              changes (vec (for [[doc-id sub-results] changes-by-uri]
-                             {:text-document {:uri doc-id :version version}
-                              :edits (mapv #(update % :range shared/->range)
-                                           (r.transform/result sub-results))}))]
+        (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
+              changes (concat resource-changes
+                              (vec (for [[doc-id sub-results] changes-by-uri]
+                                     {:text-document {:uri doc-id :version (if (= uri doc-id) version -1)}
+                                      :edits (mapv #(medley/update-existing % :range shared/->range)
+                                                   (r.transform/result sub-results))})))]
+          (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
+            (swap! db assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
           {:show-document-after-edit show-document-after-edit
            :edit (client-changes changes db)})
 

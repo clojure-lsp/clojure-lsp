@@ -18,10 +18,11 @@
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
-          (let [loc (:loc zip-edit)]
+          (if-let [loc (:loc zip-edit)]
             (-> zip-edit
                 (assoc :new-text (if loc (z/string loc) ""))
-                (dissoc :loc))))
+                (dissoc :loc))
+            zip-edit))
         zip-edits))
 
 (defn find-other-colls [zloc]
@@ -420,9 +421,26 @@
            {def-uri [{:loc nil :range def-range}]}
            references)}))))
 
-(defn can-create-function? [zloc]
+(defn can-create-private-function? [zloc]
   (and zloc
        (#{:list :token} (z/tag zloc))))
+
+(defn can-create-public-function? [zloc uri db]
+  (when (and zloc
+             (#{:list :token} (z/tag zloc)))
+    (if-let [ns-usage (some->> (z/sexpr zloc)
+                               namespace
+                               symbol
+                               (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri)))]
+      (if-let [ns-def (q/find-definition (:analysis @db) ns-usage db)]
+        (when-not (shared/external-filename? (:filename ns-def) (settings/get db [:source-paths]))
+          {:ns (:name ns-def)
+           :name (-> zloc z/sexpr name)})
+        (when-not (shared/external-filename? (:filename ns-usage) (settings/get db [:source-paths]))
+          {:new-ns (:name ns-usage)
+           :name (-> zloc z/sexpr name)}))
+      {:new-ns (-> zloc z/sexpr namespace)
+       :name (-> zloc z/sexpr name)})))
 
 (def ^:private thread-first-macro-symbols '#{-> some->})
 (def ^:private thread-last-macro-symbols '#{->> some->>})
@@ -434,24 +452,64 @@
     (n/sexpr node)
     (symbol (str "arg" (inc index)))))
 
-(defn create-function [zloc db]
-  (when (can-create-function? zloc)
-    (let [token? (= :token (z/tag zloc))
-          thread? (thread-macro-symbols (if token?
-                                          (z/sexpr (z/down (z/up zloc)))
-                                          (z/sexpr zloc)))
-          inside-thread-first? (and (z/leftmost? zloc)
-                                    (thread-first-macro-symbols (z/sexpr (z/down (z/up (z/up zloc))))))
-          inside-thread-last? (and (z/leftmost? zloc)
-                                   (thread-last-macro-symbols (z/sexpr (z/down (z/up (z/up zloc))))))
-          fn-form (if token? (z/up zloc) zloc)
+(defn ^:private create-function-for-alias
+  [ns-or-alias defn-edit uri db]
+  (let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol ns-or-alias))
+        ns-definition (when ns-usage
+                        (q/find-definition (:analysis @db) ns-usage db))
+        source-paths (settings/get db [:source-paths])
+        def-uri (cond
+                  ns-definition
+                  (shared/filename->uri (:filename ns-definition) db)
+                  ns-usage
+                  (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) db)
+                  :else
+                  (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) db))
+        min-range {:row 1 :end-row 1 :col 1 :end-col 1}
+        max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}]
+    {:show-document-after-edit def-uri
+     :resource-changes (when-not ns-definition
+                         [{:kind "create"
+                           :uri def-uri
+                           :options {:overwrite? false
+                                     :ignore-if-exists? true}}])
+     :changes-by-uri {def-uri (->> [(when-not ns-definition
+                                      {:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
+                                       :range min-range})
+                                    {:loc defn-edit
+                                     :range max-range}
+                                    {:loc (z/of-string "\n")
+                                     :range max-range}]
+                                   (remove nil?))}}))
+
+(defn create-function [local-zloc uri db]
+  (when (or (can-create-private-function? local-zloc)
+            (can-create-public-function? local-zloc uri db))
+    (let [token? (= :token (z/tag local-zloc))
+          sexpr (if token?
+                  (z/sexpr (z/down (z/up local-zloc)))
+                  (z/sexpr local-zloc))
+          ns-or-alias (when (qualified-symbol? sexpr) (namespace sexpr))
+          thread? (thread-macro-symbols sexpr)
+          inside-thread-first? (and (z/leftmost? local-zloc)
+                                    (thread-first-macro-symbols (z/sexpr (z/down (z/up (z/up local-zloc))))))
+          inside-thread-last? (and (z/leftmost? local-zloc)
+                                   (thread-last-macro-symbols (z/sexpr (z/down (z/up (z/up local-zloc))))))
+          fn-form (if token? (z/up local-zloc) local-zloc)
           fn-name (cond
-                    (and thread? token?) (z/string zloc)
-                    thread? (z/string (z/down fn-form))
-                    :else (z/string (z/down fn-form)))
-          new-fn-str (if (settings/get db [:use-metadata-for-privacy?] false)
-                       (format "(defn ^:private %s)" (symbol fn-name))
-                       (format "(defn- %s)\n\n" (symbol fn-name)))
+                    (and thread? token?) (z/sexpr local-zloc)
+                    thread? (z/sexpr (z/down fn-form))
+                    :else (z/sexpr (z/down fn-form)))
+          fn-name (if ns-or-alias (name fn-name) fn-name)
+          new-fn-str (cond
+                       ns-or-alias
+                       (format "(defn %s)" fn-name)
+
+                       (settings/get db [:use-metadata-for-privacy?] false)
+                       (format "(defn ^:private %s)" fn-name)
+
+                       :else
+                       (format "(defn- %s)" fn-name))
           args (->> fn-form
                     z/node
                     n/children
@@ -463,30 +521,29 @@
           args (cond
                  thread? (pop args)
                  inside-thread-first? (->> args
-                                           (cons (create-function-arg (z/node (z/left (z/up zloc))) -1))
+                                           (cons (create-function-arg (z/node (z/left (z/up local-zloc))) -1))
                                            vec)
                  inside-thread-last? (-> args
-                                         (conj (create-function-arg (z/node (z/left (z/up zloc))) (count args)))
+                                         (conj (create-function-arg (z/node (z/left (z/up local-zloc))) (count args)))
                                          vec)
                  :else args)
-          expr-loc (z/up (edit/find-op zloc))
-          form-loc (edit/to-top expr-loc)
-          {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
           defn-edit (-> (z/of-string new-fn-str)
-                        (z/append-child* (n/newlines 1))
-                        (z/append-child* (n/spaces 2))
+                        (z/append-child* (n/spaces 1))
                         (z/append-child args)
                         (z/append-child* (n/newlines 1))
                         (z/append-child* (n/spaces 2)))]
-
-      [{:loc defn-edit
-        :range (assoc form-pos
-                      :end-row form-row
-                      :end-col form-col)}
-       {:loc (z/of-string "\n\n")
-        :range (assoc form-pos
-                      :end-row form-row
-                      :end-col form-col)}])))
+      (if ns-or-alias
+        (create-function-for-alias ns-or-alias defn-edit uri db)
+        (let [form-loc (edit/to-top local-zloc)
+              {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))]
+          [{:loc defn-edit
+            :range (assoc form-pos
+                          :end-row form-row
+                          :end-col form-col)}
+           {:loc (z/of-string "\n\n")
+            :range (assoc form-pos
+                          :end-row form-row
+                          :end-col form-col)}])))))
 
 (defn ^:private create-test-for-source-path
   [uri function-name-loc source-path db]
@@ -513,8 +570,11 @@
             test-text (format "(deftest %s\n  (is (= true\n         (subject/foo))))"
                               (str function-name "-test"))
             test-zloc (z/up (z/of-string (str ns-text "\n\n" test-text)))]
-        (swap! db assoc :processing-work-edit-for-new-files true)
         {:show-document-after-edit test-uri
+         :resource-changes [{:kind "create"
+                             :uri test-uri
+                             :options {:overwrite? false
+                                       :ignore-if-exists? true}}]
          :changes-by-uri {test-uri [{:loc test-zloc
                                      :range (-> test-zloc z/node meta)}]}}))))
 
@@ -540,10 +600,10 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
-              chosen-source-path (producer/window-show-message-request "Which source-path?" :info actions db)]
+              chosen-source-path (producer/window-show-message-request "Choose a source-path to create the test file" :info actions db)]
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
-            ;; No source paths besides current one
+        ;; No source paths besides current one
         :else nil))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]

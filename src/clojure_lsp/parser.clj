@@ -115,12 +115,12 @@
                                 z/of-string)]
           (if (z/find-next-value replaced-node z/next (keyword (str token "_")))
             (-> (z/edit-> replaced-node
-                  (z/find-next-value z/next (keyword (str token "_")))
-                  (z/replace (n/keyword-node (keyword token))))
+                          (z/find-next-value z/next (keyword (str token "_")))
+                          (z/replace (n/keyword-node (keyword token))))
                 z/up)
             (-> (z/edit-> replaced-node
-                  (z/find-next-token z/next #(= (str "::" token "_") (z/string %)))
-                  (z/replace (n/keyword-node (keyword (str ":" token)))))
+                          (z/find-next-token z/next #(= (str "::" token "_") (z/string %)))
+                          (z/replace (n/keyword-node (keyword (str ":" token)))))
                 z/up)))))))
 
 (defn ^:private safe-zloc-of-string [text]

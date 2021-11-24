@@ -110,13 +110,18 @@
                             (re-matches #".*Invalid keyword: (.+\/)."))]
     (let [token-pattern (re-pattern (str ":" token "(\\s|\\n|\\))"))]
       (when-let [[_ extra-token] (re-find token-pattern text)]
-        (-> text
-            (string/replace-first token-pattern (str ":" token "_" extra-token))
-            z/of-string
-            (z/edit->
-              (z/find-next-value z/next (keyword (str token "_")))
-              (z/replace (n/keyword-node (keyword token))))
-            z/up)))))
+        (let [replaced-node (-> text
+                                (string/replace-first token-pattern (str ":" token "_" extra-token))
+                                z/of-string)]
+          (if (z/find-next-value replaced-node z/next (keyword (str token "_")))
+            (-> (z/edit-> replaced-node
+                  (z/find-next-value z/next (keyword (str token "_")))
+                  (z/replace (n/keyword-node (keyword token))))
+                z/up)
+            (-> (z/edit-> replaced-node
+                  (z/find-next-token z/next #(= (str "::" token "_") (z/string %)))
+                  (z/replace (n/keyword-node (keyword (str ":" token)))))
+                z/up)))))))
 
 (defn ^:private safe-zloc-of-string [text]
   (try

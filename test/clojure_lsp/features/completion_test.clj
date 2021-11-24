@@ -286,6 +286,7 @@
     (h/code "(ns some.alpaca (:require [clojure.spec.alpha :as s]))"
             "(s/def ::foo 1)"
             "(s/def ::foob 1)"
+            "(s/def ::bar 1)"
             "::fooba"
             ":some.alpaca/foobar"
             "(defn fooba [bass] 1)") "file:///some/alpaca.clj")
@@ -293,11 +294,16 @@
     (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
             "::alp/f"
             "") "file:///other/ns.clj")
-  (testing "return only reg keywords"
+  (h/load-code-and-locs
+    (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
+            "::alp/"
+            "") "file:///someother/ns.clj")
+  (testing "return all reg keywords for that aliased keyword"
     (h/assert-submaps
-      [{:label "::alp/foo" :kind :keyword}
+      [{:label "::alp/bar" :kind :keyword}
+       {:label "::alp/foo" :kind :keyword}
        {:label "::alp/foob" :kind :keyword}]
-      (f.completion/completion (h/file-uri "file:///other/ns.clj") 2 7 db/db))))
+      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 6 db/db))))
 
 (deftest completing-sorting
   (h/load-code-and-locs

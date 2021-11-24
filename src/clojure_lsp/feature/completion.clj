@@ -256,15 +256,23 @@
                      (not (:private %))))
        (mapv #(element->completion-item % full-ns :ns-definition))))
 
-(defn ^:private with-elements-from-aliased-keyword [cursor-loc cursor-element elements]
-  (let [alias (:alias cursor-element)
-        ns (:ns cursor-element)
+(defn ^:private with-elements-from-aliased-keyword
+  [cursor-loc cursor-element analysis filename elements]
+  (let [alias (or (:alias cursor-element)
+                  (-> cursor-loc z/sexpr namespace (subs 1)))
+        ns (or (:ns cursor-element)
+               (->> (get analysis filename)
+                    (filter #(and (identical? :namespace-usages (:bucket %))
+                                  (= alias (str (:alias %)))))
+                    first
+                    :name))
         name (-> cursor-loc z/sexpr name)]
     (->> elements
          (filter #(and (identical? :keywords (:bucket %))
                        (:reg %)
                        (= ns (:ns %))
-                       (string/starts-with? (:name %) name)))
+                       (or (not cursor-loc)
+                           (string/starts-with? (:name %) name))))
          (mapv #(element->completion-item % alias :alias-keyword)))))
 
 (defn ^:private with-clojure-core-items [matches-fn analysis]
@@ -362,8 +370,9 @@
                          ""))
         keyword-value? (keyword? cursor-value)
         aliased-keyword-value? (when keyword-value?
-                                 (and (string/starts-with? (namespace cursor-value) "??_")
-                                      (string/ends-with? (namespace cursor-value) "_??")))
+                                 (or (string/starts-with? (namespace cursor-value) ":")
+                                     (and (string/starts-with? (namespace cursor-value) "??_")
+                                          (string/ends-with? (namespace cursor-value) "_??"))))
         matches-fn (partial matches-cursor? cursor-value)
         inside-require? (edit/inside-require? cursor-loc)
         inside-refer? (edit/inside-refer? cursor-loc)
@@ -385,7 +394,7 @@
                 (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
 
                 aliased-keyword-value?
-                (with-elements-from-aliased-keyword cursor-loc cursor-element (concat other-ns-elements external-ns-elements))
+                (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename (concat other-ns-elements external-ns-elements))
 
                 :else
                 (cond-> []

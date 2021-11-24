@@ -281,6 +281,24 @@
        {:label "bases" :kind :reference :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 6 5 db/db))))
 
+(deftest completing-aliased-keywords
+  (h/load-code-and-locs
+    (h/code "(ns some.alpaca (:require [clojure.spec.alpha :as s]))"
+            "(s/def ::foo 1)"
+            "(s/def ::foob 1)"
+            "::fooba"
+            ":some.alpaca/foobar"
+            "(defn fooba [bass] 1)") "file:///some/alpaca.clj")
+  (h/load-code-and-locs
+    (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
+            "::alp/f"
+            "") "file:///other/ns.clj")
+  (testing "return only reg keywords"
+    (h/assert-submaps
+      [{:label "::alp/foo" :kind :keyword}
+       {:label "::alp/foob" :kind :keyword}]
+      (f.completion/completion (h/file-uri "file:///other/ns.clj") 2 7 db/db))))
+
 (deftest completing-sorting
   (h/load-code-and-locs
     (h/code "(ns foo)"

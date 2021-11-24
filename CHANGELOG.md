@@ -8,6 +8,9 @@
   - Support stub generation using `clj-easy/stub`, adding analysis and liniting support for closed sources codes like Datomic. Check `:stubs` settings for more details. #637
   - Handle config deep merge differently for collections, concating instead of overwriting. 
 
+- Editor
+  - Support completion on aliased keywords. #649
+
 ## 2021.11.16-16.52.14
 
 - General

@@ -20,26 +20,30 @@
 
 (def priority-kw->number
   {:simple-cursor 1
-   :keyword 2
-   :refer 3
-   :required-alias 4
-   :unrequired-alias 5
-   :ns-definition 6
-   :clojure-core 7
-   :clojurescript-core 8
-   :java 9
-   :snippet 10})
+   :alias-keyword 2
+   :keyword 3
+   :refer 4
+   :required-alias 5
+   :unrequired-alias 6
+   :ns-definition 7
+   :clojure-core 8
+   :clojurescript-core 9
+   :java 10
+   :snippet 11})
 
-(defn ^:private keyword-element->str [{:keys [alias ns] :as element}]
-  (cond-> ":"
-    alias
-    (str ":")
+(defn ^:private keyword-element->str [{:keys [alias ns] :as element} cursor-alias priority]
+  (let [alias (or alias
+                  (when (= :alias-keyword priority)
+                    cursor-alias))]
+    (cond-> ":"
+      alias
+      (str ":")
 
-    (or alias ns)
-    (str (or alias ns) "/")
+      (or alias ns)
+      (str (or alias ns) "/")
 
-    :always
-    (str (:name element))))
+      :always
+      (str (:name element)))))
 
 (defn ^:private matches-cursor? [cursor-value s]
   (when (and s cursor-value)
@@ -88,10 +92,10 @@
        first
        element->completion-item-kind))
 
-(defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias]
+(defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
   (cond
     (= :keywords bucket)
-    (keyword-element->str element)
+    (keyword-element->str element cursor-alias priority)
 
     (#{:namespace-alias :namespace-usages} bucket)
     (some-> alias name)
@@ -140,7 +144,7 @@
       false
 
       (and (identical? :keywords bucket)
-           (or (matches-fn (keyword-element->str element))
+           (or (matches-fn (keyword-element->str element nil nil))
                (and ns (matches-fn (str ns)))
                (and alias (matches-fn (str alias)))))
       true
@@ -174,7 +178,7 @@
                      (cond-> []
                        ns (conj (str (name ns) "/" (name (:name element))))
                        arglist-strs (conj (string/join " " arglist-strs))))))]
-    (cond-> {:label (element->label element cursor-alias)
+    (cond-> {:label (element->label element cursor-alias priority)
              :priority (generic-priority->specific-priority element priority)
              :data (walk/stringify-keys {:name (-> element :name str)
                                          :filename (:filename element)
@@ -251,6 +255,17 @@
                      (= (:ns %) (symbol full-ns))
                      (not (:private %))))
        (mapv #(element->completion-item % full-ns :ns-definition))))
+
+(defn ^:private with-elements-from-aliased-keyword [cursor-loc cursor-element elements]
+  (let [alias (:alias cursor-element)
+        ns (:ns cursor-element)
+        name (-> cursor-loc z/sexpr name)]
+    (->> elements
+         (filter #(and (identical? :keywords (:bucket %))
+                       (:reg %)
+                       (= ns (:ns %))
+                       (string/starts-with? (:name %) name)))
+         (mapv #(element->completion-item % alias :alias-keyword)))))
 
 (defn ^:private with-clojure-core-items [matches-fn analysis]
   (->> common-sym/core-syms
@@ -346,6 +361,9 @@
                          (z/sexpr cursor-loc)
                          ""))
         keyword-value? (keyword? cursor-value)
+        aliased-keyword-value? (when keyword-value?
+                                 (and (string/starts-with? (namespace cursor-value) "??_")
+                                      (string/ends-with? (namespace cursor-value) "_??")))
         matches-fn (partial matches-cursor? cursor-value)
         inside-require? (edit/inside-require? cursor-loc)
         inside-refer? (edit/inside-refer? cursor-loc)
@@ -365,6 +383,9 @@
 
                 inside-require?
                 (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+
+                aliased-keyword-value?
+                (with-elements-from-aliased-keyword cursor-loc cursor-element (concat other-ns-elements external-ns-elements))
 
                 :else
                 (cond-> []

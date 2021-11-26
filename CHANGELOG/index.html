@@ -1683,8 +1683,9 @@
 <li>Add support for LSP method <code>textDocument/prepareRename</code> which it's the proper way to check if the rename will work correctly. #642 </li>
 <li>Expose new custom method <code>clojure/cursorInfo/raw</code> for custom hack on current cursor information code. #645</li>
 <li>Support stub generation using <code>clj-easy/stub</code>, adding analysis and liniting support for closed sources codes like Datomic. Check <code>:stubs</code> settings for more details. #637</li>
+<li>Handle config deep merge differently for collections, concating instead of overwriting. </li>
 <li>
-<p>Handle config deep merge differently for collections, concating instead of overwriting. </p>
+<p>Fix unnecessary exception thrown on graal images during startup.</p>
 </li>
 <li>
 <p>Editor</p>

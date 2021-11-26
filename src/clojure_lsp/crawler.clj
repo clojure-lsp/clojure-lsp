@@ -221,9 +221,10 @@
     (async/go
       (f.clojuredocs/refresh-cache! db))
     (log/info "Analyzing source paths for project root" root-path)
-    (when (stubs/check-stubs? settings)
-      (report-callback 92 "Analyzing stubs" db)
-      (stubs/generate-and-analyze-stubs! settings db))
-    (report-callback 95 "Analyzing project files" db)
-    (analyze-source-paths! (:source-paths settings) db)
+    (let [settings (:settings @db)]
+      (when (stubs/check-stubs? settings)
+        (report-callback 92 "Analyzing stubs" db)
+        (stubs/generate-and-analyze-stubs! settings db))
+      (report-callback 95 "Analyzing project files" db)
+      (analyze-source-paths! (:source-paths settings) db))
     (report-callback 100 "Project analyzed" db)))

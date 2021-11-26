@@ -129,7 +129,7 @@
   [action options]
   (if (= "listen" action)
     (do
-      (with-out-str (server/run-server!))
+      (with-out-str @(server/run-server!))
       {:exit-code 0})
     (case action
       "clean-ns" (internal-api/clean-ns! options)

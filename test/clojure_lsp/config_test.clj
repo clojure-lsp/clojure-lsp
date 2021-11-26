@@ -81,11 +81,28 @@
       (is (= nil
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
                                                          {:classpath-config-paths ["my/other-lib"]})))))
-  (testing "when classpath-config-paths is provided and classpath has no libs with clojure-lsp config"
+  (testing "when classpath-config-paths is provided and classpath has one lib with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (constantly {:a 1 :b {:c 2 :d 3}})]
       (is (= {:a 1 :b {:c 2 :d 3}}
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
+                                                         {:classpath-config-paths ["my/other-lib"]})))))
+  (testing "when classpath-config-paths is provided and classpath has recursive libs with clojure-lsp config"
+    (with-redefs [shared/file-exists? (constantly true)
+                  config/jar-file->config (fn [jar cp-config-paths]
+                                            (cond
+                                              (and (= "/my/lib.jar" (str jar))
+                                                   (= "my/other-lib" (first cp-config-paths)))
+                                              {:a 1 :b {:c 2 :d 3}
+                                               :classpath-config-paths ["my/another-lib"]}
+
+                                              (and (= "/my/otherlib.jar" (str jar))
+                                                   (= "my/another-lib" (first cp-config-paths)))
+                                              {:b {:c 4} :e 5}))]
+      (is (= {:a 1 :b {:c 4 :d 3}
+              :e 5
+              :classpath-config-paths ["my/another-lib"]}
+             (config/resolve-from-classpath-config-paths ["/my/lib.jar" "/my/otherlib.jar"]
                                                          {:classpath-config-paths ["my/other-lib"]}))))))
 
 (deftest deep-merge-fixing-cljfmt

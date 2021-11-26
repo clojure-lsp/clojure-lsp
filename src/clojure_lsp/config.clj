@@ -89,19 +89,30 @@
             (update-in [:cljfmt :indents] merge cljfmt-a cljfmt-b)))
       deep-merged)))
 
-(defn resolve-from-classpath-config-paths [classpath {:keys [classpath-config-paths]}]
+(defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]}]
   (when-let [cp-config-paths (and (coll? classpath-config-paths)
                                   (seq classpath-config-paths))]
+    (when-let [jar-files (->> classpath
+                              (filter #(string/ends-with? % ".jar"))
+                              distinct
+                              (map io/file)
+                              (filter shared/file-exists?))]
+      (when-let [configs (->> jar-files
+                              (map #(jar-file->config % cp-config-paths))
+                              flatten
+                              (remove nil?)
+                              seq)]
+        (reduce deep-merge-fixing-cljfmt configs)))))
+
+(defn resolve-from-classpath-config-paths [classpath {:keys [classpath-config-paths] :as settings}]
+  (when (and (coll? classpath-config-paths)
+             (seq classpath-config-paths))
     (shared/logging-time
       "Finding classpath configs took %s secs"
-      (when-let [jar-files (->> classpath
-                                (filter #(string/ends-with? % ".jar"))
-                                distinct
-                                (map io/file)
-                                (filter shared/file-exists?))]
-        (when-let [configs (->> jar-files
-                                (map #(jar-file->config % cp-config-paths))
-                                flatten
-                                (remove nil?)
-                                seq)]
-          (reduce deep-merge-fixing-cljfmt configs))))))
+      (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
+             merge-config nil]
+        (if (and (coll? classpath-config-paths)
+                 (seq classpath-config-paths))
+          (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
+                 cp-settings)
+          (shared/deep-merge merge-config cp-settings))))))

@@ -11,6 +11,7 @@
 
 - Editor
   - Support completion on aliased keywords. #649
+  - Add new `Sort map keys` refactoring code action. #651
 
 ## 2021.11.16-16.52.14
 

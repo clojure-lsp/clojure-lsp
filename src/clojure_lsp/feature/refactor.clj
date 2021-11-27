@@ -5,7 +5,8 @@
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.feature.sort-map :as f.sort-map]))
 
 (set! *warn-on-reflection* true)
 
@@ -68,6 +69,9 @@
 
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
+
+(defmethod refactor :sort-map [{:keys [loc]}]
+  (f.sort-map/sort-map loc))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc [args]))

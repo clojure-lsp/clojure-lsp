@@ -10,7 +10,8 @@
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.feature.sort-map :as f.sort-map])
   (:import
    (org.eclipse.lsp4j
      CodeActionKind)))
@@ -157,6 +158,11 @@
                         :command   "unwind-all"
                         :arguments [uri line character]}}
 
+             "refactor-sort-map"
+             {:command {:title     "Sort map"
+                        :command   "sort-map"
+                        :arguments [uri line character]}}
+
              "refactor-suppress-diagnostic"
              {:command {:title "Suppress diagnostic"
                         :command "suppress-diagnostic"
@@ -183,16 +189,16 @@
 (defn ^:private require-suggestion-actions
   [uri alias-suggestions]
   (map (fn [{:keys [ns alias refer position]}]
-         {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
+         {:data       {:character (:character position)
+                       :chosen-alias alias
+                       :chosen-ns ns
+                       :chosen-refer refer
+                       :id "add-require-suggestion"
+                       :line (:line position)
+                       :uri uri}
           :kind       CodeActionKind/QuickFix
           :preferred? true
-          :data       {:id "add-require-suggestion"
-                       :uri uri
-                       :line (:line position)
-                       :character (:character position)
-                       :chosen-alias alias
-                       :chosen-refer refer
-                       :chosen-ns ns}})
+          :title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))})
        alias-suggestions))
 
 (defn ^:private missing-require-actions
@@ -301,6 +307,14 @@
           :line line
           :character character}})
 
+(defn ^:private sort-map-action [uri line character]
+  {:title "Sort map"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-sort-map"
+          :uri uri
+          :line line
+          :character character}})
+
 (defn ^:private suppress-diagnostic-actions [diagnostics uri]
   (->> diagnostics
        (map (fn [{:keys [code]
@@ -347,15 +361,16 @@
         function-to-create* (future (find-function-to-create uri diagnostics db))
         inside-let?* (future (r.transform/find-let-form zloc))
         other-colls* (future (r.transform/find-other-colls zloc))
-        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
-        inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db))
         missing-requires* (future (find-missing-requires uri diagnostics db))
         missing-imports* (future (find-missing-imports uri diagnostics db))
-        require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))]
+        require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))
+        allow-sort-map?* (future (f.sort-map/sortable-map? zloc))
+        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
+        inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []
 
       (seq @missing-requires*)
@@ -393,6 +408,10 @@
       @can-unwind-thread?*
       (conj (unwind-thread-action uri line character)
             (unwind-all-action uri line character))
+
+      (and workspace-edit-capability?
+           @allow-sort-map?*)
+      (conj (sort-map-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))

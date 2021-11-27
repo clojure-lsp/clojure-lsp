@@ -458,6 +458,40 @@
                                   {:workspace {:workspace-edit true}}
                                   db/db)))))
 
+(deftest sort-map-actions
+  (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                ""
+                                "(defn foo []"
+                                "  {:g 2 :s 3 :kj 3 :a 5})"))
+  (testing "on map bracket"
+    (is (some #(= (:title %) "Sort map")
+              (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 3)
+                                  (h/file-uri "file:///project/src/some_ns.clj")
+                                  4
+                                  3
+                                  []
+                                  {:workspace {:workspace-edit true}}
+                                  db/db))))
+  (testing "On map's key"
+    (is (not-any? #(= (:title %) "Sort map")
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 5)
+                                      (h/file-uri "file:///project/src/some_ns.clj")
+                                      4
+                                      5
+                                      []
+                                      {:workspace {:workspace-edit true}}
+                                      db/db))))
+  (testing "not on map"
+    (is (not-any? #(= (:title %) "Sort map")
+                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 7)
+                                      (h/file-uri "file:///project/src/some_ns.clj")
+                                      3
+                                      7
+                                      []
+                                      {:workspace {:workspace-edit true}}
+                                      db/db)))))
+
 (deftest create-test-code-actions
   (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                   :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}

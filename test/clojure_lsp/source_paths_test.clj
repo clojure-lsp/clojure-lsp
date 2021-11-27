@@ -12,78 +12,134 @@
 (h/reset-db-after-test)
 
 (deftest resolve-deps-source-paths
-  (testing "when on not a deps.edn project"
-    (is (= #{} (#'source-paths/resolve-deps-source-paths nil {}))))
-  (testing "when paths and extra-paths does not exist"
-    (is (= #{}
-           (#'source-paths/resolve-deps-source-paths {} {}))))
+  (testing "when paths and extra-paths don't exist"
+    (with-redefs [config/read-edn-file (constantly {})]
+      (is (= #{}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "when only paths exists"
-    (is (= #{"a"}
-           (#'source-paths/resolve-deps-source-paths {:paths ["a"]} {}))))
+    (with-redefs [config/read-edn-file (constantly {:paths ["a"]})]
+      (is (= #{"a"}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "when only extra-paths exists"
-    (is (= #{"b"}
-           (#'source-paths/resolve-deps-source-paths {:extra-paths ["b"]} {}))))
+    (with-redefs [config/read-edn-file (constantly {:extra-paths ["b"]})]
+      (is (= #{"b"}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "when both exists"
-    (is (= #{"a" "b"}
-           (#'source-paths/resolve-deps-source-paths {:paths ["a"] :extra-paths ["b"]} {}))))
+    (with-redefs [config/read-edn-file (constantly {:paths ["a"] :extra-paths ["b"]})]
+      (is (= #{"a" "b"}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "when paths contains a non existent alias"
-    (is (= #{"a" "b"}
-           (#'source-paths/resolve-deps-source-paths {:paths ["a" :foo] :extra-paths ["b"]} {}))))
+    (with-redefs [config/read-edn-file (constantly {:paths ["a" :foo] :extra-paths ["b"]})]
+      (is (= #{"a" "b"}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "when paths contains an existent alias"
-    (is (= #{"a" "b" "c" "d"}
-           (#'source-paths/resolve-deps-source-paths {:paths ["a" :foo]
-                                                      :extra-paths ["b"]
-                                                      :aliases {:foo ["c" "d"]}} {}))))
+    (with-redefs [config/read-edn-file (constantly {:paths ["a" :foo]
+                                                    :extra-paths ["b"]
+                                                    :aliases {:foo ["c" "d"]}})]
+      (is (= #{"a" "b" "c" "d"}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "when paths contains multiple aliases"
-    (is (= #{"a" "b" "c" "d" "e"}
-           (#'source-paths/resolve-deps-source-paths {:paths ["a" :foo :bar :baz]
-                                                      :extra-paths ["b"]
-                                                      :aliases {:foo ["c" "d"]
-                                                                :bar {:other :things}
-                                                                :baz ["e"]}} {}))))
+    (with-redefs [config/read-edn-file (constantly {:paths ["a" :foo :bar :baz]
+                                                    :extra-paths ["b"]
+                                                    :aliases {:foo ["c" "d"]
+                                                              :bar {:other :things}
+                                                              :baz ["e"]}})]
+      (is (= #{"a" "b" "c" "d" "e"}
+             (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
   (testing "checking default source aliases"
     (testing "with default settings"
       (testing "when some default source alias is not present"
-        (is (= #{"a" "b" "c"}
-               (#'source-paths/resolve-deps-source-paths {:paths ["a"]
-                                                          :extra-paths ["b"]
-                                                          :aliases {:dev {:paths ["c"]}
-                                                                    :bar {:other :things}
-                                                                    :baz ["x"]}} {}))))
+        (with-redefs [config/read-edn-file (constantly {:paths ["a"]
+                                                        :extra-paths ["b"]
+                                                        :aliases {:dev {:paths ["c"]}
+                                                                  :bar {:other :things}
+                                                                  :baz ["x"]}})]
+          (is (= #{"a" "b" "c"}
+                 (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
       (testing "when all source-aliases have paths"
-        (is (= #{"a" "b" "c" "d" "e" "f" "g" "h"}
-               (#'source-paths/resolve-deps-source-paths {:paths ["a"]
-                                                          :extra-paths ["b"]
-                                                          :aliases {:dev {:paths ["c"]
-                                                                          :extra-paths ["d" "e"]}
-                                                                    :bar {:other :things}
-                                                                    :test {:paths ["f" "g"]
-                                                                           :extra-paths ["h"]}
-                                                                    :baz ["x"]}} {})))))
+        (with-redefs [config/read-edn-file (constantly {:paths ["a"]
+                                                        :extra-paths ["b"]
+                                                        :aliases {:dev {:paths ["c"]
+                                                                        :extra-paths ["d" "e"]}
+                                                                  :bar {:other :things}
+                                                                  :test {:paths ["f" "g"]
+                                                                         :extra-paths ["h"]}
+                                                                  :baz ["x"]}})]
+          (is (= #{"a" "b" "c" "d" "e" "f" "g" "h"}
+                 (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root"))))))
     (testing "with custom source-aliases"
       (testing "when one of the specified alias does not exists"
-        (is (= #{"a"}
-               (#'source-paths/resolve-deps-source-paths {:aliases {:dev {:paths ["y"]}
-                                                                    :bar {:other :things
-                                                                          :paths ["a"]}
-                                                                    :baz ["x"]}}
-                                                         {:source-aliases #{:foo :bar}}))))
+        (with-redefs [config/read-edn-file (constantly {:aliases {:dev {:paths ["y"]}
+                                                                  :bar {:other :things
+                                                                        :paths ["a"]}
+                                                                  :baz ["x"]}})]
+          (is (= #{"a"}
+                 (#'source-paths/resolve-deps-source-paths "deps-root"
+                                                           {:source-aliases #{:foo :bar}} "/project/root")))))
       (testing "when all source aliases exists"
-        (is (= #{"a" "b"}
-               (#'source-paths/resolve-deps-source-paths {:aliases {:dev {:paths ["y"]}
-                                                                    :foo {:extra-paths ["b"]}
-                                                                    :bar {:other :things
-                                                                          :paths ["a"]}
-                                                                    :baz ["x"]}}
-                                                         {:source-aliases #{:foo :bar}}))))
+        (with-redefs [config/read-edn-file (constantly {:aliases {:dev {:paths ["y"]}
+                                                                  :foo {:extra-paths ["b"]}
+                                                                  :bar {:other :things
+                                                                        :paths ["a"]}
+                                                                  :baz ["x"]}})]
+          (is (= #{"a" "b"}
+                 (#'source-paths/resolve-deps-source-paths "deps-root"
+                                                           {:source-aliases #{:foo :bar}} "/project/root")))))
       (testing "when settings exists but is nil"
-        (is (= #{"a"}
-               (#'source-paths/resolve-deps-source-paths {:aliases {:dev {:paths ["a"]}
-                                                                    :foo {:extra-paths ["x"]}
-                                                                    :bar {:other :things
-                                                                          :paths ["y"]}
-                                                                    :baz ["z"]}}
-                                                         {:source-aliases nil})))))))
+        (with-redefs [config/read-edn-file (constantly {:aliases {:dev {:paths ["a"]}
+                                                                  :foo {:extra-paths ["x"]}
+                                                                  :bar {:other :things
+                                                                        :paths ["y"]}
+                                                                  :baz ["z"]}})]
+          (is (= #{"a"}
+                 (#'source-paths/resolve-deps-source-paths "deps-root"
+                                                           {:source-aliases nil} "/project/root")))))))
+  (testing "local-root"
+    (testing "single root from :deps"
+      (with-redefs [config/read-edn-file (fn [file]
+                                           (if (= "deps-root" (str file))
+                                             {:paths ["src"]
+                                              :deps {'some.lib {:local/root "./some/lib"}}}
+                                             {:paths ["foo" "bar"]}))
+                    shared/file-exists? #(= "/project/root/./some/lib/deps.edn" (str %))]
+        (is (= #{"./some/lib/foo" "./some/lib/bar" "src"}
+               (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
+    (testing "multiple root from :deps"
+      (with-redefs [config/read-edn-file (fn [file]
+                                           (case (str file)
+                                             "deps-root"
+                                             {:paths ["src"]
+                                              :deps '{some.lib {:local/root "./some/lib"}
+                                                      other-lib {:mvn/version "1.2.3"}
+                                                      another.lib/foo {:local/root "../another/lib"}}}
+
+                                             "/project/root/./some/lib/deps.edn"
+                                             {:paths ["foo" "bar"]}
+
+                                             "/project/root/../another/lib/deps.edn"
+                                             {:extra-paths ["baz"]}))
+                    shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
+                                             (= "/project/root/../another/lib/deps.edn" (str %)))]
+        (is (= #{"./some/lib/foo" "./some/lib/bar" "src" "../another/lib/baz"}
+               (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
+    (testing "root on :dev alias"
+      (with-redefs [config/read-edn-file (fn [file]
+                                           (case (str file)
+                                             "deps-root"
+                                             {:paths ["src"]
+                                              :deps '{some.lib {:local/root "./some/lib"}
+                                                      other-lib {:mvn/version "1.2.3"}}
+                                              :aliases {:dev {:extra-deps '{another.lib/foo {:local/root "../another/lib"}}}}}
+
+                                             "/project/root/./some/lib/deps.edn"
+                                             {:paths ["foo" "bar"]}
+
+                                             "/project/root/../another/lib/deps.edn"
+                                             {:extra-paths ["baz"]}))
+                    shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
+                                             (= "/project/root/../another/lib/deps.edn" (str %)))]
+        (is (= #{"./some/lib/foo" "./some/lib/bar" "src" "../another/lib/baz"}
+               (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))))
 
 (deftest resolve-lein-source-paths
   (testing "when on not a lein project"

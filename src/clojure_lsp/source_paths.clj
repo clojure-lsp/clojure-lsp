@@ -3,9 +3,12 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.shared :as shared]
+   [clojure.java.io :as io]
    [clojure.set :as set]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
+
+(set! *warn-on-reflection* true)
 
 (def default-source-paths #{"src" "test"})
 
@@ -28,10 +31,16 @@
        (remove nil?)
        set))
 
-(defn ^:private resolve-deps-source-paths
-  [{:keys [paths extra-paths aliases]}
-   settings]
-  (let [source-aliases (or (:source-aliases settings) default-source-aliases)
+(defn ^:private extract-local-roots [deps]
+  (when (map? deps)
+    (->> (vec deps)
+         (map #(some-> % second :local/root))
+         (remove nil?))))
+
+(defn ^:private deps-file->source-paths
+  [deps-file settings]
+  (let [{:keys [paths extra-paths aliases]} (config/read-edn-file deps-file)
+        source-aliases (or (:source-aliases settings) default-source-aliases)
         root-source-paths (extract-source-paths paths extra-paths aliases)]
     (->> source-aliases
          (map #(get aliases % nil))
@@ -39,6 +48,46 @@
          (remove nil?)
          set
          (set/union root-source-paths))))
+
+(defn ^:private deps-file->local-roots
+  [deps-file settings]
+  (let [{:keys [deps extra-deps aliases]} (config/read-edn-file deps-file)
+        source-aliases (or (:source-aliases settings) default-source-aliases)
+        deps-local-roots (extract-local-roots deps)
+        extra-deps-local-roots (extract-local-roots extra-deps)]
+    (->> source-aliases
+         (map #(get aliases % nil))
+         (mapcat (fn [{:keys [deps extra-deps]}]
+                   (concat (extract-local-roots deps)
+                           (extract-local-roots extra-deps))))
+         (concat deps-local-roots extra-deps-local-roots)
+         (remove nil?))))
+
+(defn ^:private resolve-deps-source-paths
+  [deps-file settings root-path]
+  (loop [deps-files-by-root [[nil deps-file]]
+         accum-source-paths nil]
+    (let [source-paths (->> deps-files-by-root
+                            (map (fn [[local-root deps-file]]
+                                   (->> (deps-file->source-paths deps-file settings)
+                                        (map #(if local-root (str (io/file local-root %)) %))
+                                        set)))
+                            (reduce set/union))
+          local-roots (->> deps-files-by-root
+                           (map second)
+                           (map #(deps-file->local-roots % settings))
+                           flatten
+                           (remove nil?))
+          deps-files-by-local-root (->> local-roots
+                                        (map (fn [local-root]
+                                               (let [sub-deps-file (io/file root-path local-root "deps.edn")]
+                                                 (when (shared/file-exists? sub-deps-file)
+                                                   [local-root sub-deps-file]))))
+                                        (remove nil?))
+          final-source-paths (set/union source-paths accum-source-paths)]
+      (if (seq deps-files-by-local-root)
+        (recur deps-files-by-local-root final-source-paths)
+        final-source-paths))))
 
 (defn ^:private valid-path-config? [config]
   (and config
@@ -78,8 +127,7 @@
         (cond-> []
           (shared/file-exists? deps-file)
           (conj
-            (let [deps-edn (config/read-edn-file deps-file)
-                  deps-source-paths (resolve-deps-source-paths deps-edn settings)]
+            (let [deps-source-paths (resolve-deps-source-paths deps-file settings (str root-path))]
               (if (seq deps-source-paths)
                 {:deps-source-paths deps-source-paths
                  :source-paths deps-source-paths
@@ -137,4 +185,4 @@
     (when (contains? origins :empty-leiningen) (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths))
     (when (contains? origins :empty-bb) (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths))
     (when (contains? origins :default) (log/info "Using default source-paths:" default-source-paths))
-    (mapv #(->> % (shared/to-file root-path) .getAbsolutePath str) source-paths)))
+    (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) source-paths)))

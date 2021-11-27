@@ -1684,8 +1684,9 @@
 <li>Expose new custom method <code>clojure/cursorInfo/raw</code> for custom hack on current cursor information code. #645</li>
 <li>Support stub generation using <code>clj-easy/stub</code>, adding analysis and liniting support for closed sources codes like Datomic. Check <code>:stubs</code> settings for more details. #637</li>
 <li>Handle config deep merge differently for collections, concating instead of overwriting. </li>
+<li>Fix unnecessary exception thrown on graal images during startup.</li>
 <li>
-<p>Fix unnecessary exception thrown on graal images during startup.</p>
+<p>Support <code>deps.edn</code> <code>:local/root</code> source-paths discovery, improving support for monorepo projects like <code>polylith</code>. #652</p>
 </li>
 <li>
 <p>Editor</p>

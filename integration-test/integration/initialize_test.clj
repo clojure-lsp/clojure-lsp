@@ -31,6 +31,7 @@
                                             "suppress-diagnostic"
                                             "thread-last"
                                             "introduce-let"
+                                            "sort-map"
                                             "unwind-thread"
                                             "thread-first-all"
                                             "thread-first"

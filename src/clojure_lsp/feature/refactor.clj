@@ -2,11 +2,11 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]
-   [clojure-lsp.feature.sort-map :as f.sort-map]))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 

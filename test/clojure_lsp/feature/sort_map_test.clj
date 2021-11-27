@@ -1,9 +1,9 @@
 (ns clojure-lsp.feature.sort-map-test
   (:require
-   [clojure.test :refer [deftest testing is]]
    [clojure-lsp.feature.sort-map :as f.sort-map]
-   [rewrite-clj.zip :as z]
-   [clojure-lsp.test-helper :as h]))
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]
+   [rewrite-clj.zip :as z]))
 
 (deftest sortable-map?
   (is (not (f.sort-map/sortable-map? (z/of-string "[]"))))

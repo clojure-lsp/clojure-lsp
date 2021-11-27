@@ -3,6 +3,7 @@
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
+   [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.transform :as r.transform]
@@ -10,8 +11,7 @@
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]
-   [clojure-lsp.feature.sort-map :as f.sort-map])
+   [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
      CodeActionKind)))

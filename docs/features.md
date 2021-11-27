@@ -1,6 +1,6 @@
 # Features
 
-Above you can find all available features that clojure-lsp provide with examples using [Emacs lsp-mode](https://emacs-lsp.github.io/lsp-mode/) client.
+Above you can find all available features that clojure-lsp provides with examples using [Emacs lsp-mode](https://emacs-lsp.github.io/lsp-mode/) as the client.
 
 ### Find a function/var definition
 
@@ -165,13 +165,18 @@ User can register additional custom snippets, for more information on how to con
 | Add known common require           | <img src="../images/features/add-common-require.gif" width=360>      |
 | Add known common import            | <img src="../images/features/add-common-import.gif" width=360>       |
 | Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
-| Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>           |
-| Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
-| Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
-| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=720>             |
-| Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
 | Create private function            | <img src="../images/features/create-private-function.gif" width=360> |
 | Resolve macro as...                | <img src="../images/features/resolve-macro-as.gif" width=720>        |
+| Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>           |
+| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=720>             |
+| Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
+| Cycle privacy                      |                                                                      |
+| Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
+| Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
+| Unwind thread                      |                                                                      |
+| Sort map                           | <img src="../images/features/sort-map.gif" width=720>                |
+| Suppress diagnostic                |                                                                      |
+| Create test for function           |                                                                      |
 
 ### Code lenses showing symbol references
 
@@ -187,7 +192,11 @@ User can register additional custom snippets, for more information on how to con
 
 ### Semantic tokens
 
-Experimental: apply color on client editor for each known token
+The LSP server is the best to say what is the semantic value of a token on the editor, semantic tokens allows server return to client all tokens of a buffer and how client show apply highlight. 
+
+Note: server return the semantic token (e.g. `function`) and the client/editor apply the color that matches the user's theme.
+
+![](images/features/semantic-tokens.png)
 
 ### Call hierarchy
 
@@ -205,60 +214,7 @@ Show functions that the current one call, recursively
 
 ![](images/features/call-hierarchy-outgoing.png)
 
-### Execute command
-
-Commands that client can request. Some code actions use these commands as actions.
-
-#### Refactoring
-
-Commands that change/refactor the code, most of them are available via code actions.
-
-##### Clean namespace *
-##### Add import to namespace
-##### Add missing require *
-##### Cycle privacy of def/defn
-##### Cycle collection (#{}, {}, [], ())
-##### Change collection to {}, (), #{}, []
-##### Extract Function *
-##### Create private function *
-##### Inline Symbol *
-##### Expand let
-##### Introduce let
-##### Move expression to let
-##### Thread first expression
-##### Thread last expression
-##### Thread first all *
-##### Thread last all *
-##### Unwind all
-##### Unwind thread
-##### Create test
-
-#### Resolve macro as *
-
-This code action should be wrapped by the LSP client to provide the missing arguments beside the existing return by the code action: 
-
-- The macro which should resolve as e.g. `clojure.core/def`
-- The clj-kondo configuration to save the new setting. e.g `/home/user/.clj-kondo/config.edn`
-
-For an example, check how [Emacs LSP client](https://github.com/emacs-lsp/lsp-mode/commit/73b127f4cf09a443e1353aa6c40b2379b59c1bd6) handles that.
-
-_* Available via code actions too_
-
-#### Dev
-
-##### Server information
-
-Return basic information about the server.
-
-##### Cursor information
-
-Return debug information about the element at point.
-
-### Custom message to client during any server process
-
-During some process, `clojure-lsp` send messages to client informing some process, warning or error.
-
-## Diagnostics (linter)
+### Diagnostics (linter)
 
 All linters besides the ones below come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
 make most of features work.
@@ -277,3 +233,55 @@ For more information on how to configure it, check the [diagnostics settings sec
 
 It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.
 For more information check the [stubs settings section](../settings.md#stub-generation).
+
+
+### Execute command
+
+Commands that client can request. Most code actions use these commands as actions.
+
+#### Resolve macro as *
+
+This code action should be wrapped by the LSP client to provide the missing arguments beside the existing return by the code action: 
+
+- The macro which should resolve as e.g. `clojure.core/def`
+- The clj-kondo configuration to save the new setting. e.g `/home/user/.clj-kondo/config.edn`
+
+For an example, check how [Emacs LSP client](https://github.com/emacs-lsp/lsp-mode/commit/73b127f4cf09a443e1353aa6c40b2379b59c1bd6) handles that.
+
+_* Available via code actions too_
+
+#### Refactoring
+
+Commands that change/refactor the code.
+
+__Note: Most of them are available via code actions and most of the time you want to call the code action and not the command manually__
+
+- Clean namespace *
+- Add import to namespace
+- Add missing require *
+- Cycle privacy of def/defn
+- Cycle collection (#{}, {}, [], ())
+- Change collection to {}, (), #{}, []
+- Extract Function *
+- Create private function *
+- Inline Symbol *
+- Expand let
+- Introduce let
+- Move expression to let
+- Thread first expression
+- Thread last expression
+- Thread first all *
+- Thread last all *
+- Unwind all
+- Unwind thread
+- Create test
+
+#### Dev
+
+##### Server information
+
+Return basic information about the server.
+
+##### Cursor information
+
+Return debug information about the element at point.

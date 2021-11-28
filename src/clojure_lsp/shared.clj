@@ -197,7 +197,7 @@
 (defn ^:private external-file? [filename]
   (boolean (re-find jar-filename-regex filename)))
 
-(defn project-filename? [filename source-paths]
+(defn external-filename? [filename source-paths]
   (and filename
        (or (-> filename name external-file?)
            (and (seq source-paths)

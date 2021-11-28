@@ -39,6 +39,8 @@
      ProgressParams
      PublishDiagnosticsParams
      Range
+     CreateFileOptions
+     CreateFile
      RenameFile
      ResponseErrorCode
      PrepareRenameResult
@@ -200,19 +202,32 @@
 (s/def ::text-document-edit (s/and (s/keys :req-un [::text-document ::edits])
                                    (s/conformer #(TextDocumentEdit. (:text-document %1) (:edits %1)))))
 (s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
+
+(s/def :create-file/options (s/and (s/keys :opt-un [::overwrite? ::ignore-if-exists?])
+                                   (s/conformer #(CreateFileOptions. (boolean (:overwrite? %))
+                                                                     (boolean (:ignore-if-exists? %))))))
+
+(s/def :create-file/kind (s/and string?
+                                #(= % "create")))
+(s/def ::create-file (s/and (s/keys :req-un [:create-file/kind ::uri]
+                                    :opt-un [:create-file/options])
+                            (s/conformer #(CreateFile. (:uri %) (:options %)))))
 (s/def :rename-file/kind (s/and string?
                                 #(= % "rename")))
-(s/def :rename-file/old-uri string?)
-(s/def :rename-file/new-uri string?)
+(s/def :rename-file/old-uri ::uri)
+(s/def :rename-file/new-uri ::uri)
+
 (s/def ::rename-file (s/and (s/keys :req-un [:rename-file/kind :rename-file/old-uri :rename-file/new-uri])
                             (s/conformer #(RenameFile. (:old-uri %) (:new-uri %)))))
 
-(s/def ::document-changes-entry (s/or :rename-file ::rename-file
+(s/def ::document-changes-entry (s/or :create-file ::create-file
+                                      :rename-file ::rename-file
                                       :text-document-edit ::text-document-edit))
 (s/def ::document-changes (s/and (s/coll-of ::document-changes-entry)
                                  (s/conformer #(map (fn [c]
                                                       (case (first c)
                                                         :text-document-edit (Either/forLeft (second c))
+                                                        :create-file (Either/forRight (second c))
                                                         :rename-file (Either/forRight (second c))))
                                                     %))))
 
@@ -422,10 +437,11 @@
                                                                (Either/forLeft ^WorkDoneProgressNotification (:value %))))))
 
 (s/def ::show-document-request
-  (s/and (s/keys :req-un [::uri]
+  (s/and (s/keys :req-un [::uri ::range]
                  :opt-un [::take-focus?])
          (s/conformer #(doto (ShowDocumentParams. (:uri %))
-                         (.setTakeFocus (:take-focus? %))))))
+                         (.setTakeFocus (:take-focus? %))
+                         (.setSelection (:range %))))))
 
 (s/def :code-action/title string?)
 

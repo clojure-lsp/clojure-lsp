@@ -1,6 +1,7 @@
 (ns clojure-lsp.producer
   (:require
    [clojure-lsp.interop :as interop]
+   [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (org.eclipse.lsp4j
@@ -61,11 +62,11 @@
          (interop/conform-or-log ::interop/notify-progress)
          (.notifyProgress client))))
 
-(defn show-document-request [uri db]
-  (log/info "Requesting to show on edtitor the document" uri)
+(defn show-document-request [document-request db]
+  (log/info "Requesting to show on edtitor the document" document-request)
   (when-let [client ^LanguageClient (:client @db)]
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
-      (->> {:uri uri
-            :take-focus? true}
+      (->> (update document-request :range #(or (some-> % shared/->range)
+                                                (shared/full-file-range)))
            (interop/conform-or-log ::interop/show-document-request)
            (.showDocument client)))))

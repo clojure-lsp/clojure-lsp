@@ -35,16 +35,14 @@
   (when-let [new-ns (and allow-create-ns
                          (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
-                         (not (:processing-work-edit-for-new-files @db))
+                         (not (get (:create-ns-blank-files-denylist @db) uri))
                          (shared/uri->namespace uri db))]
     (when (settings/get db [:auto-add-ns-to-new-files?] true)
       (let [new-text (format "(ns %s)" new-ns)
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                :new-text new-text}]}]]
-        (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))
-  (when (:processing-work-edit-for-new-files @db)
-    (swap! db assoc :processing-work-edit-for-new-files false)))
+        (async/>!! db/edits-chan (f.refactor/client-changes changes db))))))
 
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)

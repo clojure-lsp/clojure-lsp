@@ -1,5 +1,6 @@
 (ns clojure-lsp.refactor.transform
   (:require
+   [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -453,7 +454,7 @@
     (symbol (str "arg" (inc index)))))
 
 (defn ^:private create-function-for-alias
-  [ns-or-alias defn-edit uri db]
+  [local-zloc ns-or-alias fn-name defn-edit uri db]
   (let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
                         (q/find-definition (:analysis @db) ns-usage db))
@@ -473,7 +474,13 @@
                            :uri def-uri
                            :options {:overwrite? false
                                      :ignore-if-exists? true}}])
-     :changes-by-uri {def-uri (->> [(when-not ns-definition
+     :changes-by-uri {uri (when-not ns-definition
+                            (f.add-missing-libspec/add-known-alias
+                              local-zloc
+                              (symbol ns-or-alias)
+                              (symbol fn-name)
+                              db))
+                      def-uri (->> [(when-not ns-definition
                                       {:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
                                        :range min-range})
                                     {:loc defn-edit
@@ -533,7 +540,7 @@
                         (z/append-child* (n/newlines 1))
                         (z/append-child* (n/spaces 2)))]
       (if ns-or-alias
-        (create-function-for-alias ns-or-alias defn-edit uri db)
+        (create-function-for-alias local-zloc ns-or-alias fn-name defn-edit uri db)
         (let [form-loc (edit/to-top local-zloc)
               {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))]
           [{:loc defn-edit

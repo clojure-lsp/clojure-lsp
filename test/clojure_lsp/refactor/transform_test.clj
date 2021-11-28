@@ -379,7 +379,9 @@
             _ (h/load-code-and-locs code)
             {:keys [changes-by-uri]} (transform/create-function zloc "file:///a.clj" db/db)
             result (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
-        (is (= {(h/file-uri "file:///bar.clj")
+        (is (= {(h/file-uri "file:///a.clj")
+                []
+                (h/file-uri "file:///bar.clj")
                 [{:loc "(defn something []\n  )"
                   :range {:row 999999 :col 1
                           :end-row 999999 :end-col 1}}
@@ -400,7 +402,10 @@
                  :uri (h/file-uri "file:///project/src/bar.clj")
                  :options {:overwrite? false, :ignore-if-exists? true}}]
                resource-changes))
-        (is (= {(h/file-uri "file:///project/src/bar.clj")
+        (is (= {(h/file-uri "file:///project/src/foo.clj")
+                [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
+                  :loc "(ns foo (:require [bar :as b]\n                  [something :as b]))"}]
+                (h/file-uri "file:///project/src/bar.clj")
                 [{:loc "(ns b)\n"
                   :range {:row 1 :col 1
                           :end-row 1 :end-col 1}}

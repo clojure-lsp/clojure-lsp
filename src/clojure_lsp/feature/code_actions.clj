@@ -83,18 +83,19 @@
         {:name (last (string/split (:message diag) #"Unresolved symbol: "))
          :position position}))))
 
-(defn ^:private find-public-function-to-create [zloc uri diagnostics db]
+(defn ^:private find-public-function-to-create [uri diagnostics db]
   (when-let [{{{:keys [line character] :as position} :start} :range} (->> diagnostics
                                                                           (filter #(or (= "unresolved-var" (:code %))
-                                                                                       (and (= "unresolved-namespace" (:code %))
-                                                                                            (some-> zloc z/sexpr namespace))))
+                                                                                       (= "unresolved-namespace" (:code %))))
                                                                           first)]
     (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
-      (when-let [{:keys [new-ns ns name]} (r.transform/can-create-public-function? diag-loc uri db)]
-        {:ns ns
-         :new-ns new-ns
-         :name name
-         :position position}))))
+      (when (and (some-> diag-loc z/tag (= :token))
+                 (some-> diag-loc z/sexpr namespace))
+        (when-let [{:keys [new-ns ns name]} (r.transform/can-create-public-function? diag-loc uri db)]
+          {:ns ns
+           :new-ns new-ns
+           :name name
+           :position position})))))
 
 (defn resolve-code-action
   [{{:keys [id uri line character chosen-alias chosen-ns chosen-refer coll diagnostic-code]} :data :as code-action}
@@ -387,7 +388,7 @@
         resolve-action-support? (get-in client-capabilities [:text-document :code-action :resolve-support])
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create uri diagnostics db))
-        public-function-to-create* (future (find-public-function-to-create zloc uri diagnostics db))
+        public-function-to-create* (future (find-public-function-to-create uri diagnostics db))
         inside-let?* (future (r.transform/find-let-form zloc))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))

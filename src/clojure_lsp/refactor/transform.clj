@@ -468,7 +468,9 @@
                   (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) db))
         min-range {:row 1 :end-row 1 :col 1 :end-col 1}
         max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}]
-    {:show-document-after-edit def-uri
+    {:show-document-after-edit {:uri def-uri
+                                :take-focus? true
+                                :range max-range}
      :resource-changes (when-not ns-definition
                          [{:kind "create"
                            :uri def-uri
@@ -560,13 +562,16 @@
         namespace-test (str namespace "-test")
         test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
         test-uri (shared/filename->uri test-filename db)
-        test-namespace-file (io/file test-filename)]
+        test-namespace-file (io/file test-filename)
+        max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}]
     (if (shared/file-exists? test-namespace-file)
       (let [existing-text (shared/slurp-filename test-uri)
             lines (count (string/split existing-text #"\n"))
             test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
             test-zloc (z/up (z/of-string (str "\n" test-text)))]
-        {:show-document-after-edit test-uri
+        {:show-document-after-edit {:uri test-uri
+                                    :take-focus? true
+                                    :range max-range}
          :changes-by-uri
          {test-uri [{:loc test-zloc
                      :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]}})
@@ -577,7 +582,9 @@
             test-text (format "(deftest %s\n  (is (= true\n         (subject/foo))))"
                               (str function-name "-test"))
             test-zloc (z/up (z/of-string (str ns-text "\n\n" test-text)))]
-        {:show-document-after-edit test-uri
+        {:show-document-after-edit {:uri test-uri
+                                    :take-focus? true
+                                    :range max-range}
          :resource-changes [{:kind "create"
                              :uri test-uri
                              :options {:overwrite? false

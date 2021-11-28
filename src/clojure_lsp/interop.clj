@@ -437,10 +437,11 @@
                                                                (Either/forLeft ^WorkDoneProgressNotification (:value %))))))
 
 (s/def ::show-document-request
-  (s/and (s/keys :req-un [::uri]
+  (s/and (s/keys :req-un [::uri ::range]
                  :opt-un [::take-focus?])
          (s/conformer #(doto (ShowDocumentParams. (:uri %))
-                         (.setTakeFocus (:take-focus? %))))))
+                         (.setTakeFocus (:take-focus? %))
+                         (.setSelection (:range %))))))
 
 (s/def :code-action/title string?)
 

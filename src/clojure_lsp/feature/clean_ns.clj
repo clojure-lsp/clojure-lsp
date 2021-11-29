@@ -18,8 +18,10 @@
         :next-line)))
 
 (defn ^:private sort-by-if-enabled [fn type db coll]
-  (if (settings/get db [:clean :sort type] true)
-    (sort-by fn coll)
+  (if-let [sort-type (settings/get db [:clean :sort type] true)]
+    (if (= :naive sort-type)
+      (sort-by str coll)
+      (sort-by fn coll))
     coll))
 
 (defn ^:private refer-node-with-add-new-lines [nodes]

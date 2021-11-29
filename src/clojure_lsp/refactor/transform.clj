@@ -327,7 +327,14 @@
         expr-node (z/node expr-loc)
         expr-meta (meta expr-node)
         form-loc (edit/to-top expr-loc)
-        {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))
+        {form-row :row
+         form-col :col} (meta (z/node form-loc))
+        prev-end-row-w-space (some-> (z/find-next form-loc z/prev #(and (edit/top? %)
+                                                                        (z/sexpr-able? %)))
+                                     z/node
+                                     meta
+                                     :end-row
+                                     inc)
         fn-sym (symbol fn-name)
         used-syms (->> (q/find-local-usages-under-form (:analysis @db)
                                                        (shared/uri->filename uri)
@@ -338,20 +345,18 @@
                        (mapv (comp symbol name :name)))
         expr-edit (-> (z/of-string "")
                       (z/replace `(~fn-sym ~@used-syms)))
-        defn-edit (-> (z/of-string "(defn)\n\n")
+        defn-edit (-> (z/of-string "\n(defn)\n")
                       (z/append-child fn-sym)
                       (z/append-child used-syms)
                       (z/append-child* (n/newlines 1))
                       (z/append-child* (n/spaces 2))
-                      (z/append-child expr-node))]
+                      (z/append-child expr-node)
+                      z/up)]
     [{:loc defn-edit
-      :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
-     {:loc (z/of-string "\n\n")
-      :range (assoc form-pos
-                    :end-row form-row
-                    :end-col form-col)}
+      :range {:row (or prev-end-row-w-space form-row)
+              :col form-col
+              :end-row (or prev-end-row-w-space form-row)
+              :end-col form-col}}
      {:loc expr-edit
       :range expr-meta}]))
 

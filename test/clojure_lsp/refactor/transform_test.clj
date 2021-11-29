@@ -280,6 +280,9 @@
     (is (= "{:some-fun 1}" (-> (z/of-string "[:some-fun 1]") (transform/change-coll "map") first :loc z/string)))
     (is (= "#{:some-fun 1}" (-> (z/of-string "[:some-fun 1]") (transform/change-coll "set") first :loc z/string)))))
 
+(defn ^:private update-map [m f]
+  (into {} (for [[k v] m] [k (f v)])))
+
 (deftest extract-function-test
   (testing "simple extract"
     (h/clean-db!)
@@ -291,7 +294,7 @@
                     (h/file-uri "file:///a.clj")
                     "foo"
                     db/db)]
-      (is (= "(defn foo [b]\n  (let [c 1] (b c)))" (z/string (:loc (first results)))))
+      (is (= "\n(defn foo [b]\n  (let [c 1] (b c)))\n" (z/string (:loc (first results)))))
       (is (= "(foo b)" (z/string (:loc (last results)))))))
   (testing "multiple locals extract"
     (h/clean-db!)
@@ -306,11 +309,69 @@
                     (h/file-uri "file:///a.clj")
                     "foo"
                     db/db)]
-      (is (= "(defn foo [a]\n  (+ 1 a))" (z/string (:loc (first results)))))
-      (is (= "(foo a)" (z/string (:loc (last results))))))))
-
-(defn ^:private update-map [m f]
-  (into {} (for [[k v] m] [k (f v)])))
+      (is (= "\n(defn foo [a]\n  (+ 1 a))\n" (z/string (:loc (first results)))))
+      (is (= "(foo a)" (z/string (:loc (last results)))))))
+  (testing "with comments above origin function"
+    (h/clean-db!)
+    (let [code (h/code "(ns foo)"
+                       ";; {:something true}"
+                       "(defn a [b] (let [c 1] (b c)))")
+          zloc (z/find-value (z/of-string code) z/next 'let)
+          _ (h/load-code-and-locs code)
+          results (transform/extract-function
+                    zloc
+                    (h/file-uri "file:///a.clj")
+                    "foo"
+                    db/db)
+          results (map #(update % :loc z/string) results)]
+      (h/assert-submaps
+        [{:loc "\n(defn foo [b]\n  (let [c 1] (b c)))\n"
+          :range {:row 2 :col 1 :end-row 2 :end-col 1}}
+         {:loc "(foo b)"
+          :range {:row 3 :col 13 :end-row 3 :end-col 30}}]
+        results)))
+  (testing "with comments above origin function with spaces"
+    (h/clean-db!)
+    (let [code (h/code "(ns foo)"
+                       ""
+                       ""
+                       "#_{:something true}"
+                       "(defn a [b] (let [c 1] (b c)))")
+          zloc (z/find-value (z/of-string code) z/next 'let)
+          _ (h/load-code-and-locs code)
+          results (transform/extract-function
+                    zloc
+                    (h/file-uri "file:///a.clj")
+                    "foo"
+                    db/db)
+          results (map #(update % :loc z/string) results)]
+      (h/assert-submaps
+        [{:loc "\n(defn foo [b]\n  (let [c 1] (b c)))\n"
+          :range {:row 2 :col 1 :end-row 2 :end-col 1}}
+         {:loc "(foo b)"
+          :range {:row 5 :col 13 :end-row 5 :end-col 30}}]
+        results)))
+  (testing "with comments above origin function with multi line comments"
+    (h/clean-db!)
+    (let [code (h/code "(ns foo)"
+                       ""
+                       ";; {:something true}"
+                       ";; other comment"
+                       "(defn a [b] (let [c 1] (b c)))")
+          zloc (z/find-value (z/of-string code) z/next 'let)
+          _ (h/load-code-and-locs code)
+          results (transform/extract-function
+                    zloc
+                    (h/file-uri "file:///a.clj")
+                    "foo"
+                    db/db)
+          results (map #(update % :loc z/string) results)]
+      (h/assert-submaps
+        [{:loc "\n(defn foo [b]\n  (let [c 1] (b c)))\n"
+          :range {:row 2 :col 1 :end-row 2 :end-col 1}}
+         {:loc "(foo b)"
+          :range {:row 5 :col 13 :end-row 5 :end-col 30}}]
+        results))))
 
 (deftest create-function-test
   (testing "function on same file"

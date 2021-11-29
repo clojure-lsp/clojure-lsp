@@ -387,6 +387,27 @@
                              "import1."
                              "apple."
                              "ball.")))
+    (testing "sort requires lexicographically"
+      (test-clean-ns {:settings {:clean {:sort {:require :lexicographically}}}}
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  apple"
+                             "  [ball import1]"
+                             "  ball"
+                             "  [zebra]"
+                             "  ))"
+                             "import1."
+                             "apple."
+                             "ball.")
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  [ball import1]"
+                             "  [zebra]"
+                             "  apple"
+                             "  ball))"
+                             "import1."
+                             "apple."
+                             "ball.")))
     (testing "unsorted used imports"
       (test-clean-ns {}
                      (h/code "(ns foo.bar"

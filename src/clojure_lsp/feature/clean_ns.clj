@@ -19,7 +19,7 @@
 
 (defn ^:private sort-by-if-enabled [fn type db coll]
   (if-let [sort-type (settings/get db [:clean :sort type] true)]
-    (if (= :naive sort-type)
+    (if (= :lexicographically sort-type)
       (sort-by str coll)
       (sort-by fn coll))
     coll))

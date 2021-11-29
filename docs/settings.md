@@ -227,7 +227,7 @@ Whether to enable sort of `ns` children like require,import forms following [Clo
 
 ##### require
 
-Whether to enable sort of `:require` form.
+Whether to enable sort of `:require` form. `true` to sort according to the Clojure Style Guide, `:lexicographically` to do a lexicographic sort that places unwrapped namespaces last.
 
 ##### import
 

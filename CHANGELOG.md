@@ -9,6 +9,7 @@
   - Handle config deep merge differently for collections, concating instead of overwriting. 
   - Fix unnecessary exception thrown on graal images during startup.
   - Support `deps.edn` `:local/root` source-paths discovery, improving support for monorepo projects like `polylith`. #652
+  - New setting value for `:clean :sort :require`: `:lexicographic`. #654
 
 - Editor
   - Support completion on aliased keywords. #649

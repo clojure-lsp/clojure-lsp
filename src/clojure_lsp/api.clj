@@ -1,7 +1,6 @@
 (ns clojure-lsp.api
   "Entrypoint for main clojure-lsp features"
   (:require
-   [clojure-lsp.api :as api]
    [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.logging :as logging])

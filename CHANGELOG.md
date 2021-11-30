@@ -10,6 +10,7 @@
   - Fix unnecessary exception thrown on graal images during startup.
   - Support `deps.edn` `:local/root` source-paths discovery, improving support for monorepo projects like `polylith`. #652
   - New setting value for `:clean :sort :require`: `:lexicographic`. #654
+  - Bump clj-kondo to `2021.10.20-20211126.151305-16`.
 
 - Editor
   - Support completion on aliased keywords. #649

@@ -18,11 +18,11 @@
   (is (f.sort-map/sortable-map-zloc (z/of-string "{:a 2 :b 3}")))
   (is (f.sort-map/sortable-map-zloc (z/of-string "{:a {:c 4} :b 3}")))
   (is (f.sort-map/sortable-map-zloc (-> (z/of-string "{:a {:c 4} :b 3}")
-                                    (z/find-next-value z/next :b))))
+                                        (z/find-next-value z/next :b))))
   (is (f.sort-map/sortable-map-zloc (-> (z/of-string "{:a {:c 4} :b 3}")
-                                    (z/find-next-value z/next :c))))
+                                        (z/find-next-value z/next :c))))
   (is (not (f.sort-map/sortable-map-zloc (-> (z/of-string "{:a {:c 4} :b (foo 2)}")
-                                         (z/find-next-value z/next 'foo))))))
+                                             (z/find-next-value z/next 'foo))))))
 
 (defn ^:private assert-sort [expected subject]
   (is (= expected

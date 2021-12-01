@@ -474,7 +474,7 @@
                                   {:workspace {:workspace-edit true}}
                                   db/db))))
   (testing "On map's key"
-    (is (not-any? #(= (:title %) "Sort map")
+    (is (some #(= (:title %) "Sort map")
                   (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 5)
                                       (h/file-uri "file:///project/src/some_ns.clj")
                                       4

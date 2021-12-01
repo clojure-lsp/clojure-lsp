@@ -5,19 +5,26 @@
 
 (set! *warn-on-reflection* true)
 
-(defn sortable-map?
+(defn ^:private parent-map-zloc [zloc]
+  (if (= :map (z/tag zloc))
+    zloc
+    (when-let [parent-zloc (some-> zloc z/up)]
+      (and (= :map (z/tag parent-zloc))
+           parent-zloc))))
+
+(defn sortable-map-zloc
   "A node is a candidate for sorting if it is a map that contains no discards,
   and has more than 0 key-value pairs"
   [zloc]
-  (boolean
-    (and (= :map (z/tag zloc))
-         (not (z/find-tag (z/down* zloc) z/right* :uneval))
-         (-> zloc z/down)
-         (even? (->> zloc
+  (when-let [map-zloc (parent-map-zloc zloc)]
+    (and (not (z/find-tag (z/down* map-zloc) z/right* :uneval))
+         (-> map-zloc z/down)
+         (even? (->> map-zloc
                      z/down
                      (iterate z/right)
                      (take-while identity)
-                     count)))))
+                     count))
+         map-zloc)))
 
 (defn ^:private partition-map-children
   "Partition and distinguish <k><other nodes>+<v>(<whitespace><comment>)* from <nodes outside key-value pair>+
@@ -110,7 +117,7 @@
                          (n/replace-children children-sorted)))))
 
 (defn sort-map [zloc]
-  (when (sortable-map? zloc)
-    (let [sorted-zloc (sort-map-by-key zloc)]
+  (when-let [map-zloc  (sortable-map-zloc zloc)]
+    (let [sorted-zloc (sort-map-by-key map-zloc)]
       [{:range (meta (z/node sorted-zloc))
         :loc sorted-zloc}])))

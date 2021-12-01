@@ -398,7 +398,7 @@
         missing-requires* (future (find-missing-requires uri diagnostics db))
         missing-imports* (future (find-missing-imports uri diagnostics db))
         require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))
-        allow-sort-map?* (future (f.sort-map/sortable-map? zloc))
+        allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []

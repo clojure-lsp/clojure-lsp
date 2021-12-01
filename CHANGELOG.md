@@ -5,7 +5,7 @@
 - General
   - Add support for LSP method `textDocument/prepareRename` which it's the proper way to check if the rename will work correctly. #642 
   - Expose new custom method `clojure/cursorInfo/raw` for custom hack on current cursor information code. #645
-  - Support stub generation using `clj-easy/stub`, adding analysis and liniting support for closed sources codes like Datomic. Check `:stubs` settings for more details. #637
+  - Support stub generation using `clj-easy/stub`, adding analysis and linting support for closed sources codes like Datomic. Check `:stubs` settings for more details. #637
   - Handle config deep merge differently for collections, concating instead of overwriting. 
   - Fix unnecessary exception thrown on graal images during startup.
   - Support `deps.edn` `:local/root` source-paths discovery, improving support for monorepo projects like `polylith`. #652

@@ -17,7 +17,7 @@
   - Add new `Sort map keys` refactoring code action. #651
   - Add new `Create function` code action, allowing to create a function on a existing namespace or creating a new namespace + the function. #646
   - Improve `Extract function` refactoring to consider comments above current function. 
-  - Experimental: new `:linters :clj-kondo :async-custom-lint` setting, when true, scan unused-public-vars async improving lint/analysis UI feedback for huge buffers (> ~1000 lines). Default `false`.
+  - Experimental: new `:linters :clj-kondo :async-custom-lint?` setting, when true, scan unused-public-vars async improving lint/analysis UI feedback for huge buffers (> ~1000 lines). Default `false`.
 
 ## 2021.11.16-16.52.14
 

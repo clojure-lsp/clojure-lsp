@@ -8,7 +8,8 @@
  :notify-references-on-file-change true
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
-                       :ns-exclude-regex ""}}
+                       :ns-exclude-regex ""
+                       :async-custom-lint? false}}
  :clean {:ns-inner-blocks-indentation :next-line
          :sort {:ns true
                 :require true

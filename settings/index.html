@@ -1133,9 +1133,11 @@ make it work.</p>
 properly configured in your <code>.clj-kondo/config.edn</code> file.</p>
 <p>It has the possible key/values:</p>
 <ul>
+<li><code>:clj-kondo</code></li>
 <li><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code></li>
 <li><code>:report-duplicates</code> which will show all linters of the same symbol instead of showing only the first spot. Available values: <code>true</code>, <code>false</code> with default value of <code>true</code></li>
 <li><code>ns-exclude-regex</code> which will exclude the diagnostics/findings for namespaces that match this regex.</li>
+<li><code>async-custom-lint?</code>, whether to async lint custom clojure-lsp linters like unused-public-var, improves UI feedback for huge clojure buffers. Experimental, default <code>false</code>.</li>
 </ul>
 <p>Example:</p>
 <p><code>.lsp/config.edn</code>

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.12.01-12.28.16
+
 - General
   - Add support for LSP method `textDocument/prepareRename` which it's the proper way to check if the rename will work correctly. #642 
   - Expose new custom method `clojure/cursorInfo/raw` for custom hack on current cursor information code. #645

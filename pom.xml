@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.11.16-16.52.14</version>
+  <version>2021.12.01-12.28.16</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -16,6 +16,11 @@
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.10.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.clj-easy</groupId>
+      <artifactId>stub</artifactId>
+      <version>0.1.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.clj-easy</groupId>
@@ -81,7 +86,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2021.10.20-20211116.110002-7</version>
+      <version>2021.10.20-20211126.151305-16</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -137,7 +142,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
-      <version>1.4.627</version>
+      <version>1.5.640</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -158,6 +163,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2021.11.16-16.52.14</tag>
+    <tag>2021.12.01-12.28.16</tag>
   </scm>
 </project>

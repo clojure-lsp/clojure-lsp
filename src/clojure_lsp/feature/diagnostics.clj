@@ -188,3 +188,18 @@
   (let [project-analysis (q/filter-project-analysis analysis db)
         var-definitions (q/find-var-definitions project-analysis filename false)]
     (unused-public-vars-lint! var-definitions project-analysis kondo-ctx db)))
+
+(defn unused-public-var-lint-for-single-file-and-publish!
+  [filename uri analysis kondo-ctx db]
+  (let [kondo-findings (-> (unused-public-var-lint-for-single-file! filename analysis kondo-ctx db)
+                           (get filename))]
+    (loop [state-db @db]
+      (let [cur-findings (get-in state-db [:findings filename])
+            new-findings (->> cur-findings
+                              (remove #(= :clojure-lsp/unused-public-var (:type %)))
+                              (concat kondo-findings)
+                              vec)]
+        (if (compare-and-set! db state-db (assoc-in state-db [:findings filename] new-findings))
+          (when (not= :unknown (shared/uri->file-type uri))
+            (sync-lint-file! uri db))
+          (recur @db))))))

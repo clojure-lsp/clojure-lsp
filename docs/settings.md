@@ -141,9 +141,11 @@ properly configured in your `.clj-kondo/config.edn` file.
 
 It has the possible key/values:
 
-- `:level` with available values: `:off`, `:on` with default value of `:on`
-- `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true`
-- `ns-exclude-regex` which will exclude the diagnostics/findings for namespaces that match this regex.
+- `:clj-kondo`
+  - `:level` with available values: `:off`, `:on` with default value of `:on`
+  - `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true`
+  - `ns-exclude-regex` which will exclude the diagnostics/findings for namespaces that match this regex.
+  - `async-custom-lint?`, whether to async lint custom clojure-lsp linters like unused-public-var, improves UI feedback for huge clojure buffers. Experimental, default `false`.
 
 Example:
 

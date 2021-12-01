@@ -141,7 +141,9 @@
 (defn analyze-changes [{:keys [uri text version]} db]
   (loop [state-db @db]
     (when (>= version (get-in state-db [:documents uri :v] -1))
-      (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
+      (when-let [kondo-result (shared/logging-time
+                                "Changes analyzed by clj-kondo took %s secs."
+                                (lsp.kondo/run-kondo-on-text! text uri db))]
         (let [filename (shared/uri->filename uri)
               old-local-analysis (get-in @db [:analysis filename])]
           (if (compare-and-set! db state-db (-> state-db

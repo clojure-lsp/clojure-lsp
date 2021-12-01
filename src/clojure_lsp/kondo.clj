@@ -82,10 +82,13 @@
         (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx db)))))
 
 (defn ^:private single-file-custom-lint!
-  [{:keys [analysis] :as kondo-ctx} db]
+  [{:keys [analysis] :as kondo-ctx} uri db]
   (let [filename (-> analysis :var-definitions first :filename)
         updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
-    (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db)))
+    (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
+      (async/go
+        (f.diagnostic/unused-public-var-lint-for-single-file-and-publish! filename uri updated-analysis kondo-ctx db))
+      (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db))))
 
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true
@@ -110,7 +113,7 @@
        :copy-configs true
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
-       :custom-lint-fn #(single-file-custom-lint! % db)
+       :custom-lint-fn #(single-file-custom-lint! % uri db)
        :config {:output {:analysis {:arglists true
                                     :locals true
                                     :keywords true}

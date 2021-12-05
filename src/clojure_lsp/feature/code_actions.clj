@@ -97,7 +97,87 @@
            :name name
            :position position})))))
 
-(defn resolve-code-action
+(defn ^:private refactor-code-action
+  ([refactoring zloc uri line character db]
+   (refactor-code-action refactoring zloc uri line character db nil))
+  ([refactoring zloc uri line character db extra-arg]
+   (f.refactor/call-refactor {:loc         zloc
+                              :refactoring refactoring
+                              :uri         uri
+                              :version     0
+                              :args        extra-arg
+                              :row         (inc line)
+                              :col         (inc character)}
+                             db)))
+
+(defn resolve-code-action-edits
+  [{{:keys [id uri line character chosen-alias chosen-ns chosen-refer coll diagnostic-code]} :data :as code-action}
+   zloc
+   db]
+  (->
+    (merge code-action
+           (case id
+             "add-missing-require"
+             (refactor-code-action :add-missing-libspec zloc uri line character db)
+
+             "add-missing-import"
+             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-common-import-to-namespace zloc db) db)]
+               {:edit missing-import-edit})
+
+             "add-require-suggestion"
+             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-require-suggestion zloc chosen-ns chosen-alias chosen-refer db) db)]
+               {:edit alias-suggestion-edit})
+
+             ("refactor-create-private-function"
+              "refactor-create-public-function")
+             (refactor-code-action :create-function zloc uri line character db)
+
+             "refactor-inline-symbol"
+             (refactor-code-action :inline-symbol zloc uri line character db)
+
+             "refactor-change-coll"
+             (refactor-code-action :change-coll zloc uri line character db coll)
+
+             "refactor-move-to-let"
+             (refactor-code-action :move-to-let zloc uri line character db "new-binding")
+
+             "refactor-cycle-privacy"
+             (refactor-code-action :cycle-privacy zloc uri line character db)
+
+             "refactor-extract-function"
+             (refactor-code-action :extract-function zloc uri line character db "new-function")
+
+             "refactor-thread-first-all"
+             (refactor-code-action :thread-first-all zloc uri line character db)
+
+             "refactor-thread-last-all"
+             (refactor-code-action :thread-last-all zloc uri line character db)
+
+             "refactor-unwind-thread"
+             (refactor-code-action :unwind-thread zloc uri line character db)
+
+             "refactor-unwind-all"
+             (refactor-code-action :unwind-all zloc uri line character db)
+
+             "refactor-sort-map"
+             (refactor-code-action :sort-map zloc uri line character db)
+
+             "refactor-suppress-diagnostic"
+             (refactor-code-action :suppress-diagnostic zloc uri line character db diagnostic-code)
+
+             "refactor-create-test"
+             (refactor-code-action :create-test zloc uri line character db)
+
+             "clean-ns"
+             (refactor-code-action :clean-ns zloc uri line character db)
+
+             "resolve-macro-as"
+             (refactor-code-action :resolve-macro-as zloc uri line character db)
+
+             {}))
+    (dissoc :data)))
+
+(defn ^:private resolve-code-action-commands
   [{{:keys [id uri line character chosen-alias chosen-ns chosen-refer coll diagnostic-code]} :data :as code-action}
    zloc
    db]
@@ -458,4 +538,4 @@
       (conj (clean-ns-action uri line character))
 
       (not resolve-action-support?)
-      (->> (map #(resolve-code-action % zloc db))))))
+      (->> (map #(resolve-code-action-commands % zloc db))))))

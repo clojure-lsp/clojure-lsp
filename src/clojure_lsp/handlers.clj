@@ -296,7 +296,7 @@
 
 (defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
   (let [zloc (parser/safe-cursor-loc uri line character db/db)]
-    (f.code-actions/resolve-code-action action zloc db/db)))
+    (f.code-actions/resolve-code-action-edits action zloc db/db)))
 
 (defn code-lens
   [{:keys [textDocument]}]

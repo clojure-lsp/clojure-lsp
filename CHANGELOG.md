@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Change call hierarchy to return selection range of usage, not function definition.
+
 ## 2021.12.01-12.28.16
 
 - General

@@ -13,9 +13,10 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private element-by-uri->call-hierarchy-item
-  [{uri :uri {:keys [ns filename name-row name-col arglist-strs deprecated] value :name :as element} :element} db]
-  (let [range (shared/->range element)
-        project-file? (string/starts-with? uri "file://")
+  [{uri :uri
+    {:keys [ns filename name-row name-col arglist-strs deprecated] el-name :name :as parent-element} :parent-element
+    usage-element :usage-element} db]
+  (let [project-file? (string/starts-with? uri "file://")
         detail (if project-file?
                  (-> (f.file-management/force-get-document-text uri db)
                      (parser/loc-at-pos name-row name-col)
@@ -23,21 +24,25 @@
                  (or (some-> ns str)
                      filename))]
     {:name (if arglist-strs
-             (str (name value) " " (some->> arglist-strs (remove nil?) (string/join " ")))
-             (name value))
-     :kind (f.document-symbol/element->symbol-kind element)
+             (str (name el-name) " " (some->> arglist-strs (remove nil?) (string/join " ")))
+             (name el-name))
+     :kind (f.document-symbol/element->symbol-kind parent-element)
      :tags (cond-> [] deprecated (conj 1))
      :detail detail
      :uri uri
-     :range range
-     :selection-range range}))
+     :range (shared/->range parent-element)
+     :selection-range (shared/->range usage-element)}))
 
 (defn prepare [uri row col db]
   (let [cursor-element (q/find-element-under-cursor (:analysis @db) (shared/uri->filename uri) row col)]
-    [(element-by-uri->call-hierarchy-item {:uri uri :element cursor-element} db)]))
+    [(element-by-uri->call-hierarchy-item
+       {:uri uri
+        :usage-element cursor-element
+        :parent-element cursor-element}
+       db)]))
 
 (defn ^:private element->incoming-usage-by-uri
-  [db {:keys [name-row name-col filename]}]
+  [db {:keys [name-row name-col filename] :as element}]
   (let [uri (shared/filename->uri filename db)
         zloc (-> (f.file-management/force-get-document-text uri db)
                  (parser/loc-at-pos name-row name-col))
@@ -45,7 +50,8 @@
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
-         :element (q/find-element-under-cursor (:analysis @db) filename parent-row parent-col)}))))
+         :usage-element element
+         :parent-element (q/find-element-under-cursor (:analysis @db) filename parent-row parent-col)}))))
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
@@ -55,7 +61,8 @@
                            def-filename
                            (shared/filename->uri def-filename db))]
       {:uri definition-uri
-       :element definition})))
+       :usage-element element
+       :parent-element definition})))
 
 (defn incoming [uri row col db]
   (->> (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)

@@ -71,7 +71,7 @@
                :detail "some.c"
                :uri (h/file-uri "file:///some/c.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-               :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
+               :selection-range {:start {:line 3 :character 3} :end {:line 3 :character 11}}}}]
       (f.call-hierarchy/incoming (h/file-uri "file:///some/d.clj") 2 7 db/db)))
 
   (testing "for multiple elements"
@@ -83,7 +83,7 @@
                :detail "some.b"
                :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-               :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
+               :selection-range {:start {:line 3 :character 3} :end {:line 3 :character 11}}}}
        {:from-ranges []
         :from {:name "b-func []"
                :kind :function
@@ -91,7 +91,7 @@
                :detail "some.b"
                :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-               :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
+               :selection-range {:start {:line 4 :character 3} :end {:line 4 :character 11}}}}
        {:from-ranges []
         :from {:name "b-func-2 []"
                :kind :function
@@ -99,7 +99,7 @@
                :detail "some.b"
                :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 5 :character 6} :end {:line 5 :character 14}}
-               :selection-range {:start {:line 5 :character 6} :end {:line 5 :character 14}}}}]
+               :selection-range {:start {:line 6 :character 3} :end {:line 6 :character 11}}}}]
       (f.call-hierarchy/incoming (h/file-uri "file:///some/c.clj") 3 7 db/db))))
 
 (deftest outgoing
@@ -118,7 +118,7 @@
              :detail "some.b"
              :uri (h/file-uri "file:///some/b.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-             :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
+             :selection-range {:start {:line 3 :character 3} :end {:line 3 :character 11}}}}]
       (f.call-hierarchy/outgoing (h/file-uri "file:///some/a.clj") 3 7 db/db)))
 
   (testing "for multiple elements"
@@ -130,7 +130,7 @@
              :detail "some.c"
              :uri (h/file-uri "file:///some/c.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-             :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}
+             :selection-range {:start {:line 3 :character 3} :end {:line 3 :character 11}}}}
        {:from-ranges []
         :to {:name "c-func []"
              :kind :function
@@ -138,7 +138,7 @@
              :detail "some.c"
              :uri (h/file-uri "file:///some/c.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
-             :selection-range {:start {:line 2 :character 6} :end {:line 2 :character 12}}}}]
+             :selection-range {:start {:line 4 :character 3} :end {:line 4 :character 11}}}}]
       (f.call-hierarchy/outgoing (h/file-uri "file:///some/b.clj") 3 7 db/db)))
 
   (testing "with external elements"
@@ -150,5 +150,5 @@
              :detail "clojure.core"
              :uri "zipfile:///.m2/clojure.jar::clojure/core.clj"
              :range {:start {:line 1 :character 6} :end {:line 1 :character 13}}
-             :selection-range {:start {:line 1 :character 6} :end {:line 1 :character 13}}}}]
+             :selection-range {:start {:line 2 :character 3} :end {:line 2 :character 10}}}}]
       (f.call-hierarchy/outgoing (h/file-uri "file:///some/d.clj") 2 7 db/db))))

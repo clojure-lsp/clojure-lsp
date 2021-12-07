@@ -9,7 +9,7 @@
         org.clojure/data.json {:mvn/version "2.4.0"}
         borkdude/rewrite-edn {:mvn/version "0.1.0" :exclusions [rewrite-clj/rewrite-clj]}
         com.taoensso/timbre {:mvn/version "5.1.2"}
-        org.clojure/core.async {:mvn/version "1.5.640"}
+        org.clojure/core.async {:mvn/version "1.5.644"}
         borkdude/dynaload {:mvn/version "0.2.2"}
         datalevin/datalevin {:mvn/version "0.5.27"}
         org.clojure/java.data {:mvn/version "1.0.92"}

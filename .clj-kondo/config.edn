@@ -1,4 +1,5 @@
-{:config-paths ["rewrite-clj/rewrite-clj"]
+{:config-paths ["rewrite-clj/rewrite-clj"
+                "babashka/fs"]
  :linters {:unresolved-var {:exclude [digest
                                       rewrite-clj.zip
                                       rewrite-clj.node]}

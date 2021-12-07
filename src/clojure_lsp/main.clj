@@ -11,7 +11,8 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.tools.cli :refer [parse-opts]])
+   [clojure.tools.cli :refer [parse-opts]]
+   [taoensso.timbre :as log])
   (:import
    [clojure_lsp WarningLogDisabler])
   (:gen-class))
@@ -131,14 +132,17 @@
     (do
       (with-out-str @(server/run-server!))
       {:exit-code 0})
-    (case action
-      "clean-ns" (internal-api/clean-ns! options)
-      "diagnostics" (internal-api/diagnostics options)
-      "format" (internal-api/format! options)
-      "rename" (with-required-options
-                 options
-                 [:from :to]
-                 internal-api/rename!))))
+    (try
+      (case action
+        "clean-ns" (internal-api/clean-ns! options)
+        "diagnostics" (internal-api/diagnostics options)
+        "format" (internal-api/format! options)
+        "rename" (with-required-options
+                   options
+                   [:from :to]
+                   internal-api/rename!))
+      (catch clojure.lang.ExceptionInfo e
+        (ex-data e)))))
 
 (defn ^:private disable-warnings
   "LMDB has a illegal access warning that mess up clojure-lsp output."

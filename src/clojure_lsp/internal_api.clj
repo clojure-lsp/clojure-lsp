@@ -25,12 +25,16 @@
   (when-not (:raw? options)
     (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
-(defn ^:private show-message-cli [options {:keys [message type]}]
-  (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message)))
+(defn ^:private show-message-cli [options {:keys [message extra type]}]
+  (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
+  (when (= :error type)
+    (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defmacro ^:private safe-analyze [& body]
   `(try
      ~@body
+     (catch clojure.lang.ExceptionInfo e#
+       (throw e#))
      (catch Exception e#
        (throw (ex-info "Error during project analysis" {:message e#})))))
 

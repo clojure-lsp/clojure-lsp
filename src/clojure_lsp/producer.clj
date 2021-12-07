@@ -14,8 +14,8 @@
 (set! *warn-on-reflection* true)
 
 (defn window-show-message
-  ([message type db]
-   (window-show-message {:message message :type type} db))
+  ([message type extra db]
+   (window-show-message {:message message :type type :extra extra} db))
   ([message-content db]
    (log/info message-content)
    (if-let [client ^LanguageClient (:client @db)]

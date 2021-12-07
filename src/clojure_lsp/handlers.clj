@@ -190,6 +190,7 @@
   (producer/window-show-message
     (with-out-str (pprint/pprint (server-info)))
     :info
+    nil
     db/db))
 
 (def server-info-raw #'server-info)
@@ -209,6 +210,7 @@
   (producer/window-show-message
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
+    nil
     db/db))
 
 (defn cursor-info-raw [{:keys [textDocument position]}]

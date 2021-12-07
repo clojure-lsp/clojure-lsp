@@ -57,7 +57,7 @@
                              :name "clojure-lsp"
                              :skip-realign true}}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}
-                                cider/cider-nrepl {:mvn/version "0.27.2"}}}
+                                cider/cider-nrepl {:mvn/version "0.27.3"}}}
            :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                        :exec-fn hf.depstar/uberjar
                        :exec-args {:jar "clojure-lsp.jar"
@@ -66,7 +66,7 @@
                                    :main-class clojure-lsp.main
                                    :aliases [:debug]}}
            :run-debug {:extra-deps {nrepl/nrepl {:mvn/version "0.8.3"}
-                                    cider/cider-nrepl {:mvn/version "0.27.2"}}
+                                    cider/cider-nrepl {:mvn/version "0.27.3"}}
                        :main-opts ["-m" "clojure-lsp.main"]
                        :jvm-opts ["-Xmx2g" "-server"]}
            :run {:main-opts ["-m" "clojure-lsp.main"]

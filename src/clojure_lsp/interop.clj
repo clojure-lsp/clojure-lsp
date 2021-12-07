@@ -245,7 +245,7 @@
 
 (s/def ::location (s/and (s/keys :req-un [::uri ::range])
                          (s/conformer #(Location. (:uri %1) (:range %1)))))
-(s/def ::references (s/coll-of ::location))
+(s/def ::locations (s/coll-of ::location))
 
 (s/def :signature-help/documentation ::documentation)
 

@@ -51,6 +51,7 @@
      ExecuteCommandParams
      FileSystemWatcher
      HoverParams
+     ImplementationParams
      InitializeParams
      InitializeResult
      InitializedParams
@@ -151,7 +152,7 @@
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
-           (async-request params handlers/references ::interop/references)))
+           (async-request params handlers/references ::interop/locations)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
@@ -222,6 +223,10 @@
   (^CompletableFuture definition [_ ^DefinitionParams params]
     (start :definition
            (async-request params handlers/definition ::interop/location)))
+
+  (^CompletableFuture implementation [_ ^ImplementationParams params]
+    (start :definition
+           (async-request params handlers/implementation ::interop/locations)))
 
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
@@ -328,6 +333,7 @@
                      (InitializeResult. (doto (ServerCapabilities.)
                                           (.setDocumentHighlightProvider true)
                                           (.setHoverProvider true)
+                                          (.setImplementationProvider true)
                                           (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                           (.setCallHierarchyProvider true)
                                           (.setLinkedEditingRangeProvider true)

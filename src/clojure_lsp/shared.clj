@@ -303,8 +303,10 @@
           b-name-row (:name-row b)
           b-name-col (:name-col b)
           b-end-row (or (:scope-end-row b)
+                        (:end-row b)
                         (:name-end-row b))
           b-end-col (or (:scope-end-col b)
+                        (:end-col b)
                         (:name-end-col b))]
       (and (or (< b-name-row a-name-row)
                (and (= b-name-row a-name-row)

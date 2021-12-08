@@ -4,6 +4,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -22,6 +23,11 @@
 
 (defn ^:private update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
+
+(defn ^:private proccess-test-tree [uri db]
+  (async/go
+    (some-> (f.test-tree/tree uri db)
+            (producer/publish-test-tree db))))
 
 (defn did-open [uri text db allow-create-ns]
   (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
@@ -42,7 +48,8 @@
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                :new-text new-text}]}]]
-        (async/>!! db/edits-chan (f.refactor/client-changes changes db))))))
+        (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))
+  (proccess-test-tree uri db))
 
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
@@ -154,7 +161,8 @@
             (do
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db)))
+                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
+              (proccess-test-tree uri db))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]

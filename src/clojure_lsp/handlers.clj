@@ -18,6 +18,7 @@
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
+   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -26,6 +27,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [taoensso.timbre :as log])
   (:import

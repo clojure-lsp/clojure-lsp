@@ -18,7 +18,8 @@
      ClojureExtensions
      ExtraMethods
      CursorInfoParams
-     ClojuredocsParams)
+     ClojuredocsParams
+     ClojureLanguageClient)
    (java.util.concurrent CompletableFuture
                          CompletionException)
    (java.util.function Supplier)
@@ -72,9 +73,9 @@
      TextDocumentSyncKind
      TextDocumentSyncOptions
      WorkspaceSymbolParams)
-   (org.eclipse.lsp4j.jsonrpc ResponseErrorException)
-   (org.eclipse.lsp4j.launch LSPLauncher)
-   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService LanguageClient))
+   (org.eclipse.lsp4j.jsonrpc ResponseErrorException
+                              Launcher)
+   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService))
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -365,7 +366,7 @@
              (end
                (do
                  (log/info "Initialized!")
-                 (let [client ^LanguageClient (:client @db/db)]
+                 (let [client ^ClojureLanguageClient (:client @db/db)]
                    (.registerCapability client
                                         (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
                                                                              (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))])))))))
@@ -446,11 +447,11 @@
   (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
-        launcher (LSPLauncher/createServerLauncher server is os)
+        launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
     (nrepl/setup-nrepl db/db)
-    (swap! db/db assoc :client ^LanguageClient (.getRemoteProxy launcher))
+    (swap! db/db assoc :client ^ClojureLanguageClient (.getRemoteProxy launcher))
     (go-loop [edit (<! db/edits-chan)]
       (producer/workspace-apply-edit edit db/db)
       (recur (<! db/edits-chan)))

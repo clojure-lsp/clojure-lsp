@@ -2,7 +2,9 @@
   (:require
    [clojure-lsp.interop :as interop]
    [clojure-lsp.shared :as shared]
-   [taoensso.timbre :as log])
+   [clojure.core.async :as async]
+   [taoensso.timbre :as log]
+   [clojure-lsp.feature.test-tree :as f.test-tree])
   (:import
    (clojure_lsp ClojureLanguageClient)
    (org.eclipse.lsp4j
@@ -71,8 +73,12 @@
            (interop/conform-or-log ::interop/show-document-request)
            (.showDocument client)))))
 
-(defn publish-test-tree [test-tree db]
-  (when-let [client ^ClojureLanguageClient (:client @db)]
-    (->> test-tree
-         (interop/conform-or-log ::interop/publish-test-tree-params)
-         (.publishTestTree client))))
+(defn refresh-test-tree [uri db]
+  (async/go
+    (shared/logging-time
+      ":testTree %s secs"
+      (when-let [client ^ClojureLanguageClient (:client @db)]
+        (when-let [test-tree (f.test-tree/tree uri db)]
+          (->> test-tree
+               (interop/conform-or-log ::interop/publish-test-tree-params)
+               (.publishTestTree client)))))))

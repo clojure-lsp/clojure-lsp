@@ -359,7 +359,11 @@
                                                                                 :incremental TextDocumentSyncKind/Incremental
                                                                                 TextDocumentSyncKind/Full))
                                                                   (.setSave (SaveOptions. true))))
-                                          (.setCompletionProvider (CompletionOptions. true [":" "/"]))))))))))
+                                          (.setCompletionProvider (CompletionOptions. true [":" "/"]))
+                                          (.setExperimental {"testTree" true
+                                                             "cursorInfo" true
+                                                             "serverInfo" true
+                                                             "clojuredocs" true})))))))))
 
     (^void initialized [^InitializedParams params]
       (start :initialized

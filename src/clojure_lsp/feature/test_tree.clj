@@ -29,17 +29,18 @@
      :children (->testings-children local-testings)}))
 
 (defn tree [uri db]
-  (let [filename (shared/uri->filename uri)
-        local-analysis (get-in @db [:analysis filename])
-        deftests (->> local-analysis
-                      (filter #(and (identical? :var-definitions (:bucket %))
-                                    (contains? '#{clojure.test/deftest cljs.test/deftest}
-                                               (:defined-by %)))))
-        testings (->> local-analysis
-                      (filter #(and (identical? :var-usages (:bucket %))
-                                    (= 'testing (:name %))
-                                    (contains? '#{clojure.test cljs.test} (:to %)))))
-        tests-tree (mapv #(deftest->tree % testings) deftests)]
-    (when (seq tests-tree)
-      {:uri uri
-       :tests (mapv #(deftest->tree % testings) deftests)})))
+  (when (some-> @db :client-capabilities :experimental :testTree)
+    (let [filename (shared/uri->filename uri)
+          local-analysis (get-in @db [:analysis filename])
+          deftests (->> local-analysis
+                        (filter #(and (identical? :var-definitions (:bucket %))
+                                      (contains? '#{clojure.test/deftest cljs.test/deftest}
+                                                 (:defined-by %)))))
+          testings (->> local-analysis
+                        (filter #(and (identical? :var-usages (:bucket %))
+                                      (= 'testing (:name %))
+                                      (contains? '#{clojure.test cljs.test} (:to %)))))
+          tests-tree (mapv #(deftest->tree % testings) deftests)]
+      (when (seq tests-tree)
+        {:uri uri
+         :tests (mapv #(deftest->tree % testings) deftests)}))))

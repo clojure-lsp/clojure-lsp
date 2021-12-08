@@ -10,9 +10,11 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.java.data :as j]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
+   [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
    (com.google.common.io ByteStreams)
@@ -208,7 +210,7 @@
            :project-settings project-settings
            :force-settings force-settings
            :settings settings
-           :client-capabilities client-capabilities)
+           :client-capabilities (medley/update-existing client-capabilities :experimental j/from-java))
     (report-callback 5 "Finding kondo config" db)
     (ensure-kondo-config-dir-exists! project-root-uri db)
     (analyze-classpath! root-path (:source-paths settings) settings report-callback db)

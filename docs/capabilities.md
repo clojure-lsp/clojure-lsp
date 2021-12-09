@@ -120,9 +120,54 @@ Other clients might provide a higher level interface to `workspace/executeComman
 
 `clojure-lsp` has some custom LSP methods that doesn't follow the protocol but aggregate value as a clojure IDE:
 
-| command                | args                           | notes                                                                 |
-| -------------------    | ----                           | -----                                                                 |
-| clojure/serverInfo/raw |                                | Use to retrieve from server the server configuration information      |
-| clojure/serverInfo/log |                                | Use to log to user the server configuration information               |
-| clojure/cursorInfo/log | `[document-uri, line, column]` | Use to log to user the debugging information for the symbol at cursor |
-| clojure/clojuredocs/raw | `[symbol-name, symbol-ns]` | Use to retreive any Clojuredocs entry. Will return `null` if no entry found.  |
+#### Test tree
+
+Notify client with test tree data to build a UI tree on client side.
+
+Type: Server Notification
+Capability: `experimental.testTree`
+Method: `clojure/textDocument/testTree`
+Response: `TestTreeParams`
+  `TestTreeParams`: `{:uri string, :tests [TestTreeNode]}`
+  `TestTreeNode`: `{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}`
+  `TestTreeKind`: `:deftest 1 | :testing 2`
+
+#### Server Info Raw
+
+Use to retrieve from server the server configuration information.
+
+Type: Client request with response
+Capability: none 
+Method: `clojure/serverInfo/raw`
+Params: none 
+Response: Any
+
+#### Server Info Log
+
+Use to log to client the server configuration information.
+
+Type: Client request with response
+Capability: none 
+Method: `clojure/serverInfo/log`
+Params: none 
+Response: none
+
+#### Cursor Info Log
+
+Use to log to client the debugging information for the symbol at cursor.
+
+Type: Client request with response
+Capability: none 
+Method: `clojure/cursorInfo/log`
+Params: `[uri, line, column]` 
+Response: Any
+
+#### Clojuredocs raw
+
+Use to retrieve any Clojuredocs entry. Will return `null` if no entry found.
+
+Type: Client request with response
+Capability: none 
+Method: `clojure/clojuredocs/raw`
+Params: `[symbol-name, symbol-ns]`
+Response: Any

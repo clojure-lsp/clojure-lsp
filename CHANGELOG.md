@@ -5,6 +5,7 @@
 - Editor
   - Change call hierarchy to return selection range of usage, not function definition.
   - Return `edits` in `codeAction/resolve` responses rather than `commands`. #655
+  - Improve `:linters :clj-kondo :async-custom-lint?` to avoid infinite loops.
 
 - API/CLI
   - Exit process if any error during classpath lookup.

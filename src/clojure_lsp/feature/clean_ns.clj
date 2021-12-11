@@ -11,6 +11,8 @@
    [rewrite-clj.zip.subedit :as zsub]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private resolve-ns-inner-blocks-identation [db]
   (or (settings/get db [:clean :ns-inner-blocks-indentation])
       (if (settings/get db [:keep-require-at-start?])

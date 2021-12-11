@@ -5,6 +5,8 @@
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 
+(h/reset-db-after-test)
+
 (deftest sortable-map?
   (is (not (f.sort-map/sortable-map-zloc (z/of-string "[]"))))
   (is (not (f.sort-map/sortable-map-zloc (z/of-string "[1 2 3 4]"))))

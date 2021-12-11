@@ -2,6 +2,8 @@
   (:require
    [clojure-lsp.shared :as shared]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private ->testings-children [testings]
   (let [root-testings (remove (fn [testing]
                                 (some #(and (shared/inside? testing %)
@@ -13,7 +15,8 @@
                                                  (not= testing root-testing)))
                                           testings)]
               (shared/assoc-some
-                {:name "mock"
+                {:name (or (-> root-testing :context :clojure.test :testing-str)
+                           "")
                  :range (shared/->scope-range root-testing)
                  :name-range (shared/->range root-testing)
                  :kind :testing}

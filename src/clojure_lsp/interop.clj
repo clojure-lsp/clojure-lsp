@@ -340,29 +340,30 @@
                                            (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))
 
 (def test-tree-kind-enum
-  {:deftest 1 :testing 2})
+  {:namespace 1 :deftest 2 :testing 3})
 
 (s/def :test-tree/kind (s/and keyword?
                               test-tree-kind-enum
                               (s/conformer (fn [v] (TestTreeKind/forValue (get test-tree-kind-enum v))))))
 
 (s/def :test-tree/name-range ::range)
-(s/def :test-tree/children (s/coll-of :test-tree/test))
+(s/def :test-tree/children (s/coll-of :test-tree/test-node))
 
-(s/def :test-tree/test (s/and (s/keys :req-un [::name ::range :test-tree/name-range :test-tree/kind]
-                                      :opt-un [:test-tree/children])
-                              (s/conformer #(doto (TestTreeNode.)
-                                              (.setName (:name %1))
-                                              (.setRange (:range %1))
-                                              (.setNameRange (:name-range %1))
-                                              (.setKind (:kind %1))
-                                              (.setChildren (:children %1))))))
-(s/def :test-tree/tests (s/coll-of :test-tree/test))
+(s/def :test-tree/test-node (s/and (s/keys :req-un [::name ::range :test-tree/name-range :test-tree/kind]
+                                           :opt-un [:test-tree/children])
+                                   (s/conformer #(doto (TestTreeNode.)
+                                                   (.setName (:name %1))
+                                                   (.setRange (:range %1))
+                                                   (.setNameRange (:name-range %1))
+                                                   (.setKind (:kind %1))
+                                                   (.setChildren (:children %1))))))
 
-(s/def ::publish-test-tree-params (s/and (s/keys :req-un [::uri :test-tree/tests])
+(s/def :test-tree/tree :test-tree/test-node)
+
+(s/def ::publish-test-tree-params (s/and (s/keys :req-un [::uri :test-tree/tree])
                                          (s/conformer #(doto (TestTreeParams.)
                                                          (.setUri (:uri %1))
-                                                         (.setTests (:tests %1))))))
+                                                         (.setTree (:tree %1))))))
 
 (s/def ::marked-string (s/and (s/or :string string?
                                     :marked-string (s/and (s/keys :req-un [::language ::value])

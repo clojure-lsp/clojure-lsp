@@ -1,7 +1,7 @@
 package clojure_lsp.feature.test_tree;
 
 public enum TestTreeKind {
-    Deftest(1), Testing(2);
+    Namespace(1), Deftest(2), Testing(3);
 
     private final int value;
 

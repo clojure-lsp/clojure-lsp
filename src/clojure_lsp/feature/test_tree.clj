@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.test-tree
   (:require
+   [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]))
 
 (set! *warn-on-reflection* true)
@@ -34,6 +35,7 @@
 (defn tree [uri db]
   (when (some-> @db :client-capabilities :experimental :testTree)
     (let [filename (shared/uri->filename uri)
+          ns-element (q/find-namespace-definition-by-filename (:analysis @db) filename db)
           local-analysis (get-in @db [:analysis filename])
           deftests (->> local-analysis
                         (filter #(and (identical? :var-definitions (:bucket %))
@@ -46,4 +48,8 @@
           tests-tree (mapv #(deftest->tree % testings) deftests)]
       (when (seq tests-tree)
         {:uri uri
-         :tests (mapv #(deftest->tree % testings) deftests)}))))
+         :tree {:name (str (:name ns-element))
+                :range (shared/->scope-range ns-element)
+                :name-range (shared/->range ns-element)
+                :kind :namespace
+                :children (mapv #(deftest->tree % testings) deftests)}}))))

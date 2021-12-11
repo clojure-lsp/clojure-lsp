@@ -11,7 +11,7 @@ public class TestTreeParams {
     private String uri;
 
     @NonNull
-    private List<TestTreeNode> tests;
+    private TestTreeNode tree;
 
     public String getUri() {
         return uri;
@@ -21,12 +21,12 @@ public class TestTreeParams {
         this.uri = uri;
     }
 
-    public List<TestTreeNode> getTests() {
-        return tests;
+    public TestTreeNode getTree() {
+        return tree;
     }
 
-    public void setTests(List<TestTreeNode> tests) {
-        this.tests = tests;
+    public void setTree(TestTreeNode tree) {
+        this.tree = tree;
     }
 
     @Override

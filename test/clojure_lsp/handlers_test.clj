@@ -2,10 +2,10 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [taoensso.timbre :as log]
-   [clojure-lsp.kondo :as lsp.kondo]))
+   [taoensso.timbre :as log]))
 
 (h/reset-db-after-test)
 

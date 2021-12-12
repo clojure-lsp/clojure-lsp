@@ -1,4 +1,4 @@
-package clojure_lsp;
+package clojure_lsp.feature.cursor_info;
 
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.Position;

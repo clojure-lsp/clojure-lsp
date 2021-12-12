@@ -71,7 +71,11 @@
                              :triggerCharacters [":" "/"]}
         :documentSymbolProvider true
         :definitionProvider true
-        :documentHighlightProvider true}}
+        :documentHighlightProvider true
+        :experimental {:testTree true
+                       :cursorInfo true
+                       :serverInfo true
+                       :clojuredocs true}}}
 
       (lsp/request! (fixture/initialize-request))))
 

@@ -42,7 +42,8 @@
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                :new-text new-text}]}]]
-        (async/>!! db/edits-chan (f.refactor/client-changes changes db))))))
+        (async/>!! db/edits-chan (f.refactor/client-changes changes db)))))
+  (producer/refresh-test-tree uri db))
 
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
@@ -154,7 +155,8 @@
             (do
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db)))
+                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
+              (producer/refresh-test-tree uri db))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]

@@ -406,6 +406,13 @@
     analysis
     db))
 
+(defn find-namespace-definition-by-filename [analysis filename db]
+  (find-last-order-by-project-analysis
+    #(and (identical? :namespace-definitions (:bucket %))
+          (= (:filename %) filename))
+    analysis
+    db))
+
 (defn find-namespace-usage-by-alias [analysis filename alias]
   (->> (get analysis filename)
        (filter #(and (identical? :namespace-usages (:bucket %))

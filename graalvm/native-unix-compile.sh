@@ -9,7 +9,6 @@ fi
 
 if [[ ! -f "$CLOJURE_LSP_JAR" ]]
 then
-    make classes
     make prod-jar-for-native
     CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
 fi

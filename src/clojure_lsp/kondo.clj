@@ -116,7 +116,8 @@
        :custom-lint-fn #(single-file-custom-lint! % uri db)
        :config {:output {:analysis {:arglists true
                                     :locals true
-                                    :keywords true}
+                                    :keywords true
+                                    :context [:clojure.test]}
                          :canonical-paths true}}}
       (with-additional-config (settings/all db))))
 

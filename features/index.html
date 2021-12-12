@@ -591,12 +591,18 @@
     Diagnostics (linter)
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
+    <nav class="md-nav" aria-label="Diagnostics (linter)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#clojure-lspunused-public-var" class="md-nav__link">
     clojure-lsp/unused-public-var
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -605,10 +611,9 @@
     Stub generation
   </a>
   
-    <nav class="md-nav" aria-label="Stub generation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
+</li>
+      
+        <li class="md-nav__item">
   <a href="#execute-command" class="md-nav__link">
     Execute command
   </a>
@@ -649,11 +654,6 @@
   <a href="#cursor-information" class="md-nav__link">
     Cursor information
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -899,12 +899,18 @@
     Diagnostics (linter)
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
+    <nav class="md-nav" aria-label="Diagnostics (linter)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#clojure-lspunused-public-var" class="md-nav__link">
     clojure-lsp/unused-public-var
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -913,10 +919,9 @@
     Stub generation
   </a>
   
-    <nav class="md-nav" aria-label="Stub generation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
+</li>
+      
+        <li class="md-nav__item">
   <a href="#execute-command" class="md-nav__link">
     Execute command
   </a>
@@ -957,11 +962,6 @@
   <a href="#cursor-information" class="md-nav__link">
     Cursor information
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1229,10 +1229,10 @@
 make most of features work.</p>
 <p>Every linter configuration should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kondo for the project. For more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>.</p>
 <p>Below you can find the custom linters implemented on clojure-lsp side that uses the <code>:custom-lint-fn</code> from clj-kondo:</p>
-<h3 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h3>
+<h4 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h4>
 <p><img alt="" src="../images/features/unused-public-var.png" /></p>
 <p>For more information on how to configure it, check the <a href="https://clojure-lsp.io/settings/#diagnostics-linter">diagnostics settings section</a>.</p>
-<h2 id="stub-generation">Stub generation<a class="headerlink" href="#stub-generation" title="Permanent link">#</a></h2>
+<h3 id="stub-generation">Stub generation<a class="headerlink" href="#stub-generation" title="Permanent link">#</a></h3>
 <p>It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like <code>datomic.api</code>, with that clojure-lsp will be able to make most features work with those dependencies.
 For more information check the <a href="../settings.md#stub-generation">stubs settings section</a>.</p>
 <h3 id="execute-command">Execute command<a class="headerlink" href="#execute-command" title="Permanent link">#</a></h3>

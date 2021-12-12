@@ -1,10 +1,10 @@
 (ns clojure-lsp.producer
   (:require
+   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [taoensso.timbre :as log]
-   [clojure-lsp.feature.test-tree :as f.test-tree])
+   [taoensso.timbre :as log])
   (:import
    (clojure_lsp ClojureLanguageClient)
    (org.eclipse.lsp4j

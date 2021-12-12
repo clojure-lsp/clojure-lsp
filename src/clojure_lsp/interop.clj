@@ -8,11 +8,11 @@
    [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
-   (com.google.gson JsonElement)
    (clojure_lsp.feature.test_tree
      TestTreeParams
      TestTreeNode
      TestTreeKind)
+   (com.google.gson JsonElement)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCall
      CallHierarchyOutgoingCall

@@ -59,7 +59,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/rangeFormatting           | √    |                                               |
 | textDocument/onTypeFormatting          |      |                                               |
 | textDocument/rename                    | √    |                                               |
-| textDocument/prepareRename             |      |                                               |
+| textDocument/prepareRename             | √    |                                               |
 | textDocument/foldingRange              |      |                                               |
 | textDocument/selectionRange            |      |                                               |
 | textDocument/semanticTokens/full       | √    |                                               |
@@ -125,8 +125,11 @@ Other clients might provide a higher level interface to `workspace/executeComman
 Notify client with test tree data to build a UI tree on client side.
 
 Type: Server Notification
+
 Capability: `experimental.testTree`
+
 Method: `clojure/textDocument/testTree`
+
 Response: `TestTreeParams`
   `TestTreeParams`: `{:uri string, :tests [TestTreeNode]}`
   `TestTreeNode`: `{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}`
@@ -137,9 +140,13 @@ Response: `TestTreeParams`
 Use to retrieve from server the server configuration information.
 
 Type: Client request with response
+
 Capability: none 
+
 Method: `clojure/serverInfo/raw`
+
 Params: none 
+
 Response: Any
 
 #### Server Info Log
@@ -147,9 +154,13 @@ Response: Any
 Use to log to client the server configuration information.
 
 Type: Client request with response
+
 Capability: none 
+
 Method: `clojure/serverInfo/log`
+
 Params: none 
+
 Response: none
 
 #### Cursor Info Log
@@ -157,9 +168,13 @@ Response: none
 Use to log to client the debugging information for the symbol at cursor.
 
 Type: Client request with response
+
 Capability: none 
+
 Method: `clojure/cursorInfo/log`
+
 Params: `[uri, line, column]` 
+
 Response: Any
 
 #### Clojuredocs raw
@@ -167,7 +182,11 @@ Response: Any
 Use to retrieve any Clojuredocs entry. Will return `null` if no entry found.
 
 Type: Client request with response
+
 Capability: none 
+
 Method: `clojure/clojuredocs/raw`
+
 Params: `[symbol-name, symbol-ns]`
+
 Response: Any

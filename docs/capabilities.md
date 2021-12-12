@@ -131,9 +131,12 @@ Capability: `experimental.testTree`
 Method: `clojure/textDocument/testTree`
 
 Response: `TestTreeParams`
-  `TestTreeParams`: `{:uri string, :tests [TestTreeNode]}`
-  `TestTreeNode`: `{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}`
-  `TestTreeKind`: `:deftest 1 | :testing 2`
+
+  - `TestTreeParams`: `{:uri string, :tests [TestTreeNode]}`
+
+  - `TestTreeNode`: `{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}`
+
+  - `TestTreeKind`: `:deftest 1 | :testing 2`
 
 #### Server Info Raw
 

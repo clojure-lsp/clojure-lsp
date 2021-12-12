@@ -466,6 +466,47 @@
     Custom methods
   </a>
   
+    <nav class="md-nav" aria-label="Custom methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#test-tree" class="md-nav__link">
+    Test tree
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-info-raw" class="md-nav__link">
+    Server Info Raw
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-info-log" class="md-nav__link">
+    Server Info Log
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-info-log" class="md-nav__link">
+    Cursor Info Log
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clojuredocs-raw" class="md-nav__link">
+    Clojuredocs raw
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -613,6 +654,47 @@
   <a href="#custom-methods" class="md-nav__link">
     Custom methods
   </a>
+  
+    <nav class="md-nav" aria-label="Custom methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#test-tree" class="md-nav__link">
+    Test tree
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-info-raw" class="md-nav__link">
+    Server Info Raw
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-info-log" class="md-nav__link">
+    Server Info Log
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-info-log" class="md-nav__link">
+    Cursor Info Log
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clojuredocs-raw" class="md-nav__link">
+    Clojuredocs raw
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1116,37 +1198,43 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <p>Other clients might provide a higher level interface to <code>workspace/executeCommand</code> you need to pass the path, line and column numbers.</p>
 <h3 id="custom-methods">Custom methods<a class="headerlink" href="#custom-methods" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp</code> has some custom LSP methods that doesn't follow the protocol but aggregate value as a clojure IDE:</p>
-<table>
-<thead>
-<tr>
-<th>command</th>
-<th>args</th>
-<th>notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>clojure/serverInfo/raw</td>
-<td></td>
-<td>Use to retrieve from server the server configuration information</td>
-</tr>
-<tr>
-<td>clojure/serverInfo/log</td>
-<td></td>
-<td>Use to log to user the server configuration information</td>
-</tr>
-<tr>
-<td>clojure/cursorInfo/log</td>
-<td><code>[document-uri, line, column]</code></td>
-<td>Use to log to user the debugging information for the symbol at cursor</td>
-</tr>
-<tr>
-<td>clojure/clojuredocs/raw</td>
-<td><code>[symbol-name, symbol-ns]</code></td>
-<td>Use to retreive any Clojuredocs entry. Will return <code>null</code> if no entry found.</td>
-</tr>
-</tbody>
-</table>
+<h4 id="test-tree">Test tree<a class="headerlink" href="#test-tree" title="Permanent link">#</a></h4>
+<p>Notify client with test tree data to build a UI tree on client side.</p>
+<p>Type: Server Notification
+Capability: <code>experimental.testTree</code>
+Method: <code>clojure/textDocument/testTree</code>
+Response: <code>TestTreeParams</code>
+  <code>TestTreeParams</code>: <code>{:uri string, :tests [TestTreeNode]}</code>
+  <code>TestTreeNode</code>: <code>{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}</code>
+  <code>TestTreeKind</code>: <code>:deftest 1 | :testing 2</code></p>
+<h4 id="server-info-raw">Server Info Raw<a class="headerlink" href="#server-info-raw" title="Permanent link">#</a></h4>
+<p>Use to retrieve from server the server configuration information.</p>
+<p>Type: Client request with response
+Capability: none 
+Method: <code>clojure/serverInfo/raw</code>
+Params: none 
+Response: Any</p>
+<h4 id="server-info-log">Server Info Log<a class="headerlink" href="#server-info-log" title="Permanent link">#</a></h4>
+<p>Use to log to client the server configuration information.</p>
+<p>Type: Client request with response
+Capability: none 
+Method: <code>clojure/serverInfo/log</code>
+Params: none 
+Response: none</p>
+<h4 id="cursor-info-log">Cursor Info Log<a class="headerlink" href="#cursor-info-log" title="Permanent link">#</a></h4>
+<p>Use to log to client the debugging information for the symbol at cursor.</p>
+<p>Type: Client request with response
+Capability: none 
+Method: <code>clojure/cursorInfo/log</code>
+Params: <code>[uri, line, column]</code> 
+Response: Any</p>
+<h4 id="clojuredocs-raw">Clojuredocs raw<a class="headerlink" href="#clojuredocs-raw" title="Permanent link">#</a></h4>
+<p>Use to retrieve any Clojuredocs entry. Will return <code>null</code> if no entry found.</p>
+<p>Type: Client request with response
+Capability: none 
+Method: <code>clojure/clojuredocs/raw</code>
+Params: <code>[symbol-name, symbol-ns]</code>
+Response: Any</p>
                 
                   
                     
@@ -1155,7 +1243,7 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 11, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 12, 2021</span>
     
   </small>
 </div>

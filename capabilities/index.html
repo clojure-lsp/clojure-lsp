@@ -999,7 +999,7 @@
 </tr>
 <tr>
 <td>textDocument/prepareRename</td>
-<td></td>
+<td>√</td>
 <td></td>
 </tr>
 <tr>
@@ -1200,41 +1200,41 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <p><code>clojure-lsp</code> has some custom LSP methods that doesn't follow the protocol but aggregate value as a clojure IDE:</p>
 <h4 id="test-tree">Test tree<a class="headerlink" href="#test-tree" title="Permanent link">#</a></h4>
 <p>Notify client with test tree data to build a UI tree on client side.</p>
-<p>Type: Server Notification
-Capability: <code>experimental.testTree</code>
-Method: <code>clojure/textDocument/testTree</code>
-Response: <code>TestTreeParams</code>
+<p>Type: Server Notification</p>
+<p>Capability: <code>experimental.testTree</code></p>
+<p>Method: <code>clojure/textDocument/testTree</code></p>
+<p>Response: <code>TestTreeParams</code>
   <code>TestTreeParams</code>: <code>{:uri string, :tests [TestTreeNode]}</code>
   <code>TestTreeNode</code>: <code>{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}</code>
   <code>TestTreeKind</code>: <code>:deftest 1 | :testing 2</code></p>
 <h4 id="server-info-raw">Server Info Raw<a class="headerlink" href="#server-info-raw" title="Permanent link">#</a></h4>
 <p>Use to retrieve from server the server configuration information.</p>
-<p>Type: Client request with response
-Capability: none 
-Method: <code>clojure/serverInfo/raw</code>
-Params: none 
-Response: Any</p>
+<p>Type: Client request with response</p>
+<p>Capability: none </p>
+<p>Method: <code>clojure/serverInfo/raw</code></p>
+<p>Params: none </p>
+<p>Response: Any</p>
 <h4 id="server-info-log">Server Info Log<a class="headerlink" href="#server-info-log" title="Permanent link">#</a></h4>
 <p>Use to log to client the server configuration information.</p>
-<p>Type: Client request with response
-Capability: none 
-Method: <code>clojure/serverInfo/log</code>
-Params: none 
-Response: none</p>
+<p>Type: Client request with response</p>
+<p>Capability: none </p>
+<p>Method: <code>clojure/serverInfo/log</code></p>
+<p>Params: none </p>
+<p>Response: none</p>
 <h4 id="cursor-info-log">Cursor Info Log<a class="headerlink" href="#cursor-info-log" title="Permanent link">#</a></h4>
 <p>Use to log to client the debugging information for the symbol at cursor.</p>
-<p>Type: Client request with response
-Capability: none 
-Method: <code>clojure/cursorInfo/log</code>
-Params: <code>[uri, line, column]</code> 
-Response: Any</p>
+<p>Type: Client request with response</p>
+<p>Capability: none </p>
+<p>Method: <code>clojure/cursorInfo/log</code></p>
+<p>Params: <code>[uri, line, column]</code> </p>
+<p>Response: Any</p>
 <h4 id="clojuredocs-raw">Clojuredocs raw<a class="headerlink" href="#clojuredocs-raw" title="Permanent link">#</a></h4>
 <p>Use to retrieve any Clojuredocs entry. Will return <code>null</code> if no entry found.</p>
-<p>Type: Client request with response
-Capability: none 
-Method: <code>clojure/clojuredocs/raw</code>
-Params: <code>[symbol-name, symbol-ns]</code>
-Response: Any</p>
+<p>Type: Client request with response</p>
+<p>Capability: none </p>
+<p>Method: <code>clojure/clojuredocs/raw</code></p>
+<p>Params: <code>[symbol-name, symbol-ns]</code></p>
+<p>Response: Any</p>
                 
                   
                     

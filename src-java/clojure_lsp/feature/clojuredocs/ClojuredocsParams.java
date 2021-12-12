@@ -1,4 +1,4 @@
-package clojure_lsp;
+package clojure_lsp.feature.clojuredocs;
 
 import org.eclipse.lsp4j.jsonrpc.validation.NonNull;
 import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler;

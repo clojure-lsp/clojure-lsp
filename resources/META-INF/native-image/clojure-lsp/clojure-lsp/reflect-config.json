@@ -18,26 +18,39 @@
   "allPublicMethods":true
 },
 {
-  "name":"clojure_lsp.ClojureExtensions",
+  "name":"clojure_lsp.ClojureLanguageServer",
   "allDeclaredMethods":true
 },
 {
-  "name":"clojure_lsp.ExtraMethods",
+  "name":"clojure_lsp.ClojureLanguageClient",
   "allDeclaredMethods":true
 },
 {
-  "name":"clojure_lsp.CursorInfoParams",
+  "name":"clojure_lsp.feature.cursor_info.CursorInfoParams",
   "allDeclaredMethods":true,
   "allPublicMethods": true,
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"clojure_lsp.ClojuredocsParams",
+  "name":"clojure_lsp.feature.clojuredocs.ClojuredocsParams",
   "allDeclaredMethods":true,
   "allPublicMethods": true,
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"clojure_lsp.feature.test_tree.TestTreeParams",
+  "allDeclaredFields":true
+},
+{
+  "name":"clojure_lsp.feature.test_tree.TestTreeNode",
+  "allDeclaredFields":true
+},
+{
+  "name":"clojure_lsp.feature.test_tree.TestTreeKind",
+  "allPublicMethods":true,
+  "fields":[{"name":"value"}]
 },
 {
   "name":"com.google.gson.JsonObject",

@@ -214,6 +214,12 @@ Show functions that the current one call, recursively
 
 ![](images/features/call-hierarchy-outgoing.png)
 
+### Test Tree
+
+Show the tests tree hierarchy of a file
+
+![](images/features/test-tree.png)
+
 ### Diagnostics (linter)
 
 All linters besides the ones below come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp calls under the hood to lint the code and retrieve the analysis to

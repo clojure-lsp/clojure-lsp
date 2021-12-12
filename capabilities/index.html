@@ -1203,10 +1203,18 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <p>Type: Server Notification</p>
 <p>Capability: <code>experimental.testTree</code></p>
 <p>Method: <code>clojure/textDocument/testTree</code></p>
-<p>Response: <code>TestTreeParams</code>
-  <code>TestTreeParams</code>: <code>{:uri string, :tests [TestTreeNode]}</code>
-  <code>TestTreeNode</code>: <code>{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}</code>
-  <code>TestTreeKind</code>: <code>:deftest 1 | :testing 2</code></p>
+<p>Response: <code>TestTreeParams</code></p>
+<ul>
+<li>
+<p><code>TestTreeParams</code>: <code>{:uri string, :tests [TestTreeNode]}</code></p>
+</li>
+<li>
+<p><code>TestTreeNode</code>: <code>{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}</code></p>
+</li>
+<li>
+<p><code>TestTreeKind</code>: <code>:deftest 1 | :testing 2</code></p>
+</li>
+</ul>
 <h4 id="server-info-raw">Server Info Raw<a class="headerlink" href="#server-info-raw" title="Permanent link">#</a></h4>
 <p>Use to retrieve from server the server configuration information.</p>
 <p>Type: Client request with response</p>

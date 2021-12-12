@@ -223,17 +223,16 @@ Every linter configuration should be done on clj-kondo side, so anything related
 
 Below you can find the custom linters implemented on clojure-lsp side that uses the `:custom-lint-fn` from clj-kondo:
 
-### clojure-lsp/unused-public-var
+#### clojure-lsp/unused-public-var
 
 ![](images/features/unused-public-var.png)
 
 For more information on how to configure it, check the [diagnostics settings section](https://clojure-lsp.io/settings/#diagnostics-linter).
 
-## Stub generation
+### Stub generation
 
 It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.
 For more information check the [stubs settings section](../settings.md#stub-generation).
-
 
 ### Execute command
 

@@ -12,7 +12,7 @@
         org.clojure/core.async {:mvn/version "1.5.644"}
         borkdude/dynaload {:mvn/version "0.2.2"}
         datalevin/datalevin {:mvn/version "0.5.27"}
-        org.clojure/java.data {:mvn/version "1.0.92"}
+        org.clojure/java.data {:mvn/version "1.0.95"}
         cljfmt/cljfmt {:mvn/version "0.8.0"
                        :exclusions [rewrite-cljs/rewrite-cljs
                                     com.googlecode.java-diff-utils/diffutils]}

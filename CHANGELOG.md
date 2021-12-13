@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2021.12.02-20211212.204828-17`, supporting auto-load features.
+  - Merge `:cljfmt` settings with `:cljfmt-config-path` if file path exists.
 
 - Editor
   - Change call hierarchy to return selection range of usage, not function definition.

@@ -7,6 +7,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
+   [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -16,9 +17,10 @@
   (let [config-path (settings/get db [:cljfmt-config-path])
         cljfmt-config-file (io/file config-path)]
     (cljfmt.main/merge-default-options
-      (if (shared/file-exists? cljfmt-config-file)
-        (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))
-        (settings/get db [:cljfmt] {})))))
+      (medley/deep-merge
+        (settings/get db [:cljfmt] {})
+        (when (shared/file-exists? cljfmt-config-file)
+          (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file)))))))
 
 (defn formatting [uri db]
   (let [{:keys [text]} (get-in @db [:documents uri])

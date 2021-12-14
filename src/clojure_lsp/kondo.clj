@@ -166,7 +166,12 @@
 
 (defn config-hash
   [project-root]
-  (-> project-root
-      (io/file ".clj-kondo")
-      kondo/resolve-config
-      kondo/config-hash))
+  (let [err (java.io.StringWriter.)]
+    (binding [*err* err]
+      (let [result (-> project-root
+                       (io/file ".clj-kondo")
+                       kondo/resolve-config
+                       kondo/config-hash)]
+        (when-not (string/blank? (str err))
+          (log/error (str err)))
+        result))))

@@ -1,5 +1,6 @@
 (ns clojure-lsp.refactor.edit
   (:require
+   [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -12,6 +13,45 @@
   (if (top? loc)
     loc
     (recur (z/up loc))))
+
+;; From rewrite-cljs
+(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
+                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
+  (or (nil? form-pos)
+      (nil? selection-pos)
+      (and (>= r row)
+           (<= er end-row)
+           (if (= r row) (>= c col) true)
+           (if (= er end-row) (< ec end-col) true))))
+
+(defn ^:private z-next-sexpr [loc]
+  (z/find-next loc z/next #(not (n/printable-only? (z/node %)))))
+
+;; From rewrite-cljs
+(defn find-forms
+  "Find last node (if more than one node) that is in range of pos and
+  satisfying the given predicate depth first from initial zipper
+  location."
+  [zloc p?]
+  (->> zloc
+       (iterate z-next-sexpr)
+       (take-while identity)
+       (take-while (complement z/end?))
+       (filter p?)))
+
+(defn find-last-by-pos
+  [zloc pos]
+  (let [forms (find-forms zloc (fn [loc]
+                                 (when (or (-> loc z/node meta)
+                                           (string/ends-with? (z/string loc) "/")
+                                           (string/ends-with? (z/string loc) ":"))
+                                   (in-range?
+                                     (-> loc z/node meta) pos))))
+        disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
+                                       (> (count forms) 1))]
+    (if disconsider-reader-macro?
+      (last (filter (complement (comp #(= "?" %) z/string)) forms))
+      (last forms))))
 
 (defn find-op
   [zloc]
@@ -32,22 +72,19 @@
       (contains? (set op-strs) (z/string op-loc)) op-loc
       :else (recur (z/leftmost (z/up op-loc))))))
 
-(def function-definition-symbols
-  '#{defn
-     defn-
-     def
-     defmacro
-     defmulti
-     defmethod
-     defonce
-     deftest
-     deftype
-     defrecord
-     s/def
-     s/defn})
-
-(defn find-function-definition-name-loc [loc]
-  (let [function-loc (apply find-ops-up loc (mapv str function-definition-symbols))]
+(defn find-var-definition-name-loc [loc filename db]
+  (let [root-loc (to-top loc)
+        var-definition-names (->> (get-in @db [:analysis filename])
+                                  (filter #(identical? :var-definitions (:bucket %)))
+                                  (map #(find-last-by-pos root-loc {:row (:name-row %)
+                                                                    :col (:name-col %)
+                                                                    :end-row (:name-row %)
+                                                                    :end-col (:name-col %)}))
+                                  (remove nil?)
+                                  (map find-op)
+                                  (map (comp z/string))
+                                  set)
+        function-loc (apply find-ops-up loc var-definition-names)]
     (cond
       (not function-loc)
       nil

@@ -8,22 +8,6 @@
 
 (h/reset-db-after-test)
 
-(deftest find-last-by-pos
-  (is (= "foo/bar" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) (foo/bar 1)")
-                                                      {:row 1 :col 11 :end-row 1 :end-col 11}))))
-  (is (= "1" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) 1 #(+ 1 2) 3")
-                                                {:row 1 :col 10 :end-row 1 :end-col 10}))))
-  (is (= "3" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) 1 #(+ 1 2) 3")
-                                                {:row 1 :col 21 :end-row 1 :end-col 21}))))
-  (is (= "1" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) 1 #?(+ 1 2) 3")
-                                                {:row 1 :col 10 :end-row 1 :end-col 10}))))
-  (is (= "3" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) 1 #?(+ 1 2) 3")
-                                                {:row 1 :col 22 :end-row 1 :end-col 22}))))
-  (is (= "some" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) some (def other {:foo/bar 1})")
-                                                   {:row 1 :col 10 :end-row 1 :end-col 13}))))
-  (is (= "some" (z/string (parser/find-last-by-pos (z/of-string "(ns foo) some (def other #:foo{:bar 1})")
-                                                   {:row 1 :col 10 :end-row 1 :end-col 13})))))
-
 (deftest safe-zloc-of-string
   (is (= "(ns foo) foo/bar" (z/string (z/up (#'parser/safe-zloc-of-string "(ns foo) foo/bar")))))
   (is (= "(ns foo) foo/ (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) foo/ (+ 1 2)"))))

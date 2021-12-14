@@ -482,20 +482,22 @@
   (testing "when on multiples functions"
     (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                (h/file-path "/project/test")}}})
-    (is (= {:source-paths #{"/project/src" "/project/test"},
-            :current-source-path "/project/src",
-            :function-name-loc "bar"}
-           (update (transform/can-create-test? (-> (z/of-string (h/code "(ns foo)"
-                                                                        "(defn bar []"
-                                                                        "  2)"
-                                                                        "(defn baz []"
-                                                                        "  3)"
-                                                                        "(defn zaz []"
-                                                                        "  4)"))
-                                                   (z/find-value z/next '2))
-                                               "file:///project/src/foo.clj"
-                                               db/db)
-                   :function-name-loc z/string)))))
+    (let [code (h/code "(ns foo)"
+                       "(defn bar []"
+                       "  2)"
+                       "(defn baz []"
+                       "  3)"
+                       "(defn zaz []"
+                       "  4)")]
+      (h/load-code-and-locs code "file:///project/src/foo.clj")
+      (is (= {:source-paths #{"/project/src" "/project/test"},
+              :current-source-path "/project/src",
+              :function-name-loc "bar"}
+             (update (transform/can-create-test? (-> (z/of-string code)
+                                                     (z/find-value z/next '2))
+                                                 "file:///project/src/foo.clj"
+                                                 db/db)
+                     :function-name-loc z/string))))))
 
 (deftest create-test-test
   (testing "when only one available source-path besides current"

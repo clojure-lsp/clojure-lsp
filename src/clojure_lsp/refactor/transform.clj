@@ -17,6 +17,18 @@
 
 (set! *warn-on-reflection* true)
 
+(def common-var-definition-symbols
+  '#{defn
+     defn-
+     def
+     defmacro
+     defmulti
+     defmethod
+     defonce
+     deftest
+     deftype
+     defrecord})
+
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
           (if-let [loc (:loc zip-edit)]
@@ -107,7 +119,7 @@
       [])))
 
 (def thread-invalid-symbols
-  (set/union edit/function-definition-symbols
+  (set/union common-var-definition-symbols
              '#{-> ->> ns :require :import deftest testing comment when if}))
 
 (defn can-thread-list? [zloc]
@@ -361,7 +373,7 @@
       :range expr-meta}]))
 
 (defn find-function-form [zloc]
-  (apply edit/find-ops-up zloc (mapv str edit/function-definition-symbols)))
+  (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))
 
 (defn cycle-privacy
   [zloc db]
@@ -598,7 +610,7 @@
                                      :range (-> test-zloc z/node meta)}]}}))))
 
 (defn can-create-test? [zloc uri db]
-  (when-let [function-name-loc (edit/find-function-definition-name-loc zloc)]
+  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) db)]
     (let [source-paths (settings/get db [:source-paths])]
       (when-let [current-source-path (->> source-paths
                                           (filter #(and (string/starts-with? (shared/uri->filename uri) %)

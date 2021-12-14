@@ -46,7 +46,7 @@
   (let [uri (shared/filename->uri filename db)
         zloc (-> (f.file-management/force-get-document-text uri db)
                  (parser/loc-at-pos name-row name-col))
-        parent-zloc (edit/find-function-definition-name-loc zloc)]
+        parent-zloc (edit/find-var-definition-name-loc zloc filename db)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
@@ -77,7 +77,7 @@
         filename (shared/uri->filename uri)
         zloc (-> (f.file-management/force-get-document-text uri db)
                  (parser/loc-at-pos row col))
-        {parent-row :row parent-col :col} (some-> (edit/find-function-definition-name-loc zloc)
+        {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename db)
                                                   z/node
                                                   meta)]
     (when (and parent-row parent-col)

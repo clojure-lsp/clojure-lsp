@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.add-missing-libspec
   (:require
    [clojure-lsp.common-symbols :as common-sym]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -281,9 +280,9 @@
                          (= chosen-refer (str (:refer %))))
                      (= chosen-ns (str (:ns %)))))
        (map (fn [{:keys [ns alias refer]}]
-              (let [ns-usages-nodes (parser/find-forms zloc #(and (= :token (z/tag %))
-                                                                  (symbol? (z/sexpr %))
-                                                                  (= ns (-> % z/sexpr namespace))))
+              (let [ns-usages-nodes (edit/find-forms zloc #(and (= :token (z/tag %))
+                                                                (symbol? (z/sexpr %))
+                                                                (= ns (-> % z/sexpr namespace))))
                     known-require (if alias
                                     (add-known-alias zloc (symbol alias) (symbol ns) db)
                                     (add-known-refer zloc (symbol refer) (symbol ns) db))]

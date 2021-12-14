@@ -14,9 +14,6 @@
      (log/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
-(defn z-next-sexpr [loc]
-  (z/find-next loc z/next #(not (n/printable-only? (z/node %)))))
-
 (defn ident-split [ident-str]
   (let [ident-conformed (some-> ident-str (string/replace #"^::?" ""))
         prefix (string/replace ident-str #"^(::?)?.*" "$1")
@@ -25,16 +22,6 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
-;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
-                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
-  (or (nil? form-pos)
-      (nil? selection-pos)
-      (and (>= r row)
-           (<= er end-row)
-           (if (= r row) (>= c col) true)
-           (if (= er end-row) (< ec end-col) true))))
-
 (defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as _a-pos}
                    {r :name-row c :name-col er :name-end-row ec :name-end-col :as _b-pos}]
   (and (= r name-row)
@@ -42,35 +29,9 @@
        (= c name-col)
        (= ec name-end-col)))
 
-;; From rewrite-cljs
-(defn find-forms
-  "Find last node (if more than one node) that is in range of pos and
-  satisfying the given predicate depth first from initial zipper
-  location."
-  [zloc p?]
-  (->> zloc
-       (iterate z-next-sexpr)
-       (take-while identity)
-       (take-while (complement z/end?))
-       (filter p?)))
-
-(defn find-last-by-pos
-  [zloc pos]
-  (let [forms (find-forms zloc (fn [loc]
-                                 (when (or (-> loc z/node meta)
-                                           (string/ends-with? (z/string loc) "/")
-                                           (string/ends-with? (z/string loc) ":"))
-                                   (in-range?
-                                     (-> loc z/node meta) pos))))
-        disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
-                                       (> (count forms) 1))]
-    (if disconsider-reader-macro?
-      (last (filter (complement (comp #(= "?" %) z/string)) forms))
-      (last forms))))
-
 (defn find-top-forms-in-range
   [code pos]
-  (->> (find-forms (z/of-string code) #(in-range? pos (-> % z/node meta)))
+  (->> (edit/find-forms (z/of-string code) #(edit/in-range? pos (-> % z/node meta)))
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 
@@ -138,7 +99,7 @@
 (defn loc-at-pos [code row col]
   (some-> code
           safe-zloc-of-string
-          (find-last-by-pos {:row row :col col :end-row row :end-col col})))
+          (edit/find-last-by-pos {:row row :col col :end-row row :end-col col})))
 
 (defn safe-loc-at-pos [text row col]
   (try

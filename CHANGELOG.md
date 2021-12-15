@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2021.12.02-20211212.204828-17`, supporting auto-load features.
+  - Bump clj-kondo to `2021.12.02-20211215.185052-28`, supporting auto-load configs and improving potemkin support.
   - Merge `:cljfmt` settings with `:cljfmt-config-path` if file path exists.
 
 - Editor

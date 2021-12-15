@@ -10,9 +10,10 @@
   (= :forms (z/tag (z/up loc))))
 
 (defn to-top [loc]
-  (if (top? loc)
-    loc
-    (recur (z/up loc))))
+  (when loc
+    (if (top? loc)
+      loc
+      (recur (z/up loc)))))
 
 ;; From rewrite-cljs
 (defn in-range? [{:keys [row col end-row end-col] :as form-pos}
@@ -73,34 +74,34 @@
       :else (recur (z/leftmost (z/up op-loc))))))
 
 (defn find-var-definition-name-loc [loc filename db]
-  (let [root-loc (to-top loc)
-        var-definition-names (->> (get-in @db [:analysis filename])
-                                  (filter #(identical? :var-definitions (:bucket %)))
-                                  (map #(find-last-by-pos root-loc {:row (:name-row %)
-                                                                    :col (:name-col %)
-                                                                    :end-row (:name-row %)
-                                                                    :end-col (:name-col %)}))
-                                  (remove nil?)
-                                  (map find-op)
-                                  (map (comp z/string))
-                                  set)
-        function-loc (apply find-ops-up loc var-definition-names)]
-    (cond
-      (not function-loc)
-      nil
+  (when-let [root-loc (to-top loc)]
+    (let [var-definition-names (->> (get-in @db [:analysis filename])
+                                    (filter #(identical? :var-definitions (:bucket %)))
+                                    (map #(find-last-by-pos root-loc {:row (:name-row %)
+                                                                      :col (:name-col %)
+                                                                      :end-row (:name-row %)
+                                                                      :end-col (:name-col %)}))
+                                    (remove nil?)
+                                    (map find-op)
+                                    (map (comp z/string))
+                                    set)
+          function-loc (apply find-ops-up loc var-definition-names)]
+      (cond
+        (not function-loc)
+        nil
 
-      (= :map (-> function-loc z/next z/tag))
-      (-> function-loc z/next z/right)
+        (= :map (-> function-loc z/next z/tag))
+        (-> function-loc z/next z/right)
 
-      (and (= :meta (-> function-loc z/next z/tag))
-           (= :map (-> function-loc z/next z/next z/tag)))
-      (-> function-loc z/next z/down z/rightmost)
+        (and (= :meta (-> function-loc z/next z/tag))
+             (= :map (-> function-loc z/next z/next z/tag)))
+        (-> function-loc z/next z/down z/rightmost)
 
-      (= :meta (-> function-loc z/next z/tag))
-      (-> function-loc z/next z/next z/next)
+        (= :meta (-> function-loc z/next z/tag))
+        (-> function-loc z/next z/next z/next)
 
-      :else
-      (z/next function-loc))))
+        :else
+        (z/next function-loc)))))
 
 (defn find-function-usage-name-loc [zloc]
   (some-> zloc

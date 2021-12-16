@@ -1206,13 +1206,13 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <p>Response: <code>TestTreeParams</code></p>
 <ul>
 <li>
-<p><code>TestTreeParams</code>: <code>{:uri string, :tests [TestTreeNode]}</code></p>
+<p><code>TestTreeParams</code>: <code>{:uri string, :tree TestTreeNode}</code></p>
 </li>
 <li>
 <p><code>TestTreeNode</code>: <code>{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}</code></p>
 </li>
 <li>
-<p><code>TestTreeKind</code>: <code>:deftest 1 | :testing 2</code></p>
+<p><code>TestTreeKind</code>: <code>:namespace 1 :deftest 2 | :testing 3</code></p>
 </li>
 </ul>
 <h4 id="server-info-raw">Server Info Raw<a class="headerlink" href="#server-info-raw" title="Permanent link">#</a></h4>

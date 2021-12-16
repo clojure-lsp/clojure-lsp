@@ -92,9 +92,11 @@ jobs:
         run: make integration-test
 
   graalvm-build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-11]
     steps:
       - uses: actions/checkout@v2
       - name: Prepare java
@@ -123,7 +125,7 @@ jobs:
         run: |
           gu install native-image
 
-      - name: Build Linux native image
+      - name: Build native image
         env:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"

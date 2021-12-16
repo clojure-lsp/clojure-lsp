@@ -132,11 +132,11 @@ Method: `clojure/textDocument/testTree`
 
 Response: `TestTreeParams`
 
-  - `TestTreeParams`: `{:uri string, :tests [TestTreeNode]}`
+  - `TestTreeParams`: `{:uri string, :tree TestTreeNode}`
 
   - `TestTreeNode`: `{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}`
 
-  - `TestTreeKind`: `:deftest 1 | :testing 2`
+  - `TestTreeKind`: `:namespace 1 :deftest 2 | :testing 3`
 
 #### Server Info Raw
 

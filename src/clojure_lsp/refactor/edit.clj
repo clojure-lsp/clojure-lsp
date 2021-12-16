@@ -2,7 +2,8 @@
   (:require
    [clojure.string :as string]
    [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 
@@ -70,38 +71,46 @@
   (loop [op-loc (find-op zloc)]
     (cond
       (nil? op-loc) nil
-      (contains? (set op-strs) (z/string op-loc)) op-loc
+      (contains? (set op-strs)
+                 (let [sexpr (z/sexpr op-loc)]
+                   (if (qualified-ident? sexpr)
+                     (name sexpr)
+                     (str sexpr)))) op-loc
       :else (recur (z/leftmost (z/up op-loc))))))
+
+(defn var-name-loc-from-op [loc]
+  (cond
+    (not loc)
+    nil
+
+    (= :map (-> loc z/next z/tag))
+    (-> loc z/next z/right)
+
+    (and (= :meta (-> loc z/next z/tag))
+         (= :map (-> loc z/next z/next z/tag)))
+    (-> loc z/next z/down z/rightmost)
+
+    (= :meta (-> loc z/next z/tag))
+    (-> loc z/next z/next z/next)
+
+    :else
+    (z/next loc)))
 
 (defn find-var-definition-name-loc [loc filename db]
   (when-let [root-loc (to-top loc)]
-    (let [var-definition-names (->> (get-in @db [:analysis filename])
-                                    (filter #(identical? :var-definitions (:bucket %)))
+    (when-let [fn-name-loc (some-> loc to-top z/next var-name-loc-from-op)]
+      (let [fn-name-loc-meta (meta (z/node fn-name-loc))
+            var-definition-ops (->> (get-in @db [:analysis filename])
+                                    (filter #(and (identical? :var-definitions (:bucket %))
+                                                  (= (:row fn-name-loc-meta) (:name-row %))
+                                                  (= (:col fn-name-loc-meta) (:name-col %))))
                                     (map #(find-last-by-pos root-loc {:row (:name-row %)
                                                                       :col (:name-col %)
                                                                       :end-row (:name-row %)
                                                                       :end-col (:name-col %)}))
-                                    (remove nil?)
-                                    (map find-op)
-                                    (map (comp z/string))
-                                    set)
-          function-loc (apply find-ops-up loc var-definition-names)]
-      (cond
-        (not function-loc)
-        nil
-
-        (= :map (-> function-loc z/next z/tag))
-        (-> function-loc z/next z/right)
-
-        (and (= :meta (-> function-loc z/next z/tag))
-             (= :map (-> function-loc z/next z/next z/tag)))
-        (-> function-loc z/next z/down z/rightmost)
-
-        (= :meta (-> function-loc z/next z/tag))
-        (-> function-loc z/next z/next z/next)
-
-        :else
-        (z/next function-loc)))))
+                                    (remove nil?))]
+        (when (seq var-definition-ops)
+          fn-name-loc)))))
 
 (defn find-function-usage-name-loc [zloc]
   (some-> zloc

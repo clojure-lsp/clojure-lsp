@@ -10,6 +10,7 @@
    [clojure-lsp.interop :as interop]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
@@ -27,7 +28,8 @@
 
 (defn ^:private show-message-cli [options {:keys [message extra type]}]
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
-  (when (= :error type)
+  (when (and (= :error type)
+             (settings/get db/db [:api :exit-on-errors?] true))
     (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defmacro ^:private safe-analyze [& body]

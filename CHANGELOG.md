@@ -14,7 +14,7 @@
   - Improve function name finding to consider other function definition types for some features. #666
 
 - API/CLI
-  - Exit process if any error during classpath lookup.
+  - Exit process if any error during classpath lookup. Opt-out via `:api :exit-on-errors?` flag.
 
 ## 2021.12.01-12.28.16
 

@@ -160,10 +160,14 @@
                                              {:paths ["foo"]
                                               :deps '{other.lib {:local/root "../other"}}}
 
+                                             ;; this path seems platform dependent
                                              "/project/root/./some/lib/../other/deps.edn"
+                                             {:extra-paths ["bar"]}
+                                             "/project/root/some/lib/other/deps.edn"
                                              {:extra-paths ["bar"]}))
                     shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
-                                             (= "/project/root/./some/lib/../other/deps.edn" (str %)))]
+                                             (= "/project/root/./some/lib/../other/deps.edn" (str %))
+                                             (= "/project/root/some/other/deps.edn" (str %)))]
         (is (= #{"./some/lib/foo" "src" "./some/lib/../other/bar"}
                (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))))
 

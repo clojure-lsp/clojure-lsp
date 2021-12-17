@@ -162,9 +162,8 @@
 
                                              "/project/root/./some/lib/../other/deps.edn"
                                              {:extra-paths ["bar"]}))
-                    shared/file-exists? #(do (prn %)
-                                          (or (= "/project/root/./some/lib/deps.edn" (str %))
-                                              (= "/project/root/./some/lib/../other/deps.edn" (str %))))]
+                    shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
+                                             (= "/project/root/./some/lib/../other/deps.edn" (str %)))]
         (is (= #{"./some/lib/foo" "src" "./some/lib/../other/bar"}
                (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))))
 

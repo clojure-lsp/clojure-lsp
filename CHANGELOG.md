@@ -5,6 +5,7 @@
 - General
   - Bump clj-kondo to `2021.12.16`, supporting auto-load configs, improving potemkin support, adding more linters and more.
   - Merge `:cljfmt` settings with `:cljfmt-config-path` if file path exists.
+  - Avoid high CPU and lockup when clj-kondo throws exceptions. #671
 
 - Editor
   - Change call hierarchy to return selection range of usage, not function definition.

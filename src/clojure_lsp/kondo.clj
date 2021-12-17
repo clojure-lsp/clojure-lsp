@@ -85,7 +85,7 @@
   [{:keys [analysis] :as kondo-ctx} uri db]
   (let [filename (-> analysis :var-definitions first :filename)
         updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
-    (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
+    (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
       (async/go
         (let [new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
           (swap! db assoc-in [:findings filename] new-findings)

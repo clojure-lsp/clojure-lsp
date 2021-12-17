@@ -9,7 +9,7 @@
 - Editor
   - Change call hierarchy to return selection range of usage, not function definition.
   - Return `edits` in `codeAction/resolve` responses rather than `commands`. #655
-  - Improve `:linters :clj-kondo :async-custom-lint?` to avoid infinite loops.
+  - Improve `:linters :clj-kondo :async-custom-lint?` to avoid infinite loops and default to `true`.
   - Add new custom LSP feature __Test Tree__, which shows all test hierarchy of a file. #653
   - Improve function name finding to consider other function definition types for some features. #666
 

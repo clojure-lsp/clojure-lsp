@@ -17,6 +17,17 @@
 
 (def clj-kondo-analysis-batch-size 50)
 
+(defmacro catch-kondo-errors [err-hint & body]
+  `(let [err# (java.io.StringWriter.)]
+     (try
+       (binding [*err* err#]
+         (let [result# (do ~@body)]
+           (when-not (string/blank? (str err#))
+             (log/warn "Non-fatal error from clj-kondo:" (str err#)))
+           result#))
+       (catch Exception e#
+         (log/error e# "Error running clj-kondo on" ~err-hint)))))
+
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond
     ;; We create two entries here (and maybe more for refer)
@@ -126,12 +137,8 @@
       (with-additional-config (settings/all db))))
 
 (defn run-kondo-on-paths! [paths external-analysis-only? db]
-  (let [err (java.io.StringWriter.)]
-    (binding [*err* err]
-      (let [result (kondo/run! (kondo-for-paths paths db external-analysis-only?))]
-        (when-not (string/blank? (str err))
-          (log/info (str err)))
-        result))))
+  (catch-kondo-errors (str "paths " (string/join ", " paths))
+    (kondo/run! (kondo-for-paths paths db external-analysis-only?))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
@@ -151,22 +158,12 @@
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db]
-  (let [err (java.io.StringWriter.)]
-    (binding [*err* err]
-      (let [result (kondo/run! (kondo-for-reference-filenames filenames db))]
-        (when-not (string/blank? (str err))
-          (log/info (str err)))
-        result))))
+  (catch-kondo-errors (str "files " (string/join ", " filenames))
+    (kondo/run! (kondo-for-reference-filenames filenames db))))
 
 (defn run-kondo-on-text! [text uri db]
-  (let [err (java.io.StringWriter.)]
-    (binding [*err* err]
-      (let [result (with-in-str
-                     text
-                     (kondo/run! (kondo-for-single-file uri db)))]
-        (when-not (string/blank? (str err))
-          (log/error (str err)))
-        result))))
+  (catch-kondo-errors (shared/uri->filename uri)
+    (with-in-str text (kondo/run! (kondo-for-single-file uri db)))))
 
 (defn config-hash
   [project-root]

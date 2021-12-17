@@ -41,7 +41,9 @@
        (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
          (log/warn "Timeout waiting for changes for body")
          (if (:processing-changes @db/db)
-           (recur)
+           (do
+             (Thread/sleep 100)
+             (recur))
            ~@body)))))
 
 (defn ^:private report-startup-progress

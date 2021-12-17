@@ -3,7 +3,7 @@
  :remove-consecutive-blank-lines? true
  :insert-missing-whitespace? true
  :align-associative? false
- :indents {#re ".*" [[:block 0]]}
+ :indents {catch-kondo-errors [[:inner 0]]}
  :test-code
  (comment
    (:require

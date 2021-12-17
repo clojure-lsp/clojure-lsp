@@ -22,7 +22,7 @@
         clj-kondo/clj-kondo {:mvn/version "2021.12.16"}
         com.github.clj-easy/stub {:mvn/version "0.1.1"}}
  :paths ["src" "classes" "resources"]
- :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.945"}}
+ :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}

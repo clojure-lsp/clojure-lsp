@@ -54,8 +54,6 @@
     (fn [f]
       (if (.isAbsolute (io/file f))
         f
-        ;; NOTE; calling .getCanonicalFile on this would get of some "../" path
-        ;; components.
         (io/file p f)))))
 
 (defn ^:private deps-file->local-roots

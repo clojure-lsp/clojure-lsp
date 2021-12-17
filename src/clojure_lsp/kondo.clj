@@ -82,16 +82,17 @@
         (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx db)))))
 
 (defn ^:private single-file-custom-lint!
-  [{:keys [analysis] :as kondo-ctx} uri db]
-  (let [filename (-> analysis :var-definitions first :filename)
-        updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
-    (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
-      (async/go
-        (let [new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
-          (swap! db assoc-in [:findings filename] new-findings)
-          (when (not= :unknown (shared/uri->file-type uri))
-            (f.diagnostic/sync-lint-file! uri db))))
-      (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db))))
+  [{:keys [analysis config] :as kondo-ctx} uri db]
+  (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
+    (let [filename (-> analysis :var-definitions first :filename)
+          updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
+      (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
+        (async/go
+          (let [new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
+            (swap! db assoc-in [:findings filename] new-findings)
+            (when (not= :unknown (shared/uri->file-type uri))
+              (f.diagnostic/sync-lint-file! uri db))))
+        (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db)))))
 
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true

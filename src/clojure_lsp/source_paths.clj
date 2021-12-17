@@ -80,7 +80,8 @@
                            (remove nil?))
           deps-files-by-local-root (->> local-roots
                                         (map (fn [local-root]
-                                               (let [sub-deps-file (io/file root-path local-root "deps.edn")]
+                                               (let [local-root (shared/relativize-filepath local-root root-path)
+                                                     sub-deps-file (io/file root-path local-root "deps.edn")]
                                                  (when (shared/file-exists? sub-deps-file)
                                                    [local-root sub-deps-file]))))
                                         (remove nil?))

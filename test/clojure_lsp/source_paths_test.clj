@@ -95,6 +95,15 @@
                  (#'source-paths/resolve-deps-source-paths "deps-root"
                                                            {:source-aliases nil} "/project/root")))))))
   (testing "local-root"
+    (testing "absolute path"
+      (with-redefs [config/read-edn-file (fn [file]
+                                           (if (= "deps-root" (str file))
+                                             {:paths ["src"]
+                                              :deps {'some.lib {:local/root "/some/lib"}}}
+                                             {:paths ["foo" "bar"]}))
+                    shared/file-exists? #(= "/project/root/../../some/lib/deps.edn" (str %))]
+        (is (= #{"../../some/lib/foo" "../../some/lib/bar" "src"}
+               (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
     (testing "single root from :deps"
       (with-redefs [config/read-edn-file (fn [file]
                                            (if (= "deps-root" (str file))

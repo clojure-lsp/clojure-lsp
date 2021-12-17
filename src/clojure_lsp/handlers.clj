@@ -37,11 +37,13 @@
 
 (defmacro process-after-changes [& body]
   `(let [~'_time (System/nanoTime)]
-     (loop []
+     (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
          (log/warn "Timeout waiting for changes for body")
          (if (:processing-changes @db/db)
-           (recur)
+           (do
+             (Thread/sleep backoff#)
+             (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
 (defn ^:private report-startup-progress

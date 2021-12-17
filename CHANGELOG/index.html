@@ -1695,8 +1695,9 @@
 <ul>
 <li>General</li>
 <li>Bump clj-kondo to <code>2021.12.16</code>, supporting auto-load configs, improving potemkin support, adding more linters and more.</li>
+<li>Merge <code>:cljfmt</code> settings with <code>:cljfmt-config-path</code> if file path exists.</li>
 <li>
-<p>Merge <code>:cljfmt</code> settings with <code>:cljfmt-config-path</code> if file path exists.</p>
+<p>Avoid high CPU and lockup when clj-kondo throws exceptions. #671</p>
 </li>
 <li>
 <p>Editor</p>

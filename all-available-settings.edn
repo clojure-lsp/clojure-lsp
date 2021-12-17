@@ -9,7 +9,7 @@
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""
-                       :async-custom-lint? false}}
+                       :async-custom-lint? true}}
  :clean {:ns-inner-blocks-indentation :next-line
          :sort {:ns true
                 :require true

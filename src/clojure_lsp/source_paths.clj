@@ -54,7 +54,7 @@
     (fn [f]
       (if (.isAbsolute (io/file f))
         f
-        (io/file p f)))))
+        (shared/normalize-file (io/file p f))))))
 
 (defn ^:private deps-file->local-roots
   [deps-file settings]

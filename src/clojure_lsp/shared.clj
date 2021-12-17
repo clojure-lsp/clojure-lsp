@@ -351,3 +351,7 @@
   [^java.nio.file.Path path
    ^String child]
   (.toFile (.resolve path child)))
+
+(defn normalize-file
+  ^java.io.File [^java.io.File file]
+  (.toFile (.normalize (.toPath file))))

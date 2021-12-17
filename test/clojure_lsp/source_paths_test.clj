@@ -148,6 +148,24 @@
                     shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
                                              (= "/project/root/../another/lib/deps.edn" (str %)))]
         (is (= #{"./some/lib/foo" "./some/lib/bar" "src" "../another/lib/baz"}
+               (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
+    (testing "nested local/root"
+      (with-redefs [config/read-edn-file (fn [file]
+                                           (case (str file)
+                                             "deps-root"
+                                             {:paths ["src"]
+                                              :deps '{some.lib {:local/root "./some/lib"}}}
+
+                                             "/project/root/./some/lib/deps.edn"
+                                             {:paths ["foo"]
+                                              :deps '{other.lib {:local/root "../other"}}}
+
+                                             "/project/root/./some/lib/../other/deps.edn"
+                                             {:extra-paths ["bar"]}))
+                    shared/file-exists? #(do (prn %)
+                                          (or (= "/project/root/./some/lib/deps.edn" (str %))
+                                              (= "/project/root/./some/lib/../other/deps.edn" (str %))))]
+        (is (= #{"./some/lib/foo" "src" "./some/lib/../other/bar"}
                (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))))
 
 (deftest resolve-lein-source-paths

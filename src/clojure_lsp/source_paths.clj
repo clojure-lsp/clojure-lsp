@@ -49,6 +49,15 @@
          set
          (set/union root-source-paths))))
 
+(defn relative-to-deps-file [deps-file]
+  (let [p (.getParentFile (io/file deps-file))]
+    (fn [f]
+      (if (.isAbsolute (io/file f))
+        f
+        ;; NOTE; calling .getCanonicalFile on this would get of some "../" path
+        ;; components.
+        (io/file p f)))))
+
 (defn ^:private deps-file->local-roots
   [deps-file settings]
   (let [{:keys [deps extra-deps aliases]} (config/read-edn-file deps-file)
@@ -61,6 +70,7 @@
                    (concat (extract-local-roots deps)
                            (extract-local-roots extra-deps))))
          (concat deps-local-roots extra-deps-local-roots)
+         (map (relative-to-deps-file deps-file))
          (remove nil?))))
 
 (defn ^:private resolve-deps-source-paths

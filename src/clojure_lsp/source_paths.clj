@@ -49,12 +49,10 @@
          set
          (set/union root-source-paths))))
 
-(defn relative-to-deps-file [deps-file]
-  (let [p (.getParentFile (io/file deps-file))]
-    (fn [f]
-      (if (.isAbsolute (io/file f))
-        f
-        (shared/normalize-file (io/file p f))))))
+(defn ^:private relative-to-deps-file [file ^java.io.File deps-file]
+  (if (.isAbsolute (io/file file))
+    file
+    (shared/normalize-file (io/file (.getParentFile deps-file) file))))
 
 (defn ^:private deps-file->local-roots
   [deps-file settings]
@@ -68,7 +66,7 @@
                    (concat (extract-local-roots deps)
                            (extract-local-roots extra-deps))))
          (concat deps-local-roots extra-deps-local-roots)
-         (map (relative-to-deps-file deps-file))
+         (map #(relative-to-deps-file % deps-file))
          (remove nil?))))
 
 (defn ^:private resolve-deps-source-paths

@@ -34,6 +34,10 @@ Remember to install your build tool, like `clojure` or `leiningen` as well in yo
 
 To run clojure-lsp from Leiningen easily, check [lein-clojure-lsp](https://github.com/clojure-lsp/lein-clojure-lsp) plugin.
 
+### Babashka pod
+
+It's possible to load clojure-lsp as a babashka pod giving access to the `clojure-lsp.api` namespace, Check babashka pod registry [example](https://github.com/babashka/pod-registry/blob/master/examples/clojure-lsp.clj).
+
 ## Settings
 
 clojure-lsp will check for `.lsp/config.edn` in the project or home dir, but it's possible to force override the settings via the `:settings` option of the API or `--settings` option of the CLI.

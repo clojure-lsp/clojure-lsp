@@ -139,26 +139,29 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]} db]
-  (loop [state-db @db]
-    (when (>= version (get-in state-db [:documents uri :v] -1))
-      (if-let [kondo-result (shared/logging-time
-                              "Changes analyzed by clj-kondo took %s secs."
-                              (lsp.kondo/run-kondo-on-text! text uri db))]
-        (let [filename (shared/uri->filename uri)
-              old-local-analysis (get-in @db [:analysis filename])]
-          (if (compare-and-set! db state-db (-> state-db
-                                                (update-analysis uri (:analysis kondo-result))
-                                                (update-findings uri (:findings kondo-result))
-                                                (assoc :processing-changes false)
-                                                (assoc :kondo-config (:config kondo-result))))
-            (do
-              (f.diagnostic/sync-lint-file! uri db)
-              (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
-              (producer/refresh-test-tree uri db))
-            (recur @db)))
-        (when-not (compare-and-set! db state-db (assoc state-db :processing-changes false))
-          (recur @db))))))
+  (loop [state-db @db
+         tries 1]
+    (if (> tries 40)
+      (log/warn "Aborting changes due to too much retries:" tries)
+      (when (>= version (get-in state-db [:documents uri :v] -1))
+        (if-let [kondo-result (shared/logging-time
+                                (str "Changes analyzed by clj-kondo took %s secs with " tries " tries")
+                                (lsp.kondo/run-kondo-on-text! text uri db))]
+          (let [filename (shared/uri->filename uri)
+                old-local-analysis (get-in @db [:analysis filename])]
+            (if (compare-and-set! db state-db (-> state-db
+                                                  (update-analysis uri (:analysis kondo-result))
+                                                  (update-findings uri (:findings kondo-result))
+                                                  (assoc :processing-changes false)
+                                                  (assoc :kondo-config (:config kondo-result))))
+              (do
+                (f.diagnostic/sync-lint-file! uri db)
+                (when (settings/get db [:notify-references-on-file-change] true)
+                  (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
+                (producer/refresh-test-tree uri db))
+              (recur @db (inc tries))))
+          (when-not (compare-and-set! db state-db (assoc state-db :processing-changes false))
+            (recur @db (inc tries))))))))
 
 (defn did-change [uri changes version db]
   (let [old-text (get-in @db [:documents uri :text])

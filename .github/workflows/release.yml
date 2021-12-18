@@ -83,6 +83,11 @@ jobs:
         with:
           file: clojure-lsp
 
+      - name: Run babashka pod tests
+        env:
+          CLOJURE_LSP_TEST_ENV: native
+        run: make pod-test
+
       - name: Run integration tests
         run: |
           make integration-test
@@ -230,6 +235,11 @@ jobs:
       #   uses: svenstaro/upx-action@v2
       #   with:
       #     file: clojure-lsp
+
+      - name: Run babashka pod tests
+        env:
+          CLOJURE_LSP_TEST_ENV: native
+        run: make pod-test
 
       - name: Run integration tests
         run: |

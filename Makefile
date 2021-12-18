@@ -10,7 +10,7 @@ all: debug-bin
 # https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools
 
 clean:
-	rm -rf classes clojure-lsp clojure-lsp.jar docs/README.md
+	rm -rf classes clojure-lsp clojure-lsp.jar docs/README.md docs/CHANGELOG.md
 
 classes:
 	clojure -X:javac
@@ -34,6 +34,12 @@ prod-native:
 test: classes
 	clojure -M:test
 
+pod-test: classes
+	clojure -M:pod-test
+
+integration-test:
+	bb integration-test ./clojure-lsp
+
 lint-clean:
 	clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*"
 
@@ -50,12 +56,9 @@ lint-fix:
 release:
 	./release
 
-integration-test:
-	bb integration-test ./clojure-lsp
-
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all classes debug-bin prod-jar prod-jar-for-native prod-bin prod-native test integration-test local-webpage clean release
+.PHONY: all classes debug-bin prod-jar prod-jar-for-native prod-bin prod-native test pod-test integration-test local-webpage clean release

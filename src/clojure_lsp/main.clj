@@ -12,6 +12,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
+   [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
   (:import
    [clojure_lsp WarningLogDisabler])
@@ -93,8 +94,12 @@
        (string/join \newline errors)))
 
 (defn ^:private parse [args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args (cli-options))]
+  (let [{:keys [options arguments errors summary]} (parse-opts args (cli-options))
+        pod? (= "true" (System/getenv "BABASHKA_POD"))]
     (cond
+      pod?
+      {:action "pod" :options options}
+
       (:help options)
       {:exit-message (help summary) :ok? true}
 
@@ -134,6 +139,7 @@
       {:exit-code 0})
     (try
       (case action
+        "pod" (pod/run-pod)
         "clean-ns" (internal-api/clean-ns! options)
         "diagnostics" (internal-api/diagnostics options)
         "format" (internal-api/format! options)

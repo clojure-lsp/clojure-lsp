@@ -1,2 +1,2 @@
 ((clojure-mode
-  (cider-clojure-cli-aliases . "-A:test")))
+  (cider-clojure-cli-aliases . "test")))

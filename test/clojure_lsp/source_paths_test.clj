@@ -110,8 +110,8 @@
                                              {:paths ["src"]
                                               :deps {'some.lib {:local/root "./some/lib"}}}
                                              {:paths ["foo" "bar"]}))
-                    shared/file-exists? #(= "/project/root/./some/lib/deps.edn" (str %))]
-        (is (= #{"./some/lib/foo" "./some/lib/bar" "src"}
+                    shared/file-exists? #(= "/project/root/some/lib/deps.edn" (str %))]
+        (is (= #{"some/lib/foo" "some/lib/bar" "src"}
                (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
     (testing "multiple root from :deps"
       (with-redefs [config/read-edn-file (fn [file]
@@ -122,14 +122,14 @@
                                                       other-lib {:mvn/version "1.2.3"}
                                                       another.lib/foo {:local/root "../another/lib"}}}
 
-                                             "/project/root/./some/lib/deps.edn"
+                                             "/project/root/some/lib/deps.edn"
                                              {:paths ["foo" "bar"]}
 
                                              "/project/root/../another/lib/deps.edn"
                                              {:extra-paths ["baz"]}))
-                    shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
+                    shared/file-exists? #(or (= "/project/root/some/lib/deps.edn" (str %))
                                              (= "/project/root/../another/lib/deps.edn" (str %)))]
-        (is (= #{"./some/lib/foo" "./some/lib/bar" "src" "../another/lib/baz"}
+        (is (= #{"some/lib/foo" "some/lib/bar" "src" "../another/lib/baz"}
                (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
     (testing "root on :dev alias"
       (with-redefs [config/read-edn-file (fn [file]
@@ -140,14 +140,32 @@
                                                       other-lib {:mvn/version "1.2.3"}}
                                               :aliases {:dev {:extra-deps '{another.lib/foo {:local/root "../another/lib"}}}}}
 
-                                             "/project/root/./some/lib/deps.edn"
+                                             "/project/root/some/lib/deps.edn"
                                              {:paths ["foo" "bar"]}
 
                                              "/project/root/../another/lib/deps.edn"
                                              {:extra-paths ["baz"]}))
-                    shared/file-exists? #(or (= "/project/root/./some/lib/deps.edn" (str %))
+                    shared/file-exists? #(or (= "/project/root/some/lib/deps.edn" (str %))
                                              (= "/project/root/../another/lib/deps.edn" (str %)))]
-        (is (= #{"./some/lib/foo" "./some/lib/bar" "src" "../another/lib/baz"}
+        (is (= #{"some/lib/foo" "some/lib/bar" "src" "../another/lib/baz"}
+               (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))
+    (testing "nested local/root"
+      (with-redefs [config/read-edn-file (fn [file]
+                                           (case (str file)
+                                             "deps-root"
+                                             {:paths ["src"]
+                                              :deps '{some.lib {:local/root "./some/lib"}}}
+
+                                             "/project/root/some/lib/deps.edn"
+                                             {:paths ["foo"]
+                                              :deps '{other.lib {:local/root "../other"}}}
+
+                                             "/project/root/some/other/deps.edn"
+                                             {:extra-paths ["bar"]}))
+                    shared/file-exists? #(or (= "/project/root/some/lib/deps.edn" (str %))
+                                             (= "/project/root/./some/lib/../other/deps.edn" (str %))
+                                             (= "/project/root/some/other/deps.edn" (str %)))]
+        (is (= #{"some/lib/foo" "src" "some/other/bar"}
                (#'source-paths/resolve-deps-source-paths "deps-root" {} "/project/root")))))))
 
 (deftest resolve-lein-source-paths

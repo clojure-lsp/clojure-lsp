@@ -1,2 +1,2 @@
 ((clojure-mode
-  (cider-clojure-cli-aliases . "test:pod-test")))
+  (cider-clojure-cli-aliases . "test")))

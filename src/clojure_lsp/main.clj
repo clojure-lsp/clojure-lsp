@@ -12,7 +12,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
-   [pod.ericdallo.clojure-lsp :as pod]
+   [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
   (:import
    [clojure_lsp WarningLogDisabler])

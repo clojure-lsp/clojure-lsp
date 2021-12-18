@@ -88,6 +88,9 @@ jobs:
       - name: Generate embedded binary
         run: make prod-bin
 
+      - name: Run babashka pod tests
+        run: make pod-test
+
       - name: Run integration tests
         run: make integration-test
 
@@ -164,6 +167,10 @@ jobs:
           mv clojure-lsp-native/clojure-lsp .
           chmod +x clojure-lsp
 
+      - name: Run babashka pod tests
+        env:
+          CLOJURE_LSP_TEST_ENV: native
+        run: make pod-test
+
       - name: Run integration tests
-        run: |
-          make integration-test
+        run: make integration-test

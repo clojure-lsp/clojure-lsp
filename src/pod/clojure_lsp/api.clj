@@ -95,7 +95,7 @@
                          (or "unknown"))]
           (case op
             :describe (do (write {"format" "transit+json"
-                                  "namespaces" [{:name "borkdude.tdn.pod"
+                                  "namespaces" [{:name "pod.clojure-lsp.api"
                                                  :vars [{:name '-reg-transit-handlers
                                                          :code (reg-transit-handlers)}]}
                                                 {"name" "clojure-lsp.api"

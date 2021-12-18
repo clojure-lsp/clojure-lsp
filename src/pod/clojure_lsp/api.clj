@@ -75,10 +75,11 @@
     (.toString baos "utf-8")))
 
 (def api-vars
-  {'clojure-lsp.api/format! api/format!})
-
-(-> api-vars
-    keys)
+  {'clojure-lsp.api/analyze-project! api/analyze-project!
+   'clojure-lsp.api/clean-ns! api/clean-ns!
+   'clojure-lsp.api/diagnostics api/diagnostics
+   'clojure-lsp.api/format! api/format!
+   'clojure-lsp.api/rename! api/rename!})
 
 (defn run-pod []
   (loop []
@@ -98,7 +99,9 @@
                                                  :vars [{:name '-reg-transit-handlers
                                                          :code (reg-transit-handlers)}]}
                                                 {"name" "clojure-lsp.api"
-                                                 "vars" [{"name" "format!"}]}]
+                                                 "vars" (->> api-vars
+                                                             keys
+                                                             (mapv (fn [k] {"name" (name k)})))}]
                                   "id" id})
                           (recur))
             :invoke (do (try

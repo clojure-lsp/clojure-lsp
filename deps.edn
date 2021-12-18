@@ -17,6 +17,7 @@
                        :exclusions [rewrite-cljs/rewrite-cljs
                                     com.googlecode.java-diff-utils/diffutils]}
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
+        nrepl/bencode {:mvn/version "1.1.0"}
         medley/medley {:mvn/version "1.3.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
         clj-kondo/clj-kondo {:mvn/version "2021.12.16"}
@@ -25,6 +26,9 @@
  :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
+           :pod-test
+           {:extra-paths ["pod-test"]
+            :extra-deps {babashka/babashka.pods {:mvn/version "0.0.1"}}}
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
                     :exec-fn americano.cli/javac
                     :exec-args {:source-paths ["src-java"]}}

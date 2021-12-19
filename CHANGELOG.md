@@ -17,6 +17,7 @@
   - Improve `:linters :clj-kondo :async-custom-lint?` to avoid infinite loops and default to `true`.
   - Add new custom LSP feature __Test Tree__, which shows all test hierarchy of a file. #653
   - Improve function name finding to consider other function definition types for some features. #666
+  - Make `textDocument/hover` return the correct range from LSP spec, the element range instead of the element scope range.
 
 - API/CLI
   - Exit process if any error during classpath lookup. Opt-out via `:api :exit-on-errors?` flag.

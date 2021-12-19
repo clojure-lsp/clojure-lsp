@@ -118,11 +118,11 @@
         definition (when element (q/find-definition analysis element db))]
     (cond
       definition
-      {:range (shared/->scope-range element)
+      {:range (shared/->range element)
        :contents (hover-documentation definition db)}
 
       element
-      {:range (shared/->scope-range element)
+      {:range (shared/->range element)
        :contents (hover-documentation element db)}
 
       :else

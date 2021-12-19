@@ -28,14 +28,13 @@
 (deftest did-open
   (testing "opening a existing file"
     (h/clean-db!)
-    (let [_ (h/load-code-and-locs "(ns a) (when)")]
-      (is (some? (get-in @db/db [:analysis (h/file-path "/a.clj")])))
-      (Thread/sleep 500)
-      (h/diagnostics
-        #(h/assert-submaps
-           [{:code "missing-body-in-when"}
-            {:code "invalid-arity"}]
-           (:diagnostics %)))))
+    (h/with-mock-diagnostics
+      (let [_ (h/load-code-and-locs "(ns a) (when)")]
+        (is (some? (get-in @db/db [:analysis (h/file-path "/a.clj")])))
+        (h/assert-submaps
+          [{:code "missing-body-in-when"}
+           {:code "invalid-arity"}]
+          (get @h/mock-diagnostics "file:///a.clj")))))
   (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
     (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true

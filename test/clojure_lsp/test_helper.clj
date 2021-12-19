@@ -8,6 +8,8 @@
    [clojure.test :refer [is use-fixtures]]
    [taoensso.timbre :as log]))
 
+(def mock-diagnostics (atom {}))
+
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 
 (defn file-path [path]
@@ -29,6 +31,7 @@
    (clean-db! :unit-test))
   ([env]
    (reset! db/db {:env env})
+   (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
    (alter-var-root #'db/edits-chan (constantly (async/chan 1)))))
@@ -90,8 +93,11 @@
     (handlers/did-open {:textDocument {:uri filename :text code}})
     positions))
 
-(defn diagnostics [after-fn]
-  (async/take! db/diagnostics-chan after-fn))
+(defmacro with-mock-diagnostics [& body]
+  `(do
+     (reset! mock-diagnostics {})
+     (with-redefs [async/put! #(swap! mock-diagnostics assoc (:uri %2) (:diagnostics %2))]
+       ~@body)))
 
 (defn edits [after-fn]
   (async/take! db/edits-chan after-fn))

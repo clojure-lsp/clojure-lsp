@@ -19,7 +19,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.2.0
+        with:
+          fetch-depth: 0
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
@@ -48,7 +50,9 @@ jobs:
       matrix:
         jdk: [8, 11, 15, 17]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.2.0
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK ${{ matrix.jdk }}
         uses: actions/setup-java@v1
@@ -70,7 +74,9 @@ jobs:
       matrix:
         jdk: [8, 11, 15, 17]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.2.0
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK ${{ matrix.jdk }}
         uses: actions/setup-java@v1

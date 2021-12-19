@@ -72,29 +72,32 @@
 (defn ^:private resolve-deps-source-paths
   [deps-file settings root-path]
   (loop [deps-files-by-root [[nil deps-file]]
-         accum-source-paths nil]
-    (let [source-paths (->> deps-files-by-root
-                            (map (fn [[local-root deps-file]]
-                                   (->> (deps-file->source-paths deps-file settings)
-                                        (map #(if local-root (str (io/file local-root %)) %))
-                                        set)))
-                            (reduce set/union))
-          local-roots (->> deps-files-by-root
-                           (map second)
-                           (map #(deps-file->local-roots % settings))
-                           flatten
-                           (remove nil?))
-          deps-files-by-local-root (->> local-roots
-                                        (map (fn [local-root]
-                                               (let [local-root (shared/relativize-filepath local-root root-path)
-                                                     sub-deps-file (io/file root-path local-root "deps.edn")]
-                                                 (when (shared/file-exists? sub-deps-file)
-                                                   [local-root sub-deps-file]))))
-                                        (remove nil?))
-          final-source-paths (set/union source-paths accum-source-paths)]
-      (if (seq deps-files-by-local-root)
-        (recur deps-files-by-local-root final-source-paths)
-        final-source-paths))))
+         accum-source-paths nil
+         recur-level 1]
+    (if (>= recur-level 500)
+      (log/warn "Max deps source-paths resolve level found" recur-level ", maybe a cyclic dependency?")
+      (let [source-paths (->> deps-files-by-root
+                              (map (fn [[local-root deps-file]]
+                                     (->> (deps-file->source-paths deps-file settings)
+                                          (map #(if local-root (str (io/file local-root %)) %))
+                                          set)))
+                              (reduce set/union))
+            local-roots (->> deps-files-by-root
+                             (map second)
+                             (map #(deps-file->local-roots % settings))
+                             flatten
+                             (remove nil?))
+            deps-files-by-local-root (->> local-roots
+                                          (map (fn [local-root]
+                                                 (let [local-root (shared/relativize-filepath local-root root-path)
+                                                       sub-deps-file (io/file root-path local-root "deps.edn")]
+                                                   (when (shared/file-exists? sub-deps-file)
+                                                     [local-root sub-deps-file]))))
+                                          (remove nil?))
+            final-source-paths (set/union source-paths accum-source-paths)]
+        (if (seq deps-files-by-local-root)
+          (recur deps-files-by-local-root final-source-paths (inc recur-level))
+          final-source-paths)))))
 
 (defn ^:private valid-path-config? [config]
   (and config

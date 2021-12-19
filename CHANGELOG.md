@@ -8,6 +8,7 @@
   - Avoid high CPU and lockup when clj-kondo throws exceptions. #671
   - Allow absolute paths in deps.edn :local/root #672
   - Fix clojure-lsp not loading for some mono-repo cases, improving local/root support for polylith projects. #673
+  - Avoid infinite loop because of cyclic dependencies on deps source-path discovery.
   - Add babashka pod. #555
 
 - Editor

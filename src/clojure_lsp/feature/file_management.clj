@@ -142,7 +142,9 @@
   (loop [state-db @db
          tries 1]
     (if (> tries 40)
-      (log/warn "Aborting changes due to too much retries:" tries)
+      (do
+        (log/warn "Aborting changes due to too much retries:" tries)
+        (swap! db assoc :processing-changes false))
       (when (>= version (get-in state-db [:documents uri :v] -1))
         (if-let [kondo-result (shared/logging-time
                                 (str "Changes analyzed by clj-kondo took %s secs with " tries " tries")

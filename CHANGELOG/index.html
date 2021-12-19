@@ -1710,8 +1710,9 @@
 <li>Return <code>edits</code> in <code>codeAction/resolve</code> responses rather than <code>commands</code>. #655</li>
 <li>Improve <code>:linters :clj-kondo :async-custom-lint?</code> to avoid infinite loops and default to <code>true</code>.</li>
 <li>Add new custom LSP feature <strong>Test Tree</strong>, which shows all test hierarchy of a file. #653</li>
+<li>Improve function name finding to consider other function definition types for some features. #666</li>
 <li>
-<p>Improve function name finding to consider other function definition types for some features. #666</p>
+<p>Make <code>textDocument/hover</code> return the correct range from LSP spec, the element range instead of the element scope range.</p>
 </li>
 <li>
 <p>API/CLI</p>

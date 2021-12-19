@@ -4,8 +4,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [clojure.core.async :as async]))
+   [clojure.test :refer [deftest is testing]]))
 
 (def findings (atom []))
 

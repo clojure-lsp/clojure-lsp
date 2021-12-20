@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2021.12.20-00.36.56
+
 - General
   - Bump clj-kondo to `2021.12.19`, supporting auto-load configs, improving potemkin support, adding more linters and more.
   - Merge `:cljfmt` settings with `:cljfmt-config-path` if file path exists.

@@ -324,6 +324,7 @@ jobs:
 
   release:
     name: Create Release
+    environment: prod-release
     needs: [build-jvm, linux-amd64, linux-amd64-static, macos, windows]
     runs-on: ubuntu-latest
     steps:

@@ -8,7 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2.2.0
+      with:
+        fetch-depth: 0
 
     - name: Check deps
       uses: nnichols/clojure-dependency-update-action@v3

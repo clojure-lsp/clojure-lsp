@@ -102,9 +102,23 @@ If your project doesn't follow the above rules or you need a custom command to g
 ### Folders not being analyzed
 
 By default clojure-lsp searches `src` and `test` for clj* files to read into an index.
-If the definition lives under a different source dir, you can define the `src-paths` setting, for more details check the [settings section](./settings.md).
 
-It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
+* If the definition lives under a different source dir, you can define the `source-paths` setting, for more details check the [settings section](./settings.md).
+
+* It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
+
+* If you are using `deps` and using a `:local/root` dependency to reference another project, i.e.,
+
+```clojure
+{:deps {foo.bar/baz {:local/root "/path/to/foo/project/containing/a/deps.edn"}}}
+```
+
+* and you are finding that `gotoDefinition` isn't working when attempting to jump to the namespace in the referenced project, then
+it could be that your `~/.lsp/config.edn` (or `~/.config/clojure-lsp/config.edn`) has a source paths entry, i.e., `:source-paths
+["src" "test"]`. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
+current project for sources, and not the other project referenced via the `:local/root` deps entry. It can be fixed by removing
+the `:source-paths` from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
+then those can be added at the project level.
 
 ### Wrong diagnostics/lint
 

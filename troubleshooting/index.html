@@ -760,9 +760,28 @@ during server initialize for most features work, so make sure you don't see any 
 </ul>
 <p>If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the <code>project-specs</code> clojure-lsp setting, for more details check the<a href="../settings/">settings section</a>.</p>
 <h3 id="folders-not-being-analyzed">Folders not being analyzed<a class="headerlink" href="#folders-not-being-analyzed" title="Permanent link">#</a></h3>
-<p>By default clojure-lsp searches <code>src</code> and <code>test</code> for clj* files to read into an index.
-If the definition lives under a different source dir, you can define the <code>src-paths</code> setting, for more details check the <a href="../settings/">settings section</a>.</p>
+<p>By default clojure-lsp searches <code>src</code> and <code>test</code> for clj* files to read into an index.</p>
+<ul>
+<li>
+<p>If the definition lives under a different source dir, you can define the <code>source-paths</code> setting, for more details check the <a href="../settings/">settings section</a>.</p>
+</li>
+<li>
 <p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.</p>
+</li>
+<li>
+<p>If you are using <code>deps</code> and using a <code>:local/root</code> dependency to reference another project, i.e.,</p>
+</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:deps</span> <span class="p">{</span><span class="nv">foo.bar/baz</span> <span class="p">{</span><span class="ss">:local/root</span> <span class="s">&quot;/path/to/foo/project/containing/a/deps.edn&quot;</span><span class="p">}}}</span>
+</code></pre></div>
+<ul>
+<li>and you are finding that <code>gotoDefinition</code> isn't working when attempting to jump to the namespace in the referenced project, then
+it could be that your <code>~/.lsp/config.edn</code> (or <code>~/.config/clojure-lsp/config.edn</code>) has a source paths entry, i.e., <code>:source-paths
+["src" "test"]</code>. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
+current project for sources, and not the other project referenced via the <code>:local/root</code> deps entry. It can be fixed by removing
+the <code>:source-paths</code> from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
+then those can be added at the project level.</li>
+</ul>
 <h3 id="wrong-diagnosticslint">Wrong diagnostics/lint<a class="headerlink" href="#wrong-diagnosticslint" title="Permanent link">#</a></h3>
 <ul>
 <li>clojure-lsp persist the external jars analysis in a <code>.lsp/sqlite.db</code> file, if you have issues with some specific feature,
@@ -788,7 +807,7 @@ in your <code>coc-settings.json</code> the line <code>disableDiagnostics</code> 
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 20, 2021</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 22, 2021</span>
     
   </small>
 </div>

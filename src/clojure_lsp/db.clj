@@ -43,13 +43,16 @@
 
 (defn upsert-cache! [{:keys [project-root] :as project-cache} db]
   (remove-old-db-file! project-root)
-  (shared/logging-time
-    "Upserting analysis cache to Datalevin db took %s secs"
-    (let [datalevin-db (make-db project-root db)]
-      (d/open-dbi datalevin-db analysis-table-name)
-      (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]
-                                   [:put analysis-table-name :project-analysis project-cache]])
-      (d/close-kv datalevin-db))))
+  (try
+    (shared/logging-time
+      "Upserting analysis cache to Datalevin db took %s secs"
+      (let [datalevin-db (make-db project-root db)]
+        (d/open-dbi datalevin-db analysis-table-name)
+        (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]
+                                     [:put analysis-table-name :project-analysis project-cache]])
+        (d/close-kv datalevin-db)))
+    (catch Throwable e
+      (log/error "Could not upsert db cache" e))))
 
 (defn read-cache [project-root-path db]
   (try

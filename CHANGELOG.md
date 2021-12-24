@@ -4,6 +4,9 @@
 
 - Editor
   - Fix inline symbol code action regression from previous releases. #678
+  
+- API/CLI
+  - Wait for db cache upsert before end proccess.
 
 ## 2021.12.20-00.36.56
 

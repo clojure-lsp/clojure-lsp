@@ -155,19 +155,21 @@
                                                  (remove (set source-paths-abs))
                                                  (remove (set source-paths)))
                                      ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-                analysis (analyze-external-classpath! external-classpath 15 80 report-callback db)]
+                analysis (analyze-external-classpath! external-classpath 15 80 report-callback db)
+                new-db {:version db/version
+                        :project-root (str root-path)
+                        :project-hash project-hash
+                        :kondo-config-hash kondo-config-hash
+                        :classpath classpath
+                        :stubs-generation-namespaces stubs-namespaces
+                        :analysis analysis}]
             (shared/logging-time
               "Manual GC after classpath scan took %s secs"
               (System/gc))
-            (async/go
-              (-> {:version db/version
-                   :project-root (str root-path)
-                   :project-hash project-hash
-                   :kondo-config-hash kondo-config-hash
-                   :classpath classpath
-                   :stubs-generation-namespaces stubs-namespaces
-                   :analysis analysis}
-                  (db/upsert-cache! db)))))
+            (if (:api? @db)
+              (db/upsert-cache! new-db db)
+              (async/go
+                (db/upsert-cache! new-db db)))))
         (swap! db assoc :full-scan-analysis-startup true)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]

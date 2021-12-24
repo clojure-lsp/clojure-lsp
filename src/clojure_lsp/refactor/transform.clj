@@ -31,11 +31,10 @@
 
 (defn result [zip-edits]
   (mapv (fn [zip-edit]
-          (if-let [loc (:loc zip-edit)]
+          (let [loc (:loc zip-edit)]
             (-> zip-edit
                 (assoc :new-text (if loc (z/string loc) ""))
-                (dissoc :loc))
-            zip-edit))
+                (dissoc :loc))))
         zip-edits))
 
 (defn find-other-colls [zloc]

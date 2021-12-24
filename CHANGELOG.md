@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix inline symbol code action regression from previous releases. #678
+
 ## 2021.12.20-00.36.56
 
 - General

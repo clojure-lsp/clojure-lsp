@@ -14,6 +14,13 @@
 
 (set! *warn-on-reflection* true)
 
+(when (seq [])
+  (let [x 5]
+    (when x
+      (let [improved-x 2]
+        (+ 1 2)
+        3))))
+
 (defn ^:private function-loc->arglist-nodes [zloc]
   (->> zloc
        z/up

@@ -196,6 +196,14 @@
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
       (is (= "(let [x 4]\n (+ (* 3 3) (something 1)\n (* x x)))"
+             (z/root-string loc)))))
+  (testing "with inner let one level after outer let"
+    (let [code "(let [x 5] (when x (let [y 2] y)))"
+          zloc (-> code z/of-string (z/find-value z/next 'y))
+          [{:keys [loc range]}] (transform/expand-let zloc)]
+      (is (some? range))
+      (is (= 'let (z/sexpr (z/down loc))))
+      (is (= "(let [x 5\n y 2] (when x y))"
              (z/root-string loc))))))
 
 (deftest unwind-thread-test

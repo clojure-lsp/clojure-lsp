@@ -112,7 +112,8 @@
                                              read-string
                                              read-transit)]
                             (if-let [f (api-vars var)]
-                              (let [value (-> (apply f args)
+                              (let [value (-> (binding [*out* *err*]
+                                                (apply f args))
                                               write-transit)
                                     reply {"value" value
                                            "id" id

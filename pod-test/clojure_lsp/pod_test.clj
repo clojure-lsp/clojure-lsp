@@ -15,21 +15,18 @@
 (deftest pod-test
   (testing "analyze-project!"
     (let [result (clojure-lsp/analyze-project!
-                   {:project-root (io/file "integration-test/sample-test")
-                    :raw? true})]
+                   {:project-root (io/file "integration-test/sample-test")})]
       (is result)))
   (testing "clean-ns!"
     (let [result (clojure-lsp/clean-ns!
                    {:project-root (io/file "integration-test/sample-test")
                     :namespace '[sample-test.api.format.a]
-                    :raw? true
                     :dry? true})]
       (is (= 1 (:result-code result)))
       (is (seq (:edits result)))))
   (testing "diagnostics"
     (let [result (clojure-lsp/diagnostics
                    {:project-root (io/file "integration-test/sample-test")
-                    :raw? true
                     :dry? true})]
       (is (not= 0 (:result-code result)))
       (is (seq (:diagnostics result)))))
@@ -37,7 +34,6 @@
     (let [result (clojure-lsp/format!
                    {:project-root (io/file "integration-test/sample-test")
                     :namespace '[sample-test.api.format.a]
-                    :raw? true
                     :dry? true})]
       (is (= 1 (:result-code result)))
       (is (seq (:edits result))))))

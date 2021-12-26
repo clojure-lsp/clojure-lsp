@@ -11,6 +11,7 @@
   
 - API/CLI
   - Wait for db cache upsert before end proccess, avoiding the need to re-lint whole classpath on next api/cli runs.
+  - Fix the need to use `:raw? true` on babashka pod usage.
 
 ## 2021.12.20-00.36.56
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix some analysis conflicts regarding `custom-async-lint?` feature introduced on latest release.
+
 - Editor
   - Fix inline symbol code action regression from previous releases. #678
   - Fix expand let refactor duplicating variables in some cases. #676

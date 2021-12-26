@@ -98,11 +98,17 @@
     (let [filename (-> analysis :var-definitions first :filename)
           updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
-        (async/go
-          (let [new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
-            (swap! db assoc-in [:findings filename] new-findings)
-            (when (not= :unknown (shared/uri->file-type uri))
-              (f.diagnostic/sync-lint-file! uri db))))
+        (async/go-loop [tries 1]
+          (if (>= tries 200)
+            (log/info "Max tries reached when async custom linting" uri)
+            (if (:processing-changes @db)
+              (do
+                (Thread/sleep 50)
+                (recur (inc tries)))
+              (let [new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
+                (swap! db assoc-in [:findings filename] new-findings)
+                (when (not= :unknown (shared/uri->file-type uri))
+                  (f.diagnostic/sync-lint-file! uri db))))))
         (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db)))))
 
 (defn kondo-for-paths [paths db external-analysis-only?]

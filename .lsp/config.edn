@@ -1,3 +1,4 @@
 {:clean {:ns-inner-blocks-indentation :next-line}
- :linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
+ :linters {:clj-kondo {:ns-exclude-regex "sample-test.*"
+                       :async-custom-lint? true}}
  :use-metadata-for-privacy? true}

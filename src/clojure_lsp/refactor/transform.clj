@@ -652,3 +652,371 @@
       :range (assoc form-pos
                     :end-row form-row
                     :end-col form-col)}]))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))
+
+(defn foo []
+  (let [a 1]
+    (+ a 2)))

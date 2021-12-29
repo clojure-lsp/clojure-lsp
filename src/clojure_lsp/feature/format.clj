@@ -7,6 +7,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
+   [clojure.pprint :as pprint]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -26,7 +27,7 @@
 (defn formatting [uri db]
   (let [{:keys [text]} (get-in @db [:documents uri])
         cljfmt-settings (resolve-cljfmt-config db)
-        _ (log/info (with-out-str (clojure.pprint/pprint cljfmt-settings)))
+        _ (log/info (with-out-str (pprint/pprint cljfmt-settings)))
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []
@@ -36,7 +37,7 @@
 (defn range-formatting [doc-id format-pos db]
   (let [{:keys [text]} (get-in @db [:documents doc-id])
         cljfmt-settings (resolve-cljfmt-config db)
-        _ (log/info (with-out-str (clojure.pprint/pprint cljfmt-settings)))
+        _ (log/info (with-out-str (pprint/pprint cljfmt-settings)))
         forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]
             {:range (shared/->range (-> form-loc z/node meta))

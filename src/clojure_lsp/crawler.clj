@@ -42,13 +42,13 @@
             paths)
           (do
             (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-            (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work properly." command) :error err db)
+            (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err db)
             [])))
       (catch clojure.lang.ExceptionInfo e
         (throw e))
       (catch Exception e
         (log/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-        (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work properly." command) :error (.getMessage e) db)
+        (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e) db)
         []))))
 
 (defn ^:private md5 [^java.io.File file]

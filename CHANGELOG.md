@@ -8,6 +8,7 @@
 - Editor
   - Fix inline symbol code action regression from previous releases. #678
   - Fix expand let refactor duplicating variables in some cases. #676
+  - Add completion support to potemkin usages of a namespace.
   
 - API/CLI
   - Wait for db cache upsert before end proccess, avoiding the need to re-lint whole classpath on next api/cli runs.

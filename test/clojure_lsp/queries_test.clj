@@ -303,6 +303,18 @@
       {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
 
+(deftest find-definition-from-cursor-when-on-potemkin
+  (h/load-code-and-locs (h/code "(ns foo.impl) (def bar)") (h/file-uri "file:///b.clj"))
+  (let [[[bar-r bar-c]] (h/load-code-and-locs
+                          (h/code "(ns foo.api"
+                                  "  (:require [potemkin :refer [import-vars]]"
+                                  "            [foo.impl]))"
+                                  "(import-vars |impl/bar)") (h/file-uri "file:///a.clj"))
+        ana (:analysis @db/db)]
+    (h/assert-submap
+      {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
+      (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
+
 (deftest find-unused-aliases
   (testing "clj"
     (testing "used require via alias"

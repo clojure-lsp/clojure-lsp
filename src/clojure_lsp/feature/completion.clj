@@ -207,22 +207,6 @@
                        (matches-fn (:name %))))
          (map #(element->completion-item % nil :refer)))))
 
-(defn ^:private potemkin-usages-from-ns [alias-namespaces matches-fn db]
-  (when-let [potemkin-usages (->> (:analysis @db)
-                                  (mapcat val)
-                                  (filter #(and (identical? :var-usages (:bucket %))
-                                                (= 'potemkin (:to %))
-                                                (contains? alias-namespaces (:from %))))
-                                  seq)]
-    (->> (:analysis @db)
-         (mapcat val)
-         (filter (fn [usage]
-                   (and (identical? :var-usages (:bucket usage))
-                        (contains? alias-namespaces (:from usage))
-                        (matches-fn (:name usage))
-                        (some #(shared/inside? usage %) potemkin-usages))))
-         seq)))
-
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
   (when-let [aliases (some->> (q/filter-project-analysis (:analysis @db) db)
                               (mapcat val)
@@ -263,9 +247,7 @@
                                             (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
                                             r.transform/result)]
                    (cond-> completion-item
-                     (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
-        (when-let [potemkin-usages (potemkin-usages-from-ns alias-namespaces matches-fn db)]
-          (map #(element->completion-item % cursor-alias :required-alias) potemkin-usages))))))
+                     (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))))
 
 (defn ^:private with-elements-from-full-ns [full-ns analysis]
   (->> (mapcat val analysis)

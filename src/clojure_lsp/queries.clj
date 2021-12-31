@@ -131,6 +131,18 @@
           db))
       element))
 
+(defmethod find-definition :var-definitions
+  [analysis element db]
+  (if (= 'potemkin/import-vars (:defined-by element))
+    (find-last-order-by-project-analysis
+      #(and (= (:bucket %) :var-definitions)
+            (= (:name %) (:name element))
+            (not= 'potemkin/import-vars (:defined-by %))
+            (match-file-lang % element))
+      analysis
+      db)
+    element))
+
 (defmethod find-definition :default
   [_analysis element _db]
   element)

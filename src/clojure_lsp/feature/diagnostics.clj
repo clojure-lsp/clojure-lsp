@@ -15,7 +15,8 @@
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest
      cljs.test/deftest
-     state-flow.cljtest/defflow})
+     state-flow.cljtest/defflow
+     potemkin/import-vars})
 
 (def default-public-vars-name-to-exclude
   '#{-main})

@@ -53,11 +53,11 @@ Contributions to `clojure-lsp` are very welcome! You can open an issue or a PR a
 ---
 ## Support the project
 
-`clojure-lsp` has more than 12.000 lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva), vim and other editors.
+`clojure-lsp` has more than __18.000__ lines of code, to keep all of this working, we need to help the community on a lot of issues and implement new features. As a LSP server, this project is the base for Clojure clients like Emacs(lsp-mode), VSCode(Calva), vim and other editors.
 
-You can help us keep going and improving it by **[supporting the project](https://github.com/sponsors/clojure-lsp)**
+You can help us keep going and improving it by **[supporting the project](https://github.com/sponsors/clojure-lsp)**, the support helps to keep the project going and being updated and maintained.
 
-:rocket: Thank you to [Clojurists Together](https://www.clojuriststogether.org/) which is [sponsoring this project during Q3 2021](https://www.clojuriststogether.org/news/q3-2021-funding-announcement/) :rocket:
+:rocket: Thank you to [Clojurists Together](https://www.clojuriststogether.org/) which is [sponsored this project during Q3 2021](https://www.clojuriststogether.org/news/q3-2021-funding-announcement/) :rocket:
 
 ### Gold sponsors
 

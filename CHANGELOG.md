@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Fix some analysis conflicts regarding `custom-async-lint?` feature introduced on latest release.
+  - Fix some analysis conflicts regarding `custom-async-lint?` feature introduced on latest release causing outdated analysis and some deadlocks.
 
 - Editor
   - Fix inline symbol code action regression from previous releases. #678

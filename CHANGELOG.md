@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.01.03-19.46.10
+
 - Catch clj-kondo prints to stdout and log to clojure-lsp log file avoiding crashes on some clients like vscode/Calva.
 
 ## 2022.01.03-15.41.19

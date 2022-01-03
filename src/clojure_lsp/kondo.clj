@@ -18,12 +18,16 @@
 (def clj-kondo-analysis-batch-size 50)
 
 (defmacro catch-kondo-errors [err-hint & body]
-  `(let [err# (java.io.StringWriter.)]
+  `(let [err# (java.io.StringWriter.)
+         out# (java.io.StringWriter.)]
      (try
-       (binding [*err* err#]
+       (binding [*err* err#
+                 *out* out#]
          (let [result# (do ~@body)]
            (when-not (string/blank? (str err#))
              (log/warn "Non-fatal error from clj-kondo:" (str err#)))
+           (when-not (string/blank? (str out#))
+             (log/warn "Output from clj-kondo:" (str out#)))
            result#))
        (catch Exception e#
          (log/error e# "Error running clj-kondo on" ~err-hint)))))

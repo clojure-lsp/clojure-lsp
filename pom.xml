@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2021.12.20-00.36.56</version>
+  <version>2022.01.03-15.41.19</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -86,7 +86,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2021.12.19</version>
+      <version>2021.12.20-20211231.085514-6</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -168,6 +168,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2021.12.20-00.36.56</tag>
+    <tag>2022.01.03-15.41.19</tag>
   </scm>
 </project>

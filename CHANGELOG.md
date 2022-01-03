@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.01.03-15.41.19
+
 - General
   - Fix some analysis conflicts regarding `custom-async-lint?` feature introduced on latest release causing outdated analysis and some deadlocks.
 

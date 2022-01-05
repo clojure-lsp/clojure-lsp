@@ -441,13 +441,12 @@
            {def-uri [{:loc nil :range def-range}]}
            references)}))))
 
-(defn can-create-private-function? [zloc]
+(defn can-create-function? [zloc]
   (and zloc
        (#{:list :token} (z/tag zloc))))
 
 (defn can-create-public-function? [zloc uri db]
-  (when (and zloc
-             (#{:list :token} (z/tag zloc)))
+  (when (can-create-function? zloc)
     (if-let [ns-usage (some->> (z/sexpr zloc)
                                namespace
                                symbol
@@ -467,9 +466,13 @@
 (def ^:private thread-macro-symbols '#{-> ->> some-> some->>})
 
 (defn ^:private create-function-arg [node index]
-  (if (and (= :token (n/tag node))
+  (if (and node
+           (= :token (n/tag node))
            (symbol? (n/sexpr node)))
-    (n/sexpr node)
+    (let [sexpr (n/sexpr node)]
+      (if (= '% sexpr)
+        'element
+        sexpr))
     (symbol (str "arg" (inc index)))))
 
 (defn ^:private create-function-for-alias
@@ -511,23 +514,22 @@
                                    (remove nil?))}}))
 
 (defn create-function [local-zloc uri db]
-  (when (or (can-create-private-function? local-zloc)
-            (can-create-public-function? local-zloc uri db))
-    (let [token? (= :token (z/tag local-zloc))
-          sexpr (if token?
-                  (z/sexpr (z/down (z/up local-zloc)))
-                  (z/sexpr local-zloc))
-          ns-or-alias (when (qualified-symbol? sexpr) (namespace sexpr))
-          thread? (thread-macro-symbols sexpr)
-          inside-thread-first? (and (z/leftmost? local-zloc)
-                                    (thread-first-macro-symbols (z/sexpr (z/down (z/up (z/up local-zloc))))))
-          inside-thread-last? (and (z/leftmost? local-zloc)
-                                   (thread-last-macro-symbols (z/sexpr (z/down (z/up (z/up local-zloc))))))
-          fn-form (if token? (z/up local-zloc) local-zloc)
-          fn-name (cond
-                    (and thread? token?) (z/sexpr local-zloc)
-                    thread? (z/sexpr (z/down fn-form))
-                    :else (z/sexpr (z/down fn-form)))
+  (when (and local-zloc
+             (identical? :token (z/tag local-zloc)))
+    (let [local-sexpr (z/sexpr local-zloc)
+          fn-sexpr (z/sexpr (z/down (z/up local-zloc)))
+          calling? (= fn-sexpr local-sexpr)
+          parent-sexpr (if calling?
+                         (z/sexpr (z/down (z/up (z/up local-zloc))))
+                         (z/sexpr (z/down (z/up local-zloc))))
+          threadding? (thread-macro-symbols parent-sexpr)
+          inside-thread-first? (and threadding? (thread-first-macro-symbols parent-sexpr))
+          inside-thread-last? (and threadding? (thread-last-macro-symbols parent-sexpr))
+          fn-call? (and (not calling?) (not threadding?))
+          fn-call-with-partial? (and fn-call?
+                                     (= 'partial (z/sexpr (z/left local-zloc))))
+          ns-or-alias (when (qualified-symbol? fn-sexpr) (namespace fn-sexpr))
+          fn-name local-sexpr
           fn-name (if ns-or-alias (name fn-name) fn-name)
           new-fn-str (cond
                        ns-or-alias
@@ -538,7 +540,7 @@
 
                        :else
                        (format "(defn- %s)" fn-name))
-          args (->> fn-form
+          args (->> (z/up local-zloc)
                     z/node
                     n/children
                     (drop 1)
@@ -547,7 +549,11 @@
                                    (create-function-arg node index)))
                     vec)
           args (cond
-                 thread? (pop args)
+                 fn-call-with-partial? (vec (concat [(create-function-arg nil 0)]
+                                                    (rest args)))
+                 fn-call? [(create-function-arg nil 0)]
+                 (and threadding?
+                      (not calling?)) [(create-function-arg (z/node (z/left local-zloc)) 0)]
                  inside-thread-first? (->> args
                                            (cons (create-function-arg (z/node (z/left (z/up local-zloc))) -1))
                                            vec)

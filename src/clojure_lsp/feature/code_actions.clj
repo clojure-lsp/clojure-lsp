@@ -79,7 +79,7 @@
                                                                                    (filter #(= "unresolved-symbol" (:code %)))
                                                                                    first)]
     (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
-      (when (r.transform/can-create-private-function? diag-loc)
+      (when (r.transform/can-create-function? diag-loc)
         {:name (last (string/split (:message diag) #"Unresolved symbol: "))
          :position position}))))
 

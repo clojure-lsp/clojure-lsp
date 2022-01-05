@@ -391,14 +391,6 @@
             results (transform/create-function zloc "file:///a.clj" db/db)]
         (is (= "(defn- my-func []\n  )" (z/string (:loc (first results)))))
         (is (= "\n\n" (z/string (:loc (last results)))))))
-    (testing "creating with no args from the function definition"
-      (h/clean-db!)
-      (let [code "(defn a [b] (my-func))"
-            zloc (z/up (z/find-value (z/of-string code) z/next 'my-func))
-            _ (h/load-code-and-locs code)
-            results (transform/create-function zloc "file:///a.clj" db/db)]
-        (is (= "(defn- my-func []\n  )" (z/string (:loc (first results)))))
-        (is (= "\n\n" (z/string (:loc (last results)))))))
     (testing "creating with 1 known arg"
       (h/clean-db!)
       (let [code "(defn a [b] (my-func b))"
@@ -415,9 +407,33 @@
             results (transform/create-function zloc "file:///a.clj" db/db)]
         (is (= "(defn- my-func [b arg2]\n  )" (z/string (:loc (first results)))))
         (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating from a fn call of other function"
+      (h/clean-db!)
+      (let [code "(defn a [b] (remove my-func [1 2 3 4]))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [arg1]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating from a fn call of other function nested"
+      (h/clean-db!)
+      (let [code "(defn a [b] (remove (partial my-func 2) [1 2 3 4]))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [arg1 arg2]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
+    (testing "creating from a annonymous function"
+      (h/clean-db!)
+      (let [code "(defn a [b] (remove #(my-func 2 %) [1 2 3 4]))"
+            zloc (z/find-value (z/of-string code) z/next 'my-func)
+            _ (h/load-code-and-locs code)
+            results (transform/create-function zloc "file:///a.clj" db/db)]
+        (is (= "(defn- my-func [arg1 element]\n  )" (z/string (:loc (first results)))))
+        (is (= "\n\n" (z/string (:loc (last results)))))))
     (testing "creating from a thread first macro with single arg"
       (h/clean-db!)
-      (let [code "(-> b my-func)"
+      (let [code "(-> b my-func (+ 1 2) (+ 2 3))"
             zloc (z/find-value (z/of-string code) z/next 'my-func)
             _ (h/load-code-and-locs code)
             results (transform/create-function zloc "file:///a.clj" db/db)]
@@ -425,7 +441,7 @@
         (is (= "\n\n" (z/string (:loc (last results)))))))
     (testing "creating from a thread first macro with multiple args"
       (h/clean-db!)
-      (let [code "(-> b (my-func a 3))"
+      (let [code "(-> b (my-func a 3) (+ 1 2))"
             zloc (z/find-value (z/of-string code) z/next 'my-func)
             _ (h/load-code-and-locs code)
             results (transform/create-function zloc "file:///a.clj" db/db)]

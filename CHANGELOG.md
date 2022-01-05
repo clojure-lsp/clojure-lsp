@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Improve 'create function' refactor code action handling multiple cases. #682
+
 ## 2022.01.03-19.46.10
 
 - Catch clj-kondo prints to stdout and log to clojure-lsp log file avoiding crashes on some clients like vscode/Calva.

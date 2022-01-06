@@ -2,103 +2,103 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
-    paths-ignore:
-      - '**/README.md'
-      - '**/CHANGELOG.md'
-      - 'resources/CLOJURE_LSP_VERSION'
-      - 'docs/**'
-      - 'images/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/bump_deps.yml'
-      - '.github/workflows/bump_homebrew.yml'
-  pull_request:
+    # branches:
+    #   - master
+    # paths-ignore:
+    #   - '**/README.md'
+    #   - '**/CHANGELOG.md'
+    #   - 'resources/CLOJURE_LSP_VERSION'
+    #   - 'docs/**'
+    #   - 'images/**'
+    #   - 'mkdocs.yml'
+    #   - '.github/workflows/bump_deps.yml'
+    #   - '.github/workflows/bump_homebrew.yml'
+  # pull_request:
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2.2.0
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+  #     - name: Install Babashka
+  #       run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Compile java classes
-        run: make classes
+  #     - name: Compile java classes
+  #       run: make classes
 
-      - name: Check if namespaces are clean
-        run: make lint-clean
+  #     - name: Check if namespaces are clean
+  #       run: make lint-clean
 
-      - name: Check if namespaces are formatted
-        run: make lint-format
+  #     - name: Check if namespaces are formatted
+  #       run: make lint-format
 
-      - name: Check if namespaces have no diagnostics
-        run: make lint-diagnostics
+  #     - name: Check if namespaces have no diagnostics
+  #       run: make lint-diagnostics
 
-  unit-test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8, 11, 15, 17]
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
+  # unit-test:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       jdk: [8, 11, 15, 17]
+  #   steps:
+  #     - uses: actions/checkout@v2.2.0
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
+  #     - name: Set up JDK ${{ matrix.jdk }}
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: ${{ matrix.jdk }}
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
 
-      - name: Run tests
-        run: make test
+  #     - name: Run tests
+  #       run: make test
 
-  jvm-integration-test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8, 11, 15, 17]
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
+  # jvm-integration-test:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       jdk: [8, 11, 15, 17]
+  #   steps:
+  #     - uses: actions/checkout@v2.2.0
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
+  #     - name: Set up JDK ${{ matrix.jdk }}
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: ${{ matrix.jdk }}
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.814'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.814'
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+  #     - name: Install Babashka
+  #       run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Generate embedded binary
-        run: make prod-bin
+  #     - name: Generate embedded binary
+  #       run: make prod-bin
 
-      - name: Run babashka pod tests
-        run: make pod-test
+  #     - name: Run babashka pod tests
+  #       run: make pod-test
 
-      - name: Run integration tests
-        run: make integration-test
+  #     - name: Run integration tests
+  #       run: make integration-test
 
   graalvm-build:
     runs-on: ubuntu-latest
@@ -132,10 +132,11 @@ jobs:
         run: |
           gu install native-image
 
-      - name: Build Linux native image
+      - name: Build static Linux native image
         env:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
+          CLOJURE_LSP_STATIC: true
         run: |
           graalvm/native-unix-compile.sh
 

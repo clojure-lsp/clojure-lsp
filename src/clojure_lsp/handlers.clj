@@ -222,7 +222,7 @@
 (defn clojuredocs-raw [{:keys [symName symNs]}]
   (f.clojuredocs/find-docs-for symName symNs db/db))
 
-(defn ^:private refactor [refactoring [doc-id line character args] db]
+(defn ^:private refactor [refactoring [doc-id line character & args] db]
   (let [row                        (inc (int line))
         col                        (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change

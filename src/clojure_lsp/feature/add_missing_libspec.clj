@@ -247,9 +247,9 @@
                            :alias alias-str}))))
 
       :always
-      (remove (fn [sugestion]
+      (remove (fn [suggestion]
                 (some #(= (str (:ns %))
-                          (str (:ns sugestion)))
+                          (str (:ns suggestion)))
                       missing-requires))))))
 
 (defn ^:private find-refer-require-suggestions [refer missing-requires db]

@@ -5,6 +5,7 @@
 - Editor
   - Improve 'create function' refactor code action handling multiple cases. #682
   - Fix 'resolve macro as ...' code action not working.
+  - Fix `showDocumentRequest` issues when triggered via some refactor code action.
 
 ## 2022.01.03-19.46.10
 

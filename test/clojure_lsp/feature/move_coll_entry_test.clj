@@ -40,6 +40,12 @@
                                                                        " ;; some comment"
                                                                        " 3 4}"))
                                                   (z/find-next-value z/next 3)))))
+  (testing "with destructuring"
+    (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string (h/code "[[a b] [1 2]"
+                                                                       " {:keys [c d]} {:c 1 :d 2}"
+                                                                       " e 2]"))
+                                                  (z/find-next-depth-first #(= (z/sexpr %)
+                                                                               {:keys '[c d]}))))))
   (testing "when on first entry"
     (is (not (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "#{1 2 3 4}")
                                                        (z/find-next-value z/next 1)))))
@@ -91,6 +97,12 @@
                                                                          " 3 4"
                                                                          " 5 6}"))
                                                     (z/find-next-value z/next 3)))))
+  (testing "with destructuring"
+    (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string (h/code "[[a b] [1 2]"
+                                                                         " {:keys [c d]} {:c 1 :d 2}"
+                                                                         " e 2]"))
+                                                    (z/find-next-depth-first #(= (z/sexpr %)
+                                                                                 {:keys '[c d]}))))))
   (testing "when on last entry"
     (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "#{1 2 3 4}")
                                                          (z/find-next-value z/next 3)))))
@@ -107,7 +119,7 @@
 
 (defn- string-move-up [subject cursor]
   (some-> (z/of-string subject {:track-position? true})
-          (z/find-next-value z/next cursor)
+          (z/find-next-depth-first #(= (z/sexpr %) cursor))
           (f.move-coll-entry/move-up "file:///a.clj")
           :changes-by-uri
           (get "file:///a.clj")
@@ -117,7 +129,7 @@
 
 (defn- string-move-down [subject cursor]
   (some-> (z/of-string subject {:track-position? true})
-          (z/find-next-value z/next cursor)
+          (z/find-next-depth-first #(= (z/sexpr %) cursor))
           (f.move-coll-entry/move-down "file:///a.clj")
           :changes-by-uri
           (get "file:///a.clj")
@@ -165,7 +177,13 @@
                               "      {:keys [c d]} {:c 1 :d 2}])")
                       (h/code "(let [[a b] [1 2]"
                               "      {:keys [c d]} {:c 1 :d 2}"
-                              "      e 2])") 'e))
+                              "      e 2])") 'e)
+      (assert-move-up (h/code "(let [{:keys [c d]} {:c 1 :d 2}"
+                              "      [a b] [1 2]"
+                              "      e 2])")
+                      (h/code "(let [[a b] [1 2]"
+                              "      {:keys [c d]} {:c 1 :d 2}"
+                              "      e 2])") {:keys ['c 'd]}))
     (testing "comments"
       (assert-move-up (h/code "{:b (+ 1 1) ;; one comment"
                               " :a 1 ;; two comment"
@@ -219,7 +237,13 @@
                         (h/code "(let [[a b] [1 2]"
                                 "      e 2"
                                 "      {:keys [c d]} {:c 1 :d 2}])")
-                        'e))
+                        'e)
+      (assert-move-down (h/code "(let [[a b] [1 2]"
+                                "      e 2"
+                                "      {:keys [c d]} {:c 1 :d 2}])")
+                        (h/code "(let [[a b] [1 2]"
+                                "      {:keys [c d]} {:c 1 :d 2}"
+                                "      e 2])") {:keys ['c 'd]}))
     (testing "comments"
       (assert-move-down (h/code "{:b (+ 1 1) ;; one comment"
                                 " :a 1 ;; two comment"

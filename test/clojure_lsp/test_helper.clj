@@ -49,7 +49,7 @@
 (defn assert-submap [expected actual]
   (is (= expected
          (some-> actual (select-keys (keys expected))))
-      (str "No superset of " (pr-str actual) " found")))
+      (str "Actual:\n\n" (pr-str actual) "\nExpected:\n\n" (pr-str expected))))
 
 (defmacro assert-submaps
   "Asserts that maps are submaps of result in corresponding order and

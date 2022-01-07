@@ -118,7 +118,7 @@
                                                          (z/find-next-value z/next 2)))))))
 
 (defn- string-move-up [subject cursor]
-  (some-> (z/of-string subject {:track-position? true})
+  (some-> (z/of-string subject)
           (z/find-next-depth-first #(= (z/sexpr %) cursor))
           (f.move-coll-entry/move-up "file:///a.clj")
           :changes-by-uri
@@ -128,7 +128,7 @@
           z/root-string))
 
 (defn- string-move-down [subject cursor]
-  (some-> (z/of-string subject {:track-position? true})
+  (some-> (z/of-string subject)
           (z/find-next-depth-first #(= (z/sexpr %) cursor))
           (f.move-coll-entry/move-down "file:///a.clj")
           :changes-by-uri

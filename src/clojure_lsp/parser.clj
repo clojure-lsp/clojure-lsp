@@ -86,7 +86,7 @@
 
 (defn ^:private safe-zloc-of-string [text]
   (try
-    (z/of-string text {:track-position? true})
+    (z/of-string text)
     (catch clojure.lang.ExceptionInfo e
       (if-let [node (handle-end-slash-code text e)]
         node

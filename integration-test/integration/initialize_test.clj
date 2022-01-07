@@ -21,6 +21,7 @@
         :renameProvider {:prepareProvider true}
         :executeCommandProvider {:commands ["add-missing-libspec"
                                             "add-import-to-namespace"
+                                            "move-coll-entry-up"
                                             "cycle-privacy"
                                             "create-test"
                                             "change-coll"
@@ -29,6 +30,7 @@
                                             "move-to-let"
                                             "clean-ns"
                                             "suppress-diagnostic"
+                                            "move-coll-entry-down"
                                             "thread-last"
                                             "resolve-macro-as"
                                             "introduce-let"

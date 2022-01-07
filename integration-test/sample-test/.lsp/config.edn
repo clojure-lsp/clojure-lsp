@@ -1,1 +1,2 @@
-{:linters {:clj-kondo {:ns-exclude-regex ""}}}
+{:linters {:clj-kondo {:ns-exclude-regex ""}}
+ :api {:exit-on-errors? false}}

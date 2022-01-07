@@ -3,7 +3,6 @@
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
-   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -42,7 +41,7 @@
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                :new-text new-text}]}]]
-        (async/>!! db/edits-chan (f.refactor/client-changes changes db))))))
+        (async/>!! db/edits-chan (shared/client-changes changes db))))))
 
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)

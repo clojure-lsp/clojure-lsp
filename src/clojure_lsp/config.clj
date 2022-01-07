@@ -33,7 +33,7 @@
 (defn ^:private get-home-config-file []
   (let [xdg-config-home (or (get-env "XDG_CONFIG_HOME")
                             (io/file (get-property "user.home") ".config"))
-        xdg-config (io/file xdg-config-home ".lsp" "config.edn")
+        xdg-config (io/file xdg-config-home "clojure-lsp" "config.edn")
         home-config (io/file (get-property "user.home") ".lsp" "config.edn")]
     (if (shared/file-exists? xdg-config)
       xdg-config

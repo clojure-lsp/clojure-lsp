@@ -32,6 +32,7 @@
                                             "suppress-diagnostic"
                                             "move-coll-entry-down"
                                             "thread-last"
+                                            "resolve-macro-as"
                                             "introduce-let"
                                             "sort-map"
                                             "unwind-thread"

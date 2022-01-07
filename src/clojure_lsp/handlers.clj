@@ -15,7 +15,6 @@
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
-   [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
@@ -247,9 +246,6 @@
     (cursor-info-log {:textDocument (nth arguments 0)
                       :position {:line (nth arguments 1)
                                  :character (nth arguments 2)}})
-
-    (= command "resolve-macro-as")
-    (apply f.resolve-macro/resolve-macro-as! (concat arguments [db/db]))
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]

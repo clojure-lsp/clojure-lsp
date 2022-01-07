@@ -105,27 +105,33 @@
     (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "'[a 1 c 2]")
                                                          (z/find-next-value z/next 2)))))))
 
-(defn ^:private assert-move-up [expected subject cursor]
-  (is (= expected
-         (some-> (z/of-string subject {:track-position? true})
-                 (z/find-next-value z/next cursor)
-                 (f.move-coll-entry/move-up "file:///a.clj")
-                 :changes-by-uri
-                 (get "file:///a.clj")
-                 first
-                 :loc
-                 z/root-string))))
+(defn- string-move-up [subject cursor]
+  (some-> (z/of-string subject {:track-position? true})
+          (z/find-next-value z/next cursor)
+          (f.move-coll-entry/move-up "file:///a.clj")
+          :changes-by-uri
+          (get "file:///a.clj")
+          first
+          :loc
+          z/root-string))
 
-(defn ^:private assert-move-down [expected subject cursor]
-  (is (= expected
-         (some-> (z/of-string subject {:track-position? true})
-                 (z/find-next-value z/next cursor)
-                 (f.move-coll-entry/move-down "file:///a.clj")
-                 :changes-by-uri
-                 (get "file:///a.clj")
-                 first
-                 :loc
-                 z/root-string))))
+(defn- string-move-down [subject cursor]
+  (some-> (z/of-string subject {:track-position? true})
+          (z/find-next-value z/next cursor)
+          (f.move-coll-entry/move-down "file:///a.clj")
+          :changes-by-uri
+          (get "file:///a.clj")
+          first
+          :loc
+          z/root-string))
+
+(defmacro assert-move-up [expected subject cursor]
+  ;; This is a macro so test failures have the right line numbers
+  `(is (= ~expected (string-move-up ~subject ~cursor))))
+
+(defmacro assert-move-down [expected subject cursor]
+  ;; This is a macro so test failures have the right line numbers
+  `(is (= ~expected (string-move-down ~subject ~cursor))))
 
 (deftest move-up
   (testing "common cases"

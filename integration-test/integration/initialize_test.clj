@@ -34,6 +34,7 @@
                                             "thread-last"
                                             "resolve-macro-as"
                                             "introduce-let"
+                                            "add-missing-import"
                                             "sort-map"
                                             "unwind-thread"
                                             "thread-first-all"

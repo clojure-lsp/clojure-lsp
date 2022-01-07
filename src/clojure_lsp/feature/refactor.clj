@@ -75,11 +75,11 @@
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))
 
-(defmethod refactor :move-coll-entry-up [{:keys [loc]}]
-  (f.move-coll-entry/move-up loc))
+(defmethod refactor :move-coll-entry-up [{:keys [loc uri]}]
+  (f.move-coll-entry/move-up loc uri))
 
-(defmethod refactor :move-coll-entry-down [{:keys [loc]}]
-  (f.move-coll-entry/move-down loc))
+(defmethod refactor :move-coll-entry-down [{:keys [loc uri]}]
+  (f.move-coll-entry/move-down loc uri))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc [args]))

@@ -65,7 +65,7 @@
          (.notifyProgress client))))
 
 (defn show-document-request [document-request db]
-  (log/info "Requesting to show on edtitor the document" document-request)
+  (log/info "Requesting to show on editor the document" document-request)
   (when-let [client ^ClojureLanguageClient (:client @db)]
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
       (->> (update document-request :range #(or (some-> % shared/->range)

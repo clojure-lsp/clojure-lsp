@@ -142,9 +142,8 @@
         last-zloc   (-> parent-zloc z/down z/rightmost*)
         parent-zloc (if (-> last-zloc z/node n/comment?)
                       ;; align bracket with last key
-                      (let [last-key   (-> parent-zloc z/down z/rightmost z/left)
-                            ;; Do we really need to use z/position and add track-position to whole clojure-lsp zloc to make this work?
-                            [_row col] (z/position last-key)]
+                      (let [last-key (-> parent-zloc z/down z/rightmost z/left)
+                            col      (:col (meta (z/node last-key)))]
                         (-> last-zloc
                             (z/insert-space-right (dec col))
                             z/insert-newline-right

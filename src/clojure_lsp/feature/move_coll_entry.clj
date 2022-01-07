@@ -93,6 +93,7 @@
                                (iterate z/left)
                                (take-while (complement z/leftmost?))
                                count)
+        new-node-position (dir (dir node-position))
         ;; position of the entry pair we're moving, whether the original
         ;; node was a key or value.
         position          (-> node-position (/ 2) int)
@@ -122,17 +123,24 @@
         parent-zloc (->> (concat (flatten entry-pairs)
                                  extra-lines)
                          (n/replace-children (z/node parent-zloc))
-                         (z/replace parent-zloc))]
-    (if (-> parent-zloc z/down z/rightmost* z/node n/comment?)
-      ;; Do we really need to use z/position and add track-position to whole clojure-lsp zloc to make this work?
-      (let [[_row col] (-> parent-zloc z/down z/rightmost z/left z/position)]
-        (-> parent-zloc
-            z/down
-            z/rightmost*
-            (z/insert-space-right (dec col))
-            z/insert-newline-right
-            z/up))
-      parent-zloc)))
+                         (z/replace parent-zloc))
+        parent-zloc (if (-> parent-zloc z/down z/rightmost* z/node n/comment?)
+                      ;; Do we really need to use z/position and add track-position to whole clojure-lsp zloc to make this work?
+                      (let [[_row col] (-> parent-zloc z/down z/rightmost z/left z/position)]
+                        (-> parent-zloc
+                            z/down
+                            z/rightmost*
+                            (z/insert-space-right (dec col))
+                            z/insert-newline-right
+                            z/up))
+                      parent-zloc)]
+    ;; Move zipper back to original node, so repeated invocations keep
+    ;; moving the same entry.
+    (->> parent-zloc
+         z/down
+         (iterate z/right)
+         (drop new-node-position)
+         first)))
 
 (defn ^:private can-move-entry? [zloc]
   (and (not (contains? #{:map :vector :set} (z/tag zloc)))
@@ -155,14 +163,19 @@
                 count)
            2)))
 
-(defn move-up [zloc]
-  (when (can-move-entry-up? zloc)
-    (when-let [new-zloc (move-entry-zloc zloc dec)]
-      [{:range (meta (z/node new-zloc))
-        :loc new-zloc}])))
+(defn ^:private move-entry [zloc uri dir]
+  (when-let [new-zloc (move-entry-zloc zloc dir)]
+    {:show-document-after-edit {:uri uri
+                                :take-focus? true
+                                :range (meta (z/node new-zloc))}
+     :changes-by-uri {uri
+                      [{:range (meta (z/node (z/up new-zloc)))
+                        :loc (z/up new-zloc)}]}}))
 
-(defn move-down [zloc]
+(defn move-up [zloc uri]
+  (when (can-move-entry-up? zloc)
+    (move-entry zloc uri dec)))
+
+(defn move-down [zloc uri]
   (when (can-move-entry-down? zloc)
-    (when-let [new-zloc (move-entry-zloc zloc inc)]
-      [{:range (meta (z/node new-zloc))
-        :loc new-zloc}])))
+    (move-entry zloc uri inc)))

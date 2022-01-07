@@ -98,17 +98,15 @@
            :position position})))))
 
 (defn ^:private refactor-code-action
-  ([refactoring zloc uri line character db]
-   (refactor-code-action refactoring zloc uri line character db nil))
-  ([refactoring zloc uri line character db extra-arg]
-   (f.refactor/call-refactor {:loc         zloc
-                              :refactoring refactoring
-                              :uri         uri
-                              :version     0
-                              :args        extra-arg
-                              :row         (inc line)
-                              :col         (inc character)}
-                             db)))
+  [refactoring zloc uri line character db & extra-args]
+  (f.refactor/call-refactor {:loc         zloc
+                             :refactoring refactoring
+                             :uri         uri
+                             :version     0
+                             :args        extra-args
+                             :row         (inc line)
+                             :col         (inc character)}
+                            db))
 
 (defn resolve-code-action-edits
   [{{:keys [id uri line character chosen-alias chosen-ns chosen-refer coll diagnostic-code]} :data :as code-action}
@@ -121,12 +119,10 @@
              (refactor-code-action :add-missing-libspec zloc uri line character db)
 
              "add-missing-import"
-             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-common-import-to-namespace zloc db) db)]
-               {:edit missing-import-edit})
+             (refactor-code-action :add-missing-import zloc uri line character db)
 
              "add-require-suggestion"
-             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-require-suggestion zloc chosen-ns chosen-alias chosen-refer db) db)]
-               {:edit alias-suggestion-edit})
+             (refactor-code-action :add-require-suggestion zloc uri line character db chosen-ns chosen-alias chosen-refer)
 
              ("refactor-create-private-function"
               "refactor-create-public-function")
@@ -195,12 +191,14 @@
                                        db)
 
              "add-missing-import"
-             (let [missing-import-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-common-import-to-namespace zloc db) db)]
-               {:edit missing-import-edit})
+             {:command {:title     "Add missing import"
+                        :command   "add-missing-import"
+                        :arguments [uri line character]}}
 
              "add-require-suggestion"
-             (let [alias-suggestion-edit (f.refactor/refactor-client-seq-changes uri 0 (f.add-missing-libspec/add-require-suggestion zloc chosen-ns chosen-alias chosen-refer db) db)]
-               {:edit alias-suggestion-edit})
+             {:command {:title     "Add require suggestion"
+                        :command   "add-require-suggestion"
+                        :arguments [uri line character chosen-alias chosen-ns chosen-refer]}}
 
              "refactor-create-private-function"
              {:command {:title     "Create function"

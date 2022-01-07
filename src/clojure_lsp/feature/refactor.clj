@@ -15,10 +15,16 @@
 (defmulti refactor :refactoring)
 
 (defmethod refactor :add-import-to-namespace [{:keys [loc args db]}]
-  (apply f.add-missing-libspec/add-import-to-namespace loc [args db]))
+  (apply f.add-missing-libspec/add-import-to-namespace loc (concat args [db])))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc db]}]
   (f.add-missing-libspec/add-missing-libspec loc db))
+
+(defmethod refactor :add-require-suggestion [{:keys [loc args db]}]
+  (apply f.add-missing-libspec/add-require-suggestion loc (concat args [db])))
+
+(defmethod refactor :add-missing-import [{:keys [loc db]}]
+  (f.add-missing-libspec/add-common-import-to-namespace loc db))
 
 (defmethod refactor :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))
@@ -27,7 +33,7 @@
   (r.transform/cycle-coll loc))
 
 (defmethod refactor :change-coll [{:keys [loc args]}]
-  (apply r.transform/change-coll loc [args]))
+  (apply r.transform/change-coll loc args))
 
 (defmethod refactor :cycle-privacy [{:keys [loc db]}]
   (r.transform/cycle-privacy loc db))
@@ -36,16 +42,16 @@
   (r.transform/expand-let loc))
 
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
-  (apply r.transform/extract-function loc uri [args db]))
+  (apply r.transform/extract-function loc uri (concat args [db])))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
   (r.transform/inline-symbol uri row col db))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
-  (apply r.transform/introduce-let loc [args]))
+  (apply r.transform/introduce-let loc args))
 
 (defmethod refactor :move-to-let [{:keys [loc args]}]
-  (apply r.transform/move-to-let loc [args]))
+  (apply r.transform/move-to-let loc args))
 
 (defmethod refactor :thread-first [{:keys [loc db]}]
   (r.transform/thread-first loc db))
@@ -72,7 +78,7 @@
   (f.sort-map/sort-map loc))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
-  (apply r.transform/suppress-diagnostic loc [args]))
+  (apply r.transform/suppress-diagnostic loc args))
 
 (defmethod refactor :create-function [{:keys [loc uri db]}]
   (r.transform/create-function loc uri db))

@@ -40,7 +40,8 @@
                                             "extract-function"
                                             "cycle-coll"
                                             "expand-let"
-                                            "create-function"]}
+                                            "create-function"
+                                            "add-require-suggestion"]}
         :signatureHelpProvider {:triggerCharacters []}
         :codeActionProvider {:codeActionKinds ["quickfix"
                                                "refactor"

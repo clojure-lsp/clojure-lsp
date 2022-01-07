@@ -193,16 +193,22 @@
                               " :c 3} ;; three comment") :b)
       (assert-move-up (h/code ";; main comment"
                               "{;; b comment"
-                              " :b (+ 1 1) ;; one comment"
-                              " :a 1 ;; two comment"
+                              " :b (+ 1 1) ;; two comment"
+                              " :a 1 ;; one comment"
                               " ;; c comment"
                               " :c 3} ;; three comment")
                       (h/code ";; main comment"
-                              "{:a 1 ;; two comment"
+                              "{:a 1 ;; one comment"
                               " ;; b comment"
-                              " :b (+ 1 1) ;; one comment"
+                              " :b (+ 1 1) ;; two comment"
                               " ;; c comment"
-                              " :c 3} ;; three comment") :b))))
+                              " :c 3} ;; three comment") :b)
+      ;; avoids commenting out closing bracket
+      (assert-move-up (h/code "{:b 2"
+                              " :a 1 ;; one comment"
+                              " }")
+                      (h/code "{:a 1 ;; one comment"
+                              " :b 2}") :b))))
 
 (deftest move-down
   (testing "common cases"
@@ -253,13 +259,19 @@
                                 " :c 3} ;; three comment") :a)
       (assert-move-down (h/code ";; main comment"
                                 "{;; b comment"
-                                " :b (+ 1 1) ;; one comment"
-                                " :a 1 ;; two comment"
+                                " :b (+ 1 1) ;; two comment"
+                                " :a 1 ;; one comment"
                                 " ;; c comment"
                                 " :c 3} ;; three comment")
                         (h/code ";; main comment"
-                                "{:a 1 ;; two comment"
+                                "{:a 1 ;; one comment"
                                 " ;; b comment"
-                                " :b (+ 1 1) ;; one comment"
+                                " :b (+ 1 1) ;; two comment"
                                 " ;; c comment"
-                                " :c 3} ;; three comment") :a))))
+                                " :c 3} ;; three comment") :a)
+      ;; avoids commenting out closing bracket
+      (assert-move-down (h/code "{:b 2"
+                                " :a 1 ;; one comment"
+                                " }")
+                        (h/code "{:a 1 ;; one comment"
+                                " :b 2}") :a))))

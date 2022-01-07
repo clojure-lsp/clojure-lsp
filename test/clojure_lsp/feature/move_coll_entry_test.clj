@@ -109,7 +109,9 @@
   (is (= expected
          (some-> (z/of-string subject {:track-position? true})
                  (z/find-next-value z/next cursor)
-                 f.move-coll-entry/move-up
+                 (f.move-coll-entry/move-up "file:///a.clj")
+                 :changes-by-uri
+                 (get "file:///a.clj")
                  first
                  :loc
                  z/root-string))))
@@ -118,7 +120,9 @@
   (is (= expected
          (some-> (z/of-string subject {:track-position? true})
                  (z/find-next-value z/next cursor)
-                 f.move-coll-entry/move-down
+                 (f.move-coll-entry/move-down "file:///a.clj")
+                 :changes-by-uri
+                 (get "file:///a.clj")
                  first
                  :loc
                  z/root-string))))

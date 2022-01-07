@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
@@ -10,13 +11,6 @@
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
-
-(defn client-changes [changes db]
-  (if (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes])
-    {:document-changes changes}
-    {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                              [(:uri text-document) edits])
-                            changes))}))
 
 (defmulti refactor :refactoring)
 
@@ -71,6 +65,9 @@
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
 
+(defmethod refactor :resolve-macro-as [{:keys [uri row col db]}]
+  (f.resolve-macro/resolve-macro-as! uri row col db))
+
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))
 
@@ -93,31 +90,35 @@
 (defn refactor-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
                   :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
-    (client-changes changes db)))
+    (shared/client-changes changes db)))
 
 (defn call-refactor [{:keys [loc uri refactoring row col version] :as data} db]
   (let [result (refactor (assoc data :db db))]
-    (if (or loc
-            (= :clean-ns refactoring))
-      (cond
-        (map? result)
-        (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
-              changes (concat resource-changes
-                              (vec (for [[doc-id sub-results] changes-by-uri]
-                                     {:text-document {:uri doc-id :version (if (= uri doc-id) version -1)}
-                                      :edits (mapv #(medley/update-existing % :range shared/->range)
-                                                   (r.transform/result sub-results))})))]
-          (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
-            (swap! db assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
-          {:show-document-after-edit show-document-after-edit
-           :edit (client-changes changes db)})
+    (cond
+      (:no-op? result)
+      nil
 
-        (seq result)
-        {:edit (refactor-client-seq-changes uri version result db)}
+      (and (not loc)
+           (not= :clean-ns refactoring))
+      (log/warn "Could not find a form at this location. row" row "col" col "file" uri)
 
-        (empty? result)
-        (log/warn refactoring "made no changes" (z/string loc))
+      (map? result)
+      (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
+            changes (concat resource-changes
+                            (vec (for [[doc-id sub-results] changes-by-uri]
+                                   {:text-document {:uri doc-id :version (if (= uri doc-id) version -1)}
+                                    :edits (mapv #(medley/update-existing % :range shared/->range)
+                                                 (r.transform/result sub-results))})))]
+        (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
+          (swap! db assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
+        {:show-document-after-edit show-document-after-edit
+         :edit (shared/client-changes changes db)})
 
-        :else
-        (log/warn "Could not apply" refactoring "to form: " (z/string loc)))
-      (log/warn "Could not find a form at this location. row" row "col" col "file" uri))))
+      (seq result)
+      {:edit (refactor-client-seq-changes uri version result db)}
+
+      (empty? result)
+      (log/warn refactoring "made no changes" (z/string loc))
+
+      :else
+      (log/warn "Could not apply" refactoring "to form: " (z/string loc)))))

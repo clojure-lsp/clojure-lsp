@@ -30,6 +30,7 @@
                                             "clean-ns"
                                             "suppress-diagnostic"
                                             "thread-last"
+                                            "resolve-macro-as"
                                             "introduce-let"
                                             "sort-map"
                                             "unwind-thread"

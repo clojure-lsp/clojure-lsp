@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.rename
   (:require
-   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
@@ -197,9 +196,9 @@
             (swap! db (fn [db] (-> db
                                    (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
                                    (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
-            (f.refactor/client-changes (concat doc-changes
-                                               [{:kind "rename"
-                                                 :old-uri uri
-                                                 :new-uri new-uri}])
-                                       db))
-          (f.refactor/client-changes doc-changes db))))))
+            (shared/client-changes (concat doc-changes
+                                           [{:kind "rename"
+                                             :old-uri uri
+                                             :new-uri new-uri}])
+                                   db))
+          (shared/client-changes doc-changes db))))))

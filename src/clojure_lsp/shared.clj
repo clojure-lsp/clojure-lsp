@@ -355,3 +355,11 @@
 (defn normalize-file
   ^java.io.File [^java.io.File file]
   (.toFile (.normalize (.toPath file))))
+
+;; TODO move to a better place
+(defn client-changes [changes db]
+  (if (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes])
+    {:document-changes changes}
+    {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                              [(:uri text-document) edits])
+                            changes))}))

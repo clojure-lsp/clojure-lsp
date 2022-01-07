@@ -1,6 +1,7 @@
 (ns clojure-lsp.kondo
   (:require
    [clj-kondo.core :as kondo]
+   [clojure-lsp.config :as config]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -16,6 +17,29 @@
   (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
 (def clj-kondo-analysis-batch-size 50)
+
+(defn home-config-path []
+  (let [xdg-config-home (or (config/get-env "XDG_CONFIG_HOME")
+                            (io/file (config/get-property "user.home") ".config"))
+        xdg-config (io/file xdg-config-home "clj-kondo" "config.edn")]
+    (.getCanonicalPath ^java.io.File xdg-config)))
+
+(defn project-config-path [project-root-uri]
+  (let [project-root-file (io/file (shared/uri->filename project-root-uri))
+        config-file (io/file project-root-file ".clj-kondo" "config.edn")]
+    (.getCanonicalPath ^java.io.File config-file)))
+
+(defn config-hash
+  [project-root]
+  (let [err (java.io.StringWriter.)]
+    (binding [*err* err]
+      (let [result (-> project-root
+                       (io/file ".clj-kondo")
+                       kondo/resolve-config
+                       kondo/config-hash)]
+        (when-not (string/blank? (str err))
+          (log/error (str err)))
+        result))))
 
 (defmacro catch-kondo-errors [err-hint & body]
   `(let [err# (java.io.StringWriter.)
@@ -174,15 +198,3 @@
 (defn run-kondo-on-text! [text uri db]
   (catch-kondo-errors (shared/uri->filename uri)
     (with-in-str text (kondo/run! (kondo-for-single-file uri db)))))
-
-(defn config-hash
-  [project-root]
-  (let [err (java.io.StringWriter.)]
-    (binding [*err* err]
-      (let [result (-> project-root
-                       (io/file ".clj-kondo")
-                       kondo/resolve-config
-                       kondo/config-hash)]
-        (when-not (string/blank? (str err))
-          (log/error (str err)))
-        result))))

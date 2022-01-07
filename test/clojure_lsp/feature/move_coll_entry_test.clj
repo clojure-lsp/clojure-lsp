@@ -203,6 +203,14 @@
                               " :b (+ 1 1) ;; two comment"
                               " ;; c comment"
                               " :c 3} ;; three comment") :b)
+      (assert-move-up (h/code "{:b 2"
+                              " :a 1"
+                              " ;; trailing comment"
+                              " }")
+                      (h/code "{:a 1"
+                              " :b 2"
+                              " ;; trailing comment"
+                              " }") :b)
       ;; avoids commenting out closing bracket
       (assert-move-up (h/code "{:b 2"
                               " :a 1 ;; one comment"
@@ -269,6 +277,14 @@
                                 " :b (+ 1 1) ;; two comment"
                                 " ;; c comment"
                                 " :c 3} ;; three comment") :a)
+      (assert-move-down (h/code "{:b 2"
+                                " :a 1"
+                                " ;; trailing comment"
+                                " }")
+                        (h/code "{:a 1"
+                                " :b 2"
+                                " ;; trailing comment"
+                                " }") :a)
       ;; avoids commenting out closing bracket
       (assert-move-down (h/code "{:b 2"
                                 " :a 1 ;; one comment"

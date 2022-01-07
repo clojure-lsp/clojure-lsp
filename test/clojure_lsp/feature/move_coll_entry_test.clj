@@ -211,6 +211,22 @@
                               " :b 2"
                               " ;; trailing comment"
                               " }") :b)
+      (assert-move-up (h/code "{;; a"
+                              " a 1"
+                              ""
+                              " ;; c"
+                              " c 3"
+                              ""
+                              " ;; b"
+                              " b 2}")
+                      (h/code "{;; a"
+                              " a 1"
+                              ""
+                              " ;; b"
+                              " b 2"
+                              ""
+                              " ;; c"
+                              " c 3}") 'c)
       ;; avoids commenting out closing bracket
       (assert-move-up (h/code "{:b 2"
                               " :a 1 ;; one comment"
@@ -285,6 +301,22 @@
                                 " :b 2"
                                 " ;; trailing comment"
                                 " }") :a)
+      (assert-move-down (h/code "{;; a"
+                                " a 1"
+                                ""
+                                " ;; c"
+                                " c 3"
+                                ""
+                                " ;; b"
+                                " b 2}")
+                        (h/code "{;; a"
+                                " a 1"
+                                ""
+                                " ;; b"
+                                " b 2"
+                                ""
+                                " ;; c"
+                                " c 3}") 'b)
       ;; avoids commenting out closing bracket
       (assert-move-down (h/code "{:b 2"
                                 " :a 1 ;; one comment"

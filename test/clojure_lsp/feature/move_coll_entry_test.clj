@@ -117,33 +117,39 @@
     (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "'[a 1 c 2]")
                                                          (z/find-next-value z/next 2)))))))
 
-(defn- string-move-up [subject cursor]
+(defn- move-up* [subject cursor]
   (some-> (z/of-string subject)
           (z/find-next-depth-first #(= (z/sexpr %) cursor))
-          (f.move-coll-entry/move-up "file:///a.clj")
+          (f.move-coll-entry/move-up "file:///a.clj")))
+
+(defn- move-down* [subject cursor]
+  (some-> (z/of-string subject)
+          (z/find-next-depth-first #(= (z/sexpr %) cursor))
+          (f.move-coll-entry/move-down "file:///a.clj")))
+
+(defn- as-string [change]
+  (some-> change
           :changes-by-uri
           (get "file:///a.clj")
           first
           :loc
           z/root-string))
 
-(defn- string-move-down [subject cursor]
-  (some-> (z/of-string subject)
-          (z/find-next-depth-first #(= (z/sexpr %) cursor))
-          (f.move-coll-entry/move-down "file:///a.clj")
-          :changes-by-uri
-          (get "file:///a.clj")
-          first
-          :loc
-          z/root-string))
+(defn- as-position [change]
+  (when-let [{:keys [row col]} (some-> change
+                                       :show-document-after-edit
+                                       :range)]
+    [row col]))
 
+;; These are macros so test failures have the right line numbers
 (defmacro assert-move-up [expected subject cursor]
-  ;; This is a macro so test failures have the right line numbers
-  `(is (= ~expected (string-move-up ~subject ~cursor))))
-
+  `(is (= ~expected (as-string (move-up* ~subject ~cursor)))))
 (defmacro assert-move-down [expected subject cursor]
-  ;; This is a macro so test failures have the right line numbers
-  `(is (= ~expected (string-move-down ~subject ~cursor))))
+  `(is (= ~expected (as-string (move-down* ~subject ~cursor)))))
+(defmacro assert-move-up-position [expected subject cursor]
+  `(is (= ~expected (as-position (move-up* ~subject ~cursor)))))
+(defmacro assert-move-down-position [expected subject cursor]
+  `(is (= ~expected (as-position (move-down* ~subject ~cursor)))))
 
 (deftest move-up
   (testing "common cases"
@@ -232,7 +238,16 @@
                               " :a 1 ;; one comment"
                               " }")
                       (h/code "{:a 1 ;; one comment"
-                              " :b 2}") :b))))
+                              " :b 2}") :b))
+    (testing "relocation"
+      (assert-move-up-position [1 2]
+                               (h/code "{:a 1 ;; one comment"
+                                       " :b 2}") :b)
+      ;; TODO fix this case
+      (comment
+        (assert-move-up-position [1 8]
+                                 (h/code "{:a :x ;; one comment"
+                                         " :b    :y}") :y)))))
 
 (deftest move-down
   (testing "common cases"
@@ -322,4 +337,13 @@
                                 " :a 1 ;; one comment"
                                 " }")
                         (h/code "{:a 1 ;; one comment"
-                                " :b 2}") :a))))
+                                " :b 2}") :a))
+    (testing "relocation"
+      (assert-move-down-position [2 2]
+                                 (h/code "{:a 1 ;; one comment"
+                                         " :b 2}") :a)
+      ;; TODO fix this case
+      (comment
+        (assert-move-down-position [2 5]
+                                   (h/code "{:a :x ;; one comment"
+                                           " :b    :y}") :x)))))

@@ -159,10 +159,12 @@
     ;; |1 2 |3 4|
     ;; Which gets moved to {3 41 2 }. When there are newlines between nodes,
     ;; this isn't a problem. To fix this, the code needs to be smarter about
-    ;; relocating whitespace between nodes.
+    ;; reallocating whitespace between nodes.
     (comment
       (assert-move-up (h/code "{3 4 1 2}")
-                      (h/code "{1 2 3 4}") 3))
+                      (h/code "{1 2 3 4}") 3)
+      (assert-move-up (h/code "{3 4, 1 2}")
+                      (h/code "{1 2, 3 4}") 3))
     (assert-move-up (h/code "{3 4"
                             " 1 2}")
                     (h/code "{1 2"
@@ -171,6 +173,20 @@
                             " 1 2}")
                     (h/code "{1 2"
                             " 3 4}") 4)
+    ;; TODO fix this case
+    ;; Comma stays attached to `1 2,` entry. As with single line maps, the code
+    ;; needs to be smarter about reallocating whitespace between nodes.
+    (comment
+      (assert-move-up (h/code "{3 4,"
+                              " 1 2}")
+                      (h/code "{1 2,"
+                              " 3 4}") 3))
+    (assert-move-up (h/code "#{b 2,"
+                            "  a 1,"
+                            "  c 3}")
+                    (h/code "#{a 1,"
+                            "  b 2,"
+                            "  c 3}") 'b)
     (assert-move-up (h/code "{:b (+ 1 1)"
                             " :a 1"
                             " :c 3}")
@@ -310,7 +326,9 @@
     ;; see notes for similar failures when moving up
     (comment
       (assert-move-down (h/code "{3 4 1 2}")
-                        (h/code "{1 2 3 4}") 1))
+                        (h/code "{1 2 3 4}") 1)
+      (assert-move-down (h/code "{3 4, 1 2}")
+                        (h/code "{1 2, 3 4}") 1))
     (assert-move-down (h/code "{3 4"
                               " 1 2}")
                       (h/code "{1 2"
@@ -319,6 +337,19 @@
                               " 1 2}")
                       (h/code "{1 2"
                               " 3 4}") 2)
+    ;; TODO fix this case
+    ;; see notes for similar failures when moving up
+    (comment
+      (assert-move-down (h/code "{3 4,"
+                                " 1 2}")
+                        (h/code "{1 2,"
+                                " 3 4}") 1))
+    (assert-move-down (h/code "#{b 2,"
+                              "  a 1,"
+                              "  c 3}")
+                      (h/code "#{a 1,"
+                              "  b 2,"
+                              "  c 3}") 'a)
     (assert-move-down (h/code "{:b (+ 1 1)"
                               " :a 1"
                               " :c 3}")

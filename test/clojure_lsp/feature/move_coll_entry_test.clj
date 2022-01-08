@@ -3,7 +3,8 @@
    [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [rewrite-clj.node :as n]))
 
 (deftest can-move-entry-up?
   (testing "common cases"
@@ -238,7 +239,37 @@
                               " :a 1 ;; one comment"
                               " }")
                       (h/code "{:a 1 ;; one comment"
-                              " :b 2}") :b))
+                              " :b 2}") :b)
+      ;; moves from leading comment / whitespace
+      (is (= (h/code "{;; b comment"
+                     " :b 2 ;; two comment"
+                     " :a 1 ;; one comment"
+                     " :c 3}")
+             (some-> (z/of-string (h/code "{:a 1 ;; one comment"
+                                          " ;; b comment"
+                                          " :b 2 ;; two comment"
+                                          " :c 3}"))
+                     (z/down)
+                     (z/find-next-value z/right :b)
+                     ;; b comment
+                     (z/find z/left* (comp n/comment? z/node))
+                     (f.move-coll-entry/move-up "file:///a.clj")
+                     as-string)))
+      ;; TODO fix this case
+      (comment
+        ;; moves from trailing comment / whitespace
+        (is (= (h/code "{:b 2 ;; two comment"
+                       " :a 1 ;; one comment"
+                       " :c 3}")
+               (some-> (z/of-string (h/code "{:a 1 ;; one comment"
+                                            " :b 2 ;; two comment"
+                                            " :c 3}"))
+                       (z/down)
+                       (z/find-next-value z/right :b)
+                       ;; two comment
+                       (z/find z/right* (comp n/comment? z/node))
+                       (f.move-coll-entry/move-up "file:///a.clj")
+                       as-string)))))
     (testing "relocation"
       (assert-move-up-position [1 2]
                                (h/code "{:a 1 ;; one comment"
@@ -337,7 +368,35 @@
                                 " :a 1 ;; one comment"
                                 " }")
                         (h/code "{:a 1 ;; one comment"
-                                " :b 2}") :a))
+                                " :b 2}") :a)
+      ;; moves from leading comment / whitespace
+      (is (= (h/code "{;; b comment"
+                     " :b 2 ;; two comment"
+                     " ;; a comment"
+                     " :a 1 ;; one comment"
+                     " :c 3}")
+             (some-> (z/of-string (h/code "{;; a comment"
+                                          " :a 1 ;; one comment"
+                                          " ;; b comment"
+                                          " :b 2 ;; two comment"
+                                          " :c 3}"))
+                     ;; a comment
+                     (z/down*)
+                     (f.move-coll-entry/move-down "file:///a.clj")
+                     as-string)))
+      ;; TODO fix this case
+      (comment
+        ;; moves from trailing comment / whitespace
+        (is (= (h/code "{:b 2 ;; two comment"
+                       " :a 1 ;; one comment"
+                       " :c 3}")
+               (some-> (z/of-string (h/code "{:a 1 ;; one comment"
+                                            " :b 2 ;; two comment"
+                                            " :c 3}"))
+                       (z/down)
+                       (z/find z/right* (comp n/comment? z/node))
+                       (f.move-coll-entry/move-down "file:///a.clj")
+                       as-string)))))
     (testing "relocation"
       (assert-move-down-position [2 2]
                                  (h/code "{:a 1 ;; one comment"

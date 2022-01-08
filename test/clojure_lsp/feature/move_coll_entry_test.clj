@@ -261,6 +261,22 @@
                               ""
                               " ;; c"
                               " c 3}") 'c)
+      (assert-move-up (h/code "{;; b"
+                              " b 2"
+                              ""
+                              " ;; a"
+                              " a 1"
+                              ""
+                              " ;; c"
+                              " c 3}")
+                      (h/code "{;; a"
+                              " a 1"
+                              ""
+                              " ;; b"
+                              " b 2"
+                              ""
+                              " ;; c"
+                              " c 3}") 'b)
       ;; avoids commenting out closing bracket
       (assert-move-up (h/code "{:b 2"
                               " :a 1 ;; one comment"
@@ -425,6 +441,22 @@
                                 ""
                                 " ;; c"
                                 " c 3}") 'b)
+      (assert-move-down (h/code "{;; b"
+                                " b 2"
+                                ""
+                                " ;; a"
+                                " a 1"
+                                ""
+                                " ;; c"
+                                " c 3}")
+                        (h/code "{;; a"
+                                " a 1"
+                                ""
+                                " ;; b"
+                                " b 2"
+                                ""
+                                " ;; c"
+                                " c 3}") 'a)
       ;; avoids commenting out closing bracket
       (assert-move-down (h/code "{:b 2"
                                 " :a 1 ;; one comment"

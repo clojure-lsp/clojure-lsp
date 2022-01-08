@@ -3,8 +3,8 @@
    [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]
-   [rewrite-clj.node :as n]))
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]))
 
 (deftest can-move-entry-up?
   (testing "common cases"

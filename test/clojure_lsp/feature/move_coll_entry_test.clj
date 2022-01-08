@@ -23,13 +23,13 @@
     (is (not (f.move-coll-entry/can-move-entry-up? (z/of-string "'(:a :b :c :d)"))))
     (is (not (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "{1 2}")
                                                        (z/find-next-value z/next 2)))))
+    (is (not (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "#{1 2 3 4}")
+                                                       (z/find-next-value z/next 3)))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "{1 2 3 4}")
                                                   (z/find-next-value z/next 3))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "{:a :b :c :d}")
                                                   (z/find-next-value z/next :c))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "[1 2 3 4]")
-                                                  (z/find-next-value z/next 3))))
-    (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "#{1 2 3 4}")
                                                   (z/find-next-value z/next 3))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "'[a 1 c 2]")
                                                   (z/find-next-value z/next 'c)))))
@@ -78,13 +78,13 @@
     (is (not (f.move-coll-entry/can-move-entry-down? (z/of-string "'(:a :b :c :d)"))))
     (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "{1 2}")
                                                          (z/find-next-value z/next 1)))))
+    (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "#{1 2 3 4}")
+                                                         (z/find-next-value z/next 1)))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "{1 2 3 4}")
                                                     (z/find-next-value z/next 1))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "{:a :b :c :d}")
                                                     (z/find-next-value z/next :a))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "[1 2 3 4]")
-                                                    (z/find-next-value z/next 1))))
-    (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "#{1 2 3 4}")
                                                     (z/find-next-value z/next 1))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "'[a 1 c 2]")
                                                     (z/find-next-value z/next 'a)))))
@@ -181,12 +181,6 @@
                               " 1 2}")
                       (h/code "{1 2,"
                               " 3 4}") 3))
-    (assert-move-up (h/code "#{b 2,"
-                            "  a 1,"
-                            "  c 3}")
-                    (h/code "#{a 1,"
-                            "  b 2,"
-                            "  c 3}") 'b)
     (assert-move-up (h/code "{:b (+ 1 1)"
                             " :a 1"
                             " :c 3}")
@@ -199,12 +193,6 @@
                     (h/code "[a [1 2]"
                             " b 2"
                             " c 3]") 'c)
-    (assert-move-up (h/code "#{a 1"
-                            "  c 3"
-                            "  b 2}")
-                    (h/code "#{a 1"
-                            "  b 2"
-                            "  c 3}") 'c)
     (testing "with destructuring"
       (assert-move-up (h/code "(let [[a b] [1 2]"
                               "      e 2"
@@ -360,12 +348,6 @@
                                 " 1 2}")
                         (h/code "{1 2,"
                                 " 3 4}") 1))
-    (assert-move-down (h/code "#{b 2,"
-                              "  a 1,"
-                              "  c 3}")
-                      (h/code "#{a 1,"
-                              "  b 2,"
-                              "  c 3}") 'a)
     (assert-move-down (h/code "{:b (+ 1 1)"
                               " :a 1"
                               " :c 3}")
@@ -378,12 +360,6 @@
                       (h/code "[a [1 2]"
                               " b 2"
                               " c 3]") 'b)
-    (assert-move-down (h/code "#{a 1"
-                              "  c 3"
-                              "  b 2}")
-                      (h/code "#{a 1"
-                              "  b 2"
-                              "  c 3}") 'b)
     (testing "with destructuring"
       (assert-move-down (h/code "(let [[a b] [1 2]"
                                 "      {:keys [c d]} {:c 1 :d 2}"

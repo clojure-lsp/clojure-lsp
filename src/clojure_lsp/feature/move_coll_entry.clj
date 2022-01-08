@@ -158,7 +158,7 @@
          first)))
 
 (defn ^:private can-move-entry? [zloc]
-  (and (contains? #{:map :vector :set} (some-> zloc z/up z/tag))
+  (and (contains? #{:map :vector} (some-> zloc z/up z/tag))
        (even? (count (z/child-sexprs (z/up zloc))))))
 
 (defn can-move-entry-up? [zloc]

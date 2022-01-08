@@ -155,7 +155,14 @@
 (deftest move-up
   (testing "common cases"
     ;; TODO fix this case
-    ;; (assert-move-up "{3 4 1 2}" "{1 2 3 4}" 3)
+    ;; Broken because the entries are parsed as
+    ;; |1 2 |3 4|
+    ;; Which gets moved to {3 41 2 }. When there are newlines between nodes,
+    ;; this isn't a problem. To fix this, the code needs to be smarter about
+    ;; relocating whitespace between nodes.
+    (comment
+      (assert-move-up (h/code "{3 4 1 2}")
+                      (h/code "{1 2 3 4}") 3))
     (assert-move-up (h/code "{3 4"
                             " 1 2}")
                     (h/code "{1 2"
@@ -260,6 +267,12 @@
                      (f.move-coll-entry/move-up "file:///a.clj")
                      as-string)))
       ;; TODO fix this case
+      ;; Broken because the code that determines which pairs to swap thinks that
+      ;; <comment "; two comment"> is part of the third pair, not the second.
+      ;; (It sees 4 nodes to its left.)
+      ;; Could possibly fix by keeping better track of the origin node, and
+      ;; detecting which pair it is in. That approach is hampered by
+      ;; expand-comment-newlines which destroys some of the original nodes.
       (comment
         ;; moves from trailing comment / whitespace
         (is (= (h/code "{:b 2 ;; two comment"
@@ -279,6 +292,13 @@
                                (h/code "{:a 1 ;; one comment"
                                        " :b 2}") :b)
       ;; TODO fix this case
+      ;; It moves to the right row, but not the right column.
+      ;; Broken because the code uses :x's original position, not :y's
+      ;; eventual position.
+      ;; It is possible do derive :y's eventual position from z/position-span,
+      ;; but that requires constructing the zipper with {:track-position? true}.
+      ;; That's a global change that may affect performance. Needs to be
+      ;; benchmarked.
       (comment
         (assert-move-up-position [1 8]
                                  (h/code "{:a :x ;; one comment"
@@ -287,7 +307,10 @@
 (deftest move-down
   (testing "common cases"
     ;; TODO fix this case
-    ;; (assert-move-down "{3 4 1 2}" "{1 2 3 4}" 3)
+    ;; see notes for similar failures when moving up
+    (comment
+      (assert-move-down (h/code "{3 4 1 2}")
+                        (h/code "{1 2 3 4}") 1))
     (assert-move-down (h/code "{3 4"
                               " 1 2}")
                       (h/code "{1 2"
@@ -393,6 +416,7 @@
                      (f.move-coll-entry/move-down "file:///a.clj")
                      as-string)))
       ;; TODO fix this case
+      ;; see notes for similar failures when moving up
       (comment
         ;; moves from trailing comment / whitespace
         (is (= (h/code "{:b 2 ;; two comment"
@@ -410,6 +434,7 @@
                                  (h/code "{:a 1 ;; one comment"
                                          " :b 2}") :a)
       ;; TODO fix this case
+      ;; see notes for similar failures when moving up
       (comment
         (assert-move-down-position [2 5]
                                    (h/code "{:a :x ;; one comment"

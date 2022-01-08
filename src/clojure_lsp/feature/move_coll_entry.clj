@@ -119,8 +119,8 @@
         ;; whitespace, but it's moving to a location where it needs
         ;; some. And conversely, the entry that is initially second
         ;; typically has preceding whitespace but is moving somewhere
-        ;; where it shouldn't. We fix this by swapping preceding
-        ;; whitespace between the two.
+        ;; where it shouldn't. We fix this by moving preceding
+        ;; whitespace from one to the other.
         ;; TODO: seems to work whether or not we're swapping the first
         ;; and second entries. But is that accounting for all whitespace
         ;; edge cases? Maybe better to do this only if (= #{0 1}

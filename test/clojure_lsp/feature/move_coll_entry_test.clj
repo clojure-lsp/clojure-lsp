@@ -160,6 +160,10 @@
                             " 1 2}")
                     (h/code "{1 2"
                             " 3 4}") 3)
+    (assert-move-up (h/code "{3 4"
+                            " 1 2}")
+                    (h/code "{1 2"
+                            " 3 4}") 4)
     (assert-move-up (h/code "{:b (+ 1 1)"
                             " :a 1"
                             " :c 3}")
@@ -288,6 +292,10 @@
                               " 1 2}")
                       (h/code "{1 2"
                               " 3 4}") 1)
+    (assert-move-down (h/code "{3 4"
+                              " 1 2}")
+                      (h/code "{1 2"
+                              " 3 4}") 2)
     (assert-move-down (h/code "{:b (+ 1 1)"
                               " :a 1"
                               " :c 3}")

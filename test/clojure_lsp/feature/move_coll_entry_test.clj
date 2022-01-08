@@ -292,9 +292,9 @@
                                           " ;; b comment"
                                           " :b 2 ;; two comment"
                                           " :c 3}"))
+                     ;; move cursor to <comment '; b comment'>
                      (z/down)
                      (z/find-next-value z/right :b)
-                     ;; b comment
                      (z/find z/left* (comp n/comment? z/node))
                      (f.move-coll-entry/move-up "file:///a.clj")
                      as-string)))
@@ -313,9 +313,9 @@
                (some-> (z/of-string (h/code "{:a 1 ;; one comment"
                                             " :b 2 ;; two comment"
                                             " :c 3}"))
+                       ;; move cursor to <comment '; two comment'>
                        (z/down)
                        (z/find-next-value z/right :b)
-                       ;; two comment
                        (z/find z/right* (comp n/comment? z/node))
                        (f.move-coll-entry/move-up "file:///a.clj")
                        as-string)))))
@@ -327,7 +327,7 @@
       ;; It moves to the right row, but not the right column.
       ;; Broken because the code uses :x's original position, not :y's
       ;; eventual position.
-      ;; It is possible do derive :y's eventual position from z/position-span,
+      ;; It is possible to derive :y's eventual position from z/position-span,
       ;; but that requires constructing the zipper with {:track-position? true}.
       ;; That's a global change that may affect performance. Needs to be
       ;; benchmarked.
@@ -474,7 +474,7 @@
                                           " ;; b comment"
                                           " :b 2 ;; two comment"
                                           " :c 3}"))
-                     ;; a comment
+                     ;; move cursor to <comment '; a comment'>
                      (z/down*)
                      (f.move-coll-entry/move-down "file:///a.clj")
                      as-string)))
@@ -488,6 +488,7 @@
                (some-> (z/of-string (h/code "{:a 1 ;; one comment"
                                             " :b 2 ;; two comment"
                                             " :c 3}"))
+                       ;; move cursor to <comment '; one comment'>
                        (z/down)
                        (z/find z/right* (comp n/comment? z/node))
                        (f.move-coll-entry/move-down "file:///a.clj")

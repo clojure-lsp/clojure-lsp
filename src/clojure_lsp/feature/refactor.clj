@@ -2,8 +2,8 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
-   [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
+   [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]

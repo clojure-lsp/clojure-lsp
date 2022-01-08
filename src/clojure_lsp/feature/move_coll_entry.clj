@@ -120,10 +120,10 @@
                                            %)))
 
         ;; Put revised entries back into parent.
-        parent-zloc (->> (concat (flatten entry-pairs)
-                                 extra-lines)
-                         (n/replace-children (z/node parent-zloc))
-                         (z/replace parent-zloc))
+        parent-zloc (z/subedit-> parent-zloc
+                                 (z/replace (n/replace-children (z/node parent-zloc)
+                                                                (concat (flatten entry-pairs)
+                                                                        extra-lines))))
         parent-zloc (if (-> parent-zloc z/down z/rightmost* z/node n/comment?)
                       ;; Do we really need to use z/position and add track-position to whole clojure-lsp zloc to make this work?
                       (let [[_row col] (-> parent-zloc z/down z/rightmost z/left z/position)]
@@ -163,19 +163,19 @@
                 count)
            2)))
 
-(defn ^:private move-entry [zloc uri dir]
+(defn ^:private move-entry [zloc uri dir focus-zloc]
   (when-let [new-zloc (move-entry-zloc zloc dir)]
     {:show-document-after-edit {:uri uri
                                 :take-focus? true
-                                :range (meta (z/node new-zloc))}
+                                :range (meta (z/node focus-zloc))}
      :changes-by-uri {uri
                       [{:range (meta (z/node (z/up new-zloc)))
                         :loc (z/up new-zloc)}]}}))
 
 (defn move-up [zloc uri]
   (when (can-move-entry-up? zloc)
-    (move-entry zloc uri dec)))
+    (move-entry zloc uri dec (-> zloc z/left z/left))))
 
 (defn move-down [zloc uri]
   (when (can-move-entry-down? zloc)
-    (move-entry zloc uri inc)))
+    (move-entry zloc uri inc (-> zloc z/right z/right))))

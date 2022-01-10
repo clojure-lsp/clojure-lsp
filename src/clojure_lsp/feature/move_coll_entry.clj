@@ -26,7 +26,10 @@
   (and (n/comment? n)
        (string/ends-with? (:s n) "\n")))
 
-(defn z-take-while [zloc f p?]
+(defn z-take-while
+  "Returns a sequence of locations in the direction of `f` from `zloc` that
+  satisfy `p?`."
+  [zloc f p?]
   (->> zloc
        (iterate f)
        (take-while identity)
@@ -34,6 +37,9 @@
        (take-while p?)))
 
 (defn z-split-with
+  "Like clojure.core/split-with, but for a clj-rewrite zipper. Returns two
+  items, a sequence of locations to the z/right* of `zloc` that satisfy `p?`,
+  and the first location that doesn't."
   [zloc p?]
   [(z-take-while zloc z/right* p?)
    (z/skip z/right* p? zloc)])
@@ -166,8 +172,9 @@
                                  [:padding false] best-idx)))
                            -1
                            elems)
-        origin-idx (if (odd? origin-idx)
-                     (dec origin-idx)
+        ;; Here we begin to treat elements like pairs.
+        origin-idx (if (odd? origin-idx) ;; on value
+                     (dec origin-idx)    ;; back to key
                      origin-idx)
         dest-idx   (dir (dir origin-idx))
 

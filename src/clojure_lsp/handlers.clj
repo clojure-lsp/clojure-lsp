@@ -181,6 +181,7 @@
     {:project-root-uri (:project-root-uri db-value)
      :project-settings (:project-settings db-value)
      :classpath-settings (:classpath-settings db-value)
+     :classpath (:classpath db-value)
      :client-settings (:client-settings db-value)
      :final-settings (settings/all db/db)
      :port (or (:port db-value)

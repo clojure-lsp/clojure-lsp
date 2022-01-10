@@ -195,6 +195,30 @@
                       (h/code "(let [[a b] [1 2]"
                               "      {:keys [c d]} {:c 1 :d 2}"
                               "      e 2])") {:keys ['c 'd]}))
+    (testing "blank lines"
+      (is (= (h/code "{:b 2"
+                     ""
+                     " :a 1}")
+             (some-> (z/of-string (h/code "{:a 1"
+                                          ""
+                                          " :b 2}"))
+                     ;; move cursor to blank line between a and b
+                     (z/down)
+                     (z/find-next-value z/right 1)
+                     (z/right*)
+                     (f.move-coll-entry/move-up "file:///a.clj")
+                     as-string)))
+      (is (nil?
+           (some-> (z/of-string (h/code "{:a 1"
+                                        ""
+                                        " :b 2"
+                                        ""
+                                        "}"))
+                   ;; move cursor to blank line after b
+                   (z/down)
+                   (z/find-next-value z/right 2)
+                   (z/right*)
+                   (f.move-coll-entry/move-up "file:///a.clj")))))
     (testing "comments"
       (assert-move-up (h/code "{:b (+ 1 1) ;; two comment"
                               " :a 1 ;; one comment"
@@ -341,6 +365,29 @@
                         (h/code "(let [[a b] [1 2]"
                                 "      {:keys [c d]} {:c 1 :d 2}"
                                 "      e 2])") {:keys ['c 'd]}))
+    (testing "blank lines"
+      (is (= (h/code "{"
+                     " :b 2"
+                     ""
+                     " :a 1}")
+             (some-> (z/of-string (h/code "{"
+                                          " :a 1"
+                                          ""
+                                          " :b 2}"))
+                     ;; move cursor to blank line above a
+                     (z/down*)
+                     (f.move-coll-entry/move-down "file:///a.clj")
+                     as-string)))
+      (is (nil?
+           (some-> (z/of-string (h/code "{:a 1"
+                                        ""
+                                        " :b 2}"))
+                   ;; move cursor to blank line between a and b
+                   (z/down)
+                   (z/find-next-value z/right 1)
+                   (z/right*)
+                   (f.move-coll-entry/move-down "file:///a.clj")
+                   as-string))))
     (testing "comments"
       (assert-move-down (h/code "{:b (+ 1 1) ;; two comment"
                                 " :a 1 ;; one comment"

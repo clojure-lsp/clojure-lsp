@@ -22,143 +22,220 @@
        (take-while (complement z/rightmost?))
        count))
 
-(defn ^:private expand-comment-newlines
-  "Comment nodes often include their trailing newline. This splits such nodes
-  into two, to allow more careful handling of newlines."
-  [children]
-  (mapcat (fn [{:keys [s prefix] :as n}]
-            (if (and (n/comment? n)
-                     (string/ends-with? s "\n"))
-              [(n/comment-node prefix (subs s 0 (dec (count s))))
-               (n/newline-node "\n")]
-              [n]))
-          children))
+(defn newline-comment? [n]
+  (and (n/comment? n)
+       (string/ends-with? (:s n) "\n")))
 
-(defn- trailing-whitespace? [node]
-  (and (n/whitespace-or-comment? node)
-       (not (n/linebreak? node))))
+(defn z-take-while
+  "Returns a sequence of locations in the direction of `f` from `zloc` that
+  satisfy `p?`."
+  [zloc f p?]
+  (->> zloc
+       (iterate f)
+       (take-while identity)
+       (take-while (complement z/end?))
+       (take-while p?)))
 
-(defn ^:private parse-entry-pairs
-  "Parse the children of a map or binding `parent-zloc` into entry pairs
-  (key/value pairs or binding/value pairs respectively).
+(defn z-split-with
+  "Like clojure.core/split-with, but for a clj-rewrite zipper. Returns two
+  items, a sequence of locations to the z/right* of `zloc` that satisfy `p?`,
+  and the first location that doesn't."
+  [zloc p?]
+  [(z-take-while zloc z/right* p?)
+   (z/skip z/right* p? zloc)])
 
-  An entry pair is vector of nodes: the key and value themselves, with their
-  surrounding whitespace, comments and newlines.
+(defn ^:private seq-elems
+  "Returns the contents of `seq-zloc` as a a sequence of elements and padding
+  between them.
 
-  Logically, a pair's format is:
-  (whitespace | comment | newline)*
-  key
-  (whitespace | comment | newline)*
-  value
-  (whitespace | comment)*
+  What is an element? It's an item of the parent, plus any comments that are
+  associated with that item. For example, in the following vector there are two
+  elements:
 
-  NOTE: A pair does NOT include any trailing newlines... they are all allocated
-  to the next pair.
+  [;; comment before a
+   :a ;; comment after a
 
-  Returns two values: a vector of the entry pairs, and if there are lines
-  after the last value, a vector of those additional nodes."
-  [parent-zloc]
-  (let [[elements extra-lines]
-        (loop [children (->> parent-zloc
-                             z/node
-                             n/children
-                             expand-comment-newlines)
-               state    :before-key
-               result   []]
-          (cond
-            (not (seq children))
-            ;; everything processed
-            [result []]
+   ;; comment before b
+   :b ;; comment after b
+  ]
 
-            (every? n/whitespace-or-comment? children)
-            ;; everything processed but extra lines
-            [result children]
+  :a and its comments are one element, as are :b and its comments. The
+  whitespace between them is considered padding. To be precise, the padding
+  includes all whitespace, including newlines, between the :a and :b elements.
+  That is, the padding starts at the newline character following ';; comment
+  after a' and continues to the space character preceding ';; comment before b'.
+  In this case, there is also padding after the :b element: a newline and some
+  more whitespace.
 
-            (= :before-key state)
-            ;; gather comments before key, and key itself
-            (let [[prefix [k & rst]] (split-with n/whitespace-or-comment?
-                                                 children)]
-              (recur rst
-                     :before-val
-                     (conj result (concat prefix (when k [k])))))
+  The format of a returned elem is:
+  {:type :elem
+   :idx  <index of the element within seq-zloc>
+   :locs <sequence of zipper locations whose nodes make up the element>}
 
-            (= :before-val state)
-            ;; gather comments before val, val itself, and optional comment
-            ;; after val on same line
-            (let [[prefix [v & rst]] (split-with n/whitespace-or-comment?
-                                                 children)
-                  [postfix rst]      (split-with trailing-whitespace?
-                                                 rst)]
-              (recur rst
-                     :before-key
-                     (conj result (concat prefix (when v [v]) postfix))))))]
-    [(->> elements
-          (partition-all 2)
-          (mapv (fn [[k v]] (concat k v))))
-     extra-lines]))
+  The format of a returned padding is:
+  {:type :padding
+   :locs <sequence of zipper locations whose nodes make up the padding>}
+
+  The children of the original `seq-zloc` could be reconstructed by
+  concatenating all the `:locs` together.
+  "
+  [seq-zloc]
+  (loop [zloc (-> seq-zloc
+                  (z/edit* (fn [parent-node]
+                             (n/replace-children parent-node
+                                                 (mapcat (fn [node]
+                                                           (if (newline-comment? node)
+                                                             [(update node :s subs 0 (dec (count (:s node))))
+                                                              (n/newline-node "\n")]
+                                                             [node]))
+                                                         (n/children parent-node)))))
+                  z/down*)
+
+         state    :in-padding
+         elem-idx 0
+         result   []]
+    (cond
+      (nil? zloc) ;; rightmost?*
+      ;; everything processed
+      result
+
+      (= :in-padding state)
+      (let [[padding zloc] (z-split-with zloc z/whitespace?)]
+        (recur zloc
+               :on-elem
+               elem-idx
+               (cond-> result
+                 (seq padding) (conj {:type :padding :locs padding}))))
+
+      (= :on-elem state)
+      (let [[prefix elem-loc] (z-split-with zloc z/whitespace-or-comment?)]
+        (if-not elem-loc
+          ;; We've processed all the elements and this is trailing
+          ;; whitespace.
+          (cond-> result
+            (seq prefix) (conj {:type :padding :locs prefix}))
+          (let [;; find the start of the next padding
+                zloc    (->> elem-loc
+                             z/right*
+                             ;; seek to the first newline, comma or regular node
+                             ;; TODO: handle case where comma precedes comment
+                             ;; `a 1, ;; one comment`
+                             ;; Conceptually, the comma should stay put while
+                             ;; the entry and comment move.
+                             (z/skip z/right* (comp #{:whitespace :comment}
+                                                    z/tag))
+                             ;; relinquish that node
+                             z/left*
+                             ;; then give up as much whitespace as possible,
+                             ;; back to the (optional) comment
+                             (z/skip z/left* z/whitespace?)
+                             ;; then forward to the padding
+                             z/right*)
+                postfix (z-take-while (z/right* elem-loc)
+                                      z/right*
+                                      #(not= zloc %))]
+            (recur zloc
+                   :in-padding
+                   (inc elem-idx)
+                   (conj result
+                         {:type :elem
+                          :idx  elem-idx
+                          :locs (concat prefix [elem-loc] postfix)}))))))))
+
+(defn z-cursor-position [zloc]
+  (meta (z/node zloc)))
 
 (defn ^:private move-entry-zloc
   "Move `zloc` to direction `dir` considering multiple comments cases."
   [zloc dir]
-  (let [parent-zloc               (z/up zloc)
-        [entry-pairs extra-lines] (parse-entry-pairs parent-zloc)
+  (let [parent-zloc     (z/up zloc)
+        cursor-position (z-cursor-position zloc)
 
-        node-idx     (count-siblings-left zloc)
-        new-node-idx (dir (dir node-idx))
-        ;; index of the entry pair we're moving, whether the original
-        ;; node was a key or value.
-        pair-idx     (-> node-idx (/ 2) int)
-        new-pair-idx (dir pair-idx)
-        entry-pairs  (assoc entry-pairs
-                            pair-idx (get entry-pairs new-pair-idx)
-                            new-pair-idx (get entry-pairs pair-idx))
-        ;; Most entries can keep the whitespace that precedes them,
-        ;; whether moving up or down. This assumption fails when
-        ;; swapping the first and second entries. The entry that is
-        ;; initially first typically doesn't have any preceding
-        ;; whitespace, but it's moving to a location where it needs
-        ;; some. And conversely, the entry that is initially second
-        ;; typically has preceding whitespace but is moving somewhere
-        ;; where it shouldn't. We fix this by moving preceding
-        ;; whitespace from one to the other.
-        ;; TODO: seems to work whether or not we're swapping the first
-        ;; and second entries. But is that accounting for all whitespace
-        ;; edge cases? Maybe better to do this only if (= #{0 1}
-        ;; (hash-set pair-idx new-pair-idx)).
-        [whitespace first-entry] (split-with n/whitespace? (get entry-pairs 0))
-        entry-pairs              (-> entry-pairs
-                                     (assoc 0 first-entry)
-                                     (update 1 #(concat whitespace %)))
+        elems (seq-elems parent-zloc)
 
-        ;; Put revised entries back into parent.
-        parent-zloc (z/subedit-> parent-zloc
-                                 (z/replace (n/replace-children (z/node parent-zloc)
-                                                                (concat (flatten entry-pairs)
-                                                                        extra-lines))))
+        ;; Search for original cursor location within elems.
+        ;; We compare cursor position, not full loc, because comments have been
+        ;; separated from their newlines by `seq-elems`.
+        ;; This algorithm is complicated by the possiblity that the cursor is on
+        ;; padding between elements. If this was the case, we assume the
+        ;; intention was to move the next element.
+        origin-idx (reduce (fn [best-idx {:keys [idx type locs]}]
+                             (let [origin? (->> locs
+                                                (some (fn [elem-loc]
+                                                        (= (z-cursor-position elem-loc)
+                                                           cursor-position)))
+                                                boolean)]
+                               (case [type origin?]
+                                 [:elem true]     (reduced idx)
+                                 [:elem false]    idx
+                                 [:padding true]  (reduced (inc best-idx))
+                                 [:padding false] best-idx)))
+                           -1
+                           elems)
+        ;; Here we begin to treat elements like pairs.
+        origin-idx (if (odd? origin-idx) ;; on value
+                     (dec origin-idx)    ;; back to key
+                     origin-idx)
+        dest-idx   (dir (dir origin-idx))
 
-        ;; If after reordering, the last component has become a comment,
-        ;; we need to add a newline or else the closing bracket will be
-        ;; commented out.
-        last-zloc   (-> parent-zloc z/down z/rightmost*)
-        parent-zloc (if (-> last-zloc z/node n/comment?)
-                      ;; align bracket with last key
-                      (let [last-key (-> parent-zloc z/down z/rightmost z/left)
-                            col      (:col (meta (z/node last-key)))]
-                        (-> last-zloc
-                            (z/insert-space-right (dec col))
-                            z/insert-newline-right
-                            z/up))
-                      parent-zloc)]
-    ;; Move zipper back to original node, so repeated invocations keep
-    ;; moving the same entry.
-    (->> parent-zloc
-         z/down
-         (iterate z/right)
-         (drop new-node-idx)
-         first)))
+        origin-elem (->> elems
+                         (filter (fn [{:keys [type idx]}]
+                                   (and (= :elem type)
+                                        (= idx origin-idx))))
+                         first)
+        dest-elem   (->> elems
+                         (filter (fn [{:keys [type idx]}]
+                                   (and (= :elem type)
+                                        (= idx dest-idx))))
+                         first)]
+    ;; In a few cases, the simple can-move-*? heuristics return the wrong
+    ;; results. This happens:
+    ;; A) When on a padding line after the first pair, and `move-up` is invoked.
+    ;; B) When on a padding line before the last pair, and `move-down` is invoked.
+    ;; Movement should not be allowed in either of these cases. Unfortunately,
+    ;; there's no quick way to know we're in this situation. But now that we
+    ;; have parsed the elems, we can detect it. It manifests as the origin-idx
+    ;; or dest-idx being out of bounds, in which case either origin-elem or
+    ;; dest-elem will be missing. We bail out now to avoid erroneous swaps.
+    (when (and origin-elem dest-elem)
+      (let [earlier-idx        (min origin-idx dest-idx)
+            [before rst]       (split-with (fn [{:keys [type idx]}]
+                                             (or (= :padding type)
+                                                 (< idx earlier-idx)))
+                                           elems)
+            [earlier-pair rst] (split-at 3 rst) ;; key, padding, value
+            [interstitial rst] (split-at 1 rst) ;; padding
+            [later-pair rst]   (split-at 3 rst) ;; key, padding, value
+
+            swapped     (concat before
+                                later-pair
+                                interstitial
+                                earlier-pair
+                                rst)
+            ;; Put revised entries back into parent.
+            parent-zloc (z/replace parent-zloc
+                                   (n/replace-children (z/node parent-zloc)
+                                                       (->> swapped
+                                                            (mapcat :locs)
+                                                            (map z/node))))
+
+            ;; If after reordering, the last component has become a comment,
+            ;; we need to add a newline or else the closing bracket will be
+            ;; commented out.
+            last-zloc   (-> parent-zloc z/down z/rightmost*)
+            parent-zloc (if (-> last-zloc z/node n/comment?)
+                          ;; align bracket with last key
+                          (let [last-key (-> parent-zloc z/down z/rightmost z/left)
+                                col      (:col (meta (z/node last-key)))]
+                            (-> last-zloc
+                                (z/insert-space-right (dec col))
+                                z/insert-newline-right
+                                z/up))
+                          parent-zloc)]
+        [parent-zloc (first (:locs dest-elem))]))))
 
 (defn ^:private can-move-entry? [zloc]
-  (and (contains? #{:map :vector :set} (some-> zloc z/up z/tag))
+  (and (contains? #{:map :vector} (some-> zloc z/up z/tag))
        (even? (count (z/child-sexprs (z/up zloc))))))
 
 (defn can-move-entry-up? [zloc]
@@ -169,19 +246,19 @@
   (and (can-move-entry? zloc)
        (>= (count-siblings-right zloc) 2)))
 
-(defn ^:private move-entry [zloc uri dir focus-zloc]
-  (when-let [new-zloc (move-entry-zloc zloc dir)]
-    {:show-document-after-edit {:uri uri
+(defn ^:private move-entry [zloc uri dir]
+  (when-let [[parent-loc dest-loc] (move-entry-zloc zloc dir)]
+    {:show-document-after-edit {:uri         uri
                                 :take-focus? true
-                                :range (meta (z/node focus-zloc))}
-     :changes-by-uri {uri
-                      [{:range (meta (z/node (z/up new-zloc)))
-                        :loc (z/up new-zloc)}]}}))
+                                :range       (z-cursor-position dest-loc)}
+     :changes-by-uri           {uri
+                                [{:range (z-cursor-position parent-loc)
+                                  :loc   parent-loc}]}}))
 
 (defn move-up [zloc uri]
   (when (can-move-entry-up? zloc)
-    (move-entry zloc uri dec (-> zloc z/left z/left))))
+    (move-entry zloc uri dec)))
 
 (defn move-down [zloc uri]
   (when (can-move-entry-down? zloc)
-    (move-entry zloc uri inc (-> zloc z/right z/right))))
+    (move-entry zloc uri inc)))

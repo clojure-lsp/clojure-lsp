@@ -23,13 +23,13 @@
     (is (not (f.move-coll-entry/can-move-entry-up? (z/of-string "'(:a :b :c :d)"))))
     (is (not (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "{1 2}")
                                                        (z/find-next-value z/next 2)))))
+    (is (not (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "#{1 2 3 4}")
+                                                       (z/find-next-value z/next 3)))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "{1 2 3 4}")
                                                   (z/find-next-value z/next 3))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "{:a :b :c :d}")
                                                   (z/find-next-value z/next :c))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "[1 2 3 4]")
-                                                  (z/find-next-value z/next 3))))
-    (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "#{1 2 3 4}")
                                                   (z/find-next-value z/next 3))))
     (is (f.move-coll-entry/can-move-entry-up? (-> (z/of-string "'[a 1 c 2]")
                                                   (z/find-next-value z/next 'c)))))
@@ -78,13 +78,13 @@
     (is (not (f.move-coll-entry/can-move-entry-down? (z/of-string "'(:a :b :c :d)"))))
     (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "{1 2}")
                                                          (z/find-next-value z/next 1)))))
+    (is (not (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "#{1 2 3 4}")
+                                                         (z/find-next-value z/next 1)))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "{1 2 3 4}")
                                                     (z/find-next-value z/next 1))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "{:a :b :c :d}")
                                                     (z/find-next-value z/next :a))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "[1 2 3 4]")
-                                                    (z/find-next-value z/next 1))))
-    (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "#{1 2 3 4}")
                                                     (z/find-next-value z/next 1))))
     (is (f.move-coll-entry/can-move-entry-down? (-> (z/of-string "'[a 1 c 2]")
                                                     (z/find-next-value z/next 'a)))))
@@ -154,17 +154,10 @@
 
 (deftest move-up
   (testing "common cases"
-    ;; TODO fix this case
-    ;; Broken because the entries are parsed as
-    ;; |1 2 |3 4|
-    ;; Which gets moved to {3 41 2 }. When there are newlines between nodes,
-    ;; this isn't a problem. To fix this, the code needs to be smarter about
-    ;; reallocating whitespace between nodes.
-    (comment
-      (assert-move-up (h/code "{3 4 1 2}")
-                      (h/code "{1 2 3 4}") 3)
-      (assert-move-up (h/code "{3 4, 1 2}")
-                      (h/code "{1 2, 3 4}") 3))
+    (assert-move-up (h/code "{3 4 1 2}")
+                    (h/code "{1 2 3 4}") 3)
+    (assert-move-up (h/code "{3 4, 1 2}")
+                    (h/code "{1 2, 3 4}") 3)
     (assert-move-up (h/code "{3 4"
                             " 1 2}")
                     (h/code "{1 2"
@@ -173,20 +166,10 @@
                             " 1 2}")
                     (h/code "{1 2"
                             " 3 4}") 4)
-    ;; TODO fix this case
-    ;; Comma stays attached to `1 2,` entry. As with single line maps, the code
-    ;; needs to be smarter about reallocating whitespace between nodes.
-    (comment
-      (assert-move-up (h/code "{3 4,"
-                              " 1 2}")
-                      (h/code "{1 2,"
-                              " 3 4}") 3))
-    (assert-move-up (h/code "#{b 2,"
-                            "  a 1,"
-                            "  c 3}")
-                    (h/code "#{a 1,"
-                            "  b 2,"
-                            "  c 3}") 'b)
+    (assert-move-up (h/code "{3 4,"
+                            " 1 2}")
+                    (h/code "{1 2,"
+                            " 3 4}") 3)
     (assert-move-up (h/code "{:b (+ 1 1)"
                             " :a 1"
                             " :c 3}")
@@ -199,12 +182,6 @@
                     (h/code "[a [1 2]"
                             " b 2"
                             " c 3]") 'c)
-    (assert-move-up (h/code "#{a 1"
-                            "  c 3"
-                            "  b 2}")
-                    (h/code "#{a 1"
-                            "  b 2"
-                            "  c 3}") 'c)
     (testing "with destructuring"
       (assert-move-up (h/code "(let [[a b] [1 2]"
                               "      e 2"
@@ -218,6 +195,29 @@
                       (h/code "(let [[a b] [1 2]"
                               "      {:keys [c d]} {:c 1 :d 2}"
                               "      e 2])") {:keys ['c 'd]}))
+    (testing "blank lines"
+      (is (= (h/code "{:b 2"
+                     ""
+                     " :a 1}")
+             (some-> (z/of-string (h/code "{:a 1"
+                                          ""
+                                          " :b 2}"))
+                     ;; move cursor to blank line between a and b
+                     (z/down)
+                     (z/find-next-value z/right 1)
+                     (z/right*)
+                     (f.move-coll-entry/move-up "file:///a.clj")
+                     as-string)))
+      (is (nil? (some-> (z/of-string (h/code "{:a 1"
+                                             ""
+                                             " :b 2"
+                                             ""
+                                             "}"))
+                        ;; move cursor to blank line after b
+                        (z/down)
+                        (z/find-next-value z/right 2)
+                        (z/right*)
+                        (f.move-coll-entry/move-up "file:///a.clj")))))
     (testing "comments"
       (assert-move-up (h/code "{:b (+ 1 1) ;; two comment"
                               " :a 1 ;; one comment"
@@ -298,53 +298,34 @@
                      (z/find z/left* (comp n/comment? z/node))
                      (f.move-coll-entry/move-up "file:///a.clj")
                      as-string)))
-      ;; TODO fix this case
-      ;; Broken because the code that determines which pairs to swap thinks that
-      ;; <comment "; two comment"> is part of the third pair, not the second.
-      ;; (It sees 4 nodes to its left.)
-      ;; Could possibly fix by keeping better track of the origin node, and
-      ;; detecting which pair it is in. That approach is hampered by
-      ;; expand-comment-newlines which destroys some of the original nodes.
-      (comment
-        ;; moves from trailing comment / whitespace
-        (is (= (h/code "{:b 2 ;; two comment"
-                       " :a 1 ;; one comment"
-                       " :c 3}")
-               (some-> (z/of-string (h/code "{:a 1 ;; one comment"
-                                            " :b 2 ;; two comment"
-                                            " :c 3}"))
-                       ;; move cursor to <comment '; two comment'>
-                       (z/down)
-                       (z/find-next-value z/right :b)
-                       (z/find z/right* (comp n/comment? z/node))
-                       (f.move-coll-entry/move-up "file:///a.clj")
-                       as-string)))))
+      ;; moves from trailing comment / whitespace
+      (is (= (h/code "{:b 2 ;; two comment"
+                     " :a 1 ;; one comment"
+                     " :c 3}")
+             (some-> (z/of-string (h/code "{:a 1 ;; one comment"
+                                          " :b 2 ;; two comment"
+                                          " :c 3}"))
+                     ;; move cursor to <comment '; two comment'>
+                     (z/down)
+                     (z/find-next-value z/right :b)
+                     (z/find z/right* (comp n/comment? z/node))
+                     (f.move-coll-entry/move-up "file:///a.clj")
+                     as-string))))
     (testing "relocation"
       (assert-move-up-position [1 2]
                                (h/code "{:a 1 ;; one comment"
                                        " :b 2}") :b)
-      ;; TODO fix this case
-      ;; It moves to the right row, but not the right column.
-      ;; Broken because the code uses :x's original position, not :y's
-      ;; eventual position.
-      ;; It is possible to derive :y's eventual position from z/position-span,
-      ;; but that requires constructing the zipper with {:track-position? true}.
-      ;; That's a global change that may affect performance. Needs to be
-      ;; benchmarked.
-      (comment
-        (assert-move-up-position [1 8]
-                                 (h/code "{:a :x ;; one comment"
-                                         " :b    :y}") :y)))))
+      ;; moves cursor to start of entry pair
+      (assert-move-up-position [1 2]
+                               (h/code "{:a :x ;; one comment"
+                                       " :b    :y}") :y))))
 
 (deftest move-down
   (testing "common cases"
-    ;; TODO fix this case
-    ;; see notes for similar failures when moving up
-    (comment
-      (assert-move-down (h/code "{3 4 1 2}")
-                        (h/code "{1 2 3 4}") 1)
-      (assert-move-down (h/code "{3 4, 1 2}")
-                        (h/code "{1 2, 3 4}") 1))
+    (assert-move-down (h/code "{3 4 1 2}")
+                      (h/code "{1 2 3 4}") 1)
+    (assert-move-down (h/code "{3 4, 1 2}")
+                      (h/code "{1 2, 3 4}") 1)
     (assert-move-down (h/code "{3 4"
                               " 1 2}")
                       (h/code "{1 2"
@@ -353,19 +334,10 @@
                               " 1 2}")
                       (h/code "{1 2"
                               " 3 4}") 2)
-    ;; TODO fix this case
-    ;; see notes for similar failures when moving up
-    (comment
-      (assert-move-down (h/code "{3 4,"
-                                " 1 2}")
-                        (h/code "{1 2,"
-                                " 3 4}") 1))
-    (assert-move-down (h/code "#{b 2,"
-                              "  a 1,"
-                              "  c 3}")
-                      (h/code "#{a 1,"
-                              "  b 2,"
-                              "  c 3}") 'a)
+    (assert-move-down (h/code "{3 4,"
+                              " 1 2}")
+                      (h/code "{1 2,"
+                              " 3 4}") 1)
     (assert-move-down (h/code "{:b (+ 1 1)"
                               " :a 1"
                               " :c 3}")
@@ -378,12 +350,6 @@
                       (h/code "[a [1 2]"
                               " b 2"
                               " c 3]") 'b)
-    (assert-move-down (h/code "#{a 1"
-                              "  c 3"
-                              "  b 2}")
-                      (h/code "#{a 1"
-                              "  b 2"
-                              "  c 3}") 'b)
     (testing "with destructuring"
       (assert-move-down (h/code "(let [[a b] [1 2]"
                                 "      {:keys [c d]} {:c 1 :d 2}"
@@ -398,6 +364,28 @@
                         (h/code "(let [[a b] [1 2]"
                                 "      {:keys [c d]} {:c 1 :d 2}"
                                 "      e 2])") {:keys ['c 'd]}))
+    (testing "blank lines"
+      (is (= (h/code "{"
+                     " :b 2"
+                     ""
+                     " :a 1}")
+             (some-> (z/of-string (h/code "{"
+                                          " :a 1"
+                                          ""
+                                          " :b 2}"))
+                     ;; move cursor to blank line above a
+                     (z/down*)
+                     (f.move-coll-entry/move-down "file:///a.clj")
+                     as-string)))
+      (is (nil? (some-> (z/of-string (h/code "{:a 1"
+                                             ""
+                                             " :b 2}"))
+                        ;; move cursor to blank line between a and b
+                        (z/down)
+                        (z/find-next-value z/right 1)
+                        (z/right*)
+                        (f.move-coll-entry/move-down "file:///a.clj")
+                        as-string))))
     (testing "comments"
       (assert-move-down (h/code "{:b (+ 1 1) ;; two comment"
                                 " :a 1 ;; one comment"
@@ -478,28 +466,22 @@
                      (z/down*)
                      (f.move-coll-entry/move-down "file:///a.clj")
                      as-string)))
-      ;; TODO fix this case
-      ;; see notes for similar failures when moving up
-      (comment
-        ;; moves from trailing comment / whitespace
-        (is (= (h/code "{:b 2 ;; two comment"
-                       " :a 1 ;; one comment"
-                       " :c 3}")
-               (some-> (z/of-string (h/code "{:a 1 ;; one comment"
-                                            " :b 2 ;; two comment"
-                                            " :c 3}"))
-                       ;; move cursor to <comment '; one comment'>
-                       (z/down)
-                       (z/find z/right* (comp n/comment? z/node))
-                       (f.move-coll-entry/move-down "file:///a.clj")
-                       as-string)))))
+      (is (= (h/code "{:b 2 ;; two comment"
+                     " :a 1 ;; one comment"
+                     " :c 3}")
+             (some-> (z/of-string (h/code "{:a 1 ;; one comment"
+                                          " :b 2 ;; two comment"
+                                          " :c 3}"))
+                     ;; move cursor to <comment '; one comment'>
+                     (z/down)
+                     (z/find z/right* (comp n/comment? z/node))
+                     (f.move-coll-entry/move-down "file:///a.clj")
+                     as-string))))
     (testing "relocation"
       (assert-move-down-position [2 2]
                                  (h/code "{:a 1 ;; one comment"
                                          " :b 2}") :a)
-      ;; TODO fix this case
-      ;; see notes for similar failures when moving up
-      (comment
-        (assert-move-down-position [2 5]
-                                   (h/code "{:a :x ;; one comment"
-                                           " :b    :y}") :x)))))
+      ;; moves cursor to start of entry pair
+      (assert-move-down-position [2 2]
+                                 (h/code "{:a :x ;; one comment"
+                                         " :b    :y}") :x))))

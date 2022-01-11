@@ -10,6 +10,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
+   [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]
@@ -332,6 +333,19 @@
                        parent-meta)
               :loc (edit/join-let result-loc)}]))))))
 
+(defn- unify-to-one-language
+  "Drop the clojurescript analysis info when there is also clojure info"
+  [analysis]
+  (let [langs-present (->> analysis
+                           vals
+                           flatten
+                           (map :lang)
+                           (into #{}))
+        non-clj-lang? (fn [{:keys [lang]}] (and lang (not (= :clj lang))))]
+    (if (= #{:clj :cljs} langs-present)
+      (medley/map-vals (partial remove non-clj-lang?) analysis)
+      analysis)))
+
 (defn extract-function
   [zloc uri fn-name db]
   (let [{:keys [row col]} (meta (z/node zloc))
@@ -350,7 +364,8 @@
                                      :end-row
                                      inc)
         fn-sym (symbol fn-name)
-        used-syms (->> (q/find-local-usages-under-form (:analysis @db)
+        clj-analysis (unify-to-one-language (:analysis @db))
+        used-syms (->> (q/find-local-usages-under-form clj-analysis
                                                        (shared/uri->filename uri)
                                                        row
                                                        col

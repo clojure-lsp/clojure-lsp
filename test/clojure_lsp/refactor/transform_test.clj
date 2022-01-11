@@ -6,7 +6,7 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [are deftest is testing]]
    [rewrite-clj.zip :as z]))
 
 (h/reset-db-after-test)
@@ -291,19 +291,31 @@
 (defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
 
+(defn- extract-fun [code new-fn-name symbol-to-extract filepath]
+  (h/clean-db!)
+  (let [file-uri (h/file-uri filepath)
+        zloc (z/find-value (z/of-string code) z/next symbol-to-extract)]
+    (h/load-code-and-locs code file-uri)
+    (transform/extract-function zloc
+                                (h/file-uri file-uri)
+                                new-fn-name
+                                db/db)))
+
+(defn- extract-fun-string-results [code new-fn-name symbol-to-extract filepath]
+  (let [results (extract-fun code new-fn-name symbol-to-extract filepath)]
+    (map #(-> % :loc z/string) results)))
+
 (deftest extract-function-test
   (testing "simple extract"
-    (h/clean-db!)
-    (let [code "(defn a [b] (let [c 1] (b c)))"
-          zloc (z/find-value (z/of-string code) z/next 'let)
-          _ (h/load-code-and-locs code)
-          results (transform/extract-function
-                    zloc
-                    (h/file-uri "file:///a.clj")
-                    "foo"
-                    db/db)]
-      (is (= "\n(defn foo [b]\n  (let [c 1] (b c)))\n" (z/string (:loc (first results)))))
-      (is (= "(foo b)" (z/string (:loc (last results)))))))
+    (are [filepath] (= ["\n(defn foo [b]\n  (let [c 1] (b c)))\n"
+                        "(foo b)"]
+                       (extract-fun-string-results "(defn a [b] (let [c 1] (b c)))"
+                                                   "foo"
+                                                   'let
+                                                   filepath))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
   (testing "multiple locals extract"
     (h/clean-db!)
     (let [code (h/code "(let [a 1 b 2 c 3]"

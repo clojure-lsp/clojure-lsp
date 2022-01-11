@@ -4,6 +4,7 @@
 
 - General
   - Add `:classpath` to `serverInfo` command for downstream usages.
+  - Fix issues in `extract-function` that arise when operating over `.cljc` files.
 
 - Editor
   - Improve 'create function' refactor code action handling multiple cases. #682

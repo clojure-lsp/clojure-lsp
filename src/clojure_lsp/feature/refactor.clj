@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
@@ -76,6 +77,12 @@
 
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))
+
+(defmethod refactor :move-coll-entry-up [{:keys [loc uri]}]
+  (f.move-coll-entry/move-up loc uri))
+
+(defmethod refactor :move-coll-entry-down [{:keys [loc uri]}]
+  (f.move-coll-entry/move-down loc uri))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc args))

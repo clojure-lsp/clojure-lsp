@@ -169,6 +169,7 @@ User can register additional custom snippets, for more information on how to con
 | Resolve macro as...                | <img src="../images/features/resolve-macro-as.gif" width=720>        |
 | Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>           |
 | Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=720>             |
+| Move coll entry up/down            | <img src="../images/features/move-coll-entry.gif" width=720>         |
 | Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
 | Cycle privacy                      |                                                                      |
 | Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
@@ -280,6 +281,9 @@ __Note: Most of them are available via code actions and most of the time you wan
 - Unwind all
 - Unwind thread
 - Create test
+- Sort map
+- Move coll entry up
+- Move coll entry down
 
 #### Dev
 

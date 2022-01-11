@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.code-actions
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
@@ -158,6 +159,12 @@
              "refactor-sort-map"
              (refactor-code-action :sort-map zloc uri line character db)
 
+             "refactor-move-coll-entry-down"
+             (refactor-code-action :move-coll-entry-down zloc uri line character db)
+
+             "refactor-move-coll-entry-up"
+             (refactor-code-action :move-coll-entry-up zloc uri line character db)
+
              "refactor-suppress-diagnostic"
              (refactor-code-action :suppress-diagnostic zloc uri line character db diagnostic-code)
 
@@ -258,6 +265,16 @@
              "refactor-sort-map"
              {:command {:title     "Sort map"
                         :command   "sort-map"
+                        :arguments [uri line character]}}
+
+             "refactor-move-coll-entry-up"
+             {:command {:title     "Move coll key-value entry up"
+                        :command   "move-coll-entry-up"
+                        :arguments [uri line character]}}
+
+             "refactor-move-coll-entry-down"
+             {:command {:title     "Move coll key-value entry down"
+                        :command   "move-coll-entry-down"
                         :arguments [uri line character]}}
 
              "refactor-suppress-diagnostic"
@@ -412,6 +429,22 @@
           :line line
           :character character}})
 
+(defn ^:private move-coll-entry-up-action [uri line character]
+  {:title "Move coll key-pair entry up"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-move-coll-entry-up"
+          :uri uri
+          :line line
+          :character character}})
+
+(defn ^:private move-coll-entry-down-action [uri line character]
+  {:title "Move coll key-pair entry down"
+   :kind CodeActionKind/RefactorRewrite
+   :data {:id "refactor-move-coll-entry-down"
+          :uri uri
+          :line line
+          :character character}})
+
 (defn ^:private suppress-diagnostic-actions [diagnostics uri]
   (->> diagnostics
        (map (fn [{:keys [code]
@@ -477,6 +510,8 @@
         missing-imports* (future (find-missing-imports uri diagnostics db))
         require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
+        allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc))
+        allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []
@@ -523,6 +558,14 @@
       (and workspace-edit-capability?
            @allow-sort-map?*)
       (conj (sort-map-action uri line character))
+
+      (and workspace-edit-capability?
+           @allow-move-entry-up?*)
+      (conj (move-coll-entry-up-action uri line character))
+
+      (and workspace-edit-capability?
+           @allow-move-entry-down?*)
+      (conj (move-coll-entry-down-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))

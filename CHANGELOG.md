@@ -9,8 +9,8 @@
   - Improve 'create function' refactor code action handling multiple cases. #682
   - Fix 'resolve macro as ...' code action not working.
   - Fix `showDocumentRequest` issues when triggered via some refactor code action.
+  - Add new code actions + commands `Move coll entry down` and `Move coll entry up` to move map/vectors pair entries. #684
   
-
 ## 2022.01.03-19.46.10
 
 - Catch clj-kondo prints to stdout and log to clojure-lsp log file avoiding crashes on some clients like vscode/Calva.

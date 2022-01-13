@@ -8,19 +8,34 @@
 
 (h/reset-db-after-test :api-test)
 
-(deftest analyze-project!
+(deftest analyze-project-and-deps!
   (testing "when project-root is not a file"
     (is (thrown? AssertionError
-                 (api/analyze-project! {:project-root "integration-test/sample-test"}))))
+                 (api/analyze-project-and-deps! {:project-root "integration-test/sample-test"}))))
   (testing "when project-root is not a existent file"
     (is (thrown? AssertionError
-                 (api/analyze-project! {:project-root (io/file "integration-test/sample-test/bla")}))))
+                 (api/analyze-project-and-deps! {:project-root (io/file "integration-test/sample-test/bla")}))))
   (testing "when project was not analyzed before, analyzes and return a truthy value"
     (h/clean-db! :api-test)
-    (is (api/analyze-project! {:project-root (io/file "integration-test/sample-test")
+    (is (api/analyze-project-and-deps! {:project-root (io/file "integration-test/sample-test")
                                :raw? true})))
   (testing "when project was already analyzed before return a falsey value"
-    (is (not (api/analyze-project! {:project-root (io/file "integration-test/sample-test")
+    (is (not (api/analyze-project-and-deps! {:project-root (io/file "integration-test/sample-test")
+                                    :raw? true})))))
+
+(deftest analyze-project-only!
+  (testing "when project-root is not a file"
+    (is (thrown? AssertionError
+                 (api/analyze-project-only! {:project-root "integration-test/sample-test"}))))
+  (testing "when project-root is not a existent file"
+    (is (thrown? AssertionError
+                 (api/analyze-project-only! {:project-root (io/file "integration-test/sample-test/bla")}))))
+  (testing "when project was not analyzed before, analyzes and return a truthy value"
+    (h/clean-db! :api-test)
+    (is (api/analyze-project-only! {:project-root (io/file "integration-test/sample-test")
+                               :raw? true})))
+  (testing "when project was already analyzed before return a falsey value"
+    (is (not (api/analyze-project-only! {:project-root (io/file "integration-test/sample-test")
                                     :raw? true})))))
 
 (deftest clean-ns!

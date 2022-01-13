@@ -32,14 +32,6 @@
              (settings/get db/db [:api :exit-on-errors?] true))
     (throw (ex-info message {:result-code 1 :message extra}))))
 
-(defmacro ^:private safe-analyze [& body]
-  `(try
-     ~@body
-     (catch clojure.lang.ExceptionInfo e#
-       (throw e#))
-     (catch Exception e#
-       (throw (ex-info "Error during project analysis" {:message e#})))))
-
 (defn ^:private project-root->uri [project-root]
   (-> (or ^java.io.File project-root (io/file ""))
       .getCanonicalPath
@@ -51,26 +43,43 @@
     (when (= 100 percentage)
       (cli-println options ""))))
 
-(defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
+(defn ^:private setup-api! [{:keys [verbose] :as options}]
   (swap! db/db assoc
          :api? true
          :messages-fn #(show-message-cli options %))
   (when verbose
-    (logging/set-log-to-stdout))
-  (when-not (:analysis @db/db)
-    (safe-analyze
-      (crawler/initialize-project
-        (project-root->uri project-root)
-        {:workspace {:workspace-edit {:document-changes true}}}
-        (interop/clean-client-settings {})
-        (merge (shared/assoc-some
-                 {:lint-project-files-after-startup? false
-                  :text-document-sync-kind :full}
-                 :log-path log-path)
-               settings)
-        (partial initialize-report-callback options)
-        db/db)
-      true)))
+    (logging/set-log-to-stdout)))
+
+(defn ^:private analyze!
+  [{:keys [project-root settings log-path] :as options}]
+  (try
+    (crawler/initialize-project
+      (project-root->uri project-root)
+      {:workspace {:workspace-edit {:document-changes true}}}
+      (interop/clean-client-settings {})
+      (merge (shared/assoc-some
+               {:lint-project-files-after-startup? false
+                :text-document-sync-kind :full}
+               :log-path log-path)
+             settings)
+      (partial initialize-report-callback options)
+      db/db)
+    true
+    (catch clojure.lang.ExceptionInfo e
+      (throw e))
+    (catch Exception e
+      (throw (ex-info "Error during project analysis" {:message e})))))
+
+(defn ^:private setup-project-and-deps-analysis! [options]
+  (when (or (not (:analysis @db/db))
+            (not= :project-and-deps (:project-analysis-type @db/db)))
+    (swap! db/db assoc :project-analysis-type :project-and-deps)
+    (analyze! options)))
+
+(defn ^:private setup-project-only-analysis! [options]
+  (when (not (:analysis @db/db))
+    (swap! db/db assoc :project-analysis-type :project-only)
+    (analyze! options)))
 
 (defn ^:private ns->ns+uri [namespace]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace db/db))]
@@ -118,10 +127,17 @@
   (and ns-exclude-regex
        (re-matches ns-exclude-regex (str namespace))))
 
-(def analyze-project! setup-analysis!)
+(defn analyze-project-and-deps! [options]
+  (setup-api! options)
+  (setup-project-and-deps-analysis! options))
+
+(defn analyze-project-only! [options]
+  (setup-api! options)
+  (setup-project-only-analysis! options))
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-only-analysis! options)
   (cli-println options "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
@@ -168,7 +184,8 @@
             diagnostics)))
 
 (defn diagnostics [{:keys [namespace] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-and-deps-analysis! options)
   (cli-println options "Finding diagnostics...")
   (let [namespaces (or (seq namespace)
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
@@ -194,7 +211,8 @@
       {:result-code 0 :message "No diagnostics found!"})))
 
 (defn format! [{:keys [namespace dry?] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-only-analysis! options)
   (cli-println options "Formatting namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
@@ -221,7 +239,8 @@
       {:result-code 0 :message "Nothing to format!"})))
 
 (defn rename! [{:keys [from to dry?] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-only-analysis! options)
   (let [ns-only? (simple-symbol? from)
         from-name (when-not ns-only? (symbol (name from)))
         from-ns (if ns-only?

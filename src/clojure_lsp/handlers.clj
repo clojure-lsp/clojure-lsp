@@ -61,6 +61,7 @@
                                :value progress} db)))
 
 (defn initialize [project-root-uri client-capabilities client-settings work-done-token]
+  (swap! db/db assoc :project-analysis-type :project-and-deps)
   (when project-root-uri
     (crawler/initialize-project
       project-root-uri

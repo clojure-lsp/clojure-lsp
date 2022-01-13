@@ -21,8 +21,9 @@
        (some-> e# ex-data :message println)
        e#)))
 
-(defn analyze-project!
-  "Analyze project caching analysis for future API calls. Useful for REPL
+(defn analyze-project-and-deps!
+  "Analyze whole project and all external dependencies
+  caching analysis for future API calls. Useful for REPL
   usage for example.
 
   This will analyze the whole project and external dependencies with
@@ -39,8 +40,8 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/analyze-project! {:project-root (io/file \".\")
-                                     :settings {:classpath-config-paths [\"other-company/other-project\"]}})
+  (clojure-lsp.api/analyze-project-and-deps! {:project-root (io/file \".\")
+                                              :settings {:classpath-config-paths [\"other-company/other-project\"]}})
   ```"
   [{:keys [project-root settings] :as options}]
   {:pre [(or (nil? project-root)
@@ -51,7 +52,39 @@
   (logging/setup-logging db/db)
   (safe-process-message
     options
-    (internal-api/analyze-project! options)))
+    (internal-api/analyze-project-and-deps! options)))
+
+(defn analyze-project-only!
+  "Analyze whole project only caching analysis for future API calls. Useful for REPL
+  usage for example.
+
+  This will analyze the whole project and external dependencies with
+  clj-kondo caching its analysis for next other API calls.
+  All features need analysis and will call this internally if the project
+  was not analyzed before.
+
+  **Options**
+
+  `:project-root` a java.io.File representing the project root.
+
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/analyze-project-only! {:project-root (io/file \".\")
+                                          :settings {:classpath-config-paths [\"other-company/other-project\"]}})
+  ```"
+  [{:keys [project-root settings] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists ^File project-root)))
+         (or (nil? settings)
+             (map? settings))]}
+  (logging/setup-logging db/db)
+  (safe-process-message
+    options
+    (internal-api/analyze-project-only! options)))
 
 (defn clean-ns!
   "Organize `ns` form, removing unused requires/refers/imports and sorting
@@ -73,7 +106,7 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.api/clean-ns! {:namespace '[my-project.foo my-project.bar]})
+  (clojure-lsp.lapi/clean-ns! {:namespace '[my-project.foo my-project.bar]})
   ```"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)

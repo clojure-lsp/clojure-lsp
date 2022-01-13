@@ -106,7 +106,7 @@
   **Example**
 
   ```clojure
-  (clojure-lsp.lapi/clean-ns! {:namespace '[my-project.foo my-project.bar]})
+  (clojure-lsp.api/clean-ns! {:namespace '[my-project.foo my-project.bar]})
   ```"
   [{:keys [project-root settings namespace ns-exclude-regex] :as options}]
   {:pre [(or (nil? project-root)

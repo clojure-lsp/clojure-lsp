@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2021.12.20-20220113.103620-14`.
+  - Bump clj-kondo to `2022.01.13`.
   - Add `:classpath` to `serverInfo` command for downstream usages.
   - Fix issues in `extract-function` that arise when operating over `.cljc` files.
 

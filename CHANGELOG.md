@@ -6,6 +6,7 @@
   - Bump clj-kondo to `2022.01.13`.
   - Add `:classpath` to `serverInfo` command for downstream usages.
   - Fix issues in `extract-function` that arise when operating over `.cljc` files.
+  - Add setting `:copy-kondo-configs?` to allow disable auto clj-kondo config copy, enabled by default. #694
 
 - Editor
   - Improve 'create function' refactor code action handling multiple cases. #682

@@ -142,7 +142,7 @@
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true
        :parallel true
-       :copy-configs true
+       :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(string/join (System/getProperty "path.separator") paths)]
        :config {:output {:analysis {:arglists true
                                     :locals false
@@ -159,7 +159,7 @@
 (defn kondo-for-single-file [uri db]
   (-> {:cache true
        :lint ["-"]
-       :copy-configs true
+       :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
        :custom-lint-fn #(single-file-custom-lint! % uri db)

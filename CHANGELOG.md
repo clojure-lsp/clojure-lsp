@@ -12,6 +12,9 @@
   - Fix 'resolve macro as ...' code action not working.
   - Fix `showDocumentRequest` issues when triggered via some refactor code action.
   - Add new code actions + commands `Move coll entry down` and `Move coll entry up` to move map/vectors pair entries. #684
+
+- API/CLI
+  - Make `format`, `clean-ns` and `rename` features not need to scan whole classpath, analyzing only project code improving performance a lot.
   
 ## 2022.01.03-19.46.10
 

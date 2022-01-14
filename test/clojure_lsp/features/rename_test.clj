@@ -75,12 +75,31 @@
                   "    :c/d 2"
                   "    :_/e 3"
                   "    ::f 4}")
-          (h/file-uri "file:///a.cljc"))]
+          (h/file-uri "file:///a.cljc"))
+        [h1-start h1-stop
+         h2-start h2-stop
+         _h3-start _h3-stop]
+        (h/load-code-and-locs
+          (h/code "|::hello-world|"
+                  "|::hello-world|"
+                  "|:hello/world|")
+          (h/file-uri "file:///b.cljc"))]
     (testing "renaming keywords renames correctly namespaced maps as well"
       (let [[row col] a-b-start
             changes (:changes (f.rename/rename (h/file-uri "file:///a.cljc") ":a/g" row col db/db))]
         (is (= {(h/file-uri "file:///a.cljc") [{:new-text ":a/g" :range (h/->range a-b-start a-b-stop)}
                                                {:new-text ":g" :range (h/->range b-ns-start b-ns-stop)}]}
+               changes))))
+    (testing "renaming from aliased namespace to namespace"
+      (let [[row col] h1-start
+            changes (:changes (f.rename/rename (h/file-uri "file:///b.cljc") ":hello/world" row col db/db))]
+        (is (= {(h/file-uri "file:///b.cljc") [{:new-text ":hello/world" :range (h/->range h1-start h1-stop)}
+                                               {:new-text ":hello/world" :range (h/->range h2-start h2-stop)}]}
+               changes))))
+    #_(testing "renaming from namespace to aliased namespace"
+      (let [[row col] h3-start
+            changes (:changes (f.rename/rename (h/file-uri "file:///b.cljc") "::hello-world" row col db/db))]
+        (is (= {(h/file-uri "file:///b.cljc") [{:new-text "::hello-world" :range (h/->range h3-start h3-stop)}]}
                changes))))))
 
 (deftest rename-namespaces

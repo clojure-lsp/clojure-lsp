@@ -8,6 +8,7 @@
   - Fix issues in `extract-function` that arise when operating over `.cljc` files.
   - Add setting `:copy-kondo-configs?` to allow disable auto clj-kondo config copy, enabled by default. #694
   - Lint unused public keywords, like unused re-frame events/subs. #691
+  - Fix rename of namespaced keywords -> aliased keywords
 
 - Editor
   - Improve 'create function' refactor code action handling multiple cases. #682

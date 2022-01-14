@@ -166,7 +166,8 @@
        :config {:output {:analysis {:arglists true
                                     :locals true
                                     :keywords true
-                                    :context [:clojure.test]}
+                                    :context [:clojure.test
+                                              :re-frame.core]}
                          :canonical-paths true}}}
       (with-additional-config (settings/all db))))
 

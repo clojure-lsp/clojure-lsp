@@ -13,6 +13,9 @@
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns some-ns) (defn -main [& _args] 1)" (h/file-uri "file:///b.clj"))
+  (h/load-code-and-locs (h/code "(ns some-ns (:require [re-frame.core :as r]))"
+                                "(r/reg-event-fx :some/thing (fn []))"
+                                "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
@@ -146,6 +149,32 @@
       db/db)
     (h/assert-submaps
       []
+      @findings))
+  (testing "unused keyword definitions"
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      "/c.cljs"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}}
+      db/db)
+    (h/assert-submaps
+      [{:filename "/c.cljs"
+        :level :info
+        :type :clojure-lsp/unused-public-var
+        :message "Unused public keyword ':some/thing'"
+        :row 2
+        :col 17
+        :end-row 2
+        :end-col 28}
+       {:filename "/c.cljs"
+        :level :info
+        :type :clojure-lsp/unused-public-var
+        :message "Unused public keyword ':otherthing'"
+        :row 3
+        :col 17
+        :end-row 3
+        :end-col 28}]
       @findings)))
 
 (deftest lint-clj-kondo-findings

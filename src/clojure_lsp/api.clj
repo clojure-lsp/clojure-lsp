@@ -3,7 +3,8 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
-   [clojure-lsp.logging :as logging])
+   [clojure-lsp.logging :as logging]
+   [clojure.java.io :as io])
   (:import
    [java.io File]))
 
@@ -53,6 +54,8 @@
   (safe-process-message
     options
     (internal-api/analyze-project-and-deps! options)))
+
+;; (analyze-project-only! {:project-root (io/file "integration-test/sample-test")})
 
 (defn analyze-project-only!
   "Analyze whole project only caching analysis for future API calls. Useful for REPL

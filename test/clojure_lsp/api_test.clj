@@ -18,10 +18,10 @@
   (testing "when project was not analyzed before, analyzes and return a truthy value"
     (h/clean-db! :api-test)
     (is (api/analyze-project-and-deps! {:project-root (io/file "integration-test/sample-test")
-                               :raw? true})))
+                                        :raw? true})))
   (testing "when project was already analyzed before return a falsey value"
     (is (not (api/analyze-project-and-deps! {:project-root (io/file "integration-test/sample-test")
-                                    :raw? true})))))
+                                             :raw? true})))))
 
 (deftest analyze-project-only!
   (testing "when project-root is not a file"
@@ -33,10 +33,10 @@
   (testing "when project was not analyzed before, analyzes and return a truthy value"
     (h/clean-db! :api-test)
     (is (api/analyze-project-only! {:project-root (io/file "integration-test/sample-test")
-                               :raw? true})))
+                                    :raw? true})))
   (testing "when project was already analyzed before return a falsey value"
     (is (not (api/analyze-project-only! {:project-root (io/file "integration-test/sample-test")
-                                    :raw? true})))))
+                                         :raw? true})))))
 
 (deftest clean-ns!
   (testing "when project-root is not a file"

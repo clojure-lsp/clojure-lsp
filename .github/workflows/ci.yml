@@ -94,11 +94,11 @@ jobs:
       - name: Generate embedded binary
         run: make prod-bin
 
-      - name: Run babashka pod tests
-        run: make pod-test
-
       - name: Run integration tests
         run: make integration-test
+
+      - name: Run babashka pod tests
+        run: make pod-test
 
   graalvm-build:
     runs-on: ubuntu-latest

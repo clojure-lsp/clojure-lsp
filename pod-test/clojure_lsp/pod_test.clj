@@ -13,12 +13,12 @@
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (deftest pod-test
-  (testing "analyze-project-and-deps!"
-    (let [result (clojure-lsp/analyze-project-and-deps!
-                   {:project-root (io/file "integration-test/sample-test")})]
-      (is result)))
   (testing "analyze-project-only!"
     (let [result (clojure-lsp/analyze-project-only!
+                   {:project-root (io/file "integration-test/sample-test")})]
+      (is result)))
+  (testing "analyze-project-and-deps!"
+    (let [result (clojure-lsp/analyze-project-and-deps!
                    {:project-root (io/file "integration-test/sample-test")})]
       (is result)))
   (testing "clean-ns!"

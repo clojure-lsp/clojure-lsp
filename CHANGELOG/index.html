@@ -1739,8 +1739,9 @@
 <li>Bump clj-kondo to <code>2022.01.13</code>.</li>
 <li>Add <code>:classpath</code> to <code>serverInfo</code> command for downstream usages.</li>
 <li>Fix issues in <code>extract-function</code> that arise when operating over <code>.cljc</code> files.</li>
+<li>Add setting <code>:copy-kondo-configs?</code> to allow disable auto clj-kondo config copy, enabled by default. #694</li>
 <li>
-<p>Add setting <code>:copy-kondo-configs?</code> to allow disable auto clj-kondo config copy, enabled by default. #694</p>
+<p>Lint unused public keywords, like unused re-frame events/subs. #691</p>
 </li>
 <li>
 <p>Editor</p>

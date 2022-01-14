@@ -97,10 +97,10 @@
                                                {:new-text ":hello/world" :range (h/->range h2-start h2-stop)}]}
                changes))))
     #_(testing "renaming from namespace to aliased namespace"
-      (let [[row col] h3-start
-            changes (:changes (f.rename/rename (h/file-uri "file:///b.cljc") "::hello-world" row col db/db))]
-        (is (= {(h/file-uri "file:///b.cljc") [{:new-text "::hello-world" :range (h/->range h3-start h3-stop)}]}
-               changes))))))
+        (let [[row col] h3-start
+              changes (:changes (f.rename/rename (h/file-uri "file:///b.cljc") "::hello-world" row col db/db))]
+          (is (= {(h/file-uri "file:///b.cljc") [{:new-text "::hello-world" :range (h/->range h3-start h3-stop)}]}
+                 changes))))))
 
 (deftest rename-namespaces
   (testing "when client has valid source-paths but no document-changes capability"

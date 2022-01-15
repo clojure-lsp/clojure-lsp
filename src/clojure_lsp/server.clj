@@ -5,13 +5,14 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! go-loop thread timeout]]
+   [clojure.core.async :refer [<! go go-loop thread timeout]]
    [taoensso.timbre :as log])
   (:import
    (clojure_lsp
@@ -23,6 +24,7 @@
                          CompletionException)
    (java.util.function Supplier)
    (org.eclipse.lsp4j
+     ApplyWorkspaceEditParams
      CallHierarchyIncomingCallsParams
      CallHierarchyOutgoingCallsParams
      CallHierarchyPrepareParams
@@ -32,6 +34,7 @@
      CodeLens
      CodeLensParams
      CodeLensOptions
+     CodeLensWorkspaceCapabilities
      CompletionItem
      CompletionOptions
      CompletionParams
@@ -55,6 +58,7 @@
      InitializeResult
      InitializedParams
      LinkedEditingRangeParams
+     MessageActionItem
      PrepareRenameParams
      ReferenceParams
      Registration
@@ -71,6 +75,7 @@
      SignatureHelpParams
      TextDocumentSyncKind
      TextDocumentSyncOptions
+     WindowClientCapabilities
      WorkspaceSymbolParams)
    (org.eclipse.lsp4j.jsonrpc ResponseErrorException
                               Launcher)
@@ -369,10 +374,12 @@
            (end
              (do
                (log/info "Initialized!")
-               (let [client ^ClojureLanguageClient (:client @db/db)]
-                 (.registerCapability client
-                                      (RegistrationParams. [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                                                           (DidChangeWatchedFilesRegistrationOptions. [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))])))))))
+               (producer/register-capability
+                 (:producer @db/db)
+                 (RegistrationParams.
+                   [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                   (DidChangeWatchedFilesRegistrationOptions.
+                                     [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
 
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
@@ -446,20 +453,97 @@
           (log/error e "in thread"))))
     os))
 
+(defrecord LSPProducer [^ClojureLanguageClient client db]
+  producer/IProducer
+
+  (publish-diagnostic [_this diagnostic]
+    (->> diagnostic
+         (interop/conform-or-log ::interop/publish-diagnostics-params)
+         (.publishDiagnostics client)))
+
+  (refresh-code-lens [_this]
+    (when-let [code-lens-capability ^CodeLensWorkspaceCapabilities (get-in @db [:client-capabilities :workspace :code-lens])]
+      (when (.getRefreshSupport code-lens-capability)
+        (.refreshCodeLenses client))))
+
+  (refresh-test-tree [_this uri]
+    (go
+      (shared/logging-time
+        ":testTree %s secs"
+        (when-let [test-tree (f.test-tree/tree uri db)]
+          (->> test-tree
+               (interop/conform-or-log ::interop/publish-test-tree-params)
+               (.publishTestTree client))))))
+
+  (publish-workspace-edit [_this edit]
+    (->> edit
+         (interop/conform-or-log ::interop/workspace-edit-or-error)
+         ApplyWorkspaceEditParams.
+         (.applyEdit client)
+         .get))
+
+  (show-document-request [_this document-request]
+    (log/info "Requesting to show on editor the document" document-request)
+    (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
+      (->> (update document-request :range #(or (some-> % shared/->range)
+                                                (shared/full-file-range)))
+           (interop/conform-or-log ::interop/show-document-request)
+           (.showDocument client))))
+
+  (publish-progress [_this percentage message progress-token]
+    (let [progress (case (int percentage)
+                     0 {:kind :begin
+                        :title message
+                        :percentage percentage}
+                     100 {:kind :end
+                          :message message
+                          :percentage 100}
+                     {:kind :report
+                      :message message
+                      :percentage percentage})]
+      (->> {:token (or progress-token "clojure-lsp")
+            :value progress}
+           (interop/conform-or-log ::interop/notify-progress)
+           (.notifyProgress client))))
+
+  (show-message-request [_this message type actions]
+    (let [result (->> {:type type
+                       :message message
+                       :actions actions}
+                      (interop/conform-or-log ::interop/show-message-request)
+                      (.showMessageRequest client)
+                      .get)]
+      (.getTitle ^MessageActionItem result)))
+
+  (show-message [_this message type extra]
+    (let [message-content {:message message
+                           :type type
+                           :extra extra}]
+      (log/info message-content)
+      (->> message-content
+           (interop/conform-or-log ::interop/show-message)
+           (.showMessage client))))
+
+  (register-capability [_this capability]
+    (.registerCapability
+      client
+      capability)))
+
 (defn run-server! []
   (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
         launcher (Launcher/createLauncher (ClojureLSPServer.) ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
-        debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)]
+        debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
+        producer (->LSPProducer ^ClojureLanguageClient (.getRemoteProxy launcher) db/db)]
     (nrepl/setup-nrepl db/db)
-    (swap! db/db assoc :client ^ClojureLanguageClient (.getRemoteProxy launcher))
+    (swap! db/db assoc :producer producer)
     (go-loop [edit (<! db/edits-chan)]
-      (producer/workspace-apply-edit edit db/db)
+      (producer/publish-workspace-edit producer edit)
       (recur (<! db/edits-chan)))
     (go-loop []
-      (producer/publish-diagnostic (<! debounced-diags) db/db)
+      (producer/publish-diagnostic producer (<! debounced-diags))
       (recur))
     (go-loop []
       (try

@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.producer :as producer]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
@@ -26,11 +27,24 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
+(defrecord TestProducer []
+  producer/IProducer
+  (refresh-code-lens [_this])
+  (refresh-test-tree [_this _uri])
+  (publish-diagnostic [_this _diagnostic])
+  (publish-workspace-edit [_this _edit])
+  (publish-progress [_this _percentage _message _progress-token])
+  (show-document-request [_this _document-request])
+  (show-message-request [_this _message _type _actions])
+  (show-message [_this _message _type _extra])
+  (register-capability [_this _capability]))
+
 (defn clean-db!
   ([]
    (clean-db! :unit-test))
   ([env]
-   (reset! db/db {:env env})
+   (reset! db/db {:env env
+                  :producer (->TestProducer)})
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))

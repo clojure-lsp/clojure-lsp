@@ -29,13 +29,13 @@
             paths)
           (do
             (log/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-            (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err db)
+            (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
             [])))
       (catch clojure.lang.ExceptionInfo e
         (throw e))
       (catch Exception e
         (log/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-        (producer/window-show-message (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e) db)
+        (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
         []))))
 
 (defn scan-classpath! [db]

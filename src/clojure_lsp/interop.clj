@@ -478,18 +478,25 @@
 (s/def :code-action/edit ::workspace-edit-or-error)
 
 (def code-action-kind
-  [CodeActionKind/QuickFix
-   CodeActionKind/Refactor
-   CodeActionKind/RefactorExtract
-   CodeActionKind/RefactorInline
-   CodeActionKind/RefactorRewrite
-   CodeActionKind/Source
-   CodeActionKind/SourceOrganizeImports])
+  {:quick-fix CodeActionKind/QuickFix
+   :refactor CodeActionKind/Refactor
+   :refactor-extract CodeActionKind/RefactorExtract
+   :refactor-inline CodeActionKind/RefactorInline
+   :refactor-rewrite CodeActionKind/RefactorRewrite
+   :source CodeActionKind/Source
+   :source-organize-imports CodeActionKind/SourceOrganizeImports})
 
 (s/def :code-action/preferred? boolean?)
 
+(s/def :code-action/kind (s/and (s/or :keyword (s/and keyword?
+                                                      code-action-kind
+                                                      (s/conformer #(get code-action-kind %)))
+                                      :string (s/and string?
+                                                     (s/conformer identity)))
+                                (s/conformer second)))
+
 (s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
-                                    :opt-un [::kind ::diagnostics :code-action/edit ::command :code-action/preferred? ::data])
+                                    :opt-un [:code-action/kind ::diagnostics :code-action/edit ::command :code-action/preferred? ::data])
                             (s/conformer #(doto (CodeAction. (:title %1))
                                             (.setKind (:kind %1))
                                             (.setDiagnostics (:diagnostics %1))

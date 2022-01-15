@@ -331,7 +331,7 @@
                                         (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                         (.setCallHierarchyProvider true)
                                         (.setLinkedEditingRangeProvider true)
-                                        (.setCodeActionProvider (doto (CodeActionOptions. interop/code-action-kind)
+                                        (.setCodeActionProvider (doto (CodeActionOptions. (vec (vals interop/code-action-kind)))
                                                                   (.setResolveProvider true)))
                                         (.setCodeLensProvider (CodeLensOptions. true))
                                         (.setReferencesProvider true)

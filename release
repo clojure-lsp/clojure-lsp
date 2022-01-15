@@ -7,12 +7,12 @@ VERSION=$"$(date -u +"%Y.%m.%d-%H.%M.%S")"
 git fetch origin
 git pull origin HEAD
 CURRENT_TAG=$(git describe --tags --abbrev=0)
-sed -i "s/<version>$CURRENT_TAG<\/version>/<version>$VERSION<\/version>/g" pom.xml
-sed -i "s/<tag>$CURRENT_TAG<\/tag>/<tag>$VERSION<\/tag>/g" pom.xml
-echo "$VERSION" > resources/CLOJURE_LSP_VERSION
+sed -i "s/<version>$CURRENT_TAG<\/version>/<version>$VERSION<\/version>/g" lib/pom.xml
+sed -i "s/<tag>$CURRENT_TAG<\/tag>/<tag>$VERSION<\/tag>/g" lib/pom.xml
+echo "$VERSION" > lib/resources/CLOJURE_LSP_VERSION
 sed -i "s/## Unreleased/## Unreleased\n\n## $VERSION/g" CHANGELOG.md
 make cli-jar
-git add resources/CLOJURE_LSP_VERSION CHANGELOG.md pom.xml
+git add lib/resources/CLOJURE_LSP_VERSION CHANGELOG.md lib/pom.xml
 git commit -m "Release: $VERSION"
 git tag "$VERSION"
 git push origin HEAD

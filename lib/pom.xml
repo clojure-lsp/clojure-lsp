@@ -23,26 +23,6 @@
       <version>0.1.1</version>
     </dependency>
     <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>tools.cli</artifactId>
-      <version>1.0.206</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.lsp4j</groupId>
-      <artifactId>org.eclipse.lsp4j</artifactId>
-      <version>0.12.0</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.eclipse.xtend</groupId>
-          <artifactId>org.eclipse.xtend.lib</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.google.code.gson</groupId>
-          <artifactId>gson</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>cljfmt</groupId>
       <artifactId>cljfmt</artifactId>
       <version>0.8.0</version>
@@ -61,17 +41,6 @@
       <groupId>rewrite-clj</groupId>
       <artifactId>rewrite-clj</artifactId>
       <version>1.0.699-alpha</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.xtend</groupId>
-      <artifactId>org.eclipse.xtend.lib</artifactId>
-      <version>2.25.0</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>clj-kondo</groupId>

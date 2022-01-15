@@ -16,7 +16,7 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private resolve-cljfmt-config [db]
-  (let [config-path (settings/get db [:cljfmt-config-path])
+  (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
         project-root (shared/uri->filename (:project-root-uri @db))
         cljfmt-config-file (if (string/starts-with? config-path "/")
                              (io/file config-path)

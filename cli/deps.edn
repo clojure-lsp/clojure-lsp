@@ -6,8 +6,7 @@
         borkdude/dynaload {:mvn/version "0.2.2"}
 
         clojure-lsp/lib {:local/root "../lib"}}
- :paths ["src"
-         "classes"]
+ :paths ["src" "resources" "classes"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]

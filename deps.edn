@@ -28,7 +28,7 @@
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["lib/src"
                                 "cli/src"
-                                "common/test"
+                                "common-test/src"
                                 "lib/test"
                                 "cli/test"]
                   :main-opts ["-m" "kaocha.runner"]}}}

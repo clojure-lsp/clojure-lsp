@@ -9,6 +9,7 @@
 (h/reset-db-after-test)
 
 (deftest test-formatting
+  (swap! db/db shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs "(a  )\n(b c d)")
   (testing "when custom config file doesn't exists"
     (with-redefs [shared/file-exists? (constantly false)]
@@ -21,6 +22,7 @@
              (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") db/db))))))))
 
 (deftest test-formatting-noop
+  (swap! db/db shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs "(a)\n(b c d)")
   (with-redefs [shared/file-exists? (constantly false)]
     (let [r (f.format/formatting (h/file-uri "file:///a.clj") db/db)]
@@ -28,6 +30,7 @@
       (is (vector? r)))))
 
 (deftest test-range-formatting
+  (swap! db/db shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs "(a  )\n(b c d)")
   (testing "when custom config file doesn't exists"
     (with-redefs [shared/file-exists? (constantly false)]

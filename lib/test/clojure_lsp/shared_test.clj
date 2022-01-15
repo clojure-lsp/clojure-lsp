@@ -69,14 +69,14 @@
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") db/db))))
   (testing "when it has a project root a source-path on mono repos"
-    (swap! db/db medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! db/db shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                :source-paths #{(h/file-path "/user/project/src/clj")
                                                                (h/file-path "/user/project/src/cljs")}}
                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") db/db))))
   (testing "when an invalid source-path with a valid source-path prefixing it"
-    (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
+    (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
                                     :project-root-uri (h/file-uri "file:///user/project")})
     (with-redefs [shared/directory? (constantly true)]
       (is (= nil

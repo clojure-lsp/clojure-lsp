@@ -92,7 +92,7 @@ jobs:
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
       - name: Generate embedded binary
-        run: make prod-bin
+        run: make prod-cli
 
       - name: Run integration tests
         run: make integration-test
@@ -116,9 +116,6 @@ jobs:
         with:
           cli: '1.10.3.814'
 
-      - name: Generate jar
-        run: make cli-jar
-
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
@@ -134,11 +131,10 @@ jobs:
 
       - name: Build Linux native image
         env:
-          CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
         run: |
-          graalvm/native-unix-compile.sh
+          make native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2

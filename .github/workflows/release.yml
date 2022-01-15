@@ -75,7 +75,7 @@ jobs:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          graalvm/native-unix-compile.sh
+          cd cli && graalvm/native-unix-compile.sh
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -133,7 +133,7 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
         run: |
-          graalvm/native-unix-compile.sh
+          cd cli && graalvm/native-unix-compile.sh
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -184,7 +184,7 @@ jobs:
   #         CLOJURE_LSP_JAR: clojure-lsp.jar
   #         CLOJURE_LSP_XMX: "-J-Xmx6g"
   #       run: |
-  #         graalvm/native-unix-compile.sh
+  #         cd cli && graalvm/native-unix-compile.sh
 
   #     - name: Zip binary
   #       run: zip clojure-lsp-native-linux-aarch64.zip clojure-lsp
@@ -227,7 +227,7 @@ jobs:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          graalvm/native-unix-compile.sh
+          cd cli && graalvm/native-unix-compile.sh
 
       # UPX is not working for MacOS Big Sur
       # - name: Compress binary

@@ -28,16 +28,19 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Generate cli bin
-        run: make prod-cli
+      - name: Generate jar for native
+        run: make cli-jar-for-native
 
-      - name: Upload prod jar
+      - name: Upload jar
         uses: actions/upload-artifact@v2
         with:
           path: clojure-lsp.jar
           name: clojure-lsp.jar
 
-      - name: Upload embedded jar
+      - name: Generate cli bin
+        run: make prod-cli
+
+      - name: Upload bin
         uses: actions/upload-artifact@v2
         with:
           path: clojure-lsp

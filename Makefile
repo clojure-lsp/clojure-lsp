@@ -19,6 +19,8 @@ lib-jar: clean classes
 	cd lib && clojure -X:jar
 cli-jar: clean classes
 	cd cli && clojure -X:prod-jar
+cli-jar-for-native: clean classes
+	cd cli && clojure -X:prod-jar-for-native
 
 debug-cli: clean classes
 	cd cli && clojure -X:debug-jar
@@ -27,7 +29,7 @@ debug-cli: clean classes
 prod-cli: cli-jar
 	cd cli && clojure -X:bin
 	cp -f cli/clojure-lsp .
-native-cli: cli-jar
+native-cli: cli-jar-for-native
 	cd cli && CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
 	cp -f cli/clojure-lsp .
 
@@ -62,4 +64,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all classes debug-cli cli-jar api-jar prod-cli native-cli test pod-test integration-test local-webpage clean lint-clean lint-format lint-diagnostics lint-fix release
+.PHONY: all classes debug-cli cli-jar lib-jar cli-jar-for-native prod-cli native-cli test pod-test integration-test local-webpage clean lint-clean lint-format lint-diagnostics lint-fix release

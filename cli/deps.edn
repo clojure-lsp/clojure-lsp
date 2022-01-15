@@ -44,8 +44,14 @@
                       :exec-args {:jar "clojure-lsp.jar"
                                   :aot true
                                   :jvm-opts ["-Xmx2g" "-server"]
-                                  :main-class clojure-lsp.main
-                                  :aliases [:native]}}
+                                  :main-class clojure-lsp.main}}
+           :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                                 :exec-fn hf.depstar/uberjar
+                                 :exec-args {:jar "clojure-lsp.jar"
+                                             :aot true
+                                             :jvm-opts ["-Xmx2g" "-server"]
+                                             :main-class clojure-lsp.main
+                                             :aliases [:native]}}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"
                                "-Dborkdude.dynaload.aot=true"

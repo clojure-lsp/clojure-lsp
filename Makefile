@@ -29,13 +29,14 @@ native-cli: cli-jar
 	cd cli && CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
 
 test: classes
-	clojure -M:test
+	cd lib && clojure -M:test
+	cd cli && clojure -M:test
 
 pod-test: classes
-	clojure -M:pod-test
+	cd cli && clojure -M:pod-test
 
 integration-test:
-	bb integration-test ./clojure-lsp
+	cd cli && bb integration-test ./clojure-lsp
 
 lint-clean:
 	clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*"

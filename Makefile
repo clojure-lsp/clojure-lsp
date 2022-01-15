@@ -23,10 +23,13 @@ cli-jar: clean classes
 debug-cli: clean classes
 	cd cli && clojure -X:debug-jar
 	cd cli && clojure -X:bin
+	cp -f cli/clojure-lsp .
 prod-cli: cli-jar
 	cd cli && clojure -X:bin
+	cp -f cli/clojure-lsp .
 native-cli: cli-jar
 	cd cli && CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
+	cp -f cli/clojure-lsp .
 
 test: classes
 	cd lib && clojure -M:test

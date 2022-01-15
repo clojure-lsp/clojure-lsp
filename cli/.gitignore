@@ -2,6 +2,7 @@
 *.class
 /classes
 /.cpcache
+/clojure-lsp
 /integration-test/sample-test/.lsp/.cache
 /integration-test/sample-test/.cpcache
 /integration-test/sample-test/target

@@ -8,7 +8,8 @@ To build a native image with GraalVM:
 
 - Install the GraalVM 21.3.0 for Java 11 and set the `GRAALVM_HOME` to the installation dir. 
 - Install `native-image` with `$GRAALVM_HOME/bin/gu install native-image`. 
-- Run from `clojure-lsp` project root `./graalvm/native-unix-compile.sh` or `./graalvm/native-windows-compile.bat`. 
+- Unix: Run from `clojure-lsp` project root `make native-cli`
+- Windows: `cd cli && ./graalvm/native-windows-compile.bat`. 
 
 The build may take some minutes and the result will be a `./clojure-lsp` native binary.
 

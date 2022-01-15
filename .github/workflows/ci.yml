@@ -167,8 +167,8 @@ jobs:
         name: clojure-lsp-native
       - name: Setup binary
         run: |
-          mv clojure-lsp-native/clojure-lsp .
-          chmod +x clojure-lsp
+          mv clojure-lsp-native/clojure-lsp cli/clojure-lsp
+          chmod +x cli/clojure-lsp
 
       - name: Run babashka pod tests
         env:

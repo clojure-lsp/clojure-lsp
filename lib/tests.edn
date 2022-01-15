@@ -1,0 +1,1 @@
+#kaocha/v1 {:kaocha/reporter [kaocha.report/documentation]}

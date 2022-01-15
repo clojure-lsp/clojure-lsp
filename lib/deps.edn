@@ -21,8 +21,9 @@
  :paths ["src" "resources"]
  :aliases {:dev {:extra-paths ["cli"
                                "core"]}
-           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
-                  :extra-paths ["test" "src-cli" "classes"]
+           :test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
+                               lambdaisland/kaocha {:mvn/version "1.60.972"}}
+                  :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                  :exec-fn hf.depstar/uberjar

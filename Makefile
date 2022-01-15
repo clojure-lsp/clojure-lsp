@@ -13,21 +13,20 @@ clean:
 	rm -rf cli/classes cli/clojure-lsp cli/clojure-lsp.jar lib/clojure-lsp.jar docs/README.md docs/CHANGELOG.md
 
 classes:
-	clojure -X:javac
+	cd cli && clojure -X:javac
+
+lib-jar: clean classes
+	cd lib && clojure -X:jar
+cli-jar: clean classes
+	cd cli && clojure -X:prod-jar
 
 debug-cli: clean classes
-	clojure -X:debug-jar
-	clojure -X:bin
-
-cli-jar: clean classes
-	clojure -X:ci-jar
-api-jar: clean classes
-	clojure -X:api-jar
-
+	cd cli && clojure -X:debug-jar
+	cd cli && clojure -X:bin
 prod-cli: cli-jar
-	clojure -X:bin
+	cd cli && clojure -X:bin
 native-cli: cli-jar
-	CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
+	cd cli && CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
 
 test: classes
 	clojure -M:test

@@ -5,9 +5,64 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.memoize :as memoize]
+   [clojure.string :as string]
+   [clojure.walk :as walk]
+   [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
+
+(defn- typify-json [root]
+  (walk/postwalk (fn [n]
+                   (if (string? n)
+                     (keyword n)
+                     n))
+                 root))
+
+(defn- clean-symbol-map [m]
+  (->> (or m {})
+       (medley/map-keys #(if (string/starts-with? % "#")
+                           (re-pattern (subs % 1))
+                           (symbol %)))
+       (medley/map-vals typify-json)))
+
+(defn parse-source-paths [paths]
+  (when (seq paths)
+    (->> paths
+         (keep #(when (string? %)
+                  (if (string/starts-with? % ":")
+                    (subs % 1)
+                    %)))
+         (into #{})
+         (not-empty))))
+
+(defn kwd-string [s]
+  (cond
+    (keyword? s) s
+    (and (string? s)
+         (string/starts-with? s ":")) (keyword (subs s 1))
+    (string? s) (keyword s)))
+
+(defn parse-source-aliases [aliases]
+  (when (seq aliases)
+    (->> aliases
+         (keep kwd-string)
+         (into #{})
+         (not-empty))))
+
+(defn clean-client-settings [client-settings]
+  (let [kwd-keys #(medley/map-keys keyword %)]
+    (-> client-settings
+        (update :dependency-scheme #(or % "zipfile"))
+        (update :text-document-sync-kind kwd-string)
+        (update :source-paths parse-source-paths)
+        (update :source-aliases parse-source-aliases)
+        (update :project-specs #(->> % (mapv kwd-keys) not-empty))
+        (update :cljfmt-config-path #(or % ".cljfmt.edn"))
+        (update :cljfmt kwd-keys)
+        (update-in [:cljfmt :indents] clean-symbol-map)
+        (update :document-formatting? (fnil identity true))
+        (update :document-range-formatting? (fnil identity true)))))
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]

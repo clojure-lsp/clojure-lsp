@@ -1,5 +1,6 @@
 (ns clojure-lsp.server
   (:require
+   [clojure-lsp.coercer :as coercer]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
@@ -7,7 +8,6 @@
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.interop :as interop]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
@@ -109,16 +109,16 @@
   [params handler]
   `(end
      (->> ~params
-          interop/java->clj
+          coercer/java->clj
           ~handler)))
 
 (defmacro ^:private sync-request
   [params handler response-spec]
   `(end
      (->> ~params
-          interop/java->clj
+          coercer/java->clj
           ~handler
-          (interop/conform-or-log ~response-spec))))
+          (coercer/conform-or-log ~response-spec))))
 
 (defmacro ^:private async-request
   [params handler response-spec]
@@ -156,46 +156,46 @@
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
-           (async-request params handlers/references ::interop/references)))
+           (async-request params handlers/references ::coercer/references)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
-           (async-request params handlers/completion ::interop/completion-items)))
+           (async-request params handlers/completion ::coercer/completion-items)))
 
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem
-           (async-request item handlers/completion-resolve-item ::interop/completion-item)))
+           (async-request item handlers/completion-resolve-item ::coercer/completion-item)))
 
   (^CompletableFuture prepareRename [_ ^PrepareRenameParams params]
     (start :prepare-rename
-           (async-request params handlers/prepare-rename ::interop/prepare-rename-or-error)))
+           (async-request params handlers/prepare-rename ::coercer/prepare-rename-or-error)))
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
-           (async-request params handlers/rename ::interop/workspace-edit-or-error)))
+           (async-request params handlers/rename ::coercer/workspace-edit-or-error)))
 
   (^CompletableFuture hover [_ ^HoverParams params]
     (start :hover
-           (async-request params handlers/hover ::interop/hover)))
+           (async-request params handlers/hover ::coercer/hover)))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams params]
     (start :signatureHelp
-           (async-request params handlers/signature-help ::interop/signature-help)))
+           (async-request params handlers/signature-help ::coercer/signature-help)))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
     (start :formatting
-           (async-request params handlers/formatting ::interop/edits)))
+           (async-request params handlers/formatting ::coercer/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (start :rangeFormatting
            (end
              (let [result (when (compare-and-set! formatting false true)
                             (try
-                              (let [doc-id (interop/document->uri (.getTextDocument params))
+                              (let [doc-id (coercer/document->uri (.getTextDocument params))
                                     range (.getRange params)
                                     start (.getStart range)
                                     end (.getEnd range)]
-                                (interop/conform-or-log ::interop/edits (#'handlers/range-formatting
+                                (coercer/conform-or-log ::coercer/edits (#'handlers/range-formatting
                                                                          doc-id
                                                                          {:row (inc (.getLine start))
                                                                           :col (inc (.getCharacter start))
@@ -210,55 +210,55 @@
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (start :codeAction
-           (async-request params handlers/code-actions ::interop/code-actions)))
+           (async-request params handlers/code-actions ::coercer/code-actions)))
 
   (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
     (start :resolveCodeAction
-           (async-request unresolved handlers/resolve-code-action ::interop/code-action)))
+           (async-request unresolved handlers/resolve-code-action ::coercer/code-action)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (start :codeLens
-           (async-request params handlers/code-lens ::interop/code-lenses)))
+           (async-request params handlers/code-lens ::coercer/code-lenses)))
 
   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
     (start :resolveCodeLens
-           (async-request params handlers/code-lens-resolve ::interop/code-lens)))
+           (async-request params handlers/code-lens-resolve ::coercer/code-lens)))
 
   (^CompletableFuture definition [_ ^DefinitionParams params]
     (start :definition
-           (async-request params handlers/definition ::interop/location)))
+           (async-request params handlers/definition ::coercer/location)))
 
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
-           (async-request params handlers/document-symbol ::interop/document-symbols)))
+           (async-request params handlers/document-symbol ::coercer/document-symbols)))
 
   (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
     (start :documentHighlight
-           (async-request params handlers/document-highlight ::interop/document-highlights)))
+           (async-request params handlers/document-highlight ::coercer/document-highlights)))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
     (start :semanticTokensFull
-           (async-request params handlers/semantic-tokens-full ::interop/semantic-tokens)))
+           (async-request params handlers/semantic-tokens-full ::coercer/semantic-tokens)))
 
   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
     (start :semanticTokensRange
-           (async-request params handlers/semantic-tokens-range ::interop/semantic-tokens)))
+           (async-request params handlers/semantic-tokens-range ::coercer/semantic-tokens)))
 
   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
     (start :prepareCallHierarchy
-           (async-request params handlers/prepare-call-hierarchy ::interop/call-hierarchy-items)))
+           (async-request params handlers/prepare-call-hierarchy ::coercer/call-hierarchy-items)))
 
   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
     (start :callHierarchyIncomingCalls
-           (async-request params handlers/call-hierarchy-incoming ::interop/call-hierarchy-incoming-calls)))
+           (async-request params handlers/call-hierarchy-incoming ::coercer/call-hierarchy-incoming-calls)))
 
   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
     (start :callHierarchyOutgoingCalls
-           (async-request params handlers/call-hierarchy-outgoing ::interop/call-hierarchy-outgoing-calls)))
+           (async-request params handlers/call-hierarchy-outgoing ::coercer/call-hierarchy-outgoing-calls)))
 
   (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
     (start :linkedEditingRange
-           (async-request params handlers/linked-editing-ranges ::interop/linked-editing-ranges-or-error))))
+           (async-request params handlers/linked-editing-ranges ::coercer/linked-editing-ranges-or-error))))
 
 (deftype LSPWorkspaceService []
   WorkspaceService
@@ -269,7 +269,7 @@
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
-    (log/warn (interop/java->clj params)))
+    (log/warn (coercer/java->clj params)))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
@@ -282,20 +282,20 @@
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (start :workspaceSymbol
-           (async-request params handlers/workspace-symbols ::interop/workspace-symbols))))
+           (async-request params handlers/workspace-symbols ::coercer/workspace-symbols))))
 
 (defn ^:private client-settings [^InitializeParams params]
   (-> params
-      interop/java->clj
+      coercer/java->clj
       :initializationOptions
       (or {})
       shared/keywordize-first-depth
-      (interop/clean-client-settings)))
+      (settings/clean-client-settings)))
 
 (defn ^:private client-capabilities [^InitializeParams params]
   (some->> params
            .getCapabilities
-           (interop/conform-or-log ::interop/client-capabilities)))
+           (coercer/conform-or-log ::coercer/client-capabilities)))
 
 ;; Called from java
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -303,7 +303,7 @@
   (start :extension
          (CompletableFuture/completedFuture
            (end
-             (apply #'handlers/extension method args)))))
+             (apply #'handlers/extension method (coercer/java->clj args))))))
 
 (defn ^:private start-parent-process-liveness-probe!
   [ppid server]
@@ -336,7 +336,7 @@
                                         (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                         (.setCallHierarchyProvider true)
                                         (.setLinkedEditingRangeProvider true)
-                                        (.setCodeActionProvider (doto (CodeActionOptions. (vec (vals interop/code-action-kind)))
+                                        (.setCodeActionProvider (doto (CodeActionOptions. (vec (vals coercer/code-action-kind)))
                                                                   (.setResolveProvider true)))
                                         (.setCodeLensProvider (CodeLensOptions. true))
                                         (.setReferencesProvider true)
@@ -384,7 +384,7 @@
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
       (->> (handlers/server-info-raw)
-           (interop/conform-or-log ::interop/server-info-raw))))
+           (coercer/conform-or-log ::coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (start :server-info-log
@@ -395,7 +395,7 @@
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (start :cursorInfoRaw
            (CompletableFuture/completedFuture
-             (sync-request params handlers/cursor-info-raw ::interop/cursor-info-raw))))
+             (sync-request params handlers/cursor-info-raw ::coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (start :cursor-info-log
@@ -405,7 +405,7 @@
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (start :clojuredocsRaw
            (CompletableFuture/completedFuture
-             (sync-request params handlers/clojuredocs-raw ::interop/clojuredocs-raw))))
+             (sync-request params handlers/clojuredocs-raw ::coercer/clojuredocs-raw))))
 
   (^CompletableFuture shutdown [_]
     (log/info "Shutting down")
@@ -458,7 +458,7 @@
 
   (publish-diagnostic [_this diagnostic]
     (->> diagnostic
-         (interop/conform-or-log ::interop/publish-diagnostics-params)
+         (coercer/conform-or-log ::coercer/publish-diagnostics-params)
          (.publishDiagnostics client)))
 
   (refresh-code-lens [_this]
@@ -472,12 +472,12 @@
         ":testTree %s secs"
         (when-let [test-tree (f.test-tree/tree uri db)]
           (->> test-tree
-               (interop/conform-or-log ::interop/publish-test-tree-params)
+               (coercer/conform-or-log ::coercer/publish-test-tree-params)
                (.publishTestTree client))))))
 
   (publish-workspace-edit [_this edit]
     (->> edit
-         (interop/conform-or-log ::interop/workspace-edit-or-error)
+         (coercer/conform-or-log ::coercer/workspace-edit-or-error)
          ApplyWorkspaceEditParams.
          (.applyEdit client)
          .get))
@@ -487,7 +487,7 @@
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
       (->> (update document-request :range #(or (some-> % shared/->range)
                                                 (shared/full-file-range)))
-           (interop/conform-or-log ::interop/show-document-request)
+           (coercer/conform-or-log ::coercer/show-document-request)
            (.showDocument client))))
 
   (publish-progress [_this percentage message progress-token]
@@ -503,14 +503,14 @@
                       :percentage percentage})]
       (->> {:token (or progress-token "clojure-lsp")
             :value progress}
-           (interop/conform-or-log ::interop/notify-progress)
+           (coercer/conform-or-log ::coercer/notify-progress)
            (.notifyProgress client))))
 
   (show-message-request [_this message type actions]
     (let [result (->> {:type type
                        :message message
                        :actions actions}
-                      (interop/conform-or-log ::interop/show-message-request)
+                      (coercer/conform-or-log ::coercer/show-message-request)
                       (.showMessageRequest client)
                       .get)]
       (.getTitle ^MessageActionItem result)))
@@ -521,7 +521,7 @@
                            :extra extra}]
       (log/info message-content)
       (->> message-content
-           (interop/conform-or-log ::interop/show-message)
+           (coercer/conform-or-log ::coercer/show-message)
            (.showMessage client))))
 
   (register-capability [_this capability]

@@ -7,7 +7,6 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.interop :as interop]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -133,7 +132,7 @@
     (crawler/initialize-project
       (project-root->uri project-root)
       {:workspace {:workspace-edit {:document-changes true}}}
-      (interop/clean-client-settings {})
+      (settings/clean-client-settings {})
       (merge (shared/assoc-some
                {:lint-project-files-after-startup? false
                 :text-document-sync-kind :full}

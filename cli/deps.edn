@@ -3,12 +3,13 @@
         org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.25.0" :exclusions [com.google.guava/guava]}
         org.eclipse.lsp4j/org.eclipse.lsp4j {:mvn/version "0.12.0"  :exclusions [org.eclipse.xtend/org.eclipse.xtend.lib
                                                                                  com.google.code.gson/gson]}
-        borkdude/dynaload {:mvn/version "0.2.2"}}
- :paths ["../lib/src"
-         "../lib/resources"
-         "src"
+        borkdude/dynaload {:mvn/version "0.2.2"}
+
+        clojure-lsp/lib {:local/root "../lib"}}
+ :paths ["src"
          "classes"]
- :aliases {:test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
+ :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
+                               lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
@@ -39,13 +40,13 @@
                              :jvm-opts ["-Xmx2g" "-server"]
                              :name "clojure-lsp"
                              :skip-realign true}}
-           :cli-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
-                     :exec-fn hf.depstar/uberjar
-                     :exec-args {:jar "clojure-lsp.jar"
-                                 :aot true
-                                 :jvm-opts ["-Xmx2g" "-server"]
-                                 :main-class clojure-lsp.main
-                                 :aliases [:native]}}
+           :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                      :exec-fn hf.depstar/uberjar
+                      :exec-args {:jar "clojure-lsp.jar"
+                                  :aot true
+                                  :jvm-opts ["-Xmx2g" "-server"]
+                                  :main-class clojure-lsp.main
+                                  :aliases [:native]}}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"
                                "-Dborkdude.dynaload.aot=true"

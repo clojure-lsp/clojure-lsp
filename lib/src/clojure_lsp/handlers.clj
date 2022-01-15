@@ -18,7 +18,6 @@
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
-   [clojure-lsp.interop :as interop]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -260,9 +259,8 @@
 (defmulti extension (fn [method _] method))
 
 (defmethod extension "dependencyContents"
-  [_ doc]
-  (let [doc-id (interop/java->clj doc)
-        url (URL. doc-id)
+  [_ doc-id]
+  (let [url (URL. doc-id)
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)
         entry (.getJarEntry connection)]

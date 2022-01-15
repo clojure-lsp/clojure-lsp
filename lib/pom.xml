@@ -23,11 +23,6 @@
       <version>0.1.1</version>
     </dependency>
     <dependency>
-      <groupId>com.github.clj-easy</groupId>
-      <artifactId>graal-build-time</artifactId>
-      <version>0.1.4</version>
-    </dependency>
-    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.cli</artifactId>
       <version>1.0.206</version>
@@ -46,11 +41,6 @@
           <artifactId>gson</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.clojars.huahaiy</groupId>
-      <artifactId>datalevin-native</artifactId>
-      <version>0.5.27</version>
     </dependency>
     <dependency>
       <groupId>cljfmt</groupId>
@@ -86,7 +76,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2021.12.20-20211231.085514-6</version>
+      <version>2022.01.13</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>

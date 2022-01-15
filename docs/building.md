@@ -14,5 +14,11 @@ The build may take some minutes and the result will be a `./clojure-lsp` native 
 
 ## Jar
 
-Run `clojure -X:prod-jar` for building the jar.
+### Editor
+
+Run `clojure -X:editor-jar` for building the jar to be used with LSP protocol in a editor or CLI.
+
+### API/CLI
+
+Run `clojure -X:api-jar` for building the jar to be used via CLI or JVM via API.
 

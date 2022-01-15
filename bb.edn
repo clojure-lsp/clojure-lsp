@@ -1,4 +1,4 @@
-{:paths ["integration-test" "scripts"]
+{:paths ["cli/integration-test" "scripts"]
  :min-bb-version "0.4.0"
  :tasks {integration-test entrypoint/run-all
          get-last-changelog-entry ci/get-last-changelog-entry}}

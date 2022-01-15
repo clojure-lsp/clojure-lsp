@@ -171,7 +171,7 @@
      :client-settings (:client-settings db-value)
      :final-settings (settings/all db/db)
      :port (or (:port db-value)
-               "NREPL only available on :debug profile (`make debug-bin`)")
+               "NREPL only available on :debug profile (`make debug-cli`)")
      :server-version (config/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))

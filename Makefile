@@ -1,4 +1,4 @@
-all: debug-bin
+all: debug-cli
 
 # NOTE!
 #
@@ -10,26 +10,24 @@ all: debug-bin
 # https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools
 
 clean:
-	rm -rf classes clojure-lsp clojure-lsp.jar docs/README.md docs/CHANGELOG.md
+	rm -rf cli/classes cli/clojure-lsp cli/clojure-lsp.jar lib/clojure-lsp.jar docs/README.md docs/CHANGELOG.md
 
 classes:
 	clojure -X:javac
 
-debug-bin: clean classes
+debug-cli: clean classes
 	clojure -X:debug-jar
 	clojure -X:bin
 
-prod-jar: clean classes
-	clojure -X:prod-jar
+cli-jar: clean classes
+	clojure -X:ci-jar
+api-jar: clean classes
+	clojure -X:api-jar
 
-prod-jar-for-native: clean classes
-	clojure -X:prod-jar-for-native
-
-prod-bin: clean classes prod-jar
+prod-cli: cli-jar
 	clojure -X:bin
-
-prod-native:
-	./graalvm/native-unix-compile.sh
+native-cli: cli-jar
+	CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
 
 test: classes
 	clojure -M:test
@@ -61,4 +59,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all classes debug-bin prod-jar prod-jar-for-native prod-bin prod-native test pod-test integration-test local-webpage clean release
+.PHONY: all classes debug-cli cli-jar api-jar prod-cli native-cli test pod-test integration-test local-webpage clean release

@@ -59,4 +59,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all classes debug-cli cli-jar api-jar prod-cli native-cli test pod-test integration-test local-webpage clean release
+.PHONY: all classes debug-cli cli-jar api-jar prod-cli native-cli test pod-test integration-test local-webpage clean lint-clean lint-format lint-diagnostics lint-fix release

@@ -39,17 +39,17 @@ integration-test:
 	cd cli && bb integration-test ./clojure-lsp
 
 lint-clean:
-	clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*" --project-root "../"
 
 lint-format:
-	clojure -M:run format --dry --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run format --dry --ns-exclude-regex "sample-test.*" --project-root "../"
 
 lint-diagnostics:
-	clojure -M:run diagnostics --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run diagnostics --ns-exclude-regex "sample-test.*" --project-root "../"
 
 lint-fix:
-	clojure -M:run clean-ns --ns-exclude-regex "sample-test.*"
-	clojure -M:run format --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run clean-ns --ns-exclude-regex "sample-test.*" --project-root "../"
+	cd cli && clojure -M:run format --ns-exclude-regex "sample-test.*" --project-root "../"
 
 release:
 	./release

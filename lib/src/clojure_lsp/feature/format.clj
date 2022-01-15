@@ -7,6 +7,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
+   [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -16,7 +17,10 @@
 
 (defn ^:private resolve-cljfmt-config [db]
   (let [config-path (settings/get db [:cljfmt-config-path])
-        cljfmt-config-file (io/file config-path)]
+        project-root (shared/uri->filename (:project-root-uri @db))
+        cljfmt-config-file (if (string/starts-with? config-path "/")
+                             (io/file config-path)
+                             (io/file project-root config-path))]
     (cljfmt.main/merge-default-options
       (medley/deep-merge
         (settings/get db [:cljfmt] {})

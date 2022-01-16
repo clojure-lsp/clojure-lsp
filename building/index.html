@@ -395,6 +395,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#debug-development" class="md-nav__link">
+    Debug / development
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#jar" class="md-nav__link">
     Jar
   </a>
@@ -403,15 +410,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#editor" class="md-nav__link">
-    Editor
+  <a href="#editorcli" class="md-nav__link">
+    Editor/CLI
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#apicli" class="md-nav__link">
-    API/CLI
+  <a href="#jvm-api" class="md-nav__link">
+    JVM API
   </a>
   
 </li>
@@ -569,6 +576,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#debug-development" class="md-nav__link">
+    Debug / development
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#jar" class="md-nav__link">
     Jar
   </a>
@@ -577,15 +591,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#editor" class="md-nav__link">
-    Editor
+  <a href="#editorcli" class="md-nav__link">
+    Editor/CLI
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#apicli" class="md-nav__link">
-    API/CLI
+  <a href="#jvm-api" class="md-nav__link">
+    JVM API
   </a>
   
 </li>
@@ -623,11 +637,13 @@
 <li>Windows: <code>cd cli &amp;&amp; ./graalvm/native-windows-compile.bat</code>. </li>
 </ul>
 <p>The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
+<h2 id="debug-development">Debug / development<a class="headerlink" href="#debug-development" title="Permanent link">#</a></h2>
+<p>Run <code>make</code> or <code>make debug-cli</code>.</p>
 <h2 id="jar">Jar<a class="headerlink" href="#jar" title="Permanent link">#</a></h2>
-<h3 id="editor">Editor<a class="headerlink" href="#editor" title="Permanent link">#</a></h3>
-<p>Run <code>clojure -X:editor-jar</code> for building the jar to be used with LSP protocol in a editor or CLI.</p>
-<h3 id="apicli">API/CLI<a class="headerlink" href="#apicli" title="Permanent link">#</a></h3>
-<p>Run <code>clojure -X:api-jar</code> for building the jar to be used via CLI or JVM via API.</p>
+<h3 id="editorcli">Editor/CLI<a class="headerlink" href="#editorcli" title="Permanent link">#</a></h3>
+<p>Run <code>make cli-jar</code> for building the jar to be used with LSP protocol in a editor or CLI.</p>
+<h3 id="jvm-api">JVM API<a class="headerlink" href="#jvm-api" title="Permanent link">#</a></h3>
+<p>Run <code>make lib-jar</code> for building the jar to be used on JVM via API.</p>
                 
                   
                     

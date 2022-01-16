@@ -17,20 +17,21 @@
    [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
-   (com.google.common.io ByteStreams)
+   (java.io ByteArrayOutputStream)
    (java.net URI)
-   (java.security MessageDigest
-                  DigestInputStream)))
+   (java.security MessageDigest)))
 
 (set! *warn-on-reflection* true)
 
 (defn ^:private md5 [^java.io.File file]
-  (let [digest (MessageDigest/getInstance "MD5")]
-    (with-open [input-stream (io/input-stream file)
-                digest-stream (DigestInputStream. input-stream digest)
-                output-stream (ByteStreams/nullOutputStream)]
-      (io/copy digest-stream output-stream))
-    (format "%032x" (BigInteger. 1 (.digest digest)))))
+  (let [bytes'
+        (with-open [xin (io/input-stream file)
+                    xout (ByteArrayOutputStream.)]
+          (io/copy xin xout)
+          (.toByteArray xout))
+        algorithm (MessageDigest/getInstance "MD5")
+        raw (.digest algorithm bytes')]
+    (format "%032x" (BigInteger. 1 raw))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file

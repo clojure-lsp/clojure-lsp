@@ -2,7 +2,6 @@
                                "cli/src"]
                  :extra-deps {org.clojure/clojure {:mvn/version "1.10.3"}
                               com.google.code.gson/gson {:mvn/version "2.8.9"}
-                              com.google.guava/guava {:mvn/version "31.0.1-jre"}
                               rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
                               org.clojure/data.json {:mvn/version "2.4.0"}
                               borkdude/rewrite-edn {:mvn/version "0.1.0" :exclusions [rewrite-clj/rewrite-clj]}
@@ -22,7 +21,7 @@
 
                               borkdude/dynaload {:mvn/version "0.2.2"}
                               org.clojure/tools.cli {:mvn/version "1.0.206"}
-                              org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.25.0" :exclusions [com.google.guava/guava]}
+                              org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.25.0"}
                               org.eclipse.lsp4j/org.eclipse.lsp4j {:mvn/version "0.12.0"  :exclusions [org.eclipse.xtend/org.eclipse.xtend.lib
                                                                                                        com.google.code.gson/gson]}}}
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}

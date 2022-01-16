@@ -1,14 +1,15 @@
 (ns clojure-lsp.internal-api
   (:require
-   [clojure-lsp.client :as client]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.interop :as interop]
    [clojure-lsp.logging :as logging]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -32,45 +33,130 @@
              (settings/get db/db [:api :exit-on-errors?] true))
     (throw (ex-info message {:result-code 1 :message extra}))))
 
-(defmacro ^:private safe-analyze [& body]
-  `(try
-     ~@body
-     (catch clojure.lang.ExceptionInfo e#
-       (throw e#))
-     (catch Exception e#
-       (throw (ex-info "Error during project analysis" {:message e#})))))
+(defrecord APIProducer [options]
+  producer/IProducer
+
+  (refresh-code-lens [_this])
+  (refresh-test-tree [_this _uri])
+  (publish-diagnostic [_this _diagnostic])
+  (publish-workspace-edit [_this _edit])
+
+  (publish-progress [_this percentage message _progress-token]
+    (when-not (:raw? options)
+      (cli-print (format "\r[%3d%s] %-28s" (int percentage) "%" message))
+      (when (= 100 percentage)
+        (cli-println options ""))))
+
+  (show-document-request [_this _document-request])
+  (show-message-request [_this _message _type _actions])
+
+  (show-message [_this message type extra]
+    (let [message-content {:message message
+                           :type type
+                           :extra extra}]
+      (show-message-cli options message-content)))
+  (register-capability [_this _capability]))
+
+(defn ^:private edit->summary
+  ([db uri edit]
+   (edit->summary db uri edit nil))
+  ([db uri {:keys [range new-text]} old-text]
+   (let [old-text (or old-text
+                      (get-in @db [:documents uri :text])
+                      (slurp uri))
+         new-full-text (f.file-management/replace-text
+                         old-text
+                         new-text
+                         (-> range :start :line)
+                         (-> range :start :character)
+                         (-> range :end :line)
+                         (-> range :end :character))]
+     (when (not= new-full-text old-text)
+       {:kind :change
+        :uri uri
+        :version (get-in @db [:documents uri :version] 0)
+        :old-text old-text
+        :new-text new-full-text}))))
+
+(defn ^:private document-change->edit-summary [{:keys [text-document edits kind old-uri new-uri]} db]
+  (if (= "rename" kind)
+    {:kind :rename
+     :new-uri new-uri
+     :old-uri old-uri}
+    (let [uri (:uri text-document)]
+      (loop [edit-summary nil
+             i 0]
+        (if-let [edit (nth edits i nil)]
+          (when-let [edit-summary (edit->summary db uri edit (:new-text edit-summary))]
+            (recur edit-summary (inc i)))
+          edit-summary)))))
+
+(defn ^:private apply-workspace-change-edit-summary!
+  [{:keys [uri new-text version changed?]} db]
+  (spit uri new-text)
+  (when (and changed?
+             (get-in @db [:documents uri :text]))
+    (f.file-management/did-change uri new-text (inc version) db)))
+
+(defn ^:private apply-workspace-rename-edit-summary!
+  [{:keys [old-uri new-uri]} db]
+  (let [old-file (-> old-uri shared/uri->filename io/file)
+        new-file (-> new-uri shared/uri->filename io/file)]
+    (io/make-parents new-file)
+    (io/copy old-file new-file)
+    (io/delete-file old-file)
+    (f.file-management/did-close old-uri db)
+    (f.file-management/did-open new-uri (slurp new-file) db false)))
+
+(defn ^:private apply-workspace-edit-summary!
+  [change db]
+  (if (= :rename (:kind change))
+    (apply-workspace-rename-edit-summary! change db)
+    (apply-workspace-change-edit-summary! change db))
+  change)
 
 (defn ^:private project-root->uri [project-root]
   (-> (or ^java.io.File project-root (io/file ""))
       .getCanonicalPath
       (shared/filename->uri db/db)))
 
-(defn initialize-report-callback [options percentage message _db]
-  (when-not (:raw? options)
-    (cli-print (format "\r[%3d%s] %-28s" (int percentage) "%" message))
-    (when (= 100 percentage)
-      (cli-println options ""))))
-
-(defn ^:private setup-analysis! [{:keys [project-root settings log-path verbose] :as options}]
+(defn ^:private setup-api! [{:keys [verbose] :as options}]
   (swap! db/db assoc
          :api? true
-         :messages-fn #(show-message-cli options %))
+         :producer (->APIProducer options))
   (when verbose
-    (logging/set-log-to-stdout))
-  (when-not (:analysis @db/db)
-    (safe-analyze
-      (crawler/initialize-project
-        (project-root->uri project-root)
-        {:workspace {:workspace-edit {:document-changes true}}}
-        (interop/clean-client-settings {})
-        (merge (shared/assoc-some
-                 {:lint-project-files-after-startup? false
-                  :text-document-sync-kind :full}
-                 :log-path log-path)
-               settings)
-        (partial initialize-report-callback options)
-        db/db)
-      true)))
+    (logging/set-log-to-stdout)))
+
+(defn ^:private analyze!
+  [{:keys [project-root settings log-path]}]
+  (try
+    (crawler/initialize-project
+      (project-root->uri project-root)
+      {:workspace {:workspace-edit {:document-changes true}}}
+      (interop/clean-client-settings {})
+      (merge (shared/assoc-some
+               {:lint-project-files-after-startup? false
+                :text-document-sync-kind :full}
+               :log-path log-path)
+             settings)
+      nil
+      db/db)
+    true
+    (catch clojure.lang.ExceptionInfo e
+      (throw e))
+    (catch Exception e
+      (throw (ex-info "Error during project analysis" {:message e})))))
+
+(defn ^:private setup-project-and-deps-analysis! [options]
+  (when (or (not (:analysis @db/db))
+            (not= :project-and-deps (:project-analysis-type @db/db)))
+    (swap! db/db assoc :project-analysis-type :project-and-deps)
+    (analyze! options)))
+
+(defn ^:private setup-project-only-analysis! [options]
+  (when (not (:analysis @db/db))
+    (swap! db/db assoc :project-analysis-type :project-only)
+    (analyze! options)))
 
 (defn ^:private ns->ns+uri [namespace]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db/db) namespace db/db))]
@@ -118,10 +204,17 @@
   (and ns-exclude-regex
        (re-matches ns-exclude-regex (str namespace))))
 
-(def analyze-project! setup-analysis!)
+(defn analyze-project-and-deps! [options]
+  (setup-api! options)
+  (setup-project-and-deps-analysis! options))
+
+(defn analyze-project-only! [options]
+  (setup-api! options)
+  (setup-project-only-analysis! options))
 
 (defn clean-ns! [{:keys [namespace dry?] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-only-analysis! options)
   (cli-println options "Checking namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
@@ -134,7 +227,7 @@
                    (mapcat (comp :document-changes
                                  #(handlers/execute-command {:command "clean-ns"
                                                              :arguments [(:uri %) 0 0]})))
-                   (map #(client/document-change->edit-summary % db/db))
+                   (map #(document-change->edit-summary % db/db))
                    (remove nil?))]
     (if (seq edits)
       (if dry?
@@ -143,7 +236,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
-                      #(client/apply-workspace-edit-summary! % db/db)) edits)
+                      #(apply-workspace-edit-summary! % db/db)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
@@ -168,7 +261,8 @@
             diagnostics)))
 
 (defn diagnostics [{:keys [namespace] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-and-deps-analysis! options)
   (cli-println options "Finding diagnostics...")
   (let [namespaces (or (seq namespace)
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
@@ -194,7 +288,8 @@
       {:result-code 0 :message "No diagnostics found!"})))
 
 (defn format! [{:keys [namespace dry?] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-only-analysis! options)
   (cli-println options "Formatting namespaces...")
   (let [namespaces (or (seq namespace)
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
@@ -206,7 +301,7 @@
                    (map open-file!)
                    (mapcat (fn [{:keys [uri]}]
                              (some->> (handlers/formatting {:textDocument uri})
-                                      (map #(client/edit->summary db/db uri %)))))
+                                      (map #(edit->summary db/db uri %)))))
                    (remove nil?))]
     (if (seq edits)
       (if dry?
@@ -215,13 +310,14 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
-                      #(client/apply-workspace-edit-summary! % db/db)) edits)
+                      #(apply-workspace-edit-summary! % db/db)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to format!"})))
 
 (defn rename! [{:keys [from to dry?] :as options}]
-  (setup-analysis! options)
+  (setup-api! options)
+  (setup-project-only-analysis! options)
   (let [ns-only? (simple-symbol? from)
         from-name (when-not ns-only? (symbol (name from)))
         from-ns (if ns-only?
@@ -236,7 +332,7 @@
         (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
           (if document-changes
             (if-let [edits (->> document-changes
-                                (map #(client/document-change->edit-summary % db/db))
+                                (map #(document-change->edit-summary % db/db))
                                 (remove nil?)
                                 seq)]
               (if dry?
@@ -244,7 +340,7 @@
                  :message (edits->diff-string edits options)
                  :edits edits}
                 (do
-                  (mapv #(client/apply-workspace-edit-summary! % db/db) edits)
+                  (mapv #(apply-workspace-edit-summary! % db/db) edits)
                   {:result-code 0
                    :message (format "Renamed %s to %s" from to)
                    :edits edits}))

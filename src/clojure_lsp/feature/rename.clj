@@ -12,6 +12,7 @@
 
 (defn ^:private rename-keyword
   [replacement
+   replacement-raw
    db
    {:keys [ns alias name filename
            name-col name-end-col
@@ -47,8 +48,15 @@
                alias
                (str "::" alias "/" replacement-name)
 
-               qualified-same-ns?
+               (and qualified-same-ns?
+                    ;; check if it is from aliased keyword -> namespaced keyword
+                    (string/starts-with? replacement-raw "::"))
                (str "::" replacement-name)
+
+               (and qualified-same-ns?
+                    ;; check if is from aliased keyword -> namespaced keyword
+                    (string/starts-with? replacement-raw ":"))
+               replacement-raw
 
                namespace-from-prefix
                (str ":" replacement-name)
@@ -117,7 +125,7 @@
      :text-document {:version version :uri ref-doc-id}}))
 
 (defn ^:private rename-changes
-  [definition references replacement db]
+  [definition references replacement replacement-raw db]
   (condp = (:bucket definition)
 
     :namespace-definitions
@@ -127,7 +135,7 @@
     (mapv (partial rename-alias replacement db) references)
 
     :keywords
-    (mapv (partial rename-keyword replacement db) references)
+    (mapv (partial rename-keyword replacement replacement-raw db) references)
 
     :locals
     (mapv (partial rename-local replacement db) references)
@@ -184,7 +192,7 @@
     (if error
       result
       (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
-            changes (rename-changes definition references replacement db)
+            changes (rename-changes definition references replacement new-name db)
             doc-changes (->> changes
                              (group-by :text-document)
                              (remove (comp empty? val))

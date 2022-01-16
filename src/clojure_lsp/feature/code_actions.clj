@@ -12,10 +12,7 @@
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log])
-  (:import
-   (org.eclipse.lsp4j
-     CodeActionKind)))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
 
@@ -310,7 +307,7 @@
                        :id "add-require-suggestion"
                        :line (:line position)
                        :uri uri}
-          :kind       CodeActionKind/QuickFix
+          :kind       :quick-fix
           :preferred? true
           :title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))})
        alias-suggestions))
@@ -319,7 +316,7 @@
   [uri missing-requires]
   (map (fn [{:keys [ns alias refer position]}]
          {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
-          :kind       CodeActionKind/QuickFix
+          :kind       :quick-fix
           :preferred? true
           :data       {:id        "add-missing-require"
                        :uri       uri
@@ -330,7 +327,7 @@
 (defn ^:private missing-import-actions [uri missing-imports]
   (map (fn [{:keys [missing-import position]}]
          {:title      (str "Add import '" missing-import "'")
-          :kind       CodeActionKind/QuickFix
+          :kind       :quick-fix
           :preferred? true
           :data       {:id        "add-missing-import"
                        :uri       uri
@@ -341,7 +338,7 @@
 (defn ^:private change-colls-actions [uri line character other-colls]
   (map (fn [coll]
          {:title      (str "Change coll to " (name coll))
-          :kind       CodeActionKind/Refactor
+          :kind       :refactor
           :data       {:id        "refactor-change-coll"
                        :uri       uri
                        :line      line
@@ -351,7 +348,7 @@
 
 (defn ^:private inline-symbol-action [uri line character]
   {:title "Inline symbol"
-   :kind  CodeActionKind/RefactorInline
+   :kind  :refactor-inline
    :data  {:id        "refactor-inline-symbol"
            :uri       uri
            :line      line
@@ -359,7 +356,7 @@
 
 (defn ^:private move-to-let-action [uri line character]
   {:title "Move to let"
-   :kind  CodeActionKind/RefactorExtract
+   :kind  :refactor-extract
    :data  {:id        "refactor-move-to-let"
            :uri       uri
            :line      line
@@ -367,7 +364,7 @@
 
 (defn ^:private cycle-privacy-action [uri line character]
   {:title "Cycle privacy"
-   :kind  CodeActionKind/RefactorRewrite
+   :kind  :refactor-rewrite
    :data  {:id        "refactor-cycle-privacy"
            :uri       uri
            :line      line
@@ -375,7 +372,7 @@
 
 (defn ^:private extract-function-action [uri line character]
   {:title "Extract function"
-   :kind  CodeActionKind/RefactorExtract
+   :kind  :refactor-extract
    :data  {:id        "refactor-extract-function"
            :uri       uri
            :line      line
@@ -383,7 +380,7 @@
 
 (defn ^:private clean-ns-action [uri line character]
   {:title "Clean namespace"
-   :kind  CodeActionKind/SourceOrganizeImports
+   :kind  :source-organize-imports
    :data  {:id        "clean-ns"
            :uri       uri
            :line      line
@@ -391,7 +388,7 @@
 
 (defn ^:private thread-first-all-action [uri line character]
   {:title "Thread first all"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-thread-first-all"
           :uri uri
           :line line
@@ -399,7 +396,7 @@
 
 (defn ^:private thread-last-all-action [uri line character]
   {:title "Thread last all"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-thread-last-all"
           :uri uri
           :line line
@@ -407,7 +404,7 @@
 
 (defn ^:private unwind-thread-action [uri line character]
   {:title "Unwind thread once"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-unwind-thread"
           :uri uri
           :line line
@@ -415,7 +412,7 @@
 
 (defn ^:private unwind-all-action [uri line character]
   {:title "Unwind whole thread"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-unwind-all"
           :uri uri
           :line line
@@ -423,7 +420,7 @@
 
 (defn ^:private sort-map-action [uri line character]
   {:title "Sort map"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-sort-map"
           :uri uri
           :line line
@@ -431,7 +428,7 @@
 
 (defn ^:private move-coll-entry-up-action [uri line character]
   {:title "Move coll key-pair entry up"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-move-coll-entry-up"
           :uri uri
           :line line
@@ -439,7 +436,7 @@
 
 (defn ^:private move-coll-entry-down-action [uri line character]
   {:title "Move coll key-pair entry down"
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-move-coll-entry-down"
           :uri uri
           :line line
@@ -450,7 +447,7 @@
        (map (fn [{:keys [code]
                   {{:keys [line character]} :start} :range}]
               {:title (format "Suppress '%s' diagnostic" code)
-               :kind CodeActionKind/QuickFix
+               :kind :quick-fix
                :data {:id "refactor-suppress-diagnostic"
                       :uri uri
                       :line line
@@ -460,7 +457,7 @@
 
 (defn ^:private create-test-action [function-name-loc uri line character]
   {:title (format "Create test for '%s'" (z/string function-name-loc))
-   :kind CodeActionKind/RefactorRewrite
+   :kind :refactor-rewrite
    :data {:id "refactor-create-test"
           :uri uri
           :line line
@@ -468,7 +465,7 @@
 
 (defn ^:private create-private-function-action [uri function-to-create]
   {:title (format "Create private function '%s'" (:name function-to-create))
-   :kind CodeActionKind/QuickFix
+   :kind :quick-fix
    :data {:id "refactor-create-private-function"
           :uri uri
           :line      (:line (:position function-to-create))
@@ -478,7 +475,7 @@
   {:title (if new-ns
             (format "Create namespace '%s' and '%s' function" new-ns name)
             (format "Create function '%s' on '%s'" name ns))
-   :kind CodeActionKind/QuickFix
+   :kind :quick-fix
    :data {:id "refactor-create-public-function"
           :uri uri
           :line      (:line position)
@@ -486,7 +483,7 @@
 
 (defn ^:private resolve-macro-as-action [uri row col macro-sym]
   {:title (format "Resolve macro '%s' as..." (str macro-sym))
-   :kind CodeActionKind/QuickFix
+   :kind :quick-fix
    :data {:id "resolve-macro-as"
           :uri uri
           :line row

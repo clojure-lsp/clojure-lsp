@@ -3,15 +3,21 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2021.12.20-20220113.103620-14`.
+  - Bump clj-kondo to `2022.01.13`.
   - Add `:classpath` to `serverInfo` command for downstream usages.
   - Fix issues in `extract-function` that arise when operating over `.cljc` files.
+  - Add setting `:copy-kondo-configs?` to allow disable auto clj-kondo config copy, enabled by default. #694
+  - Lint unused public keywords, like unused re-frame events/subs. #691
+  - Fix rename of namespaced keywords -> aliased keywords. #665
 
 - Editor
   - Improve 'create function' refactor code action handling multiple cases. #682
   - Fix 'resolve macro as ...' code action not working.
   - Fix `showDocumentRequest` issues when triggered via some refactor code action.
   - Add new code actions + commands `Move coll entry down` and `Move coll entry up` to move map/vectors pair entries. #684
+
+- API/CLI
+  - Make `format`, `clean-ns` and `rename` features not need to scan whole classpath, analyzing only project code improving performance a lot.
   
 ## 2022.01.03-19.46.10
 

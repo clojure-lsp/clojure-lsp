@@ -94,7 +94,7 @@
         (crawler/analyze-reference-filenames! filenames db)
         (doseq [filename filenames]
           (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (producer/refresh-code-lens db)))))
+        (producer/refresh-code-lens (:producer @db))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -154,7 +154,7 @@
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
-              (producer/refresh-test-tree uri db))
+              (producer/refresh-test-tree (:producer @db) uri))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]

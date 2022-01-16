@@ -45,36 +45,22 @@
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
-(defn ^:private report-startup-progress
-  [work-done-token percentage message db]
-  (let [progress (case (int percentage)
-                   0 {:kind :begin
-                      :title message
-                      :percentage percentage}
-                   100 {:kind :end
-                        :message message
-                        :percentage 100}
-                   {:kind :report
-                    :message message
-                    :percentage percentage})]
-    (producer/notify-progress {:token (or work-done-token "clojure-lsp")
-                               :value progress} db)))
-
 (defn initialize [project-root-uri client-capabilities client-settings work-done-token]
+  (swap! db/db assoc :project-analysis-type :project-and-deps)
   (when project-root-uri
     (crawler/initialize-project
       project-root-uri
       client-capabilities
       client-settings
       {}
-      (partial report-startup-progress work-done-token)
+      work-done-token
       db/db)))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)
         text (:text textDocument)]
     (f.file-management/did-open uri text db/db true)
-    (producer/refresh-test-tree uri db/db))
+    (producer/refresh-test-tree (:producer @db/db) uri))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -96,7 +82,7 @@
     (let [filename (shared/uri->filename uri)]
       (case type
         :created (do (f.file-management/did-open uri (slurp filename) db/db false)
-                     (producer/refresh-test-tree uri db/db))
+                     (producer/refresh-test-tree (:producer @db/db) uri))
         ;; TODO Fix outdated changes overwriting newer changes.
         :changed nil #_(f.file-management/did-change uri
                                                      [{:text (slurp filename)}]
@@ -191,11 +177,11 @@
      :log-path (:log-path db-value)}))
 
 (defn server-info-log []
-  (producer/window-show-message
+  (producer/show-message
+    (:producer @db/db)
     (with-out-str (pprint/pprint (server-info)))
     :info
-    nil
-    db/db))
+    nil))
 
 (def server-info-raw #'server-info)
 
@@ -211,11 +197,11 @@
                                        elements))))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
-  (producer/window-show-message
+  (producer/show-message
+    (:producer @db/db)
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
-    nil
-    db/db))
+    nil))
 
 (defn cursor-info-raw [{:keys [textDocument position]}]
   (cursor-info [textDocument (:line position) (:character position)]))
@@ -250,12 +236,10 @@
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
-      (if (:client @db/db)
-        (do
-          (producer/workspace-apply-edit edit db/db)
-          (when show-document-after-edit
-            (producer/show-document-request show-document-after-edit db/db)))
-        edit))))
+      (producer/publish-workspace-edit (:producer @db/db) edit)
+      (when show-document-after-edit
+        (producer/show-document-request (:producer @db/db) show-document-after-edit))
+      edit)))
 
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)
@@ -302,7 +286,7 @@
     (when-let [result (f.code-actions/resolve-code-action-edits action zloc db/db)]
       (when (and (:client @db/db)
                  (:show-document-after-edit result))
-        (producer/show-document-request (:show-document-after-edit result) db/db))
+        (producer/show-document-request (:producer @db/db) (:show-document-after-edit result)))
       result)))
 
 (defn code-lens

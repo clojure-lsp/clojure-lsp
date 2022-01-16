@@ -258,6 +258,8 @@
               (filter #(identical? :keywords (:bucket %)))
               (filter #(safe-equal? name (:name %)))
               (filter #(not (:ns %)))
+              (filter #(or include-declaration?
+                           (not (:reg %))))
               (medley/distinct-by (juxt :filename :name :row :col))))
           project-analysis)))
 
@@ -333,6 +335,15 @@
        (filter #(and (identical? :keywords (:bucket %))
                      (:reg %)))
        (medley/distinct-by (juxt :ns :name :row :col))))
+
+(defn find-all-keyword-definitions [analysis]
+  (into []
+        (comp
+          (mapcat val)
+          (filter #(and (identical? :keywords (:bucket %))
+                        (:reg %)))
+          (medley/distinct-by (juxt :ns :name :row :col)))
+        analysis))
 
 (defn find-local-by-destructured-keyword [analysis filename keyword-element]
   (->> (get analysis filename)

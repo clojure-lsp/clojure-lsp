@@ -74,10 +74,11 @@
   (let [row (dec row)
         col (dec col)
         project-root-uri (:project-root-uri @db)
-        resolved-full-symbol-str (producer/window-show-message-request "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve) db)
+        producer (:producer @db)
+        resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
                                     (lsp.kondo/home-config-path)]
-        kondo-config-path (producer/window-show-message-request "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options) db)]
+        kondo-config-path (producer/show-message-request producer "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options))]
     (if-let [new-kondo-config (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path db)]
       (let [document (get-in @db [:documents uri])]
         (io/make-parents kondo-config-path)
@@ -89,5 +90,5 @@
         (log/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
       (do
         (log/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
-        (producer/window-show-message (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil db)))
+        (producer/show-message (:producer @db) (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
     {:no-op? true}))

@@ -650,7 +650,7 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
-              chosen-source-path (producer/window-show-message-request "Choose a source-path to create the test file" :info actions db)]
+              chosen-source-path (producer/show-message-request (:producer @db) "Choose a source-path to create the test file" :info actions)]
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
         ;; No source paths besides current one

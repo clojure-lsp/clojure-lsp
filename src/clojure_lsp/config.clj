@@ -104,15 +104,17 @@
                               seq)]
         (reduce deep-merge-fixing-cljfmt configs)))))
 
-(defn resolve-from-classpath-config-paths [classpath {:keys [classpath-config-paths] :as settings}]
-  (when (and (coll? classpath-config-paths)
-             (seq classpath-config-paths))
-    (shared/logging-time
-      "Finding classpath configs took %s secs"
-      (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
-             merge-config nil]
-        (if (and (coll? classpath-config-paths)
-                 (seq classpath-config-paths))
-          (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
-                 cp-settings)
-          (shared/deep-merge merge-config cp-settings))))))
+(defn classpath-config-paths? [{:keys [classpath-config-paths]}]
+  (and (coll? classpath-config-paths)
+       (seq classpath-config-paths)))
+
+(defn resolve-from-classpath-config-paths [classpath settings]
+  (shared/logging-time
+    "Finding classpath configs took %s secs"
+    (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
+           merge-config nil]
+      (if (and (coll? classpath-config-paths)
+               (seq classpath-config-paths))
+        (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
+               cp-settings)
+        (shared/deep-merge merge-config cp-settings)))))

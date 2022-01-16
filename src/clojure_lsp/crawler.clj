@@ -84,6 +84,9 @@
     (swap! db update :findings merge (group-by :filename (:findings result)))
     analysis))
 
+(defn ^:private analyze-test-paths! [paths db]
+  (map #(producer/refresh-test-tree % db) paths))
+
 (defn ^:private report-batch-analysis-percentage
   [start-progress-percentage fulfill-progress-percentage report-callback db index count]
   (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
@@ -232,5 +235,7 @@
         (report-callback 92 "Analyzing stubs" db)
         (stubs/generate-and-analyze-stubs! settings db))
       (report-callback 95 "Analyzing project files" db)
-      (analyze-source-paths! (:source-paths settings) db))
+      (analyze-source-paths! (:source-paths settings) db)
+      (report-callback 97 "Analyzing test files" db)
+      (analyze-test-paths! (:source-paths settings) db))
     (report-callback 100 "Project analyzed" db)))

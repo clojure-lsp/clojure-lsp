@@ -13,13 +13,17 @@ To build a native image with GraalVM:
 
 The build may take some minutes and the result will be a `./clojure-lsp` native binary.
 
+## Debug / development
+
+Run `make` or `make debug-cli`.
+
 ## Jar
 
-### Editor
+### Editor/CLI
 
-Run `clojure -X:editor-jar` for building the jar to be used with LSP protocol in a editor or CLI.
+Run `make cli-jar` for building the jar to be used with LSP protocol in a editor or CLI.
 
-### API/CLI
+### JVM API
 
-Run `clojure -X:api-jar` for building the jar to be used via CLI or JVM via API.
+Run `make lib-jar` for building the jar to be used on JVM via API.
 

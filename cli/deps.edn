@@ -1,0 +1,63 @@
+{:deps {org.clojure/clojure {:mvn/version "1.10.3"}
+        org.clojure/tools.cli {:mvn/version "1.0.206"}
+        org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.25.0"}
+        org.eclipse.lsp4j/org.eclipse.lsp4j {:mvn/version "0.12.0"  :exclusions [org.eclipse.xtend/org.eclipse.xtend.lib
+                                                                                 com.google.code.gson/gson]}
+        com.google.code.gson/gson {:mvn/version "2.8.9"}
+        borkdude/dynaload {:mvn/version "0.2.2"}
+        nrepl/bencode {:mvn/version "1.1.0"}
+
+        clojure-lsp/lib {:local/root "../lib"}}
+ :paths ["src" "resources" "classes"]
+ :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
+                               lambdaisland/kaocha {:mvn/version "1.60.972"}}
+                  :extra-paths ["test"]
+                  :main-opts ["-m" "kaocha.runner"]}
+           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
+                    :exec-fn americano.cli/javac
+                    :exec-args {:source-paths ["src-java"]}}
+           :pod-test
+           {:replace-paths ["pod-test"]
+            :replace-deps {com.cognitect/transit-clj {:mvn/version "1.0.324"}
+                           cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
+                                                  :sha "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}
+                           babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
+                                                   :sha "f360afa6135b8bd2d384d9ba4582c0de6fdac804"}}
+            :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
+           :run {:main-opts ["-m" "clojure-lsp.main"]
+                 :jvm-opts ["-Xmx2g" "-server"]}
+           :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}
+                                cider/cider-nrepl {:mvn/version "0.28.0"}}}
+           :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                       :exec-fn hf.depstar/uberjar
+                       :exec-args {:jar "clojure-lsp.jar"
+                                   :aot true
+                                   :jvm-opts ["-Xmx2g" "-server"]
+                                   :main-class clojure-lsp.main
+                                   :aliases [:debug]}}
+           :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
+                 :exec-fn deps-bin.deps-bin/bin
+                 :exec-args {:jar "clojure-lsp.jar"
+                             :jvm-opts ["-Xmx2g" "-server"]
+                             :name "clojure-lsp"
+                             :skip-realign true}}
+           :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                      :exec-fn hf.depstar/uberjar
+                      :exec-args {:jar "clojure-lsp.jar"
+                                  :aot true
+                                  :jvm-opts ["-Xmx2g" "-server"]
+                                  :main-class clojure-lsp.main}}
+           :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                                 :exec-fn hf.depstar/uberjar
+                                 :exec-args {:jar "clojure-lsp.jar"
+                                             :aot true
+                                             :jvm-opts ["-Xmx2g" "-server"]
+                                             :main-class clojure-lsp.main
+                                             :aliases [:native]}}
+           :native {:jvm-opts ["-Xmx2g"
+                               "-server"
+                               "-Dborkdude.dynaload.aot=true"
+                               "-Dclojure.compiler.direct-linking=true"
+                               "-Dclojure.spec.skip-macros=true"]
+                    :extra-deps {org.clojars.huahaiy/datalevin-native {:mvn/version "0.5.27"}
+                                 com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}}}

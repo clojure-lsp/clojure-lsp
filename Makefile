@@ -1,4 +1,4 @@
-all: debug-bin
+all: debug-cli
 
 # NOTE!
 #
@@ -10,48 +10,51 @@ all: debug-bin
 # https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools
 
 clean:
-	rm -rf classes clojure-lsp clojure-lsp.jar docs/README.md docs/CHANGELOG.md
+	rm -rf cli/classes cli/clojure-lsp cli/clojure-lsp.jar lib/clojure-lsp.jar docs/README.md docs/CHANGELOG.md
 
 classes:
-	clojure -X:javac
+	cd cli && clojure -X:javac
 
-debug-bin: clean classes
-	clojure -X:debug-jar
-	clojure -X:bin
+lib-jar: clean classes
+	cd lib && clojure -X:jar
+cli-jar: clean classes
+	cd cli && clojure -X:prod-jar
+cli-jar-for-native: clean classes
+	cd cli && clojure -X:prod-jar-for-native
 
-prod-jar: clean classes
-	clojure -X:prod-jar
-
-prod-jar-for-native: clean classes
-	clojure -X:prod-jar-for-native
-
-prod-bin: clean classes prod-jar
-	clojure -X:bin
-
-prod-native:
-	./graalvm/native-unix-compile.sh
+debug-cli: clean classes
+	cd cli && clojure -X:debug-jar
+	cd cli && clojure -X:bin
+	cp -f cli/clojure-lsp .
+prod-cli: cli-jar
+	cd cli && clojure -X:bin
+	cp -f cli/clojure-lsp .
+native-cli: cli-jar-for-native
+	cd cli && CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
+	cp -f cli/clojure-lsp .
 
 test: classes
-	clojure -M:test
+	cd lib && clojure -M:test
+	cd cli && clojure -M:test
 
 pod-test: classes
-	clojure -M:pod-test
+	cd cli && clojure -M:pod-test
 
 integration-test:
-	bb integration-test ./clojure-lsp
+	cd cli && bb integration-test ./clojure-lsp
 
 lint-clean:
-	clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*" --project-root "../"
 
 lint-format:
-	clojure -M:run format --dry --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run format --dry --ns-exclude-regex "sample-test.*" --project-root "../"
 
 lint-diagnostics:
-	clojure -M:run diagnostics --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run diagnostics --ns-exclude-regex "sample-test.*" --project-root "../"
 
 lint-fix:
-	clojure -M:run clean-ns --ns-exclude-regex "sample-test.*"
-	clojure -M:run format --ns-exclude-regex "sample-test.*"
+	cd cli && clojure -M:run clean-ns --ns-exclude-regex "sample-test.*" --project-root "../"
+	cd cli && clojure -M:run format --ns-exclude-regex "sample-test.*" --project-root "../"
 
 release:
 	./release
@@ -61,4 +64,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all classes debug-bin prod-jar prod-jar-for-native prod-bin prod-native test pod-test integration-test local-webpage clean release
+.PHONY: all classes debug-cli cli-jar lib-jar cli-jar-for-native prod-cli native-cli test pod-test integration-test local-webpage clean lint-clean lint-format lint-diagnostics lint-fix release

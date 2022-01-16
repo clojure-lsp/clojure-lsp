@@ -1,0 +1,10 @@
+*.jar
+*.class
+/classes
+/.cpcache
+/clojure-lsp
+/reports
+/integration-test/sample-test/.lsp/.cache
+/integration-test/sample-test/.cpcache
+/integration-test/sample-test/target
+/integration-test/sample-test/.clj-kondo/.cache

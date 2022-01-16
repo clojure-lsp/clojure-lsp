@@ -1741,8 +1741,9 @@
 <li>Fix issues in <code>extract-function</code> that arise when operating over <code>.cljc</code> files.</li>
 <li>Add setting <code>:copy-kondo-configs?</code> to allow disable auto clj-kondo config copy, enabled by default. #694</li>
 <li>Lint unused public keywords, like unused re-frame events/subs. #691</li>
+<li>Fix rename of namespaced keywords -&gt; aliased keywords. #665</li>
 <li>
-<p>Fix rename of namespaced keywords -&gt; aliased keywords. #665</p>
+<p>Huge refactor on clojure-lsp codebase, spliting code into submodules, this made possible remove a lot of deps from API jar and help separate clojure-lsp features in the future. #658</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2529,7 +2530,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 15, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 16, 2022</span>
     
   </small>
 </div>

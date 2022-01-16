@@ -399,6 +399,26 @@
     Jar
   </a>
   
+    <nav class="md-nav" aria-label="Jar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#editor" class="md-nav__link">
+    Editor
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apicli" class="md-nav__link">
+    API/CLI
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -553,6 +573,26 @@
     Jar
   </a>
   
+    <nav class="md-nav" aria-label="Jar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#editor" class="md-nav__link">
+    Editor
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apicli" class="md-nav__link">
+    API/CLI
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -579,11 +619,15 @@
 <ul>
 <li>Install the GraalVM 21.3.0 for Java 11 and set the <code>GRAALVM_HOME</code> to the installation dir. </li>
 <li>Install <code>native-image</code> with <code>$GRAALVM_HOME/bin/gu install native-image</code>. </li>
-<li>Run from <code>clojure-lsp</code> project root <code>./graalvm/native-unix-compile.sh</code> or <code>./graalvm/native-windows-compile.bat</code>. </li>
+<li>Unix: Run from <code>clojure-lsp</code> project root <code>make native-cli</code></li>
+<li>Windows: <code>cd cli &amp;&amp; ./graalvm/native-windows-compile.bat</code>. </li>
 </ul>
 <p>The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
 <h2 id="jar">Jar<a class="headerlink" href="#jar" title="Permanent link">#</a></h2>
-<p>Run <code>clojure -X:prod-jar</code> for building the jar.</p>
+<h3 id="editor">Editor<a class="headerlink" href="#editor" title="Permanent link">#</a></h3>
+<p>Run <code>clojure -X:editor-jar</code> for building the jar to be used with LSP protocol in a editor or CLI.</p>
+<h3 id="apicli">API/CLI<a class="headerlink" href="#apicli" title="Permanent link">#</a></h3>
+<p>Run <code>clojure -X:api-jar</code> for building the jar to be used via CLI or JVM via API.</p>
                 
                   
                     
@@ -592,7 +636,7 @@
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 15, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 16, 2022</span>
     
   </small>
 </div>

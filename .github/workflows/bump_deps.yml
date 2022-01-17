@@ -15,4 +15,5 @@ jobs:
     - name: Check deps
       uses: nnichols/clojure-dependency-update-action@v3
       with:
+        directories: "cli lib"
         github-token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}

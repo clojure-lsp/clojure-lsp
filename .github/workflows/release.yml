@@ -28,8 +28,8 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Generate jar and embedded jar
-        run: make prod-jar-for-native
+      - name: Generate jar for native
+        run: make cli-jar-for-native
 
       - name: Upload jar
         uses: actions/upload-artifact@v2
@@ -37,10 +37,10 @@ jobs:
           path: clojure-lsp.jar
           name: clojure-lsp.jar
 
-      - name: Generate jar and embedded jar
-        run: make prod-bin
+      - name: Generate cli bin
+        run: make prod-cli
 
-      - name: Upload embedded jar
+      - name: Upload bin
         uses: actions/upload-artifact@v2
         with:
           path: clojure-lsp
@@ -78,7 +78,7 @@ jobs:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          graalvm/native-unix-compile.sh
+          cd cli && graalvm/native-unix-compile.sh
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -136,7 +136,7 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
         run: |
-          graalvm/native-unix-compile.sh
+          cd cli && graalvm/native-unix-compile.sh
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -187,7 +187,7 @@ jobs:
   #         CLOJURE_LSP_JAR: clojure-lsp.jar
   #         CLOJURE_LSP_XMX: "-J-Xmx6g"
   #       run: |
-  #         graalvm/native-unix-compile.sh
+  #         cd cli && graalvm/native-unix-compile.sh
 
   #     - name: Zip binary
   #       run: zip clojure-lsp-native-linux-aarch64.zip clojure-lsp
@@ -230,7 +230,7 @@ jobs:
           CLOJURE_LSP_JAR: clojure-lsp.jar
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          graalvm/native-unix-compile.sh
+          cd cli && graalvm/native-unix-compile.sh
 
       # UPX is not working for MacOS Big Sur
       # - name: Compress binary

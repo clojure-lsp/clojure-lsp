@@ -213,6 +213,22 @@
              z/up))
        parent-zloc))))
 
+(defn ^:private can-swap?
+  "In a few cases, the simple can-move-*? heuristics return the wrong results.
+  This happens:
+  A) When on a comment following the first element/pair, and `move-up` is
+     invoked.
+  B) When on a padding line before the last element/pair, and `move-down` is
+     invoked.
+  Movement should not be allowed in either of these cases. Unfortunately,
+  there's no quick way to know we're in this situation until after we've
+  affiliated whitespace with elements. But now that we've done that, we can
+  detect it. It manifests as the origin-idx or dest-idx being out of bounds, in
+  which case either origin-elem or dest-elem will be missing. We bail out now to
+  avoid erroneous swaps."
+  [origin-elem dest-elem]
+  (and origin-elem dest-elem))
+
 (defn ^:private move-pair-zloc
   "Move a pair of elements around `zloc` in direction `dir` considering multiple
   comments cases."
@@ -230,16 +246,7 @@
 
         origin-elem (elem-by-index origin-idx elems)
         dest-elem   (elem-by-index dest-idx elems)]
-    ;; In a few cases, the simple can-move-*? heuristics return the wrong
-    ;; results. This happens:
-    ;; A) When on a comment after the first pair, and `move-up` is invoked.
-    ;; B) When on a padding line before the last pair, and `move-down` is invoked.
-    ;; Movement should not be allowed in either of these cases. Unfortunately,
-    ;; there's no quick way to know we're in this situation. But now that we've
-    ;; parsed the elems, we can detect it. It manifests as the origin-idx or
-    ;; dest-idx being out of bounds, in which case either origin-elem or
-    ;; dest-elem will be missing. We bail out now to avoid erroneous swaps.
-    (when (and origin-elem dest-elem)
+    (when (can-swap? origin-elem dest-elem)
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 
@@ -271,16 +278,7 @@
 
         origin-elem (elem-by-index origin-idx elems)
         dest-elem   (elem-by-index dest-idx elems)]
-    ;; In a few cases, the simple can-move-*? heuristics return the wrong
-    ;; results. This happens:
-    ;; A) When on a comment after the first element, and `move-up` is invoked.
-    ;; B) When on a padding line before the last element, and `move-down` is invoked.
-    ;; Movement should not be allowed in either of these cases. Unfortunately,
-    ;; there's no quick way to know we're in this situation. But now that we've
-    ;; parsed the elems, we can detect it. It manifests as the origin-idx or
-    ;; dest-idx being out of bounds, in which case either origin-elem or
-    ;; dest-elem will be missing. We bail out now to avoid erroneous swaps.
-    (when (and origin-elem dest-elem)
+    (when (can-swap? origin-elem dest-elem)
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 

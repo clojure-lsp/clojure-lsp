@@ -326,7 +326,7 @@
   [zloc uri {:keys [analysis]}]
   (boolean
     (or (when-let [outer-zloc (z/left zloc)]
-          (and (nil? (z/left outer-zloc)) ;; leftmost
+          (and (z/leftmost? outer-zloc)
                (contains? common-binding-syms (z/sexpr outer-zloc))))
         (let [z-pos   (z-cursor-position (z/down zloc))
               z-scope {:name-row     (:row z-pos)

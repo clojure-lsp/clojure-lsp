@@ -106,15 +106,13 @@
         (recur zloc
                :on-elem
                elem-idx
-               (cond-> result
-                 (seq padding) (conj {:type :padding :locs padding}))))
+               (conj result {:type :padding :locs padding})))
 
       (= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc z/whitespace-or-comment?)]
         (if-not elem-loc
           ;; We've processed all the elements and this is trailing whitespace.
-          (cond-> result
-            (seq prefix) (conj {:type :padding :locs prefix}))
+          (conj result {:type :padding :locs prefix})
           (let [;; affiliate elem with (optional) comment following it
                 postfix-start (z/right* elem-loc)
                 padding-start (->> postfix-start

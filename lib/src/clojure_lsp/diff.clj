@@ -42,10 +42,10 @@
 
 (def ^:private ansi-colors
   {:reset "[0m"
-   :red   "[031m"
-   :green "[032m"
-   :yellow "[033m"
-   :cyan  "[036m"})
+   :red   "[31m"
+   :green "[32m"
+   :yellow "[33m"
+   :cyan  "[36m"})
 
 (defn colorize [s color]
   (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))

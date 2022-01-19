@@ -59,7 +59,7 @@
   (let [uri (:uri textDocument)
         text (:text textDocument)]
     (f.file-management/did-open uri text db/db true)
-    (producer/refresh-test-tree (:producer @db/db) uri))
+    (producer/refresh-test-tree (:producer @db/db) [uri]))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -81,7 +81,7 @@
     (let [filename (shared/uri->filename uri)]
       (case type
         :created (do (f.file-management/did-open uri (slurp filename) db/db false)
-                     (producer/refresh-test-tree (:producer @db/db) uri))
+                     (producer/refresh-test-tree (:producer @db/db) [uri]))
         ;; TODO Fix outdated changes overwriting newer changes.
         :changed nil #_(f.file-management/did-change uri
                                                      [{:text (slurp filename)}]

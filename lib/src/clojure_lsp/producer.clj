@@ -6,7 +6,7 @@
 
 (defprotocol IProducer
   (refresh-code-lens [this])
-  (refresh-test-tree [this uri])
+  (refresh-test-tree [this uris])
   (publish-diagnostic [this diagnostic])
   (publish-workspace-edit [this edit])
   (publish-progress [this percentage message progress-token])

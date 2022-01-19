@@ -10,6 +10,7 @@
   - Lint unused public keywords, like unused re-frame events/subs. #691
   - Fix rename of namespaced keywords -> aliased keywords. #665
   - Huge refactor on clojure-lsp codebase, spliting code into submodules, this made possible remove a lot of deps from API jar and help separate clojure-lsp features in the future. #658
+  - Send testTree notification for all project test files after clojure-lsp start. #697
 
 - Editor
   - Improve 'create function' refactor code action handling multiple cases. #682

@@ -30,7 +30,7 @@
 (defrecord TestProducer []
   producer/IProducer
   (refresh-code-lens [_this])
-  (refresh-test-tree [_this _uri])
+  (refresh-test-tree [_this _uris])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
   (publish-progress [_this _percentage _message _progress-token])

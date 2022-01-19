@@ -112,31 +112,30 @@
       (= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc z/whitespace-or-comment?)]
         (if-not elem-loc
-          ;; We've processed all the elements and this is trailing
-          ;; whitespace.
+          ;; We've processed all the elements and this is trailing whitespace.
           (cond-> result
             (seq prefix) (conj {:type :padding :locs prefix}))
-          (let [;; find the start of the next padding
-                zloc    (->> elem-loc
-                             z/right*
-                             ;; seek to the first newline, comma or regular node
-                             ;; TODO: handle case where comma precedes comment
-                             ;; `a 1, ;; one comment`
-                             ;; Conceptually, the comma should stay put while
-                             ;; the pair and comment move.
-                             (z/skip z/right* (comp #{:whitespace :comment}
-                                                    z/tag))
-                             ;; relinquish that node
-                             z/left*
-                             ;; then give up as much whitespace as possible,
-                             ;; back to the (optional) comment
-                             (z/skip z/left* z/whitespace?)
-                             ;; then forward to the padding
-                             z/right*)
-                postfix (z-take-while (z/right* elem-loc)
-                                      z/right*
-                                      #(not= zloc %))]
-            (recur zloc
+          (let [;; affiliate elem with (optional) comment following it
+                postfix-start (z/right* elem-loc)
+                padding-start (->> postfix-start
+                                   ;; seek to the first newline, comma or regular node
+                                   ;; TODO: handle case where comma precedes comment
+                                   ;; `a 1, ;; one comment`
+                                   ;; Conceptually, the comma should stay put while
+                                   ;; the pair and comment move.
+                                   (z/skip z/right* (comp #{:whitespace :comment}
+                                                          z/tag))
+                                   ;; relinquish that node
+                                   z/left*
+                                   ;; then give up as much whitespace as possible,
+                                   ;; back to the (optional) comment
+                                   (z/skip z/left* z/whitespace?)
+                                   ;; then forward to the padding
+                                   z/right*)
+                postfix       (z-take-while postfix-start
+                                            z/right*
+                                            #(not= padding-start %))]
+            (recur padding-start
                    :in-padding
                    (inc elem-idx)
                    (conj result
@@ -339,8 +338,11 @@
                                (shared/inside? element z-scope)))
                         (get analysis (shared/uri->filename uri)))))))
 
+(defn ^:private balanced-pairs? [parent-zloc]
+  (even? (count (z/child-sexprs parent-zloc))))
+
 (defn ^:private can-move-pair-up? [zloc]
-  (when (and (even? (count (z/child-sexprs (z/up zloc))))
+  (when (and (balanced-pairs? (z/up zloc))
              (>= (count-siblings-left zloc) 2))
     :pairwise))
 
@@ -349,7 +351,7 @@
     :elementwise))
 
 (defn ^:private can-move-pair-down? [zloc]
-  (when (and (even? (count (z/child-sexprs (z/up zloc))))
+  (when (and (balanced-pairs? (z/up zloc))
              (>= (count-siblings-right zloc) 2))
     :pairwise))
 

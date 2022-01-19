@@ -154,7 +154,7 @@
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
-              (producer/refresh-test-tree (:producer @db) uri))
+              (producer/refresh-test-tree (:producer @db) [uri]))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]

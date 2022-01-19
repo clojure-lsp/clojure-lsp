@@ -466,14 +466,15 @@
       (when (.getRefreshSupport code-lens-capability)
         (.refreshCodeLenses client))))
 
-  (refresh-test-tree [_this uri]
+  (refresh-test-tree [_this uris]
     (go
       (shared/logging-time
-        ":testTree %s secs"
-        (when-let [test-tree (f.test-tree/tree uri db)]
-          (->> test-tree
-               (coercer/conform-or-log ::coercer/publish-test-tree-params)
-               (.publishTestTree client))))))
+        "Refreshing testTree took %s secs"
+        (doseq [uri uris]
+          (when-let [test-tree (f.test-tree/tree uri db)]
+            (->> test-tree
+                 (coercer/conform-or-log ::coercer/publish-test-tree-params)
+                 (.publishTestTree client)))))))
 
   (publish-workspace-edit [_this edit]
     (->> edit

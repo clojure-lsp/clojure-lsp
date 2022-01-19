@@ -8,6 +8,7 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
@@ -32,6 +33,14 @@
         algorithm (MessageDigest/getInstance "MD5")
         raw (.digest algorithm bytes')]
     (format "%032x" (BigInteger. 1 raw))))
+
+(defn ^:private analyze-test-paths! [db]
+  (let [project-files (-> (:analysis @db/db)
+                          (q/filter-project-analysis db/db)
+                          keys)]
+    (->> project-files
+         (map #(shared/filename->uri % db))
+         (producer/refresh-test-tree (:producer @db)))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
@@ -218,4 +227,8 @@
       (producer/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
       (log/info "Analyzing source paths for project root" root-path)
       (analyze-source-paths! (:source-paths settings) db))
+    (when-not (:api? @db)
+      (async/go
+        (log/info "Analyzing test paths for project root" root-path)
+        (analyze-test-paths! db)))
     (producer/publish-progress (:producer @db) 100 "Project analyzed" progress-token)))

@@ -265,12 +265,12 @@
                         :arguments [uri line character]}}
 
              "refactor-move-coll-entry-up"
-             {:command {:title     "Move coll key-value entry up"
+             {:command {:title     "Move coll entry up"
                         :command   "move-coll-entry-up"
                         :arguments [uri line character]}}
 
              "refactor-move-coll-entry-down"
-             {:command {:title     "Move coll key-value entry down"
+             {:command {:title     "Move coll entry down"
                         :command   "move-coll-entry-down"
                         :arguments [uri line character]}}
 
@@ -427,7 +427,7 @@
           :character character}})
 
 (defn ^:private move-coll-entry-up-action [uri line character]
-  {:title "Move coll key-pair entry up"
+  {:title "Move coll entry up"
    :kind :refactor-rewrite
    :data {:id "refactor-move-coll-entry-up"
           :uri uri
@@ -435,7 +435,7 @@
           :character character}})
 
 (defn ^:private move-coll-entry-down-action [uri line character]
-  {:title "Move coll key-pair entry down"
+  {:title "Move coll entry down"
    :kind :refactor-rewrite
    :data {:id "refactor-move-coll-entry-down"
           :uri uri
@@ -507,8 +507,8 @@
         missing-imports* (future (find-missing-imports uri diagnostics db))
         require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
-        allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc))
-        allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc))
+        allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
+        allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []

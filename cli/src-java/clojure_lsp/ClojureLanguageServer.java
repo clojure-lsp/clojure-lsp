@@ -11,6 +11,7 @@ import clojure.java.api.Clojure;
 import clojure.lang.IFn;
 
 import clojure_lsp.feature.cursor_info.CursorInfoParams;
+import clojure_lsp.feature.classpath.ClasspathLookupParams;
 import clojure_lsp.feature.clojuredocs.ClojuredocsParams;
 
 /**
@@ -44,5 +45,8 @@ public interface ClojureLanguageServer extends LanguageServer {
 
     @JsonRequest("clojure/clojuredocs/raw")
     CompletableFuture<Object> clojuredocsRaw(ClojuredocsParams clojuredocsParams);
+
+    @JsonRequest("clojure/classpath/lookup")
+    CompletableFuture<Object> lookupClasspath(ClasspathLookupParams params);
 
 }

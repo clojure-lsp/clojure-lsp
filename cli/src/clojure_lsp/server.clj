@@ -18,8 +18,10 @@
    (clojure_lsp
      ClojureLanguageServer
      ClojureLanguageClient)
+   (clojure_lsp.feature.classpath ClasspathLookupParams)
    (clojure_lsp.feature.clojuredocs ClojuredocsParams)
    (clojure_lsp.feature.cursor_info CursorInfoParams)
+   (java.util Base64)
    (java.util.concurrent CompletableFuture
                          CompletionException)
    (java.util.function Supplier)
@@ -406,6 +408,19 @@
     (start :clojuredocsRaw
            (CompletableFuture/completedFuture
              (sync-request params handlers/clojuredocs-raw ::coercer/clojuredocs-raw))))
+
+  (^CompletableFuture lookupClasspath [_ ^ClasspathLookupParams params]
+    (try
+      (CompletableFuture/completedFuture
+       (let [filepath (.getFilepath params)
+             base64 (some->> (handlers/lookup-classpath filepath)
+                             (.encodeToString (Base64/getEncoder)))]
+         (log/info (str "lookup: " filepath))
+         (coercer/conform-or-log ::coercer/classpath-lookup {:content base64})))
+      (catch Throwable t
+        (log/error t (str "lookup error: " params))
+        (CompletableFuture/completedFuture
+         (coercer/conform-or-log ::coercer/classpath-lookup {:content nil})))))
 
   (^CompletableFuture shutdown [_]
     (log/info "Shutting down")

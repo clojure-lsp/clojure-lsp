@@ -33,6 +33,13 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"clojure_lsp.feature.classpath.ClasspathLookupParams",
+  "allDeclaredMethods":true,
+  "allPublicMethods": true,
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"clojure_lsp.feature.clojuredocs.ClojuredocsParams",
   "allDeclaredMethods":true,
   "allPublicMethods": true,

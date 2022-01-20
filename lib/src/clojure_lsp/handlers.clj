@@ -1,5 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
+   [clojure-lsp.classpath-lookup :as classpath-lookup]
    [clojure-lsp.config :as config]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
@@ -207,6 +208,10 @@
 
 (defn clojuredocs-raw [{:keys [symName symNs]}]
   (f.clojuredocs/find-docs-for symName symNs db/db))
+
+(defn lookup-classpath [filepath]
+  {:pre [(string? filepath)]}
+  (classpath-lookup/lookup! filepath db/db))
 
 (defn ^:private refactor [refactoring [doc-id line character & args] db]
   (let [row                        (inc (int line))

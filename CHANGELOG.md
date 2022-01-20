@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.01.20-03.13.10
+
 - General
   - Bump clj-kondo to `2022.01.13`.
   - Add `:classpath` to `serverInfo` command for downstream usages.

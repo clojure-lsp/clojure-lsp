@@ -10,7 +10,7 @@
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
         medley/medley {:mvn/version "1.3.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
-        clj-kondo/clj-kondo {:mvn/version "2022.01.15"}
+        clj-kondo/clj-kondo {:mvn/version "2021.12.20-20220113.103620-14"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}

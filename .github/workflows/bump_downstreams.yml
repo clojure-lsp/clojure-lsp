@@ -23,8 +23,8 @@ jobs:
         with:
           cli: '1.10.3.814'
 
-      - name: Build api-jar
-        run: make api-jar
+      - name: Build lib-jar
+        run: make lib-jar
 
       - uses: jlesquembre/clojars-publish-action@0.4
         env:

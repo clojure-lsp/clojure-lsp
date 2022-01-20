@@ -23,11 +23,12 @@ jobs:
       - name: Build lib-jar
         run: make lib-jar
 
-      - uses: jlesquembre/clojars-publish-action@0.4
+      - name: Deploy clojars
         env:
-          USE_GIT_REF: false
           CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+        run: |
+          make deploy-clojars
 
   bump-homebrew-formula:
     name: Bump Homebrew formula

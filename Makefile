@@ -69,6 +69,9 @@ lint-fix:
 release:
 	./release
 
+deploy-clojars:
+	cd lib && clojure -X:deploy
+
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs
 	docker login docker.pkg.github.com

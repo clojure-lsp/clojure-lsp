@@ -76,11 +76,16 @@
 
   The format of a returned padding is:
   {:type :padding
+   :idx  <index of the padding within seq-zloc>
    :locs <sequence of zipper locations whose nodes make up the padding>}
 
+  The returned values will always be interposed with padding, with padding at
+  the beginning and possibly at the end, even if the padding contains no locs.
+  The first padding's and first element's idx will be 0, increasing in step from
+  there.
+
   The children of the original `seq-zloc` could be reconstructed by
-  concatenating all the `:locs` together.
-  "
+  concatenating all the `:locs` together."
   [seq-zloc]
   (loop [zloc (-> seq-zloc
                   (z/edit* (fn [parent-node]
@@ -93,9 +98,9 @@
                                                          (n/children parent-node)))))
                   z/down*)
 
-         state    :in-padding
-         elem-idx 0
-         result   []]
+         state  :in-padding
+         idx    0
+         result []]
     (cond
       (nil? zloc) ;; rightmost?*
       ;; everything processed
@@ -105,14 +110,18 @@
       (let [[padding zloc] (z-split-with zloc z/whitespace?)]
         (recur zloc
                :on-elem
-               elem-idx
-               (conj result {:type :padding :locs padding})))
+               idx
+               (conj result {:type :padding
+                             :idx  idx
+                             :locs padding})))
 
       (= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc z/whitespace-or-comment?)]
         (if-not elem-loc
           ;; We've processed all the elements and this is trailing whitespace.
-          (conj result {:type :padding :locs prefix})
+          (conj result {:type :padding
+                        :idx  idx
+                        :locs prefix})
           (let [;; affiliate elem with (optional) comment following it
                 postfix-start (z/right* elem-loc)
                 padding-start (->> postfix-start
@@ -135,10 +144,10 @@
                                             #(not= padding-start %))]
             (recur padding-start
                    :in-padding
-                   (inc elem-idx)
+                   (inc idx)
                    (conj result
                          {:type :elem
-                          :idx  elem-idx
+                          :idx  idx
                           :locs (concat prefix [elem-loc] postfix)}))))))))
 
 (defn ^:private z-cursor-position [zloc]
@@ -154,25 +163,18 @@
   between elements. If this was the case, we assume the intention was to move
   the next element."
   [cursor-position elems]
-  (reduce (fn [best-idx {:keys [idx type locs]}]
-            (let [origin? (->> locs
-                               (some (fn [elem-loc]
-                                       (= (z-cursor-position elem-loc)
-                                          cursor-position)))
-                               boolean)]
-              (case [type origin?]
-                [:elem true]     (reduced idx)
-                [:elem false]    idx
-                [:padding true]  (reduced (inc best-idx))
-                [:padding false] best-idx)))
-          -1
-          elems))
+  (->> elems
+       (filter (fn [{:keys [locs]}]
+                 (some (comp #{cursor-position} z-cursor-position)
+                       locs)))
+       first
+       :idx))
 
-(defn ^:private elem-by-index [origin-idx elems]
+(defn ^:private elem-by-index [search-idx elems]
   (->> elems
        (filter (fn [{:keys [type idx]}]
                  (and (= :elem type)
-                      (= idx origin-idx))))
+                      (= search-idx idx))))
        first))
 
 (defn ^:private split-elems-at-idx [elems split-idx]

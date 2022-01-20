@@ -13,7 +13,7 @@
 /test.clj
 /.calva/output-window
 /clojure-lsp
-/clojure-lsp.jar
+/*.jar
 clojure-lsp.build_artifacts.txt
 
 /.classpath

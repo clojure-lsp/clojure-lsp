@@ -10,7 +10,7 @@ fi
 if [[ ! -f "$CLOJURE_LSP_JAR" ]]
 then
     make cli-jar
-    CLOJURE_LSP_JAR=$(ls clojure-lsp.jar)
+    CLOJURE_LSP_JAR=$(ls clojure-lsp-standalone.jar)
 fi
 
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx8g"}

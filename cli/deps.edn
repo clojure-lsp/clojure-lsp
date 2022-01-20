@@ -32,26 +32,26 @@
                                 cider/cider-nrepl {:mvn/version "0.28.0"}}}
            :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                        :exec-fn hf.depstar/uberjar
-                       :exec-args {:jar "clojure-lsp.jar"
+                       :exec-args {:jar "clojure-lsp-standalone.jar"
                                    :aot true
                                    :jvm-opts ["-Xmx2g" "-server"]
                                    :main-class clojure-lsp.main
                                    :aliases [:debug]}}
            :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
                  :exec-fn deps-bin.deps-bin/bin
-                 :exec-args {:jar "clojure-lsp.jar"
+                 :exec-args {:jar "clojure-lsp-standalone.jar"
                              :jvm-opts ["-Xmx2g" "-server"]
                              :name "clojure-lsp"
                              :skip-realign true}}
            :prod-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                       :exec-fn hf.depstar/uberjar
-                      :exec-args {:jar "clojure-lsp.jar"
+                      :exec-args {:jar "clojure-lsp-standalone.jar"
                                   :aot true
                                   :jvm-opts ["-Xmx2g" "-server"]
                                   :main-class clojure-lsp.main}}
            :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                                  :exec-fn hf.depstar/uberjar
-                                 :exec-args {:jar "clojure-lsp.jar"
+                                 :exec-args {:jar "clojure-lsp-standalone.jar"
                                              :aot true
                                              :jvm-opts ["-Xmx2g" "-server"]
                                              :main-class clojure-lsp.main

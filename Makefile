@@ -17,10 +17,13 @@ classes:
 
 lib-jar: clean classes
 	cd lib && clojure -X:jar
+	cp -f lib/clojure-lsp.jar .
 cli-jar: clean classes
 	cd cli && clojure -X:prod-jar
+	cp -f cli/clojure-lsp-standalone.jar .
 cli-jar-for-native: clean classes
 	cd cli && clojure -X:prod-jar-for-native
+	cp -f cli/clojure-lsp-standalone.jar .
 
 debug-cli: clean classes
 	cd cli && clojure -X:debug-jar
@@ -30,7 +33,7 @@ prod-cli: cli-jar
 	cd cli && clojure -X:bin
 	cp -f cli/clojure-lsp .
 native-cli: cli-jar-for-native
-	cd cli && CLOJURE_LSP_JAR=clojure-lsp.jar ./graalvm/native-unix-compile.sh
+	cd cli && CLOJURE_LSP_JAR=clojure-lsp-standalone.jar ./graalvm/native-unix-compile.sh
 	cp -f cli/clojure-lsp .
 
 test: classes

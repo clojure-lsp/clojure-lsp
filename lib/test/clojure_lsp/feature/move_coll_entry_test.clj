@@ -22,13 +22,17 @@
   (let [[[row col]] (h/load-code-and-locs code uri)]
     (zloc-at row col)))
 
+(defn can-move-zloc-up? [zloc]
+  (f.move-coll-entry/can-move-entry-up? zloc uri @db/db))
+
+(defn can-move-zloc-down? [zloc]
+  (f.move-coll-entry/can-move-entry-down? zloc uri @db/db))
+
 (defn can-move-code-up? [code]
-  (let [zloc (load-code-and-zloc code)]
-    (f.move-coll-entry/can-move-entry-up? zloc uri @db/db)))
+  (can-move-zloc-up? (load-code-and-zloc code)))
 
 (defn can-move-code-down? [code]
-  (let [zloc (load-code-and-zloc code)]
-    (f.move-coll-entry/can-move-entry-down? zloc uri @db/db)))
+  (can-move-zloc-down? (load-code-and-zloc code)))
 
 (deftest can-move-entry-up?
   (testing "common cases"
@@ -249,18 +253,34 @@
                (z/right*)
                move-zloc-up
                as-string)))
-    (is (nil? (-> (h/code "{:a 1"
-                          ""
-                          " :b 2"
-                          "|"
-                          "}")
-                  load-code-and-zloc
-                  ;; load-code moves cursor in whitespace to outer form;
-                  ;; move cursor to blank line after b
-                  (z/down)
-                  (z/find-next-value z/right 2)
-                  z/right*
-                  move-zloc-up))))
+    (let [ws-zloc (-> (h/code "{:a 1 |;; one comment"
+                              ""
+                              " :b 2}")
+                      load-code-and-zloc
+                      ;; load-code moves cursor in whitespace to outer form;
+                      ;; move cursor to comment after 1
+                      (z/down)
+                      (z/find-next-value z/right 1)
+                      z/right*)]
+      ;; NOTE: ideally can-move-*? and move-* would agree, but at least no
+      ;; erroneous swaps happen
+      (is (can-move-zloc-up? ws-zloc))
+      (is (nil? (move-zloc-up ws-zloc))))
+    (let [ws-zloc (-> (h/code "{:a 1"
+                              ""
+                              " :b 2"
+                              "|"
+                              "}")
+                      load-code-and-zloc
+                      ;; load-code moves cursor in whitespace to outer form;
+                      ;; move cursor to blank line after b
+                      (z/down)
+                      (z/find-next-value z/right 2)
+                      z/right*)]
+      ;; NOTE: ideally can-move-*? and move-* would agree, but at least no
+      ;; erroneous swaps happen
+      (is (can-move-zloc-up? ws-zloc))
+      (is (nil? (move-zloc-up ws-zloc)))))
   (testing "comments"
     (assert-move-up (h/code "{:b (+ 1 1) ;; two comment"
                             " :a 1 ;; one comment"
@@ -482,17 +502,20 @@
                (z/down*)
                move-zloc-down
                as-string)))
-    (is (nil? (-> (h/code "{:a 1"
-                          "|"
-                          " :b 2}")
-                  load-code-and-zloc
-                  ;; load-code moves cursor in whitespace to outer form;
-                  ;; move cursor to blank line between a and b
-                  z/down
-                  z/right
-                  z/right*
-                  z/right*
-                  move-zloc-down))))
+    (let [ws-zloc (-> (h/code "{:a 1"
+                              "|"
+                              " :b 2}")
+                      load-code-and-zloc
+                      ;; load-code moves cursor in whitespace to outer form;
+                      ;; move cursor to blank line between a and b
+                      z/down
+                      z/right
+                      z/right*
+                      z/right*)]
+      ;; NOTE: ideally can-move-*? and move-* would agree, but at least no
+      ;; erroneous swaps happen
+      (is (can-move-zloc-down? ws-zloc))
+      (is (nil? (move-zloc-down ws-zloc)))))
   (testing "comments"
     (assert-move-down (h/code "{:b (+ 1 1) ;; two comment"
                               " :a 1 ;; one comment"

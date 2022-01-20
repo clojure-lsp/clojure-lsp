@@ -12,10 +12,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.java.data :as j]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
    (java.io ByteArrayOutputStream)
@@ -184,7 +182,7 @@
            :project-settings project-settings
            :force-settings force-settings
            :settings settings
-           :client-capabilities (medley/update-existing client-capabilities :experimental j/from-java))
+           :client-capabilities client-capabilities)
     (producer/publish-progress (:producer @db) 5 "Finding kondo config" progress-token)
     (ensure-kondo-config-dir-exists! project-root-uri db)
     (producer/publish-progress (:producer @db) 10 "Finding cache" progress-token)

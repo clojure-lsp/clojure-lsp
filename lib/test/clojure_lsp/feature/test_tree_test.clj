@@ -3,16 +3,12 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest testing]]))
 
 (h/reset-db-after-test)
 
 (deftest tree-test
-  (testing "without test tree client capability"
-    (swap! db/db assoc-in [:client-capabilities :experimental :testTree] false)
-    (is (not (f.test-tree/tree "file:///a.clj" db/db))))
   (testing "valid test tree"
-    (swap! db/db assoc-in [:client-capabilities :experimental :testTree] true)
     (h/load-code-and-locs (h/code "(ns foo.bar (:require [clojure.test :refer :all]))"
                                   "(deftest some-test"
                                   "  (testing \"foo\""

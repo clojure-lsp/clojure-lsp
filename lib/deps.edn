@@ -1,11 +1,9 @@
 {:deps {org.clojure/clojure {:mvn/version "1.10.3"}
         rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
-        org.clojure/data.json {:mvn/version "2.4.0"}
         borkdude/rewrite-edn {:mvn/version "0.1.0" :exclusions [rewrite-clj/rewrite-clj]}
         com.taoensso/timbre {:mvn/version "5.1.2"}
         org.clojure/core.async {:mvn/version "1.5.648"}
         datalevin/datalevin {:mvn/version "0.5.27"}
-        org.clojure/java.data {:mvn/version "1.0.95"}
         cljfmt/cljfmt {:mvn/version "0.8.0"
                        :exclusions [rewrite-cljs/rewrite-cljs
                                     com.googlecode.java-diff-utils/diffutils]}
@@ -15,9 +13,7 @@
         clj-kondo/clj-kondo {:mvn/version "2022.01.15"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}}
  :paths ["src" "resources"]
- :aliases {:dev {:extra-paths ["cli"
-                               "core"]}
-           :test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
+ :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}

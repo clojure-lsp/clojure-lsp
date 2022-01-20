@@ -13,6 +13,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go go-loop thread timeout]]
+   [clojure.java.data :as j]
    [taoensso.timbre :as log])
   (:import
    (clojure_lsp
@@ -468,13 +469,14 @@
 
   (refresh-test-tree [_this uris]
     (go
-      (shared/logging-time
-        "Refreshing testTree took %s secs"
-        (doseq [uri uris]
-          (when-let [test-tree (f.test-tree/tree uri db)]
-            (->> test-tree
-                 (coercer/conform-or-log ::coercer/publish-test-tree-params)
-                 (.publishTestTree client)))))))
+      (when (some-> @db/db :client-capabilities :experimental j/from-java :testTree)
+        (shared/logging-time
+          "Refreshing testTree took %s secs"
+          (doseq [uri uris]
+            (when-let [test-tree (f.test-tree/tree uri db)]
+              (->> test-tree
+                   (coercer/conform-or-log ::coercer/publish-test-tree-params)
+                   (.publishTestTree client))))))))
 
   (publish-workspace-edit [_this edit]
     (->> edit

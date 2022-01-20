@@ -79,7 +79,7 @@ jobs:
 
   linux-amd64:
     name: Build native linux amd64 binary
-    needs: build-jvm
+    needs: [build-lib-jar, build-cli-jar]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -136,7 +136,7 @@ jobs:
 
   linux-amd64-static:
     name: Build native linux amd64 static binary
-    needs: build-jvm
+    needs: [build-lib-jar, build-cli-jar]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -190,7 +190,7 @@ jobs:
 
   # linux-aarch64:
   #   name: Build native linux aarch64 binary
-  #   needs: build-jvm
+  #   needs: [build-lib-jar, build-cli-jar]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v2
@@ -231,7 +231,7 @@ jobs:
 
   macos:
     name: Build native MacOS binary
-    needs: build-jvm
+    needs: [build-lib-jar, build-cli-jar]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
@@ -289,7 +289,7 @@ jobs:
 
   windows:
     name: Build native Windows binary
-    needs: build-jvm
+    needs: [build-lib-jar, build-cli-jar]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -356,7 +356,7 @@ jobs:
   release:
     name: Create Release
     environment: prod-release
-    needs: [build-jvm, linux-amd64, linux-amd64-static, macos, windows]
+    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.2.0

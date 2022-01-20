@@ -76,7 +76,7 @@ if [[ "$checksum" != "" ]] && [[ "$version" == "" ]]; then
 fi
 
 if [[ "$version" == "" ]]; then
-  version="$(curl -sL https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/resources/CLOJURE_LSP_VERSION)"
+  version="$(curl -sL https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/lib/resources/CLOJURE_LSP_VERSION)"
 fi
 
 case "$(uname -s)" in

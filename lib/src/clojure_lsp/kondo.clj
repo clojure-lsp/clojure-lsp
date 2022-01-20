@@ -16,7 +16,7 @@
 (defn clj-kondo-version []
   (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
-(def clj-kondo-analysis-batch-size 50)
+(def clj-kondo-analysis-batch-size 1)
 
 (defn home-config-path []
   (let [xdg-config-home (or (config/get-env "XDG_CONFIG_HOME")
@@ -187,7 +187,7 @@
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
-                          (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
+                          (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo..." (vec batch-paths))
                           (update-callback (inc index) batch-count)
                           (run-kondo-on-paths! batch-paths public-only? db)))
            (reduce shared/deep-merge)))))

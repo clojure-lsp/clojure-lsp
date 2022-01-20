@@ -36,6 +36,13 @@ native-cli: cli-jar-for-native
 	cd cli && CLOJURE_LSP_JAR=clojure-lsp-standalone.jar ./graalvm/native-unix-compile.sh
 	cp -f cli/clojure-lsp .
 
+native-cli-raw-unix:
+	cd cli && ./graalvm/native-unix-compile.sh
+	cp -f cli/clojure-lsp .
+native-cli-raw-windows:
+	cd cli && ./graalvm/native-windows-compile.bat
+	cp -f cli/clojure-lsp.exe .
+
 test: classes
 	cd lib && clojure -M:test
 	cd cli && clojure -M:test

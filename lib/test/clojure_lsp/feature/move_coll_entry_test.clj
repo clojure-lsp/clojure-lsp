@@ -364,12 +364,15 @@
       (is (nil? (move-zloc-up ws-zloc)))))
   (testing "relocation"
     (assert-move-up-position [1 2]
-                             (h/code "{:a 1 ;; one comment"
+                             (h/code "{:a 1"
                                      " |:b 2}"))
+    (assert-move-up-position [1 2]
+                             (h/code "[:a"
+                                     " |:b]"))
     ;; moves cursor to start of entry pair
     (assert-move-up-position [1 2]
-                             (h/code "{:a :x ;; one comment"
-                                     " :b    |:y}"))))
+                             (h/code "{:a 1"
+                                     " :b |2}"))))
 
 (deftest move-down
   (testing "common cases"
@@ -595,9 +598,12 @@
       (is (nil? (move-zloc-down ws-zloc)))))
   (testing "relocation"
     (assert-move-down-position [2 2]
-                               (h/code "{|:a 1 ;; one comment"
+                               (h/code "{|:a 1"
                                        " :b 2}"))
+    (assert-move-down-position [2 2]
+                               (h/code "[|:a"
+                                       " :b]"))
     ;; moves cursor to start of entry pair
     (assert-move-down-position [2 2]
-                               (h/code "{:a    |:x ;; one comment"
-                                       " :b :y}"))))
+                               (h/code "{:a |1"
+                                       " :b 2}"))))

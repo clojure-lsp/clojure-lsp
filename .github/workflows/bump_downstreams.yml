@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ["Release"]
     types:
-      - completedjobs:
+      - completed
 
   release-clojars:
     name: Release artifact to Clojars

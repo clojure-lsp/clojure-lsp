@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix freezing in some cases during clojure-lsp startup linting. #708
+
 ## 2022.01.20-14.12.43
 
 - General

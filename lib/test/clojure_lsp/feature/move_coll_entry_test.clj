@@ -356,6 +356,22 @@
     (assert-move-up-position [1 2]
                              (h/code "[:a"
                                      " |:b]"))
+    (assert-move-up-position [1 2]
+                             (h/code "[[:a"
+                                     "  :b]"
+                                     " |:c]"))
+    (assert-move-up-position [1 2]
+                             (h/code "[:c"
+                                     " |[:a"
+                                     "  :b]]"))
+    (assert-move-up-position [1 2]
+                             (h/code "{:a {:a/a 1"
+                                     "     :a/b 2}"
+                                     " |:c 3}"))
+    (assert-move-up-position [1 2]
+                             (h/code "{:c 3"
+                                     " |:a {:a/a 1"
+                                     "     :a/b 2}}"))
     ;; moves cursor to start of entry pair
     (assert-move-up-position [1 2]
                              (h/code "{:a 1"
@@ -590,6 +606,22 @@
     (assert-move-down-position [2 2]
                                (h/code "[|:a"
                                        " :b]"))
+    (assert-move-down-position [2 2]
+                               (h/code "[|[:a"
+                                       "  :b]"
+                                       " :c]"))
+    (assert-move-down-position [3 2]
+                               (h/code "[|:c"
+                                       " [:a"
+                                       "  :b]]"))
+    (assert-move-down-position [2 2]
+                               (h/code "{|:a {:a/a 1"
+                                       "     :a/b 2}"
+                                       " :c 3}"))
+    (assert-move-down-position [3 2]
+                               (h/code "{|:c 3"
+                                       " :a {:a/a 1"
+                                       "     :a/b 2}}"))
     ;; moves cursor to start of entry pair
     (assert-move-down-position [2 2]
                                (h/code "{:a |1"

@@ -99,7 +99,7 @@
 (defn loc-at-pos [code row col]
   (some-> code
           safe-zloc-of-string
-          (edit/find-last-by-pos {:row row :col col :end-row row :end-col col})))
+          (edit/find-last-by-pos z/next* {:row row :col col :end-row row :end-col col})))
 
 (defn safe-loc-at-pos [text row col]
   (try

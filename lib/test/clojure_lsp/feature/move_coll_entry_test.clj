@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
@@ -10,12 +11,11 @@
 
 (def ^:private uri (h/file-uri "file:///a.cljc"))
 
-(defn zloc-at [pos]
+(defn zloc-at [[row col]]
   (-> @db/db
       (get-in [:documents uri])
       :text
-      (z/of-string {:track-position? true})
-      (z/find-last-by-pos pos)))
+      (parser/loc-at-pos row col)))
 
 (defn load-code-and-zloc [code]
   (let [[pos] (h/load-code-and-locs code uri)]

@@ -123,16 +123,18 @@
              '#{-> ->> ns :require :import deftest testing comment when if}))
 
 (defn can-thread-list? [zloc]
-  (and (= (z/tag zloc) :list)
-       (not (contains? thread-invalid-symbols
-                       (some-> zloc z/next z/sexpr)))))
+  (let [zloc (z/skip-whitespace z/up zloc)]
+    (and (= (z/tag zloc) :list)
+         (not (contains? thread-invalid-symbols
+                         (some-> zloc z/next z/sexpr))))))
 
 (defn can-thread? [zloc]
-  (or (can-thread-list? zloc)
-      (and (= (z/tag zloc) :token)
-           (= (z/tag (z/up zloc)) :list)
-           (not (contains? thread-invalid-symbols
-                           (some-> zloc z/up z/next z/sexpr))))))
+  (let [zloc (z/skip-whitespace z/up zloc)]
+    (or (can-thread-list? zloc)
+        (and (= (z/tag zloc) :token)
+             (= (z/tag (z/up zloc)) :list)
+             (not (contains? thread-invalid-symbols
+                             (some-> zloc z/up z/next z/sexpr)))))))
 
 (defn thread-first
   [zloc db]
@@ -244,44 +246,47 @@
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
   [zloc binding-name]
-  (when-let [let-top-loc (find-let-form zloc)]
-    (let [let-loc (z/down (zsub/subzip let-top-loc))
-          bound-string (z/string zloc)
-          bound-node (z/node zloc)
-          binding-sym (symbol binding-name)
-          bindings-loc (z/right let-loc)
-          {:keys [col]} (meta (z/node bindings-loc)) ;; indentation of bindings
-          first-bind (z/down bindings-loc)
-          bindings-pos (replace-in-bind-values
-                         first-bind
-                         #(= bound-string (z/string %))
-                         binding-sym)
-          with-binding (if bindings-pos
-                         (-> bindings-pos
-                             (z/insert-left binding-sym)
-                             (z/insert-left* bound-node)
-                             (z/insert-left* (n/newlines 1))
-                             (z/insert-left* (n/spaces col)))
-                         (-> bindings-loc
-                             (cond->
-                              first-bind (z/append-child* (n/newlines 1))
-                              first-bind (z/append-child* (n/spaces col))) ; insert let and binding backwards
-                             (z/append-child binding-sym) ; add binding symbol
-                             (z/append-child bound-node)
-                             (z/down)
-                             (z/rightmost)))
-          new-let-loc (loop [loc (z/next with-binding)]
-                        (cond
-                          (z/end? loc) (z/replace let-top-loc (z/root loc))
-                          (= (z/string loc) bound-string) (recur (z/next (z/replace loc binding-sym)))
-                          :else (recur (z/next loc))))]
-      [{:range (meta (z/node (z/up let-loc)))
-        :loc new-let-loc}])))
+  (let [zloc (z/skip-whitespace z/right zloc)]
+    (when-let [let-top-loc (find-let-form zloc)]
+      (let [let-loc       (z/down (zsub/subzip let-top-loc))
+            bound-string  (z/string zloc)
+            bound-node    (z/node zloc)
+            binding-sym   (symbol binding-name)
+            bindings-loc  (z/right let-loc)
+            {:keys [col]} (meta (z/node bindings-loc)) ;; indentation of bindings
+            first-bind    (z/down bindings-loc)
+            bindings-pos  (replace-in-bind-values
+                            first-bind
+                            #(= bound-string (z/string %))
+                            binding-sym)
+            with-binding  (if bindings-pos
+                            (-> bindings-pos
+                                (z/insert-left binding-sym)
+                                (z/insert-left* bound-node)
+                                (z/insert-left* (n/newlines 1))
+                                (z/insert-left* (n/spaces col)))
+                            (-> bindings-loc
+                                (cond->
+                                 first-bind (z/append-child* (n/newlines 1))
+                                 first-bind (z/append-child* (n/spaces col))) ; insert let and binding backwards
+                                (z/append-child binding-sym) ; add binding symbol
+                                (z/append-child bound-node)
+                                (z/down)
+                                (z/rightmost)))
+            new-let-loc   (loop [loc (z/next with-binding)]
+                            (cond
+                              (z/end? loc)                    (z/replace let-top-loc (z/root loc))
+                              (= (z/string loc) bound-string) (recur (z/next (z/replace loc binding-sym)))
+                              :else                           (recur (z/next loc))))]
+        [{:range (meta (z/node (z/up let-loc)))
+          :loc   new-let-loc}]))))
 
 (defn introduce-let
   "Adds a let around the current form."
   [zloc binding-name]
-  (let [sym (symbol binding-name)
+  (let [zloc (or (z/skip-whitespace z/right zloc)
+                 (z/skip-whitespace z/up zloc))
+        sym (symbol binding-name)
         {:keys [col]} (meta (z/node zloc))
         loc (-> zloc
                 (edit/wrap-around :list) ; wrap with new let list
@@ -348,7 +353,9 @@
 
 (defn extract-function
   [zloc uri fn-name db]
-  (let [{:keys [row col]} (meta (z/node zloc))
+  (let [zloc (or (z/skip-whitespace z/right zloc)
+                 (z/skip-whitespace z/up zloc))
+        {:keys [row col]} (meta (z/node zloc))
         expr-loc (if (not= :token (z/tag zloc))
                    zloc
                    (z/up (edit/find-op zloc)))

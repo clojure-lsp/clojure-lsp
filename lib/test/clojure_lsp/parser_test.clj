@@ -23,10 +23,10 @@
 
 (deftest find-loc-at-pos-test
   (testing "valid code"
-    (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 1))))
+    (is (= nil (z/string (parser/loc-at-pos "  foo  " 1 1))))
     (is (= 'foo (z/sexpr (parser/loc-at-pos "  foo  " 1 3))))
     (is (= 'foo (z/sexpr (parser/loc-at-pos "  foo  " 1 5))))
-    (is (= nil (z/sexpr (parser/loc-at-pos "  foo  " 1 6)))))
+    (is (= "  " (z/string (parser/loc-at-pos "  foo  " 1 6)))))
   (testing "invalid code"
     (is (= "foo/" (z/string (parser/loc-at-pos "(ns foo)  (foo/)  " 1 12))))
     (is (= "foo/" (z/string (parser/loc-at-pos "(ns foo)  foo/ " 1 11))))

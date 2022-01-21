@@ -143,18 +143,89 @@
         [{:keys [loc]}] (transform/move-to-let zloc 'x)]
     (is (= 'let (z/sexpr (z/down loc))))
     (is (= (str "(let [x a] x)")
-           (z/root-string loc)))))
+           (z/root-string loc))))
+  (let [root-zloc    (-> (h/code "(let [a 1]"
+                                 "  (+ a"
+                                 ""
+                                 "     ;; comment"
+                                 "     2))")
+                         z/of-string
+                         z/up)
+        comment-zloc (z/find root-zloc z/next* #(= :comment (z/tag %)))]
+    (let [[{:keys [loc]}] (transform/move-to-let comment-zloc 'x)]
+      (is (= (h/code "(let [a 1"
+                     "      x 2]"
+                     "  (+ a"
+                     ""
+                     "     ;; comment"
+                     "     x))")
+             (z/root-string loc))))
+    (let [ws-zloc         (z/left* comment-zloc)
+          [{:keys [loc]}] (transform/move-to-let ws-zloc 'x)]
+      (is (= :whitespace (z/tag ws-zloc)))
+      (is (= (h/code "(let [a 1"
+                     "      x 2]"
+                     "  (+ a"
+                     ""
+                     "     ;; comment"
+                     "     x))")
+             (z/root-string loc)))))
+  (let [zloc (-> (h/code "(let [a 1]"
+                         "  (+ a"
+                         "     2"
+                         "     ;; comment"
+                         "))")
+                 z/of-string
+                 z/up
+                 (z/find z/next* #(= :comment (z/tag %))))]
+    (is (nil? (transform/move-to-let zloc 'x)))))
 
 (deftest introduce-let-test
-  (let [zloc (z/of-string "(inc a)")
-        [{:keys [loc range]}] (transform/introduce-let zloc 'b)]
-    (is (some? range))
-    (is (= 'let (z/sexpr (z/down loc))))
-    (is (= (str "(let [b (inc a)]\n  b)") (z/root-string loc)))
-    (let [[{:keys [loc range]}] (transform/introduce-let (z/rightmost (z/down (z/of-string (z/root-string loc)))) 'c)]
+  (testing "simple"
+    (let [zloc (z/of-string "(inc a)")
+          [{:keys [loc range]}] (transform/introduce-let zloc 'b)]
       (is (some? range))
       (is (= 'let (z/sexpr (z/down loc))))
-      (is (= (str "(let [b (inc a)\n c b]\n  c)") (z/root-string loc))))))
+      (is (= (str "(let [b (inc a)]\n  b)") (z/root-string loc)))
+      (let [[{:keys [loc range]}] (transform/introduce-let (z/rightmost (z/down (z/of-string (z/root-string loc)))) 'c)]
+        (is (some? range))
+        (is (= 'let (z/sexpr (z/down loc))))
+        (is (= (str "(let [b (inc a)\n c b]\n  c)") (z/root-string loc))))))
+  (let [root-zloc (-> (h/code ";; comment"
+                              ""
+                              "(inc a)")
+                      z/of-string
+                      z/up)]
+    (testing "from comment"
+      (let [comment-zloc          (z/down* root-zloc)
+            [{:keys [loc range]}] (transform/introduce-let comment-zloc 'b)]
+        (is (= :comment (z/tag comment-zloc)))
+        (is (some? range))
+        (is (= (str ";; comment\n\n(let [b (inc a)]\n  b)") (z/root-string loc)))))
+
+    (testing "from whitespace"
+      (let [newline-zloc          (z/right* (z/down* root-zloc))
+            [{:keys [loc range]}] (transform/introduce-let newline-zloc 'b)]
+        (is (= :newline (z/tag newline-zloc)))
+        (is (some? range))
+        (is (= (str ";; comment\n\n(let [b (inc a)]\n  b)") (z/root-string loc))))))
+  (let [root-zloc (-> (h/code "(inc a)"
+                              ""
+                              ";; comment"
+                              "")
+                      z/of-string
+                      z/up)]
+    (testing "from trailing comment"
+      (let [comment-zloc          (z/find-next root-zloc z/next* #(= :comment (z/tag %)))
+            [{:keys [loc range]}] (transform/introduce-let comment-zloc 'b)]
+        (is (= :comment (z/tag comment-zloc)))
+        (is (some? range))
+        (is (= (h/code "(let [b (inc a)"
+                       ""
+                       ";; comment"
+                       "]"
+                       "  b)")
+               (z/root-string loc)))))))
 
 (deftest expand-let-test
   (testing "simple"
@@ -297,7 +368,7 @@
         zloc (z/find-value (z/of-string code) z/next symbol-to-extract)]
     (h/load-code-and-locs code file-uri)
     (transform/extract-function zloc
-                                (h/file-uri file-uri)
+                                file-uri
                                 new-fn-name
                                 db/db)))
 
@@ -331,6 +402,56 @@
                     db/db)]
       (is (= "\n(defn foo [a]\n  (+ 1 a))\n" (z/string (:loc (first results)))))
       (is (= "(foo a)" (z/string (:loc (last results)))))))
+  (let [code    (h/code
+                  "(let [a 1 b 2 c 3]"
+                  "  ;; comment"
+                  ""
+                  "  (+ 1 a))")
+        zloc    (-> (z/of-string code)
+                    (z/find-value z/next '+)
+                    z/up)]
+    (h/load-code-and-locs code)
+    (testing "from comment"
+      (let [zloc    (z/find-next zloc z/left* #(= :comment (z/tag %)))
+            results (transform/extract-function
+                      zloc
+                      (h/file-uri "file:///a.clj")
+                      "foo"
+                      db/db)]
+        (is (= "\n(defn foo [a]\n  (+ 1 a))\n" (z/string (:loc (first results)))))
+        (is (= "(foo a)" (z/string (:loc (last results)))))))
+    (testing "from whitespace"
+      (let [zloc    (z/find-next zloc z/left* #(= :whitespace (z/tag %)))
+            results (transform/extract-function
+                      zloc
+                      (h/file-uri "file:///a.clj")
+                      "foo"
+                      db/db)]
+        (is (= "\n(defn foo [a]\n  (+ 1 a))\n" (z/string (:loc (first results)))))
+        (is (= "(foo a)" (z/string (:loc (last results))))))))
+  (testing "from trailing comment"
+    (let [code    (h/code "(let [a 1 b 2 c 3]"
+                          "  (+ 1 a)"
+                          "  ;; comment"
+                          ")")
+          zloc    (-> (z/of-string code)
+                      (z/find-value z/next '+)
+                      z/up
+                      (z/find-next z/right* #(= :comment (z/tag %))))
+          _       (h/load-code-and-locs code)
+          results (transform/extract-function
+                    zloc
+                    (h/file-uri "file:///a.clj")
+                    "foo"
+                    db/db)]
+      (is (= (h/code ""
+                     "(defn foo []"
+                     "  (let [a 1 b 2 c 3]"
+                     "  (+ 1 a)"
+                     "  ;; comment"
+                     "))"
+                     "") (z/string (:loc (first results)))))
+      (is (= "(foo)" (z/string (:loc (last results)))))))
   (testing "with comments above origin function"
     (h/clean-db!)
     (let [code (h/code "(ns foo)"

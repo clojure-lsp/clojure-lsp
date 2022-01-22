@@ -20,6 +20,10 @@
 (defn can-move-code-down? [code]
   (can-move-zloc-down? (h/load-code-and-zloc code)))
 
+;; These are only the negative cases, proving when move-up is NOT offered in the
+;; actions menu. The positive cases are all tested indirectly via
+;; assert-move-up, since if a movement happens, it implicitly passed
+;; can-move-entry-up?
 (deftest can-move-entry-up?
   (testing "common cases"
     (is (not (can-move-code-up? "|[]")))
@@ -30,23 +34,7 @@
     (is (not (can-move-code-up? "|[:a :b :c :d]")))
     (is (not (can-move-code-up? "|'(:a :b :c :d)")))
     (is (not (can-move-code-up? "{|1 2}")))
-    (is (not (can-move-code-up? "{1 |2}")))
-    (is (can-move-code-up? "#{1 |2 3}"))
-    (is (can-move-code-up? "[1 |2 3]"))
-    (is (can-move-code-up? "'(1 |2 3)"))
-    (is (can-move-code-up? "{1 2 |3 4}"))
-    (is (can-move-code-up? "(let [a 1 |c 2])"))
-    (is (can-move-code-up? "(binding [a 1 |c 2])")))
-  (testing "comments"
-    (is (can-move-code-up? (h/code "{1 2 ;; some comment"
-                                   " |3 4}")))
-    (is (can-move-code-up? (h/code "{1 2"
-                                   " ;; some comment"
-                                   " |3 4}"))))
-  (testing "with destructuring"
-    (is (can-move-code-up? (h/code "(let [[a b] [1 2]"
-                                   "      |{:keys [c d]} {:c 1 :d 2}"
-                                   "      e 2])"))))
+    (is (not (can-move-code-up? "{1 |2}"))))
   (testing "when on first entry"
     (is (not (can-move-code-up? "#{|1 2 3}")))
     (is (not (can-move-code-up? "[|1 2 3]")))
@@ -56,6 +44,10 @@
     (is (not (can-move-code-up? "(let [|a 1 c 2])")))
     (is (not (can-move-code-up? "(let [a |1 c 2])")))))
 
+;; These are only the negative cases, proving when move-down is NOT offered in
+;; the actions menu. The positive cases are all tested indirectly via
+;; assert-move-down, since if a movement happens, it implicitly passed
+;; can-move-entry-down?
 (deftest can-move-entry-down?
   (testing "common cases"
     (is (not (can-move-code-down? "|[]")))
@@ -65,25 +57,7 @@
     (is (not (can-move-code-down? "|#{:a :b :c :d}")))
     (is (not (can-move-code-down? "|[:a :b :c :d]")))
     (is (not (can-move-code-down? "|'(:a :b :c :d)")))
-    (is (not (can-move-code-down? "{|1 2}")))
-    (is (can-move-code-down? "#{1 |2 3}"))
-    (is (can-move-code-down? "[1 |2 3]"))
-    (is (can-move-code-down? "'(1 |2 3)"))
-    (is (can-move-code-down? "{|1 2 3 4}"))
-    (is (can-move-code-down? "(let [|a 1 c 2])"))
-    (is (can-move-code-down? "(binding [|a 1 c 2])")))
-  (testing "comments"
-    (is (can-move-code-down? (h/code "{1 2 ;; some comment"
-                                     " |3 4 ;; other coment"
-                                     " 5 6}")))
-    (is (can-move-code-down? (h/code "{1 2"
-                                     " ;; some comment"
-                                     " |3 4"
-                                     " 5 6}"))))
-  (testing "with destructuring"
-    (is (can-move-code-down? (h/code "(let [[a b] [1 2]"
-                                     "      |{:keys [c d]} {:c 1 :d 2}"
-                                     "      e 2])"))))
+    (is (not (can-move-code-down? "{|1 2}"))))
   (testing "when on last entry"
     (is (not (can-move-code-down? "#{1 2 |3}")))
     (is (not (can-move-code-down? "[1 2 |3]")))

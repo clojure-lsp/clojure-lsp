@@ -10,7 +10,7 @@ all: debug-cli
 # https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools
 
 clean:
-	rm -rf cli/classes cli/clojure-lsp cli/clojure-lsp.jar lib/clojure-lsp.jar docs/README.md docs/CHANGELOG.md
+	rm -rf cli/target cli/classes cli/clojure-lsp cli/clojure-lsp.jar lib/clojure-lsp.jar docs/README.md docs/CHANGELOG.md
 
 classes:
 	cd cli && clojure -T:build javac
@@ -25,9 +25,13 @@ cli-jar-for-native: clean classes
 	cd cli && clojure -X:prod-jar-for-native
 	cp -f cli/clojure-lsp-standalone.jar .
 
-debug-cli:
-	cd cli && clojure -T:build clean
+debug-cli-old: clean
 	cd cli && clojure -X:javac
+	cd cli && clojure -X:debug-jar
+	cd cli && clojure -X:bin
+	cp -f cli/clojure-lsp .
+
+debug-cli:
 	cd cli && clojure -T:build debug-cli
 	cp -f cli/clojure-lsp .
 prod-cli: cli-jar

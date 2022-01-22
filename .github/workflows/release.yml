@@ -22,7 +22,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.814'
+          cli: '1.10.3.1013'
 
       - name: Get latest tag
         id: latest-tag
@@ -53,7 +53,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.814'
+          cli: '1.10.3.1013'
 
       - name: Get latest tag
         id: latest-tag
@@ -90,7 +90,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.814'
+          cli: '1.10.3.1013'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -147,7 +147,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.814'
+          cli: '1.10.3.1013'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -194,7 +194,7 @@ jobs:
   #     - name: Install Clojure
   #       uses: DeLaGuardo/setup-clojure@master
   #       with:
-  #         cli: '1.10.3.814'
+  #         cli: '1.10.3.1013'
 
   #     - name: Install GraalVM
   #       uses: DeLaGuardo/setup-graalvm@master
@@ -229,7 +229,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.814'
+          cli: '1.10.3.1013'
 
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
@@ -291,7 +291,7 @@ jobs:
 
       - name: Install Clojure
         run: |
-          iwr -useb download.clojure.org/install/win-install-1.10.3.814.ps1 | iex
+          iwr -useb download.clojure.org/install/win-install-1.10.3.1013.ps1 | iex
 
       - name: Install Babashka
         run: |

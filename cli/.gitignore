@@ -1,5 +1,6 @@
 *.jar
 *.class
+/target
 /classes
 /.cpcache
 /clojure-lsp

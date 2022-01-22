@@ -17,13 +17,9 @@
                                lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
-           :jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
-                 :exec-fn hf.depstar/uberjar
-                 :exec-args {:jar "clojure-lsp.jar"
-                             :sync-pom true
-                             :jvm-opts ["-Xmx2g" "-server"]}}
-           :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
-                    :exec-fn deps-deploy.deps-deploy/deploy
-                    :exec-args {:installer :remote
-                                :sign-releases? false
-                                :artifact "clojure-lsp.jar"}}}}
+           :build {:extra-paths ["resources"]
+                   :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
+                                                         :tag "v0.7.5"
+                                                         :sha "34727f7"}
+                          slipset/deps-deploy {:mvn/version "0.2.0"}}
+                   :ns-default build}}}

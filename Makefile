@@ -13,11 +13,11 @@ clean:
 	rm -rf cli/classes cli/clojure-lsp cli/clojure-lsp.jar lib/clojure-lsp.jar docs/README.md docs/CHANGELOG.md
 
 classes:
-	cd cli && clojure -X:javac
+	cd cli && clojure -T:build javac
 
-lib-jar: clean classes
-	cd lib && clojure -X:jar
-	cp -f lib/clojure-lsp.jar .
+lib-jar:
+	cd lib && clojure -T:build jar
+	cp -f lib/target/clojure-lsp.jar .
 cli-jar: clean classes
 	cd cli && clojure -X:prod-jar
 	cp -f cli/clojure-lsp-standalone.jar .
@@ -25,9 +25,8 @@ cli-jar-for-native: clean classes
 	cd cli && clojure -X:prod-jar-for-native
 	cp -f cli/clojure-lsp-standalone.jar .
 
-debug-cli: clean classes
-	cd cli && clojure -X:debug-jar
-	cd cli && clojure -X:bin
+debug-cli:
+	cd cli && clojure -T:build debug-cli
 	cp -f cli/clojure-lsp .
 prod-cli: cli-jar
 	cd cli && clojure -X:bin
@@ -70,7 +69,7 @@ release:
 	./release
 
 deploy-clojars:
-	cd lib && clojure -X:deploy
+	cd lib && clojure -T:build deploy-clojars
 
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs

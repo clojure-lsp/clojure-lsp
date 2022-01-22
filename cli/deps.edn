@@ -11,7 +11,7 @@
         nrepl/bencode {:mvn/version "1.1.0"}
 
         clojure-lsp/lib {:local/root "../lib"}}
- :paths ["src" "resources"]
+ :paths ["src" "resources" "target/classes"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
@@ -20,6 +20,10 @@
                    :deps {io.github.clojure/tools.build {:tag "v0.7.5" :sha "34727f7"}
                           com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
                    :ns-default build}
+           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
+                    :exec-fn americano.cli/javac
+                    :exec-args {:source-paths ["src-java"]
+                                :output-path  "target/classes"}}
            :pod-test
            {:replace-paths ["pod-test"]
             :replace-deps {com.cognitect/transit-clj {:mvn/version "1.0.324"}
@@ -32,6 +36,19 @@
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}
                                 cider/cider-nrepl {:mvn/version "0.28.0"}}}
+           :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                       :exec-fn hf.depstar/uberjar
+                       :exec-args {:jar "clojure-lsp-standalone.jar"
+                                   :aot true
+                                   :jvm-opts ["-Xmx2g" "-server"]
+                                   :main-class clojure-lsp.main
+                                   :aliases [:debug]}}
+           :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
+                 :exec-fn deps-bin.deps-bin/bin
+                 :exec-args {:jar "clojure-lsp-standalone.jar"
+                             :jvm-opts ["-Xmx2g" "-server"]
+                             :name "clojure-lsp"
+                             :skip-realign true}}
            :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                                  :exec-fn hf.depstar/uberjar
                                  :exec-args {:jar "clojure-lsp-standalone.jar"

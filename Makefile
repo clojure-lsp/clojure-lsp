@@ -26,6 +26,8 @@ cli-jar-for-native: clean classes
 	cp -f cli/clojure-lsp-standalone.jar .
 
 debug-cli:
+	cd cli && clojure -T:build clean
+	cd cli && clojure -X:javac
 	cd cli && clojure -T:build debug-cli
 	cp -f cli/clojure-lsp .
 prod-cli: cli-jar

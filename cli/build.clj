@@ -54,7 +54,7 @@
   (bin))
 
 (defn prod-cli [opts]
-  (prod-jar-for-native opts)
+  (prod-jar opts)
   (bin))
 
 (defn native-cli [opts]

@@ -14,14 +14,6 @@
                                lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
-           :build {:extra-paths ["../lib/resources"]
-                   :deps {io.github.clojure/tools.build {:tag "v0.7.5" :sha "34727f7"}
-                          com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
-                   :ns-default build}
-           :javac  {:replace-deps {org.suskalo/americano {:mvn/version "1.2.0"}}
-                    :exec-fn americano.cli/javac
-                    :exec-args {:source-paths ["src-java"]
-                                :output-path  "target/classes"}}
            :pod-test
            {:replace-paths ["pod-test"]
             :replace-deps {com.cognitect/transit-clj {:mvn/version "1.0.324"}
@@ -30,30 +22,15 @@
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
                                                    :sha "f360afa6135b8bd2d384d9ba4582c0de6fdac804"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
+           :build {:extra-paths ["../lib/resources"]
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.7.5" :sha "34727f7"}
+                                  com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}
+                                  com.google.guava/guava {:mvn/version "31.0.1-jre"}}
+                   :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}
                                 cider/cider-nrepl {:mvn/version "0.28.0"}}}
-           :debug-jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
-                       :exec-fn hf.depstar/uberjar
-                       :exec-args {:jar "clojure-lsp-standalone.jar"
-                                   :aot true
-                                   :jvm-opts ["-Xmx2g" "-server"]
-                                   :main-class clojure-lsp.main
-                                   :aliases [:debug]}}
-           :bin {:replace-deps {com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}}
-                 :exec-fn deps-bin.deps-bin/bin
-                 :exec-args {:jar "clojure-lsp-standalone.jar"
-                             :jvm-opts ["-Xmx2g" "-server"]
-                             :name "clojure-lsp"
-                             :skip-realign true}}
-           :prod-jar-for-native {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
-                                 :exec-fn hf.depstar/uberjar
-                                 :exec-args {:jar "clojure-lsp-standalone.jar"
-                                             :aot true
-                                             :jvm-opts ["-Xmx2g" "-server"]
-                                             :main-class clojure-lsp.main
-                                             :aliases [:native]}}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"
                                "-Dborkdude.dynaload.aot=true"

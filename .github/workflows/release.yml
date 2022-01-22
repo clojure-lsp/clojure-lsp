@@ -109,7 +109,7 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli-raw-unix
+          make native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -167,14 +167,7 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
         run: |
-          make native-cli-raw-unix
-
-      - name: Compress binary
-        uses: svenstaro/upx-action@v2
-        with:
-          file: clojure-lsp
-
-      # Not working, check #296
+          make native-cli
       # - name: Run integration tests
       #   run: |
       #     make integration-test
@@ -218,13 +211,7 @@ jobs:
   #         CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
   #         CLOJURE_LSP_XMX: "-J-Xmx6g"
   #       run: |
-  #         make native-cli-raw-unix
-
-  #     - name: Zip binary
-  #       run: zip clojure-lsp-native-linux-aarch64.zip clojure-lsp
-
-  #     - name: Upload
-  #       uses: actions/upload-artifact@v2
+  #         make native-cli/upload-artifact@v2
   #       with:
   #         path: clojure-lsp-native-linux-aarch64.zip
   #         name: clojure-lsp-native-linux-aarch64.zip
@@ -261,13 +248,7 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli-raw-unix
-
-      # UPX is not working for MacOS Big Sur
-      # - name: Compress binary
-      #   uses: svenstaro/upx-action@v2
-      #   with:
-      #     file: clojure-lsp
+          make native-cli   file: clojure-lsp
 
       - name: Run babashka pod tests
         env:
@@ -342,7 +323,7 @@ jobs:
           CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
           CLOJURE_LSP_XMX: "-J-Xmx7g"
         run: |
-          make native-cli-raw-windows
+          make native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2

@@ -11,7 +11,6 @@ all: debug-cli
 
 clean:
 	rm -rf cli/target \
-           cli/classes \
            cli/clojure-lsp \
            cli/clojure-lsp-standalone.jar \
            lib/clojure-lsp.jar \
@@ -25,36 +24,23 @@ classes:
 
 lib-jar:
 	cd lib && clojure -T:build jar
-	cp -f lib/target/clojure-lsp.jar .
-cli-jar: clean classes
-	cd cli && clojure -X:prod-jar
-	cp -f cli/clojure-lsp-standalone.jar .
-cli-jar-for-native: clean classes
-	cd cli && clojure -X:prod-jar-for-native
-	cp -f cli/clojure-lsp-standalone.jar .
-
-debug-cli-old: clean
-	cd cli && clojure -X:javac
-	cd cli && clojure -X:debug-jar
-	cd cli && clojure -X:bin
-	cp -f cli/clojure-lsp .
+	mv lib/target/clojure-lsp.jar .
+cli-jar:
+	cd cli && clojure -T:build prod-jar
+	mv cli/target/clojure-lsp-standalone.jar .
+cli-jar-for-native:
+	cd cli && clojure -T:build prod-jar-for-native
+	mv cli/target/clojure-lsp-standalone.jar .
 
 debug-cli:
 	cd cli && clojure -T:build debug-cli
-	cp -f cli/clojure-lsp .
-prod-cli: cli-jar
-	cd cli && clojure -X:bin
-	cp -f cli/clojure-lsp .
-native-cli: cli-jar-for-native
-	cd cli && CLOJURE_LSP_JAR=clojure-lsp-standalone.jar ./graalvm/native-unix-compile.sh
-	cp -f cli/clojure-lsp .
-
-native-cli-raw-unix:
-	cd cli && ./graalvm/native-unix-compile.sh
-	cp -f cli/clojure-lsp .
-native-cli-raw-windows:
-	cd cli && ./graalvm/native-windows-compile.bat
-	cp -f cli/clojure-lsp.exe .
+	mv cli/clojure-lsp .
+prod-cli:
+	cd cli && clojure -T:build prod-cli
+	mv cli/clojure-lsp .
+native-cli:
+	cd cli && clojure -T:build native-cli
+	mv cli/clojure-lsp .
 
 test: classes
 	cd lib && clojure -M:test

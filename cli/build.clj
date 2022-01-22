@@ -37,7 +37,7 @@
              :main 'clojure-lsp.main
              :basis basis})))
 
-(defn bin [_]
+(defn ^:private bin []
   (println "Generating bin...")
   (deps-bin/build-bin {:jar uber-file
                        :name "clojure-lsp"
@@ -46,27 +46,39 @@
 
 (def prod-jar uber)
 
+(defn prod-jar-for-native [opts]
+  (uber (merge opts {:extra-aliases [:native]})))
+
 (defn debug-cli [opts]
   (uber (merge opts {:extra-aliases [:debug]}))
-  (bin opts))
+  (bin))
 
-(defn native [opts]
+(defn prod-cli [opts]
+  (prod-jar-for-native opts)
+  (bin))
+
+(defn native-cli [opts]
   (println "Building native image...")
   (if-let [graal-home (System/getenv "GRAALVM_HOME")]
-    (let [jar (or (System/getenv "STUB_JAR")
-                  (do (uber (merge opts {:extra-aliases [:native]}))
+    (let [jar (or (System/getenv "CLOJURE_LSP_JAR")
+                  (do (prod-jar-for-native opts)
                       uber-file))
+          datalevin-temp-dir (com.google.common.io.Files/createTempDir)
           command (->> [(str (io/file graal-home "bin" "native-image"))
                         "-jar" jar
                         "-H:+ReportExceptionStackTraces"
+                        (str "-H:CLibraryPath=" (.getCanonicalPath datalevin-temp-dir))
                         "--verbose"
                         "--no-fallback"
                         "--native-image-info"
-                        (or (System/getenv "STUB_XMX")
-                            "-J-Xmx4g")
-                        (when (= "true" (System/getenv "STUB_STATIC"))
-                          "--static")]
+                        (or (System/getenv "CLOJURE_LSP_XMX")
+                            "-J-Xmx8g")
+                        (when (= "true" (System/getenv "CLOJURE_LSP_STATIC"))
+                          ["--static" "-H:+StaticExecutableWithDynamicLibC"])
+                        "clojure-lsp"]
+                       (flatten)
                        (remove nil?))
           {:keys [exit]} (b/process {:command-args command})]
-      (System/exit exit))
+      (when-not (= 0 exit)
+        (System/exit exit)))
     (println "Set GRAALVM_HOME env")))

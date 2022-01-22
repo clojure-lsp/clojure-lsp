@@ -165,10 +165,11 @@ jobs:
 
       - uses: actions/download-artifact@v2
         name: clojure-lsp-native
+
       - name: Setup binary
         run: |
-          mv clojure-lsp-native/clojure-lsp cli/clojure-lsp
-          chmod +x cli/clojure-lsp
+          mv clojure-lsp-native/clojure-lsp clojure-lsp
+          chmod +x clojure-lsp
 
       - name: Run babashka pod tests
         env:

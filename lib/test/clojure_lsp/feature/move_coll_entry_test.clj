@@ -25,20 +25,22 @@
 ;; assert-move-up, since if a movement happens, it implicitly passed
 ;; can-move-entry-up?
 (deftest can-move-entry-up?
-  (testing "common cases"
+  (testing "unbalanced pairs"
+    (is (not (can-move-code-up? "{1 2 |3}")))
+    (is (not (can-move-code-up? "(let [1 2 |3])"))))
+  (testing "outside collection"
     (is (not (can-move-code-up? "|[]")))
-    (is (not (can-move-code-up? "[|1]")))
-    (is (not (can-move-code-up? "{1 |2 3}")))
     (is (not (can-move-code-up? "|{:a :b :c :d}")))
     (is (not (can-move-code-up? "|#{:a :b :c :d}")))
     (is (not (can-move-code-up? "|[:a :b :c :d]")))
-    (is (not (can-move-code-up? "|'(:a :b :c :d)")))
-    (is (not (can-move-code-up? "{|1 2}")))
-    (is (not (can-move-code-up? "{1 |2}"))))
-  (testing "when on first entry"
+    (is (not (can-move-code-up? "|'(:a :b :c :d)"))))
+  (testing "on first entry"
+    (is (not (can-move-code-up? "[|1]")))
     (is (not (can-move-code-up? "#{|1 2 3}")))
     (is (not (can-move-code-up? "[|1 2 3]")))
     (is (not (can-move-code-up? "'(|1 2 3)")))
+    (is (not (can-move-code-up? "{|1 2}")))
+    (is (not (can-move-code-up? "{1 |2}")))
     (is (not (can-move-code-up? "{|:a :b :c :d}")))
     (is (not (can-move-code-up? "{:a |:b :c :d}")))
     (is (not (can-move-code-up? "(let [|a 1 c 2])")))
@@ -49,19 +51,22 @@
 ;; assert-move-down, since if a movement happens, it implicitly passed
 ;; can-move-entry-down?
 (deftest can-move-entry-down?
-  (testing "common cases"
+  (testing "unbalanced pairs"
+    (is (not (can-move-code-down? "{|1 2 3}")))
+    (is (not (can-move-code-down? "(let [|1 2 3])"))))
+  (testing "outside collection"
     (is (not (can-move-code-down? "|[]")))
-    (is (not (can-move-code-down? "[|1]")))
-    (is (not (can-move-code-down? "{1 |2 3}")))
     (is (not (can-move-code-down? "|{:a :b :c :d}")))
     (is (not (can-move-code-down? "|#{:a :b :c :d}")))
     (is (not (can-move-code-down? "|[:a :b :c :d]")))
-    (is (not (can-move-code-down? "|'(:a :b :c :d)")))
-    (is (not (can-move-code-down? "{|1 2}"))))
-  (testing "when on last entry"
+    (is (not (can-move-code-down? "|'(:a :b :c :d)"))))
+  (testing "on last entry"
+    (is (not (can-move-code-down? "[|1]")))
     (is (not (can-move-code-down? "#{1 2 |3}")))
     (is (not (can-move-code-down? "[1 2 |3]")))
     (is (not (can-move-code-down? "'(1 2 |3)")))
+    (is (not (can-move-code-down? "{|1 2}")))
+    (is (not (can-move-code-down? "{1 |2}")))
     (is (not (can-move-code-down? "{:a :b |:c :d}")))
     (is (not (can-move-code-down? "{:a :b :c |:d}")))
     (is (not (can-move-code-down? "(let [a 1 |c 2])")))

@@ -5,6 +5,7 @@
         org.clojure/core.async {:mvn/version "1.5.648"}
         datalevin/datalevin {:mvn/version "0.5.27"
                              :exclusions [borkdude/sci]}
+        com.taoensso/nippy {:mvn/version "3.1.1"}
         cljfmt/cljfmt {:mvn/version "0.8.0"
                        :exclusions [rewrite-cljs/rewrite-cljs
                                     com.googlecode.java-diff-utils/diffutils]}

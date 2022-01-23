@@ -1,6 +1,7 @@
 (ns clojure-lsp.db
   (:require
    [clojure-lsp.settings :as settings]
+   [taoensso.nippy :as nippy]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
@@ -61,6 +62,28 @@
       (let [datalevin-db (make-db project-root-path db)]
         (d/open-dbi datalevin-db analysis-table-name)
         (when-let [project-analysis (d/get-value datalevin-db analysis-table-name :project-analysis)]
+          (when (and (= (str project-root-path) (:project-root project-analysis))
+                     (= version (:version project-analysis)))
+            project-analysis))))
+    (catch Throwable e
+      (log/error "Could not load project cache from DB" e))))
+
+(defn upsert-cache! [{:keys [project-root] :as project-cache} db]
+  (remove-old-db-file! project-root)
+  (try
+    (shared/logging-time
+      "Upserting analysis cache to nippy db took %s secs"
+      (let [file (get-datalevin-db-file project-root db)]
+        (nippy/freeze-to-file (io/file file "nippy.db") project-cache)))
+    (catch Throwable e
+      (log/error "Could not upsert db cache" e))))
+
+(defn read-cache [project-root-path db]
+  (try
+    (shared/logging-time
+      "Reading analysis cache from nippy db took %s secs"
+      (let [file (get-datalevin-db-file project-root-path db)]
+        (when-let [project-analysis (nippy/thaw-from-file (io/file file "nippy.db"))]
           (when (and (= (str project-root-path) (:project-root project-analysis))
                      (= version (:version project-analysis)))
             project-analysis))))

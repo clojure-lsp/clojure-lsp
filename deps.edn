@@ -2,7 +2,7 @@
                                "cli/src"]
                  :extra-deps {clojure-lsp/lib {:local/root "lib"}
                               clojure-lsp/cli {:local/root "cli"}}}
-           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
+            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.972"}}
                   :extra-paths ["lib/src"
                                 "cli/src"
                                 "common-test/src"

@@ -4,6 +4,7 @@
 
 - General
   - Migrate project from depstar -> tools.build. #711
+  - Replace datalevin cache db with transit. #703
 
 ## 2022.01.22-01.31.09
 

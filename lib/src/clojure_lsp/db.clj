@@ -19,11 +19,13 @@
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
-(defn ^:private datalevin-db-file [project-root-path db]
+(defn ^:private datalevin-db-files [project-root-path db]
   (let [configured (some-> (settings/get db [:cache-path])
                            io/file)
-        default (io/file (str project-root-path) ".lsp" ".cache")]
-    ^java.io.File (or configured default)))
+        default (io/file (str project-root-path) ".lsp" ".cache")
+        cache-dir ^java.io.File (or configured default)]
+    [(io/file cache-dir "data.mdb")
+     (io/file cache-dir "lock.mdb")]))
 
 (defn ^:private transit-db-file [project-root db]
   (let [overwritten-path (some-> (settings/get db [:cache-path])
@@ -37,9 +39,9 @@
       (io/delete-file old-db-file true))))
 
 (defn ^:private remove-old-datalevin-db-file! [project-root-path]
-  (let [old-db-file (datalevin-db-file project-root-path db)]
-    (when (shared/file-exists? old-db-file)
-      (io/delete-file old-db-file true))))
+  (->> (datalevin-db-files project-root-path db)
+       (filter shared/file-exists?)
+       (mapv #(io/delete-file % true))))
 
 (defn db-exists? [project-root-path db]
   (shared/file-exists? (transit-db-file project-root-path db)))

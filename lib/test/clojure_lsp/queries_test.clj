@@ -242,7 +242,7 @@
       {:name 'foo :filename (h/file-path "/b.clj") :ns 'd.e.f}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") alias-use-r alias-use-c db/db))
     (h/assert-submap
-      {:alias 'f-alias :name-row alias-r :name-col alias-c}
+      {:name 'd.e.f :bucket :namespace-definitions}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") alias-r alias-c db/db))))
 
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis

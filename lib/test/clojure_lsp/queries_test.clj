@@ -303,6 +303,14 @@
       {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
 
+(deftest find-definition-from-namespace-alias
+  (h/load-code-and-locs (h/code "(ns foo.bar) (def a 1)") (h/file-uri "file:///a.clj"))
+  (let [[[foob-r foob-c]] (h/load-code-and-locs (h/code "(ns foo.baz (:require [foo.bar :as |foob]))") (h/file-uri "file:///b.clj"))
+        ana (:analysis @db/db)]
+    (h/assert-submap
+      {:name-end-col 12 :name-end-row 1 :name-row 1 :name 'foo.bar :filename "/a.clj" :col 1 :name-col 5 :bucket :namespace-definitions :row 1}
+      (q/find-definition-from-cursor ana (h/file-path "/b.clj") foob-r foob-c db/db))))
+
 (deftest find-definition-from-cursor-when-on-potemkin
   (h/load-code-and-locs (h/code "(ns foo.impl) (def bar)") (h/file-uri "file:///b.clj"))
   (let [[[bar-r bar-c]] (h/load-code-and-locs

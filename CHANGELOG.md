@@ -4,6 +4,9 @@
 
 - General
   - Migrate project from depstar -> tools.build. #711
+  
+- Editor
+  - Support going to namespace definition on an alias. #706
 
 ## 2022.01.22-01.31.09
 

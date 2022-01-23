@@ -94,6 +94,15 @@
   (fn [_analysis element _db]
     (:bucket element)))
 
+(defmethod find-definition :namespace-alias
+  [analysis element db]
+  (find-last-order-by-project-analysis
+    #(and (= (:bucket %) :namespace-definitions)
+          (= (:name %) (:to element))
+          (match-file-lang % element))
+    analysis
+    db))
+
 (defmethod find-definition :namespace-usages
   [analysis element db]
   (find-last-order-by-project-analysis

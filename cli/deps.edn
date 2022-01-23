@@ -36,5 +36,4 @@
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"
                                "-Dclojure.spec.skip-macros=true"]
-                    :extra-deps {org.clojars.huahaiy/datalevin-native {:mvn/version "0.5.27"}
-                                 com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}}}
+                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}}}

@@ -63,11 +63,9 @@
     (let [jar (or (System/getenv "CLOJURE_LSP_JAR")
                   (do (prod-jar-for-native opts)
                       uber-file))
-          datalevin-temp-dir (com.google.common.io.Files/createTempDir)
           command (->> [(str (io/file graal-home "bin" "native-image"))
                         "-jar" jar
                         "-H:+ReportExceptionStackTraces"
-                        (str "-H:CLibraryPath=" (.getCanonicalPath datalevin-temp-dir))
                         "--verbose"
                         "--no-fallback"
                         "--native-image-info"

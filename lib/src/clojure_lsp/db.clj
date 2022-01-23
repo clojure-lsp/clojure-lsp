@@ -4,12 +4,10 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [datalevin.core :as d]
+   [cognitect.transit :as transit]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
-
-(def analysis-table-name "analysis-table")
 
 (defonce db (atom {:documents {}}))
 (defonce current-changes-chan (async/chan 1))
@@ -18,57 +16,65 @@
 
 (def version 1)
 
-(defn ^:private get-sqlite-db-file [project-root]
+(defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
-(defn ^:private get-datalevin-db-file [project-root-path db]
+(defn ^:private datalevin-db-file [project-root-path db]
   (let [configured (some-> (settings/get db [:cache-path])
                            io/file)
         default (io/file (str project-root-path) ".lsp" ".cache")]
     ^java.io.File (or configured default)))
 
-(defn ^:private get-db-file-path [project-root-path db]
-  (let [file ^java.io.File (get-datalevin-db-file project-root-path db)]
-    (if (.isAbsolute file)
-      (.getAbsolutePath file)
-      (.getAbsolutePath (io/file (str project-root-path) file)))))
+(defn ^:private transit-db-file [project-root db]
+  (let [overwritten-path (some-> (settings/get db [:cache-path])
+                                 io/file)
+        default (io/file (str project-root) ".lsp" ".cache" "db.transit.json")]
+    ^java.io.File (or overwritten-path default)))
 
-(defn make-db [project-root db]
-  (d/open-kv (get-db-file-path project-root db)))
-
-(defn ^:private remove-old-db-file! [project-root-path]
-  (let [old-db-file (get-sqlite-db-file project-root-path)]
+(defn ^:private remove-old-sqlite-db-file! [project-root-path]
+  (let [old-db-file (sqlite-db-file project-root-path)]
     (when (shared/file-exists? old-db-file)
-      (io/delete-file old-db-file))))
+      (io/delete-file old-db-file true))))
+
+(defn ^:private remove-old-datalevin-db-file! [project-root-path]
+  (let [old-db-file (datalevin-db-file project-root-path db)]
+    (when (shared/file-exists? old-db-file)
+      (io/delete-file old-db-file true))))
+
+(defn db-exists? [project-root-path db]
+  (shared/file-exists? (transit-db-file project-root-path db)))
+
+(defn remove-db! [project-root-path db]
+  (io/delete-file (transit-db-file project-root-path db)))
 
 (defn upsert-cache! [{:keys [project-root] :as project-cache} db]
-  (remove-old-db-file! project-root)
+  (remove-old-sqlite-db-file! project-root)
+  (remove-old-datalevin-db-file! project-root)
   (try
     (shared/logging-time
-      "Upserting analysis cache to Datalevin db took %s secs"
-      (let [datalevin-db (make-db project-root db)]
-        (d/open-dbi datalevin-db analysis-table-name)
-        (d/transact-kv datalevin-db [[:del analysis-table-name :project-analysis]
-                                     [:put analysis-table-name :project-analysis project-cache]])
-        (d/close-kv datalevin-db)))
+      "Upserting transit analysis cache took %s secs"
+      (let [cache-file (transit-db-file project-root db)]
+        (with-open [;; first we write to a baos as a workaround for transit-clj #43
+                    bos (java.io.ByteArrayOutputStream. 1024)
+                    os (io/output-stream bos)]
+          (let [writer (transit/writer os :json)]
+            (io/make-parents cache-file)
+            (transit/write writer project-cache)
+            (io/copy (.toByteArray bos) cache-file)))))
     (catch Throwable e
       (log/error "Could not upsert db cache" e))))
 
-(defn read-cache [project-root-path db]
+(defn read-cache [project-root db]
   (try
     (shared/logging-time
-      "Reading analysis cache from Datalevin db took %s secs"
-      (let [datalevin-db (make-db project-root-path db)]
-        (d/open-dbi datalevin-db analysis-table-name)
-        (when-let [project-analysis (d/get-value datalevin-db analysis-table-name :project-analysis)]
-          (when (and (= (str project-root-path) (:project-root project-analysis))
-                     (= version (:version project-analysis)))
-            project-analysis))))
+      "Reading transit analysis cache from db took %s secs"
+      (let [db-file (transit-db-file project-root db)]
+        (if (shared/file-exists? db-file)
+          (let [project-analysis (with-open [is (io/input-stream db-file)]
+                                   (transit/read (transit/reader is :json)))]
+            (when (and (= (str project-root) (:project-root project-analysis))
+                       (= version (:version project-analysis)))
+              project-analysis))
+          (log/error "No cache DB file found"))))
     (catch Throwable e
       (log/error "Could not load project cache from DB" e))))
-
-(defn db-exists? [project-root-path db]
-  (shared/file-exists? (get-datalevin-db-file project-root-path db)))
-
-(defn remove-db! [project-root-path db]
-  (io/delete-file (get-datalevin-db-file project-root-path db)))

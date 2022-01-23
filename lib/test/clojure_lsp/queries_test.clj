@@ -323,6 +323,35 @@
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
 
+(deftest find-declaration-from-cursor
+  (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))
+  (let [[[something-r something-c]
+         [other-r other-c]] (h/load-code-and-locs
+                              (h/code "(ns sample"
+                                      "  (:require [foo.bar :as foob]"
+                                      "            [foo.baz :refer :all]))"
+                                      "foob/som|ething"
+                                      "|other")
+                              "file:///b.clj")
+        ana (:analysis @db/db)]
+    (testing "from usage with alias"
+      (h/assert-submap
+        {:filename "/b.clj"
+         :alias 'foob
+         :from 'sample
+         :bucket
+         :namespace-alias
+         :to 'foo.bar}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c db/db)))
+    (testing "from usage with refer all"
+      (h/assert-submap
+        {:filename "/b.clj"
+         :from 'sample
+         :bucket
+         :namespace-usages
+         :name 'foo.baz}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c db/db)))))
+
 (deftest find-unused-aliases
   (testing "clj"
     (testing "used require via alias"

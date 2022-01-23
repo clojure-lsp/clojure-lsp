@@ -7,6 +7,7 @@
   
 - Editor
   - Support going to namespace definition on an alias. #706
+  - Add LSP `textDocument/declaration`, for now adding the making possible navigate to alias and namespaces declared on the namespace. #680
 
 ## 2022.01.22-01.31.09
 

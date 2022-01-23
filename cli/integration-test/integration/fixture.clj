@@ -25,6 +25,11 @@
                 {:textDocument {:uri (h/file->uri (h/source-path->file path))}
                  :position {:line row :character col}}))
 
+(defn declaration-request [path row col]
+  (lsp-json-rpc :textDocument/declaration
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}}))
+
 (defn formatting-full-request [path]
   (lsp-json-rpc :textDocument/formatting
                 {:textDocument {:uri (h/source-path->uri path)}

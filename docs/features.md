@@ -6,6 +6,10 @@ Above you can find all available features that clojure-lsp provides with example
 
 <img src="../images/features/find-definition.gif" width=340>
 
+### Find a function/var declaration in the ns
+
+<img src="../images/features/find-declaration.gif" width=340>
+
 ### Find all references of a function, var, keyword or namespace alias
 
 <img src="../images/features/find-references.gif" width=340>

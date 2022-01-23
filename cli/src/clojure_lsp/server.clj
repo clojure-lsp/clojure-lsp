@@ -39,6 +39,7 @@
      CompletionItem
      CompletionOptions
      CompletionParams
+     DeclarationParams
      DefinitionParams
      DidChangeConfigurationParams
      DidChangeTextDocumentParams
@@ -229,6 +230,10 @@
     (start :definition
            (async-request params handlers/definition ::coercer/location)))
 
+  (^CompletableFuture declaration [_ ^DeclarationParams params]
+    (start :declaration
+           (async-request params handlers/declaration ::coercer/location)))
+
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
            (async-request params handlers/document-symbol ::coercer/document-symbols)))
@@ -334,6 +339,7 @@
                    (InitializeResult. (doto (ServerCapabilities.)
                                         (.setDocumentHighlightProvider true)
                                         (.setHoverProvider true)
+                                        (.setDeclarationProvider true)
                                         (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                         (.setCallHierarchyProvider true)
                                         (.setLinkedEditingRangeProvider true)

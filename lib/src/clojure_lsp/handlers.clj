@@ -119,9 +119,15 @@
 
 (defn definition [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)]
-    (when-let [d (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column db/db)]
-      {:uri (shared/filename->uri (:filename d) db/db)
-       :range (shared/->range d)})))
+    (when-let [definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column db/db)]
+      {:uri (shared/filename->uri (:filename definition) db/db)
+       :range (shared/->range definition)})))
+
+(defn declaration [{:keys [textDocument position]}]
+  (let [[line column] (shared/position->line-column position)]
+    (when-let [declaration (q/find-declaration-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column db/db)]
+      {:uri (shared/filename->uri (:filename declaration) db/db)
+       :range (shared/->range declaration)})))
 
 (defn document-symbol [{:keys [textDocument]}]
   (let [filename (shared/uri->filename textDocument)

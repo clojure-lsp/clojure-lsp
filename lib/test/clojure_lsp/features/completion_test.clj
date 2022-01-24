@@ -285,6 +285,12 @@
        {:label "bases" :kind :reference :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 6 5 db/db))))
 
+(deftest completing-normal-keywords
+  (h/load-code-and-locs (h/code ":foo"))
+  (h/assert-submaps
+   []
+   (f.completion/completion (h/file-uri "file:///a.clj") 1 4 db/db)))
+
 (deftest completing-aliased-keywords
   (h/load-code-and-locs
     (h/code "(ns some.alpaca (:require [clojure.spec.alpha :as s]))"

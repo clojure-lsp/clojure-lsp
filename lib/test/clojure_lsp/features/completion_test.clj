@@ -288,8 +288,8 @@
 (deftest completing-normal-keywords
   (h/load-code-and-locs (h/code ":foo"))
   (h/assert-submaps
-   []
-   (f.completion/completion (h/file-uri "file:///a.clj") 1 4 db/db)))
+    []
+    (f.completion/completion (h/file-uri "file:///a.clj") 1 4 db/db)))
 
 (deftest completing-aliased-keywords
   (h/load-code-and-locs

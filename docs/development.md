@@ -46,10 +46,12 @@ The details in how to perform these steps can vary a bit between the various Clo
 
 ### Emacs with CIDER
 
-Use the above instructions to jack-in to the running Emacs clojure-lsp server. 
-To configure Emacs to use the nREPL-enabled executable, run `(setq lsp-clojure-custom-server-command '("~/path/to/clojure-lsp/clojure-lsp"))`, adjusting the path as necessary.
+* To configure Emacs to use the nREPL-enabled executable, run `(setq lsp-clojure-custom-server-command '("~/path/to/clojure-lsp/clojure-lsp"))`, adjusting the path as necessary. If you add this to your Emacs config, you can skip this step in the future.
+* To restart the clojure-lsp server, execute the Emacs command `lsp-workspace-restart`.
+* To find the server info, execute `lsp-clojure-server-info`.
+* To connect the nREPL client, run `cider-connect-clj`, with "localhost" and the port.
 
-If you reconnect regulary, you may want to add this Emacs shortcut:
+If you re-connect regulary, you may want to add this Emacs shortcut:
 
 ```emacs-lisp
 (defun lsp-clojure-nrepl-connect ()

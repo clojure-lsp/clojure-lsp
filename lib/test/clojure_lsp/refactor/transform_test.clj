@@ -178,7 +178,8 @@
                  z/of-string
                  z/up
                  (z/find z/next* #(= :comment (z/tag %))))]
-    (is (nil? (transform/move-to-let zloc 'x)))))
+    (is (nil? (transform/move-to-let zloc 'x))))
+  (is (nil? (transform/move-to-let nil 'x))))
 
 (deftest introduce-let-test
   (testing "simple"
@@ -202,7 +203,6 @@
         (is (= :comment (z/tag comment-zloc)))
         (is (some? range))
         (is (= (str ";; comment\n\n(let [b (inc a)]\n  b)") (z/root-string loc)))))
-
     (testing "from whitespace"
       (let [newline-zloc          (z/right* (z/down* root-zloc))
             [{:keys [loc range]}] (transform/introduce-let newline-zloc 'b)]
@@ -225,7 +225,8 @@
                        ";; comment"
                        "]"
                        "  b)")
-               (z/root-string loc)))))))
+               (z/root-string loc))))))
+  (is (nil? (transform/introduce-let nil 'b))))
 
 (deftest expand-let-test
   (testing "simple"
@@ -512,7 +513,8 @@
           :range {:row 2 :col 1 :end-row 2 :end-col 1}}
          {:loc "(foo b)"
           :range {:row 5 :col 13 :end-row 5 :end-col 30}}]
-        results))))
+        results)))
+  (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" db/db))))
 
 (deftest create-function-test
   (testing "function on same file"

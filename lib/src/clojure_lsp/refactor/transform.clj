@@ -284,24 +284,24 @@
 (defn introduce-let
   "Adds a let around the current form."
   [zloc binding-name]
-  (let [zloc (or (z/skip-whitespace z/right zloc)
-                 (z/skip-whitespace z/up zloc))
-        sym (symbol binding-name)
-        {:keys [col]} (meta (z/node zloc))
-        loc (-> zloc
-                (edit/wrap-around :list) ; wrap with new let list
-                (z/insert-child 'let) ; add let
-                (z/append-child* (n/newlines 1)) ; add new line after location
-                (z/append-child* (n/spaces (inc col)))  ; indent body
-                (z/append-child sym) ; add new symbol to body of let
-                (z/down) ; enter let list
-                (z/right) ; skip 'let
-                (edit/wrap-around :vector) ; wrap binding vec around form
-                (z/insert-child sym) ; add new symbol as binding
-                z/up
-                (edit/join-let))]
-    [{:range (meta (z/node (or loc zloc)))
-      :loc loc}]))
+  (when-let [zloc (or (z/skip-whitespace z/right zloc)
+                      (z/skip-whitespace z/up zloc))]
+    (let [sym (symbol binding-name)
+          {:keys [col]} (meta (z/node zloc))
+          loc (-> zloc
+                  (edit/wrap-around :list) ; wrap with new let list
+                  (z/insert-child 'let) ; add let
+                  (z/append-child* (n/newlines 1)) ; add new line after location
+                  (z/append-child* (n/spaces (inc col)))  ; indent body
+                  (z/append-child sym) ; add new symbol to body of let
+                  (z/down) ; enter let list
+                  (z/right) ; skip 'let
+                  (edit/wrap-around :vector) ; wrap binding vec around form
+                  (z/insert-child sym) ; add new symbol as binding
+                  z/up
+                  (edit/join-let))]
+      [{:range (meta (z/node (or loc zloc)))
+        :loc   loc}])))
 
 (defn expand-let
   "Expand the scope of the next let up the tree."
@@ -353,48 +353,48 @@
 
 (defn extract-function
   [zloc uri fn-name db]
-  (let [zloc (or (z/skip-whitespace z/right zloc)
-                 (z/skip-whitespace z/up zloc))
-        {:keys [row col]} (meta (z/node zloc))
-        expr-loc (if (not= :token (z/tag zloc))
-                   zloc
-                   (z/up (edit/find-op zloc)))
-        expr-node (z/node expr-loc)
-        expr-meta (meta expr-node)
-        form-loc (edit/to-top expr-loc)
-        {form-row :row
-         form-col :col} (meta (z/node form-loc))
-        prev-end-row-w-space (some-> (z/find-next form-loc z/prev #(and (edit/top? %)
-                                                                        (z/sexpr-able? %)))
-                                     z/node
-                                     meta
-                                     :end-row
-                                     inc)
-        fn-sym (symbol fn-name)
-        clj-analysis (unify-to-one-language (:analysis @db))
-        used-syms (->> (q/find-local-usages-under-form clj-analysis
-                                                       (shared/uri->filename uri)
-                                                       row
-                                                       col
-                                                       (:end-row expr-meta)
-                                                       (:end-col expr-meta))
-                       (mapv (comp symbol name :name)))
-        expr-edit (-> (z/of-string "")
-                      (z/replace `(~fn-sym ~@used-syms)))
-        defn-edit (-> (z/of-string "\n(defn)\n")
-                      (z/append-child fn-sym)
-                      (z/append-child used-syms)
-                      (z/append-child* (n/newlines 1))
-                      (z/append-child* (n/spaces 2))
-                      (z/append-child expr-node)
-                      z/up)]
-    [{:loc defn-edit
-      :range {:row (or prev-end-row-w-space form-row)
-              :col form-col
-              :end-row (or prev-end-row-w-space form-row)
-              :end-col form-col}}
-     {:loc expr-edit
-      :range expr-meta}]))
+  (when-let [zloc (or (z/skip-whitespace z/right zloc)
+                      (z/skip-whitespace z/up zloc))]
+    (let [{:keys [row col]} (meta (z/node zloc))
+          expr-loc (if (not= :token (z/tag zloc))
+                     zloc
+                     (z/up (edit/find-op zloc)))
+          expr-node (z/node expr-loc)
+          expr-meta (meta expr-node)
+          form-loc (edit/to-top expr-loc)
+          {form-row :row
+           form-col :col} (meta (z/node form-loc))
+          prev-end-row-w-space (some-> (z/find-next form-loc z/prev #(and (edit/top? %)
+                                                                          (z/sexpr-able? %)))
+                                       z/node
+                                       meta
+                                       :end-row
+                                       inc)
+          fn-sym (symbol fn-name)
+          clj-analysis (unify-to-one-language (:analysis @db))
+          used-syms (->> (q/find-local-usages-under-form clj-analysis
+                                                         (shared/uri->filename uri)
+                                                         row
+                                                         col
+                                                         (:end-row expr-meta)
+                                                         (:end-col expr-meta))
+                         (mapv (comp symbol name :name)))
+          expr-edit (-> (z/of-string "")
+                        (z/replace `(~fn-sym ~@used-syms)))
+          defn-edit (-> (z/of-string "\n(defn)\n")
+                        (z/append-child fn-sym)
+                        (z/append-child used-syms)
+                        (z/append-child* (n/newlines 1))
+                        (z/append-child* (n/spaces 2))
+                        (z/append-child expr-node)
+                        z/up)]
+      [{:loc defn-edit
+        :range {:row (or prev-end-row-w-space form-row)
+                :col form-col
+                :end-row (or prev-end-row-w-space form-row)
+                :end-col form-col}}
+       {:loc expr-edit
+        :range expr-meta}])))
 
 (defn find-function-form [zloc]
   (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))

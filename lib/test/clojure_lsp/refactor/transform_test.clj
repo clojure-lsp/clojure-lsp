@@ -521,13 +521,13 @@
           zloc    (z/down* (z/of-string code))
           _       (h/load-code-and-locs code)
           results (transform/extract-function
-                   zloc
-                   (h/file-uri "file:///a.clj")
-                   "foo"
-                   db/db)]
+                    zloc
+                    (h/file-uri "file:///a.clj")
+                    "foo"
+                    db/db)]
       (h/assert-submaps
-       []
-       results))))
+        []
+        results))))
 
 (deftest create-function-test
   (testing "function on same file"
@@ -853,9 +853,9 @@
           results (transform/suppress-diagnostic zloc "clojure-lsp/unused-public-var")
           results-to-assert (map #(update % :loc z/string) results)]
       (h/assert-submaps
-       [{:loc   "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}\n"
-         :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
-       results-to-assert)))
+        [{:loc   "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}\n"
+          :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
+        results-to-assert)))
   (testing "when outside of form"
     (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code              (h/code "zzz")
@@ -864,6 +864,6 @@
           results           (transform/suppress-diagnostic zloc "unresolved-symbol")
           results-to-assert (map #(update % :loc z/string) results)]
       (h/assert-submaps
-       [{:loc   "#_{:clj-kondo/ignore [:unresolved-symbol]}\n"
-         :range {:row 1 :col 1 :end-row 1 :end-col 1}}]
-       results-to-assert))))
+        [{:loc   "#_{:clj-kondo/ignore [:unresolved-symbol]}\n"
+          :range {:row 1 :col 1 :end-row 1 :end-col 1}}]
+        results-to-assert))))

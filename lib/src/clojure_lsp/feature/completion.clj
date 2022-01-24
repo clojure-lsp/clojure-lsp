@@ -371,7 +371,7 @@
                              (recur (dec try-column)))))
         cursor-value (if (= :vector (z/tag cursor-loc))
                        ""
-                       (if cursor-loc
+                       (if (z/sexpr-able? cursor-loc)
                          (z/sexpr cursor-loc)
                          ""))
         keyword-value? (keyword? cursor-value)

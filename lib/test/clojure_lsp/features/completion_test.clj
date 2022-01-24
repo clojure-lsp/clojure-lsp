@@ -37,6 +37,8 @@
                                 "(defn qux [bass] ba)"
                                 "")
                         (h/file-uri "file:///g.clj"))
+  (h/load-code-and-locs (h/code ";; comment")
+                        (h/file-uri "file:///h.clj"))
 
   (swap! db/db merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
   (testing "complete-alp"
@@ -95,7 +97,9 @@
        {:label "bases" :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///g.clj") 2 18 db/db)))
   (testing "complete without prefix return all available completions"
-    (is (< 100 (count (f.completion/completion (h/file-uri "file:///g.clj") 3 1 db/db))))))
+    (is (< 100 (count (f.completion/completion (h/file-uri "file:///g.clj") 3 1 db/db)))))
+  (testing "complete comment"
+    (is (< 100 (count (f.completion/completion (h/file-uri "file:///h.clj") 1 10 db/db))))))
 
 (deftest completing-full-ns
   (h/load-code-and-locs

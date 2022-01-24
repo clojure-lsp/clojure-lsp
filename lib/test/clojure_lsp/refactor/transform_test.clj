@@ -514,7 +514,20 @@
          {:loc "(foo b)"
           :range {:row 5 :col 13 :end-row 5 :end-col 30}}]
         results)))
-  (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" db/db))))
+  (testing "from end of file"
+    (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" db/db)))
+    (h/clean-db!)
+    (let [code    (h/code ";; comment")
+          zloc    (z/down* (z/of-string code))
+          _       (h/load-code-and-locs code)
+          results (transform/extract-function
+                   zloc
+                   (h/file-uri "file:///a.clj")
+                   "foo"
+                   db/db)]
+      (h/assert-submaps
+       []
+       results))))
 
 (deftest create-function-test
   (testing "function on same file"

@@ -21,21 +21,24 @@
             :class-dir class-dir
             :basis (b/create-basis basis)}))
 
-(defn jar [opts]
+(defn ^:private uber [opts]
   (clean opts)
   (javac opts)
-  (b/write-pom {:target ""
-                :lib clojars-lib
-                :version current-version
-                :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
-                :src-dirs ["src"]
-                :resource-dirs ["resources"]})
-  (b/copy-dir {:src-dirs ["src" "../lib/src"]
-               :target-dir class-dir})
-  (b/jar {:class-dir class-dir
-          :jar-file uber-file}))
+  (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))]
+    (b/write-pom {:target ""
+                  :lib clojars-lib
+                  :version current-version
+                  :basis basis
+                  :src-dirs ["src" "../lib/src"]
+                  :resource-dirs ["resources"]})
+    (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
+                 :target-dir class-dir})
+    (b/uber {:class-dir class-dir
+             :uber-file uber-file
+             :main 'clojure-lsp.main
+             :basis basis})))
 
-(defn ^:private uber [opts]
+(defn ^:private uber-aot [opts]
   (clean opts)
   (javac opts)
   (println "Building uberjar...")
@@ -65,13 +68,13 @@
     :jvm-opts ["-Xmx2g" "-server"]
     :skip-realign true}))
 
-(def prod-jar uber)
+(def prod-jar uber-aot)
 
 (defn prod-jar-for-native [opts]
-  (uber (merge opts {:extra-aliases [:native]})))
+  (uber-aot (merge opts {:extra-aliases [:native]})))
 
 (defn debug-cli [opts]
-  (uber (merge opts {:extra-aliases [:debug]}))
+  (uber-aot (merge opts {:extra-aliases [:debug]}))
   (bin))
 
 (defn prod-cli [opts]
@@ -105,7 +108,7 @@
     (println "Set GRAALVM_HOME env")))
 
 (defn deploy-clojars [opts]
-  (jar opts)
+  (uber opts)
   ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
    (merge {:installer :remote
            :artifact uber-file

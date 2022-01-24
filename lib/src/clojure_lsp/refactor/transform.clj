@@ -665,7 +665,8 @@
         :else nil))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]
-  (let [form-zloc (z/up (edit/find-op zloc))
+  (let [form-zloc (or (z/up (edit/find-op zloc))
+                      zloc)
         {form-row :row form-col :col :as form-pos} (-> form-zloc z/node meta)
         loc-w-comment (z/edit-> form-zloc
                                 (z/insert-left (n/uneval-node (cond-> [(n/map-node [(n/keyword-node :clj-kondo/ignore)

@@ -21,6 +21,20 @@
             :class-dir class-dir
             :basis (b/create-basis basis)}))
 
+(defn jar [opts]
+  (clean opts)
+  (javac opts)
+  (b/write-pom {:target ""
+                :lib clojars-lib
+                :version current-version
+                :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
+                :src-dirs ["src"]
+                :resource-dirs ["resources"]})
+  (b/copy-dir {:src-dirs ["src" "../lib/src"]
+               :target-dir class-dir})
+  (b/jar {:class-dir class-dir
+          :jar-file uber-file}))
+
 (defn ^:private uber [opts]
   (clean opts)
   (javac opts)
@@ -91,7 +105,7 @@
     (println "Set GRAALVM_HOME env")))
 
 (defn deploy-clojars [opts]
-  (uber opts)
+  (jar opts)
   ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
    (merge {:installer :remote
            :artifact uber-file

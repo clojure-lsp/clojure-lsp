@@ -25,6 +25,7 @@
            :build {:extra-paths ["../lib/resources"]
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.7.5" :sha "34727f7"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}
+                                  slipset/deps-deploy {:mvn/version "0.2.0"}
                                   com.google.guava/guava {:mvn/version "31.0.1-jre"}}
                    :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]

@@ -95,6 +95,6 @@
   ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
    (merge {:installer :remote
            :artifact uber-file
-           :pom-file (b/pom-path {:lib clojars-lib :class-dir class-dir})}
+           :pom-file "pom.xml"}
           opts))
   opts)

@@ -2,10 +2,10 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.tools.build.api :as b]
-   [deps-bin.impl.bin :as deps-bin]))
+   [clojure.tools.build.api :as b]))
 
 (def lib 'com.github.clojure-lsp/clojure-lsp)
+(def clojars-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
 (def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 (def class-dir "target/classes")
 (def basis {:project "deps.edn"})
@@ -26,6 +26,12 @@
   (javac opts)
   (println "Building uberjar...")
   (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))]
+    (b/write-pom {:target ""
+                  :lib clojars-lib
+                  :version current-version
+                  :basis basis
+                  :src-dirs ["src"]
+                  :resource-dirs ["resources"]})
     (b/copy-dir {:src-dirs ["src" "resources"]
                  :target-dir class-dir})
     (b/compile-clj {:basis basis
@@ -39,10 +45,11 @@
 
 (defn ^:private bin []
   (println "Generating bin...")
-  (deps-bin/build-bin {:jar uber-file
-                       :name "clojure-lsp"
-                       :jvm-opts ["-Xmx2g" "-server"]
-                       :skip-realign true}))
+  ((requiring-resolve 'deps-bin.impl.bin/build-bin)
+   {:jar uber-file
+    :name "clojure-lsp"
+    :jvm-opts ["-Xmx2g" "-server"]
+    :skip-realign true}))
 
 (def prod-jar uber)
 
@@ -82,3 +89,12 @@
       (when-not (= 0 exit)
         (System/exit exit)))
     (println "Set GRAALVM_HOME env")))
+
+(defn deploy-clojars [opts]
+  (uber opts)
+  ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
+   (merge {:installer :remote
+           :artifact uber-file
+           :pom-file (b/pom-path {:lib clojars-lib :class-dir class-dir})}
+          opts))
+  opts)

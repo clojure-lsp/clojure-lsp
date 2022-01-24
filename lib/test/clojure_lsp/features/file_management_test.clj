@@ -5,7 +5,8 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.core.async :as async]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [medley.core :as medley]))
 
 (h/reset-db-after-test)
 
@@ -20,19 +21,29 @@
   (is (= "(+ 1 1)\n\n" (#'f.file-management/replace-text "(+ 1 1)\n" "\n" 1 0 1 0))))
 
 (deftest did-close
-  (h/load-code-and-locs "(ns foo) a b c")
-  (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///b.clj"))
+  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
+                                  :project-root-uri (h/file-uri "file:///user/project")})
+  (h/load-code-and-locs "(ns foo) a b c" (h/file-uri "file:///user/project/src/clj/foo.clj"))
+  (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///user/project/src/clj/bar.clj"))
+  (h/load-code-and-locs "(ns some-jar)" (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj"))
   (testing "when file exists on disk"
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly true)]
-      (f.file-management/did-close "file:///a.clj" db/db))
-    (is (get-in @db/db [:analysis "/a.clj"]))
-    (is (get-in @db/db [:findings "/a.clj"]))
-    (is (get-in @db/db [:documents "file:///a.clj"])))
-  (testing "when file not exists on disk"
+      (f.file-management/did-close "file:///user/project/src/clj/foo.clj" db/db))
+    (is (get-in @db/db [:analysis "/user/project/src/clj/foo.clj"]))
+    (is (get-in @db/db [:findings "/user/project/src/clj/foo.clj"]))
+    (is (get-in @db/db [:documents "file:///user/project/src/clj/foo.clj"])))
+  (testing "when local file not exists on disk"
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly false)]
-      (f.file-management/did-close "file:///b.clj" db/db))
-    (is (nil? (get-in @db/db [:analysis "/b.clj"])))
-    (is (nil? (get-in @db/db [:findings "/b.clj"])))
-    (is (nil? (get-in @db/db [:documents "file:///b.clj"])))))
+      (f.file-management/did-close "file:///user/project/src/clj/bar.clj" db/db))
+    (is (nil? (get-in @db/db [:analysis "/user/project/src/clj/bar.clj"])))
+    (is (nil? (get-in @db/db [:findings "/user/project/src/clj/bar.clj"])))
+    (is (nil? (get-in @db/db [:documents "file:///user/project/src/clj/bar.clj"]))))
+  (testing "when file is external we do not remove analysis"
+    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+    (with-redefs [shared/file-exists? (constantly false)]
+      (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" db/db))
+    (is (get-in @db/db [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
+    (is (get-in @db/db [:findings "/some/path/to/jar.jar:/some/file.clj"]))
+    (is (get-in @db/db [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))))

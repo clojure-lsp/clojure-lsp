@@ -169,8 +169,10 @@
                                         :version version})))
 
 (defn did-close [uri db]
-  (let [filename (shared/uri->filename uri)]
-    (when-not (shared/file-exists? (io/file filename))
+  (let [filename (shared/uri->filename uri)
+        source-paths (settings/get db [:source-paths])]
+    (when (and (not (shared/external-filename? filename source-paths))
+               (not (shared/file-exists? (io/file filename))))
       (swap! db (fn [state-db] (-> state-db
                                    (shared/dissoc-in [:documents uri])
                                    (shared/dissoc-in [:analysis filename])

@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.rename
   (:require
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -9,6 +8,14 @@
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
+
+(defn ident-split [ident-str]
+  (let [ident-conformed (some-> ident-str (string/replace #"^::?" ""))
+        prefix          (string/replace ident-str #"^(::?)?.*" "$1")
+        idx             (string/index-of ident-conformed "/")]
+    (if (and idx (not= idx (dec (count ident-conformed))))
+      (into [prefix] (string/split ident-conformed #"/" 2))
+      [prefix nil ident-conformed])))
 
 (defn ^:private rename-keyword
   [replacement
@@ -91,7 +98,7 @@
         keyword? (= :keywords (:bucket reference))
         ref-doc-uri (shared/filename->uri (:filename reference) db)
         [u-prefix _ u-name] (when-not alias?
-                              (parser/ident-split (:name reference)))
+                              (ident-split (:name reference)))
         version (get-in @db [:documents ref-doc-uri :v] 0)]
     (if keyword?
       {:range (shared/->range reference)

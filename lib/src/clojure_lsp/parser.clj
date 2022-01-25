@@ -14,14 +14,6 @@
      (log/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
-(defn ident-split [ident-str]
-  (let [ident-conformed (some-> ident-str (string/replace #"^::?" ""))
-        prefix (string/replace ident-str #"^(::?)?.*" "$1")
-        idx (string/index-of ident-conformed "/")]
-    (if (and idx (not= idx (dec (count ident-conformed))))
-      (into [prefix] (string/split ident-conformed #"/" 2))
-      [prefix nil ident-conformed])))
-
 (defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as _a-pos}
                    {r :name-row c :name-col er :name-end-row ec :name-end-col :as _b-pos}]
   (and (= r name-row)

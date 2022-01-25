@@ -7,7 +7,8 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.parser :as parser]))
 
 (def mock-diagnostics (atom {}))
 
@@ -117,10 +118,12 @@
 
     [text positions]))
 
-(defn load-code-and-locs [code & [filename]]
+(def default-uri (file-uri "file:///a.clj"))
+
+(defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
-        filename (or filename (file-uri "file:///a.clj"))]
-    (handlers/did-open {:textDocument {:uri filename :text code}})
+        uri (or uri default-uri)]
+    (handlers/did-open {:textDocument {:uri uri :text code}})
     positions))
 
 (defmacro with-mock-diagnostics [& body]
@@ -138,3 +141,19 @@
 (defn ->range [[row col] [end-row end-col]]
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
+
+(defn zloc-at
+  ([pos] (zloc-at pos default-uri))
+  ([[row col] uri]
+   (-> @db/db
+       (get-in [:documents uri])
+       :text
+       (parser/loc-at-pos row col))))
+
+(defn load-code-and-zloc
+  ([code] (load-code-and-zloc code default-uri))
+  ([code uri]
+   (let [[pos :as positions] (load-code-and-locs code uri)]
+     (let [position-count (count positions)]
+       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
+     (zloc-at pos uri))))

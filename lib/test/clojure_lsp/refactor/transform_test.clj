@@ -337,9 +337,9 @@
               (take 5))))
   (is (= "[some-fun 1 2]"
          (-> "|{some-fun 1 2}"
-                h/zloc-from-code
-                transform/cycle-coll
-                as-string)))
+             h/zloc-from-code
+             transform/cycle-coll
+             as-string)))
   (is (nil? (transform/cycle-coll (h/zloc-from-code ";; |comment")))))
 
 (defn ^:private update-map [m f]

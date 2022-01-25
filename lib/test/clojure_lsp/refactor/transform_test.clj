@@ -10,11 +10,17 @@
 
 (h/reset-db-after-test)
 
-(defn results-as-string [results]
+(defn with-strings [results]
   (map #(update % :loc z/string) results))
 
-(defn results-strings [results]
+(defn as-strings [results]
   (map (comp z/string :loc) results))
+
+(defn- as-root-string [[{:keys [loc]}]]
+  (z/root-string loc))
+
+(defn- as-string [[{:keys [loc]}]]
+  (z/string loc))
 
 (deftest find-other-colls
   (testing "map"
@@ -46,109 +52,89 @@
     (is (= '((a) (b)) (z/sexpr (z/up zloc))))
     (is (= "((a) (b))" (z/root-string zloc)))))
 
-(defn- thread-first-code [code]
-  (-> (h/zloc-from-code code)
-      (transform/thread-first db/db)
-      first
-      :loc
-      z/root-string))
+(defn- thread-first [code]
+  (as-root-string (transform/thread-first (h/zloc-from-code code) db/db)))
 
-(defn- thread-first-all-code [code]
-  (-> (h/zloc-from-code code)
-      (transform/thread-first-all db/db)
-      first
-      :loc
-      z/root-string))
+(defn- thread-first-all [code]
+  (as-root-string (transform/thread-first-all (h/zloc-from-code code) db/db)))
 
-(defn- thread-last-code [code]
-  (-> (h/zloc-from-code code)
-      (transform/thread-last db/db)
-      first
-      :loc
-      z/root-string))
+(defn- thread-last [code]
+  (as-root-string (transform/thread-last (h/zloc-from-code code) db/db)))
 
-(defn- thread-last-all-code [code]
-  (-> (h/zloc-from-code code)
-      (transform/thread-last-all db/db)
-      first
-      :loc
-      z/root-string))
+(defn- thread-last-all [code]
+  (as-root-string (transform/thread-last-all (h/zloc-from-code code) db/db)))
 
 (deftest thread-test
   (let [code "|(remove nil? (filter :id (map (comp now doit) xs)))"]
     (is (= (h/code "(->> (filter :id (map (comp now doit) xs))"
                    "     (remove nil?))")
-           (thread-last-code code)))
+           (thread-last code)))
     (is (= (h/code "(->> xs"
                    "     (map (comp now doit))"
                    "     (filter :id)"
                    "     (remove nil?))")
-           (thread-last-all-code code))))
+           (thread-last-all code))))
   (let [code "|(assoc (dissoc (update m :xs reverse) :bye) :hello :world)"]
     (is (= (h/code "(-> (dissoc (update m :xs reverse) :bye)"
                    "    (assoc :hello :world))")
-           (thread-first-code code)))
+           (thread-first code)))
     (is (= (h/code "(-> m"
                    "    (update :xs reverse)"
                    "    (dissoc :bye)"
                    "    (assoc :hello :world))")
-           (thread-first-all-code code))))
+           (thread-first-all code))))
   (is (= (h/code "(->> (foo)"
                  "     (interpose (spaces)))")
-         (thread-last-all-code "|(interpose (spaces) (foo))")))
-  (is (nil? (thread-last-all-code "|[:a :b]")))
+         (thread-last-all "|(interpose (spaces) (foo))")))
+  (is (nil? (thread-last-all "|[:a :b]")))
   (is (= (h/code "(->> [:a :b]"
                  "     (get-in foo))")
-         (thread-last-all-code "|(get-in foo [:a :b])")))
+         (thread-last-all "|(get-in foo [:a :b])")))
   (testing "Removing unecessary parens when 1 arg"
     (h/clean-db!)
     (is (= (h/code "(->> [1 2]"
                    "     foo"
                    "     bar)")
-           (thread-last-all-code "|(bar (foo [1 2]))"))))
+           (thread-last-all "|(bar (foo [1 2]))"))))
   (testing "Not removing unecessary parens when 1 arg"
     (h/clean-db!)
     (swap! db/db shared/deep-merge {:settings {:keep-parens-when-threading? true}})
     (is (= (h/code "(->> [1 2]"
                    "     (foo)"
                    "     (bar))")
-           (thread-last-all-code "|(bar (foo [1 2]))")))))
+           (thread-last-all "|(bar (foo [1 2]))")))))
 
-(defn- move-to-let-code [code new-sym]
-  (some-> (h/zloc-from-code code)
-          (transform/move-to-let new-sym)
-          first
-          :loc
-          z/root-string))
+(defn- move-to-let [code new-sym]
+  (as-root-string (transform/move-to-let (h/zloc-from-code code) new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
                  "      b a] b)")
-         (move-to-let-code "(let [a 1] |a)" 'b)))
+         (move-to-let "(let [a 1] |a)" 'b)))
   (is (= (h/code "(let [a 1"
                  "      b (inc a)] b)")
-         (move-to-let-code "(let [a 1] |(inc a))" 'b)))
+         (move-to-let "(let [a 1] |(inc a))" 'b)))
   (is (= (h/code "(let [a 1"
                  "      b (inc a)] (thing b))")
-         (move-to-let-code "(let [a 1] (thing |(inc a)))" 'b)))
-  (is (nil? (move-to-let-code "(let [a 1] a) |(inc b)" 'b)))
+         (move-to-let "(let [a 1] (thing |(inc a)))" 'b)))
+  (is (nil? (move-to-let "(let [a 1] a) |(inc b)" 'b)))
   (is (= (h/code "(let [as [{:a :a}]"
                  "      b b] b)")
-         (move-to-let-code "(let [as [{:a :a}]] |b)" 'b)))
+         (move-to-let "(let [as [{:a :a}]] |b)" 'b)))
   (is (= (h/code "(let [b 1"
                  "      a (inc b)] a (inc b))")
-         (move-to-let-code "(let [a (inc |1)] a (inc 1))" 'b)))
+         (move-to-let "(let [a (inc |1)] a (inc 1))" 'b)))
   (is (= (h/code "(let [b (inc 1)"
                  "      a b] a b)")
-         (move-to-let-code "(let [a |(inc 1)] a (inc 1))" 'b)))
+         (move-to-let "(let [a |(inc 1)] a (inc 1))" 'b)))
   (is (= (h/code "(let [x 1"
                  "      x y] x)")
-         (move-to-let-code "(let [x 1] |y)" 'x)))
+         (move-to-let "(let [x 1] |y)" 'x)))
   (is (= (h/code "(let [[_] 1 x x"
                  "      a (x)] a)")
-         (move-to-let-code "(let [[_] 1 a (|x)] a)" 'x)))
+         (move-to-let "(let [[_] 1 a (|x)] a)" 'x)))
   (is (= "(let [x a] x)"
-         (move-to-let-code "(let [] |a)" 'x)))
+         (move-to-let "(let [] |a)" 'x)))
   (is (= (h/code "(let [a 1"
                  "      x 2]"
                  "  (+ a"
@@ -160,7 +146,7 @@
                      ""
                      "     |;; comment"
                      "     2))")
-             (move-to-let-code 'x))))
+             (move-to-let 'x))))
   (is (= (h/code "(let [a 1"
                  "      x 2]"
                  "  (+ a"
@@ -172,34 +158,30 @@
                      ""
                      " |    ;; comment"
                      "     2))")
-             (move-to-let-code 'x))))
+             (move-to-let 'x))))
   (is (nil? (-> (h/code "(let [a 1]"
                         "  (+ a"
                         "     2"
                         "     |;; comment"
                         "))")
-                (move-to-let-code 'x))))
+                (move-to-let 'x))))
   (is (nil? (transform/move-to-let nil 'x))))
 
-(defn- introduce-let-code [code new-sym]
-  (-> (h/zloc-from-code code)
-      (transform/introduce-let new-sym)
-      first
-      :loc
-      z/root-string))
+(defn- introduce-let [code new-sym]
+  (as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
 
 (deftest introduce-let-test
   (testing "simple"
     (is (= (h/code "(let [b (inc a)]"
                    "  b)")
            (-> (h/code "|(inc a)")
-               (introduce-let-code 'b))))
+               (introduce-let 'b))))
     (is (= (h/code "(let [b (inc a)"
                    " c b]"
                    "  c)")
            (-> (h/code "(let [b (inc a)]"
                        "  |b)")
-               (introduce-let-code 'c)))))
+               (introduce-let 'c)))))
   (testing "from comment"
     (is (= (h/code "foo"
                    ";; comment"
@@ -210,7 +192,7 @@
                        "|;; comment"
                        ""
                        "(inc a)")
-               (introduce-let-code 'b)))))
+               (introduce-let 'b)))))
   (testing "from whitespace"
     (is (= (h/code "foo"
                    ";; comment"
@@ -221,7 +203,7 @@
                        ";; comment"
                        "|"
                        "(inc a)")
-               (introduce-let-code 'b)))))
+               (introduce-let 'b)))))
   (testing "from trailing comment"
     (is (= (h/code "(let [b (inc a)"
                    ""
@@ -232,46 +214,42 @@
                        ""
                        "|;; comment"
                        "")
-               (introduce-let-code 'b)))))
+               (introduce-let 'b)))))
   (is (nil? (transform/introduce-let nil 'b))))
 
-(defn- expand-let-code [code]
-  (-> (h/zloc-from-code code)
-      transform/expand-let
-      first
-      :loc
-      z/root-string))
+(defn- expand-let [code]
+  (as-root-string (transform/expand-let (h/zloc-from-code code))))
 
 (deftest expand-let-test
   (testing "simple"
     (is (= (h/code "(let [a 1]"
                    " (+ 1 a 2))")
-           (expand-let-code "(+ 1 (|let [a 1] a) 2)"))))
+           (expand-let "(+ 1 (|let [a 1] a) 2)"))))
   (testing "in fn literal"
-    (is (nil? (expand-let-code "#(a |(b c))"))))
+    (is (nil? (expand-let "#(a |(b c))"))))
   (testing "in fn without args"
     (is (= (h/code "(def foo (let [a 1]"
                    "          (fn [] a 2)))")
-           (expand-let-code "(def foo (fn [] (|let [a 1] a) 2))"))))
+           (expand-let "(def foo (fn [] (|let [a 1] a) 2))"))))
   (testing "in fn with args"
     (is (= (h/code "(def foo (let [a 1]"
                    "          (fn [bar] a 2)))")
-           (expand-let-code "(def foo (fn [bar] (|let [a 1] a) 2))"))))
+           (expand-let "(def foo (fn [bar] (|let [a 1] a) 2))"))))
   (testing "with list in front of let"
     (is (= (h/code "(let [x 4]"
                    " (+ (* 3 3) (* x x)))")
-           (expand-let-code "(+ (* 3 3) (|let [x 4] (* x x)))"))))
+           (expand-let "(+ (* 3 3) (|let [x 4] (* x x)))"))))
   (testing "with list in front of let and more than an expr in let body"
     (is (= (h/code "(let [x 4]"
                    " (+ (* 3 3) (something 1)"
                    " (* x x)))")
            (-> (h/code "(+ (* 3 3) (|let [x 4] (something 1)"
                        " (* x x)))")
-               expand-let-code))))
+               expand-let))))
   (testing "with inner let one level after outer let"
     (is (= (h/code "(let [x 5"
                    " y 2] (when x y))")
-           (expand-let-code "(let [x 5] (when x (let [|y 2] y)))")))))
+           (expand-let "(let [x 5] (when x (let [|y 2] y)))")))))
 
 (deftest unwind-thread-test
   (testing "from thread position"
@@ -310,58 +288,50 @@
     (is (some? range))
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
 
-(defn cycle-priv [code]
-  (-> (h/zloc-from-code code)
-      (transform/cycle-privacy db/db)
-      first
-      :loc
-      z/string))
+(defn cycle-privacy [code]
+  (as-string (transform/cycle-privacy (h/zloc-from-code code) db/db)))
 
 (deftest cycle-privacy-test
   (testing "without-setting"
     (swap! db/db shared/deep-merge {:settings {}})
-    (is (= "defn-" (cycle-priv "(defn |a [])")))
-    (is (= "defn" (cycle-priv "(defn- |a [])")))
-    (is (= "^:private a" (cycle-priv "(def |a [])")))
-    (is (= "a" (cycle-priv "(def ^:private |a [])"))))
+    (is (= "defn-" (cycle-privacy "(defn |a [])")))
+    (is (= "defn" (cycle-privacy "(defn- |a [])")))
+    (is (= "^:private a" (cycle-privacy "(def |a [])")))
+    (is (= "a" (cycle-privacy "(def ^:private |a [])"))))
   (testing "with-setting"
     (swap! db/db shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
-    (is (= "^:private a" (cycle-priv "(defn |a [])")))
-    (is (= "a" (cycle-priv "(defn ^:private |a [])")))))
+    (is (= "^:private a" (cycle-privacy "(defn |a [])")))
+    (is (= "a" (cycle-privacy "(defn ^:private |a [])")))))
 
-(defn change-coll-code [code coll-type]
-  (-> (z/of-string code)
-      (transform/change-coll coll-type)
-      first
-      :loc
-      z/string))
+(defn change-coll [code coll-type]
+  (as-string (transform/change-coll (z/of-string code) coll-type)))
 
 (deftest change-coll-test
   (testing "when loc is not a coll"
     (is (= [] (-> (z/of-string "\"some string\"")
                   (transform/change-coll "map")))))
   (testing "when loc is a list"
-    (is (= "{some-fun 1 2}" (change-coll-code "(some-fun 1 2)" "map")))
-    (is (= "#{some-fun 1 2}" (change-coll-code "(some-fun 1 2)" "set")))
-    (is (= "[some-fun 1 2]" (change-coll-code "(some-fun 1 2)" "vector"))))
+    (is (= "{some-fun 1 2}" (change-coll "(some-fun 1 2)" "map")))
+    (is (= "#{some-fun 1 2}" (change-coll "(some-fun 1 2)" "set")))
+    (is (= "[some-fun 1 2]" (change-coll "(some-fun 1 2)" "vector"))))
   (testing "when loc is a map"
-    (is (= "#{:some-fun 1}" (change-coll-code "{:some-fun 1}" "set")))
-    (is (= "[:some-fun 1]" (change-coll-code "{:some-fun 1}" "vector")))
-    (is (= "(:some-fun 1)" (change-coll-code "{:some-fun 1}" "list"))))
+    (is (= "#{:some-fun 1}" (change-coll "{:some-fun 1}" "set")))
+    (is (= "[:some-fun 1]" (change-coll "{:some-fun 1}" "vector")))
+    (is (= "(:some-fun 1)" (change-coll "{:some-fun 1}" "list"))))
   (testing "when loc is a set"
-    (is (= "[:some-fun 1]" (change-coll-code "#{:some-fun 1}" "vector")))
-    (is (= "(:some-fun 1)" (change-coll-code "#{:some-fun 1}" "list")))
-    (is (= "{:some-fun 1}" (change-coll-code "#{:some-fun 1}" "map"))))
+    (is (= "[:some-fun 1]" (change-coll "#{:some-fun 1}" "vector")))
+    (is (= "(:some-fun 1)" (change-coll "#{:some-fun 1}" "list")))
+    (is (= "{:some-fun 1}" (change-coll "#{:some-fun 1}" "map"))))
   (testing "when loc is a vector"
-    (is (= "(:some-fun 1)" (change-coll-code "[:some-fun 1]" "list")))
-    (is (= "{:some-fun 1}" (change-coll-code "[:some-fun 1]" "map")))
-    (is (= "#{:some-fun 1}" (change-coll-code "[:some-fun 1]" "set")))))
+    (is (= "(:some-fun 1)" (change-coll "[:some-fun 1]" "list")))
+    (is (= "{:some-fun 1}" (change-coll "[:some-fun 1]" "map")))
+    (is (= "#{:some-fun 1}" (change-coll "[:some-fun 1]" "set")))))
 
 (defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
 
-(defn- extract-fun
-  ([code new-fn-name] (extract-fun code new-fn-name h/default-uri))
+(defn- extract-function
+  ([code new-fn-name] (extract-function code new-fn-name h/default-uri))
   ([code new-fn-name filepath]
    (h/clean-db!)
    (let [file-uri (h/file-uri filepath)
@@ -378,10 +348,10 @@
                                 "  (let [c 1] (b c)))"
                                 "")
                         (h/code "(foo b)")]
-                       (results-strings
-                         (extract-fun "(defn a [b] (|let [c 1] (b c)))"
-                                      "foo"
-                                      filepath)))
+                       (as-strings
+                         (extract-function "(defn a [b] (|let [c 1] (b c)))"
+                                           "foo"
+                                           filepath)))
       "file:///a.clj"
       "file:///a.cljc"
       "file:///a.cljs"))
@@ -393,8 +363,8 @@
             (h/code "(foo a)")]
            (-> (h/code "(let [a 1 b 2 c 3]"
                        "  |(+ 1 a))")
-               (extract-fun "foo")
-               results-strings))))
+               (extract-function "foo")
+               as-strings))))
   (testing "from comment"
     (is (= [(h/code ""
                     "(defn foo [a]"
@@ -405,8 +375,8 @@
                        "  ;; |comment"
                        ""
                        "  (+ 1 a))")
-               (extract-fun "foo")
-               results-strings))))
+               (extract-function "foo")
+               as-strings))))
   (testing "from whitespace"
     (is (= [(h/code ""
                     "(defn foo [a]"
@@ -417,8 +387,8 @@
                        "|  ;; comment"
                        ""
                        "  (+ 1 a))")
-               (extract-fun "foo")
-               results-strings))))
+               (extract-function "foo")
+               as-strings))))
   (testing "from trailing comment"
     (is (= [(h/code ""
                     "(defn foo []"
@@ -432,8 +402,8 @@
                        "  (+ 1 a)"
                        "  |;; comment"
                        ")")
-               (extract-fun "foo")
-               results-strings))))
+               (extract-function "foo")
+               as-strings))))
   (testing "with comments above origin function"
     (h/assert-submaps
       [{:loc   (h/code ""
@@ -446,8 +416,8 @@
       (-> (h/code "(ns foo)"
                   ";; {:something true}"
                   "(defn a [b] (|let [c 1] (b c)))")
-          (extract-fun "foo")
-          results-as-string)))
+          (extract-function "foo")
+          with-strings)))
   (testing "with comments above origin function with spaces"
     (h/assert-submaps
       [{:loc   (h/code ""
@@ -462,8 +432,8 @@
                   ""
                   "#_{:something true}"
                   "(defn a [b] (|let [c 1] (b c)))")
-          (extract-fun "foo")
-          results-as-string)))
+          (extract-function "foo")
+          with-strings)))
   (testing "with comments above origin function with multi line comments"
     (h/assert-submaps
       [{:loc   (h/code ""
@@ -478,16 +448,16 @@
                   ";; {:something true}"
                   ";; other comment"
                   "(defn a [b] (|let [c 1] (b c)))")
-          (extract-fun "foo")
-          results-as-string)))
+          (extract-function "foo")
+          with-strings)))
   (testing "from end of file"
     (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" db/db)))
     (h/assert-submaps
       []
-      (extract-fun "|;; comment"
-                   "foo"))))
+      (extract-function "|;; comment"
+                        "foo"))))
 
-(defn- create-fun [code]
+(defn- create-function [code]
   (transform/create-function (h/load-code-and-zloc code) "file:///a.clj" db/db))
 
 (deftest create-function-test
@@ -496,98 +466,80 @@
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func []"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(defn a [b] (|my-func))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating with 1 known arg"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [b]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(defn a [b] (|my-func b))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating with 1 known arg and a unknown arg"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [b arg2]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(defn a [b] (|my-func b (+ 1 2)))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating from a fn call of other function"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [arg1]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(defn a [b] (remove |my-func [1 2 3 4]))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating from a fn call of other function nested"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [arg1 arg2]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(defn a [b] (remove (partial |my-func 2) [1 2 3 4]))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating from a annonymous function"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [arg1 element]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(defn a [b] (remove #(|my-func 2 %) [1 2 3 4]))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating from a thread first macro with single arg"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [b]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(-> b |my-func (+ 1 2) (+ 2 3))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating from a thread first macro with multiple args"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [b a arg2]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(-> b (|my-func a 3) (+ 1 2))"
-                 create-fun
-                 results-strings))))
+                 create-function
+                 as-strings))))
     (testing "creating from a thread last macro with multiple args"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [a arg2 b]"
                       "  )")
-              (h/code ""
-                      ""
-                      "")]
+              (h/code "" "" "")]
              (-> "(->> b (|my-func a 3))"
-                 create-fun
-                 results-strings)))))
+                 create-function
+                 as-strings)))))
   (testing "on other files"
     (testing "when namespace is already required and exists"
       (h/clean-db!)
       (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
-      (let [{:keys [changes-by-uri]} (create-fun "(ns foo (:require [bar :as b])) (|b/something)")
-            result (update-map changes-by-uri results-as-string)]
+      (let [{:keys [changes-by-uri]} (create-function "(ns foo (:require [bar :as b])) (|b/something)")
+            result (update-map changes-by-uri with-strings)]
         (is (= {(h/file-uri "file:///a.clj")
                 []
                 (h/file-uri "file:///bar.clj")
@@ -607,7 +559,7 @@
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" db/db)
-            result (update-map changes-by-uri results-as-string)]
+            result (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
                  :options {:overwrite? false, :ignore-if-exists? true}}]
@@ -688,7 +640,7 @@
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
-            results-to-assert (update-map changes-by-uri results-as-string)]
+            results-to-assert (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
                  :options {:overwrite? false :ignore-if-exists? true}}]
@@ -712,7 +664,7 @@
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.cljs")
             {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
-            results-to-assert (update-map changes-by-uri results-as-string)]
+            results-to-assert (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
                  :options {:overwrite? false :ignore-if-exists? true}}]
@@ -742,7 +694,7 @@
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")
                 {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
-                results-to-assert (update-map changes-by-uri results-as-string)]
+                results-to-assert (update-map changes-by-uri with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
               {(h/file-uri "file:///project/test/some/ns_test.clj")
@@ -804,62 +756,49 @@
       (is (= [nil] (map (comp z/string :loc) a-results)))
       (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results))))))
 
-(deftest suppress-diagnostic
+(defn suppress-diagnostic [code diagnostic-code]
+  (with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))
+
+(deftest suppress-diagnostic-test
   (testing "when op has no spaces"
     (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-    (let [code (h/code "(ns bla)"
-                       ""
-                       "(defn foo [|b]"
-                       "  (+ 1 2))"
-                       "(foo 1)")
-          results (-> code
-                      h/zloc-from-code
-                      (transform/suppress-diagnostic "unused-var")
-                      results-as-string)]
-      (h/assert-submaps
-        [{:loc (h/code "#_{:clj-kondo/ignore [:unused-var]}"
+    (h/assert-submaps
+      [{:loc   (h/code "#_{:clj-kondo/ignore [:unused-var]}"
                        "")
-          :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
-        results)))
+        :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
+      (suppress-diagnostic (h/code "(ns bla)"
+                                   ""
+                                   "(defn foo [|b]"
+                                   "  (+ 1 2))"
+                                   "(foo 1)")
+                           "unused-var")))
   (testing "when op has spaces"
     (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-    (let [code (h/code "(ns bla)"
-                       ""
-                       "(defn foo [b]"
-                       "  (+ |c 1 2))"
-                       "(foo 1)")
-          results (-> code
-                      h/zloc-from-code
-                      (transform/suppress-diagnostic "unresolved-var")
-                      results-as-string)]
-      (h/assert-submaps
-        [{:loc (h/code "#_{:clj-kondo/ignore [:unresolved-var]}"
+    (h/assert-submaps
+      [{:loc   (h/code "#_{:clj-kondo/ignore [:unresolved-var]}"
                        "  ")
-          :range {:row 4 :col 3 :end-row 4 :end-col 3}}]
-        results)))
+        :range {:row 4 :col 3 :end-row 4 :end-col 3}}]
+      (suppress-diagnostic (h/code "(ns bla)"
+                                   ""
+                                   "(defn foo [b]"
+                                   "  (+ |c 1 2))"
+                                   "(foo 1)")
+                           "unresolved-var")))
   (testing "when diagnostic is from clojure-lsp"
     (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-    (let [code    (h/code "(ns bla)"
-                          ""
-                          "(def |foo 1)")
-          results (-> code
-                      h/zloc-from-code
-                      (transform/suppress-diagnostic "clojure-lsp/unused-public-var")
-                      results-as-string)]
-      (h/assert-submaps
-        [{:loc   (h/code "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}"
-                         "")
-          :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
-        results)))
+    (h/assert-submaps
+      [{:loc   (h/code "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}"
+                       "")
+        :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
+      (suppress-diagnostic (h/code "(ns bla)"
+                                   ""
+                                   "(def |foo 1)")
+                           "clojure-lsp/unused-public-var")))
   (testing "when outside of form"
     (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-    (let [code    (h/code "|zzz")
-          results (-> code
-                      h/zloc-from-code
-                      (transform/suppress-diagnostic "unresolved-symbol")
-                      results-as-string)]
-      (h/assert-submaps
-        [{:loc   (h/code "#_{:clj-kondo/ignore [:unresolved-symbol]}"
-                         "")
-          :range {:row 1 :col 1 :end-row 1 :end-col 1}}]
-        results))))
+    (h/assert-submaps
+      [{:loc   (h/code "#_{:clj-kondo/ignore [:unresolved-symbol]}"
+                       "")
+        :range {:row 1 :col 1 :end-row 1 :end-col 1}}]
+      (suppress-diagnostic (h/code "|zzz")
+                           "unresolved-symbol"))))

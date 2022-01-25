@@ -422,28 +422,27 @@
 
 (defn inline-symbol
   [uri row col db]
-  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
-        references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)
-        def-uri (shared/filename->uri (:filename definition) db)
-        def-text (get-in @db [:documents def-uri :text])
-        def-loc (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
-        op (inline-symbol? definition db)]
-    (when op
-      (let [val-loc (z/right def-loc)
-            end-pos (if (= op 'def)
-                      (meta (z/node (z/up def-loc)))
-                      (meta (z/node val-loc)))
-            prev-loc (if (= op 'def)
-                       (z/left (z/up def-loc))
-                       (z/left def-loc))
-            start-pos (if prev-loc
-                        (set/rename-keys (meta (z/node prev-loc))
-                                         {:end-row :row :end-col :col})
-                        (meta (z/node def-loc)))
-            def-range {:row (:row start-pos)
-                       :col (:col start-pos)
-                       :end-row (:end-row end-pos)
-                       :end-col (:end-col end-pos)}]
+  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)]
+    (when-let [op (inline-symbol? definition db)]
+      (let [references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)
+            def-uri    (shared/filename->uri (:filename definition) db)
+            def-text   (get-in @db [:documents def-uri :text])
+            def-loc    (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
+            val-loc    (z/right def-loc)
+            end-pos    (if (= op 'def)
+                         (meta (z/node (z/up def-loc)))
+                         (meta (z/node val-loc)))
+            prev-loc   (if (= op 'def)
+                         (z/left (z/up def-loc))
+                         (z/left def-loc))
+            start-pos  (if prev-loc
+                         (set/rename-keys (meta (z/node prev-loc))
+                                          {:end-row :row :end-col :col})
+                         (meta (z/node def-loc)))
+            def-range  {:row     (:row start-pos)
+                        :col     (:col start-pos)
+                        :end-row (:end-row end-pos)
+                        :end-col (:end-col end-pos)}]
         {:changes-by-uri
          (reduce
            (fn [accum {:keys [filename] :as element}]

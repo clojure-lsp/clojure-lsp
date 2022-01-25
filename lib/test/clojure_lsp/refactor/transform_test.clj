@@ -769,7 +769,10 @@
       (is (map? results))
       (is (= 2 (count results)))
       (is (= [nil] (map (comp z/string :loc) a-results)))
-      (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results))))))
+      (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results)))))
+  (testing "invalid location"
+    (let [[[pos-l pos-c]] (h/load-code-and-locs "|;; comment")]
+      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db))))))
 
 (defn suppress-diagnostic [code diagnostic-code]
   (with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))

@@ -54,7 +54,7 @@
     file
     (shared/normalize-file (io/file (.getParentFile deps-file) file))))
 
-(defn ^:private deps-file->local-roots
+(defn deps-file->local-roots
   [deps-file settings]
   (let [{:keys [deps extra-deps aliases]} (config/read-edn-file deps-file)
         source-aliases (or (:source-aliases settings) default-source-aliases)

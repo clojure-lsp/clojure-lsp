@@ -3,6 +3,8 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.source-paths :as source-paths]
+   [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
    [taoensso.timbre :as log]))
@@ -10,6 +12,17 @@
 (defn valid-project-spec? [root-path {:keys [project-path]}]
   (let [project-file (shared/to-file root-path project-path)]
     (shared/file-exists? project-file)))
+
+(defn project-root->project-dep-files [project-root dep-file-path settings]
+  (let [project-dep-file (io/file project-root dep-file-path)]
+    (if (string/ends-with? (str project-dep-file) "deps.edn")
+      (if-let [local-roots (seq (source-paths/deps-file->local-roots project-dep-file settings))]
+        (concat [project-dep-file]
+                (->> local-roots
+                     (map #(shared/relativize-filepath % project-root))
+                     (map #(io/file project-root % "deps.edn"))))
+        [project-dep-file])
+      [project-dep-file])))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
   (let [command (string/join " " classpath-cmd)]

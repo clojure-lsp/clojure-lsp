@@ -43,12 +43,6 @@
   (javac opts)
   (println "Building uberjar...")
   (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))]
-    (b/write-pom {:target ""
-                  :lib clojars-lib
-                  :version current-version
-                  :basis basis
-                  :src-dirs ["src"]
-                  :resource-dirs ["resources"]})
     (b/copy-dir {:src-dirs ["src" "resources"]
                  :target-dir class-dir})
     (b/compile-clj {:basis basis

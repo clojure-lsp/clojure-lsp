@@ -2,13 +2,13 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [taoensso.timbre :as log]
-   [clojure-lsp.parser :as parser]))
+   [taoensso.timbre :as log]))
 
 (def mock-diagnostics (atom {}))
 

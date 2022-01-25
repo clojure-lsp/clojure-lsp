@@ -37,38 +37,38 @@
            (transform/find-other-colls (z/of-string "{:a }"))))))
 
 (deftest paredit-test
-  (let [zloc (edit/raise (h/load-code-and-zloc "(a (|b))"))]
+  (let [zloc (edit/raise (h/zloc-from-code "(a (|b))"))]
     (is (= 'b (z/sexpr zloc)))
     (is (= '(a b) (z/sexpr (z/up zloc))))
     (is (= "b" (-> zloc edit/raise z/root-string))))
-  (let [zloc (edit/wrap-around (h/load-code-and-zloc "(|a (b))") :list)]
+  (let [zloc (edit/wrap-around (h/zloc-from-code "(|a (b))") :list)]
     (is (= '(a) (z/sexpr zloc)))
     (is (= '((a) (b)) (z/sexpr (z/up zloc))))
     (is (= "((a) (b))" (z/root-string zloc)))))
 
 (defn- thread-first-code [code]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       (transform/thread-first db/db)
       first
       :loc
       z/root-string))
 
 (defn- thread-first-all-code [code]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       (transform/thread-first-all db/db)
       first
       :loc
       z/root-string))
 
 (defn- thread-last-code [code]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       (transform/thread-last db/db)
       first
       :loc
       z/root-string))
 
 (defn- thread-last-all-code [code]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       (transform/thread-last-all db/db)
       first
       :loc
@@ -115,7 +115,7 @@
            (thread-last-all-code "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let-code [code new-sym]
-  (some-> (h/load-code-and-zloc code)
+  (some-> (h/zloc-from-code code)
           (transform/move-to-let new-sym)
           first
           :loc
@@ -182,7 +182,7 @@
   (is (nil? (transform/move-to-let nil 'x))))
 
 (defn- introduce-let-code [code new-sym]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       (transform/introduce-let new-sym)
       first
       :loc
@@ -236,7 +236,7 @@
   (is (nil? (transform/introduce-let nil 'b))))
 
 (defn- expand-let-code [code]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       transform/expand-let
       first
       :loc
@@ -311,7 +311,7 @@
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
 
 (defn cycle-priv [code]
-  (-> (h/load-code-and-zloc code)
+  (-> (h/zloc-from-code code)
       (transform/cycle-privacy db/db)
       first
       :loc
@@ -813,7 +813,7 @@
                        "  (+ 1 2))"
                        "(foo 1)")
           results (-> code
-                      h/load-code-and-zloc
+                      h/zloc-from-code
                       (transform/suppress-diagnostic "unused-var")
                       results-as-string)]
       (h/assert-submaps
@@ -829,7 +829,7 @@
                        "  (+ |c 1 2))"
                        "(foo 1)")
           results (-> code
-                      h/load-code-and-zloc
+                      h/zloc-from-code
                       (transform/suppress-diagnostic "unresolved-var")
                       results-as-string)]
       (h/assert-submaps
@@ -843,7 +843,7 @@
                           ""
                           "(def |foo 1)")
           results (-> code
-                      h/load-code-and-zloc
+                      h/zloc-from-code
                       (transform/suppress-diagnostic "clojure-lsp/unused-public-var")
                       results-as-string)]
       (h/assert-submaps
@@ -855,7 +855,7 @@
     (swap! db/db shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (let [code    (h/code "|zzz")
           results (-> code
-                      h/load-code-and-zloc
+                      h/zloc-from-code
                       (transform/suppress-diagnostic "unresolved-symbol")
                       results-as-string)]
       (h/assert-submaps

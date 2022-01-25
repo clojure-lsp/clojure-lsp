@@ -9,7 +9,7 @@
 
 (h/reset-db-after-test)
 
-(deftest resolve-best-alias-suggestions
+(deftest resolve-best-alias-suggestions-test
   (testing "alias not exists"
     (is (= #{"foo"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo" '#{bar})))
     (is (= #{"string"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "clojure.string" '#{foo bar})))
@@ -24,7 +24,7 @@
     (is (= #{"bar"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo.bar.core" '#{})))
     (is (= #{"bar"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo.bar.core" '#{bar})))))
 
-(deftest resolve-best-namespaces-suggestions
+(deftest resolve-best-namespaces-suggestions-test
   (testing "when alias segments match namespaces in the order"
     (is (= #{"foo.dar.zas"} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
                              "d.z" '#{foo.bar.baz
@@ -52,7 +52,7 @@
                                       foo.bar
                                       foo.bar-test})))))
 
-(deftest find-require-suggestions
+(deftest find-require-suggestions-test
   (testing "Suggested namespaces"
     (h/load-code-and-locs "(ns project.some.cool.namespace)")
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
@@ -78,231 +78,260 @@
         :refer "blow"}]
       (f.add-missing-libspec/find-require-suggestions (z/of-string "blow") [] db/db))))
 
-(deftest add-missing-libspec
+(defn ^:private add-missing-libspec [code]
+  (f.add-missing-libspec/add-missing-libspec (h/zloc-from-code code) db/db))
+
+(defn ^:private as-sexp [[{:keys [loc]}]]
+  (z/sexpr loc))
+
+(defn ^:private as-str [[{:keys [loc]}]]
+  (z/string loc))
+
+(defn ^:private as-root-str [[{:keys [loc]}]]
+  (z/root-string loc))
+
+(deftest add-missing-libspec-test
   (testing "aliases"
     (testing "known aliases in project"
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
-      (let [zloc (-> (z/of-string "(ns foo) s/thing") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [foo.s :as s])) (z/sexpr loc)))))
+      (is (= '(ns foo (:require [foo.s :as s]))
+             (-> "(ns foo) |s/thing"
+                 add-missing-libspec
+                 as-sexp))))
     (testing "common ns aliases"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [clojure.set :as set])) (z/sexpr loc)))))
+      (is (= '(ns foo (:require [clojure.set :as set]))
+             (-> "(ns foo) |set/subset?"
+                 add-missing-libspec
+                 as-sexp))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-        (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-          (is (some? range))
-          (is (= (h/code "(ns foo "
-                         "  (:require [clojure.set :as set]))") (z/string loc)))))
+        (is (= (h/code "(ns foo "
+                       "  (:require [clojure.set :as set]))")
+               (-> "(ns foo) |set/subset?"
+                   add-missing-libspec
+                   as-str))))
       (testing "next requires follow the same pattern"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-        (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-          (is (some? range))
-          (is (= (h/code "(ns foo "
-                         "  (:require [foo :as bar]"
-                         "            [clojure.set :as set]))") (z/string loc))))))
+        (is (= (h/code "(ns foo "
+                       "  (:require [foo :as bar]"
+                       "            [clojure.set :as set]))")
+               (-> (h/code "(ns foo "
+                           "  (:require [foo :as bar])) |set/subset?")
+                   add-missing-libspec
+                   as-str)))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-        (let [zloc (-> (z/of-string "(ns foo) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-          (is (some? range))
-          (is (= (h/code "(ns foo "
-                         "  (:require [clojure.set :as set]))") (z/string loc)))))
+        (is (= (h/code "(ns foo "
+                       "  (:require [clojure.set :as set]))")
+               (-> "(ns foo) |set/subset?"
+                   add-missing-libspec
+                   as-str))))
       (testing "next requires follow the same pattern"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-        (let [zloc (-> (z/of-string "(ns foo \n  (:require [foo :as bar])) set/subset?") z/rightmost)
-              [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-          (is (some? range))
-          (is (= (h/code "(ns foo "
-                         "  (:require [foo :as bar]"
-                         "            [clojure.set :as set]))") (z/string loc)))))))
+        (is (= (h/code "(ns foo "
+                       "  (:require [foo :as bar]"
+                       "            [clojure.set :as set]))")
+               (-> (h/code "(ns foo "
+                           "  (:require [foo :as bar])) |set/subset?")
+                   add-missing-libspec
+                   as-str))))))
   (testing "common refers"
     (testing "when require doesn't exists"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo) deftest") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+      (is (= '(ns foo (:require [clojure.test :refer [deftest]]))
+             (-> "(ns foo) |deftest"
+                 add-missing-libspec
+                 as-sexp))))
     (testing "when already exists another require"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.set :refer [subset?]])) deftest") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [clojure.set :refer [subset?]]
-                                  [clojure.test :refer [deftest]])) (z/sexpr loc)))))
+      (is (= '(ns foo (:require [clojure.set :refer [subset?]]
+                                [clojure.test :refer [deftest]]))
+             (-> "(ns foo (:require [clojure.set :refer [subset?]])) |deftest"
+                 add-missing-libspec
+                 as-sexp))))
     (testing "when already exists that ns with alias and no refers"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :as t])) testing") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [clojure.test :as t :refer [testing]])) (z/sexpr loc)))))
+      (is (= '(ns foo (:require [clojure.test :as t :refer [testing]]))
+             (-> "(ns foo (:require [clojure.test :as t])) |testing"
+                 add-missing-libspec
+                 as-sexp))))
     (testing "when already exists that ns with another refer"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest]])) testing") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [clojure.test :refer [deftest testing]])) (z/sexpr loc)))))
+      (is (= '(ns foo (:require [clojure.test :refer [deftest testing]]))
+             (-> "(ns foo (:require [clojure.test :refer [deftest]])) |testing"
+                 add-missing-libspec
+                 as-sexp))))
     (testing "we don't add existing refers"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [testing]])) testing") z/rightmost)]
-        (is (= nil (f.add-missing-libspec/add-missing-libspec zloc db/db)))))
+      (is (nil? (add-missing-libspec "(ns foo (:require [clojure.test :refer [testing]])) |testing"))))
     (testing "we can add multiple refers"
       (h/clean-db!)
-      (let [zloc (-> (z/of-string "(ns foo (:require [clojure.test :refer [deftest testing]])) is") z/rightmost)
-            [{:keys [loc range]}] (f.add-missing-libspec/add-missing-libspec zloc db/db)]
-        (is (some? range))
-        (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]])) (z/sexpr loc)))))))
+      (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]]))
+             (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is"
+                 add-missing-libspec
+                 as-sexp))))))
+
+(defn add-import-to-namespace [code import-name]
+  (f.add-missing-libspec/add-import-to-namespace (h/zloc-from-code code) import-name db/db))
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
     (h/clean-db!)
-    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar "
-                     "  (:import"
-                     "    java.util.Date))") (z/root-string loc)))))
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import"
+                   "    java.util.Date))")
+           (-> "(ns foo.bar) |Date."
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
     (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar "
-                     "  (:import java.util.Date))") (z/root-string loc)))))
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import java.util.Date))")
+           (-> "(ns foo.bar) |Date."
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
-    (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar "
-                     "  (:import java.util.Date))") (z/root-string loc)))))
+    (swap! db/db shared/deep-merge {:settings {:keep-require-at-start? true}})
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import java.util.Date))")
+           (-> "(ns foo.bar) |Date."
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
   (testing "when there is a :import form already"
     (h/clean-db!)
-    (let [zloc (-> (z/of-string (h/code "(ns foo.bar "
-                                        "  (:import "
-                                        "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar "
-                     "  (:import "
-                     "    java.util.Calendar"
-                     "    java.util.Date))") (z/root-string loc)))))
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import "
+                   "    java.util.Calendar"
+                   "    java.util.Date))")
+           (-> (h/code "(ns foo.bar "
+                       "  (:import "
+                       "    java.util.Calendar)) |Date.")
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
   (testing "when there is already that :import imported"
     (h/clean-db!)
-    (let [zloc (-> (z/of-string (h/code "(ns foo.bar "
-                                        "  (:import "
-                                        "    java.util.Date)) Date.")) (z/find-value z/next 'Date.))]
-      (is (= nil
-             (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)))))
+    (is (= nil
+           (-> (h/code "(ns foo.bar "
+                       "  (:import "
+                       "    java.util.Date)) |Date.")
+               (add-import-to-namespace "java.util.Date")))))
   (testing "when there is only a :require form"
     (h/clean-db!)
-    (let [zloc (-> (z/of-string (h/code "(ns foo.bar"
-                                        "  (:require"
-                                        "    [foo.baz :as baz])) Date.")) (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar"
-                     "  (:require"
-                     "    [foo.baz :as baz]) "
-                     "  (:import"
-                     "    java.util.Date))") (z/root-string loc)))))
+    (is (= (h/code "(ns foo.bar"
+                   "  (:require"
+                   "    [foo.baz :as baz]) "
+                   "  (:import"
+                   "    java.util.Date))")
+           (-> (h/code "(ns foo.bar"
+                       "  (:require"
+                       "    [foo.baz :as baz])) |Date.")
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
   (testing "when there is a :require form and :import form"
     (h/clean-db!)
-    (let [zloc (-> (z/of-string (h/code "(ns foo.bar"
-                                        "  (:require"
-                                        "    [foo.baz :as baz])"
-                                        "  (:import"
-                                        "    java.util.Calendar)) Date.")) (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-import-to-namespace zloc "java.util.Date" db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar"
-                     "  (:require"
-                     "    [foo.baz :as baz])"
-                     "  (:import"
-                     "    java.util.Calendar"
-                     "    java.util.Date))") (z/root-string loc))))))
+    (is (= (h/code "(ns foo.bar"
+                   "  (:require"
+                   "    [foo.baz :as baz])"
+                   "  (:import"
+                   "    java.util.Calendar"
+                   "    java.util.Date))")
+           (-> (h/code "(ns foo.bar"
+                       "  (:require"
+                       "    [foo.baz :as baz])"
+                       "  (:import"
+                       "    java.util.Calendar)) |Date.")
+               (add-import-to-namespace "java.util.Date")
+               as-root-str)))))
+
+(defn add-common-import-to-namespace [code]
+  (f.add-missing-libspec/add-common-import-to-namespace (h/zloc-from-code code) db/db))
 
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"
-    (let [zloc (-> (z/of-string "(ns foo.bar) Date.") (z/find-value z/next 'Date.))
-          [{:keys [loc range]}] (f.add-missing-libspec/add-common-import-to-namespace zloc db/db)]
-      (is (some? range))
-      (is (= (h/code "(ns foo.bar "
-                     "  (:import"
-                     "    java.util.Date))") (z/root-string loc)))))
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import"
+                   "    java.util.Date))")
+           (-> "(ns foo.bar) |Date."
+               add-common-import-to-namespace
+               as-root-str))))
   (testing "when we don't known the import"
-    (let [zloc (-> (z/of-string "(ns foo.bar) MyClass.") (z/find-value z/next 'MyClass.))]
-      (is (= nil (f.add-missing-libspec/add-common-import-to-namespace zloc db/db))))))
+    (is (nil? (add-common-import-to-namespace "(ns foo.bar) |MyClass.")))))
+
+(defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) chosen-ns chosen-alias chosen-refer db/db))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
   (testing "alias"
     (testing "on empty ns"
-      (let [zloc (-> (z/of-string "(ns foo.bar)\nstr/a") (z/find-value z/next 'str/a))
-            [{:keys [loc range]}] (f.add-missing-libspec/add-require-suggestion zloc "clojure.string" "str" nil db/db)]
-        (is (some? range))
-        (is (= (h/code "(ns foo.bar "
-                       "  (:require"
-                       "    [clojure.string :as str]))")
-               (z/root-string loc)))))
+      (is (= (h/code "(ns foo.bar "
+                     "  (:require"
+                     "    [clojure.string :as str]))")
+             (-> (h/code "(ns foo.bar)"
+                         "|str/a")
+                 (add-require-suggestion "clojure.string" "str" nil)
+                 as-root-str))))
     (testing "on non empty ns"
-      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.java.io :as io]))\nstr/a") (z/find-value z/next 'str/a))
-            [{:keys [loc range]}] (f.add-missing-libspec/add-require-suggestion zloc "clojure.string" "str" nil db/db)]
-        (is (some? range))
-        (is (= (h/code "(ns foo.bar"
-                       "  (:require"
-                       "   [clojure.java.io :as io]"
-                       "   [clojure.string :as str]))")
-               (z/root-string loc))))))
+      (is (= (h/code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.java.io :as io]"
+                     "   [clojure.string :as str]))")
+             (-> (h/code "(ns foo.bar"
+                         "  (:require"
+                         "   [clojure.java.io :as io]))"
+                         "|str/a")
+                 (add-require-suggestion "clojure.string" "str" nil)
+                 as-root-str)))))
   (testing "refer"
     (testing "on empty ns"
-      (let [zloc (-> (z/of-string "(ns foo.bar)\nsplit") (z/find-value z/next 'split))
-            [{:keys [loc range]}] (f.add-missing-libspec/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
-        (is (some? range))
-        (is (= (h/code "(ns foo.bar "
-                       "  (:require"
-                       "    [clojure.string :refer [split]]))")
-               (z/root-string loc)))))
+      (is (= (h/code "(ns foo.bar "
+                     "  (:require"
+                     "    [clojure.string :refer [split]]))")
+             (-> (h/code "(ns foo.bar)"
+                         "|split")
+                 (add-require-suggestion "clojure.string" nil "split")
+                 as-root-str))))
     (testing "on non empty ns"
-      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.java.io :as io]))\nsplit") (z/find-value z/next 'split))
-            [{:keys [loc range]}] (f.add-missing-libspec/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
-        (is (some? range))
-        (is (= (h/code "(ns foo.bar"
-                       "  (:require"
-                       "   [clojure.java.io :as io]"
-                       "   [clojure.string :refer [split]]))")
-               (z/root-string loc)))))
+      (is (= (h/code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.java.io :as io]"
+                     "   [clojure.string :refer [split]]))")
+             (-> (h/code "(ns foo.bar"
+                         "  (:require"
+                         "   [clojure.java.io :as io]))"
+                         "|split")
+                 (add-require-suggestion "clojure.string" nil "split")
+                 as-root-str))))
     (testing "on existing ns with alias"
-      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.string :as str]))\nsplit") (z/find-value z/next 'split))
-            [{:keys [loc range]}] (f.add-missing-libspec/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
-        (is (some? range))
-        (is (= (h/code "(ns foo.bar"
-                       "  (:require"
-                       "   [clojure.string :as str :refer [split]]))")
-               (z/root-string loc)))))
+      (is (= (h/code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :as str :refer [split]]))")
+             (-> (h/code "(ns foo.bar"
+                         "  (:require"
+                         "   [clojure.string :as str]))"
+                         "|split")
+                 (add-require-suggestion "clojure.string" nil "split")
+                 as-root-str))))
     (testing "on existing ns with refers"
-      (let [zloc (-> (z/of-string "(ns foo.bar\n  (:require\n   [clojure.string :refer [join]]))\nsplit") (z/find-value z/next 'split))
-            [{:keys [loc range]}] (f.add-missing-libspec/add-require-suggestion zloc "clojure.string" nil "split" db/db)]
-        (is (some? range))
-        (is (= (h/code "(ns foo.bar"
-                       "  (:require"
-                       "   [clojure.string :refer [join split]]))")
-               (z/root-string loc)))))))
+      (is (= (h/code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :refer [join split]]))")
+             (-> (h/code "(ns foo.bar"
+                         "  (:require"
+                         "   [clojure.string :refer [join]]))"
+                         "|split")
+                 (add-require-suggestion "clojure.string" nil "split")
+                 as-root-str))))))
 
-(deftest find-missing-import
+(deftest find-missing-import-test
   (testing "when usage is a java constructor"
-    (let [zloc (-> (z/of-string "(ns a) Date.") z/rightmost)
+    (let [zloc (h/zloc-from-code "(ns a) |Date.")
           full-package (f.add-missing-libspec/find-missing-import zloc)]
       (is (= 'java.util.Date full-package))))
   (testing "when usage is a java constructor"
-    (let [zloc (-> (z/of-string "(ns a) Date/parse") z/rightmost)
+    (let [zloc (h/zloc-from-code "(ns a) |Date/parse")
           full-package (f.add-missing-libspec/find-missing-import zloc)]
       (is (= 'java.util.Date full-package)))))

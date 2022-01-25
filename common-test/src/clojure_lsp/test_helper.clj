@@ -142,18 +142,24 @@
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
 
-(defn zloc-at
-  ([pos] (zloc-at pos default-uri))
-  ([[row col] uri]
-   (-> @db/db
-       (get-in [:documents uri])
-       :text
-       (parser/loc-at-pos row col))))
-
 (defn load-code-and-zloc
+  "Load a `code` block into the kondo db at the provided `uri` and return a
+  zloc parsed from the code. Useful for refactorings that consult the kondo db."
   ([code] (load-code-and-zloc code default-uri))
   ([code uri]
-   (let [[pos :as positions] (load-code-and-locs code uri)]
+   (let [[[row col] :as positions] (load-code-and-locs code uri)]
      (let [position-count (count positions)]
        (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-     (zloc-at pos uri))))
+     (-> @db/db
+         (get-in [:documents uri])
+         :text
+         (parser/loc-at-pos row col)))))
+
+(defn zloc-from-code
+  "Parse a zloc from a `code` block. Useful for refactorings that do not consult
+  the kondo db."
+  [code]
+  (let [[code [[row col] :as positions]] (positions-from-text code)]
+    (let [position-count (count positions)]
+      (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
+    (parser/loc-at-pos code row col)))

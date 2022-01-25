@@ -27,10 +27,10 @@
     (is (= [:vector :set :list]
            (transform/find-other-colls (z/of-string "{:a 1}")))))
   (testing "set"
-    (is (= [:list :map :vector]
+    (is (= [:vector :list :map]
            (transform/find-other-colls (z/of-string "#{:a 1}")))))
   (testing "list"
-    (is (= [:map :vector :set]
+    (is (= [:vector :set :map]
            (transform/find-other-colls (z/of-string "(1 2 3)")))))
   (testing "vector"
     (is (= [:set :list :map]
@@ -308,8 +308,7 @@
 
 (deftest change-coll-test
   (testing "when loc is not a coll"
-    (is (= [] (-> (z/of-string "\"some string\"")
-                  (transform/change-coll "map")))))
+    (is (nil? (transform/change-coll (z/of-string "\"some string\"") "map"))))
   (testing "when loc is a list"
     (is (= "{some-fun 1 2}" (change-coll "(some-fun 1 2)" "map")))
     (is (= "#{some-fun 1 2}" (change-coll "(some-fun 1 2)" "set")))
@@ -326,6 +325,22 @@
     (is (= "(:some-fun 1)" (change-coll "[:some-fun 1]" "list")))
     (is (= "{:some-fun 1}" (change-coll "[:some-fun 1]" "map")))
     (is (= "#{:some-fun 1}" (change-coll "[:some-fun 1]" "set")))))
+
+(deftest cycle-coll-test
+  (is (= ["(some-fun 1 2 3)"
+          "{some-fun 1 2 3}"
+          "[some-fun 1 2 3]"
+          "#{some-fun 1 2 3}"
+          "(some-fun 1 2 3)"]
+         (->> "(some-fun 1 2 3)"
+              (iterate #(as-string (transform/cycle-coll (z/of-string %))))
+              (take 5))))
+  (is (= "[some-fun 1 2]"
+         (-> "|{some-fun 1 2}"
+                h/zloc-from-code
+                transform/cycle-coll
+                as-string)))
+  (is (nil? (transform/cycle-coll (h/zloc-from-code ";; |comment")))))
 
 (defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))

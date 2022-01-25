@@ -38,45 +38,35 @@
                 (dissoc :loc))))
         zip-edits))
 
+(defn- coll-tag [zloc]
+  (get #{:vector :set :list :map} (z/tag zloc)))
+
 (defn find-other-colls [zloc]
-  (when (z/sexpr-able? zloc)
-    (cond
-      (z/map? zloc) [:vector :set :list]
-      (z/vector? zloc) [:set :list :map]
-      (z/set? zloc) [:list :map :vector]
-      (z/list? zloc) [:map :vector :set])))
+  (when-let [tag (coll-tag zloc)]
+    (remove #{tag} [:vector :set :list :map])))
 
 (defn change-coll
   "Change collection to specified collection"
   [zloc coll]
-  (let [sexpr (z/sexpr zloc)]
-    (if (coll? sexpr)
-      (let [node (z/node zloc)
-            coerce-to-next (fn [_ children]
-                             (case (keyword coll)
-                               :map (n/map-node children)
-                               :vector (n/vector-node children)
-                               :set (n/set-node children)
-                               :list (n/list-node children)))]
-        [{:range (meta node)
-          :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
-      [])))
+  (when (coll-tag zloc)
+    (let [node     (z/node zloc)
+          children (n/children node)]
+      [{:range (meta node)
+        :loc   (z/replace zloc (case (keyword coll)
+                                 :map    (n/map-node children)
+                                 :vector (n/vector-node children)
+                                 :set    (n/set-node children)
+                                 :list   (n/list-node children)))}])))
 
 (defn cycle-coll
   "Cycles collection between vector, list, map and set"
   [zloc]
-  (let [sexpr (z/sexpr zloc)]
-    (if (coll? sexpr)
-      (let [node (z/node zloc)
-            coerce-to-next (fn [sexpr children]
-                             (cond
-                               (map? sexpr) (n/vector-node children)
-                               (vector? sexpr) (n/set-node children)
-                               (set? sexpr) (n/list-node children)
-                               (list? sexpr) (n/map-node children)))]
-        [{:range (meta node)
-          :loc (z/replace zloc (coerce-to-next sexpr (n/children node)))}])
-      [])))
+  (when-let [tag (coll-tag zloc)]
+    (change-coll zloc (case tag
+                        :map    :vector
+                        :vector :set
+                        :set    :list
+                        :list   :map))))
 
 (defn ^:private thread-sym
   [zloc sym top-meta db]

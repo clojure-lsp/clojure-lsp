@@ -285,35 +285,29 @@
       (find-refer-require-suggestions sym missing-requires db))))
 
 (defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
-  (->> (find-require-suggestions zloc [] db)
-       (filter #(and (or (= chosen-alias (str (:alias %)))
-                         (= chosen-refer (str (:refer %))))
-                     (= chosen-ns (str (:ns %)))))
-       (map (fn [{:keys [ns alias refer]}]
-              (let [ns-usages-nodes (edit/find-forms zloc #(when-let [sym (safe-sym %)]
-                                                             (= ns (namespace sym))))
-                    known-require (if alias
-                                    (add-known-alias zloc (symbol alias) (symbol ns) db)
-                                    (add-known-refer zloc (symbol refer) (symbol ns) db))]
-                (concat known-require
-                        ;; TODO: There's no test for this code, and I was unable
-                        ;; to write one. The intention appears to be to change
-                        ;; the namespace of the zloc to match a custom alias,
-                        ;; so that, e.g., str/split -> my-str/split. But:
-                        ;; A) The UI doesn't offer a way to invoke this command
-                        ;;    with a non-"suggested" alias.
-                        ;; B) Even if you could, the above code filters out
-                        ;;    unrecognized aliases, so this code is never reached.
-                        ;; Suggestion: delete this, and rely on "rename" to
-                        ;; change aliases.
-                        (when alias
-                          (->> ns-usages-nodes
-                               (map (fn [node]
-                                      (z/replace node (-> (symbol alias (-> node z/sexpr name))
-                                                          n/token-node
-                                                          (with-meta (meta (z/node  node)))))))
-                               (map (fn [loc]
-                                      {:range (meta (z/node loc))
-                                       :loc loc}))))))))
-       flatten
-       seq))
+  (let [ns-usages-nodes (edit/find-forms zloc #(when-let [sym (safe-sym %)]
+                                                 (and (= chosen-ns (namespace sym))
+                                                      ;; See note below. This is always false, except in tests
+                                                      (not= chosen-alias (namespace sym)))))
+        chosen-require  (if chosen-alias
+                           (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
+                           (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))]
+    (seq
+     (concat chosen-require
+             ;; TODO: the intention of the following code appears to be to
+             ;; convert un-aliased symbols to aliased symbols, e.g.
+             ;; `clojure.string/split` -> `my-str/split`. However, when on a
+             ;; `clojure.string/split` node, the UI will only ever suggest
+             ;; 'clojure.string' as an alias. So, in practice, there's never any
+             ;; meaningful change. Proposal: delete this code and rely on
+             ;; "rename" to change aliases. Alternatively, make the UI accept
+             ;; custom aliases.
+             (when chosen-alias
+               (->> ns-usages-nodes
+                    (map (fn [node]
+                           (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
+                                               n/token-node
+                                               (with-meta (meta (z/node  node)))))))
+                    (map (fn [loc]
+                           {:range (meta (z/node loc))
+                            :loc   loc}))))))))

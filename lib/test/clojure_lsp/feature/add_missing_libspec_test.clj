@@ -100,6 +100,9 @@
   (assert (= 1 (count locs)))
   (z/root-string loc))
 
+(defn ^:private as-root-strs [locs]
+  (map (comp z/root-string :loc) locs))
+
 (deftest add-missing-libspec-test
   (testing "aliases"
     (testing "known aliases in project"
@@ -294,6 +297,18 @@
                          "|str/a")
                  (add-require-suggestion "clojure.string" "str" nil)
                  as-root-str))))
+    ;; TODO: the UI doesn't offer a way to provide a custom alias, so this test
+    ;; is a bit silly.
+    (testing "changing alias"
+      (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
+                                            "|clojure.string/a")
+                                    (add-require-suggestion "clojure.string" "my-str" nil))]
+        (is (= (h/code "(ns foo.bar "
+                       "  (:require"
+                       "    [clojure.string :as my-str]))")
+               (z/root-string (:loc ns-edit))))
+        (is (= (h/code "my-str/a")
+               (z/string (:loc form-edit))))))
     (testing "on non empty ns"
       (is (= (h/code "(ns foo.bar"
                      "  (:require"

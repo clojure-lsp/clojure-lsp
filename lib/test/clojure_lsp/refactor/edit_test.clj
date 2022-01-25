@@ -66,16 +66,15 @@
 
 (deftest find-namespace-name
   (testing "without ns on file"
-    (let [code "(foo ((x) [a] (b {c d})))"
-          zloc (-> code z/of-string (z/find-next-value z/next 'd))]
-      (is (= nil
-             (edit/find-namespace-name zloc)))))
+    (is (nil? (-> "(foo ((x) [a] (b {c |d})))"
+                  h/zloc-from-code
+                  edit/find-namespace-name))))
   (testing "with ns on file"
-    (let [code "(ns some.foo.bar (require [some.foo :as s]))\n
-                (foo ((x) [a] (b {c d})))"
-          zloc (-> code z/of-string (z/find-next-value z/next 'd))]
-      (is (= "some.foo.bar"
-             (edit/find-namespace-name zloc))))))
+    (is (= "some.foo.bar"
+           (-> (h/code "(ns some.foo.bar (require [some.foo :as s]))"
+                       "(foo ((x) [a] (b {c |d})))")
+               h/zloc-from-code
+               edit/find-namespace-name)))))
 
 (defn ^:private assert-function-name [code]
   (h/clean-db!)
@@ -131,31 +130,31 @@
     (testing "with meta map" (assert-function-name "(ns a (:require [clojure.test :refer :all])) (deftest ^{:pending true} foo (is (let [a 1] d)))"))))
 
 (deftest find-function-usage-name
-  (let [zloc (-> "(defn foo [] (let [a 1] d))" z/of-string (z/find-next-value z/next 'd))]
+  (let [zloc (h/zloc-from-code "(defn foo [] (let [a 1] |d))")]
     (is (= "let" (z/string (edit/find-function-usage-name-loc zloc)))))
-  (let [zloc (-> "(defn foo [] (let [a 1] (and 1 d)))" z/of-string (z/find-next-value z/next 'd))]
+  (let [zloc (h/zloc-from-code "(defn foo [] (let [a 1] (and 1 |d)))")]
     (is (= "and" (z/string (edit/find-function-usage-name-loc zloc))))))
 
 (deftest inside-refer?
-  (let [zloc (-> "(ns a (:require [clojure.test :refer [deftes]]))" z/of-string (z/find-next-value z/next 'deftes))]
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer [|deftes]]))")]
     (is (edit/inside-refer? zloc)))
-  (let [zloc (-> "(ns a (:require [clojure.test :refer []]))" z/of-string (z/find-next-value z/next ':refer) z/next)]
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer |[]]))")]
     (is (edit/inside-refer? zloc)))
-  (let [zloc (-> "(ns a (:require [clojure.test :refer [deftest is]]))" z/of-string (z/find-next-value z/next 'is))]
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer [deftest |is]]))")]
     (is (edit/inside-refer? zloc)))
-  (let [zloc (-> "(ns a (:require [clojure.test :as test]))" z/of-string (z/find-next-value z/next 'test))]
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :as |test]))")]
     (is (not (edit/inside-refer? zloc))))
-  (let [zloc (-> "(require '[clojure.test :refer [testing]])" z/of-string (z/find-next-value z/next 'testing))]
+  (let [zloc (h/zloc-from-code "(require '[clojure.test :refer [|testing]])")]
     (is (edit/inside-refer? zloc))))
 
 (deftest find-refer-ns
-  (let [zloc (-> "(ns a (:require [clojure.test :refer [deftes]]))" z/of-string (z/find-next-value z/next 'deftes))]
-    (is (= 'clojure.test  (z/sexpr (edit/find-refer-ns zloc)))))
-  (let [zloc (-> "(ns a (:require [clojure.test :refer []]))" z/of-string (z/find-next-value z/next ':refer) z/next)]
-    (is (= 'clojure.test  (z/sexpr (edit/find-refer-ns zloc)))))
-  (let [zloc (-> "(ns a (:require [clojure.test :refer [deftest is]]))" z/of-string (z/find-next-value z/next 'is))]
-    (is (= 'clojure.test  (z/sexpr (edit/find-refer-ns zloc)))))
-  (let [zloc (-> "(ns a (:require [clojure.test :as test]))" z/of-string (z/find-next-value z/next 'test))]
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer [|deftes]]))")]
+    (is (= 'clojure.test (z/sexpr (edit/find-refer-ns zloc)))))
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer |[]]))")]
+    (is (= 'clojure.test (z/sexpr (edit/find-refer-ns zloc)))))
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer [deftest |is]]))")]
+    (is (= 'clojure.test (z/sexpr (edit/find-refer-ns zloc)))))
+  (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :as |test]))")]
     (is (not (edit/find-refer-ns zloc))))
-  (let [zloc (-> "(require '[clojure.test :refer [testing]])" z/of-string (z/find-next-value z/next 'testing))]
-    (is (= 'clojure.test  (z/sexpr (edit/find-refer-ns zloc))))))
+  (let [zloc (h/zloc-from-code "(require '[clojure.test :refer [|testing]])")]
+    (is (= 'clojure.test (z/sexpr (edit/find-refer-ns zloc))))))

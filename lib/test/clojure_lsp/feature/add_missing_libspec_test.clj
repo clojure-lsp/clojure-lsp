@@ -52,6 +52,9 @@
                                       foo.bar
                                       foo.bar-test})))))
 
+(defn find-require-suggestions [code]
+  (f.add-missing-libspec/find-require-suggestions (h/zloc-from-code code) [] db/db))
+
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
     (h/load-code-and-locs "(ns project.some.cool.namespace)")
@@ -62,32 +65,39 @@
         :alias "s.cool.namespace"}
        {:ns "other-project.some.coolio.namespace"
         :alias "s.cool.namespace"}]
-      (f.add-missing-libspec/find-require-suggestions (z/of-string "s.cool.namespace/foo") [] db/db)))
+      (find-require-suggestions "|s.cool.namespace/foo")))
   (testing "Suggested alias"
     (h/load-code-and-locs "(ns project.some.cool.namespace)")
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
     (h/assert-submaps
       [{:ns "project.some.cool.namespace"
         :alias "namespace"}]
-      (f.add-missing-libspec/find-require-suggestions (z/of-string "project.some.cool.namespace/foo") [] db/db)))
+      (find-require-suggestions "|project.some.cool.namespace/foo")))
   (testing "Suggested refers"
     (h/load-code-and-locs "(ns project.some.cool.namespace) (def bla 1) (def blow 2)")
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace) (def bli)" "file:///b.clj")
     (h/assert-submaps
       [{:ns "project.some.cool.namespace"
         :refer "blow"}]
-      (f.add-missing-libspec/find-require-suggestions (z/of-string "blow") [] db/db))))
+      (find-require-suggestions "|blow")))
+  (testing "Invalid location"
+    (h/assert-submaps
+     []
+     (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
   (f.add-missing-libspec/add-missing-libspec (h/zloc-from-code code) db/db))
 
-(defn ^:private as-sexp [[{:keys [loc]}]]
+(defn ^:private as-sexp [[{:keys [loc]} :as locs]]
+  (assert (= 1 (count locs)))
   (z/sexpr loc))
 
-(defn ^:private as-str [[{:keys [loc]}]]
+(defn ^:private as-str [[{:keys [loc]} :as locs]]
+  (assert (= 1 (count locs)))
   (z/string loc))
 
-(defn ^:private as-root-str [[{:keys [loc]}]]
+(defn ^:private as-root-str [[{:keys [loc]} :as locs]]
+  (assert (= 1 (count locs)))
   (z/root-string loc))
 
 (deftest add-missing-libspec-test
@@ -172,7 +182,11 @@
       (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]]))
              (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is"
                  add-missing-libspec
-                 as-sexp))))))
+                 as-sexp)))))
+  (testing "when on invalid location"
+    (h/clean-db!)
+    (is (nil? (-> "(ns foo) |;; comment"
+                  add-missing-libspec)))))
 
 (defn add-import-to-namespace [code import-name]
   (f.add-missing-libspec/add-import-to-namespace (h/zloc-from-code code) import-name db/db))
@@ -244,7 +258,11 @@
                        "  (:import"
                        "    java.util.Calendar)) |Date.")
                (add-import-to-namespace "java.util.Date")
-               as-root-str)))))
+               as-root-str))))
+  (testing "when on an invalid location"
+    (h/clean-db!)
+    (is (nil? (-> (h/code "(ns foo.bar) |;; comment")
+                  (add-import-to-namespace "java.util.Date"))))))
 
 (defn add-common-import-to-namespace [code]
   (f.add-missing-libspec/add-common-import-to-namespace (h/zloc-from-code code) db/db))
@@ -258,7 +276,9 @@
                add-common-import-to-namespace
                as-root-str))))
   (testing "when we don't known the import"
-    (is (nil? (add-common-import-to-namespace "(ns foo.bar) |MyClass.")))))
+    (is (nil? (add-common-import-to-namespace "(ns foo.bar) |MyClass."))))
+  (testing "when on invalid location"
+    (is (nil? (add-common-import-to-namespace "(ns foo.bar) |;; comment")))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) chosen-ns chosen-alias chosen-refer db/db))
@@ -284,7 +304,11 @@
                          "   [clojure.java.io :as io]))"
                          "|str/a")
                  (add-require-suggestion "clojure.string" "str" nil)
-                 as-root-str)))))
+                 as-root-str))))
+    (testing "on invalid location"
+      (is (nil? (-> (h/code "(ns foo.bar)"
+                            "|;; comment")
+                    (add-require-suggestion "clojure.string" "str" nil))))))
   (testing "refer"
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "
@@ -324,14 +348,19 @@
                          "   [clojure.string :refer [join]]))"
                          "|split")
                  (add-require-suggestion "clojure.string" nil "split")
-                 as-root-str))))))
+                 as-root-str))))
+    (testing "on invalid location"
+      (is (nil? (-> (h/code "(ns foo.bar)"
+                            "|;; comment")
+                    (add-require-suggestion "clojure.string" nil "split")))))))
+
+(defn- find-missing-import [code]
+  (f.add-missing-libspec/find-missing-import (h/zloc-from-code code)))
 
 (deftest find-missing-import-test
   (testing "when usage is a java constructor"
-    (let [zloc (h/zloc-from-code "(ns a) |Date.")
-          full-package (f.add-missing-libspec/find-missing-import zloc)]
-      (is (= 'java.util.Date full-package))))
-  (testing "when usage is a java constructor"
-    (let [zloc (h/zloc-from-code "(ns a) |Date/parse")
-          full-package (f.add-missing-libspec/find-missing-import zloc)]
-      (is (= 'java.util.Date full-package)))))
+    (is (= 'java.util.Date (find-missing-import "(ns a) |Date."))))
+  (testing "when usage is a java ns"
+    (is (= 'java.util.Date (find-missing-import "(ns a) |Date/parse"))))
+  (testing "when usage is invalid"
+    (is (nil? (find-missing-import "(ns a) |;; comment")))))

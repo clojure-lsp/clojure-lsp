@@ -13,9 +13,9 @@
 (defn clean [_]
   (b/delete {:path "target"}))
 
-(defn uber [opts]
+(defn jar [opts]
   (clean nil)
-  (b/write-pom {:class-dir class-dir
+  (b/write-pom {:target ""
                 :lib lib
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
@@ -26,7 +26,7 @@
           :jar-file jar-file}))
 
 (defn deploy-clojars [opts]
-  (uber opts)
+  (jar opts)
   ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
    (merge {:installer :remote
            :artifact jar-file

@@ -70,6 +70,8 @@ release:
 
 deploy-clojars:
 	cd lib && clojure -T:build deploy-clojars
+deploy-clojars-standalone:
+	cd cli && clojure -T:build deploy-clojars
 
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs

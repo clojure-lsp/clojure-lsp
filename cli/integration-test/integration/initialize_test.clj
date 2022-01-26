@@ -76,6 +76,7 @@
                              :triggerCharacters [":" "/"]}
         :documentSymbolProvider true
         :definitionProvider true
+        :declarationProvider true
         :documentHighlightProvider true
         :experimental {:testTree true
                        :cursorInfo true

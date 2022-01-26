@@ -94,10 +94,19 @@
   (fn [_analysis element _db]
     (:bucket element)))
 
+(defmethod find-definition :namespace-alias
+  [analysis element db]
+  (find-last-order-by-project-analysis
+    #(and (identical? :namespace-definitions (:bucket %))
+          (= (:name %) (:to element))
+          (match-file-lang % element))
+    analysis
+    db))
+
 (defmethod find-definition :namespace-usages
   [analysis element db]
   (find-last-order-by-project-analysis
-    #(and (= (:bucket %) :namespace-definitions)
+    #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) (:name element))
           (match-file-lang % element))
     analysis
@@ -106,7 +115,7 @@
 (defmethod find-definition :var-usages
   [analysis element db]
   (find-last-order-by-project-analysis
-    #(and (= (:bucket %) :var-definitions)
+    #(and (identical? :var-definitions (:bucket %))
           (= (:name %) (:name element))
           (not (= (:defined-by %) 'clojure.core/declare))
           (= (:ns %) (:to element))
@@ -123,7 +132,7 @@
   [analysis element db]
   (or (when (:ns element)
         (find-last-order-by-project-analysis
-          #(and (= (:bucket %) :keywords)
+          #(and (identical? :keywords (:bucket %))
                 (= (:name %) (:name element))
                 (:reg %)
                 (= (:ns %) (:ns element)))
@@ -135,7 +144,7 @@
   [analysis element db]
   (if (= 'potemkin/import-vars (:defined-by element))
     (find-last-order-by-project-analysis
-      #(and (= (:bucket %) :var-definitions)
+      #(and (identical? :var-definitions (:bucket %))
             (= (:name %) (:name element))
             (not= 'potemkin/import-vars (:defined-by %))
             (match-file-lang % element))
@@ -146,6 +155,35 @@
 (defmethod find-definition :default
   [_analysis element _db]
   element)
+
+(defmulti find-declaration
+  (fn [_analysis element _db]
+    (:bucket element)))
+
+(defmethod find-declaration :var-usages
+  [analysis element db]
+  (when-not (identical? :clj-kondo/unknown-namespace (:to element))
+    (if (:alias element)
+      (find-last-order-by-project-analysis
+        #(and (identical? :namespace-alias (:bucket %))
+              (= (:to element) (:to %))
+              (= (:alias element) (:alias %))
+              (= (:filename element) (:filename %))
+              (match-file-lang % element))
+        analysis
+        db)
+      (find-last-order-by-project-analysis
+        #(if (:refer %)
+           (and (identical? :var-usages (:bucket %))
+                (= (:to element) (:to %))
+                (= (:filename element) (:filename %))
+                (match-file-lang % element))
+           (and (identical? :namespace-usages (:bucket %))
+                (= (:to element) (:name %))
+                (= (:filename element) (:filename %))
+                (match-file-lang % element)))
+        analysis
+        db))))
 
 (defmulti find-references
   (fn [_analysis element _include-declaration? _db]
@@ -296,6 +334,13 @@
       (find-definition analysis element db))
     (catch Throwable e
       (log/error e "can't find definition"))))
+
+(defn find-declaration-from-cursor [analysis filename line column db]
+  (try
+    (when-let [element (find-element-under-cursor analysis filename line column)]
+      (find-declaration analysis element db))
+    (catch Throwable e
+      (log/error e "can't find declaration"))))
 
 (defn find-references-from-cursor [analysis filename line column include-declaration? db]
   (try

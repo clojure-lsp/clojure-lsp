@@ -3,22 +3,25 @@
    [clojure.test :as t]))
 
 (def namespaces
-  '[integration.initialize-test
-    integration.definition-test
-    integration.diagnostics-test
-    integration.settings-change-test
-    integration.formatting-test
-    integration.rename-test
-    integration.document-highlight-test
-    integration.document-symbol-test
-    integration.linked-editing-range-test
-    integration.cursor-info-test
-    integration.stubs-test
-    integration.api.version-test
-    integration.api.clean-ns-test
-    integration.api.diagnostics-test
-    integration.api.format-test
-    integration.api.rename-test])
+  '[
+    ;; integration.initialize-test
+    ;; integration.definition-test
+    integration.declaration-test
+    ;; integration.diagnostics-test
+    ;; integration.settings-change-test
+    ;; integration.formatting-test
+    ;; integration.rename-test
+    ;; integration.document-highlight-test
+    ;; integration.document-symbol-test
+    ;; integration.linked-editing-range-test
+    ;; integration.cursor-info-test
+    ;; integration.stubs-test
+    ;; integration.api.version-test
+    ;; integration.api.clean-ns-test
+    ;; integration.api.diagnostics-test
+    ;; integration.api.format-test
+    ;; integration.api.rename-test
+    ])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

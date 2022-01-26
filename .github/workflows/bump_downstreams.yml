@@ -30,6 +30,30 @@ jobs:
         run: |
           make deploy-clojars
 
+  release-clojars-standalone:
+    name: Release standalone artifact to Clojars
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+
+      - name: Deploy clojars
+        env:
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+        run: |
+          make deploy-clojars-standalone
+
+
   bump-homebrew-formula:
     name: Bump Homebrew formula
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -108,7 +132,7 @@ jobs:
 
   bump-lein-clojure-lsp:
     name: Bump lein-clojure-lsp
-    needs: [release-clojars]
+    needs: [release-clojars-standalone]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -134,48 +158,49 @@ jobs:
           cd lein-clojure-lsp
           bb tag-patch-for-version "${{ env.VERSION }}"
 
-  nixpkgs-update:
-    name: Bump nixpkgs
-    needs: [release-clojars]
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+  # not working
+  # nixpkgs-update:
+  #   name: Bump nixpkgs
+  #   needs: [release-clojars]
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2.2.0
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Get latest tag
+  #       id: latest-tag
+  #       uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - uses: cachix/install-nix-action@v13
-        with:
-          nix_path: nixpkgs=channel:nixpkgs-unstable
-          extra_nix_config: |
-            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nixpkgs-update.cachix.org-1:6y6Z2JdoL3APdu6/+Iy8eZX2ajf09e4EE9SnxSML1W8=
-            substituters = https://hydra.iohk.io https://cache.nixos.org/ https://nixpkgs-update.cachix.org/
+  #     - uses: cachix/install-nix-action@v13
+  #       with:
+  #         nix_path: nixpkgs=channel:nixpkgs-unstable
+  #         extra_nix_config: |
+  #           trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nixpkgs-update.cachix.org-1:6y6Z2JdoL3APdu6/+Iy8eZX2ajf09e4EE9SnxSML1W8=
+  #           substituters = https://hydra.iohk.io https://cache.nixos.org/ https://nixpkgs-update.cachix.org/
 
-      - name: Install nixpkgs-update
-        run: |
-          nix-env -if https://github.com/ryantm/nixpkgs-update/archive/master.tar.gz
+  #     - name: Install nixpkgs-update
+  #       run: |
+  #         nix-env -if https://github.com/ryantm/nixpkgs-update/archive/master.tar.gz
 
-      - name: Get current version
-        run : |
-          VERSION=$(nix-env -qa --json clojure-lsp -f 'https://github.com/NixOS/nixpkgs/archive/master.tar.gz' | jq '.["clojure-lsp"].version' | tr -d '"')
-          echo "CURRENT_VERSION=$VERSION" >> $GITHUB_ENV
+  #     - name: Get current version
+  #       run : |
+  #         VERSION=$(nix-env -qa --json clojure-lsp -f 'https://github.com/NixOS/nixpkgs/archive/master.tar.gz' | jq '.["clojure-lsp"].version' | tr -d '"')
+  #         echo "CURRENT_VERSION=$VERSION" >> $GITHUB_ENV
 
-      - env:
-          GITHUB_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-        run: |
-          git config --global user.name "Clojure LSP Bot"
-          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
-          mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-          git clone --depth 1 git@github.com:clojure-lsp/nixpkgs.git
-          cd nixpkgs
-          git remote add upstream git@github.com:NixOS/nixpkgs.git
-          git fetch upstream
-          git merge upstream/master master --allow-unrelated-histories
-          git push origin HEAD -f
-          git checkout -b auto-bump-clojure-lsp
+  #     - env:
+  #         GITHUB_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+  #       run: |
+  #         git config --global user.name "Clojure LSP Bot"
+  #         git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+  #         mkdir ~/.ssh && touch ~/.ssh/id_rsa
+  #         echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  #         git clone --depth 1 git@github.com:clojure-lsp/nixpkgs.git
+  #         cd nixpkgs
+  #         git remote add upstream git@github.com:NixOS/nixpkgs.git
+  #         git fetch upstream
+  #         git merge upstream/master master --allow-unrelated-histories
+  #         git push origin HEAD -f
+  #         git checkout -b auto-bump-clojure-lsp
 
-          nixpkgs-update update --pr "clojure-lsp ${{ env.CURRENT_VERSION }} ${{ steps.latest-tag.outputs.tag }}"
+  #         nixpkgs-update update --pr "clojure-lsp ${{ env.CURRENT_VERSION }} ${{ steps.latest-tag.outputs.tag }}"

@@ -95,10 +95,12 @@
     (swap! db update :findings merge new-findings)
     analysis))
 
-(defn ^:private project-specs->hash [project-specs root-path]
-  (->> project-specs
+(defn ^:private project-specs->hash [root-path settings]
+  (->> (:project-specs settings)
+       (filter (partial classpath/valid-project-spec? root-path))
        (map (fn [{:keys [project-path]}]
-              (md5 (shared/to-file root-path project-path))))
+              (map md5 (classpath/project-root->project-dep-files (str root-path) project-path settings))))
+       flatten
        (reduce str)))
 
 (defn ^:private analyze-classpath! [root-path source-paths settings progress-token db]
@@ -190,9 +192,7 @@
     (when-not (:classpath @db)
       (producer/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
       (swap! db assoc :classpath (classpath/scan-classpath! db)))
-    (let [project-specs (->> (:project-specs settings)
-                             (filter (partial classpath/valid-project-spec? root-path)))
-          project-hash (project-specs->hash project-specs root-path)
+    (let [project-hash (project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           use-db-analysis? (and (= (:project-hash @db) project-hash)
                                 (= (:kondo-config-hash @db) kondo-config-hash))]

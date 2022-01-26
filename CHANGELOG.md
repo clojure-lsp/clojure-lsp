@@ -4,7 +4,13 @@
 
 - General
   - Migrate project from depstar -> tools.build. #711
+  - Improve classpath hash to consider invaliding cache when local root deps was changed.
   - Replace datalevin cache db with transit. #703
+  
+- Editor
+  - Support going to namespace definition on an alias. #706
+  - Add LSP `textDocument/declaration`, for now adding the making possible navigate to alias and namespaces declared on the namespace. #680
+  - Fix removal of file analysis on didClose for external files like jars. #717
 
 ## 2022.01.22-01.31.09
 

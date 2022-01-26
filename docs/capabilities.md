@@ -40,7 +40,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | completionItem/resolve                 | √    |                                               |
 | textDocument/hover                     | √    |                                               |
 | textDocument/signatureHelp             | √    | Missing support for active parameter ATM      |
-| textDocument/declaration               |      |                                               |
+| textDocument/declaration               | √    |                                               |
 | textDocument/definition                | √    | TODO: Find java classes definition            |
 | textDocument/typeDefinition            |      |                                               |
 | textDocument/implementation            |      |                                               |

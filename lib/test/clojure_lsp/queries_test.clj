@@ -242,7 +242,7 @@
       {:name 'foo :filename (h/file-path "/b.clj") :ns 'd.e.f}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") alias-use-r alias-use-c db/db))
     (h/assert-submap
-      {:alias 'f-alias :name-row alias-r :name-col alias-c}
+      {:name 'd.e.f :bucket :namespace-definitions}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") alias-r alias-c db/db))))
 
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis
@@ -303,6 +303,14 @@
       {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
 
+(deftest find-definition-from-namespace-alias
+  (h/load-code-and-locs (h/code "(ns foo.bar) (def a 1)") (h/file-uri "file:///a.clj"))
+  (let [[[foob-r foob-c]] (h/load-code-and-locs (h/code "(ns foo.baz (:require [foo.bar :as |foob]))") (h/file-uri "file:///b.clj"))
+        ana (:analysis @db/db)]
+    (h/assert-submap
+      {:name-end-col 12 :name-end-row 1 :name-row 1 :name 'foo.bar :filename "/a.clj" :col 1 :name-col 5 :bucket :namespace-definitions :row 1}
+      (q/find-definition-from-cursor ana (h/file-path "/b.clj") foob-r foob-c db/db))))
+
 (deftest find-definition-from-cursor-when-on-potemkin
   (h/load-code-and-locs (h/code "(ns foo.impl) (def bar)") (h/file-uri "file:///b.clj"))
   (let [[[bar-r bar-c]] (h/load-code-and-locs
@@ -314,6 +322,35 @@
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
+
+(deftest find-declaration-from-cursor
+  (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))
+  (let [[[something-r something-c]
+         [other-r other-c]] (h/load-code-and-locs
+                              (h/code "(ns sample"
+                                      "  (:require [foo.bar :as foob]"
+                                      "            [foo.baz :refer :all]))"
+                                      "foob/som|ething"
+                                      "|other")
+                              "file:///b.clj")
+        ana (:analysis @db/db)]
+    (testing "from usage with alias"
+      (h/assert-submap
+        {:filename "/b.clj"
+         :alias 'foob
+         :from 'sample
+         :bucket
+         :namespace-alias
+         :to 'foo.bar}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c db/db)))
+    (testing "from usage with refer all"
+      (h/assert-submap
+        {:filename "/b.clj"
+         :from 'sample
+         :bucket
+         :namespace-usages
+         :name 'foo.baz}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c db/db)))))
 
 (deftest find-unused-aliases
   (testing "clj"

@@ -100,9 +100,6 @@
   (assert (= 1 (count locs)))
   (z/root-string loc))
 
-(defn ^:private as-root-strs [locs]
-  (map (comp z/root-string :loc) locs))
-
 (deftest add-missing-libspec-test
   (testing "aliases"
     (testing "known aliases in project"

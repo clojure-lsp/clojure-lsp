@@ -14,8 +14,6 @@
    [clojure.tools.cli :refer [parse-opts]]
    [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
-  (:import
-   [clojure_lsp WarningLogDisabler])
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -150,16 +148,10 @@
       (catch clojure.lang.ExceptionInfo e
         (ex-data e)))))
 
-(defn ^:private disable-warnings
-  "LMDB has a illegal access warning that mess up clojure-lsp output."
-  []
-  (WarningLogDisabler/disable))
-
 (defn run!
   "Entrypoint for clojure-lsp CLI, Use `clojure-lsp.api` for a better API usage."
   [& args]
   (logging/setup-logging db/db)
-  (disable-warnings)
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
       {:result-code (if ok? 0 1)

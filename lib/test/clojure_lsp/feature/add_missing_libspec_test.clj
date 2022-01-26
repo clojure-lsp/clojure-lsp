@@ -82,8 +82,8 @@
       (find-require-suggestions "|blow")))
   (testing "Invalid location"
     (h/assert-submaps
-     []
-     (find-require-suggestions "|;; comment"))))
+      []
+      (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
   (f.add-missing-libspec/add-missing-libspec (h/zloc-from-code code) db/db))

@@ -123,14 +123,14 @@
                                             (z/append-child [sym])))
                              (z/subedit-> ns-zip
                                           (cond->
-                                              add-form-type? (z/append-child (n/newlines 1))
-                                              add-form-type? (z/append-child (n/spaces 2))
-                                              add-form-type? (z/append-child (list form-type)))
+                                           add-form-type? (z/append-child (n/newlines 1))
+                                           add-form-type? (z/append-child (n/spaces 2))
+                                           add-form-type? (z/append-child (list form-type)))
                                           (z/find-value z/next form-type)
                                           (z/up)
                                           (cond->
-                                              (or (not add-form-type?)
-                                                  (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                           (or (not add-form-type?)
+                                               (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
                                           (z/append-child* (n/spaces (dec col)))
                                           (z/append-child form-to-add)))]
             [{:range (meta (z/node result-loc))
@@ -290,10 +290,10 @@
                                                       ;; See note below. This is always false, except in tests
                                                       (not= chosen-alias (namespace sym)))))
         chosen-require  (if chosen-alias
-                           (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
-                           (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))]
+                          (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
+                          (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))]
     (seq
-     (concat chosen-require
+      (concat chosen-require
              ;; TODO: the intention of the following code appears to be to
              ;; convert un-aliased symbols to aliased symbols, e.g.
              ;; `clojure.string/split` -> `my-str/split`. However, when on a
@@ -302,12 +302,12 @@
              ;; meaningful change. Proposal: delete this code and rely on
              ;; "rename" to change aliases. Alternatively, make the UI accept
              ;; custom aliases.
-             (when chosen-alias
-               (->> ns-usages-nodes
-                    (map (fn [node]
-                           (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
-                                               n/token-node
-                                               (with-meta (meta (z/node  node)))))))
-                    (map (fn [loc]
-                           {:range (meta (z/node loc))
-                            :loc   loc}))))))))
+              (when chosen-alias
+                (->> ns-usages-nodes
+                     (map (fn [node]
+                            (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
+                                                n/token-node
+                                                (with-meta (meta (z/node  node)))))))
+                     (map (fn [loc]
+                            {:range (meta (z/node loc))
+                             :loc   loc}))))))))

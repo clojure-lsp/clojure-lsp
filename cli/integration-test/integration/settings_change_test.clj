@@ -1,15 +1,23 @@
 (ns integration.settings-change-test
   (:require
    [clojure.string :as string]
-   [clojure.test :refer [deftest testing]]
+   [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
    [integration.lsp :as lsp]))
 
 (lsp/clean-after-test)
 
-(def current-lsp-config-file (h/source-path->file "../../.lsp/config.edn"))
-(def current-lsp-config-content (slurp current-lsp-config-file))
+(def lsp-config-file (h/source-path->file "../../.lsp/config.edn"))
+
+(defn with-revised-lsp-config-content [new-content f]
+  (let [old-content (slurp lsp-config-file)]
+    (is (not= new-content old-content))
+    (try
+      (spit lsp-config-file new-content)
+      (f)
+      (finally
+        (spit lsp-config-file old-content)))))
 
 (def new-lsp-config-content
   (string/join "/n"
@@ -41,15 +49,14 @@
         :tags [1]}]
       (lsp/await-diagnostics "diagnostics/unused_public_var.clj")))
 
-  (spit current-lsp-config-file new-lsp-config-content)
+  (with-revised-lsp-config-content
+    new-lsp-config-content
+    (fn []
+      (Thread/sleep 1100)
 
-  (Thread/sleep 1100)
+      (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
 
-  (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
-
-  (testing "Config has changed"
-    (h/assert-submaps
-      []
-      (lsp/await-diagnostics "diagnostics/unused_public_var.clj")))
-
-  (spit current-lsp-config-file current-lsp-config-content))
+      (testing "Config has changed"
+        (h/assert-submaps
+          []
+          (lsp/await-diagnostics "diagnostics/unused_public_var.clj"))))))

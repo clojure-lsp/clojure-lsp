@@ -1,5 +1,6 @@
 (ns integration.settings-change-test
   (:require
+   [clojure.string :as string]
    [clojure.test :refer [deftest testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
@@ -11,7 +12,10 @@
 (def current-lsp-config-content (slurp current-lsp-config-file))
 
 (def new-lsp-config-content
-  "{:linters {:clj-kondo {:level :off}}}\n")
+  (string/join "/n"
+               ["{:linters {:clj-kondo {:level :off"
+                "                       :async-custom-lint? false}}}"
+                ""]))
 
 (deftest unused-public-var
   (lsp/start-process!)

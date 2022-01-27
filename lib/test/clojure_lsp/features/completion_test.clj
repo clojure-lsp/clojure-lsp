@@ -229,7 +229,7 @@
       [{:label "comment"
         :detail "clojure.core/comment"
         :insert-text "(comment\n  ${0:body}\n  )"
-        :kind :reference
+        :kind :snippet
         :insert-text-format :snippet}]
       (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 db/db)))))
 

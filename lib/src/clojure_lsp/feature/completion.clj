@@ -14,10 +14,14 @@
    [clojure.walk :as walk]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]
-   [clojure-lsp.coercer :as coercer]))
+   [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
+
+(def completion-kind-enum
+  {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
+   :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
+   :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
 (def priority-kw->number
   {:simple-cursor 1
@@ -329,7 +333,7 @@
       (map (fn [item]
              (if-let [snippet-item (get snippet-items-by-label (:label item))]
                (let [data (shared/assoc-some (:data item)
-                                             :snippet-kind (get coercer/completion-kind-enum (:kind item)))]
+                                             :snippet-kind (get completion-kind-enum (:kind item)))]
                  (shared/assoc-some snippet-item
                                     :detail (:detail item)
                                     :data data))

@@ -6,6 +6,7 @@
   - Migrate project from depstar -> tools.build. #711
   - Improve classpath hash to consider invaliding cache when local root deps was changed.
   - Replace datalevin cache db with transit. #703
+  - Bump Graalvm from 21.3.0 to 22.0.0.2 improving binary performance/size
   
 - Editor
   - Support going to namespace definition on an alias. #706

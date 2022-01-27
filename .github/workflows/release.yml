@@ -98,7 +98,8 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm-version: 21.3.0.java11
+          graalvm: 22.0.0.2
+          java: java11
 
       - name: Install native-image component
         run: |
@@ -155,7 +156,8 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm-version: 21.3.0.java11
+          graalvm: 22.0.0.2
+          java: java11
 
       - name: Install native-image component
         run: |
@@ -199,7 +201,8 @@ jobs:
   #     - name: Install GraalVM
   #       uses: DeLaGuardo/setup-graalvm@master
   #       with:
-  #         graalvm-version: 21.3.0.java11
+  #         graalvm: 22.0.0.2
+  #         java: java11
   #         arch: 'aarch64'
 
   #     - name: Install native-image component
@@ -237,7 +240,8 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm-version: 21.3.0.java11
+          graalvm: 22.0.0.2
+          java: java11
 
       - name: Install native-image component
         run: |
@@ -307,7 +311,8 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm-version: 21.3.0.java11
+          graalvm: 22.0.0.2
+          java: java11
 
       - name: Install native-image component
         run: |

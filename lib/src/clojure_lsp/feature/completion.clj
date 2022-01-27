@@ -14,7 +14,8 @@
    [clojure.walk :as walk]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [clojure-lsp.coercer :as coercer]))
 
 (set! *warn-on-reflection* true)
 
@@ -327,10 +328,11 @@
     (concat
       (map (fn [item]
              (if-let [snippet-item (get snippet-items-by-label (:label item))]
-               (shared/assoc-some snippet-item
-                                  :detail (:detail item)
-                                  :data (:data item)
-                                  :kind (:kind item))
+               (let [data (shared/assoc-some (:data item)
+                                             :snippet-kind (get coercer/completion-kind-enum (:kind item)))]
+                 (shared/assoc-some snippet-item
+                                    :detail (:detail item)
+                                    :data data))
                item))
            items)
       (remove #(get items-by-label (:label %))
@@ -450,8 +452,14 @@
       item)))
 
 (defn resolve-item [{{:keys [ns]} :data :as item} db]
-  (if (:data item)
-    (if ns
-      (resolve-item-by-ns item db)
-      (resolve-item-by-definition item db))
-    item))
+  (let [item (shared/assoc-some item
+                                :insert-text-format (:insertTextFormat item)
+                                :text-edit (:textEdit item)
+                                :filter-text (:filterText item)
+                                :additional-text-edits (:additionalTextEdits item)
+                                :insert-text (:insertText item))]
+    (if (:data item)
+      (if ns
+        (resolve-item-by-ns item db)
+        (resolve-item-by-definition item db))
+      item)))

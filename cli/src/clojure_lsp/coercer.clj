@@ -104,9 +104,6 @@
 (defmethod j/from-java InsertTextFormat [^InsertTextFormat instance]
   (-> instance .name .toLowerCase keyword))
 
-(defmethod j/from-java CompletionItem [^CompletionItem instance]
-  (-> instance debeaner))
-
 (defmethod j/from-java SymbolKind [^SymbolKind instance]
   (-> instance .name .toLowerCase keyword))
 

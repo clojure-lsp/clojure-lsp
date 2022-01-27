@@ -14,11 +14,17 @@
 
 (defn initialize-request
   ([]
-   (initialize-request {:lint-project-files-after-startup? false}))
-  ([settings]
+   (initialize-request {:initializationOptions {:lint-project-files-after-startup? false}}))
+  ([params]
    (lsp-json-rpc :initialize
-                 {:rootUri (h/file->uri (io/file h/root-project-path))
-                  :initializationOptions settings})))
+                 (merge {:rootUri (h/file->uri (io/file h/root-project-path))}
+                        params))))
+
+(defn completion-request [path row col kind]
+  (lsp-json-rpc :textDocument/completion
+                {:textDocument {:uri (h/file->uri (h/source-path->file path))}
+                 :position {:line row :character col}
+                 :context {:triggerKind kind}}))
 
 (defn definition-request [path row col]
   (lsp-json-rpc :textDocument/definition

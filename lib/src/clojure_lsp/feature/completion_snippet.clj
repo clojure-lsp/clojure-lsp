@@ -69,17 +69,18 @@
     :detail "Create use"
     :insert-text "(:use [${1:namespace} :only [$0]])"}])
 
-(defn ^:private replace-snippets-vars [snippet next-loc]
+(defn ^:private replacing-current-form-vars [snippet next-loc]
   (let [current-sexpr (or (some-> next-loc z/string)
                           "")]
     (string/replace snippet "$current-form" current-sexpr)))
 
 (defn build-additional-snippets [cursor-loc next-loc settings]
-  (if (and next-loc (meta (z/node next-loc)))
+  (if-let [range-zloc (or next-loc cursor-loc)]
     (->> (get settings :additional-snippets [])
          (filter #(or (not (string/includes? (:snippet %) "$current-form"))
                       (and cursor-loc
-                           next-loc)))
+                           next-loc
+                           (meta (z/node range-zloc)))))
          (map (fn [{:keys [name detail snippet]}]
                 (if (string/includes? snippet "$current-form")
                   (let [range (shared/->range (meta (z/node next-loc)))]
@@ -88,8 +89,8 @@
                      :text-edit {:range (if (= :token (z/tag cursor-loc))
                                           (update-in range [:start :character] - (count (z/string cursor-loc)))
                                           range)
-                                 :new-text (replace-snippets-vars snippet next-loc)}})
+                                 :new-text (replacing-current-form-vars snippet next-loc)}})
                   {:label name
                    :detail detail
-                   :insert-text (replace-snippets-vars snippet next-loc)}))))
+                   :insert-text (replacing-current-form-vars snippet range-zloc)}))))
     []))

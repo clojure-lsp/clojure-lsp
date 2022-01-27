@@ -12,6 +12,8 @@
   - Support going to namespace definition on an alias. #706
   - Add LSP `textDocument/declaration`, for now adding the making possible navigate to alias and namespaces declared on the namespace. #680
   - Fix removal of file analysis on didClose for external files like jars. #717
+  - Fix cursor not moving when using code actions that move the cursor automatically.
+  - Fix additional-snippets to work on top-level forms as well.
 
 ## 2022.01.22-01.31.09
 

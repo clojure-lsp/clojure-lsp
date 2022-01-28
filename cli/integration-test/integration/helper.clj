@@ -50,6 +50,15 @@
        (doseq [[r# m#] (map vector res# maps#)]
          (assert-submap m# r#)))))
 
+(defmacro assert-contains-submaps
+  "Asserts that maps are contained submaps of result in results. "
+  [maps result]
+  `(let [maps# ~maps
+         res# ~result]
+     (doseq [m# maps#]
+       (let [m-keys (keys m#)]
+         (is (some #(= m# (some-> % (select-keys m-keys))) res#)))))) 
+
 (defn delete-folder
   "Recursively delete a directory."
   [^String filename]

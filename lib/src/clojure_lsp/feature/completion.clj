@@ -18,6 +18,11 @@
 
 (set! *warn-on-reflection* true)
 
+(def completion-kind-enum
+  {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
+   :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
+   :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
+
 (def priority-kw->number
   {:simple-cursor 1
    :alias-keyword 2
@@ -327,10 +332,11 @@
     (concat
       (map (fn [item]
              (if-let [snippet-item (get snippet-items-by-label (:label item))]
-               (shared/assoc-some snippet-item
-                                  :detail (:detail item)
-                                  :data (:data item)
-                                  :kind (:kind item))
+               (let [data (shared/assoc-some (:data item)
+                                             "snippet-kind" (get completion-kind-enum (:kind item)))]
+                 (shared/assoc-some snippet-item
+                                    :detail (:detail item)
+                                    :data data))
                item))
            items)
       (remove #(get items-by-label (:label %))
@@ -432,8 +438,7 @@
                                                 :bucket :var-usages} db)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db))
-          (dissoc :data))
+          (assoc :documentation (f.hover/hover-documentation definition db)))
       item)))
 
 (defn ^:private resolve-item-by-definition
@@ -445,13 +450,17 @@
                                        (= name-col (:name-col %))) local-analysis)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db))
-          (dissoc :data))
+          (assoc :documentation (f.hover/hover-documentation definition db)))
       item)))
 
 (defn resolve-item [{{:keys [ns]} :data :as item} db]
-  (if (:data item)
-    (if ns
-      (resolve-item-by-ns item db)
-      (resolve-item-by-definition item db))
-    item))
+  (let [item (shared/assoc-some item
+                                :insert-text-format (:insertTextFormat item)
+                                :text-edit (:textEdit item)
+                                :filter-text (:filterText item)
+                                :insert-text (:insertText item))]
+    (if (:data item)
+      (if ns
+        (resolve-item-by-ns item db)
+        (resolve-item-by-definition item db))
+      item)))

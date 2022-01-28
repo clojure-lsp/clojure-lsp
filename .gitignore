@@ -20,3 +20,6 @@ clojure-lsp.build_artifacts.txt
 /.project
 /.settings/
 /reports
+
+/.lh
+output.calva-repl

@@ -72,6 +72,18 @@
 
 (set! *warn-on-reflection* true)
 
+(defn ^{:deprecated "use java->clj instead"} debeaner [inst]
+  (when inst
+    (->> (dissoc (bean inst) :class)
+         (into {})
+         (medley/remove-vals nil?)
+         (medley/map-keys #(as-> % map-key
+                             (name map-key)
+                             (string/split map-key #"(?=[A-Z])")
+                             (string/join "-" map-key)
+                             (string/lower-case map-key)
+                             (keyword map-key))))))
+
 (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
 
 (defn document->uri [^TextDocumentIdentifier document]
@@ -87,6 +99,9 @@
   (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java CompletionItemKind [^CompletionItemKind instance]
+  (-> instance .name .toLowerCase keyword))
+
+(defmethod j/from-java InsertTextFormat [^InsertTextFormat instance]
   (-> instance .name .toLowerCase keyword))
 
 (defmethod j/from-java SymbolKind [^SymbolKind instance]
@@ -148,7 +163,7 @@
                                     (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
 
 (def insert-text-format-enum
-  {:plain-text 1
+  {:plaintext 1
    :snippet 2})
 
 (s/def :completion-item/insert-text-format
@@ -593,18 +608,6 @@
            (remove #(nil? (val %)))
            (into {}))
       converted)))
-
-(defn ^{:deprecated "use java->clj instead"} debeaner [inst]
-  (when inst
-    (->> (dissoc (bean inst) :class)
-         (into {})
-         (medley/remove-vals nil?)
-         (medley/map-keys #(as-> % map-key
-                             (name map-key)
-                             (string/split map-key #"(?=[A-Z])")
-                             (string/join "-" map-key)
-                             (string/lower-case map-key)
-                             (keyword map-key))))))
 
 #_{:clj-kondo/ignore [:deprecated-var]}
 (s/def ::legacy-debean (s/conformer debeaner))

@@ -4,6 +4,7 @@
 
 (def namespaces
   '[integration.initialize-test
+    integration.code-action-test
     integration.definition-test
     integration.declaration-test
     integration.diagnostics-test

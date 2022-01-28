@@ -509,39 +509,3 @@
                                   []
                                   {:workspace {:workspace-edit true}}
                                   db/db)))))
-
-(deftest resolve-code-action-edits
-  (h/load-code-and-locs (h/code "(ns some-ns)"
-                                "(let [a 1] (+ 2 3))"
-                                "(defn foo [] 1)")
-                        "file:///project/src/some_ns.clj")
-  (testing "for a refactoring without extra-arg"
-    (h/assert-submap
-      {:title "Cycle privacy"
-       :edit {:changes {"file:///project/src/some_ns.clj"
-                        [{:range {:start {:line 2 :character 1}
-                                  :end {:line 2 :character 5}}
-                          :new-text "defn-"}]}}}
-      (f.code-actions/resolve-code-action-edits
-        {:title "Cycle privacy"
-         :data {:id "refactor-cycle-privacy"
-                :uri "file:///project/src/some_ns.clj"
-                :line 2
-                :character 7}}
-        (zloc-at (h/file-uri "file:///project/src/some_ns.clj") 3 8)
-        db/db)))
-  (testing "for a refactoring with extra-arg"
-    (h/assert-submap
-      {:title "Move to let"
-       :edit {:changes {"file:///project/src/some_ns.clj"
-                        [{:range {:start {:line 1 :character 0}
-                                  :end {:line 1 :character 19}}
-                          :new-text "(let [a 1\n      new-binding +] (new-binding 2 3))"}]}}}
-      (f.code-actions/resolve-code-action-edits
-        {:title "Move to let"
-         :data {:id "refactor-move-to-let"
-                :uri "file:///project/src/some_ns.clj"
-                :line 1
-                :character 12}}
-        (zloc-at (h/file-uri "file:///project/src/some_ns.clj") 2 13)
-        db/db))))

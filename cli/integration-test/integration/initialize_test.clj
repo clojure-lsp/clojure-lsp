@@ -52,8 +52,7 @@
                                                "refactor.inline"
                                                "refactor.rewrite"
                                                "source"
-                                               "source.organizeImports"]
-                             :resolveProvider true}
+                                               "source.organizeImports"]}
         :hoverProvider true
         :semanticTokensProvider {:legend {:tokenTypes ["namespace"
                                                        "type"

@@ -20,10 +20,9 @@
         (spit lsp-config-file old-content)))))
 
 (def new-lsp-config-content
-  (string/join "/n"
-               ["{:linters {:clj-kondo {:level :off"
-                "                       :async-custom-lint? false}}}"
-                ""]))
+  (h/code "{:linters {:clj-kondo {:level :off"
+          "                       :async-custom-lint? false}}}"
+          ""))
 
 (deftest unused-public-var
   (lsp/start-process!)

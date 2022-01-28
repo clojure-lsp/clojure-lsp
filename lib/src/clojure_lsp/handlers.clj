@@ -285,13 +285,6 @@
           client-capabilities (get @db/db :client-capabilities)]
       (f.code-actions/all zloc textDocument row col diagnostics client-capabilities db/db))))
 
-(defn resolve-code-action [{{:keys [uri line character]} :data :as action}]
-  (let [zloc (parser/safe-cursor-loc uri line character db/db)]
-    (when-let [result (f.code-actions/resolve-code-action-edits action zloc db/db)]
-      (when (:show-document-after-edit result)
-        (producer/show-document-request (:producer @db/db) (:show-document-after-edit result)))
-      result)))
-
 (defn code-lens
   [{:keys [textDocument]}]
   (process-after-changes

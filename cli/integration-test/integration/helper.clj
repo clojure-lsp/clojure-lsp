@@ -2,6 +2,7 @@
   (:require
    [clojure.java.io :as io]
    [clojure.pprint :as pprint]
+   [clojure.string :as string]
    [clojure.test :refer [is]]))
 
 (def root-project-path
@@ -64,3 +65,6 @@
        (str "integration-test/sample-test/src/sample_test/")
        io/as-relative-path
        delete-folder))
+
+(defn code [& strings]
+  (string/join \newline strings))

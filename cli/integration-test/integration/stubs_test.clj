@@ -11,8 +11,8 @@
   (h/delete-project-file "../../.lsp/.cache")
   (h/delete-project-file "../../.clj-kondo/.cache")
   (lsp/start-process!)
-  (lsp/request! (fixture/initialize-request {:lint-project-files-after-startup? false
-                                             :stubs {:generation {:namespaces #{"datomic.api"}}}}))
+  (lsp/request! (fixture/initialize-request (assoc fixture/default-init-options
+                                                   :stubs {:generation {:namespaces #{"datomic.api"}}})))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "stubs/a.clj"))
 

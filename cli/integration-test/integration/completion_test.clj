@@ -15,7 +15,6 @@
                   {:textDocument
                    {:completion
                     {:contextSupport true
-                     :completionItemKind {:valueSet (vec (range 1 26))}
                      :completionItem {:snippetSupport true
                                       :commitCharactersSupport true
                                       :preselectSupport true
@@ -36,9 +35,9 @@
     (testing "get snippets"
       (h/assert-contains-submaps
        [{:label "defn"
-        ;;  :kind 15 
-        ;;  :detail "clojure.core/defn" 
-        ;;  :insertText "(defn ${1:name} [$2]\n  ${0:body})"
-        ;;  :insertTextFormat 2
+         :kind 15
+         :detail "clojure.core/defn" 
+         :insertText "(defn ${1:name} [$2]\n  ${0:body})"
+         :insertTextFormat 2
          :data {:filename "/clojure.core.clj" :name "defn" :ns "clojure.core", :snippet-kind 6}}]
        (lsp/request! (fixture/completion-request "completion/a.clj" 2 4))))))

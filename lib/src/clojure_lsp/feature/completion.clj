@@ -333,7 +333,7 @@
       (map (fn [item]
              (if-let [snippet-item (get snippet-items-by-label (:label item))]
                (let [data (shared/assoc-some (:data item)
-                                             :snippet-kind (get completion-kind-enum (:kind item)))]
+                                             "snippet-kind" (get completion-kind-enum (:kind item)))]
                  (shared/assoc-some snippet-item
                                     :detail (:detail item)
                                     :data data))
@@ -438,8 +438,7 @@
                                                 :bucket :var-usages} db)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db))
-          (dissoc :data))
+          (assoc :documentation (f.hover/hover-documentation definition db)))
       item)))
 
 (defn ^:private resolve-item-by-definition
@@ -451,8 +450,7 @@
                                        (= name-col (:name-col %))) local-analysis)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db))
-          (dissoc :data))
+          (assoc :documentation (f.hover/hover-documentation definition db)))
       item)))
 
 (defn resolve-item [{{:keys [ns]} :data :as item} db]
@@ -460,7 +458,6 @@
                                 :insert-text-format (:insertTextFormat item)
                                 :text-edit (:textEdit item)
                                 :filter-text (:filterText item)
-                                :additional-text-edits (:additionalTextEdits item)
                                 :insert-text (:insertText item))]
     (if (:data item)
       (if ns

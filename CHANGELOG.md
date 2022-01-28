@@ -14,6 +14,7 @@
   - Fix removal of file analysis on didClose for external files like jars. #717
   - Fix cursor not moving when using code actions that move the cursor automatically.
   - Fix additional-snippets to work on top-level forms as well.
+  - Fix resolve completion item not returning insertText. #719
 
 ## 2022.01.22-01.31.09
 

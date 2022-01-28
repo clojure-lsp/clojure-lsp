@@ -21,7 +21,6 @@
                                       :preselectSupport true
                                       :documentationFormat ["markdown" "plaintext"]
                                       :resolveSupport {:properties ["documentation" "detail" "additionalTextEdits"]}}}}}}))
-  ;; :client-capabilities :text-document :completion :completion-item :snippet-support
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "completion/a.clj"))
   (lsp/notify! (fixture/did-open-notification "completion/b.clj"))

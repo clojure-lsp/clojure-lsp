@@ -32,7 +32,7 @@
          :kind 3
          :detail "clojure.core/definterface"
          :data {:filename "/clojure.core.clj", :name "definterface", :ns "clojure.core"}}]
-       (lsp/request! (fixture/completion-request "completion/a.clj" 2 3 1))))
+       (lsp/request! (fixture/completion-request "completion/a.clj" 2 3))))
     (testing "get snippets"
       (h/assert-contains-submaps
        [{:label "defn"
@@ -41,4 +41,4 @@
         ;;  :insertText "(defn ${1:name} [$2]\n  ${0:body})"
         ;;  :insertTextFormat 2
          :data {:filename "/clojure.core.clj" :name "defn" :ns "clojure.core", :snippet-kind 6}}]
-       (lsp/request! (fixture/completion-request "completion/a.clj" 2 4 1))))))
+       (lsp/request! (fixture/completion-request "completion/a.clj" 2 4))))))

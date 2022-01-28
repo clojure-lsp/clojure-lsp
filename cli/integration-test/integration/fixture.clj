@@ -20,11 +20,10 @@
                  (merge {:rootUri (h/file->uri (io/file h/root-project-path))}
                         params))))
 
-(defn completion-request [path row col kind]
+(defn completion-request [path row col]
   (lsp-json-rpc :textDocument/completion
                 {:textDocument {:uri (h/file->uri (h/source-path->file path))}
-                 :position {:line row :character col}
-                 :context {:triggerKind kind}}))
+                 :position {:line row :character col}}))
 
 (defn definition-request [path row col]
   (lsp-json-rpc :textDocument/definition

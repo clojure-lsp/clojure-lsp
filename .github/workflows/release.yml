@@ -183,41 +183,56 @@ jobs:
           path: clojure-lsp-native-static-linux-amd64.zip
           name: clojure-lsp-native-static-linux-amd64.zip
 
-  # linux-aarch64:
-  #   name: Build native linux aarch64 binary
-  #   needs: [build-lib-jar, build-cli-jar]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/download-artifact@v2
-  #       with:
-  #         name: clojure-lsp-standalone.jar
+  linux-aarch64:
+    name: Build native linux aarch64 binary
+    needs: [build-lib-jar, build-cli-jar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp-standalone.jar
 
-  #     - name: Install Clojure
-  #       uses: DeLaGuardo/setup-clojure@master
-  #       with:
-  #         cli: '1.10.3.1013'
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
 
-  #     - name: Install GraalVM
-  #       uses: DeLaGuardo/setup-graalvm@master
-  #       with:
-  #         graalvm: 22.0.0.2
-  #         java: java11
-  #         arch: 'aarch64'
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-  #     - name: Install native-image component
-  #       run: |
-  #         gu install native-image
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm: 22.0.0.2
+          java: java11
+          arch: 'aarch64'
 
-  #     - name: Build
-  #       env:
-  #         CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
-  #         CLOJURE_LSP_XMX: "-J-Xmx6g"
-  #       run: |
-  #         make native-cli/upload-artifact@v2
-  #       with:
-  #         path: clojure-lsp-native-linux-aarch64.zip
-  #         name: clojure-lsp-native-linux-aarch64.zip
+      - name: Install native-image component
+        run: |
+          gu install native-image
+
+      - name: Build
+        env:
+          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+        run: |
+          make native-cli
+
+      - name: Run babashka pod tests
+        env:
+          CLOJURE_LSP_TEST_ENV: native
+        run: make pod-test
+
+      - name: Run integration tests
+        run: |
+          make integration-test
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-native-linux-aarch64.zip
+          name: clojure-lsp-native-linux-aarch64.zip
 
   macos:
     name: Build native MacOS binary

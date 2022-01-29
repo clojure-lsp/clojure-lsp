@@ -7,6 +7,7 @@
 (def lib 'com.github.clojure-lsp/clojure-lsp)
 (def clojars-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
 (def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
+(def lsp-class-dir "target/lsp-classes")
 (def class-dir "target/classes")
 (def basis {:project "deps.edn"})
 (def uber-file (format "target/%s-standalone.jar" (name lib)))
@@ -18,8 +19,10 @@
   (clean opts)
   (println "Compiing java classes...")
   (b/javac {:src-dirs ["src-java"]
-            :class-dir class-dir
-            :basis (b/create-basis basis)}))
+            :class-dir lsp-class-dir
+            :basis (b/create-basis basis)})
+  (b/copy-dir {:src-dirs [lsp-class-dir]
+               :target-dir class-dir}))
 
 (defn ^:private uber [opts]
   (clean opts)

@@ -56,8 +56,7 @@
                                     "   ;; b comment"
                                     "   :b 2 ;; 2 comment"
                                     "   :d 4}")}]}]
-        (:documentChanges (:edit (lsp/await-request :workspace/applyEdit)))))
-
+        (:documentChanges (:edit (lsp/await-client-request :workspace/applyEdit)))))
     (testing "the cursor is repositioned"
       (h/assert-submap
        ;; FIXME: 5/3 is the correct positioning. But the associated fix is on
@@ -75,4 +74,4 @@
                              :character 3}
                      :end   {:line      6
                              :character 5}}}
-        (lsp/await-request :window/showDocument)))))
+        (lsp/await-client-request :window/showDocument)))))

@@ -154,7 +154,7 @@
           (Thread/sleep 500)
           (recur))))))
 
-(defn await-request [method]
+(defn await-client-request [method]
   (loop []
     (let [method-str (keyname method)
           msg        (first (filter #(= method-str (:method %)) @server-requests))]

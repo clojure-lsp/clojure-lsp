@@ -13,21 +13,6 @@
      :id (lsp/inc-request-id)}))
 
 (def default-init-options {:lint-project-files-after-startup? false})
-(def full-client-capabilities
-  "Turn on all the client capabilities that clojure-lsp cares about.
-
-  ```
-  (intiailize-request {:initializationOptions default-init-opts
-                       :capabilities full-client-capabilities})
-  ```
-
-  Last updated 2022-01-28."
-  {:experimental {:testTree true}
-   :textDocument {:hover      {:contentFormat ["markdown" "plaintext"]}
-                  :completion {:completionItem {:snippetSupport true}}}
-   :window       {:showDocument {:support true}}
-   :workspace    {:workspaceEdit {:documentChanges true}
-                  :codeLens {:refreshSupport true}}})
 
 (defn initialize-request
   ([]

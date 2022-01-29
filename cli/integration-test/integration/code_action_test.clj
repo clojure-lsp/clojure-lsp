@@ -13,7 +13,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions fixture/default-init-options
-                   :capabilities          fixture/full-client-capabilities}))
+                   :capabilities          {:window    {:showDocument {:support true}}
+                                           :workspace {:workspaceEdit {:documentChanges true}}}}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification sample-file-name))
 

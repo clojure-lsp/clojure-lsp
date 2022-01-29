@@ -20,7 +20,7 @@ Example:
 ---
 ### Global
 
-For global settings which should work for all the projects using `clojure-lsp`, you just need to add the same configs to `~/.lsp/config.edn` or `$XDG_CONFIG_HOME/.lsp/config.edn`.
+For global settings which should work for all the projects using `clojure-lsp`, you just need to add the same configs to `~/.lsp/config.edn` or `$XDG_CONFIG_HOME/clojure-lsp/config.edn`.
 
 For an example of a global `config.edn`, check [here](https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn).
 

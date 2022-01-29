@@ -13,7 +13,7 @@
 (def ^:dynamic *stdout* nil)
 
 (defonce server-responses (atom {}))
-(defonce server-requests (atom {}))
+(defonce server-requests (atom []))
 (defonce server-notifications (atom []))
 (defonce client-request-id (atom 0))
 
@@ -54,7 +54,7 @@
               (and id method)
               (do
                 (println (colored :magenta "Received request:") (colored :yellow json))
-                (swap! server-requests assoc id json))
+                (swap! server-requests conj json))
 
               id
               (do
@@ -81,7 +81,7 @@
     (io/reader (:out *clojure-lsp-process*))))
 
 (defn clean! []
-  (reset! server-requests {})
+  (reset! server-requests [])
   (reset! server-responses {})
   (reset! server-notifications [])
   (reset! client-request-id 0)
@@ -150,6 +150,22 @@
                         (remove #(= method-str (:method %)))
                         vec)))
           (:params notification))
+        (do
+          (Thread/sleep 500)
+          (recur))))))
+
+(defn await-client-request [method]
+  (loop []
+    (let [method-str (keyname method)
+          msg        (first (filter #(= method-str (:method %)) @server-requests))]
+      (if msg
+        (do
+          (swap! server-requests
+                 (fn [n]
+                   (->> n
+                        (remove #(= method-str (:method %)))
+                        vec)))
+          (:params msg))
         (do
           (Thread/sleep 500)
           (recur))))))

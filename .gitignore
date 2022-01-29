@@ -5,7 +5,7 @@
 /.lsp/.cache
 /.clj-kondo/.cache
 /out
-/target
+target/
 /classes
 /.DS_Store
 /.cpcache

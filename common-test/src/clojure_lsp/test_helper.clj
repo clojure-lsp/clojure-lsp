@@ -60,9 +60,16 @@
        (clean-db! env)
        (f)))))
 
+(defn submap? [smaller larger]
+  (every? (fn [[smaller-k smaller-v]]
+            (let [larger-v (get larger smaller-k)]
+              (if (map? smaller-v)
+                (submap? smaller-v larger-v)
+                (= smaller-v larger-v))))
+          smaller))
+
 (defn assert-submap [expected actual]
-  (is (= expected
-         (some-> actual (select-keys (keys expected))))
+  (is (submap? expected actual)
       (str "Actual:\n\n" (pr-str actual) "\nExpected:\n\n" (pr-str expected))))
 
 (defmacro assert-submaps
@@ -80,6 +87,15 @@
                    (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
        (doseq [[r# m#] (map vector res# maps#)]
          (assert-submap m# r#)))))
+
+(defmacro assert-contains-submaps
+  "Asserts that maps are contained submaps of result in results. "
+  [maps result]
+  (let [r (gensym)]
+    `(let [~r ~result]
+       ~@(map (fn [m]
+                `(is (some #(submap? ~m %) ~r)))
+              maps))))
 
 (defn positions-from-text
   "Takes text with a pipe `|` as a placeholder for cursor positions and returns the text without

@@ -64,7 +64,7 @@
 
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db]
-  (let [[content-format] (get-in @db [:client-capabilities :text-document :hover :content-format])
+  (let [content-formats (get-in @db [:client-capabilities :text-document :hover :content-format])
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
                                 (settings/get db [:show-docs-arity-on-same-line?]))
         hide-filename? (settings/get db [:hover :hide-file-location?])
@@ -76,7 +76,7 @@
               sym-ns (str sym-ns "/"))
         sym-line (str sym (when signatures
                             (str join-char signatures)))
-        markdown? (= "markdown" content-format)
+        markdown? (some #{"markdown"} content-formats)
         doc-line (when (seq doc)
                    (if markdown?
                      (docstring->formatted-markdown doc)

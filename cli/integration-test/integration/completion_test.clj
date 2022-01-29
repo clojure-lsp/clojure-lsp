@@ -10,7 +10,7 @@
 (deftest completion
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
-                 {:initializationOptions {:lint-project-files-after-startup? false}
+                 {:initializationOptions fixture/default-init-options
                   :capabilities
                   {:textDocument
                    {:completion

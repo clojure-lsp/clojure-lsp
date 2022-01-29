@@ -30,7 +30,6 @@
      CallHierarchyOutgoingCallsParams
      CallHierarchyPrepareParams
      CodeActionParams
-     CodeAction
      CodeActionOptions
      CodeLens
      CodeLensParams
@@ -214,10 +213,6 @@
     (start :codeAction
            (async-request params handlers/code-actions ::coercer/code-actions)))
 
-  (^CompletableFuture resolveCodeAction [_ ^CodeAction unresolved]
-    (start :resolveCodeAction
-           (async-request unresolved handlers/resolve-code-action ::coercer/code-action)))
-
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (start :codeLens
            (async-request params handlers/code-lens ::coercer/code-lenses)))
@@ -343,8 +338,7 @@
                                         (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                         (.setCallHierarchyProvider true)
                                         (.setLinkedEditingRangeProvider true)
-                                        (.setCodeActionProvider (doto (CodeActionOptions. (vec (vals coercer/code-action-kind)))
-                                                                  (.setResolveProvider true)))
+                                        (.setCodeActionProvider (CodeActionOptions. (vec (vals coercer/code-action-kind))))
                                         (.setCodeLensProvider (CodeLensOptions. true))
                                         (.setReferencesProvider true)
                                         (.setRenameProvider (RenameOptions. true))
@@ -488,8 +482,7 @@
     (->> edit
          (coercer/conform-or-log ::coercer/workspace-edit-or-error)
          ApplyWorkspaceEditParams.
-         (.applyEdit client)
-         .get))
+         (.applyEdit client)))
 
   (show-document-request [_this document-request]
     (log/info "Requesting to show on editor the document" document-request)

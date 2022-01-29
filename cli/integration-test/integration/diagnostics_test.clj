@@ -62,9 +62,9 @@
 (deftest report-duplicates-disabled
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request {:initializationOptions
-                                             {:lint-project-files-after-startup? false
-                                              :linters {:clj-kondo {:report-duplicates false
-                                                                    :async-custom-lint? false}}}}))
+                                             (assoc fixture/default-init-options
+                                                    :linters {:clj-kondo {:report-duplicates  false
+                                                                          :async-custom-lint? false}})}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))
 

@@ -13,7 +13,9 @@ jobs:
         fetch-depth: 0
 
     - name: Check deps
-      uses: nnichols/clojure-dependency-update-action@v3
+      uses: nnichols/clojure-dependency-update-action@679163d5c8b407342c79a9176d2d559bd1a83e83
       with:
+        skips: "pom"
         directories: "cli lib"
+        git-username: clojure-lsp-bot
         github-token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}

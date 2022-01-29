@@ -1780,6 +1780,8 @@
 <li>Fix cursor not moving when using code actions that move the cursor automatically.</li>
 <li>Fix additional-snippets to work on top-level forms as well.</li>
 <li>Fix resolve completion item not returning insertText. #719 @Cyrik</li>
+<li>Remove support for LSP <code>codeAction/resolve</code>. It added complexity and was not
+    used in a way that improved performance of the action menu. #722, #725, #726</li>
 </ul>
 <h2 id="20220122-013109">2022.01.22-01.31.09<a class="headerlink" href="#20220122-013109" title="Permanent link">#</a></h2>
 <ul>

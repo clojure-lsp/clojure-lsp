@@ -112,7 +112,7 @@
           :kind       :quick-fix
           :preferred? true
           :command    {:title     "Add missing require"
-                       :command   "add-missing-require"
+                       :command   "add-missing-libspec"
                        :arguments [uri (:line position) (:character position)]}})
        missing-requires))
 

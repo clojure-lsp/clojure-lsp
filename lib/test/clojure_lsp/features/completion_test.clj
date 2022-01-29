@@ -155,32 +155,32 @@
     (is (= {:label "Some" :kind :module}
            (f.completion/resolve-item {:label "Some" :kind :module} db/db))))
   (testing "When element contains data of a element/knows the element"
-    (is (= {:label "foo"
-            :documentation [{:language "clojure" :value "a/foo"}
-                            "Some docs"
-                            (h/file-path "/a.clj")]
-            :kind :variable}
-           (f.completion/resolve-item {:label "foo"
-                                       :kind :variable
-                                       :data {:name "foo"
-                                              :filename (h/file-path "/a.clj")
-                                              :name-row 1
-                                              :name-col 13}}
-                                      db/db))))
+    (h/assert-submap {:label "foo"
+                      :documentation [{:language "clojure" :value "a/foo"}
+                                      "Some docs"
+                                      (h/file-path "/a.clj")]
+                      :kind :variable}
+                     (f.completion/resolve-item {:label "foo"
+                                                 :kind :variable
+                                                 :data {:name "foo"
+                                                        :filename (h/file-path "/a.clj")
+                                                        :name-row 1
+                                                        :name-col 13}}
+                                                db/db)))
   (testing "When element contains data of a element/knows the element"
-    (is (= {:label "foo"
-            :documentation [{:language "clojure" :value "a/foo"}
-                            "Some docs"
-                            (h/file-path "/a.clj")]
-            :kind :function}
-           (f.completion/resolve-item {:label "foo"
-                                       :kind :function
-                                       :data {:name "foo"
-                                              :filename (h/file-path "/a.clj")
-                                              :name-row 1
-                                              :name-col 13
-                                              :ns "a"}}
-                                      db/db)))))
+    (h/assert-submap {:label "foo"
+                      :documentation [{:language "clojure" :value "a/foo"}
+                                      "Some docs"
+                                      (h/file-path "/a.clj")]
+                      :kind :function}
+                     (f.completion/resolve-item {:label "foo"
+                                                 :kind :function
+                                                 :data {:name "foo"
+                                                        :filename (h/file-path "/a.clj")
+                                                        :name-row 1
+                                                        :name-col 13
+                                                        :ns "a"}}
+                                                db/db))))
 
 (deftest completing-refers
   (h/load-code-and-locs
@@ -229,7 +229,7 @@
       [{:label "comment"
         :detail "clojure.core/comment"
         :insert-text "(comment\n  ${0:body}\n  )"
-        :kind :reference
+        :kind :snippet
         :insert-text-format :snippet}]
       (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 db/db)))))
 

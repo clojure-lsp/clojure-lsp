@@ -3,9 +3,11 @@
    [clojure.test :as t]))
 
 (def namespaces
-  '[integration.initialize-test
+  '[
+    integration.initialize-test
     integration.code-action-test
     integration.definition-test
+    integration.completion-test
     integration.declaration-test
     integration.diagnostics-test
     integration.settings-change-test

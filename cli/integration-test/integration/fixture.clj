@@ -13,20 +13,21 @@
      :id (lsp/inc-request-id)}))
 
 (def default-init-options {:lint-project-files-after-startup? false})
-(def emacs-capabilities
-  ;; Emacs' advertised client capabilities
-  ;; LSP :: lsp-mode 20220115.1742, Emacs 27.2, darwin
-  ;; Derived from a printout of client capabilities that was halfway through
-  ;; the json -> java -> coerce process. It was messy. I hope this is accurate.
-  ;; Emacs advertises many other capabilities, but this includes only the ones
-  ;; that clojure-lsp cares about as of 2022-01-28.
+(def full-client-capabilities
+  "Turn on all the client capabilities that clojure-lsp cares about.
+
+  ```
+  (intiailize-request {:initializationOptions default-init-opts
+                       :capabilities full-client-capabilities})
+  ```
+
+  Last updated 2022-01-28."
   {:experimental {:testTree true}
    :textDocument {:hover      {:contentFormat ["markdown" "plaintext"]}
                   :completion {:completionItem {:snippetSupport true}}}
    :window       {:showDocument {:support true}}
    :workspace    {:workspaceEdit {:documentChanges true}
-                  ;; does not advertise code lens refresh support, though clojure-lsp would use it
-                  #_#_:codeLens  {:refreshSupport true}}})
+                  :codeLens {:refreshSupport true}}})
 
 (defn initialize-request
   ([]
@@ -35,10 +36,6 @@
    (lsp-json-rpc :initialize
                  (merge {:rootUri (h/file->uri (io/file h/root-project-path))}
                         params))))
-
-(defn initialize-emacs-request []
-  (initialize-request {:initializationOptions default-init-options
-                       :capabilities          emacs-capabilities}))
 
 (defn completion-request [path row col]
   (lsp-json-rpc :textDocument/completion

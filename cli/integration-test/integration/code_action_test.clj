@@ -11,7 +11,9 @@
 
 (deftest view-and-execute-code-action
   (lsp/start-process!)
-  (lsp/request! (fixture/initialize-emacs-request))
+  (lsp/request! (fixture/initialize-request
+                  {:initializationOptions fixture/default-init-options
+                   :capabilities          fixture/full-client-capabilities}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification sample-file-name))
 

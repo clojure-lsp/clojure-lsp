@@ -1,6 +1,5 @@
 (ns integration.settings-change-test
   (:require
-   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]

@@ -542,7 +542,7 @@
           fn-call? (and (not calling?) (not threadding?))
           fn-call-with-partial? (and fn-call?
                                      (= 'partial (z/sexpr (z/left local-zloc))))
-          ns-or-alias (when (qualified-symbol? fn-sexpr) (namespace fn-sexpr))
+          ns-or-alias (when (qualified-symbol? local-sexpr) (namespace local-sexpr))
           fn-name local-sexpr
           fn-name (if ns-or-alias (name fn-name) fn-name)
           new-fn-str (cond

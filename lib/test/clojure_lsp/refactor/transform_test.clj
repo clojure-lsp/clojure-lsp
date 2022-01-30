@@ -512,6 +512,34 @@
                  {:loc "\n"
                   :range {:row 999999 :col 1
                           :end-row 999999 :end-col 1}}]}
+               result))))
+    (testing "when namespace is not required and not exists not calling it as function"
+      (h/clean-db!)
+      (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                 (h/file-path "/project/test")}}})
+      (let [code "(ns foo (:require [bar :as b])) b/something"
+            zloc (z/find-value (z/of-string code) z/next 'b/something)
+            _ (h/load-code-and-locs code "file:///project/src/foo.clj")
+            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" db/db)
+            result (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+        (is (= [{:kind "create"
+                 :uri (h/file-uri "file:///project/src/bar.clj")
+                 :options {:overwrite? false, :ignore-if-exists? true}}]
+               resource-changes))
+        (is (= {(h/file-uri "file:///project/src/foo.clj")
+                [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
+                  :loc "(ns foo (:require [bar :as b]\n                  [something :as b]))"}]
+                (h/file-uri "file:///project/src/bar.clj")
+                [{:loc "(ns b)\n"
+                  :range {:row 1 :col 1
+                          :end-row 1 :end-col 1}}
+                 ;; TODO we should not add a arg
+                 {:loc "(defn something [arg1]\n  )"
+                  :range {:row 999999 :col 1
+                          :end-row 999999 :end-col 1}}
+                 {:loc "\n"
+                  :range {:row 999999 :col 1
+                          :end-row 999999 :end-col 1}}]}
                result))))))
 
 (deftest can-create-test?

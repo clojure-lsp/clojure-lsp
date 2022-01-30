@@ -16,8 +16,8 @@
   - Fix cursor not moving when using code actions that move the cursor automatically.
   - Fix additional-snippets to work on top-level forms as well.
   - Fix resolve completion item not returning insertText. #719 @Cyrik
-  - Remove support for LSP `codeAction/resolve`. It added complexity and was not
-    used in a way that improved performance of the action menu. #722, #725, #726
+  - Remove support for LSP `codeAction/resolve`. It added complexity and was not used in a way that improved performance of the action menu. #722, #725, #726
+  - Fix create public function refactoring not working when function is not a function call.
 
 ## 2022.01.22-01.31.09
 

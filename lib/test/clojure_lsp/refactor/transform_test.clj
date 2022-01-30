@@ -601,11 +601,10 @@
       (h/clean-db!)
       (swap! db/db shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                  (h/file-path "/project/test")}}})
-      (let [code "(ns foo (:require [bar :as b])) b/something"
-            zloc (z/find-value (z/of-string code) z/next 'b/something)
-            _ (h/load-code-and-locs code "file:///project/src/foo.clj")
+      (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
+                                       "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" db/db)
-            result (update-map changes-by-uri (fn [v] (map #(update % :loc z/string) v)))]
+            result (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
                  :options {:overwrite? false, :ignore-if-exists? true}}]

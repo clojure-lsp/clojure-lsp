@@ -611,16 +611,19 @@
                resource-changes))
         (is (= {(h/file-uri "file:///project/src/foo.clj")
                 [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
-                  :loc "(ns foo (:require [bar :as b]\n                  [something :as b]))"}]
+                  :loc (h/code "(ns foo (:require [bar :as b]"
+                               "                  [something :as b]))")}]
                 (h/file-uri "file:///project/src/bar.clj")
-                [{:loc "(ns b)\n"
+                [{:loc (h/code "(ns b)"
+                               "")
                   :range {:row 1 :col 1
                           :end-row 1 :end-col 1}}
                  ;; TODO we should not add a arg
-                 {:loc "(defn something [arg1]\n  )"
+                 {:loc (h/code "(defn something [arg1]"
+                               "  )")
                   :range {:row 999999 :col 1
                           :end-row 999999 :end-col 1}}
-                 {:loc "\n"
+                 {:loc (h/code "" "")
                   :range {:row 999999 :col 1
                           :end-row 999999 :end-col 1}}]}
                result))))))

@@ -415,20 +415,21 @@
   [{:keys [filename name-row name-col bucket]} db]
   (when (or (identical? :locals bucket)
             (identical? :var-definitions bucket))
-    (let [{:keys [text]} (get-in @db [:documents (shared/filename->uri filename db)])]
-      (some-> (parser/loc-at-pos text name-row name-col)
-              edit/find-op
-              z/sexpr
-              #{'let 'def}))))
+    (some-> (parser/safe-zloc-of-file @db (shared/filename->uri filename db))
+            (parser/to-pos name-row name-col)
+            edit/find-op
+            z/sexpr
+            #{'let 'def})))
 
 (defn inline-symbol
-  [uri row col db]
-  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)]
+  [uri line column db]
+  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) line column db)]
     (when-let [op (inline-symbol? definition db)]
-      (let [references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)
+      (let [references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) line column false db)
             def-uri    (shared/filename->uri (:filename definition) db)
-            def-text   (get-in @db [:documents def-uri :text])
-            def-loc    (parser/loc-at-pos def-text (:name-row definition) (:name-col definition))
+            ;; TODO: use safe-zloc-of-file and handle nils
+            def-loc    (some-> (parser/zloc-of-file @db def-uri)
+                               (parser/to-pos (:name-row definition) (:name-col definition)))
             val-loc    (z/right def-loc)
             end-pos    (if (= op 'def)
                          (meta (z/node (z/up def-loc)))
@@ -458,25 +459,27 @@
   (and zloc
        (#{:list :token} (z/tag zloc))))
 
-(defn can-create-public-function? [zloc uri db]
-  (when (can-create-function? zloc)
-    (if-let [ns-usage (some->> (z/sexpr zloc)
-                               namespace
-                               symbol
-                               (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri)))]
-      (if-let [ns-def (q/find-definition (:analysis @db) ns-usage db)]
-        (when-not (shared/external-filename? (:filename ns-def) (settings/get db [:source-paths]))
-          {:ns (:name ns-def)
-           :name (-> zloc z/sexpr name)})
-        (when-not (shared/external-filename? (:filename ns-usage) (settings/get db [:source-paths]))
-          {:new-ns (:name ns-usage)
-           :name (-> zloc z/sexpr name)}))
-      {:new-ns (-> zloc z/sexpr namespace)
-       :name (-> zloc z/sexpr name)})))
+(defn find-public-function-to-create [zloc uri db]
+  (when (and zloc
+             (identical? :token (z/tag zloc))
+             (qualified-symbol? (z/sexpr zloc)))
+    (let [z-sexpr (z/sexpr zloc)
+          z-name (name z-sexpr)
+          z-ns (namespace z-sexpr)]
+      (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol z-ns))]
+        (if-let [ns-def (q/find-definition (:analysis @db) ns-usage db)]
+          (when-not (shared/external-filename? (:filename ns-def) (settings/get db [:source-paths]))
+            {:ns (:name ns-def)
+             :name z-name})
+          (when-not (shared/external-filename? (:filename ns-usage) (settings/get db [:source-paths]))
+            {:new-ns (:name ns-usage)
+             :name z-name}))
+        {:new-ns z-ns
+         :name z-name}))))
 
 (defn ^:private create-function-param [node index]
   (if (and node
-           (= :token (n/tag node))
+           (identical? :token (n/tag node))
            (symbol? (n/sexpr node)))
     (let [sexpr (n/sexpr node)]
       (if-let [[_ num]  (re-matches #"^%([\d]*)$" (str sexpr))]

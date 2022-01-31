@@ -10,11 +10,9 @@
 
 (h/reset-db-after-test)
 
-(defn zloc-at [file row col]
-  (-> @db/db
-      (get-in [:documents file])
-      :text
-      (parser/loc-at-pos row col)))
+(defn zloc-at [uri row col]
+  (-> (parser/safe-zloc-of-file @db/db uri)
+      (parser/to-pos row col)))
 
 (deftest add-alias-suggestion-code-actions
   (h/load-code-and-locs "(ns clojure.set)" (h/file-uri "file:///clojure.core.clj"))

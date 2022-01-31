@@ -323,9 +323,8 @@
                          :detail (str "java.util." sym)
                          :priority :java})))))
 
-(defn ^:private merging-snippets [items cursor-loc matches-fn text row col settings]
-  (let [next-loc (parser/safe-loc-at-pos text row (inc col))
-        snippet-items-by-label (->> (concat
+(defn ^:private merging-snippets [items cursor-loc next-loc matches-fn settings]
+  (let [snippet-items-by-label (->> (concat
                                       (f.completion-snippet/known-snippets settings)
                                       (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
                                     (map #(assoc %
@@ -356,11 +355,13 @@
        not-empty))
 
 (defn completion [uri row col db]
-  (let [{:keys [text]} (get-in @db [:documents uri])
-        cursor-loc (when-let [loc (parser/safe-loc-at-pos text row col)]
+  (let [root-zloc (parser/safe-zloc-of-file @db uri)
+        ;; (dec col) because we're completing what's behind the cursor
+        cursor-loc (when-let [loc (some-> root-zloc (parser/to-pos row (dec col)))]
                      (when (or (not (-> loc z/node meta))
                                (= row (-> loc z/node meta :row)))
-                       loc))]
+                       loc))
+        next-loc (some-> root-zloc (parser/to-pos row col))]
     ;; When not on a symbol or keyword, we want to return all valid completions
     ;; (almost 1000 in an empty file), even though it's expensive to compute.
     ;; The one exception is in comments. Some editors (nvim + coc.nvim) request
@@ -443,7 +444,7 @@
 
                       (and support-snippets?
                            simple-cursor?)
-                      (merging-snippets cursor-loc matches-fn text row col settings)))]
+                      (merging-snippets cursor-loc next-loc matches-fn settings)))]
         (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns

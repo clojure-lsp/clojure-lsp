@@ -223,11 +223,12 @@
   (f.clojuredocs/find-docs-for symName symNs db/db))
 
 (defn ^:private refactor [refactoring [doc-id line character & args] db]
-  (let [row                        (inc (int line))
-        col                        (inc (int character))
+  (let [row (inc (int line))
+        col (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change
-        {:keys [v text] :or {v 0}} (get-in @db [:documents doc-id])
-        loc                        (parser/loc-at-pos text row col)]
+        v (get-in @db [:documents doc-id :v] 0)
+        loc (some-> (parser/zloc-of-file @db doc-id)
+                    (parser/to-pos row col))]
     (f.refactor/call-refactor {:refactoring (keyword refactoring)
                                :loc         loc
                                :uri         doc-id
@@ -289,7 +290,8 @@
           character (-> range :start :character)
           row (inc line)
           col (inc character)
-          zloc (parser/safe-cursor-loc textDocument line character db/db)
+          zloc (some-> (parser/safe-zloc-of-file @db/db textDocument)
+                       (parser/to-pos row col))
           client-capabilities (get @db/db :client-capabilities)]
       (f.code-actions/all zloc textDocument row col diagnostics client-capabilities db/db))))
 

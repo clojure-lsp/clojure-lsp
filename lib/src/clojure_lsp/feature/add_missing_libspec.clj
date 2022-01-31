@@ -234,54 +234,34 @@
         #{alias})
       #{alias})))
 
-(defn ^:private find-alias-require-suggestions [alias-str missing-requires db]
+(defn ^:private find-alias-require-suggestions [alias-str db]
   (let [analysis (:analysis @db)
         ns-definitions (q/find-all-ns-definition-names analysis)
         all-aliases (->> (q/find-all-aliases analysis)
                          (map :alias)
                          set)]
-    (cond->> []
+    (if (contains? ns-definitions (symbol alias-str))
+      (->> (resolve-best-alias-suggestions alias-str all-aliases)
+           (map (fn [suggestion]
+                  {:ns    alias-str
+                   :alias suggestion})))
+      (->> (resolve-best-namespaces-suggestions alias-str ns-definitions)
+           (map (fn [suggestion]
+                  {:ns    suggestion
+                   :alias alias-str}))))))
 
-      (contains? ns-definitions (symbol alias-str))
-      (concat
-        (->> (resolve-best-alias-suggestions alias-str all-aliases)
-             (map (fn [suggestion]
-                    {:ns alias-str
-                     :alias suggestion}))))
+(defn ^:private find-refer-require-suggestions [refer db]
+  (->> (q/find-all-var-definitions (:analysis @db))
+       (filter #(= refer (:name %)))
+       (map (fn [element]
+              {:ns    (str (:ns element))
+               :refer (str refer)}))))
 
-      (not (contains? ns-definitions (symbol alias-str)))
-      (concat (->> (resolve-best-namespaces-suggestions alias-str ns-definitions)
-                   (map (fn [suggestion]
-                          {:ns suggestion
-                           :alias alias-str}))))
-
-      :always
-      (remove (fn [suggestion]
-                (some #(= (str (:ns %))
-                          (str (:ns suggestion)))
-                      missing-requires))))))
-
-(defn ^:private find-refer-require-suggestions [refer missing-requires db]
-  (let [analysis (:analysis @db)
-        all-valid-refers (->> (q/find-all-var-definitions analysis)
-                              (filter #(= refer (:name %))))]
-    (cond->> []
-      (seq all-valid-refers)
-      (concat (->> all-valid-refers
-                   (map (fn [element]
-                          {:ns (str (:ns element))
-                           :refer (str refer)}))))
-      :always
-      (remove (fn [element]
-                (some #(= (str (:ns %))
-                          (str (:ns element)))
-                      missing-requires))))))
-
-(defn find-require-suggestions [zloc missing-requires db]
+(defn find-require-suggestions [zloc db]
   (when-let [sym (safe-sym zloc)]
     (if-let [alias-str (namespace sym)]
-      (find-alias-require-suggestions alias-str missing-requires db)
-      (find-refer-require-suggestions sym missing-requires db))))
+      (find-alias-require-suggestions alias-str db)
+      (find-refer-require-suggestions sym db))))
 
 (defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
   (seq

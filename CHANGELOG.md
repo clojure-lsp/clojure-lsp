@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix classpath hash regression introduced by last release
+
 ## 2022.02.01-16.53.14
 
 - General

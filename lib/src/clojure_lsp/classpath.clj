@@ -20,7 +20,8 @@
         (concat [project-dep-file]
                 (->> local-roots
                      (map #(shared/relativize-filepath % project-root))
-                     (map #(io/file project-root % "deps.edn"))))
+                     (map #(io/file project-root % "deps.edn"))
+                     (filter shared/file-exists?)))
         [project-dep-file])
       [project-dep-file])))
 

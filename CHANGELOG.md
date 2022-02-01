@@ -4,10 +4,6 @@
 
 ## 2022.02.01-16.53.14
 
-## 2022.02.01-14.46.34
-
-## 2022.02.01-13.01.51
-
 - General
   - Migrate project from depstar -> tools.build. #711
   - Improve classpath hash to consider invaliding cache when local root deps was changed.

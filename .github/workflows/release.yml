@@ -252,7 +252,7 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli   file: clojure-lsp
+          make native-cli
 
       - name: Run babashka pod tests
         env:

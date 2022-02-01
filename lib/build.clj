@@ -30,6 +30,6 @@
   ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
    (merge {:installer :remote
            :artifact jar-file
-           :pom-file (b/pom-path {:lib lib :class-dir class-dir})}
+           :pom-file "pom.xml"}
           opts))
   opts)

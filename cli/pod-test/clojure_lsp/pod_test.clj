@@ -5,7 +5,7 @@
    [clojure.test :refer [deftest is testing]]))
 
 (def pod-spec (if (= "native" (System/getenv "CLOJURE_LSP_TEST_ENV"))
-                ["./clojure-lsp"]
+                ["../clojure-lsp"]
                 ["clojure" "-M:run"]))
 
 (pods/load-pod pod-spec)

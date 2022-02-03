@@ -97,6 +97,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2022.02.01-13.01.51</tag>
+    <tag>2022.02.01-20.02.32</tag>
   </scm>
 </project>

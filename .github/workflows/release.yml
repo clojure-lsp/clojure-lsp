@@ -311,7 +311,7 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm: 22.0.0.2
+          graalvm: 21.3.0
           java: java11
 
       - name: Install native-image component

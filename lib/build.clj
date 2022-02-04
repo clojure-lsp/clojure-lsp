@@ -13,14 +13,17 @@
 (defn clean [_]
   (b/delete {:path "target"}))
 
-(defn jar [opts]
-  (clean nil)
+(defn pom [opts]
   (b/write-pom {:target ""
                 :lib lib
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
                 :src-dirs ["src"]
-                :scm {:tag current-version}})
+                :scm {:tag current-version}}))
+
+(defn jar [opts]
+  (clean nil)
+  (pom opts)
   (b/copy-dir {:src-dirs ["src"]
                :target-dir class-dir})
   (b/jar {:class-dir class-dir

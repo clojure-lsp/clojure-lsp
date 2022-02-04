@@ -24,23 +24,25 @@
   (b/copy-dir {:src-dirs [lsp-class-dir]
                :target-dir class-dir}))
 
+(defn pom [opts]
+  (b/write-pom {:target ""
+                :lib clojars-lib
+                :version current-version
+                :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
+                :src-dirs ["src" "../lib/src"]
+                :resource-dirs ["resources"]
+                :scm {:tag current-version}}))
+
 (defn ^:private uber [opts]
   (clean opts)
   (javac opts)
-  (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))]
-    (b/write-pom {:target ""
-                  :lib clojars-lib
-                  :version current-version
-                  :basis basis
-                  :src-dirs ["src" "../lib/src"]
-                  :resource-dirs ["resources"]
-                  :scm {:tag current-version}})
-    (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
-                 :target-dir class-dir})
-    (b/uber {:class-dir class-dir
-             :uber-file uber-file
-             :main 'clojure-lsp.main
-             :basis basis})))
+  (pom opts)
+  (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
+               :target-dir class-dir})
+  (b/uber {:class-dir class-dir
+           :uber-file uber-file
+           :main 'clojure-lsp.main
+           :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))}))
 
 (defn ^:private uber-aot [opts]
   (clean opts)

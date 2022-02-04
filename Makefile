@@ -22,6 +22,11 @@ clean:
 classes:
 	cd cli && clojure -T:build javac
 
+lib-pom:
+	cd lib && clojure -T:build pom
+cli-pom:
+	cd cli && clojure -T:build pom
+
 lib-jar:
 	cd lib && clojure -T:build jar
 	mv lib/target/clojure-lsp.jar .

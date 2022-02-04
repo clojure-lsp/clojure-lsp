@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Use `:source-aliases` setting during default deps.edn project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
+
 ## 2022.02.01-20.02.32
 
 - General

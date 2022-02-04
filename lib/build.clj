@@ -19,7 +19,8 @@
                 :lib lib
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
-                :src-dirs ["src"]})
+                :src-dirs ["src"]
+                :scm {:tag current-version}})
   (b/copy-dir {:src-dirs ["src"]
                :target-dir class-dir})
   (b/jar {:class-dir class-dir

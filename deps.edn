@@ -1,7 +1,10 @@
 {:aliases {:dev {:extra-paths ["lib/src"
                                "cli/src"]
                  :extra-deps {clojure-lsp/lib {:local/root "lib"}
-                              clojure-lsp/cli {:local/root "cli"}}}
+                              clojure-lsp/cli {:local/root "cli"}
+                              io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
+                                                             :tag "v0.7.5"
+                                                             :sha "34727f7"}}}
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.977"}}
                   :extra-paths ["lib/src"
                                 "cli/src"

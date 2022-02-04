@@ -33,7 +33,8 @@
                   :version current-version
                   :basis basis
                   :src-dirs ["src" "../lib/src"]
-                  :resource-dirs ["resources"]})
+                  :resource-dirs ["resources"]
+                  :scm {:tag current-version}})
     (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
                  :target-dir class-dir})
     (b/uber {:class-dir class-dir

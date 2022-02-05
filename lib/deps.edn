@@ -11,7 +11,7 @@
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
         clj-kondo/clj-kondo {:mvn/version "2022.01.15"
                              :exclude [com.cognitect/transit-clj]}
-        com.cognitect/transit-clj {:mvn/version "1.0.324"}
+        com.cognitect/transit-clj {:mvn/version "1.0.329"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}

@@ -57,6 +57,9 @@ pod-test: classes
 integration-test:
 	cd cli && bb integration-test ../clojure-lsp
 
+zen-test:
+	cd cli && bb integration-test ../../zen-lsp/zen-lsp
+
 lint-clean:
 	cd cli && clojure -M:run clean-ns --dry --ns-exclude-regex "sample-test.*" --project-root "../"
 

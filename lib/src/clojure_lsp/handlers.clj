@@ -129,6 +129,13 @@
       {:uri (shared/filename->uri (:filename declaration) db/db)
        :range (shared/->range declaration)})))
 
+(defn implementation [{:keys [textDocument position]}]
+  (let [[row col] (shared/position->line-column position)]
+    (mapv (fn [implementation]
+            {:uri (shared/filename->uri (:filename implementation) db/db)
+             :range (shared/->range implementation)})
+          (q/find-implementations-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col db/db))))
+
 (defn document-symbol [{:keys [textDocument]}]
   (let [filename (shared/uri->filename textDocument)
         analysis (:analysis @db/db)

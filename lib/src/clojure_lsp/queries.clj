@@ -152,6 +152,16 @@
       db)
     element))
 
+(defmethod find-definition :protocol-impls
+  [analysis element db]
+  (find-last-order-by-project-analysis
+    #(and (identical? :var-definitions (:bucket %))
+          (= (:name %) (:method-name element))
+          (= (:ns %) (:protocol-ns element))
+          (match-file-lang % element))
+    analysis
+    db))
+
 (defmethod find-definition :default
   [_analysis element _db]
   element)
@@ -184,6 +194,40 @@
                 (match-file-lang % element)))
         analysis
         db))))
+
+(defmethod find-declaration :default [_ _ _] nil)
+
+(defmulti find-implementations
+  (fn [_analysis element _db]
+    (:bucket element)))
+
+(defmethod find-implementations :var-definitions
+  [analysis element _db]
+  (into []
+        (comp
+          (mapcat val)
+          (filter #(identical? :protocol-impls (:bucket %)))
+          (filter #(safe-equal? (:ns element) (:protocol-ns %)))
+          (filter #(safe-equal? (:name element) (:method-name %)))
+          (filter #(match-file-lang % element))
+          (medley/distinct-by (juxt :filename :name :row :col)))
+        analysis))
+
+(defmethod find-implementations :var-usages
+  [analysis element _db]
+  (if (= (:to element) :clj-kondo/unknown-namespace)
+    []
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(identical? :protocol-impls (:bucket %)))
+            (filter #(safe-equal? (:to element) (:protocol-ns %)))
+            (filter #(safe-equal? (:name element) (:method-name %)))
+            (filter #(match-file-lang % element))
+            (medley/distinct-by (juxt :filename :name :row :col)))
+          analysis)))
+
+(defmethod find-implementations :default [_ _ _] [])
 
 (defmulti find-references
   (fn [_analysis element _include-declaration? _db]
@@ -308,6 +352,20 @@
                     (not (identical? :locals (:bucket %)))))
           (get analysis filename)))
 
+(defmethod find-references :protocol-impls
+  [analysis element include-declaration? _db]
+  (concat
+    (when include-declaration?
+      [element])
+    (into []
+          (comp
+            (mapcat val)
+            (filter #(identical? :var-usages (:bucket %)))
+            (filter #(safe-equal? (:method-name element) (:name %)))
+            (filter #(safe-equal? (:protocol-ns element) (:to %)))
+            (medley/distinct-by (juxt :filename :name :row :col)))
+          analysis)))
+
 (defmethod find-references :default
   [_analysis element _ _]
   [element])
@@ -341,6 +399,13 @@
       (find-declaration analysis element db))
     (catch Throwable e
       (log/error e "can't find declaration"))))
+
+(defn find-implementations-from-cursor [analysis filename line column db]
+  (try
+    (when-let [element (find-element-under-cursor analysis filename line column)]
+      (find-implementations analysis element db))
+    (catch Throwable e
+      (log/error e "can't find implementation"))))
 
 (defn find-references-from-cursor [analysis filename line column include-declaration? db]
   (try

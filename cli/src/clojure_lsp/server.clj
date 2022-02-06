@@ -55,6 +55,7 @@
      ExecuteCommandParams
      FileSystemWatcher
      HoverParams
+     ImplementationParams
      InitializeParams
      InitializeResult
      InitializedParams
@@ -157,7 +158,7 @@
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
-           (async-request params handlers/references ::coercer/references)))
+           (async-request params handlers/references ::coercer/locations)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
@@ -228,6 +229,10 @@
   (^CompletableFuture declaration [_ ^DeclarationParams params]
     (start :declaration
            (async-request params handlers/declaration ::coercer/location)))
+
+  (^CompletableFuture implementation [_ ^ImplementationParams params]
+    (start :implementation
+           (async-request params handlers/implementation ::coercer/locations)))
 
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
@@ -335,6 +340,7 @@
                                         (.setDocumentHighlightProvider true)
                                         (.setHoverProvider true)
                                         (.setDeclarationProvider true)
+                                        (.setImplementationProvider true)
                                         (.setSignatureHelpProvider (SignatureHelpOptions. []))
                                         (.setCallHierarchyProvider true)
                                         (.setLinkedEditingRangeProvider true)

@@ -4,75 +4,74 @@
 
 Below are all the currently supported LSP capabilities and their implementation status:
 
-| capability                             | done | notes                                         |
-|----------------------------------------|------|-----------------------------------------------|
-| initialize                             | √    |                                               |
-| initialized                            | √    |                                               |
-| shutdown                               | √    |                                               |
-| exit                                   | √    |                                               |
-| $/cancelRequest                        |      |                                               |
-| $/progress                             | √    |                                               |
-| window/showDocument                    | √    |                                               |
-| window/showMessage                     | √    |                                               |
-| window/showMessageRequest              | √    |                                               |
-| window/logMessage                      |      |                                               |
-| window/workDoneProgress/create         |      |                                               |
-| window/workDoneProgress/cancel         |      |                                               |
-| telemetry/event                        |      |                                               |
-| client/registerCapability              | √    |                                               |
-| client/unregisterCapability            |      |                                               |
-| workspace/workspaceFolders             |      |                                               |
-| workspace/didChangeWorkspaceFolders    |      |                                               |
-| workspace/didChangeConfiguration       | √    | Currently does nothing but log                |
-| workspace/configuration                |      |                                               |
-| workspace/didChangeWatchedFiles        | √    |                                               |
-| workspace/symbol                       | √    |                                               |
-| workspace/executeCommand               | √    | See [Extra capabilities](#extra-capabilities) |
-| workspace/applyEdit                    | √    | TextDocumentEdit and RenameFile only          |
-| textDocument/didOpen                   | √    |                                               |
-| textDocument/didChange                 | √    |                                               |
-| textDocument/willSave                  |      |                                               |
-| textDocument/willSaveWaitUntil         |      |                                               |
-| textDocument/didSave                   | √    | Do nothing currently                          |
-| textDocument/didClose                  | √    |                                               |
-| textDocument/publishDiagnostics        | √    |                                               |
-| textDocument/completion                | √    |                                               |
-| completionItem/resolve                 | √    |                                               |
-| textDocument/hover                     | √    |                                               |
-| textDocument/signatureHelp             | √    | Missing support for active parameter ATM      |
-| textDocument/declaration               | √    |                                               |
-| textDocument/definition                | √    | TODO: Find java classes definition            |
-| textDocument/typeDefinition            |      |                                               |
-| textDocument/implementation            |      |                                               |
-| textDocument/references                | √    |                                               |
-| textDocument/documentHighlight         | √    |                                               |
-| textDocument/documentSymbol            | √    |                                               |
-| textDocument/codeAction                | √    |                                               |
-| codeAction/resolve                     | √    |                                               |
-| textDocument/codeLens                  | √    |                                               |
-| codeLens/resolve                       | √    |                                               |
-| textDocument/documentLink              |      |                                               |
-| documentLink/resolve                   |      |                                               |
-| textDocument/documentColor             |      |                                               |
-| textDocument/colorPresentation         |      |                                               |
-| textDocument/formatting                | √    |                                               |
-| textDocument/rangeFormatting           | √    |                                               |
-| textDocument/onTypeFormatting          |      |                                               |
-| textDocument/rename                    | √    |                                               |
-| textDocument/prepareRename             | √    |                                               |
-| textDocument/foldingRange              |      |                                               |
-| textDocument/selectionRange            |      |                                               |
-| textDocument/semanticTokens/full       | √    |                                               |
-| textDocument/semanticTokens/full/delta |      |                                               |
-| textDocument/semanticTokens/range      | √    |                                               |
-| workspace/semanticTokens/refresh       |      |                                               |
-| workspace/codeLens/refresh             | √    |                                               |
-| textDocument/linkedEditingRange        | √    |                                               |
-| textDocument/prepareCallHierarchy      | √    |                                               |
-| callHierarchy/incomingCalls            | √    |                                               |
-| callHierarchy/outgoingCalls            | √    |                                               |
-| textDocument/moniker                   |      |                                               |
-
+| capability                             | done | notes                                                                         |
+|----------------------------------------|------|-------------------------------------------------------------------------------|
+| initialize                             | √    |                                                                               |
+| initialized                            | √    |                                                                               |
+| shutdown                               | √    |                                                                               |
+| exit                                   | √    |                                                                               |
+| $/cancelRequest                        |      |                                                                               |
+| $/progress                             | √    |                                                                               |
+| window/showDocument                    | √    |                                                                               |
+| window/showMessage                     | √    |                                                                               |
+| window/showMessageRequest              | √    |                                                                               |
+| window/logMessage                      |      |                                                                               |
+| window/workDoneProgress/create         |      |                                                                               |
+| window/workDoneProgress/cancel         |      |                                                                               |
+| telemetry/event                        |      |                                                                               |
+| client/registerCapability              | √    |                                                                               |
+| client/unregisterCapability            |      |                                                                               |
+| workspace/workspaceFolders             |      |                                                                               |
+| workspace/didChangeWorkspaceFolders    |      |                                                                               |
+| workspace/didChangeConfiguration       | √    | Currently does nothing but log                                                |
+| workspace/configuration                |      |                                                                               |
+| workspace/didChangeWatchedFiles        | √    |                                                                               |
+| workspace/symbol                       | √    |                                                                               |
+| workspace/executeCommand               | √    | See [Extra capabilities](#extra-capabilities)                                 |
+| workspace/applyEdit                    | √    | TextDocumentEdit and RenameFile only                                          |
+| textDocument/didOpen                   | √    |                                                                               |
+| textDocument/didChange                 | √    |                                                                               |
+| textDocument/willSave                  |      |                                                                               |
+| textDocument/willSaveWaitUntil         |      |                                                                               |
+| textDocument/didSave                   | √    | Do nothing currently                                                          |
+| textDocument/didClose                  | √    |                                                                               |
+| textDocument/publishDiagnostics        | √    |                                                                               |
+| textDocument/completion                | √    |                                                                               |
+| completionItem/resolve                 | √    |                                                                               |
+| textDocument/hover                     | √    |                                                                               |
+| textDocument/signatureHelp             | √    | Missing support for active parameter ATM                                      |
+| textDocument/declaration               | √    | Show where the symbol was declared on the file, like alias/refer  definitions |
+| textDocument/definition                | √    | TODO: Find java classes definition                                            |
+| textDocument/typeDefinition            |      |                                                                               |
+| textDocument/implementation            | √    | Implementation of defprotocols showing deftypes and defrecords                |
+| textDocument/references                | √    |                                                                               |
+| textDocument/documentHighlight         | √    |                                                                               |
+| textDocument/documentSymbol            | √    |                                                                               |
+| textDocument/codeAction                | √    |                                                                               |
+| codeAction/resolve                     | √    |                                                                               |
+| textDocument/codeLens                  | √    |                                                                               |
+| codeLens/resolve                       | √    |                                                                               |
+| textDocument/documentLink              |      |                                                                               |
+| documentLink/resolve                   |      |                                                                               |
+| textDocument/documentColor             |      |                                                                               |
+| textDocument/colorPresentation         |      |                                                                               |
+| textDocument/formatting                | √    |                                                                               |
+| textDocument/rangeFormatting           | √    |                                                                               |
+| textDocument/onTypeFormatting          |      |                                                                               |
+| textDocument/rename                    | √    |                                                                               |
+| textDocument/prepareRename             | √    |                                                                               |
+| textDocument/foldingRange              |      |                                                                               |
+| textDocument/selectionRange            |      |                                                                               |
+| textDocument/semanticTokens/full       | √    |                                                                               |
+| textDocument/semanticTokens/full/delta |      |                                                                               |
+| textDocument/semanticTokens/range      | √    |                                                                               |
+| workspace/semanticTokens/refresh       |      |                                                                               |
+| workspace/codeLens/refresh             | √    |                                                                               |
+| textDocument/linkedEditingRange        | √    |                                                                               |
+| textDocument/prepareCallHierarchy      | √    |                                                                               |
+| callHierarchy/incomingCalls            | √    |                                                                               |
+| callHierarchy/outgoingCalls            | √    |                                                                               |
+| textDocument/moniker                   |      |                                                                               |
 
 ---
 ## Extra capabilities

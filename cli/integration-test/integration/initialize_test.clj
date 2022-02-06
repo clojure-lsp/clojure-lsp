@@ -76,6 +76,7 @@
         :documentSymbolProvider true
         :definitionProvider true
         :declarationProvider true
+        :implementationProvider true
         :documentHighlightProvider true
         :experimental {:testTree true
                        :cursorInfo true

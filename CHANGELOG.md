@@ -7,6 +7,7 @@
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
+  - Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method `textDocument/implementation`. #656
 
 ## 2022.02.01-20.02.32
 

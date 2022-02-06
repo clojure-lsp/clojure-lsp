@@ -5,10 +5,11 @@
 (def namespaces
   '[
     integration.initialize-test
-    integration.code-action-test
     integration.definition-test
-    integration.completion-test
     integration.declaration-test
+    integration.implementation-test
+    integration.code-action-test
+    integration.completion-test
     integration.diagnostics-test
     integration.settings-change-test
     integration.formatting-test
@@ -22,7 +23,8 @@
     integration.api.clean-ns-test
     integration.api.diagnostics-test
     integration.api.format-test
-    integration.api.rename-test])
+    integration.api.rename-test
+    ])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

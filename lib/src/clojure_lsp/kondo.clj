@@ -146,7 +146,8 @@
        :lint [(string/join (System/getProperty "path.separator") paths)]
        :config {:output {:analysis {:arglists true
                                     :locals false
-                                    :keywords true}
+                                    :keywords true
+                                    :protocol-impls true}
                          :canonical-paths true}}}
       (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
                                            (partial project-custom-lint! paths db)))
@@ -166,6 +167,7 @@
        :config {:output {:analysis {:arglists true
                                     :locals true
                                     :keywords true
+                                    :protocol-impls true
                                     :context [:clojure.test
                                               :re-frame.core]}
                          :canonical-paths true}}}

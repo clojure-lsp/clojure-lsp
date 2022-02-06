@@ -217,6 +217,39 @@
            :from-var bar}]
         (q/find-references-from-cursor ana (h/file-path "/b.clj") bar-usa-b-r bar-usa-b-c false db/db)))))
 
+(deftest find-references-from-protocol-impl
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(defprotocol Foo"
+                                "  (something []))"))
+  (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                "(defrecord FooImpl1 []"
+                                " f/Foo"
+                                " (something [_] 123))"
+                                "(defrecord FooImpl2 []"
+                                " f/Foo"
+                                " (^void something [_] 456))"
+                                "(f/something (->FooImpl1))"
+                                "(f/something (->FooImpl2))") (h/file-uri "file:///b.clj"))
+  (testing "from defrecord method name"
+    (h/assert-submaps
+      '[{:row 8 :col 1 :end-row 8 :end-col 27
+         :name-row 8 :name-end-col 13 :name-col 2 :name-end-row 8
+         :name something
+         :filename "/b.clj"
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}
+        {:name-col 2 :name-row 9 :name-end-row 9 :name-end-col 13
+         :name something
+         :filename "/b.clj"
+         :alias f
+         :from b
+         :row 9 :col 1 :end-row 9 :end-col 27
+         :bucket :var-usages
+         :to a}]
+      (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 7 9 false db/db))))
+
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"
@@ -351,6 +384,62 @@
          :namespace-usages
          :name 'foo.baz}
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c db/db)))))
+
+(deftest find-implementations-from-cursor
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(defprotocol Foo"
+                                "  (something []))"))
+  (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                "(defrecord FooImpl1 []"
+                                " f/Foo"
+                                " (something [_] 123))"
+                                "(defrecord FooImpl2 []"
+                                " f/Foo"
+                                " (^void something [_] 456))"
+                                "(f/something (->FooImpl1))"
+                                "(f/something (->FooImpl2))") (h/file-uri "file:///b.clj"))
+  (testing "from protocol definitions"
+    (h/assert-submaps
+      [{:impl-ns 'b
+        :protocol-ns 'a
+        :method-name 'something
+        :name-row 4 :name-col 3 :name-end-row 4 :name-end-col 12
+        :row 4 :col 2 :end-row 4 :end-col 21
+        :defined-by 'clojure.core/defrecord
+        :protocol-name 'Foo
+        :filename "/b.clj"
+        :bucket :protocol-impls}
+       {:impl-ns 'b
+        :name-row 7 :name-col 9 :name-end-row 7 :name-end-col 18
+        :row 7 :col 2 :end-row 7 :end-col 27
+        :protocol-ns 'a
+        :method-name 'something
+        :defined-by 'clojure.core/defrecord
+        :protocol-name 'Foo
+        :filename "/b.clj"
+        :bucket :protocol-impls}]
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 3 4 db/db)))
+  (testing "from implementation usage"
+    (h/assert-submaps
+      [{:impl-ns 'b
+        :protocol-ns 'a
+        :method-name 'something
+        :name-row 4 :name-col 3 :name-end-row 4 :name-end-col 12
+        :row 4 :col 2 :end-row 4 :end-col 21
+        :defined-by 'clojure.core/defrecord
+        :protocol-name 'Foo
+        :filename "/b.clj"
+        :bucket :protocol-impls}
+       {:impl-ns 'b
+        :name-row 7 :name-col 9 :name-end-row 7 :name-end-col 18
+        :row 7 :col 2 :end-row 7 :end-col 27
+        :protocol-ns 'a
+        :method-name 'something
+        :defined-by 'clojure.core/defrecord
+        :protocol-name 'Foo
+        :filename "/b.clj"
+        :bucket :protocol-impls}]
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 9 2 db/db))))
 
 (deftest find-unused-aliases
   (testing "clj"

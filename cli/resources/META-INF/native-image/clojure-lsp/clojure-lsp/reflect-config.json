@@ -374,12 +374,6 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
-  "name":"org.eclipse.lsp4j.DeclarationCapabilities",
-  "allDeclaredFields":true,
-  "allPublicMethods":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
   "name":"org.eclipse.lsp4j.DefinitionParams",
   "allDeclaredFields":true,
   "allPublicMethods":true,
@@ -635,6 +629,12 @@
 },
 {
   "name":"org.eclipse.lsp4j.HoverParams",
+  "allDeclaredFields":true,
+  "allPublicMethods":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.eclipse.lsp4j.ImplementationParams",
   "allDeclaredFields":true,
   "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

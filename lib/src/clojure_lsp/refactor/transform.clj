@@ -13,8 +13,7 @@
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (set! *warn-on-reflection* true)
 
@@ -157,9 +156,10 @@
   (thread-all zloc '->> db))
 
 (def thread-first-symbols #{'-> 'some->})
+(def thread-last-symbols #{'->> 'some->>})
 
 (def thread-symbols (set/union thread-first-symbols
-                               #{'->> 'some->>}))
+                               thread-last-symbols))
 
 (defn can-unwind-thread? [zloc]
   (let [thread-loc (apply edit/find-ops-up zloc (map str thread-symbols))
@@ -473,17 +473,13 @@
       {:new-ns (-> zloc z/sexpr namespace)
        :name (-> zloc z/sexpr name)})))
 
-(def ^:private thread-first-macro-symbols '#{-> some->})
-(def ^:private thread-last-macro-symbols '#{->> some->>})
-(def ^:private thread-macro-symbols '#{-> ->> some-> some->>})
-
-(defn ^:private create-function-arg [node index]
+(defn ^:private create-function-param [node index]
   (if (and node
            (= :token (n/tag node))
            (symbol? (n/sexpr node)))
     (let [sexpr (n/sexpr node)]
-      (if (= '% sexpr)
-        'element
+      (if-let [[_ num]  (re-matches #"^%([\d]*)$" (str sexpr))]
+        (symbol (str "element" num))
         sexpr))
     (symbol (str "arg" (inc index)))))
 
@@ -533,9 +529,9 @@
           parent-sexpr (if calling?
                          (z/sexpr (z/down (z/up (z/up local-zloc))))
                          (z/sexpr (z/down (z/up local-zloc))))
-          threadding? (thread-macro-symbols parent-sexpr)
-          inside-thread-first? (and threadding? (thread-first-macro-symbols parent-sexpr))
-          inside-thread-last? (and threadding? (thread-last-macro-symbols parent-sexpr))
+          inside-thread-first? (thread-first-symbols parent-sexpr)
+          inside-thread-last? (thread-last-symbols parent-sexpr)
+          threadding? (or inside-thread-first? inside-thread-last?)
           fn-call? (and (not calling?) (not threadding?))
           fn-call-with-partial? (and fn-call?
                                      (= 'partial (z/sexpr (z/left local-zloc))))
@@ -554,27 +550,28 @@
           args (->> (z/up local-zloc)
                     z/node
                     n/children
-                    (drop 1)
                     (remove n/whitespace?)
-                    (map-indexed (fn [index node]
-                                   (create-function-arg node index)))
+                    (drop 1)
                     vec)
           args (cond
-                 fn-call-with-partial? (vec (concat [(create-function-arg nil 0)]
-                                                    (rest args)))
-                 fn-call? [(create-function-arg nil 0)]
+                 fn-call-with-partial? (vec (concat [nil] (rest args)))
+                 fn-call? [nil]
                  (and threadding?
-                      (not calling?)) [(create-function-arg (z/node (z/left local-zloc)) 0)]
+                      (not calling?)) [(z/node (z/left local-zloc))]
                  inside-thread-first? (->> args
-                                           (cons (create-function-arg (z/node (z/left (z/up local-zloc))) -1))
+                                           (cons (z/node (z/left (z/up local-zloc))))
                                            vec)
                  inside-thread-last? (-> args
-                                         (conj (create-function-arg (z/node (z/left (z/up local-zloc))) (count args)))
+                                         (conj (z/node (z/left (z/up local-zloc))))
                                          vec)
                  :else args)
+          params (->> args
+                      (map-indexed (fn [index arg]
+                                     (create-function-param arg index)))
+                      vec)
           defn-edit (-> (z/of-string new-fn-str)
                         (z/append-child* (n/spaces 1))
-                        (z/append-child args)
+                        (z/append-child params)
                         (z/append-child* (n/newlines 1))
                         (z/append-child* (n/spaces 2)))]
       (if ns-or-alias

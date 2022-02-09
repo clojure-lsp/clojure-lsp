@@ -16,6 +16,7 @@
   (h/load-code-and-locs (h/code "(ns some-ns (:require [re-frame.core :as r]))"
                                 "(r/reg-event-fx :some/thing (fn []))"
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
+  (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
@@ -175,7 +176,16 @@
         :col 17
         :end-row 3
         :end-col 28}]
-      @findings)))
+      @findings))
+  (testing "var marked ^:export is excluded"
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      "/d.cljs"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}}
+      db/db)
+    (h/assert-submaps [] @findings)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")

@@ -72,7 +72,8 @@
         (contains? (set excluded-ns-or-var) (:ns definition))
         (-> excluded-full-qualified-vars
             set
-            (contains? (symbol (-> definition :ns str) (-> definition :name str)))))))
+            (contains? (symbol (-> definition :ns str) (-> definition :name str))))
+        (:export definition))))
 
 (defn ^:private kondo-finding->diagnostic
   [{:keys [type message level row col end-row] :as finding}]

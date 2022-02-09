@@ -10,6 +10,9 @@
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
   - Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.
 
+- API/CLI
+  - Small performance improvment to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
+
 ## 2022.02.01-20.02.32
 
 - General

@@ -219,14 +219,15 @@
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
-        ns+uris (map ns->ns+uri namespaces)
+        ns+uris (pmap ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
-                   (map open-file!)
-                   (mapcat (comp :document-changes
-                                 #(handlers/execute-command {:command "clean-ns"
-                                                             :arguments [(:uri %) 0 0]})))
-                   (map #(document-change->edit-summary % db/db))
+                   (pmap (comp :document-changes
+                               #(handlers/execute-command {:command "clean-ns"
+                                                           :arguments [(:uri %) 0 0]})
+                               open-file!))
+                   (apply concat)
+                   (pmap #(document-change->edit-summary % db/db))
                    (remove nil?))]
     (if (seq edits)
       (if dry?
@@ -268,11 +269,11 @@
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
         diags-by-uri (->> namespaces
-                          (map ns->ns+uri)
+                          (pmap ns->ns+uri)
                           (assert-ns-exists-or-drop! options)
-                          (map (fn [{:keys [uri]}]
-                                 {:uri uri
-                                  :diagnostics (f.diagnostic/find-diagnostics uri db/db)}))
+                          (pmap (fn [{:keys [uri]}]
+                                  {:uri uri
+                                   :diagnostics (f.diagnostic/find-diagnostics uri db/db)}))
                           (remove (comp empty? :diagnostics))
                           (reduce (fn [a {:keys [uri diagnostics]}]
                                     (assoc a uri diagnostics))
@@ -294,13 +295,14 @@
                        (->> (q/filter-project-analysis (:analysis @db/db) db/db)
                             q/find-all-ns-definition-names
                             (remove (partial exclude-ns? options))))
-        ns+uris (map ns->ns+uri namespaces)
+        ns+uris (pmap ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
-                   (map open-file!)
-                   (mapcat (fn [{:keys [uri]}]
-                             (some->> (handlers/formatting {:textDocument uri})
-                                      (map #(edit->summary db/db uri %)))))
+                   (pmap (comp (fn [{:keys [uri]}]
+                                 (some->> (handlers/formatting {:textDocument uri})
+                                          (map #(edit->summary db/db uri %))))
+                               open-file!))
+                   (apply concat)
                    (remove nil?))]
     (if (seq edits)
       (if dry?
@@ -331,7 +333,7 @@
         (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db/db)]
           (if document-changes
             (if-let [edits (->> document-changes
-                                (map #(document-change->edit-summary % db/db))
+                                (pmap #(document-change->edit-summary % db/db))
                                 (remove nil?)
                                 seq)]
               (if dry?

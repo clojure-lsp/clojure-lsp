@@ -4,6 +4,7 @@
 
 - General
   - Use `:source-aliases` setting during default deps.edn project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
+  - Exclude from unused-public-var linter vars with metadata `^:export`. #753
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.

@@ -81,13 +81,19 @@
   [zloc & op-strs]
   (loop [op-loc (find-op zloc)]
     (cond
-      (nil? op-loc) nil
-      (contains? (set op-strs)
-                 (let [sexpr (z/sexpr op-loc)]
-                   (if (qualified-ident? sexpr)
-                     (name sexpr)
-                     (str sexpr)))) op-loc
-      :else (recur (z/leftmost (z/up op-loc))))))
+      (nil? op-loc)
+      nil
+
+      (and (= :token (z/tag op-loc))
+           (contains? (set op-strs)
+                      (let [sexpr (-> op-loc z/string symbol)]
+                        (if (qualified-ident? sexpr)
+                          (name sexpr)
+                          (str sexpr)))))
+      op-loc
+
+      :else
+      (recur (z/leftmost (z/up op-loc))))))
 
 (defn var-name-loc-from-op [loc]
   (cond

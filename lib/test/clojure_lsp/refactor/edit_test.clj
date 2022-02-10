@@ -62,7 +62,14 @@
       (is (= nil (op-from-val (comp z/right (val-finder 'foo)) 'b)))
       (is (= 'b (op-from-val (val-finder 'd) 'b)))
       (is (= 'b (op-from-val (val-finder 'b) 'b)))
-      (is (= 'b (op-from-val (comp z/up (val-finder 'b)) 'b))))))
+      (is (= 'b (op-from-val (comp z/up (val-finder 'b)) 'b)))))
+  (testing "when sexpr is invalid"
+    (is (= '->
+           (-> "(-> {:a (some) (find-ops-up)})"
+               z/of-string
+               (z/find-next-value z/next 'some)
+               (edit/find-ops-up "->")
+               z/sexpr)))))
 
 (deftest find-namespace-name
   (testing "without ns on file"

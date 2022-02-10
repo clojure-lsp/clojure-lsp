@@ -118,9 +118,16 @@
   [root-node initial-sep-spaces db nodes]
   (let [sorted-refers (->> nodes
                            (sort-by-if-enabled (comp string/lower-case n/sexpr) :refer db))
+        as-alias-before-refer-node (-> root-node z/down (z/find-value z/right ':refer) (z/find-value z/left ':as))
+        extra-alias-before-refer-spaces (if as-alias-before-refer-node
+                                          (+ (-> as-alias-before-refer-node z/next z/sexpr str count)
+                                             2 ;; :as
+                                             3 ;; spaces between
+                                             )
+                                          0)
         init-refer-sep (+ initial-sep-spaces
                           (-> root-node z/down z/sexpr str count)
-                          12)]
+                          (+ 12 extra-alias-before-refer-spaces))]
     (->> sorted-refers
          (map-indexed (fn [idx refer-node]
                         (let [end-col (->> sorted-refers

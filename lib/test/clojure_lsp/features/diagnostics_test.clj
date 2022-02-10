@@ -16,6 +16,7 @@
   (h/load-code-and-locs (h/code "(ns some-ns (:require [re-frame.core :as r]))"
                                 "(r/reg-event-fx :some/thing (fn []))"
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
+  (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/unused-public-var-lint-for-single-file!
@@ -175,7 +176,16 @@
         :col 17
         :end-row 3
         :end-col 28}]
-      @findings)))
+      @findings))
+  (testing "var marked ^:export is excluded"
+    (reset! findings [])
+    (f.diagnostic/unused-public-var-lint-for-single-file!
+      "/d.cljs"
+      (:analysis @db/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}}
+      db/db)
+    (h/assert-submaps [] @findings)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")
@@ -183,14 +193,14 @@
   (testing "when linter level is :off"
     (swap! db/db shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
-           (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
   (testing "when linter level is not :off but has matching :ns-exclude-regex"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/a.clj"))
     (swap! db/db merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths ["/project/src"]
                                    :linters {:clj-kondo {:ns-exclude-regex "a.*"}}}})
     (is (= []
-           (#'f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/a.clj") db/db))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/a.clj") db/db))))
   (testing "when linter level is not :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :error}}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
@@ -199,7 +209,7 @@
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
   (testing "when linter is not specified"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
@@ -208,7 +218,7 @@
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
   (testing "when inside expression?"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
@@ -217,7 +227,13 @@
                         :tags []
                         :severity 1
                         :source "clj-kondo"}]
-                      (#'f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") db/db))))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") db/db)))
+  (testing "when file is external"
+    (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some/place.jar:some/file.clj"))
+    (swap! db/db merge {:project-root-uri (h/file-uri "file:///project")
+                        :settings {:source-paths ["/project/src"]}})
+    (is (= []
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///some/place.jar:some/file.clj") db/db)))))
 
 (deftest test-find-diagnostics
   (testing "wrong arity"

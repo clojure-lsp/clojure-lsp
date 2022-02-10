@@ -458,7 +458,31 @@
                              "  [some :refer [bar baz bla"
                              "                blowning Dee"
                              "                foo]]))"
-                             "   foo bar baz Dee bla blowning")))
+                             "   foo bar baz Dee bla blowning"))
+      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 40}}}}}
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "   [some :refer [Dee foo bar baz bla blowning] :as s]))"
+                             "   foo bar baz Dee bla blowning"
+                             "   s/foo")
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  [some :refer [bar baz bla blowning"
+                             "                Dee foo] :as s]))"
+                             "   foo bar baz Dee bla blowning"
+                             "   s/foo"))
+      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 40}}}}}
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "   [some :as s :refer [Dee foo bar baz bla blowning]]))"
+                             "   foo bar baz Dee bla blowning"
+                             "   s/foo")
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  [some :as s :refer [bar baz bla"
+                             "                      blowning Dee foo]]))"
+                             "   foo bar baz Dee bla blowning"
+                             "   s/foo")))
     (testing "unsorted used refer with infinite max-line-length"
       (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 0}}}}}
                      (h/code "(ns foo.bar"

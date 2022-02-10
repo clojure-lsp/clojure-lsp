@@ -16,6 +16,15 @@
     (is (= {:a {:b [1 2 3 4] :c 3}} (shared/deep-merge {:a {:b #{1 2}}} {:a {:b [3 4] :c 3}})))
     (is (= {:a {:b [1 2 4 3] :c 3}} (shared/deep-merge {:a {:b [1 2]}} {:a {:b #{3 4} :c 3}})))))
 
+(deftest external-filename?
+  (is (not (shared/external-filename? "/some/project/src/a.clj" #{"/some/project/src"})))
+  (is (not (shared/external-filename? "/some/project/src/a.clj" #{})))
+  (is (shared/external-filename? "/some/project/src/a.clj" #{"/some/project/src/b.clj"}))
+  (is (shared/external-filename? "/some/place/file.jar:some/path/to/file.clj" #{"/some/project/src/a.clj"}))
+  (is (shared/external-filename? "/some/place/file.jar:some/path/to/file.clj" #{}))
+  (is (shared/external-filename? "/some/place/file.jar:some/path/to/file.clj" #{"/some/place/file.jar:some/path"}))
+  (is (shared/external-filename? "/some/user/.emacs.d/.local/etc/workspace/.cache/something.cljc" #{"/some/place/file.clj"})))
+
 (deftest uri->filename
   (testing "should decode special characters in file URI"
     (is (= (h/file-path "/path+/encoded characters!")

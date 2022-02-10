@@ -8,6 +8,7 @@
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
+  - Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.
 
 ## 2022.02.01-20.02.32
 

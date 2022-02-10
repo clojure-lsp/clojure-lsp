@@ -125,10 +125,12 @@
     2 :yellow
     3 :cyan))
 
-(defn find-diagnostics [uri db]
-  (let [filename (shared/uri->filename uri)]
+(defn find-diagnostics [^String uri db]
+  (let [filename (shared/uri->filename uri)
+        source-paths (settings/get db [:source-paths])]
     (cond-> []
-      (not (= :off (settings/get db [:linters :clj-kondo :level])))
+      (and (not= :off (settings/get db [:linters :clj-kondo :level]))
+           (not (shared/external-filename? filename source-paths)))
       (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 
 (defn sync-lint-file! [uri db]

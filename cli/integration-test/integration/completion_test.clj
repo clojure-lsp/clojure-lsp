@@ -40,4 +40,8 @@
          :insertText "(defn ${1:name} [$2]\n  ${0:body})"
          :insertTextFormat 2
          :data {:filename "/clojure.core.clj" :name "defn" :ns "clojure.core", :snippet-kind 6}}]
-       (lsp/request! (fixture/completion-request "completion/a.clj" 2 4))))))
+       (lsp/request! (fixture/completion-request "completion/a.clj" 2 4)))))
+  (testing "completions in whitespace"
+    (h/assert-submaps
+      []
+      (lsp/request! (fixture/completion-request "completion/a.clj" 4 3)))))

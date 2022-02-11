@@ -13,8 +13,7 @@
    [clojure.string :as string]
    [clojure.walk :as walk]
    [medley.core :as medley]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -350,85 +349,95 @@
        not-empty))
 
 (defn completion [uri row col db]
-  (let [filename (shared/uri->filename uri)
-        {:keys [text]} (get-in @db [:documents uri])
-        settings (settings/all db)
-        analysis (:analysis @db)
-        current-ns-elements (get analysis filename)
-        support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
-        other-ns-elements (->> (q/filter-project-analysis (dissoc analysis filename) db)
-                               (mapcat val))
-        external-ns-elements (->> (q/filter-external-analysis (dissoc analysis filename) db)
-                                  (mapcat val))
+  (let [{:keys [text]} (get-in @db [:documents uri])
         cursor-loc (when-let [loc (parser/safe-loc-at-pos text row col)]
                      (when (or (not (-> loc z/node meta))
                                (= row (-> loc z/node meta :row)))
-                       loc))
-        cursor-element (loop [try-column col]
-                         (if-let [usage (q/find-element-under-cursor analysis filename row col)]
-                           usage
-                           (when (pos? try-column)
-                             (recur (dec try-column)))))
-        cursor-value (if (= :vector (z/tag cursor-loc))
-                       ""
-                       (if (z/sexpr-able? cursor-loc)
-                         (z/sexpr cursor-loc)
-                         ""))
-        keyword-value? (keyword? cursor-value)
-        aliased-keyword-value? (when (and keyword-value?
-                                          (qualified-keyword? cursor-value))
-                                 (or (string/starts-with? (namespace cursor-value) ":")
-                                     (and (string/starts-with? (namespace cursor-value) "??_")
-                                          (string/ends-with? (namespace cursor-value) "_??"))))
-        matches-fn (partial matches-cursor? cursor-value)
-        inside-require? (edit/inside-require? cursor-loc)
-        inside-refer? (edit/inside-refer? cursor-loc)
-        simple-cursor? (or (simple-ident? cursor-value)
-                           (string/blank? (str cursor-value)))
-        cursor-value-or-ns (if (qualified-ident? cursor-value)
-                             (namespace cursor-value)
-                             (if (or (symbol? cursor-value)
-                                     keyword-value?)
-                               (name cursor-value)
-                               (str cursor-value)))
-        cursor-full-ns? (when cursor-value-or-ns
-                          (contains? (q/find-all-ns-definition-names analysis) (symbol cursor-value-or-ns)))
-        items (cond
-                inside-refer?
-                (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
+                       loc))]
+    ;; When not on a symbol or keyword, we want to return all valid completions
+    ;; (almost 1000 in an empty file), even though it's expensive to compute.
+    ;; The one exception is in comments. Some editors (nvim + coc.nvim) request
+    ;; completions in comments. Since rewrite-clj parses the entire comment
+    ;; section, not individual words within the comment, we don't have an
+    ;; individual symbol, and so would return all valid completions. This
+    ;; changes an occasional expensive computation into a frequent expensive
+    ;; computation. To avoid this expense, we abort on comments.
+    (if (= :comment (some-> cursor-loc z/tag))
+      []
+      (let [filename (shared/uri->filename uri)
+            settings (settings/all db)
+            analysis (:analysis @db)
+            current-ns-elements (get analysis filename)
+            support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
+            other-ns-elements (->> (q/filter-project-analysis (dissoc analysis filename) db)
+                                   (mapcat val))
+            external-ns-elements (->> (q/filter-external-analysis (dissoc analysis filename) db)
+                                      (mapcat val))
+            cursor-element (loop [try-column col]
+                             (if-let [usage (q/find-element-under-cursor analysis filename row col)]
+                               usage
+                               (when (pos? try-column)
+                                 (recur (dec try-column)))))
+            cursor-value (if (= :vector (z/tag cursor-loc))
+                           ""
+                           (if (z/sexpr-able? cursor-loc)
+                             (z/sexpr cursor-loc)
+                             ""))
+            keyword-value? (keyword? cursor-value)
+            aliased-keyword-value? (when (and keyword-value?
+                                              (qualified-keyword? cursor-value))
+                                     (or (string/starts-with? (namespace cursor-value) ":")
+                                         (and (string/starts-with? (namespace cursor-value) "??_")
+                                              (string/ends-with? (namespace cursor-value) "_??"))))
+            matches-fn (partial matches-cursor? cursor-value)
+            inside-require? (edit/inside-require? cursor-loc)
+            inside-refer? (edit/inside-refer? cursor-loc)
+            simple-cursor? (or (simple-ident? cursor-value)
+                               (string/blank? (str cursor-value)))
+            cursor-value-or-ns (if (qualified-ident? cursor-value)
+                                 (namespace cursor-value)
+                                 (if (or (symbol? cursor-value)
+                                         keyword-value?)
+                                   (name cursor-value)
+                                   (str cursor-value)))
+            cursor-full-ns? (when cursor-value-or-ns
+                              (contains? (q/find-all-ns-definition-names analysis) (symbol cursor-value-or-ns)))
+            items (cond
+                    inside-refer?
+                    (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
 
-                inside-require?
-                (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+                    inside-require?
+                    (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
 
-                aliased-keyword-value?
-                (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename (concat other-ns-elements external-ns-elements))
+                    aliased-keyword-value?
+                    (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename (concat other-ns-elements external-ns-elements))
 
-                :else
-                (cond-> []
-                  cursor-full-ns?
-                  (into (with-elements-from-full-ns cursor-value-or-ns analysis))
+                    :else
+                    (cond-> []
+                      cursor-full-ns?
+                      (into (with-elements-from-full-ns cursor-value-or-ns analysis))
 
-                  (and cursor-value-or-ns
-                       (not keyword-value?))
-                  (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
+                      (and cursor-value-or-ns
+                           (not keyword-value?))
+                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
 
-                  (or simple-cursor?
-                      keyword-value?)
-                  (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements row col))
-                      (into (with-clojure-core-items matches-fn analysis)))
+                      (or simple-cursor?
+                          keyword-value?)
+                      (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements row col))
+                          (into (with-clojure-core-items matches-fn analysis)))
 
-                  (and simple-cursor?
-                       (supports-cljs? uri))
-                  (into (with-clojurescript-items matches-fn analysis))
+                      (and simple-cursor?
+                           (supports-cljs? uri))
+                      (into (with-clojurescript-items matches-fn analysis))
 
-                  (and simple-cursor?
-                       (supports-clj-core? uri))
-                  (into (with-java-items matches-fn))
+                      (and simple-cursor?
+                           (supports-clj-core? uri))
+                      (into (with-java-items matches-fn))
 
-                  (and support-snippets?
-                       simple-cursor?)
-                  (merging-snippets cursor-loc matches-fn text row col settings)))]
-    (sorting-and-distincting-items items)))
+                      (and support-snippets?
+                           simple-cursor?)
+                      (merging-snippets cursor-loc matches-fn text row col settings)))]
+        (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns
   [{{:keys [name ns filename]} :data :as item} db]

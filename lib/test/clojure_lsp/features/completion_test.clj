@@ -98,8 +98,8 @@
       (f.completion/completion (h/file-uri "file:///g.clj") 2 18 db/db)))
   (testing "complete without prefix return all available completions"
     (is (< 100 (count (f.completion/completion (h/file-uri "file:///g.clj") 3 1 db/db)))))
-  (testing "complete comment"
-    (is (< 100 (count (f.completion/completion (h/file-uri "file:///h.clj") 1 10 db/db))))))
+  (testing "complete comment returns nothing"
+    (is (empty? (f.completion/completion (h/file-uri "file:///h.clj") 1 10 db/db)))))
 
 (deftest completing-full-ns
   (h/load-code-and-locs

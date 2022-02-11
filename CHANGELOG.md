@@ -12,6 +12,7 @@
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
   - Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.
   - Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method `textDocument/implementation`. #656
+  - Don't return completions when invoked from a comment, avoiding performance problems. #756
 
 - API/CLI
   - Small performance improvment to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.

@@ -26,34 +26,45 @@
            (if (= r row) (>= c col) true)
            (if (= er end-row) (< ec end-col) true))))
 
-(defn ^:private z-next-sexpr [loc]
-  (z/find-next loc z/next #(not (n/printable-only? (z/node %)))))
+(defn z-filter
+  "Return list of nodes satisfying the given predicate `p?`, moving in direction
+  `f` from initial zipper location `zloc`."
+  ([zloc f p?]
+   (->> zloc
+        (iterate f)
+        (take-while identity)
+        (take-while (complement z/end?))
+        (filter p?))))
+
+(defn find-forms
+  "Find sexpr-able nodes satisfying the given predicate depth first from initial
+  zipper location."
+  [zloc p?]
+  (z-filter zloc z/next p?))
 
 ;; From rewrite-cljs
-(defn find-forms
-  "Find last node (if more than one node) that is in range of pos and
-  satisfying the given predicate depth first from initial zipper
-  location."
-  [zloc p?]
-  (->> zloc
-       (iterate z-next-sexpr)
-       (take-while identity)
-       (take-while (complement z/end?))
-       (filter p?)))
-
 (defn find-last-by-pos
-  [zloc pos]
-  (let [forms (find-forms zloc (fn [loc]
-                                 (when (or (-> loc z/node meta)
-                                           (string/ends-with? (z/string loc) "/")
-                                           (string/ends-with? (z/string loc) ":"))
-                                   (in-range?
-                                     (-> loc z/node meta) pos))))
-        disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
-                                       (> (count forms) 1))]
-    (if disconsider-reader-macro?
-      (last (filter (complement (comp #(= "?" %) z/string)) forms))
-      (last forms))))
+  "Find last node (if more than one) that is in range of `pos`, from initial
+  zipper location `zloc`, moving in direction of `f`, which by default is depth
+  first skipping whitespace.
+
+  This is similar to z/find-last-by-pos, but allows incomplete forms, different
+  movement strategies and whitespace handling, and doesn't require
+  {:track-position? true}."
+  ([zloc pos] (find-last-by-pos zloc z/next pos))
+  ([zloc f pos]
+   (let [forms (z-filter zloc f
+                         (fn [loc]
+                           (when (or (-> loc z/node meta)
+                                     (string/ends-with? (z/string loc) "/")
+                                     (string/ends-with? (z/string loc) ":"))
+                             (in-range?
+                               (-> loc z/node meta) pos))))
+         disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
+                                        (> (count forms) 1))]
+     (if disconsider-reader-macro?
+       (last (filter (complement (comp #(= "?" %) z/string)) forms))
+       (last forms)))))
 
 (defn find-op
   [zloc]

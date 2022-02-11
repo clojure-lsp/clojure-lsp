@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
@@ -117,10 +118,12 @@
 
     [text positions]))
 
-(defn load-code-and-locs [code & [filename]]
+(def default-uri (file-uri "file:///a.clj"))
+
+(defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
-        filename (or filename (file-uri "file:///a.clj"))]
-    (handlers/did-open {:textDocument {:uri filename :text code}})
+        uri (or uri default-uri)]
+    (handlers/did-open {:textDocument {:uri uri :text code}})
     positions))
 
 (defmacro with-mock-diagnostics [& body]
@@ -138,3 +141,25 @@
 (defn ->range [[row col] [end-row end-col]]
   {:start {:line (dec row) :character (dec col)}
    :end {:line (dec end-row) :character (dec end-col)}})
+
+(defn load-code-and-zloc
+  "Load a `code` block into the kondo db at the provided `uri` and return a
+  zloc parsed from the code. Useful for refactorings that consult the kondo db."
+  ([code] (load-code-and-zloc code default-uri))
+  ([code uri]
+   (let [[[row col] :as positions] (load-code-and-locs code uri)]
+     (let [position-count (count positions)]
+       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
+     (-> @db/db
+         (get-in [:documents uri])
+         :text
+         (parser/loc-at-pos row col)))))
+
+(defn zloc-from-code
+  "Parse a zloc from a `code` block. Useful for refactorings that do not consult
+  the kondo db."
+  [code]
+  (let [[code [[row col] :as positions]] (positions-from-text code)]
+    (let [position-count (count positions)]
+      (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
+    (parser/loc-at-pos code row col)))

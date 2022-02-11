@@ -18,8 +18,8 @@ Here's demo video: https://www.youtube.com/watch?v=4UvT0yqBDw8
 
 These are the steps:
 
-1. Configure your editor to use the `clojure-lsp` executable from this project
-1. `make` - to build the clojure-lsp executable
+1. `make` - to build a `clojure-lsp` executable that includes cider-nrepl in the jar. This executable will be saved at the root of the project.
+1. Configure your editor to use this `clojure-lsp` executable
 1. Have your editor restart its clojure-lsp server
 1. Issue the clojure-lsp `serverInfo` command
 1. Find the `port` entry in the output
@@ -40,13 +40,30 @@ The details in how to perform these steps can vary a bit between the various Clo
 
 ### Visual Studio Code with Calva
 
-* This project comes with [Calva](https://calva.io) configuration to use the `clojure-lsp` executable built in step 2 above. You can skip step 1.
+* This project comes with [Calva](https://calva.io) configuration to use the `clojure-lsp` executable built in step 1 above. You can skip step 2.
 * To restart the clojure-lsp server, use the VS Code command **Developer: Reload Window**
 * The **Hack away!** step needs to start with you issuing the command **Calva: Load Current File and Dependencies**.
 
 ### Emacs with CIDER
 
-TBD. PR welcome.
+* To configure Emacs to use the nREPL-enabled executable, run `(setq lsp-clojure-custom-server-command '("~/path/to/clojure-lsp/clojure-lsp"))`, adjusting the path as necessary. If you add this to your Emacs config, you can skip this step in the future.
+* To restart the clojure-lsp server, execute the Emacs command `lsp-workspace-restart`.
+* To find the server info, execute `lsp-clojure-server-info`.
+* To connect the nREPL client, run `cider-connect-clj`, with "localhost" and the port.
+
+If you re-connect regulary, you may want to add this Emacs shortcut:
+
+```emacs-lisp
+(defun lsp-clojure-nrepl-connect ()
+  "Connect to the running nrepl debug server of clojure-lsp."
+  (interactive)
+  (let ((info (lsp-clojure-server-info-raw)))
+    (save-match-data
+      (when-let (port (and (string-match "\"port\":\\([0-9]+\\)" info)
+                           (match-string 1 info)))
+        (cider-connect-clj `(:host "localhost"
+                             :port ,port))))))
+```
 
 ### Your Favorite Editor
 

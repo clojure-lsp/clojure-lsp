@@ -8,30 +8,17 @@
 
 (h/reset-db-after-test)
 
-(def ^:private uri (h/file-uri "file:///a.cljc"))
-
-(defn zloc-at [pos]
-  (-> @db/db
-      (get-in [:documents uri])
-      :text
-      (z/of-string {:track-position? true})
-      (z/find-last-by-pos pos)))
-
-(defn load-code-and-zloc [code]
-  (let [[pos] (h/load-code-and-locs code uri)]
-    (zloc-at pos)))
-
 (defn can-move-zloc-up? [zloc]
-  (f.move-coll-entry/can-move-entry-up? zloc uri @db/db))
+  (f.move-coll-entry/can-move-entry-up? zloc h/default-uri @db/db))
 
 (defn can-move-zloc-down? [zloc]
-  (f.move-coll-entry/can-move-entry-down? zloc uri @db/db))
+  (f.move-coll-entry/can-move-entry-down? zloc h/default-uri @db/db))
 
 (defn can-move-code-up? [code]
-  (can-move-zloc-up? (load-code-and-zloc code)))
+  (can-move-zloc-up? (h/load-code-and-zloc code)))
 
 (defn can-move-code-down? [code]
-  (can-move-zloc-down? (load-code-and-zloc code)))
+  (can-move-zloc-down? (h/load-code-and-zloc code)))
 
 (deftest can-move-entry-up?
   (testing "common cases"
@@ -107,21 +94,21 @@
     (is (not (can-move-code-down? "(let [a 1 c |2])")))))
 
 (defn move-zloc-up [zloc]
-  (f.move-coll-entry/move-up zloc uri @db/db))
+  (f.move-coll-entry/move-up zloc h/default-uri @db/db))
 
 (defn move-zloc-down [zloc]
-  (f.move-coll-entry/move-down zloc uri @db/db))
+  (f.move-coll-entry/move-down zloc h/default-uri @db/db))
 
 (defn move-code-up [code]
-  (move-zloc-up (load-code-and-zloc code)))
+  (move-zloc-up (h/load-code-and-zloc code)))
 
 (defn move-code-down [code]
-  (move-zloc-down (load-code-and-zloc code)))
+  (move-zloc-down (h/load-code-and-zloc code)))
 
 (defn- as-string [change]
   (some-> change
           :changes-by-uri
-          (get uri)
+          (get h/default-uri)
           first
           :loc
           z/root-string))
@@ -256,14 +243,14 @@
                             " :c 2}"))
     ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
     ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (load-code-and-zloc (h/code "[:a"
-                                              "|"
-                                              "]"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "[:a"
+                                                "|"
+                                                "]"))]
       (is (can-move-zloc-up? ws-zloc))
       (is (nil? (move-zloc-up ws-zloc))))
-    (let [ws-zloc (load-code-and-zloc (h/code "{:a 1"
-                                              "|"
-                                              "}"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "{:a 1"
+                                                "|"
+                                                "}"))]
       (is (can-move-zloc-up? ws-zloc))
       (is (nil? (move-zloc-up ws-zloc)))))
   (testing "comments"
@@ -354,12 +341,12 @@
                             " :c 3}"))
     ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
     ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (load-code-and-zloc (h/code "[:a |;; a comment"
-                                              "]"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "[:a |;; a comment"
+                                                "]"))]
       (is (can-move-zloc-up? ws-zloc))
       (is (nil? (move-zloc-up ws-zloc))))
-    (let [ws-zloc (load-code-and-zloc (h/code "{:a 1 |;; one comment"
-                                              "}"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "{:a 1 |;; one comment"
+                                                "}"))]
       (is (can-move-zloc-up? ws-zloc))
       (is (nil? (move-zloc-up ws-zloc)))))
   (testing "relocation"
@@ -490,12 +477,12 @@
                               " :c 2}"))
     ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
     ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (load-code-and-zloc (h/code "[|"
-                                              " :a]"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "[|"
+                                                " :a]"))]
       (is (can-move-zloc-down? ws-zloc))
       (is (nil? (move-zloc-down ws-zloc))))
-    (let [ws-zloc (load-code-and-zloc (h/code "{|"
-                                              " :a 1}"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "{|"
+                                                " :a 1}"))]
       (is (can-move-zloc-down? ws-zloc))
       (is (nil? (move-zloc-down ws-zloc)))))
   (testing "comments"
@@ -588,12 +575,12 @@
                               " :c 3}"))
     ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
     ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (load-code-and-zloc (h/code "[|;; a comment"
-                                              " :a]"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "[|;; a comment"
+                                                " :a]"))]
       (is (can-move-zloc-down? ws-zloc))
       (is (nil? (move-zloc-down ws-zloc))))
-    (let [ws-zloc (load-code-and-zloc (h/code "{|;; a comment"
-                                              " :a 1}"))]
+    (let [ws-zloc (h/load-code-and-zloc (h/code "{|;; a comment"
+                                                " :a 1}"))]
       (is (can-move-zloc-down? ws-zloc))
       (is (nil? (move-zloc-down ws-zloc)))))
   (testing "relocation"

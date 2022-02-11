@@ -222,10 +222,10 @@
         ns+uris (pmap ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
+                   (map open-file!)
                    (pmap (comp :document-changes
                                #(handlers/execute-command {:command "clean-ns"
-                                                           :arguments [(:uri %) 0 0]})
-                               open-file!))
+                                                           :arguments [(:uri %) 0 0]})))
                    (apply concat)
                    (pmap #(document-change->edit-summary % db/db))
                    (remove nil?))]
@@ -298,10 +298,10 @@
         ns+uris (pmap ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
+                   (map open-file!)
                    (pmap (comp (fn [{:keys [uri]}]
                                  (some->> (handlers/formatting {:textDocument uri})
-                                          (map #(edit->summary db/db uri %))))
-                               open-file!))
+                                          (map #(edit->summary db/db uri %))))))
                    (apply concat)
                    (remove nil?))]
     (if (seq edits)

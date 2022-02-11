@@ -35,7 +35,7 @@
     ret))
 
 (defn log-tail []
-  (:out (sh/sh "tail" "-n" "100" "/tmp/clojure-lsp.integration.out")))
+  (:out (sh/sh "tail" "-n" "300" "/tmp/clojure-lsp.integration.out")))
 
 (defn print-log-tail! []
   (binding [*out* *err*]

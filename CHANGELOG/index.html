@@ -1803,8 +1803,9 @@
 </li>
 <li>Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.</li>
 <li>Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.</li>
+<li>Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method <code>textDocument/implementation</code>. #656</li>
 <li>
-<p>Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method <code>textDocument/implementation</code>. #656</p>
+<p>Don't return completions when invoked from a comment, avoiding performance problems. #756</p>
 </li>
 <li>
 <p>API/CLI</p>

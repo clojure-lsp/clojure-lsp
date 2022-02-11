@@ -93,19 +93,24 @@
          ~'_id ~id]
      (do ~@body)))
 
-(defmacro ^:private end [expr]
-  `(try
-     ~expr
-     (catch Throwable ex#
-       (if (instance? ResponseErrorException ex#)
-         (throw (CompletionException. ex#))
-         (log/error ex#)))
-     (finally
-       (try
-         (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
-           (log/debug ~'_id (format "%sms" duration#)))
-         (catch Throwable ex#
-           (log/error ex#))))))
+(defmacro ^:private end
+  ([expr]
+   `(end ~expr false))
+  ([expr extra-log-fn]
+   `(let [~'_result (try
+                      ~expr
+                      (catch Throwable ex#
+                        (if (instance? ResponseErrorException ex#)
+                          (throw (CompletionException. ex#))
+                          (log/error ex#))))]
+      (try
+        (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
+          (if ~extra-log-fn
+            (log/debug ~'_id (format "%sms - %s" duration# (~extra-log-fn ~'_result)))
+            (log/debug ~'_id (format "%sms" duration#))))
+        (catch Throwable ex#
+          (log/error ex#)))
+      ~'_result)))
 
 (defmacro ^:private sync-notification
   [params handler]
@@ -115,19 +120,24 @@
           ~handler)))
 
 (defmacro ^:private sync-request
-  [params handler response-spec]
-  `(end
-     (->> ~params
-          coercer/java->clj
-          ~handler
-          (coercer/conform-or-log ~response-spec))))
+  ([params handler response-spec]
+   `(sync-request ~params ~handler ~response-spec false))
+  ([params handler response-spec extra-log-fn]
+   `(end
+      (->> ~params
+           coercer/java->clj
+           ~handler
+           (coercer/conform-or-log ~response-spec))
+      ~extra-log-fn)))
 
 (defmacro ^:private async-request
-  [params handler response-spec]
-  `(CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         (sync-request ~params ~handler ~response-spec)))))
+  ([params handler response-spec]
+   `(async-request ~params ~handler ~response-spec false))
+  ([params handler response-spec extra-log-fn]
+   `(CompletableFuture/supplyAsync
+      (reify Supplier
+        (get [this]
+          (sync-request ~params ~handler ~response-spec ~extra-log-fn))))))
 
 (defmacro ^:private async-notification
   [params handler]
@@ -162,7 +172,8 @@
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
-           (async-request params handlers/completion ::coercer/completion-items)))
+           (async-request params handlers/completion ::coercer/completion-items (fn [items]
+                                                                                  (format "total items: %s" (count items))))))
 
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem

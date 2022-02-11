@@ -371,11 +371,12 @@
                              (recur (dec try-column)))))
         cursor-value (if (= :vector (z/tag cursor-loc))
                        ""
-                       (if cursor-loc
+                       (if (z/sexpr-able? cursor-loc)
                          (z/sexpr cursor-loc)
                          ""))
         keyword-value? (keyword? cursor-value)
-        aliased-keyword-value? (when keyword-value?
+        aliased-keyword-value? (when (and keyword-value?
+                                          (qualified-keyword? cursor-value))
                                  (or (string/starts-with? (namespace cursor-value) ":")
                                      (and (string/starts-with? (namespace cursor-value) "??_")
                                           (string/ends-with? (namespace cursor-value) "_??"))))

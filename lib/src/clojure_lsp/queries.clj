@@ -326,23 +326,17 @@
   [analysis {:keys [ns name] :as _element} include-declaration? db]
   (let [project-analysis (filter-project-analysis analysis db)]
     (into []
-          (if ns
-            (comp
-              (mapcat val)
-              (filter #(identical? :keywords (:bucket %)))
-              (filter #(safe-equal? name (:name %)))
-              (filter #(safe-equal? ns (:ns %)))
-              (filter #(or include-declaration?
-                           (not (:reg %))))
-              (medley/distinct-by (juxt :filename :name :row :col)))
-            (comp
-              (mapcat val)
-              (filter #(identical? :keywords (:bucket %)))
-              (filter #(safe-equal? name (:name %)))
-              (filter #(not (:ns %)))
-              (filter #(or include-declaration?
-                           (not (:reg %))))
-              (medley/distinct-by (juxt :filename :name :row :col))))
+          (comp
+            (mapcat val)
+            (filter #(identical? :keywords (:bucket %)))
+            (filter #(safe-equal? name (:name %)))
+            (filter (cond
+                      (= ns :clj-kondo/unknown-namespace) #(= :clj-kondo/unknown-namespace (:ns %))
+                      ns                                  #(safe-equal? ns (:ns %))
+                      :else                               #(not (:ns %))))
+            (filter #(or include-declaration?
+                         (not (:reg %))))
+            (medley/distinct-by (juxt :filename :name :row :col)))
           project-analysis)))
 
 (defmethod find-references :local

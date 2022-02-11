@@ -4,10 +4,16 @@
 
 - General
   - Use `:source-aliases` setting during default deps.edn project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
+  - Exclude from unused-public-var linter vars with metadata `^:export`. #753
+  - Fix clean-ns multiple refers sort when there is a alias before the refers.
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
+  - Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.
   - Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method `textDocument/implementation`. #656
+
+- API/CLI
+  - Small performance improvment to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
 
 ## 2022.02.01-20.02.32
 

@@ -35,7 +35,7 @@
     ret))
 
 (defn log-tail []
-  (:out (sh/sh "tail" "-n" "300" "/tmp/clojure-lsp.integration.out")))
+  (:out (sh/sh "tail" "-n" "300" "clojure-lsp.integration-test.out" :dir "integration-test/sample-test/")))
 
 (defn print-log-tail! []
   (binding [*out* *err*]

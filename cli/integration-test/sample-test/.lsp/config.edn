@@ -1,4 +1,4 @@
 {:linters {:clj-kondo {:ns-exclude-regex ""
                        :async-custom-lint? false}}
- :log-path "/tmp/clojure-lsp.integration.out"
+ :log-path "clojure-lsp.integration-test.out"
  :api {:exit-on-errors? false}}

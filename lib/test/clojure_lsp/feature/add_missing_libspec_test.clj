@@ -294,8 +294,9 @@
                          "|str/a")
                  (add-require-suggestion "clojure.string" "str" nil)
                  as-root-str))))
-    ;; TODO: the UI doesn't offer a way to provide a custom alias, so this test
-    ;; is a bit silly.
+    ;; TODO: the code actions will always suggest clojure.string, and they don't
+    ;; request a custom alias via input, but it's possible to have a custom
+    ;; alias if invoked directly.
     (testing "changing alias"
       (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
                                             "|clojure.string/a")

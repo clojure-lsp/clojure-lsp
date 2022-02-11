@@ -285,23 +285,19 @@
       (find-refer-require-suggestions sym missing-requires db))))
 
 (defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
-  (let [ns-usages-nodes (edit/find-forms zloc #(when-let [sym (safe-sym %)]
+  (let [;; When this node is clojure.string/split and we are aliasing
+        ;; clojure.string to my-str, we want to change this node to
+        ;; my-str/split. The code actions never suggest this (they always
+        ;; suggest clojure.string), but it's possible if the command is invoked
+        ;; directly.
+        ns-usages-nodes (edit/find-forms zloc #(when-let [sym (safe-sym %)]
                                                  (and (= chosen-ns (namespace sym))
-                                                      ;; See note below. This is always false, except in tests
                                                       (not= chosen-alias (namespace sym)))))
         chosen-require  (if chosen-alias
                           (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
                           (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))]
     (seq
       (concat chosen-require
-             ;; TODO: the intention of the following code appears to be to
-             ;; convert un-aliased symbols to aliased symbols, e.g.
-             ;; `clojure.string/split` -> `my-str/split`. However, when on a
-             ;; `clojure.string/split` node, the UI will only ever suggest
-             ;; 'clojure.string' as an alias. So, in practice, there's never any
-             ;; meaningful change. Proposal: delete this code and rely on
-             ;; "rename" to change aliases. Alternatively, make the UI accept
-             ;; custom aliases.
               (when chosen-alias
                 (->> ns-usages-nodes
                      (map (fn [node]

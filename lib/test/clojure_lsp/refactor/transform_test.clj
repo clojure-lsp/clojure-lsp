@@ -517,12 +517,20 @@
              (-> "(defn a [b] (remove (partial |my-func 2) [1 2 3 4]))"
                  create-function
                  as-strings))))
-    (testing "creating from a annonymous function"
+    (testing "creating from an anonymous function"
       (h/clean-db!)
       (is (= [(h/code "(defn- my-func [arg1 element]"
                       "  )")
               (h/code "" "" "")]
              (-> "(defn a [b] (remove #(|my-func 2 %) [1 2 3 4]))"
+                 create-function
+                 as-strings))))
+    (testing "creating from an anonymous function with many args"
+      (h/clean-db!)
+      (is (= [(h/code "(defn- my-func [arg1 b element3 element2]"
+                      "  )")
+              (h/code "" "" "")]
+             (-> "(defn a [b] (#(|my-func 2 b %3 %2) 1 2 3 4))"
                  create-function
                  as-strings))))
     (testing "creating from a thread first macro with single arg"
@@ -535,7 +543,7 @@
                  as-strings))))
     (testing "creating from a thread first macro with multiple args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b a arg2]"
+      (is (= [(h/code "(defn- my-func [b a arg3]"
                       "  )")
               (h/code "" "" "")]
              (-> "(-> b (|my-func a 3) (+ 1 2))"

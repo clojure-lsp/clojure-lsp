@@ -17,6 +17,8 @@
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
   - Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.
   - Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method `textDocument/implementation`. #656
+  - Make the actions and commands aware of when they were invoked from comments or whitespace. This will allow individual refactorings to be more deliberate about how they handle comments and whitespace. #716 @mainej
+  - Correctly position the cursor after calling move-coll-entry-down on an entry with leading comments. #758 @mainej
   - Don't return completions when invoked from a comment, avoiding performance problems. #756
   - Fix small anomalies in parameter names of extracted private functions. #759 @mainej
   - Add semantic tokens for protocol implementations methods like defrecord and deftype.

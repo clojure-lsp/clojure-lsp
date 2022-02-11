@@ -120,7 +120,7 @@
 (defn ^:private exit [status msg]
   (when msg
     (println msg))
-  (System/exit status))
+  (System/exit (or status 1)))
 
 (defn ^:private with-required-options [options required fn]
   (doseq [option required]
@@ -134,7 +134,7 @@
   (if (= "listen" action)
     (do
       (with-out-str @(server/run-server!))
-      {:exit-code 0})
+      {:result-code 0})
     (try
       (case action
         "pod" (pod/run-pod)

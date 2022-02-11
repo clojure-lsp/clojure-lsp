@@ -50,7 +50,7 @@
     (print-log-tail!))
   (original-report data))
 
-(defmacro report-log-tail
+(defmacro with-log-tail-report
   "Execute body with modified test reporting functions that prints log tail on failure."
   [& body]
   `(binding [original-report t/report
@@ -66,7 +66,7 @@
   (apply require namespaces)
 
   (let [test-results (timeout 600000
-                              #(report-log-tail
+                              #(with-log-tail-report
                                  (apply t/run-tests namespaces)))]
 
     (when (= test-results :timed-out)

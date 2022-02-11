@@ -189,9 +189,6 @@
     (ensure-kondo-config-dir-exists! project-root-uri db)
     (producer/publish-progress (:producer @db) 10 "Finding cache" progress-token)
     (load-db-cache! root-path db)
-    (when-not (:classpath @db)
-      (producer/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
-      (swap! db assoc :classpath (classpath/scan-classpath! db)))
     (let [project-hash (project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           use-db-analysis? (and (= (:project-hash @db) project-hash)
@@ -199,9 +196,11 @@
       (if use-db-analysis?
         (log/info "Using cached db for project root" root-path)
         (do
+          (producer/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
           (swap! db assoc
                  :project-hash project-hash
-                 :kondo-config-hash kondo-config-hash)
+                 :kondo-config-hash kondo-config-hash
+                 :classpath (classpath/scan-classpath! db))
           (when (= :project-and-deps (:project-analysis-type @db))
             (analyze-classpath! root-path (:source-paths settings) settings progress-token db))
           (upsert-db-cache! db))))

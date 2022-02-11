@@ -64,31 +64,6 @@
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
 
-(defn ^:private classpath-cmd->windows-safe-classpath-cmd
-  [classpath]
-  (if shared/windows-os?
-    (into ["powershell.exe" "-NoProfile"] classpath)
-    classpath))
-
-(defn ^:private deps-source-aliases [source-aliases]
-  (let [aliases (if source-aliases
-                  (map name source-aliases)
-                  ["dev" "test"])]
-    (str "-A:" (string/join ":" aliases))))
-
-(defn ^:private default-project-specs [source-aliases]
-  (->> [{:project-path "project.clj"
-         :classpath-cmd ["lein" "classpath"]}
-        {:project-path "deps.edn"
-         :classpath-cmd ["clojure" (deps-source-aliases source-aliases) "-Spath"]}
-        {:project-path "build.boot"
-         :classpath-cmd ["boot" "show" "--fake-classpath"]}
-        {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
-        {:project-path "bb.edn"
-         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
-       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
-
 (defn ^:private setting-changed?
   [old-settings new-settings key env]
   (and (not= :unit-test env)
@@ -108,8 +83,8 @@
     (update :source-paths (partial source-paths/process-source-paths (shared/uri->path project-root-uri) new-settings))
 
     (setting-changed? old-settings new-settings :project-specs env)
-    (update :project-specs #(or % (default-project-specs (or (:source-aliases new-settings)
-                                                             (:source-aliases old-settings)))))))
+    (update :project-specs #(or % (source-paths/default-project-specs (or (:source-aliases new-settings)
+                                                                          (:source-aliases old-settings)))))))
 
 (defn ^:private get-refreshed-settings [db]
   (let [{:keys [project-root-uri settings force-settings env]} @db

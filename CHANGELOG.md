@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Use `:source-aliases` setting during default deps.edn project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
+  - Use `:source-aliases` setting during default deps.edn and lein project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
   - Exclude from unused-public-var linter vars with metadata `^:export`. #753
   - Fix clean-ns multiple refers sort when there is a alias before the refers.
   - Bump clj-kondo from `2022.01.15` to `2022.02.09` adding support for implementation analysis and more improvements.

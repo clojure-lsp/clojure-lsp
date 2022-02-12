@@ -14,6 +14,7 @@
   - Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method `textDocument/implementation`. #656
   - Don't return completions when invoked from a comment, avoiding performance problems. #756
   - Fix small anomalies in parameter names of extracted private functions. #759 @mainej
+  - Add semantic tokens for protocol implementations methods like defrecord and deftype.
 
 - API/CLI
   - Small performance improvment to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.

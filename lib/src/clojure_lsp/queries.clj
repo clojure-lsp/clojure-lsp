@@ -340,11 +340,13 @@
           project-analysis)))
 
 (defmethod find-references :local
-  [analysis {:keys [id filename] :as _element} include-declaration? _db]
-  (filter #(and (= (:id %) id)
-                (or include-declaration?
-                    (not (identical? :locals (:bucket %)))))
-          (get analysis filename)))
+  [analysis {:keys [id name filename] :as element} include-declaration? _db]
+  (if (or id name)
+    (filter #(and (= (:id %) id)
+                  (or include-declaration?
+                      (not (identical? :locals (:bucket %)))))
+            (get analysis filename))
+    [element]))
 
 (defmethod find-references :protocol-impls
   [analysis element include-declaration? _db]

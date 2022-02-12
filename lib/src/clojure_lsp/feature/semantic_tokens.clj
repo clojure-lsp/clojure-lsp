@@ -25,7 +25,9 @@
        vec))
 
 (def token-modifiers
-  [:definition :defaultLibrary])
+  [:definition
+   :defaultLibrary
+   :implementation])
 
 (def token-modifiers-str
   (->> token-modifiers
@@ -169,7 +171,10 @@
              (and (= bucket :keywords)
                   (not (:str element))
                   (not (:keys-destructuring element)))
-             (keywords->absolute-tokens element))))
+             (keywords->absolute-tokens element)
+
+             (= bucket :protocol-impls)
+             [(element->absolute-token element :method [:implementation])])))
        (remove nil?)
        (mapcat identity)))
 

@@ -180,6 +180,17 @@
             0 0 5 4 0
             0 7 3 6 0
             0 4 3 6 0]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db))))
+  (testing "defrecord/deftype"
+    (h/load-code-and-locs (code "(defrecord Something []"
+                                "  Otherthing"
+                                "(some-method [this] 123))"))
+    (is (= [0 1 9 3 0
+            0 10 9 2 1
+            0 0 9 2 1
+            0 0 9 2 1
+            2 1 11 7 4
+            0 13 4 6 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") db/db)))))
 
 (deftest range-tokens

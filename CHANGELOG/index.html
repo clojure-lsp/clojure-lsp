@@ -1805,8 +1805,9 @@
 <li>Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.</li>
 <li>Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method <code>textDocument/implementation</code>. #656</li>
 <li>Don't return completions when invoked from a comment, avoiding performance problems. #756</li>
+<li>Fix small anomalies in parameter names of extracted private functions. #759 @mainej</li>
 <li>
-<p>Fix small anomalies in parameter names of extracted private functions. #759 @mainej</p>
+<p>Add semantic tokens for protocol implementations methods like defrecord and deftype.</p>
 </li>
 <li>
 <p>API/CLI</p>
@@ -2643,7 +2644,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 11, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 12, 2022</span>
     
   </small>
 </div>

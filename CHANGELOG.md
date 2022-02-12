@@ -7,6 +7,7 @@
   - Exclude from unused-public-var linter vars with metadata `^:export`. #753
   - Fix clean-ns multiple refers sort when there is a alias before the refers.
   - Bump clj-kondo from `2022.01.15` to `2022.02.09` adding support for implementation analysis and more improvements.
+  - Performance improvement during startup when unused-public-var linter is disabled.
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.

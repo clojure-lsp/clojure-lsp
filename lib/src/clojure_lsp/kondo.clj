@@ -62,7 +62,10 @@
     (= :namespace-usages bucket)
     (cond-> [(set/rename-keys element {:to :name})]
       (:alias element)
-      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row :alias-col :name-col :alias-end-row :name-end-row :alias-end-col :name-end-col})))
+      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
+                                                                       :alias-col :name-col
+                                                                       :alias-end-row :name-end-row
+                                                                       :alias-end-col :name-end-col})))
 
     (contains? #{:locals :local-usages :keywords} bucket)
     [(-> element
@@ -97,19 +100,20 @@
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn ^:private project-custom-lint!
-  [paths db {:keys [analysis] :as kondo-ctx}]
-  (let [new-analysis (group-by :filename (normalize-analysis analysis))]
-    (if (:api? @db)
-      (do
-        (log/info (format "Starting to lint whole project files..."))
-        (shared/logging-time
-          "Linting whole project files took %s secs"
-          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
-      (when (settings/get db [:lint-project-files-after-startup?] true)
-        (async/go
+  [paths db {:keys [analysis config] :as kondo-ctx}]
+  (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
+    (let [new-analysis (group-by :filename (normalize-analysis analysis))]
+      (if (:api? @db)
+        (do
+          (log/info (format "Starting to lint whole project files..."))
           (shared/logging-time
             "Linting whole project files took %s secs"
-            (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)))))))
+            (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
+        (when (settings/get db [:lint-project-files-after-startup?] true)
+          (async/go
+            (shared/logging-time
+              "Linting whole project files took %s secs"
+              (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db))))))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]

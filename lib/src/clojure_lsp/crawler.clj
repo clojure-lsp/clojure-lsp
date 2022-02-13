@@ -209,6 +209,7 @@
       (producer/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
       (log/info "Analyzing source paths for project root" root-path)
       (analyze-source-paths! (-> @db :settings :source-paths) db))
+    (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
       (async/go
         (log/info "Analyzing test paths for project root" root-path)

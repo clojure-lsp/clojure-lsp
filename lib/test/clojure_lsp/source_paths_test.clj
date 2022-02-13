@@ -292,7 +292,7 @@
   (testing "when source-paths are provided via settings"
     (is (= {:origins #{:settings}
             :source-paths #{"some" "paths"}}
-           (#'source-paths/resolve-source-paths root-path {} #{"some" "paths"}))))
+           (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} #{"some" "paths"}))))
   (testing "when there is a deps.edn with valid :paths"
     (with-redefs [shared/to-file #(when (= "deps.edn" %2) (io/file ""))
                   shared/file-exists? (complement nil?)
@@ -300,14 +300,14 @@
       (is (= {:origins #{:deps-edn}
               :source-paths #{"some" "paths"}
               :deps-source-paths #{"some" "paths"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a deps.edn without :paths"
     (with-redefs [shared/to-file #(when (= "deps.edn" %2) (io/file ""))
                   shared/file-exists? (complement nil?)
                   config/read-edn-file (constantly {})]
       (is (= {:origins #{:empty-deps-edn}
               :source-paths #{"src" "test"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a project.clj with valid :source-paths"
     (with-redefs [shared/to-file #(when (= "project.clj" %2) (io/file ""))
                   shared/file-exists? (complement nil?)
@@ -315,7 +315,7 @@
       (is (= {:origins #{:leiningen}
               :source-paths #{"paths" "some" "test" "src/test/clojure"}
               :lein-source-paths #{"paths" "some" "test" "src/test/clojure"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a project.clj without :source-paths"
     (with-redefs [shared/to-file #(when (= "project.clj" %2) (io/file ""))
                   shared/file-exists? (complement nil?)
@@ -323,7 +323,7 @@
                   parser/lein-zloc->edn (constantly nil)]
       (is (= {:origins #{:empty-leiningen}
               :source-paths #{"src" "test"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a bb.edn with valid :paths"
     (with-redefs [shared/to-file #(when (= "bb.edn" %2) (io/file ""))
                   shared/file-exists? (complement nil?)
@@ -331,14 +331,14 @@
       (is (= {:origins #{:bb}
               :source-paths #{"some" "paths"}
               :bb-source-paths #{"some" "paths"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a bb.edn without :paths"
     (with-redefs [shared/to-file #(when (= "bb.edn" %2) (io/file ""))
                   shared/file-exists? (complement nil?)
                   config/read-edn-file (constantly {})]
       (is (= {:origins #{:empty-bb}
               :source-paths #{"src" "test" "script" "scripts"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a deps.edn with :paths and bb.edn with :paths"
     (with-redefs [shared/to-file #(case %2
                                     "deps.edn" (io/file "deps")
@@ -352,7 +352,7 @@
               :bb-source-paths #{"scripts"}
               :deps-source-paths #{"some" "paths"}
               :source-paths #{"some" "paths" "scripts"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is a deps.edn with :paths and empty project.clj"
     (with-redefs [shared/to-file #(case %2
                                     "deps.edn" (io/file "deps")
@@ -366,10 +366,10 @@
       (is (= {:origins #{:deps-edn :empty-leiningen}
               :deps-source-paths #{"some" "paths"}
               :source-paths #{"some" "paths" "src" "test"}}
-             (#'source-paths/resolve-source-paths root-path {} nil)))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil)))))
   (testing "when there is no file, fallback to default source paths"
     (with-redefs [shared/to-file (constantly nil)
                   shared/file-exists? (complement nil?)]
       (is (= {:origins #{:default}
               :source-paths #{"src" "test"}}
-             (#'source-paths/resolve-source-paths root-path {} nil))))))
+             (#'source-paths/resolve-source-paths root-path [] {:use-source-paths-from-classpath false} nil))))))

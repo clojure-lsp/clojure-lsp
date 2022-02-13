@@ -9,6 +9,8 @@
    [clojure.string :as string]
    [taoensso.timbre :as log]))
 
+(set! *warn-on-reflection* true)
+
 (defn valid-project-spec? [root-path {:keys [project-path]}]
   (let [project-file (shared/to-file root-path project-path)]
     (shared/file-exists? project-file)))
@@ -59,3 +61,43 @@
          (mapcat #(lookup-classpath root-path % db))
          vec
          seq)))
+
+(defn ^:private classpath-cmd->windows-safe-classpath-cmd
+  [classpath]
+  (if shared/windows-os?
+    (into ["powershell.exe" "-NoProfile"] classpath)
+    classpath))
+
+(defn ^:private lein-source-aliases [source-aliases]
+  (some->> source-aliases
+           (map #(str "+" (name %)))
+           seq
+           (string/join ",")
+           (conj ["with-profile"])))
+
+(defn ^:private deps-source-aliases [source-aliases]
+  (some->> source-aliases
+           (map name)
+           seq
+           (string/join ":")
+           (str "-A:")
+           vector))
+
+(defn default-project-specs [source-aliases]
+  (->> [{:project-path "project.clj"
+         :classpath-cmd (->> ["lein" (lein-source-aliases source-aliases) "classpath"]
+                             flatten
+                             (remove nil?)
+                             vec)}
+        {:project-path "deps.edn"
+         :classpath-cmd (->> ["clojure" (deps-source-aliases source-aliases) "-Spath"]
+                             flatten
+                             (remove nil?)
+                             vec)}
+        {:project-path "build.boot"
+         :classpath-cmd ["boot" "show" "--fake-classpath"]}
+        {:project-path "shadow-cljs.edn"
+         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
+        {:project-path "bb.edn"
+         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
+       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))

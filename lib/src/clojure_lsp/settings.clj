@@ -3,7 +3,6 @@
   (:require
    [clojure-lsp.config :as config]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.source-paths :as source-paths]
    [clojure.core.memoize :as memoize]
    [clojure.string :as string]
    [clojure.walk :as walk]
@@ -64,33 +63,11 @@
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
 
-(defn ^:private setting-changed?
-  [old-settings new-settings key env]
-  (and (not= :unit-test env)
-       (or (nil? old-settings)
-           (and (clojure.core/get new-settings key)
-                (not= (clojure.core/get old-settings key)
-                      (clojure.core/get new-settings key))))))
-
-(defn udpate-with-default-settings
-  [old-settings new-settings project-root-uri env]
-  (cond-> new-settings
-
-    (setting-changed? old-settings new-settings :source-aliases env)
-    (update :source-aliases #(or % source-paths/default-source-aliases))
-
-    (setting-changed? old-settings new-settings :source-paths env)
-    (update :source-paths (partial source-paths/process-source-paths (shared/uri->path project-root-uri) new-settings))
-
-    (setting-changed? old-settings new-settings :project-specs env)
-    (update :project-specs #(or % (source-paths/default-project-specs (or (:source-aliases new-settings)
-                                                                          (:source-aliases old-settings)))))))
-
 (defn ^:private get-refreshed-settings [db]
-  (let [{:keys [project-root-uri settings force-settings env]} @db
+  (let [{:keys [project-root-uri settings force-settings]} @db
         new-project-settings (config/resolve-for-root project-root-uri)]
     (shared/deep-merge settings
-                       (udpate-with-default-settings settings new-project-settings project-root-uri env)
+                       new-project-settings
                        force-settings)))
 
 (def ttl-threshold-milis 1000)

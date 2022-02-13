@@ -5,7 +5,6 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 
@@ -197,43 +196,3 @@
     (when (contains? origins :empty-bb) (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths))
     (when (contains? origins :default) (log/info "Using default source-paths:" default-source-paths))
     (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) source-paths)))
-
-(defn ^:private classpath-cmd->windows-safe-classpath-cmd
-  [classpath]
-  (if shared/windows-os?
-    (into ["powershell.exe" "-NoProfile"] classpath)
-    classpath))
-
-(defn ^:private lein-source-aliases [source-aliases]
-  (some->> source-aliases
-           (map #(str "+" (name %)))
-           seq
-           (string/join ",")
-           (conj ["with-profile"])))
-
-(defn ^:private deps-source-aliases [source-aliases]
-  (some->> source-aliases
-           (map name)
-           seq
-           (string/join ":")
-           (str "-A:")
-           vector))
-
-(defn default-project-specs [source-aliases]
-  (->> [{:project-path "project.clj"
-         :classpath-cmd (->> ["lein" (lein-source-aliases source-aliases) "classpath"]
-                             flatten
-                             (remove nil?)
-                             vec)}
-        {:project-path "deps.edn"
-         :classpath-cmd (->> ["clojure" (deps-source-aliases source-aliases) "-Spath"]
-                             flatten
-                             (remove nil?)
-                             vec)}
-        {:project-path "build.boot"
-         :classpath-cmd ["boot" "show" "--fake-classpath"]}
-        {:project-path "shadow-cljs.edn"
-         :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
-        {:project-path "bb.edn"
-         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
-       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))

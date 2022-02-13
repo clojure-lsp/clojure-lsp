@@ -9,8 +9,8 @@
    [clojure-lsp.logging :as logging]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
@@ -166,18 +166,19 @@
   (producer/publish-progress (:producer @db) 0 "clojure-lsp" progress-token)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
-        env (:env @db)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
                                         :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
-        raw-settings (shared/deep-merge encoding-settings
-                                        client-settings
-                                        project-settings
-                                        force-settings)
-        _ (when-let [log-path (:log-path raw-settings)]
+        settings (shared/deep-merge encoding-settings
+                                    client-settings
+                                    project-settings
+                                    force-settings)
+        _ (when-let [log-path (:log-path settings)]
             (logging/update-log-path log-path db))
-        settings (settings/udpate-with-default-settings nil raw-settings project-root-uri env)]
+        settings (update settings :source-aliases #(or % source-paths/default-source-aliases))
+        settings (update settings :source-paths (partial source-paths/process-source-paths root-path settings))
+        settings (update settings :project-specs #(or % (classpath/default-project-specs (:source-aliases settings))))]
     (swap! db assoc
            :project-root-uri project-root-uri
            :client-settings client-settings

@@ -345,16 +345,16 @@
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             filename (shared/uri->filename uri)
-            unused-aliases (q/find-unused-aliases analysis findings filename)
-            unused-refers (q/find-unused-refers analysis findings filename)
-            unused-imports (q/find-unused-imports analysis findings filename)
-            duplicate-requires (q/find-duplicate-requires findings filename)
+            unused-aliases* (future (q/find-unused-aliases analysis findings filename))
+            unused-refers* (future (q/find-unused-refers analysis findings filename))
+            unused-imports* (future (q/find-unused-imports analysis findings filename))
+            duplicate-requires* (future (q/find-duplicate-requires findings filename))
             clean-ctx {:db db
                        :filename filename
-                       :unused-aliases unused-aliases
-                       :unused-refers unused-refers
-                       :unused-imports unused-imports
-                       :duplicate-requires duplicate-requires
+                       :unused-aliases @unused-aliases*
+                       :unused-refers @unused-refers*
+                       :unused-imports @unused-imports*
+                       :duplicate-requires @duplicate-requires*
                        :ns-inner-blocks-indentation ns-inner-blocks-indentation}
             result-loc (-> ns-loc
                            (clean-requires clean-ctx)

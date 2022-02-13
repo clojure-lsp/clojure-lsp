@@ -273,12 +273,14 @@
   (concat
     (when include-declaration?
       [element])
-    (->> (get analysis filename)
-         (filter #(or (and (= :var-usages (:bucket %))
-                           (= (:alias %) alias))
-                      (and (= :keywords (:bucket %))
-                           (= (:alias %) alias))))
-         (medley/distinct-by (juxt :filename :name :name-row :name-col)))))
+    (into []
+          (comp
+            (filter #(or (and (= :var-usages (:bucket %))
+                              (= (:alias %) alias))
+                         (and (= :keywords (:bucket %))
+                              (= (:alias %) alias))))
+            (medley/distinct-by (juxt :filename :name :name-row :name-col)))
+          (get analysis filename))))
 
 (defmethod find-references :var-usages
   [analysis element include-declaration? _db]
@@ -482,47 +484,52 @@
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]
-    (->> (get findings filename)
-         (filter (comp #(= % :unused-namespace) :type))
-         (remove (fn [finding]
-                   (some #(and (= :var-usages (:bucket %))
-                               (not (:refer %))
-                               (= (:ns finding) (:to %)))
-                         local-analysis)))
-         (map :ns)
-         set)))
+    (into #{}
+          (comp
+            (filter (comp #(identical? :unused-namespace %) :type))
+            (remove (fn [finding]
+                      (some #(and (identical? :var-usages (:bucket %))
+                                  (not (:refer %))
+                                  (safe-equal? (:ns finding) (:to %)))
+                            local-analysis)))
+            (map :ns))
+          (get findings filename))))
 
 (defn find-unused-refers [analysis findings filename]
   (let [local-analysis (get analysis filename)]
-    (->> (get findings filename)
-         (filter (comp #(= % :unused-referred-var) :type))
-         (remove (fn [finding]
-                   (> (->> local-analysis
-                           (filter #(and (= :var-usages (:bucket %))
-                                         (= (:refer finding) (:name %))
-                                         (= (:ns finding) (:to %))))
-                           (medley/distinct-by (juxt :name :to :row :col :end-row :end-col))
-                           count)
-                      1)))
-         (map #(symbol (-> % :ns str) (-> % :refer str)))
-         set)))
+    (into #{}
+          (comp
+            (filter (comp #(identical? :unused-referred-var %) :type))
+            (remove (fn [finding]
+                      (> (->> local-analysis
+                              (filter #(and (identical? :var-usages (:bucket %))
+                                            (safe-equal? (:refer finding) (:name %))
+                                            (safe-equal? (:ns finding) (:to %))))
+                              (medley/distinct-by (juxt :name :to :row :col :end-row :end-col))
+                              count)
+                         1)))
+            (map #(symbol (-> % :ns str) (-> % :refer str))))
+          (get findings filename))))
 
 (defn find-unused-imports [analysis findings filename]
   (let [local-analysis (get analysis filename)]
-    (->> (get findings filename)
-         (filter (comp #(= % :unused-import) :type))
-         (remove (fn [finding]
-                   (some #(and (= :var-usages (:bucket %))
-                               (= (str (:class finding)) (str (:to %) "." (:name %))))
-                         local-analysis)))
-         (map :class)
-         set)))
+    (into #{}
+          (comp
+            (filter (comp #(identical? :unused-import %) :type))
+            (remove (fn [finding]
+                      (some #(and (identical? :var-usages (:bucket %))
+                                  (safe-equal? (str (:class finding))
+                                               (str (:to %) "." (:name %))))
+                            local-analysis)))
+            (map :class))
+          (get findings filename))))
 
 (defn find-duplicate-requires [findings filename]
-  (->> (get findings filename)
-       (filter (comp #(identical? :duplicate-require %) :type))
-       (map :duplicate-ns)
-       set))
+  (into #{}
+        (comp
+          (filter (comp #(identical? :duplicate-require %) :type))
+          (map :duplicate-ns))
+        (get findings filename)))
 
 (defn find-namespace-definitions [analysis filename]
   (into []

@@ -1796,8 +1796,10 @@
 <li>Exclude from unused-public-var linter vars with metadata <code>^:export</code>. #753</li>
 <li>Fix clean-ns multiple refers sort when there is a alias before the refers.</li>
 <li>Bump clj-kondo from <code>2022.01.15</code> to <code>2022.02.09</code> adding support for implementation analysis and more improvements.</li>
+<li>Medium performance improvement during startup when unused-public-var linter is disabled.</li>
+<li>Small performance improvement during startup on unused-public-var calculation parallelizing calculations.</li>
 <li>
-<p>Performance improvement during startup when unused-public-var linter is disabled.</p>
+<p>Small performance improvement on code actions calcullation.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -1807,13 +1809,14 @@
 <li>Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method <code>textDocument/implementation</code>. #656</li>
 <li>Don't return completions when invoked from a comment, avoiding performance problems. #756</li>
 <li>Fix small anomalies in parameter names of extracted private functions. #759 @mainej</li>
+<li>Add semantic tokens for protocol implementations methods like defrecord and deftype.</li>
 <li>
-<p>Add semantic tokens for protocol implementations methods like defrecord and deftype.</p>
+<p>Small performance improvevement on code lens calculation using transducers.</p>
 </li>
 <li>
 <p>API/CLI</p>
 </li>
-<li>Small performance improvment to <code>format</code>, <code>clean-ns</code>, <code>diagnostics</code>, and <code>rename</code> via parallelizing parts of the logic.</li>
+<li>Small performance improvement to <code>format</code>, <code>clean-ns</code>, <code>diagnostics</code>, and <code>rename</code> via parallelizing parts of the logic.</li>
 </ul>
 <h2 id="20220201-200232">2022.02.01-20.02.32<a class="headerlink" href="#20220201-200232" title="Permanent link">#</a></h2>
 <ul>
@@ -2645,7 +2648,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 12, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 13, 2022</span>
     
   </small>
 </div>

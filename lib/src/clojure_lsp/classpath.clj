@@ -7,15 +7,28 @@
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import
+   (java.io ByteArrayOutputStream)
+   (java.security MessageDigest)))
 
 (set! *warn-on-reflection* true)
 
-(defn valid-project-spec? [root-path {:keys [project-path]}]
+(defn ^:private md5 [^java.io.File file]
+  (let [bytes'
+        (with-open [xin (io/input-stream file)
+                    xout (ByteArrayOutputStream.)]
+          (io/copy xin xout)
+          (.toByteArray xout))
+        algorithm (MessageDigest/getInstance "MD5")
+        raw (.digest algorithm bytes')]
+    (format "%032x" (BigInteger. 1 raw))))
+
+(defn ^:private valid-project-spec? [root-path {:keys [project-path]}]
   (let [project-file (shared/to-file root-path project-path)]
     (shared/file-exists? project-file)))
 
-(defn project-root->project-dep-files [project-root dep-file-path settings]
+(defn ^:private project-root->project-dep-files [project-root dep-file-path settings]
   (let [project-dep-file (io/file project-root dep-file-path)]
     (if (string/ends-with? (str project-dep-file) "deps.edn")
       (if-let [local-roots (seq (source-paths/deps-file->local-roots project-dep-file settings))]
@@ -26,6 +39,14 @@
                      (filter shared/file-exists?)))
         [project-dep-file])
       [project-dep-file])))
+
+(defn project-specs->hash [root-path settings]
+  (->> (:project-specs settings)
+       (filter (partial valid-project-spec? root-path))
+       (map (fn [{:keys [project-path]}]
+              (map md5 (project-root->project-dep-files (str root-path) project-path settings))))
+       flatten
+       (reduce str)))
 
 (defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
   (let [command (string/join " " classpath-cmd)]

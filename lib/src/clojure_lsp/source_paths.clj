@@ -185,9 +185,9 @@
         {:source-paths default-source-paths
          :origins #{:default}})))
 
-(defn process-source-paths [root-path settings settings-source-paths]
-  (let [{:keys [origins source-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path settings settings-source-paths)]
-    (when (contains? origins :settings) (log/info "Using given source-paths:" settings-source-paths))
+(defn process-source-paths [root-path settings given-source-paths]
+  (let [{:keys [origins source-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path settings given-source-paths)]
+    (when (contains? origins :settings) (log/info "Using given source-paths:" given-source-paths))
     (when (contains? origins :deps-edn) (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths))
     (when (contains? origins :leiningen) (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths))
     (when (contains? origins :bb) (log/info "Automatically resolved source-paths from bb.edn:" bb-source-paths))

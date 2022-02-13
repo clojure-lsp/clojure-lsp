@@ -16,21 +16,9 @@
    [clojure.string :as string]
    [taoensso.timbre :as log])
   (:import
-   (java.io ByteArrayOutputStream)
-   (java.net URI)
-   (java.security MessageDigest)))
+   (java.net URI)))
 
 (set! *warn-on-reflection* true)
-
-(defn ^:private md5 [^java.io.File file]
-  (let [bytes'
-        (with-open [xin (io/input-stream file)
-                    xout (ByteArrayOutputStream.)]
-          (io/copy xin xout)
-          (.toByteArray xout))
-        algorithm (MessageDigest/getInstance "MD5")
-        raw (.digest algorithm bytes')]
-    (format "%032x" (BigInteger. 1 raw))))
 
 (defn ^:private analyze-test-paths! [db]
   (let [project-files (-> (:analysis @db/db)
@@ -94,14 +82,6 @@
     (swap! db assoc :kondo-config (:config result))
     (swap! db update :findings merge new-findings)
     analysis))
-
-(defn ^:private project-specs->hash [root-path settings]
-  (->> (:project-specs settings)
-       (filter (partial classpath/valid-project-spec? root-path))
-       (map (fn [{:keys [project-path]}]
-              (map md5 (classpath/project-root->project-dep-files (str root-path) project-path settings))))
-       flatten
-       (reduce str)))
 
 (defn ^:private analyze-classpath! [root-path source-paths settings progress-token db]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
@@ -190,7 +170,7 @@
     (ensure-kondo-config-dir-exists! project-root-uri db)
     (producer/publish-progress (:producer @db) 10 "Finding cache" progress-token)
     (load-db-cache! root-path db)
-    (let [project-hash (project-specs->hash root-path settings)
+    (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           use-db-analysis? (and (= (:project-hash @db) project-hash)
                                 (= (:kondo-config-hash @db) kondo-config-hash))]

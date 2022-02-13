@@ -1798,8 +1798,9 @@
 <li>Bump clj-kondo from <code>2022.01.15</code> to <code>2022.02.09</code> adding support for implementation analysis and more improvements.</li>
 <li>Medium performance improvement during startup when unused-public-var linter is disabled.</li>
 <li>Small performance improvement during startup on unused-public-var calculation parallelizing calculations.</li>
+<li>Small performance improvement on code actions calcullation.</li>
 <li>
-<p>Small performance improvement on code actions calcullation.</p>
+<p>Add <code>:use-source-paths-from-classpath</code> setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551</p>
 </li>
 <li>
 <p>Editor</p>

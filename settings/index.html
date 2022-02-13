@@ -973,6 +973,11 @@
 <td><code>#{:dev :test}</code></td>
 </tr>
 <tr>
+<td><code>use-source-paths-from-classpath</code></td>
+<td>Whether to check source-paths from classpath or manually discover</td>
+<td><code>true</code></td>
+</tr>
+<tr>
 <td><code>linters</code></td>
 <td>clojure-lsp custom linters, check the diagnostics settings section below</td>
 <td></td>
@@ -1106,11 +1111,11 @@
 </table>
 <h3 id="classpath-scan">Classpath scan<a class="headerlink" href="#classpath-scan" title="Permanent link">#</a></h3>
 <p>clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project to pass to clj-kondo later. </p>
-<p>You can configure how clojure-lsp should find the classpath with the <code>project-specs</code> setting, check the default <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60">here</a>.</p>
+<p>You can configure how clojure-lsp should find the classpath with the <code>project-specs</code> setting, but keep in mind that usually the <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/lib/src/clojure_lsp/classpath.clj#L108-L123">default</a> is enough, it will also consider the <code>:source-aliases</code> setting if any to find the classpath using those aliases.</p>
 <p>Supported project types at the moment are:</p>
 <ul>
-<li><code>leiningen</code>: If a <code>project.clj</code> is found at the project root, clojure-lsp will run <code>lein classpath</code>.</li>
-<li><code>deps</code>: If a <code>deps.edn</code> is found at the project root, clojure-lsp will run <code>clojure -Spath</code>.</li>
+<li><code>leiningen</code>: If a <code>project.clj</code> is found at the project root, clojure-lsp will run <code>lein classpath</code> with <code>:source-aliases</code> specified if any.</li>
+<li><code>deps</code>: If a <code>deps.edn</code> is found at the project root, clojure-lsp will run <code>clojure -Spath</code> with <code>:source-aliases</code> specified if any.</li>
 <li><code>boot</code>: If a <code>build.boot</code> is found at the project root, clojure-lsp will run <code>boot show --fake-classpath</code>.</li>
 <li><code>shadow-cljs</code>: If a <code>shadow-cljs.edn</code> is found at the project root, clojure-lsp will run <code>npx shadow-cljs classpath</code>.</li>
 <li><code>babashka</code>: If a <code>bb.edn</code> is found at the project root, clojure-lsp will run <code>bb print-deps --format classpath</code>.</li>
@@ -1120,7 +1125,7 @@
 <p>Alternatively, you can configure the <code>project-specs</code> specific for your project, for example:</p>
 <p><code>.lsp/config.edn</code>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:project-specs</span> <span class="p">[{</span><span class="ss">:project-path</span> <span class="s">&quot;deps.edn&quot;</span>
-                  <span class="ss">:classpath-cmd</span> <span class="p">[</span><span class="s">&quot;clojure&quot;</span> <span class="s">&quot;-A:dev&quot;</span> <span class="s">&quot;-Spath&quot;</span><span class="p">]}]}</span>
+                  <span class="ss">:classpath-cmd</span> <span class="p">[</span><span class="s">&quot;clojure&quot;</span> <span class="s">&quot;-A:my-custom-alias&quot;</span> <span class="s">&quot;-Spath&quot;</span><span class="p">]}]}</span>
 </code></pre></div></p>
 <p>Note that clojure-lsp will make this scan to save the cache when:</p>
 <ul>
@@ -1189,6 +1194,12 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <h3 id="source-paths-discovery">Source paths discovery<a class="headerlink" href="#source-paths-discovery" title="Permanent link">#</a></h3>
 <p>Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.</p>
 <ul>
+<li>
+<p>When <code>:use-source-paths-from-classpath</code> setting is enabled (which is true by default), clojure-lsp will get source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check <code>:source-aliases</code> or <code>:source-paths</code> settings.</p>
+</li>
+<li>
+<p>If <code>:use-source-paths-from-classpath</code> is manually disabled, clojure-lsp will do the following:</p>
+</li>
 <li>If your project is a <code>lein</code> project, clojure-lsp will scan the <code>project.clj</code> file for <code>:source-paths</code>, <code>:test-paths</code> and the optional <code>source-paths</code> from the specified <code>:source-aliases</code> setting (default <code>#{:dev :test}</code>), unless you specified <code>:source-paths</code> setting manually.</li>
 <li>If your project is a <code>deps.edn</code>, clojure-lsp will scan the <code>deps.edn</code> file for <code>:paths</code>, <code>:extra-paths</code>, <code>:local/root</code> on <code>:deps</code>, <code>:extra-deps</code> and the <code>paths</code>, <code>extra-paths</code>, <code>:local/root</code> in <code>:deps</code> and <code>:extra-deps</code> from the specified <code>:source-aliases</code> setting (default <code>#{:dev :test}</code>), unless you specified <code>:source-paths</code> setting manually.</li>
 <li>If your project is not a <code>deps.edn</code> or <code>lein</code> project, a <code>boot</code> project for example, clojure-lsp will use only the <code>:source-paths</code> setting (default <code>#{"src" "test"}</code>) which should point to the folders containing your clojure code.</li>

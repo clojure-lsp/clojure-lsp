@@ -4,6 +4,7 @@
  :source-aliases #{:dev :test}
  :project-specs [] ;; Check the default at clojure-lsp.crawler/default-project-specs
  :ignore-classpath-directories false
+ :use-source-paths-from-classpath true
  :lint-project-files-after-startup? true ;; false for clojure-lsp.api usage
  :notify-references-on-file-change true
  :linters {:clj-kondo {:level :on

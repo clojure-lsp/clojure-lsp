@@ -6,7 +6,9 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import
+   [java.io File]))
 
 (set! *warn-on-reflection* true)
 
@@ -49,7 +51,7 @@
          set
          (set/union root-source-paths))))
 
-(defn ^:private relative-to-deps-file [file ^java.io.File deps-file]
+(defn ^:private relative-to-deps-file [file ^File deps-file]
   (if (.isAbsolute (io/file file))
     file
     (shared/normalize-file (io/file (.getParentFile deps-file) file))))
@@ -129,7 +131,7 @@
   [{:keys [paths]}]
   (set (map str paths)))
 
-(defn ^:private resolve-source-paths-from-files [root-path settings]
+(defn ^:private manual-source-paths-calculation [root-path settings]
   (let [deps-file (shared/to-file root-path "deps.edn")
         lein-file (shared/to-file root-path "project.clj")
         bb-file (shared/to-file root-path "bb.edn")
@@ -177,20 +179,35 @@
         {}
         file-source-paths))))
 
-(defn ^:private resolve-source-paths [root-path settings given-source-paths]
+(defn ^:private classpath->source-paths [^java.nio.file.Path root-path classpath]
+  (let [source-paths (->> classpath
+                          (remove shared/jar-file?)
+                          (map (comp #(.getAbsoluteFile ^File %) io/file))
+                          (filter (fn [^File file]
+                                    (.startsWith (.toPath file) root-path)))
+                          (mapv #(.getCanonicalPath ^File %)))]
+    (when (seq source-paths)
+      {:origins #{:classpath}
+       :source-paths source-paths
+       :classpath-paths source-paths})))
+
+(defn ^:private resolve-source-paths [root-path classpath given-source-paths settings]
   (if given-source-paths
     {:source-paths given-source-paths
      :origins #{:settings}}
-    (or (resolve-source-paths-from-files root-path settings)
+    (or (if (get settings :use-source-paths-from-classpath true)
+          (classpath->source-paths root-path classpath)
+          (manual-source-paths-calculation root-path settings))
         {:source-paths default-source-paths
          :origins #{:default}})))
 
-(defn process-source-paths [root-path settings given-source-paths]
-  (let [{:keys [origins source-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path settings given-source-paths)]
+(defn process-source-paths [root-path classpath given-source-paths settings]
+  (let [{:keys [origins source-paths classpath-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path classpath settings given-source-paths)]
     (when (contains? origins :settings) (log/info "Using given source-paths:" given-source-paths))
-    (when (contains? origins :deps-edn) (log/info "Automatically resolved source-paths from deps.edn:" deps-source-paths))
-    (when (contains? origins :leiningen) (log/info "Automatically resolved source-paths from project.clj:" lein-source-paths))
-    (when (contains? origins :bb) (log/info "Automatically resolved source-paths from bb.edn:" bb-source-paths))
+    (when (contains? origins :classpath) (log/info "Using source-paths from classpath:" classpath-paths))
+    (when (contains? origins :deps-edn) (log/info "Manually resolved source-paths from deps.edn:" deps-source-paths))
+    (when (contains? origins :leiningen) (log/info "Manually resolved source-paths from project.clj:" lein-source-paths))
+    (when (contains? origins :bb) (log/info "Manually resolved source-paths from bb.edn:" bb-source-paths))
     (when (contains? origins :empty-deps-edn) (log/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths))
     (when (contains? origins :empty-leiningen) (log/info "Empty project.clj source-paths, using default source-paths:" default-source-paths))
     (when (contains? origins :empty-bb) (log/info "Empty bb.edn paths, using default source-paths:" default-source-paths))

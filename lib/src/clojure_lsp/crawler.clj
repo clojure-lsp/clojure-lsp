@@ -157,7 +157,6 @@
         _ (when-let [log-path (:log-path settings)]
             (logging/update-log-path log-path db))
         settings (update settings :source-aliases #(or % source-paths/default-source-aliases))
-        settings (update settings :source-paths (partial source-paths/process-source-paths root-path settings))
         settings (update settings :project-specs #(or % (classpath/default-project-specs (:source-aliases settings))))]
     (swap! db assoc
            :project-root-uri project-root-uri
@@ -175,15 +174,20 @@
           use-db-analysis? (and (= (:project-hash @db) project-hash)
                                 (= (:kondo-config-hash @db) kondo-config-hash))]
       (if use-db-analysis?
-        (log/info "Using cached db for project root" root-path)
+        (do
+          (log/info "Using cached db for project root" root-path)
+          (swap! db assoc
+                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
           (producer/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
-          (swap! db assoc
-                 :project-hash project-hash
-                 :kondo-config-hash kondo-config-hash
-                 :classpath (classpath/scan-classpath! db))
+          (let [classpath (classpath/scan-classpath! db)]
+            (swap! db assoc
+                   :project-hash project-hash
+                   :kondo-config-hash kondo-config-hash
+                   :classpath classpath
+                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings))))
           (when (= :project-and-deps (:project-analysis-type @db))
-            (analyze-classpath! root-path (:source-paths settings) settings progress-token db))
+            (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token db))
           (upsert-db-cache! db))))
     (producer/publish-progress (:producer @db) 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
@@ -204,7 +208,7 @@
         (stubs/generate-and-analyze-stubs! settings db))
       (producer/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
       (log/info "Analyzing source paths for project root" root-path)
-      (analyze-source-paths! (:source-paths settings) db))
+      (analyze-source-paths! (-> @db :settings :source-paths) db))
     (when-not (:api? @db)
       (async/go
         (log/info "Analyzing test paths for project root" root-path)

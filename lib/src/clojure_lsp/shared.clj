@@ -192,14 +192,16 @@
 (defn- uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
 
-(def jar-filename-regex #"^(.*\.jar):(.*)")
+(def jar-file-with-filename-regex #"^(.*\.jar):(.*)")
+(def jar-file-regex #"^(.*\.jar)")
 
-(defn ^:private external-file? [filename]
-  (boolean (re-find jar-filename-regex filename)))
+(defn jar-file? [filename]
+  (or (boolean (re-find jar-file-with-filename-regex filename))
+      (boolean (re-find jar-file-regex filename))))
 
 (defn external-filename? [filename source-paths]
   (and filename
-       (or (-> filename name external-file?)
+       (or (-> filename name jar-file?)
            (and (seq source-paths)
                 (not-any? #(string/starts-with? filename %) source-paths)))))
 
@@ -210,7 +212,7 @@
   `:dependency-scheme` setting."
   [^String filename db]
   (let [jar-scheme? (= "jar" (get-in @db [:settings :dependency-scheme]))
-        [_ jar-filepath nested-file] (re-find jar-filename-regex filename)]
+        [_ jar-filepath nested-file] (re-find jar-file-with-filename-regex filename)]
     (conform-uri
       (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
         (if jar-scheme?

@@ -68,6 +68,7 @@ You can find all settings and its default values [here](https://github.com/cloju
 |-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
 | `source-paths`                          | project-local directories to look for clj/cljc/cljs files, if using `deps.edn`, `project.clj` or `bb.edn`, use `:source-aliases` instead.                                                                                                                                                                                                                                                                            | `#{"src" "test"}`                                |
 | `source-aliases`                        | Used for `deps.edn` or `project.clj` projects, the aliases which clojure-lsp should get the source-paths besides the root level `:paths` and `:extra-paths`. Check the `source-aliases discovery` section below.                                                                                                                                                                                                     | `#{:dev :test}`                                  |
+| `use-source-paths-from-classpath`       | Whether to check source-paths from classpath or manually discover                                                                                                                                                                                                                                                                                                                                                    | `true`                                           |
 | `linters`                               | clojure-lsp custom linters, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                             |                                                  |
 | `additional-snippets`                   | Additional user snippets to be available during completing, check the snippets section below                                                                                                                                                                                                                                                                                                                         | `[]`                                             |
 | `ignore-classpath-directories`          | will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into `resources` or `target` that you want lsp to ignore.                                                                                                                                                                                                             | `false`                                          |
@@ -99,12 +100,12 @@ You can find all settings and its default values [here](https://github.com/cloju
 
 clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project to pass to clj-kondo later. 
 
-You can configure how clojure-lsp should find the classpath with the `project-specs` setting, check the default [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/src/clojure_lsp/crawler.clj#L53-L60).
+You can configure how clojure-lsp should find the classpath with the `project-specs` setting, but keep in mind that usually the [default](https://github.com/clojure-lsp/clojure-lsp/blob/master/lib/src/clojure_lsp/classpath.clj#L108-L123) is enough, it will also consider the `:source-aliases` setting if any to find the classpath using those aliases.
 
 Supported project types at the moment are:
 
-- `leiningen`: If a `project.clj` is found at the project root, clojure-lsp will run `lein classpath`.
-- `deps`: If a `deps.edn` is found at the project root, clojure-lsp will run `clojure -Spath`.
+- `leiningen`: If a `project.clj` is found at the project root, clojure-lsp will run `lein classpath` with `:source-aliases` specified if any.
+- `deps`: If a `deps.edn` is found at the project root, clojure-lsp will run `clojure -Spath` with `:source-aliases` specified if any.
 - `boot`: If a `build.boot` is found at the project root, clojure-lsp will run `boot show --fake-classpath`.
 - `shadow-cljs`: If a `shadow-cljs.edn` is found at the project root, clojure-lsp will run `npx shadow-cljs classpath`.
 - `babashka`: If a `bb.edn` is found at the project root, clojure-lsp will run `bb print-deps --format classpath`.
@@ -118,7 +119,7 @@ Alternatively, you can configure the `project-specs` specific for your project, 
 `.lsp/config.edn`
 ```clojure
 {:project-specs [{:project-path "deps.edn"
-                  :classpath-cmd ["clojure" "-A:dev" "-Spath"]}]}
+                  :classpath-cmd ["clojure" "-A:my-custom-alias" "-Spath"]}]}
 ```
 
 Note that clojure-lsp will make this scan to save the cache when:
@@ -210,9 +211,12 @@ For information on how to troubleshoot the linter, check the [troubleshooting se
 
 Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.
 
-- If your project is a `lein` project, clojure-lsp will scan the `project.clj` file for `:source-paths`, `:test-paths` and the optional `source-paths` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
-- If your project is a `deps.edn`, clojure-lsp will scan the `deps.edn` file for `:paths`, `:extra-paths`, `:local/root` on `:deps`, `:extra-deps` and the `paths`, `extra-paths`, `:local/root` in `:deps` and `:extra-deps` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
-- If your project is not a `deps.edn` or `lein` project, a `boot` project for example, clojure-lsp will use only the `:source-paths` setting (default `#{"src" "test"}`) which should point to the folders containing your clojure code.
+- When `:use-source-paths-from-classpath` setting is enabled (which is true by default), clojure-lsp will get source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check `:source-aliases` or `:source-paths` settings.
+
+- If `:use-source-paths-from-classpath` is manually disabled, clojure-lsp will do the following:
+  - If your project is a `lein` project, clojure-lsp will scan the `project.clj` file for `:source-paths`, `:test-paths` and the optional `source-paths` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
+  - If your project is a `deps.edn`, clojure-lsp will scan the `deps.edn` file for `:paths`, `:extra-paths`, `:local/root` on `:deps`, `:extra-deps` and the `paths`, `extra-paths`, `:local/root` in `:deps` and `:extra-deps` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
+  - If your project is not a `deps.edn` or `lein` project, a `boot` project for example, clojure-lsp will use only the `:source-paths` setting (default `#{"src" "test"}`) which should point to the folders containing your clojure code.
 
 ### Clean
 

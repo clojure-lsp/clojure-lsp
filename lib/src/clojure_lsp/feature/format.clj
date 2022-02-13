@@ -5,6 +5,7 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure.core.memoize :as memoize]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
@@ -27,9 +28,14 @@
         (when (shared/file-exists? cljfmt-config-file)
           (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file)))))))
 
+(def memoize-ttl-threshold-milis 3000)
+
+(def ^:private memoized-cljfmt-config
+  (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
+
 (defn formatting [uri db]
   (let [{:keys [text]} (get-in @db [:documents uri])
-        cljfmt-settings (resolve-cljfmt-config db)
+        cljfmt-settings (memoized-cljfmt-config db)
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []
@@ -38,7 +44,7 @@
 
 (defn range-formatting [doc-id format-pos db]
   (let [{:keys [text]} (get-in @db [:documents doc-id])
-        cljfmt-settings (resolve-cljfmt-config db)
+        cljfmt-settings (memoized-cljfmt-config db)
         forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]
             {:range (shared/->range (-> form-loc z/node meta))

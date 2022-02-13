@@ -1,6 +1,9 @@
 name: Bump dependencies
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   check-deps-and-bump:

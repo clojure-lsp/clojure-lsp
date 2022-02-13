@@ -1,0 +1,270 @@
+name: Nightly builds
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    paths-ignore:
+      - '**/README.md'
+      - '**/CHANGELOG.md'
+      - 'resources/CLOJURE_LSP_VERSION'
+      - 'docs/**'
+      - 'images/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/bump_deps.yml'
+      - '.github/workflows/bump_downstreams.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/release.yml'
+
+jobs:
+  build-cli-jar:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.2.0
+        with:
+          fetch-depth: 0
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+
+      - name: Generate jar for native
+        run: make cli-jar-for-native
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-standalone.jar
+          name: clojure-lsp-standalone.jar
+
+  linux-amd64:
+    needs: [build-cli-jar]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm: 22.0.0.2
+          java: java11
+
+      - name: Install native-image component
+        run: |
+          gu install native-image
+
+      - name: Build Linux native image
+        env:
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+          CLOJURE_LSP_STATIC: true
+        run: |
+          make native-cli
+
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp
+
+      - name: Zip binary
+        run: zip clojure-lsp-native-linux-amd64.zip clojure-lsp
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: clojure-lsp-native-linux-amd64.zip
+          path: clojure-lsp-native-linux-amd64.zip
+
+  linux-amd64-static:
+    needs: [build-cli-jar]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp-standalone.jar
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm: 22.0.0.2
+          java: java11
+
+      - name: Install native-image component
+        run: |
+          gu install native-image
+
+      - name: Build static Linux native image
+        env:
+          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+          CLOJURE_LSP_STATIC: true
+        run: |
+          make native-cli
+
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp
+
+      - name: Zip binary
+        run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-native-static-linux-amd64.zip
+          name: clojure-lsp-native-static-linux-amd64.zip
+
+  macos:
+    needs: [build-cli-jar]
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp-standalone.jar
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+
+      - name: Install Babashka
+        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm: 22.0.0.2
+          java: java11
+
+      - name: Install native-image component
+        run: |
+          gu install native-image
+
+      - name: Build MacOS native image
+        env:
+          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+        run: |
+          make native-cli
+
+      - name: Zip binary
+        run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-native-macos-amd64.zip
+          name: clojure-lsp-native-macos-amd64.zip
+
+  windows:
+    needs: [build-cli-jar]
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp-standalone.jar
+
+      - name: configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 8GB
+          maximum-size: 16GB
+
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Install Clojure
+        run: |
+          iwr -useb download.clojure.org/install/win-install-1.10.3.1013.ps1 | iex
+
+      - name: Install Babashka
+        run: |
+          iwr -useb get.scoop.sh | iex
+          scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
+          scoop bucket add extras
+          scoop install babashka --independent
+          echo "$HOME\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm: 21.3.0
+          java: java11
+
+      - name: Install native-image component
+        run: |
+          gu.cmd install native-image
+
+      - name: Install make
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: install make
+
+      - name: Build Windows native image
+        env:
+          CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
+          CLOJURE_LSP_XMX: "-J-Xmx7g"
+        run: |
+          cd cli
+          .\graalvm\native-windows-compile.bat
+          mv clojure-lsp.exe ..\
+          cd ..\
+
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp.exe
+
+      - name: Zip binary
+        run: |
+          jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-native-windows-amd64.zip
+          name: clojure-lsp-native-windows-amd64.zip

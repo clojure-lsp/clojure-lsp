@@ -20,9 +20,7 @@
 
   (testing "When a code action is available"
     (h/assert-submaps
-      [{:title "Inline symbol"
-        :kind "refactor.inline"}
-       {:title "Cycle privacy"
+      [{:title "Cycle privacy"
         :kind "refactor.rewrite"}
        {:title "Extract function"
         :kind "refactor.extract"}

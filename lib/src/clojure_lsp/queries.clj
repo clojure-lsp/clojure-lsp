@@ -331,9 +331,9 @@
             (filter #(identical? :keywords (:bucket %)))
             (filter #(safe-equal? name (:name %)))
             (filter (cond
-                      (= ns :clj-kondo/unknown-namespace) #(= :clj-kondo/unknown-namespace (:ns %))
-                      ns                                  #(safe-equal? ns (:ns %))
-                      :else                               #(not (:ns %))))
+                      (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
+                      ns #(safe-equal? ns (:ns %))
+                      :else #(not (:ns %))))
             (filter #(or include-declaration?
                          (not (:reg %))))
             (medley/distinct-by (juxt :filename :name :row :col)))
@@ -411,16 +411,18 @@
       (log/error e "can't find references"))))
 
 (defn find-var-definitions [analysis filename include-private?]
-  (->> (get analysis filename)
-       (filter #(and (identical? :var-definitions (:bucket %))
-                     (or include-private?
-                         (not (get % :private)))))
-       (medley/distinct-by (juxt :ns :name :row :col))
-       (remove #(or (and (= 'clojure.core/defrecord (:defined-by %))
-                         (or (string/starts-with? (str (:name %)) "->")
-                             (string/starts-with? (str (:name %)) "map->")))
-                    (and (= 'clojure.core/deftype (:defined-by %))
-                         (string/starts-with? (str (:name %)) "->"))))))
+  (into []
+        (comp
+          (filter #(and (identical? :var-definitions (:bucket %))
+                        (or include-private?
+                            (not (get % :private)))))
+          (medley/distinct-by (juxt :ns :name :row :col))
+          (remove #(or (and (safe-equal? 'clojure.core/defrecord (:defined-by %))
+                            (or (string/starts-with? (str (:name %)) "->")
+                                (string/starts-with? (str (:name %)) "map->")))
+                       (and (safe-equal? 'clojure.core/deftype (:defined-by %))
+                            (string/starts-with? (str (:name %)) "->")))))
+        (get analysis filename)))
 
 (defn find-all-var-definitions [analysis]
   (into []
@@ -437,10 +439,12 @@
         analysis))
 
 (defn find-keyword-definitions [analysis filename]
-  (->> (get analysis filename)
-       (filter #(and (identical? :keywords (:bucket %))
-                     (:reg %)))
-       (medley/distinct-by (juxt :ns :name :row :col))))
+  (into []
+        (comp
+          (filter #(and (identical? :keywords (:bucket %))
+                        (:reg %)))
+          (medley/distinct-by (juxt :ns :name :row :col)))
+        (get analysis filename)))
 
 (defn find-all-keyword-definitions [analysis]
   (into []
@@ -524,7 +528,7 @@
   (into []
         (comp
           (mapcat val)
-          (filter #(= (:filename %) filename))
+          (filter #(safe-equal? (:filename %) filename))
           (filter #(identical? :namespace-definitions (:bucket %))))
         analysis))
 

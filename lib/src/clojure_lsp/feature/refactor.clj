@@ -72,8 +72,8 @@
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
 
-(defmethod refactor :resolve-macro-as [{:keys [uri row col db]}]
-  (f.resolve-macro/resolve-macro-as! uri row col db))
+(defmethod refactor :resolve-macro-as [{:keys [loc uri db]}]
+  (f.resolve-macro/resolve-macro-as! loc uri db))
 
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))

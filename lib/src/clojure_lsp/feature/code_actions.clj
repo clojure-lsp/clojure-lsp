@@ -272,7 +272,7 @@
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
-        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve uri row col db))
+        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         missing-requires* (future (find-missing-requires uri diagnostics db))
         missing-imports* (future (find-missing-imports uri diagnostics db))
         require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))

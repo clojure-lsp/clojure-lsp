@@ -412,8 +412,9 @@
         :range (meta (z/node source))}])))
 
 (defn inline-symbol?
-  [{:keys [filename name-row name-col] :as definition} db]
-  (when definition
+  [{:keys [filename name-row name-col bucket]} db]
+  (when (or (identical? :locals bucket)
+            (identical? :var-definitions bucket))
     (let [{:keys [text]} (get-in @db [:documents (shared/filename->uri filename db)])]
       (some-> (parser/loc-at-pos text name-row name-col)
               edit/find-op

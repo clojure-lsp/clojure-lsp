@@ -7,7 +7,9 @@
   - Exclude from unused-public-var linter vars with metadata `^:export`. #753
   - Fix clean-ns multiple refers sort when there is a alias before the refers.
   - Bump clj-kondo from `2022.01.15` to `2022.02.09` adding support for implementation analysis and more improvements.
-  - Performance improvement during startup when unused-public-var linter is disabled.
+  - Medium performance improvement during startup when unused-public-var linter is disabled.
+  - Small performance improvement during startup on unused-public-var calculation parallelizing calculations.
+  - Small performance improvement on code actions calcullation.
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
@@ -16,9 +18,10 @@
   - Don't return completions when invoked from a comment, avoiding performance problems. #756
   - Fix small anomalies in parameter names of extracted private functions. #759 @mainej
   - Add semantic tokens for protocol implementations methods like defrecord and deftype.
+  - Small performance improvevement on code lens calculation using transducers.
 
 - API/CLI
-  - Small performance improvment to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
+  - Small performance improvement to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
 
 ## 2022.02.01-20.02.32
 

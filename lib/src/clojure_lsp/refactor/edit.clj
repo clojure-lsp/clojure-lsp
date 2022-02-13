@@ -117,15 +117,17 @@
   (when-let [root-loc (to-top loc)]
     (when-let [fn-name-loc (some-> loc to-top z/next var-name-loc-from-op)]
       (let [fn-name-loc-meta (meta (z/node fn-name-loc))
-            var-definition-ops (->> (get-in @db [:analysis filename])
-                                    (filter #(and (identical? :var-definitions (:bucket %))
-                                                  (= (:row fn-name-loc-meta) (:name-row %))
-                                                  (= (:col fn-name-loc-meta) (:name-col %))))
-                                    (map #(find-last-by-pos root-loc {:row (:name-row %)
-                                                                      :col (:name-col %)
-                                                                      :end-row (:name-row %)
-                                                                      :end-col (:name-col %)}))
-                                    (remove nil?))]
+            var-definition-ops (into []
+                                     (comp
+                                       (filter #(and (identical? :var-definitions (:bucket %))
+                                                     (= (:row fn-name-loc-meta) (:name-row %))
+                                                     (= (:col fn-name-loc-meta) (:name-col %))))
+                                       (map #(find-last-by-pos root-loc {:row (:name-row %)
+                                                                         :col (:name-col %)
+                                                                         :end-row (:name-row %)
+                                                                         :end-col (:name-col %)}))
+                                       (remove nil?))
+                                     (get-in @db [:analysis filename]))]
         (when (seq var-definition-ops)
           fn-name-loc)))))
 

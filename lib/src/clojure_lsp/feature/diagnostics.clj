@@ -170,8 +170,10 @@
   [definitions project-analysis {:keys [config reg-finding!]} db]
   (let [elements (->> definitions
                       (remove (partial exclude-public-definition? config))
-                      (filter (comp #(= (count %) 0)
-                                    #(q/find-references project-analysis % false db))))]
+                      (pmap (fn [definition]
+                              (when (= 0 (count (q/find-references project-analysis definition false db)))
+                                definition)))
+                      (remove nil?))]
     (->> (reg-unused-public-var-elements! elements reg-finding! config)
          (remove nil?)
          (group-by :filename))))
@@ -217,6 +219,6 @@
                            (get filename))
         cur-findings (get-in @db [:findings filename])]
     (->> cur-findings
-         (remove #(= :clojure-lsp/unused-public-var (:type %)))
+         (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)
          vec)))

@@ -3,7 +3,6 @@
    [borkdude.rewrite-edn :as r]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -25,24 +24,22 @@
     schema.core [defschema]
     compojure.core [defroutes let-routes]})
 
-(defn ^:private find-function-name-position [uri row col db]
-  (some-> (get-in @db [:documents uri :text])
-          (parser/loc-at-pos row col)
+(defn ^:private find-function-name-position [zloc]
+  (some-> zloc
           edit/find-function-usage-name-loc
           z/node
           meta))
 
-(defn find-full-macro-symbol-to-resolve [uri row col db]
-  (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position uri row col db)]
+(defn find-full-macro-symbol-to-resolve [zloc uri db]
+  (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position zloc)]
     (let [filename (shared/uri->filename uri)
           analysis (:analysis @db)
-          element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)
-          definition (q/find-definition analysis element db)]
-      (when (:macro definition)
-        (let [excluded-vars (get excluded-macros (:ns definition))]
+          element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)]
+      (when (:macro element)
+        (let [excluded-vars (get excluded-macros (:to element))]
           (when (and (not= excluded-vars '*)
-                     (not (contains? excluded-vars (:name definition))))
-            (symbol (-> definition :ns name) (-> definition :name name))))))))
+                     (not (contains? excluded-vars (:name element))))
+            (symbol (-> element :to name) (-> element :name name))))))))
 
 (defn ^:private update-macro-resolve-for-config
   [resolved-full-symbol full-symbol config-loc]
@@ -51,8 +48,8 @@
       (r/assoc-in [:lint-as full-symbol] resolved-full-symbol)
       (str "\n")))
 
-(defn ^:private resolve-macro-as [uri row col resolved-full-symbol-str kondo-config-path db]
-  (when-let [full-symbol (find-full-macro-symbol-to-resolve uri row col db)]
+(defn ^:private resolve-macro-as [zloc uri resolved-full-symbol-str kondo-config-path db]
+  (when-let [full-symbol (find-full-macro-symbol-to-resolve zloc uri db)]
     (let [kondo-config-file (io/file kondo-config-path)]
       (if (shared/file-exists? kondo-config-file)
         (->> (z/of-file kondo-config-file)
@@ -70,16 +67,14 @@
    "clj-kondo.lint-as/def-catch-all"])
 
 (defn resolve-macro-as!
-  [uri row col db]
-  (let [row (dec row)
-        col (dec col)
-        project-root-uri (:project-root-uri @db)
+  [zloc uri db]
+  (let [project-root-uri (:project-root-uri @db)
         producer (:producer @db)
         resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
                                     (lsp.kondo/home-config-path)]
         kondo-config-path (producer/show-message-request producer "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options))]
-    (if-let [new-kondo-config (resolve-macro-as uri row col resolved-full-symbol-str kondo-config-path db)]
+    (if-let [new-kondo-config (resolve-macro-as zloc uri resolved-full-symbol-str kondo-config-path db)]
       (let [document (get-in @db [:documents uri])]
         (io/make-parents kondo-config-path)
         (spit kondo-config-path new-kondo-config)

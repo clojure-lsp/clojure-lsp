@@ -43,6 +43,16 @@ jobs:
           path: clojure-lsp-standalone.jar
           name: clojure-lsp-standalone.jar
 
+      - name: Notify Clojurians Slack
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.CLOJURIANS_SLACK_WEBHOOK }}
+          SLACK_USERNAME: clojure-lsp-bot
+          SLACK_ICON: https://github.com/clojure-lsp.png?size=32
+          SLACK_TITLE: clojure-lsp-standalone.jar
+          SLACK_MESSAGE: [clojure-lsp-standalone.jar](https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-standalone.jar.zip)
+          MSG_MINIMAL: true
+
   linux-amd64:
     needs: [build-cli-jar]
     continue-on-error: true

@@ -11,6 +11,7 @@
   - Small performance improvement during startup on unused-public-var calculation parallelizing calculations.
   - Small performance improvement on code actions calcullation.
   - Add `:use-source-paths-from-classpath` setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551
+  - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764 @mainej
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.

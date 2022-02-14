@@ -88,13 +88,16 @@
     :else
     :reference))
 
-(defn ^:private resolve-item-kind [name ns analysis]
-  (->> (mapcat val analysis)
-       (filter #(and (= name (:name %))
-                     (= ns (:ns %))
-                     (= :var-definitions (:bucket %))))
-       first
-       element->completion-item-kind))
+(defn ^:private var-defs-in-ns-named [analysis ns names]
+  ;; TODO: maybe better to use queries/find-all-var-definitions, or to refactor
+  ;; queries so that they are composable as transducer transformations.
+  (let [name-set (set names)]
+    (into []
+          (comp (mapcat val)
+                (filter #(= ns (:ns %)))
+                (filter #(identical? :var-definitions (:bucket %)))
+                (filter #(contains? name-set (:name %))))
+          analysis)))
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
   (cond
@@ -280,26 +283,30 @@
          (mapv #(element->completion-item % alias :alias-keyword)))))
 
 (defn ^:private with-clojure-core-items [matches-fn analysis]
-  (->> common-sym/core-syms
-       (filter (comp matches-fn str))
-       (map (fn [sym] {:label (str sym)
-                       :kind (resolve-item-kind sym 'clojure.core analysis)
-                       :data (walk/stringify-keys {:filename "/clojure.core.clj"
-                                                   :name (str sym)
-                                                   :ns "clojure.core"})
-                       :detail (str "clojure.core/" sym)
-                       :priority :clojure-core}))))
+  (let [matches (->> common-sym/core-syms (filter (comp matches-fn str)))
+        elem-by-name (->> (var-defs-in-ns-named analysis 'clojure.core matches)
+                          (medley/index-by :name))]
+    (map (fn [sym] {:label (str sym)
+                    :kind (element->completion-item-kind (elem-by-name sym))
+                    :data (walk/stringify-keys {:filename "/clojure.core.clj"
+                                                :name (str sym)
+                                                :ns "clojure.core"})
+                    :detail (str "clojure.core/" sym)
+                    :priority :clojure-core})
+         matches)))
 
 (defn ^:private with-clojurescript-items [matches-fn analysis]
-  (->> common-sym/cljs-syms
-       (filter (comp matches-fn str))
-       (map (fn [sym] {:label (str sym)
-                       :kind (resolve-item-kind sym 'cljs.core analysis)
-                       :data (walk/stringify-keys {:filename "/cljs.core.cljs"
-                                                   :name (str sym)
-                                                   :ns "cljs.core"})
-                       :detail (str "cljs.core/" sym)
-                       :priority :clojurescript-core}))))
+  (let [matches (->> common-sym/cljs-syms (filter (comp matches-fn str)))
+        elem-by-name (->> (var-defs-in-ns-named analysis 'cljs.core matches)
+                          (medley/index-by :name))]
+    (map (fn [sym] {:label (str sym)
+                    :kind (element->completion-item-kind (elem-by-name sym))
+                    :data (walk/stringify-keys {:filename "/cljs.core.cljs"
+                                                :name (str sym)
+                                                :ns "cljs.core"})
+                    :detail (str "cljs.core/" sym)
+                    :priority :clojurescript-core})
+         matches)))
 
 (defn ^:private with-java-items [matches-fn]
   (concat

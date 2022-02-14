@@ -223,6 +223,13 @@ jobs:
           path: clojure-lsp-native-macos-amd64.zip
           name: clojure-lsp-native-macos-amd64.zip
 
+  macos-notify:
+    needs: [macos]
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
       - name: Notify Clojurians Slack
         uses: rtCamp/action-slack-notify@v2
         env:
@@ -311,6 +318,13 @@ jobs:
           path: clojure-lsp-native-windows-amd64.zip
           name: clojure-lsp-native-windows-amd64.zip
 
+  windows-notify:
+    needs: [windows]
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
       - name: Notify Clojurians Slack
         uses: rtCamp/action-slack-notify@v2
         env:

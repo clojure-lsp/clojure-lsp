@@ -8,8 +8,7 @@
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (set! *warn-on-reflection* true)
 
@@ -285,25 +284,19 @@
       (find-refer-require-suggestions sym missing-requires db))))
 
 (defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
-  (let [;; When this node is clojure.string/split and we are aliasing
-        ;; clojure.string to my-str, we want to change this node to
-        ;; my-str/split. The code actions never suggest this (they always
-        ;; suggest clojure.string), but it's possible if the command is invoked
-        ;; directly.
-        ns-usages-nodes (edit/find-forms zloc #(when-let [sym (safe-sym %)]
-                                                 (and (= chosen-ns (namespace sym))
-                                                      (not= chosen-alias (namespace sym)))))
-        chosen-require  (if chosen-alias
-                          (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
-                          (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))]
-    (seq
-      (concat chosen-require
-              (when chosen-alias
-                (->> ns-usages-nodes
-                     (map (fn [node]
-                            (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
-                                                n/token-node
-                                                (with-meta (meta (z/node  node)))))))
-                     (map (fn [loc]
-                            {:range (meta (z/node loc))
-                             :loc   loc}))))))))
+  (seq
+    (if chosen-alias
+      (concat (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
+              ;; When we're aliasing clojure.string to string, we want to change
+              ;; all subnodes like clojure.string/split to string/split.
+              (->> (edit/find-forms zloc #(when-let [sym (safe-sym %)]
+                                            (and (= chosen-ns (namespace sym))
+                                                 (not= chosen-alias (namespace sym)))))
+                   (map (fn [node]
+                          (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
+                                              n/token-node
+                                              (with-meta (meta (z/node node)))))))
+                   (map (fn [loc]
+                          {:range (meta (z/node loc))
+                           :loc   loc}))))
+      (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))))

@@ -17,7 +17,7 @@
 
 (defn javac [opts]
   (clean opts)
-  (println "Compiing java classes...")
+  (println "Compiling java classes...")
   (b/javac {:src-dirs ["src-java"]
             :class-dir lsp-class-dir
             :basis (b/create-basis basis)})

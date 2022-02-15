@@ -421,11 +421,11 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#custom-clj-kondo-hooks" class="md-nav__link">
-    Custom clj-kondo hooks
+  <a href="#custom-clj-kondo-linters" class="md-nav__link">
+    Custom clj-kondo linters
   </a>
   
-    <nav class="md-nav" aria-label="Custom clj-kondo hooks">
+    <nav class="md-nav" aria-label="Custom clj-kondo linters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -770,11 +770,11 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#custom-clj-kondo-hooks" class="md-nav__link">
-    Custom clj-kondo hooks
+  <a href="#custom-clj-kondo-linters" class="md-nav__link">
+    Custom clj-kondo linters
   </a>
   
-    <nav class="md-nav" aria-label="Custom clj-kondo hooks">
+    <nav class="md-nav" aria-label="Custom clj-kondo linters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1093,6 +1093,11 @@
 <td><code>[]</code></td>
 </tr>
 <tr>
+<td><code>copy-kondo-configs?</code></td>
+<td>Whether to copy clj-kondo hooks configs exported by libs on classpath during startup lint.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
 <td><code>cache-path</code></td>
 <td>Where to store the project's analysis cache, used to speed up next <code>clojure-lsp</code> startup. A path relative to project root or an absolute path.</td>
 <td><code>.lsp/.cache</code></td>
@@ -1164,9 +1169,10 @@ linter enabled via `ale` will only conflict with the built-in clj-kondo bundled 
 
 </details>
 
+<p>Also, clojure-lsp by default pass <code>copy-configs</code> flag as <code>true</code> to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set <code>copy-kondo-configs?</code> setting to false.</p>
 <p>For more information about all clj-kondo available configurations,
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
-<h5 id="custom-clj-kondo-hooks">Custom clj-kondo hooks<a class="headerlink" href="#custom-clj-kondo-hooks" title="Permanent link">#</a></h5>
+<h5 id="custom-clj-kondo-linters">Custom clj-kondo linters<a class="headerlink" href="#custom-clj-kondo-linters" title="Permanent link">#</a></h5>
 <p>Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (<code>&lt;project&gt;/.clj-kondo/config.edn</code>), below are the custom linters used:</p>
 <h6 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h6>
 <p>A custom linter that reports public functions/vars not used over the project.</p>

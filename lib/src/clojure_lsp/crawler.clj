@@ -194,7 +194,7 @@
                                        (:classpath @db)
                                        (config/resolve-from-classpath-config-paths (:classpath @db) settings))]
       (swap! db assoc
-             :settings (shared/deep-merge settings
+             :settings (shared/deep-merge (:settings @db)
                                           classpath-settings
                                           project-settings
                                           force-settings)

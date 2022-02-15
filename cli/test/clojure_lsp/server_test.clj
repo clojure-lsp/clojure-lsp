@@ -36,16 +36,27 @@
                        (coercer/clj->java
                          {:source-paths path})))]
         (is (= #{"foo"} (:source-paths (#'server/client-settings params)))))))
-  (testing "source-paths rejects non-strings"
+  (testing "source-paths converts strings"
     (let [params (doto (InitializeParams.)
                    (.setInitializationOptions
                      (coercer/clj->java
                        {:source-paths [:foo]})))]
-      (is (nil? (:source-paths (#'server/client-settings params))))))
+      (is (= #{"foo"} (:source-paths (#'server/client-settings params))))))
   (testing "source-aliases converts strings"
     (doseq [path [[:foo] ["foo"] [":foo"]]]
       (let [params (doto (InitializeParams.)
                      (.setInitializationOptions
                        (coercer/clj->java
                          {:source-aliases path})))]
-        (is (= #{:foo} (:source-aliases (#'server/client-settings params))))))))
+        (is (= #{:foo} (:source-aliases (#'server/client-settings params)))))))
+  (testing "vectors and keywords are converted properly"
+    (let [params (doto (InitializeParams.)
+                   (.setInitializationOptions
+                     (coercer/clj->java
+                       {:cljfmt {:indents {'something [[:block 1]]}}})))]
+      (is (= {:indents {'something [[:block 1]]}} (:cljfmt (#'server/client-settings params)))))))
+
+(deftest clj->java
+  (testing "converting map with keyword and vectors"
+    (is (= {"cljfmt" {"indents" {"something" [["block" 1]]}}}
+           (coercer/clj->java {:cljfmt {:indents {'something [[:block 1]]}}})))))

@@ -590,6 +590,12 @@
     (clojure.walk/postwalk
       (fn [x]
         (cond
+          (symbol? x)
+          (str x)
+
+          (keyword? x)
+          (name x)
+
           (map? x)
           (into {} (map #(-> % kf vf) x))
 

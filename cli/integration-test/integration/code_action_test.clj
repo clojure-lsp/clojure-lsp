@@ -60,19 +60,10 @@
         (:documentChanges (:edit (lsp/await-client-request :workspace/applyEdit)))))
     (testing "the cursor is repositioned"
       (h/assert-submap
-       ;; FIXME: 5/3 is the correct positioning. But the associated fix is on
-       ;; another branch. I'm committing the actual-but-incorrect 6/3-6/5 in the
-       ;; interim so that A) this integration test exists, and B) it proves that
-       ;; we're calling window/showDocument, which we weren't before.
-        #_{:takeFocus true
-        ;; 5/3 is the start of <comment ";; b comment">, after the move
-           :selection {:start {:line      5
-                               :character 3}
-                       :end   {:line      5
-                               :character 3}}}
         {:takeFocus true
-         :selection {:start {:line      6
+         ;; 5/3 is the start of <comment ";; b comment">, after the move
+         :selection {:start {:line      5
                              :character 3}
-                     :end   {:line      6
-                             :character 5}}}
+                     :end   {:line      5
+                             :character 3}}}
         (lsp/await-client-request :window/showDocument)))))

@@ -4,6 +4,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
+   [rewrite-clj.node.protocols :as n.protocols]
    [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
@@ -226,8 +227,9 @@
   detect it. It manifests as the origin-idx or dest-idx being out of bounds, in
   which case either origin-elem or dest-elem will be missing. We bail out now to
   avoid erroneous swaps."
-  [origin-elem dest-elem]
-  (and origin-elem dest-elem))
+  [origin-idx dest-idx elems]
+  (and (elem-by-index origin-idx elems)
+       (elem-by-index dest-idx elems)))
 
 (defn ^:private move-pair-zloc
   "Move a pair of elements around `zloc` in direction `dir` considering multiple
@@ -242,11 +244,8 @@
         origin-idx (cond-> origin-idx
                      ;; if on on value, go back to key
                      (odd? origin-idx) dec)
-        dest-idx   (dir (dir origin-idx))
-
-        origin-elem (elem-by-index origin-idx elems)
-        dest-elem   (elem-by-index dest-idx elems)]
-    (when (can-swap? origin-elem dest-elem)
+        dest-idx   (dir (dir origin-idx))]
+    (when (can-swap? origin-idx dest-idx elems)
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 
@@ -263,7 +262,7 @@
                             (edit-collection swapped)
                             ;; align with last key, not value
                             (fix-trailing-comment z/left))]
-        [parent-zloc (first (:locs dest-elem))]))))
+        [parent-zloc (first earlier-pair) (concat later-pair interstitial)]))))
 
 (defn ^:private move-element-zloc
   "Move an element around `zloc` in direction `dir` considering multiple
@@ -274,11 +273,8 @@
         elems (seq-elems parent-zloc)
 
         origin-idx (elem-index-by-cursor-position (z-cursor-position zloc) elems)
-        dest-idx   (dir origin-idx)
-
-        origin-elem (elem-by-index origin-idx elems)
-        dest-elem   (elem-by-index dest-idx elems)]
-    (when (can-swap? origin-elem dest-elem)
+        dest-idx   (dir origin-idx)]
+    (when (can-swap? origin-idx dest-idx elems)
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 
@@ -293,13 +289,13 @@
             parent-zloc (-> parent-zloc
                             (edit-collection swapped)
                             (fix-trailing-comment))]
-        [parent-zloc (first (:locs dest-elem))]))))
+        [parent-zloc earlier-elem [later-elem padding]]))))
 
 (def ^:private common-binding-syms
   "Symbols that are typically used to define bindings."
-  ;; We are not concerned with macros like `if-let` that establish one binding
+  ;; We aren't concerned with macros like `if-let` that establish one binding
   ;; only. They can be treated like regular 'move-element' vectors.
-  #{'binding 'doseq 'for 'let 'loop 'with-local-vars 'with-open 'with-redefs})
+  '#{binding doseq for let loop with-local-vars with-open with-redefs})
 
 (defn ^:private establishes-bindings?
   "Returns whether `zloc` (which should be a vector node) establishes bindings,
@@ -339,61 +335,104 @@
 (defn ^:private balanced-pairs? [parent-zloc]
   (even? (count (z/child-sexprs parent-zloc))))
 
-(defn ^:private can-move-pair-up? [zloc]
+(defn ^:private move-pair-up-breadth [zloc]
   (when (and (balanced-pairs? (z/up zloc))
              (>= (count-siblings-left zloc) 2))
     :pairwise))
 
-(defn ^:private can-move-element-up? [zloc]
+(defn ^:private move-element-up-breadth [zloc]
   (when (>= (count-siblings-left zloc) 1)
     :elementwise))
 
-(defn ^:private can-move-pair-down? [zloc]
+(defn ^:private move-pair-down-breadth [zloc]
   (when (and (balanced-pairs? (z/up zloc))
              (>= (count-siblings-right zloc) 2))
     :pairwise))
 
-(defn ^:private can-move-element-down? [zloc]
+(defn ^:private move-element-down-breadth [zloc]
   (when (>= (count-siblings-right zloc) 1)
     :elementwise))
 
-(defn can-move-entry-up? [zloc uri db]
+(defn move-up-breadth [zloc uri db]
   (let [parent-zloc (z/up zloc)]
     (case (some-> parent-zloc z/tag)
-      :map         (can-move-pair-up? zloc)
+      :map         (move-pair-up-breadth zloc)
       :vector      (if (establishes-bindings? parent-zloc uri db)
-                     (can-move-pair-up? zloc)
-                     (can-move-element-up? zloc))
-      (:list :set) (can-move-element-up? zloc)
+                     (move-pair-up-breadth zloc)
+                     (move-element-up-breadth zloc))
+      (:list :set) (move-element-up-breadth zloc)
       nil)))
+
+(defn move-down-breadth [zloc uri db]
+  (let [parent-zloc (z/up zloc)]
+    (case (some-> parent-zloc z/tag)
+      :map         (move-pair-down-breadth zloc)
+      :vector      (if (establishes-bindings? parent-zloc uri db)
+                     (move-pair-down-breadth zloc)
+                     (move-element-down-breadth zloc))
+      (:list :set) (move-element-down-breadth zloc)
+      nil)))
+
+(defn can-move-entry-up? [zloc uri db]
+  (boolean (move-up-breadth zloc uri db)))
 
 (defn can-move-entry-down? [zloc uri db]
-  (let [parent-zloc (z/up zloc)]
-    (case (some-> parent-zloc z/tag)
-      :map         (can-move-pair-down? zloc)
-      :vector      (if (establishes-bindings? parent-zloc uri db)
-                     (can-move-pair-down? zloc)
-                     (can-move-element-down? zloc))
-      (:list :set) (can-move-element-down? zloc)
-      nil)))
+  (boolean (move-down-breadth zloc uri db)))
 
-(defn ^:private changes [uri [parent-loc dest-loc :as changed]]
-  (when changed
-    {:show-document-after-edit {:uri         uri
-                                :take-focus? true
-                                :range       (z-cursor-position dest-loc)}
-     :changes-by-uri           {uri
-                                [{:range (z-cursor-position parent-loc)
-                                  :loc   parent-loc}]}}))
+(defn ^:private movement [zloc breadth dir]
+  (case breadth
+    :pairwise    (move-pair-zloc zloc dir)
+    :elementwise (move-element-zloc zloc dir)
+    nil))
+
+(defn ^:private final-top-cursor
+  "Returns the position where the cursor should be placed after the swap in
+  order to end up on the (eventual) top element.
+
+  This is calculated from the beginning of the swapped elements `orig-top-elem`."
+  [orig-top-elem]
+  (z-cursor-position (first (:locs orig-top-elem))))
+
+(defn ^:private final-bottom-cursor
+  "Returns the position where the cursor should be placed after the swap in
+  order to end up on the (eventual) bottom element.
+
+  This is calculated by starting at the beginning of the swapped elements
+  `orig-top-elem`, and adjusting that position by adding the extent of the
+  `intervening-elems`. The extent is calculated by re-parsing the
+  intervening-elems, counting their rows and columns by looking at their string
+  representations. This is probably slow, but it avoids needing to use
+  {:track-position? true} in the parser. If someday this project uses
+  :track-position?, this code probably should be changed to read the revised
+  position of the original zloc."
+  [orig-top-elem intervening-elems]
+  (let [top-position (final-top-cursor orig-top-elem)
+
+        [bottom-row bottom-col]
+        (->> intervening-elems
+             (mapcat :locs)
+             (reduce (fn [pos zloc]
+                       (n.protocols/+extent pos (n.protocols/extent (z/node zloc))))
+                     [(:row top-position) (:col top-position)]))]
+    {:row     bottom-row
+     :col     bottom-col
+     :end-row bottom-row
+     :end-col bottom-col}))
+
+(defn ^:private changes [uri parent-loc cursor-position]
+  {:show-document-after-edit {:uri         uri
+                              :take-focus? true
+                              :range       cursor-position}
+   :changes-by-uri           {uri
+                              [{:range (z-cursor-position parent-loc)
+                                :loc   parent-loc}]}})
 
 (defn move-up [zloc uri db]
-  (when-let [breadth (can-move-entry-up? zloc uri db)]
-    (changes uri (case breadth
-                   :pairwise    (move-pair-zloc zloc dec)
-                   :elementwise (move-element-zloc zloc dec)))))
+  (when-let [[parent-zloc orig-top-elem _]
+             (movement zloc (move-up-breadth zloc uri db) dec)]
+    (changes uri parent-zloc (final-top-cursor orig-top-elem))))
 
 (defn move-down [zloc uri db]
-  (when-let [breadth (can-move-entry-down? zloc uri db)]
-    (changes uri (case breadth
-                   :pairwise    (move-pair-zloc zloc inc)
-                   :elementwise (move-element-zloc zloc inc)))))
+  (when-let [[parent-zloc orig-top-elem intervening-elems]
+             (movement zloc (move-down-breadth zloc uri db) inc)]
+    (changes uri parent-zloc (final-bottom-cursor orig-top-elem intervening-elems))))

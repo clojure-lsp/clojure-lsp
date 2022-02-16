@@ -294,16 +294,18 @@
                          "|str/a")
                  (add-require-suggestion "clojure.string" "str" nil)
                  as-root-str))))
-    ;; TODO: the UI doesn't offer a way to provide a custom alias, so this test
-    ;; is a bit silly.
     (testing "changing alias"
       (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
                                             "|clojure.string/a")
+                                    ;; The code actions will suggest clojure.string or string but it's possible
+                                    ;; to have a custom alias if invoked directly.
                                     (add-require-suggestion "clojure.string" "my-str" nil))]
         (is (= (h/code "(ns foo.bar "
                        "  (:require"
                        "    [clojure.string :as my-str]))")
                (z/root-string (:loc ns-edit))))
+        ;; If we are aliasing to something other than the full namespace, we change
+        ;; uses of the namespace to the alias.
         (is (= (h/code "my-str/a")
                (z/string (:loc form-edit))))))
     (testing "on non empty ns"

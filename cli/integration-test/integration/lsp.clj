@@ -45,28 +45,32 @@
 
 (defn ^:private listen-output! []
   (async/thread
-    (try
+    (binding [*in* *stdout*]
       (loop []
-        (binding [*in* *stdout*]
-          (let [_content-length (read-line)
-                {:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+        ;; Block, waiting for next Content-Length line, and discard it. If the
+        ;; server output stream is closed, also close the client by exiting this
+        ;; loop.
+        (if-let [_content-length (read-line)]
+          (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
             (cond
               (and id method)
               (do
-                (println (colored :magenta "Received request:") (colored :yellow json))
+                (println (colored :magenta "Client received request:") (colored :yellow json))
                 (swap! server-requests conj json))
 
               id
               (do
-                (println (colored :green "Received response:") (colored :yellow json))
+                (println (colored :green "Client received response:") (colored :yellow json))
                 (swap! server-responses assoc id json))
 
               :else
               (do
-                (println (colored :blue "Received notification:") (colored :yellow json))
-                (swap! server-notifications conj json)))))
-        (recur))
-      (catch java.io.IOException _))))
+                (println (colored :blue "Client received notification:") (colored :yellow json))
+                (swap! server-notifications conj json)))
+            (recur))
+          (do
+            (println (colored :red "Client closed"))
+            (flush)))))))
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]
@@ -95,18 +99,20 @@
   (use-fixtures :once (fn [f] (f) (clean!))))
 
 (defn notify! [params]
-  (println (colored :blue "Sending notification:") (colored :yellow params))
+  (println (colored :blue "Client sending notification:") (colored :yellow params))
   (binding [*out* *stdin*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
-    (println params)))
+    (println params)
+    (flush)))
 
 (defn request! [params]
-  (println (colored :cyan "Sending request:") (colored :yellow params))
+  (println (colored :cyan "Client sending request:") (colored :yellow params))
   (binding [*out* *stdin*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
-    (println params))
+    (println params)
+    (flush))
   (loop [response (get @server-responses @client-request-id)]
     (if response
       (do

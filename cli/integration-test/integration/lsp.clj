@@ -14,6 +14,7 @@
 (defonce server-responses (atom {}))
 (defonce server-requests (atom []))
 (defonce server-notifications (atom []))
+(defonce client-id (atom 0))
 (defonce client-request-id (atom 0))
 
 (defn inc-request-id []
@@ -43,33 +44,34 @@
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
 (defn ^:private listen-output! []
-  (future
-    (binding [*in* *stdout*]
-      (loop []
+  (let [client-id (swap! client-id inc)]
+    (future
+      (binding [*in* *stdout*]
+        (loop []
         ;; Block, waiting for next Content-Length line, and discard it. If the
         ;; server output stream is closed, also close the client by exiting this
         ;; loop.
-        (if-let [_content-length (read-line)]
-          (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-            (cond
-              (and id method)
-              (do
-                (println (colored :magenta "Client received request:") (colored :yellow json))
-                (swap! server-requests conj json))
+          (if-let [_content-length (read-line)]
+            (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+              (cond
+                (and id method)
+                (do
+                  (println (colored :magenta (str "Client " client-id " received request:")) (colored :yellow json))
+                  (swap! server-requests conj json))
 
-              id
-              (do
-                (println (colored :green "Client received response:") (colored :yellow json))
-                (swap! server-responses assoc id json))
+                id
+                (do
+                  (println (colored :green (str "Client " client-id " received response:")) (colored :yellow json))
+                  (swap! server-responses assoc id json))
 
-              :else
-              (do
-                (println (colored :blue "Client received notification:") (colored :yellow json))
-                (swap! server-notifications conj json)))
-            (recur))
-          (do
-            (println (colored :red "Client closed"))
-            (flush)))))))
+                :else
+                (do
+                  (println (colored :blue (str "Client " client-id " received notification:")) (colored :yellow json))
+                  (swap! server-notifications conj json)))
+              (recur))
+            (do
+              (println (colored :red (str "Client " client-id " closed")))
+              (flush))))))))
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]
@@ -98,7 +100,7 @@
   (use-fixtures :once (fn [f] (f) (clean!))))
 
 (defn notify! [params]
-  (println (colored :blue "Client sending notification:") (colored :yellow params))
+  (println (colored :blue (str "Client " @client-id " sending notification:")) (colored :yellow params))
   (binding [*out* *stdin*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
@@ -106,7 +108,7 @@
     (flush)))
 
 (defn request! [params]
-  (println (colored :cyan "Client sending request:") (colored :yellow params))
+  (println (colored :cyan (str "Client " @client-id " sending request:")) (colored :yellow params))
   (binding [*out* *stdin*]
     (println (str "Content-Length: " (content-length params)))
     (println "")

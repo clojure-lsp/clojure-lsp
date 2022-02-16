@@ -18,16 +18,27 @@
 
 (def clj-kondo-analysis-batch-size 50)
 
+(defn ^:private project-config-dir [project-root-uri]
+  (when project-root-uri
+    ;; TODO: might be better to use clj-kondo.impl.core/config-dir, but it's not
+    ;; yet part of the public kondo api.
+    #_(kondo/config-dir (shared/uri->filename project-root-uri))
+    (let [config-dir (io/file (shared/uri->filename project-root-uri) ".clj-kondo")]
+      (when (and (shared/file-exists? config-dir)
+                 (shared/directory? config-dir))
+        config-dir))))
+
+(defn ^:private config-path [config-dir]
+  (let [config-file (io/file config-dir "config.edn")]
+    (.getCanonicalPath ^java.io.File config-file)))
+
 (defn home-config-path []
   (let [xdg-config-home (or (config/get-env "XDG_CONFIG_HOME")
-                            (io/file (config/get-property "user.home") ".config"))
-        xdg-config (io/file xdg-config-home "clj-kondo" "config.edn")]
-    (.getCanonicalPath ^java.io.File xdg-config)))
+                            (io/file (config/get-property "user.home") ".config"))]
+    (config-path (io/file xdg-config-home "clj-kondo"))))
 
 (defn project-config-path [project-root-uri]
-  (let [project-root-file (io/file (shared/uri->filename project-root-uri))
-        config-file (io/file project-root-file ".clj-kondo" "config.edn")]
-    (.getCanonicalPath ^java.io.File config-file)))
+  (config-path (project-config-dir project-root-uri)))
 
 (defn config-hash
   [project-root]
@@ -167,6 +178,7 @@
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
+       :config-dir (project-config-dir (:project-root-uri @db))
        :custom-lint-fn #(single-file-custom-lint! % uri db)
        :config {:output {:analysis {:arglists true
                                     :locals true

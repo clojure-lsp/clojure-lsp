@@ -15,7 +15,7 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.60.977"}}
+                               lambdaisland/kaocha {:mvn/version "1.63.998"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :build {:extra-paths ["resources"]

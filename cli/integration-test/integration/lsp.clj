@@ -8,8 +8,8 @@
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *clojure-lsp-listener* nil)
-(def ^:dynamic *stdin* nil)
-(def ^:dynamic *stdout* nil)
+(def ^:dynamic *server-in* nil)
+(def ^:dynamic *server-out* nil)
 
 (defonce server-responses (atom {}))
 (defonce server-requests (atom []))
@@ -46,13 +46,13 @@
 (defn ^:private listen-output! []
   (let [client-id (swap! client-id inc)]
     (future
-      (binding [*in* *stdout*]
+      (binding [*in* *server-out*]
         (loop []
-        ;; Block, waiting for next Content-Length line, and discard it. If the
-        ;; server output stream is closed, also close the client by exiting this
-        ;; loop.
+          ;; Block, waiting for next Content-Length line, then discard it. If the
+          ;; server output stream is closed, also close the client by exiting
+          ;; this loop.
           (if-let [_content-length (read-line)]
-            (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+            (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)] ;
               (cond
                 (and id method)
                 (do
@@ -76,8 +76,8 @@
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]
     (alter-var-root #'*clojure-lsp-process* (constantly (p/process [(.getCanonicalPath (io/file clojure-lsp-binary))] {:dir "integration-test/sample-test/"})))
-    (alter-var-root #'*stdin* (constantly (io/writer (:in *clojure-lsp-process*))))
-    (alter-var-root #'*stdout* (constantly (io/reader (:out *clojure-lsp-process*))))
+    (alter-var-root #'*server-in* (constantly (io/writer (:in *clojure-lsp-process*))))
+    (alter-var-root #'*server-out* (constantly (io/reader (:out *clojure-lsp-process*))))
     (alter-var-root #'*clojure-lsp-listener* (constantly (listen-output!)))))
 
 (defn cli! [& args]
@@ -105,7 +105,7 @@
 
 (defn notify! [params]
   (println (colored :blue (str "Client " @client-id " sending notification:")) (colored :yellow params))
-  (binding [*out* *stdin*]
+  (binding [*out* *server-in*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
     (println params)
@@ -113,7 +113,7 @@
 
 (defn request! [params]
   (println (colored :cyan (str "Client " @client-id " sending request:")) (colored :yellow params))
-  (binding [*out* *stdin*]
+  (binding [*out* *server-in*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
     (println params)

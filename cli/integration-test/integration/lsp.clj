@@ -2,7 +2,6 @@
   (:require
    [babashka.process :as p]
    [cheshire.core :as json]
-   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
    [integration.helper :as h]))
@@ -44,7 +43,7 @@
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
 (defn ^:private listen-output! []
-  (async/thread
+  (future
     (binding [*in* *stdout*]
       (loop []
         ;; Block, waiting for next Content-Length line, and discard it. If the
@@ -90,7 +89,7 @@
   (reset! server-notifications [])
   (reset! client-request-id 0)
   (when *clojure-lsp-listener*
-    (async/close! *clojure-lsp-listener*))
+    (future-cancel *clojure-lsp-listener*))
   (when *clojure-lsp-process*
     (p/destroy *clojure-lsp-process*)))
 

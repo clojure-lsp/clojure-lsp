@@ -70,7 +70,7 @@
                   (swap! server-notifications conj json)))
               (recur))
             (do
-              (println (colored :red (str "Client " client-id " closed")))
+              (println (colored :red (str "Client " client-id " closed:")) (colored :yellow "server closed"))
               (flush))))))))
 
 (defn start-process! []
@@ -91,9 +91,13 @@
   (reset! server-notifications [])
   (reset! client-request-id 0)
   (when *clojure-lsp-listener*
-    (future-cancel *clojure-lsp-listener*))
+    (println (colored :red (str "Client " @client-id " closing:")) (colored :yellow "test cleanup"))
+    (flush)
+    (future-cancel *clojure-lsp-listener*)
+    (alter-var-root #'*clojure-lsp-listener* (constantly nil)))
   (when *clojure-lsp-process*
-    (p/destroy *clojure-lsp-process*)))
+    (p/destroy *clojure-lsp-process*)
+    (alter-var-root #'*clojure-lsp-process* (constantly nil))))
 
 (defn clean-after-test []
   (use-fixtures :each (fn [f] (clean!) (f)))

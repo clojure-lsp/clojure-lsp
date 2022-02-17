@@ -43,6 +43,12 @@
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
+(defn client-log
+  ([color msg params]
+   (client-log @client-id color msg params))
+  ([client-id color msg params]
+   (println (colored color (str "Client " client-id ": " msg)) (colored :yellow params))))
+
 (defn ^:private listen-output! []
   (let [client-id (swap! client-id inc)]
     (future
@@ -57,24 +63,25 @@
                 (cond
                   (and id method)
                   (do
-                    (println (colored :magenta (str "Client " client-id " received request:")) (colored :yellow json))
+                    (client-log client-id :magenta "Received request:" json)
                     (swap! server-requests conj json))
 
                   id
                   (do
-                    (println (colored :green (str "Client " client-id " received response:")) (colored :yellow json))
+                    (client-log client-id :green "Received reponse:" json)
                     (swap! server-responses assoc id json))
 
                   :else
                   (do
-                    (println (colored :blue (str "Client " client-id " received notification:")) (colored :yellow json))
+                    (client-log client-id :blue "Received notification:" json)
                     (swap! server-notifications conj json)))
                 (recur))
               (do
-                (println (colored :red (str "Client " client-id " closed:")) (colored :yellow "server closed"))
+                (client-log client-id :red "Closed:" "server closed")
                 (flush)))))
-        (catch Exception e
-          (println (colored :red (str "Client " client-id " closed:")) (colored :yellow "exception") e)
+        (catch Throwable e
+          (client-log client-id :red "Closed:" "exception")
+          (println e)
           (throw e))))))
 
 (defn start-process! []
@@ -95,7 +102,7 @@
   (reset! server-notifications [])
   (reset! client-request-id 0)
   (when *clojure-lsp-listener*
-    (println (colored :red (str "Client " @client-id " closing:")) (colored :yellow "test cleanup"))
+    (client-log :red "Closing:" "test cleanup")
     (flush)
     (future-cancel *clojure-lsp-listener*)
     (alter-var-root #'*clojure-lsp-listener* (constantly nil)))
@@ -108,7 +115,7 @@
   (use-fixtures :once (fn [f] (f) (clean!))))
 
 (defn notify! [params]
-  (println (colored :blue (str "Client " @client-id " sending notification:")) (colored :yellow params))
+  (client-log :blue "Sending notification:" params)
   (binding [*out* *server-in*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
@@ -116,7 +123,7 @@
     (flush)))
 
 (defn request! [params]
-  (println (colored :cyan (str "Client " @client-id " sending request:")) (colored :yellow params))
+  (client-log :cyan "Sending request:" params)
   (binding [*out* *server-in*]
     (println (str "Content-Length: " (content-length params)))
     (println "")

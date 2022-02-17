@@ -46,32 +46,36 @@
 (defn ^:private listen-output! []
   (let [client-id (swap! client-id inc)]
     (future
-      (binding [*in* *server-out*]
-        (loop []
+      (try
+        (binding [*in* *server-out*]
+          (loop []
           ;; Block, waiting for next Content-Length line, then discard it. If the
           ;; server output stream is closed, also close the client by exiting
           ;; this loop.
-          (if-let [_content-length (read-line)]
-            (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)] ;
-              (cond
-                (and id method)
-                (do
-                  (println (colored :magenta (str "Client " client-id " received request:")) (colored :yellow json))
-                  (swap! server-requests conj json))
+            (if-let [_content-length (read-line)]
+              (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)] ;
+                (cond
+                  (and id method)
+                  (do
+                    (println (colored :magenta (str "Client " client-id " received request:")) (colored :yellow json))
+                    (swap! server-requests conj json))
 
-                id
-                (do
-                  (println (colored :green (str "Client " client-id " received response:")) (colored :yellow json))
-                  (swap! server-responses assoc id json))
+                  id
+                  (do
+                    (println (colored :green (str "Client " client-id " received response:")) (colored :yellow json))
+                    (swap! server-responses assoc id json))
 
-                :else
-                (do
-                  (println (colored :blue (str "Client " client-id " received notification:")) (colored :yellow json))
-                  (swap! server-notifications conj json)))
-              (recur))
-            (do
-              (println (colored :red (str "Client " client-id " closed:")) (colored :yellow "server closed"))
-              (flush))))))))
+                  :else
+                  (do
+                    (println (colored :blue (str "Client " client-id " received notification:")) (colored :yellow json))
+                    (swap! server-notifications conj json)))
+                (recur))
+              (do
+                (println (colored :red (str "Client " client-id " closed:")) (colored :yellow "server closed"))
+                (flush)))))
+        (catch Exception e
+          (println (colored :red (str "Client " client-id " closed:")) (colored :yellow "exception") e)
+          (throw e))))))
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]

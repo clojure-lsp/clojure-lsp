@@ -412,32 +412,28 @@
     (catch Throwable e
       (log/error e "can't find references"))))
 
+(defn xf-var-defs [include-private?]
+  (comp
+    (filter #(and (identical? :var-definitions (:bucket %))
+                  (or include-private?
+                      (not (get % :private)))))
+    (medley/distinct-by (juxt :ns :name :row :col))
+    (remove #(or (and (safe-equal? 'clojure.core/defrecord (:defined-by %))
+                      (or (string/starts-with? (str (:name %)) "->")
+                          (string/starts-with? (str (:name %)) "map->")))
+                 (and (safe-equal? 'clojure.core/deftype (:defined-by %))
+                      (string/starts-with? (str (:name %)) "->"))))))
+
 (defn find-var-definitions [analysis filename include-private?]
   (into []
-        (comp
-          (filter #(and (identical? :var-definitions (:bucket %))
-                        (or include-private?
-                            (not (get % :private)))))
-          (medley/distinct-by (juxt :ns :name :row :col))
-          (remove #(or (and (safe-equal? 'clojure.core/defrecord (:defined-by %))
-                            (or (string/starts-with? (str (:name %)) "->")
-                                (string/starts-with? (str (:name %)) "map->")))
-                       (and (safe-equal? 'clojure.core/deftype (:defined-by %))
-                            (string/starts-with? (str (:name %)) "->")))))
+        (xf-var-defs include-private?)
         (get analysis filename)))
 
 (defn find-all-var-definitions [analysis]
   (into []
         (comp
           (mapcat val)
-          (filter #(and (identical? :var-definitions (:bucket %))
-                        (not (get % :private))))
-          (medley/distinct-by (juxt :ns :name :row :col))
-          (remove #(or (and (= 'clojure.core/defrecord (:defined-by %))
-                            (or (string/starts-with? (str (:name %)) "->")
-                                (string/starts-with? (str (:name %)) "map->")))
-                       (and (= 'clojure.core/deftype (:defined-by %))
-                            (string/starts-with? (str (:name %)) "->")))))
+          (xf-var-defs false))
         analysis))
 
 (defn find-keyword-definitions [analysis filename]

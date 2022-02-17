@@ -114,21 +114,20 @@
   (use-fixtures :each (fn [f] (clean!) (f)))
   (use-fixtures :once (fn [f] (f) (clean!))))
 
-(defn notify! [params]
-  (client-log :blue "sending notification:" params)
+(defn client-send [params]
   (binding [*out* *server-in*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
     (println params)
     (flush)))
 
+(defn notify! [params]
+  (client-log :blue "sending notification:" params)
+  (client-send params))
+
 (defn request! [params]
   (client-log :cyan "sending request:" params)
-  (binding [*out* *server-in*]
-    (println (str "Content-Length: " (content-length params)))
-    (println "")
-    (println params)
-    (flush))
+  (client-send params)
   (loop [response (get @server-responses @client-request-id)]
     (if response
       (do

@@ -59,7 +59,7 @@
         (update :project-specs #(->> % (mapv kwd-keys) not-empty))
         (update :cljfmt-config-path #(or % ".cljfmt.edn"))
         (update :cljfmt kwd-keys)
-        (update-in [:cljfmt :indents] clean-symbol-map)
+        (medley/update-existing-in [:cljfmt :indents] clean-symbol-map)
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
 

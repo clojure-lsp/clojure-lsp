@@ -16,26 +16,29 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private resolve-cljfmt-config [db]
+(defn resolve-user-cljfmt-config [db]
   (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
         project-root (shared/uri->filename (:project-root-uri @db))
         cljfmt-config-file (if (string/starts-with? config-path "/")
                              (io/file config-path)
                              (io/file project-root config-path))]
-    (cljfmt.main/merge-default-options
-      (medley/deep-merge
-        (settings/get db [:cljfmt] {})
-        (when (shared/file-exists? cljfmt-config-file)
-          (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file)))))))
+    (medley/deep-merge
+      (settings/get db [:cljfmt] {})
+      (when (shared/file-exists? cljfmt-config-file)
+        (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))))))
+
+(defn ^:private resolve-cljfmt-config [db]
+  (cljfmt.main/merge-default-options
+    (resolve-user-cljfmt-config db)))
 
 (def memoize-ttl-threshold-milis 3000)
 
-(def ^:private memoized-cljfmt-config
+(def cljfmt-config
   (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
 
 (defn formatting [uri db]
   (let [{:keys [text]} (get-in @db [:documents uri])
-        cljfmt-settings (memoized-cljfmt-config db)
+        cljfmt-settings (cljfmt-config db)
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []
@@ -44,7 +47,7 @@
 
 (defn range-formatting [doc-id format-pos db]
   (let [{:keys [text]} (get-in @db [:documents doc-id])
-        cljfmt-settings (memoized-cljfmt-config db)
+        cljfmt-settings (cljfmt-config db)
         forms (parser/find-top-forms-in-range text format-pos)]
     (mapv (fn [form-loc]
             {:range (shared/->range (-> form-loc z/node meta))

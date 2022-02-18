@@ -52,6 +52,18 @@
           :kind 3
           :detail "clojure.core/vec"
           :data {:filename "/clojure.core.clj", :name "vec", :ns "clojure.core"}}]
+        completions))
+    (let [completions (lsp/request! (fixture/completion-request "completion/a.cljs" 3 1))]
+      (is (< 800 (count completions)))
+      (h/assert-contains-submaps
+        [{:label "clj->js"
+          :kind 18
+          :detail "cljs.core/clj->js"
+          :data {:filename "/cljs.core.cljs", :name "clj->js", :ns "cljs.core"}}
+         {:label "vec"
+          :kind 3
+          :detail "clojure.core/vec"
+          :data {:filename "/clojure.core.clj", :name "vec", :ns "clojure.core"}}]
         completions)))
   (testing "completions from comment"
     (h/assert-submaps

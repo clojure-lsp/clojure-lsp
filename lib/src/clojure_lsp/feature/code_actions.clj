@@ -17,8 +17,8 @@
 (defn ^:private diagnostics-with-code [code-set diagnostics]
   (filter (comp code-set :code) diagnostics))
 
-(defn ^:private resolvable-diagnostics [diagnostics uri db]
-  (when-let [root-zloc (parser/safe-zloc-of-file @db uri)]
+(defn ^:private resolvable-diagnostics [diagnostics root-zloc]
+  (when root-zloc
     (->> diagnostics
          (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var"})
          (keep (fn [{{{:keys [line character] :as position} :start} :range :as diagnostic}]
@@ -234,10 +234,11 @@
              :command   "resolve-macro-as"
              :arguments [uri row col]}})
 
-(defn all [zloc uri row col diagnostics client-capabilities db]
-  (let [line (dec row)
+(defn all [root-zloc uri row col diagnostics client-capabilities db]
+  (let [zloc (parser/to-pos root-zloc row col)
+        line (dec row)
         character (dec col)
-        resolvable-diagnostics (resolvable-diagnostics diagnostics uri db)
+        resolvable-diagnostics (resolvable-diagnostics diagnostics root-zloc)
         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))

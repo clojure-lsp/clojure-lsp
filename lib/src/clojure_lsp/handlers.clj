@@ -291,10 +291,9 @@
           character (-> range :start :character)
           row (inc line)
           col (inc character)
-          zloc (some-> (parser/safe-zloc-of-file @db/db textDocument)
-                       (parser/to-pos row col))
+          root-zloc (parser/safe-zloc-of-file @db/db textDocument)
           client-capabilities (get @db/db :client-capabilities)]
-      (f.code-actions/all zloc textDocument row col diagnostics client-capabilities db/db))))
+      (f.code-actions/all root-zloc textDocument row col diagnostics client-capabilities db/db))))
 
 (defn code-lens
   [{:keys [textDocument]}]

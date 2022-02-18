@@ -41,30 +41,6 @@
          :insertTextFormat 2
          :data {:filename "/clojure.core.clj" :name "defn" :ns "clojure.core", :snippet-kind 6}}]
        (lsp/request! (fixture/completion-request "completion/a.clj" 2 4)))))
-  (testing "completions from whitespace"
-    (let [completions (lsp/request! (fixture/completion-request "completion/a.clj" 3 1))]
-      (is (< 800 (count completions)))
-      (h/assert-contains-submaps
-        [{:label "Map"
-          :kind 7
-          :detail "java.util.Map"}
-         {:label "vec"
-          :kind 3
-          :detail "clojure.core/vec"
-          :data {:filename "/clojure.core.clj", :name "vec", :ns "clojure.core"}}]
-        completions))
-    (let [completions (lsp/request! (fixture/completion-request "completion/a.cljs" 3 1))]
-      (is (< 800 (count completions)))
-      (h/assert-contains-submaps
-        [{:label "clj->js"
-          :kind 18
-          :detail "cljs.core/clj->js"
-          :data {:filename "/cljs.core.cljs", :name "clj->js", :ns "cljs.core"}}
-         {:label "vec"
-          :kind 3
-          :detail "clojure.core/vec"
-          :data {:filename "/clojure.core.clj", :name "vec", :ns "clojure.core"}}]
-        completions)))
   (testing "completions from comment"
     (h/assert-submaps
       []

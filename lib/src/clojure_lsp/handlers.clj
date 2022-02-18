@@ -182,7 +182,8 @@
      :classpath (:classpath db-value)
      :client-settings (:client-settings db-value)
      :final-settings (settings/all db/db)
-     :cljfmt-raw (str (settings/get db/db [:cljfmt]))
+     :cljfmt-raw (binding [*print-meta* true]
+                   (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db))))
      :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-cli`)")
      :server-version (config/clojure-lsp-version)

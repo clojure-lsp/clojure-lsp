@@ -1,47 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url>
      <loc>https://clojure-lsp.io/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/settings/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/clients/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/building/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/development/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/troubleshooting/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/capabilities/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/features/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/installation/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/api/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://clojure-lsp.io/CHANGELOG/</loc>
-     <lastmod>2022-02-17</lastmod>
+     <lastmod>2022-02-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>

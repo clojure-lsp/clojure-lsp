@@ -196,13 +196,13 @@ jobs:
         with:
           cli: '1.10.3.1013'
       
+      - name: Check vulnerable dependencies
+        run: clojure -Sdeps '{:deps {io.github.clj-holmes/clj-watson {:git/tag "v3.0.0" :git/sha "47d3321"}}}' -M -m clj-watson.cli scan -p deps.edn -a dev -f -s -t github-advisory
+        env:
+          GITHUB_TOKEN: ${{ secrest.GITHUB_TOKEN }}
+
       - name: Check vulnerable code
         uses: clj-holmes/clj-holmes-action@main
         with:
           output-type: 'stdout'
           fail-on-result: 'true'
-          
-      - name: Check vulnerable dependencies
-        run: clojure -Sdeps '{:deps {io.github.clj-holmes/clj-watson {:git/tag "v3.0.0" :git/sha "47d3321"}}}' -M -m clj-watson.cli scan -p deps.edn -a dev -f -s -t github-advisory
-
-      

@@ -182,6 +182,7 @@ jobs:
         run: make integration-test
         
   security:
+    if: always()
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

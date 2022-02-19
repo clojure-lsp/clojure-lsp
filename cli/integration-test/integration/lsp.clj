@@ -2,19 +2,19 @@
   (:require
    [babashka.process :as p]
    [cheshire.core :as json]
-   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
    [integration.helper :as h]))
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *clojure-lsp-listener* nil)
-(def ^:dynamic *stdin* nil)
-(def ^:dynamic *stdout* nil)
+(def ^:dynamic *server-in* nil)
+(def ^:dynamic *server-out* nil)
 
 (defonce server-responses (atom {}))
 (defonce server-requests (atom []))
 (defonce server-notifications (atom []))
+(defonce client-id (atom 0))
 (defonce client-request-id (atom 0))
 
 (defn inc-request-id []
@@ -43,36 +43,52 @@
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
+(defn client-log
+  ([color msg params]
+   (client-log @client-id color msg params))
+  ([client-id color msg params]
+   (println (colored color (str "Client " client-id " " msg)) (colored :yellow params))))
+
 (defn ^:private listen-output! []
-  (async/thread
-    (try
-      (loop []
-        (binding [*in* *stdout*]
-          (let [_content-length (read-line)
-                {:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-            (cond
-              (and id method)
-              (do
-                (println (colored :magenta "Received request:") (colored :yellow json))
-                (swap! server-requests conj json))
+  (let [client-id (swap! client-id inc)]
+    (future
+      (try
+        (binding [*in* *server-out*]
+          (loop []
+            ;; Block, waiting for next Content-Length line, then discard it. If
+            ;; the server output stream is closed, also close the client by
+            ;; exiting this loop.
+            (if-let [_content-length (read-line)]
+              (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+                (cond
+                  (and id method)
+                  (do
+                    (client-log client-id :magenta "received request:" json)
+                    (swap! server-requests conj json))
 
-              id
-              (do
-                (println (colored :green "Received response:") (colored :yellow json))
-                (swap! server-responses assoc id json))
+                  id
+                  (do
+                    (client-log client-id :green "received reponse:" json)
+                    (swap! server-responses assoc id json))
 
-              :else
+                  :else
+                  (do
+                    (client-log client-id :blue "received notification:" json)
+                    (swap! server-notifications conj json)))
+                (recur))
               (do
-                (println (colored :blue "Received notification:") (colored :yellow json))
-                (swap! server-notifications conj json)))))
-        (recur))
-      (catch java.io.IOException _))))
+                (client-log client-id :red "closed:" "server closed")
+                (flush)))))
+        (catch Throwable e
+          (client-log client-id :red "closed:" "exception")
+          (println e)
+          (throw e))))))
 
 (defn start-process! []
   (let [clojure-lsp-binary (first *command-line-args*)]
     (alter-var-root #'*clojure-lsp-process* (constantly (p/process [(.getCanonicalPath (io/file clojure-lsp-binary))] {:dir "integration-test/sample-test/"})))
-    (alter-var-root #'*stdin* (constantly (io/writer (:in *clojure-lsp-process*))))
-    (alter-var-root #'*stdout* (constantly (io/reader (:out *clojure-lsp-process*))))
+    (alter-var-root #'*server-in* (constantly (io/writer (:in *clojure-lsp-process*))))
+    (alter-var-root #'*server-out* (constantly (io/reader (:out *clojure-lsp-process*))))
     (alter-var-root #'*clojure-lsp-listener* (constantly (listen-output!)))))
 
 (defn cli! [& args]
@@ -86,27 +102,32 @@
   (reset! server-notifications [])
   (reset! client-request-id 0)
   (when *clojure-lsp-listener*
-    (async/close! *clojure-lsp-listener*))
+    (client-log :red "closing:" "test cleanup")
+    (flush)
+    (future-cancel *clojure-lsp-listener*)
+    (alter-var-root #'*clojure-lsp-listener* (constantly nil)))
   (when *clojure-lsp-process*
-    (p/destroy *clojure-lsp-process*)))
+    (p/destroy *clojure-lsp-process*)
+    (alter-var-root #'*clojure-lsp-process* (constantly nil))))
 
 (defn clean-after-test []
   (use-fixtures :each (fn [f] (clean!) (f)))
   (use-fixtures :once (fn [f] (f) (clean!))))
 
-(defn notify! [params]
-  (println (colored :blue "Sending notification:") (colored :yellow params))
-  (binding [*out* *stdin*]
+(defn client-send [params]
+  (binding [*out* *server-in*]
     (println (str "Content-Length: " (content-length params)))
     (println "")
-    (println params)))
+    (println params)
+    (flush)))
+
+(defn notify! [params]
+  (client-log :blue "sending notification:" params)
+  (client-send params))
 
 (defn request! [params]
-  (println (colored :cyan "Sending request:") (colored :yellow params))
-  (binding [*out* *stdin*]
-    (println (str "Content-Length: " (content-length params)))
-    (println "")
-    (println params))
+  (client-log :cyan "sending request:" params)
+  (client-send params)
   (loop [response (get @server-responses @client-request-id)]
     (if response
       (do

@@ -146,7 +146,7 @@
       (case action
         "pod" (pod/run-pod)
         "clean-ns" (internal-api/clean-ns! options)
-        "diagnostics" nil #_(internal-api/diagnostics options)
+        "diagnostics" (internal-api/diagnostics options)
         "format" (internal-api/format! options)
         "rename" (with-required-options
                    options

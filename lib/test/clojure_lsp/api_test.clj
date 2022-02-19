@@ -182,6 +182,23 @@
                                  :raw? true})]
         (is (= 0 (:result-code result)))
         (is (= "Nothing to format!" (:message result)))))
+    (testing "when single filename is specified"
+      (h/clean-db! :api-test)
+      (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
+                                 :filenames [(io/file "src/sample_test/api/format/b.clj")]
+                                 :dry? true
+                                 :raw? true})]
+        (is (= 0 (:result-code result)))
+        (is (= "Nothing to format!" (:message result)))))
+    (testing "when filenames are specified"
+      (h/clean-db! :api-test)
+      (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
+                                 :filenames [(io/file "src/sample_test/api/format/b.clj")
+                                             (io/file "src/sample_test/api/format/a.clj")]
+                                 :dry? true
+                                 :raw? true})]
+        (is (= 1 (:result-code result)))
+        (is (:message result))))
     (testing "specifying a ns-exclude-regex"
       (h/clean-db! :api-test)
       (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")

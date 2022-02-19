@@ -11,7 +11,7 @@
   - Small performance improvement during startup on unused-public-var calculation parallelizing calculations.
   - Small performance improvement on code actions calcullation.
   - Add `:use-source-paths-from-classpath` setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551
-  - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764 @mainej
+  - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764, #771 @mainej
   - Fix scenarios where the lint findings in individual files differed from what you'd expect based on the .clj-kondo/config.edn settings.
   
 - Editor
@@ -29,6 +29,7 @@
   - Small performance improvement to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
   - Fix edn->json parser of `serverInfo/raw` for Calva use cljfmt configuration. #763
   - Add `:cljfmt-raw` config to `serverInfo/raw` for Calva. #768
+  - Add support for passing specific `--filenames` for most actions. #775
 
 ## 2022.02.01-20.02.32
 

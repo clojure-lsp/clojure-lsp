@@ -29,6 +29,7 @@
   - Small performance improvement to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
   - Fix edn->json parser of `serverInfo/raw` for Calva use cljfmt configuration. #763
   - Add `:cljfmt-raw` config to `serverInfo/raw` for Calva. #768
+  - Add support for passing specific `--filenames` for most actions. #775
 
 ## 2022.02.01-20.02.32
 

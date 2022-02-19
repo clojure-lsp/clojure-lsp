@@ -14,7 +14,9 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import
+   [java.io File]))
 
 (set! *warn-on-reflection* true)
 
@@ -115,7 +117,7 @@
   change)
 
 (defn ^:private project-root->uri [project-root]
-  (-> (or ^java.io.File project-root (io/file ""))
+  (-> (or ^File project-root (io/file ""))
       .getCanonicalPath
       (shared/filename->uri db/db)))
 
@@ -203,6 +205,28 @@
   (and ns-exclude-regex
        (re-matches ns-exclude-regex (str namespace))))
 
+(defn ^:private options->namespaces [{:keys [namespace filenames project-root] :as options}]
+  (or (seq namespace)
+      (->> filenames
+           (map (fn [^File filename-or-dir]
+                  (if (.isAbsolute filename-or-dir)
+                    (io/file filename-or-dir)
+                    (io/file project-root filename-or-dir))))
+           (map (fn [^File filename-or-dir]
+                  (if (shared/directory? filename-or-dir)
+                    (->> filename-or-dir
+                         file-seq
+                         (remove shared/directory?)
+                         (map #(shared/filename->namespace (.getCanonicalPath ^File %) db/db)))
+                    (shared/filename->namespace (.getCanonicalPath filename-or-dir) db/db))))
+           flatten
+           (remove nil?)
+           (map symbol)
+           seq)
+      (->> (q/filter-project-analysis (:analysis @db/db) db/db)
+           q/find-all-ns-definition-names
+           (remove (partial exclude-ns? options)))))
+
 (defn analyze-project-and-deps! [options]
   (setup-api! options)
   (setup-project-and-deps-analysis! options))
@@ -211,14 +235,11 @@
   (setup-api! options)
   (setup-project-only-analysis! options))
 
-(defn clean-ns! [{:keys [namespace dry?] :as options}]
+(defn clean-ns! [{:keys [dry?] :as options}]
   (setup-api! options)
   (setup-project-only-analysis! options)
   (cli-println options "Checking namespaces...")
-  (let [namespaces (or (seq namespace)
-                       (->> (q/filter-project-analysis (:analysis @db/db) db/db)
-                            q/find-all-ns-definition-names
-                            (remove (partial exclude-ns? options))))
+  (let [namespaces (options->namespaces options)
         ns+uris (pmap ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
@@ -260,14 +281,11 @@
                      diags)))
             diagnostics)))
 
-(defn diagnostics [{:keys [namespace] :as options}]
+(defn diagnostics [options]
   (setup-api! options)
   (setup-project-and-deps-analysis! options)
   (cli-println options "Finding diagnostics...")
-  (let [namespaces (or (seq namespace)
-                       (->> (q/filter-project-analysis (:analysis @db/db) db/db)
-                            q/find-all-ns-definition-names
-                            (remove (partial exclude-ns? options))))
+  (let [namespaces (options->namespaces options)
         diags-by-uri (->> namespaces
                           (pmap ns->ns+uri)
                           (assert-ns-exists-or-drop! options)
@@ -287,14 +305,11 @@
        :diagnostics diags-by-uri}
       {:result-code 0 :message "No diagnostics found!"})))
 
-(defn format! [{:keys [namespace dry?] :as options}]
+(defn format! [{:keys [dry?] :as options}]
   (setup-api! options)
   (setup-project-only-analysis! options)
   (cli-println options "Formatting namespaces...")
-  (let [namespaces (or (seq namespace)
-                       (->> (q/filter-project-analysis (:analysis @db/db) db/db)
-                            q/find-all-ns-definition-names
-                            (remove (partial exclude-ns? options))))
+  (let [namespaces (options->namespaces options)
         ns+uris (pmap ns->ns+uri namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)

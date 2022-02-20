@@ -51,4 +51,4 @@
               :range (shared/->scope-range ns-element)
               :name-range (shared/->range ns-element)
               :kind :namespace
-              :children (mapv #(deftest->tree % testings) deftests)}})))
+              :children tests-tree}})))

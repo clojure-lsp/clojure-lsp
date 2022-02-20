@@ -8,7 +8,7 @@
   - Fix clean-ns multiple refers sort when there is a alias before the refers.
   - Bump clj-kondo from `2022.01.15` to `2022.02.09` adding support for implementation analysis and more improvements.
   - Medium performance improvement during startup when unused-public-var linter is disabled.
-  - Small performance improvement during startup on unused-public-var calculation parallelizing calculations.
+  - Medium performance improvement during startup on unused-public-var calculation parallelizing calculations.
   - Small performance improvement on code actions calcullation.
   - Add `:use-source-paths-from-classpath` setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551
   - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764, #771 @mainej

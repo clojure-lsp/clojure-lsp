@@ -643,13 +643,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#resolve-macro-as" class="md-nav__link">
-    Resolve macro as *
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#refactoring" class="md-nav__link">
     Refactoring
   </a>
@@ -972,13 +965,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#resolve-macro-as" class="md-nav__link">
-    Resolve macro as *
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#refactoring" class="md-nav__link">
     Refactoring
   </a>
@@ -1290,14 +1276,6 @@ make most of features work.</p>
 For more information check the <a href="../settings.md#stub-generation">stubs settings section</a>.</p>
 <h3 id="execute-command">Execute command<a class="headerlink" href="#execute-command" title="Permanent link">#</a></h3>
 <p>Commands that client can request. Most code actions use these commands as actions.</p>
-<h4 id="resolve-macro-as">Resolve macro as *<a class="headerlink" href="#resolve-macro-as" title="Permanent link">#</a></h4>
-<p>This code action should be wrapped by the LSP client to provide the missing arguments beside the existing return by the code action: </p>
-<ul>
-<li>The macro which should resolve as e.g. <code>clojure.core/def</code></li>
-<li>The clj-kondo configuration to save the new setting. e.g <code>/home/user/.clj-kondo/config.edn</code></li>
-</ul>
-<p>For an example, check how <a href="https://github.com/emacs-lsp/lsp-mode/commit/73b127f4cf09a443e1353aa6c40b2379b59c1bd6">Emacs LSP client</a> handles that.</p>
-<p><em>* Available via code actions too</em></p>
 <h4 id="refactoring">Refactoring<a class="headerlink" href="#refactoring" title="Permanent link">#</a></h4>
 <p>Commands that change/refactor the code.</p>
 <p><strong>Note: Most of them are available via code actions and most of the time you want to call the code action and not the command manually</strong></p>
@@ -1305,9 +1283,9 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <li>Clean namespace *</li>
 <li>Add import to namespace</li>
 <li>Add missing require *</li>
-<li>Cycle privacy of def/defn</li>
+<li>Cycle privacy of def/defn *</li>
 <li>Cycle collection (#{}, {}, [], ())</li>
-<li>Change collection to {}, (), #{}, []</li>
+<li>Change collection to {}, (), #{}, [] *</li>
 <li>Extract Function *</li>
 <li>Create private function *</li>
 <li>Inline Symbol *</li>
@@ -1318,12 +1296,13 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <li>Thread last expression</li>
 <li>Thread first all *</li>
 <li>Thread last all *</li>
-<li>Unwind all</li>
+<li>Unwind all *</li>
 <li>Unwind thread</li>
-<li>Create test</li>
-<li>Sort map</li>
-<li>Move coll entry up</li>
-<li>Move coll entry down</li>
+<li>Resolve macro as *</li>
+<li>Create test *</li>
+<li>Sort map *</li>
+<li>Move coll entry up *</li>
+<li>Move coll entry down *</li>
 </ul>
 <h4 id="dev">Dev<a class="headerlink" href="#dev" title="Permanent link">#</a></h4>
 <h5 id="server-information">Server information<a class="headerlink" href="#server-information" title="Permanent link">#</a></h5>
@@ -1338,7 +1317,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 20, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 21, 2022</span>
     
   </small>
 </div>

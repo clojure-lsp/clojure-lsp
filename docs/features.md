@@ -253,17 +253,6 @@ For more information check the [stubs settings section](../settings.md#stub-gene
 
 Commands that client can request. Most code actions use these commands as actions.
 
-#### Resolve macro as *
-
-This code action should be wrapped by the LSP client to provide the missing arguments beside the existing return by the code action: 
-
-- The macro which should resolve as e.g. `clojure.core/def`
-- The clj-kondo configuration to save the new setting. e.g `/home/user/.clj-kondo/config.edn`
-
-For an example, check how [Emacs LSP client](https://github.com/emacs-lsp/lsp-mode/commit/73b127f4cf09a443e1353aa6c40b2379b59c1bd6) handles that.
-
-_* Available via code actions too_
-
 #### Refactoring
 
 Commands that change/refactor the code.
@@ -273,9 +262,9 @@ __Note: Most of them are available via code actions and most of the time you wan
 - Clean namespace *
 - Add import to namespace
 - Add missing require *
-- Cycle privacy of def/defn
+- Cycle privacy of def/defn *
 - Cycle collection (#{}, {}, [], ())
-- Change collection to {}, (), #{}, []
+- Change collection to {}, (), #{}, [] *
 - Extract Function *
 - Create private function *
 - Inline Symbol *
@@ -286,12 +275,13 @@ __Note: Most of them are available via code actions and most of the time you wan
 - Thread last expression
 - Thread first all *
 - Thread last all *
-- Unwind all
+- Unwind all *
 - Unwind thread
-- Create test
-- Sort map
-- Move coll entry up
-- Move coll entry down
+- Resolve macro as *
+- Create test *
+- Sort map *
+- Move coll entry up *
+- Move coll entry down *
 
 #### Dev
 

@@ -53,7 +53,7 @@
                                       foo.bar-test})))))
 
 (defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/zloc-from-code code) [] db/db))
+  (f.add-missing-libspec/find-require-suggestions (h/zloc-from-code code) db/db))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"

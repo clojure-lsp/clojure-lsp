@@ -76,36 +76,36 @@
                           (z/replace (n/keyword-node (keyword (str ":" token)))))
                 z/up)))))))
 
-(defn ^:private safe-zloc-of-string [text]
+(defn zloc-of-string [text]
   (try
     (z/of-string text)
     (catch clojure.lang.ExceptionInfo e
-      (if-let [node (handle-end-slash-code text e)]
-        node
-        (if-let [node (handle-keyword-with-end-slash-code text e)]
-          node
-          (if-let [node (handle-single-colon-code text e)]
-            node
-            (throw e)))))))
+      (or (handle-end-slash-code text e)
+          (handle-keyword-with-end-slash-code text e)
+          (handle-single-colon-code text e)
+          (throw e)))))
 
-(defn loc-at-pos [code row col]
-  (some-> code
-          safe-zloc-of-string
-          (edit/find-last-by-pos z/next* {:row row :col col :end-row row :end-col col})))
-
-(defn safe-loc-at-pos [text row col]
+(defn safe-zloc-of-string [text]
+  ;; TODO: only used by tests.
   (try
-    (loc-at-pos text row (dec col))
+    (zloc-of-string text)
     (catch Exception _e
-      (log/warn "It was not possible to parse cursor location, probably a not valid clojure text"))))
+      (log/warn "It was not possible to parse text. Probably not valid clojure code."))))
 
-(defn safe-cursor-loc [uri line character db]
+(defn zloc-of-file [db uri]
+  (zloc-of-string (get-in db [:documents uri :text])))
+
+(defn safe-zloc-of-file [db uri]
   (try
-    (-> (get-in @db [:documents uri])
-        :text
-        (loc-at-pos (inc line) (inc character)))
+    (zloc-of-file db uri)
     (catch Exception _
-      (log/warn "It was not possible to get cursor location at given position. Probably a not valid clojure code"))))
+      (log/warn "It was not possible to parse file. Probably not valid clojure code."))))
+
+(defn to-pos [zloc row col]
+  (edit/find-last-by-pos zloc z/next* {:row row :col col :end-row row :end-col col}))
+
+(defn to-cursor [zloc line character]
+  (to-pos zloc (inc line) (inc character)))
 
 (defn lein-zloc->edn [zloc]
   (when-let [zloc (some-> zloc

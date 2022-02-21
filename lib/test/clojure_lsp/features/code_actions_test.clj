@@ -10,11 +10,8 @@
 
 (h/reset-db-after-test)
 
-(defn zloc-at [file row col]
-  (-> @db/db
-      (get-in [:documents file])
-      :text
-      (parser/loc-at-pos row col)))
+(defn zloc-of [uri]
+  (parser/safe-zloc-of-file @db/db uri))
 
 (deftest add-alias-suggestion-code-actions
   (h/load-code-and-locs "(ns clojure.set)" (h/file-uri "file:///clojure.core.clj"))
@@ -29,7 +26,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.set :as set]'"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 4)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
                           4
@@ -40,7 +37,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[medley.core :as medley]'"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 4)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           3
                           4
@@ -53,7 +50,7 @@
         :command {:command "add-require-suggestion"}}
        {:title "Add require '[clojure.data.json :as data.json]'"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 4)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           4
                           4
@@ -72,7 +69,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[medley.core :refer [unit]]'"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 3)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
                           3
@@ -84,7 +81,7 @@
     (h/assert-contains-submaps
       [{:title   "Add require '[clojure.set :refer [union]]'"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           3
                           3
@@ -112,7 +109,7 @@
                         (h/file-uri "file:///c.clj"))
   (testing "when it has not unresolved-namespace diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 2 10)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                                       (h/file-uri "file:///c.clj")
                                       2
                                       10
@@ -122,7 +119,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[some-ns :as sns]'"
         :command {:command "add-missing-libspec"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 3 11)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           3
                           11
@@ -131,7 +128,7 @@
                           db/db)))
   (testing "when it has unresolved-namespace but cannot find namespace"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 2 11)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                                       (h/file-uri "file:///c.clj")
                                       2
                                       11
@@ -142,7 +139,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.test :refer [deftest]]'"
         :command {:command "add-missing-libspec"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 2)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           4
                           2
@@ -151,7 +148,7 @@
                           db/db)))
   (testing "when it has unresolved-symbol but it's not a known refer"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 4 11)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                                       (h/file-uri "file:///c.clj")
                                       4
                                       11
@@ -171,7 +168,7 @@
                         (h/file-uri "file:///c.clj"))
   (testing "when it has no unresolved-symbol diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add import")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 5 2)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                                       (h/file-uri "file:///c.clj")
                                       5
                                       2
@@ -180,7 +177,7 @@
 
   (testing "when it has unresolved-symbol but it's not a common import"
     (is (not-any? #(string/starts-with? (:title %) "Add import")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 5 2)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                                       (h/file-uri "file:///c.clj")
                                       5
                                       2
@@ -192,7 +189,7 @@
     (h/assert-contains-submaps
       [{:title "Add import 'java.util.Date'"
         :command {:command "add-missing-import"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 6 2)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           6
                           2
@@ -204,7 +201,7 @@
     (h/assert-contains-submaps
       [{:title "Add import 'java.util.Date'"
         :command {:command "add-missing-import"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///c.clj") 7 2)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           7
                           2
@@ -220,7 +217,7 @@
                         (h/file-uri "file:///b.clj"))
   (testing "when in not a let/def symbol"
     (is (not-any? #(= (:title %) "Inline symbol")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 8)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                                       (h/file-uri "file:///b.clj")
                                       4
                                       8
@@ -230,7 +227,7 @@
     (h/assert-contains-submaps
       [{:title "Inline symbol"
         :command {:command "inline-symbol"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 5)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                           (h/file-uri "file:///b.clj")
                           4
                           5
@@ -246,7 +243,7 @@
                         (h/file-uri "file:///b.clj"))
   (testing "when in not a coll"
     (is (not-any? #(= (:title %) "Change coll to")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 1 1)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                                       (h/file-uri "file:///b.clj")
                                       1
                                       1
@@ -256,22 +253,22 @@
     (h/assert-contains-submaps
       [{:title "Change coll to map"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 2 1) (h/file-uri "file:///b.clj") 2 1 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 2 1 [] {} db/db)))
   (testing "when in a map"
     (h/assert-contains-submaps
       [{:title   "Change coll to vector"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 3 1) (h/file-uri "file:///b.clj") 3 1 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 3 1 [] {} db/db)))
   (testing "when in a vector"
     (h/assert-contains-submaps
       [{:title "Change coll to set"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 1) (h/file-uri "file:///b.clj") 4 1 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 4 1 [] {} db/db)))
   (testing "when in a set"
     (h/assert-contains-submaps
       [{:title "Change coll to list"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 5 1) (h/file-uri "file:///b.clj") 5 1 [] {} db/db))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 5 1 [] {} db/db))))
 
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"
@@ -281,7 +278,7 @@
                         (h/file-uri "file:///b.clj"))
   (testing "when not inside a let form"
     (is (not-any? #(= (:title %) "Move to let")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 4 1)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                                       (h/file-uri "file:///b.clj")
                                       4
                                       1
@@ -291,7 +288,7 @@
     (h/assert-contains-submaps
       [{:title "Move to let"
         :command {:command "move-to-let"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 3 3)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                           (h/file-uri "file:///b.clj")
                           3
                           3
@@ -304,7 +301,7 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when non function location"
     (is (not-any? #(= (:title %) "Cycle privacy")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 5)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                                       (h/file-uri "file:///a.clj")
                                       1
                                       5
@@ -314,7 +311,7 @@
     (h/assert-contains-submaps
       [{:title "Cycle privacy"
         :command {:command "cycle-privacy"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 5)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
                           5
@@ -327,7 +324,7 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when non function location"
     (is (not-any? #(= (:title %) "Extract function")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 5)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                                       (h/file-uri "file:///a.clj")
                                       1
                                       5
@@ -337,7 +334,7 @@
     (h/assert-contains-submaps
       [{:title "Extract function"
         :command {:command "extract-function"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 5)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
                           5
@@ -350,7 +347,7 @@
                                 "(def bar (some-func 1 2))"))
   (testing "when not in a unresolved symbol"
     (is (not-any? #(= (:title %) "Create private function")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 10)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                                       (h/file-uri "file:///a.clj")
                                       1
                                       10
@@ -360,7 +357,7 @@
     (h/assert-contains-submaps
       [{:title "Create private function 'some-func'"
         :command {:command "create-function"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 10)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
                           10
@@ -376,23 +373,23 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when in a ns or :require"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a def non-list node"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 2 [] {} db/db))))
   (testing "when on a valid function that can be threaded"
     (h/assert-contains-submaps
       [{:title "Thread first all"
         :command {:command "thread-first-all"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))
   (testing "when on a non-list node"
     (h/assert-contains-submaps
       [{:title "Thread first all"
         :command {:command "thread-first-all"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {} db/db))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 3 [] {} db/db))))
 
 (deftest thread-last-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -401,23 +398,23 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when in a ns or :require"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 1) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a def non-list node"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 2 2) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} db/db))))
   (testing "when on a valid function that can be threaded"
     (h/assert-contains-submaps
       [{:title "Thread last all"
         :command {:command "thread-last-all"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))
   (testing "when on a non-list node"
     (h/assert-contains-submaps
       [{:title "Thread last all"
         :command {:command "thread-last-all"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3) (h/file-uri "file:///a.clj") 3 1 [] {} db/db))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 3 [] {} db/db))))
 
 (deftest unwind-thread-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -428,22 +425,22 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when not in a thread"
     (is (not-any? #(= (:title %) "Unwind thread once")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 1 1) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} db/db))))
   (testing "when inside thread call"
     (h/assert-contains-submaps
       [{:title "Unwind thread once"
         :command {:command "unwind-thread"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 1) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} db/db)))
   (testing "when inside thread symbol"
     (h/assert-contains-submaps
       [{:title "Unwind thread once"
         :command {:command "unwind-thread"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 2) (h/file-uri "file:///a.clj") 3 2 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 2 [] {} db/db)))
   (testing "when inside any threading call"
     (h/assert-contains-submaps
       [{:title "Unwind thread once"
         :command {:command "unwind-thread"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 5 7) (h/file-uri "file:///a.clj") 5 7 [] {} db/db))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 5 7 [] {} db/db))))
 
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -464,7 +461,7 @@
                         (h/file-uri "file:///c.clj"))
   (testing "without workspace edit client capability"
     (is (not-any? #(= (:title %) "Clean namespace")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 2 2)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                                       (h/file-uri "file:///b.clj")
                                       2
                                       2
@@ -476,7 +473,7 @@
     (h/assert-contains-submaps
       [{:title "Clean namespace"
         :command {:command "clean-ns"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///b.clj") 2 2)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                           (h/file-uri "file:///b.clj")
                           2
                           2
@@ -492,10 +489,10 @@
     (h/assert-contains-submaps
       [{:title "Resolve macro 'some-ns/foo' as..."
         :command {:command "resolve-macro-as"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 7) (h/file-uri "file:///a.clj") 3 7 [] {} db/db)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 7 [] {} db/db)))
   (testing "when not inside a macro usage"
     (is (not-any? #(= (:title %) "Resolve macro 'some-ns/foo' as...")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 4) (h/file-uri "file:///a.clj") 4 4 [] {} db/db)))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 4 4 [] {} db/db)))))
 
 (deftest suppress-diagnostic-code-actions
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -505,7 +502,7 @@
     (h/assert-contains-submaps
       [{:title "Suppress 'unused-private-var' diagnostic"
         :command {:command "suppress-diagnostic"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 3)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           3
                           3
@@ -525,7 +522,7 @@
     (h/assert-contains-submaps
       [{:title "Sort map"
         :command {:command "sort-map"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 3)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           4
                           3
@@ -536,7 +533,7 @@
     (h/assert-contains-submaps
       [{:title "Sort map"
         :command {:command "sort-map"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 4 5)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           4
                           5
@@ -545,7 +542,7 @@
                           db/db)))
   (testing "not on map"
     (is (not-any? #(= (:title %) "Sort map")
-                  (f.code-actions/all (zloc-at (h/file-uri "file:///a.clj") 3 7)
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                                       (h/file-uri "file:///project/src/some_ns.clj")
                                       3
                                       7
@@ -565,7 +562,7 @@
     (h/assert-contains-submaps
       [{:title "Create test for 'foo'"
         :command {:command "create-test"}}]
-      (f.code-actions/all (zloc-at (h/file-uri "file:///project/src/some_ns.clj") 3 6)
+      (f.code-actions/all (zloc-of (h/file-uri "file:///project/src/some_ns.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           3
                           6

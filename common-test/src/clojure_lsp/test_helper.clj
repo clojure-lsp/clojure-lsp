@@ -150,10 +150,8 @@
    (let [[[row col] :as positions] (load-code-and-locs code uri)]
      (let [position-count (count positions)]
        (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-     (-> @db/db
-         (get-in [:documents uri])
-         :text
-         (parser/loc-at-pos row col)))))
+     (-> (parser/zloc-of-file @db/db uri)
+         (parser/to-pos row col)))))
 
 (defn zloc-from-code
   "Parse a zloc from a `code` block. Useful for refactorings that do not consult
@@ -162,4 +160,5 @@
   (let [[code [[row col] :as positions]] (positions-from-text code)]
     (let [position-count (count positions)]
       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-    (parser/loc-at-pos code row col)))
+    (-> (parser/zloc-of-string code)
+        (parser/to-pos row col))))

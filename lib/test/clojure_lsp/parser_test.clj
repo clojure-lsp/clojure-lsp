@@ -9,28 +9,35 @@
 (h/reset-db-after-test)
 
 (deftest safe-zloc-of-string
-  (is (= "(ns foo) foo/bar" (z/string (z/up (#'parser/safe-zloc-of-string "(ns foo) foo/bar")))))
-  (is (= "(ns foo) foo/ (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) foo/ (+ 1 2)"))))
-  (is (= "(ns foo) foo/\n(+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) foo/\n(+ 1 2)"))))
-  (is (= "(ns foo) (foo/)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (foo/)"))))
-  (is (= "(ns foo) :\n" (z/string (#'parser/safe-zloc-of-string "(ns foo) :\n"))))
-  (is (= "(ns foo) : " (z/string (#'parser/safe-zloc-of-string "(ns foo) : "))))
-  (is (= "(ns foo) (:)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (:)"))))
-  (is (= "(ns foo)\n:\n" (z/string (#'parser/safe-zloc-of-string "(ns foo)\n:\n"))))
-  (is (= "(ns foo) :foo/ (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) :foo/ (+ 1 2)"))))
-  (is (= "(ns foo) (:foo/) (+ 1 2)" (z/string (#'parser/safe-zloc-of-string "(ns foo) (:foo/) (+ 1 2)"))))
-  (is (= ":user/username\n:user/\n123" (z/string (#'parser/safe-zloc-of-string ":user/username\n:user/\n123")))))
+  (is (= "(ns foo) foo/bar" (z/string (z/up (parser/safe-zloc-of-string "(ns foo) foo/bar")))))
+  (is (= "(ns foo) foo/ (+ 1 2)" (z/string (parser/safe-zloc-of-string "(ns foo) foo/ (+ 1 2)"))))
+  (is (= "(ns foo) foo/\n(+ 1 2)" (z/string (parser/safe-zloc-of-string "(ns foo) foo/\n(+ 1 2)"))))
+  (is (= "(ns foo) (foo/)" (z/string (parser/safe-zloc-of-string "(ns foo) (foo/)"))))
+  (is (= "(ns foo) :\n" (z/string (parser/safe-zloc-of-string "(ns foo) :\n"))))
+  (is (= "(ns foo) : " (z/string (parser/safe-zloc-of-string "(ns foo) : "))))
+  (is (= "(ns foo) (:)" (z/string (parser/safe-zloc-of-string "(ns foo) (:)"))))
+  (is (= "(ns foo)\n:\n" (z/string (parser/safe-zloc-of-string "(ns foo)\n:\n"))))
+  (is (= "(ns foo) :foo/ (+ 1 2)" (z/string (parser/safe-zloc-of-string "(ns foo) :foo/ (+ 1 2)"))))
+  (is (= "(ns foo) (:foo/) (+ 1 2)" (z/string (parser/safe-zloc-of-string "(ns foo) (:foo/) (+ 1 2)"))))
+  (is (= ":user/username\n:user/\n123" (z/string (parser/safe-zloc-of-string ":user/username\n:user/\n123")))))
 
-(deftest find-loc-at-pos-test
+(deftest to-pos-test
   (testing "valid code"
-    (is (= nil (z/string (parser/loc-at-pos "  foo  " 1 1))))
-    (is (= 'foo (z/sexpr (parser/loc-at-pos "  foo  " 1 3))))
-    (is (= 'foo (z/sexpr (parser/loc-at-pos "  foo  " 1 5))))
-    (is (= "  " (z/string (parser/loc-at-pos "  foo  " 1 6)))))
+    (let [zloc (parser/zloc-of-string "  foo  ")]
+      (is (= nil (z/string (parser/to-pos zloc 1 1))))
+      (is (= 'foo (z/sexpr (parser/to-pos zloc 1 3))))
+      (is (= 'foo (z/sexpr (parser/to-pos zloc 1 5))))
+      (is (= "  " (z/string (parser/to-pos zloc 1 6))))))
   (testing "invalid code"
-    (is (= "foo/" (z/string (parser/loc-at-pos "(ns foo)  (foo/)  " 1 12))))
-    (is (= "foo/" (z/string (parser/loc-at-pos "(ns foo)  foo/ " 1 11))))
-    (is (= "foo/" (z/string (parser/loc-at-pos "(ns foo)  foo/\n" 1 11))))))
+    (is (= "foo/" (-> (parser/zloc-of-string "(ns foo)  (foo/)  ")
+                      (parser/to-pos 1 12)
+                      z/string)))
+    (is (= "foo/" (-> (parser/zloc-of-string "(ns foo)  foo/ ")
+                      (parser/to-pos 1 11)
+                      z/string)))
+    (is (= "foo/" (-> (parser/zloc-of-string "(ns foo)  foo/\n")
+                      (parser/to-pos 1 11)
+                      z/string)))))
 
 (deftest find-top-forms-test
   (let [code "(a) (b c d)"]

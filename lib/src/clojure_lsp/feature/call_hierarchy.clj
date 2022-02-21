@@ -18,9 +18,10 @@
     usage-element :usage-element} db]
   (let [project-file? (string/starts-with? uri "file://")
         detail (if project-file?
-                 (-> (f.file-management/force-get-document-text uri db)
-                     (parser/loc-at-pos name-row name-col)
-                     edit/find-namespace-name)
+                 (some-> (f.file-management/force-get-document-text uri db)
+                         (parser/zloc-of-string) ;; throws on invalid Clojure
+                         (parser/to-pos name-row name-col)
+                         edit/find-namespace-name)
                  (or (some-> ns str)
                      filename))]
     {:name (if arglist-strs
@@ -44,8 +45,9 @@
 (defn ^:private element->incoming-usage-by-uri
   [db {:keys [name-row name-col filename] :as element}]
   (let [uri (shared/filename->uri filename db)
-        zloc (-> (f.file-management/force-get-document-text uri db)
-                 (parser/loc-at-pos name-row name-col))
+        zloc (some-> (f.file-management/force-get-document-text uri db)
+                     (parser/zloc-of-string) ;; throws on invalid Clojure
+                     (parser/to-pos name-row name-col))
         parent-zloc (edit/find-var-definition-name-loc zloc filename db)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
@@ -75,8 +77,9 @@
 (defn outgoing [uri row col db]
   (let [analysis (:analysis @db)
         filename (shared/uri->filename uri)
-        zloc (-> (f.file-management/force-get-document-text uri db)
-                 (parser/loc-at-pos row col))
+        zloc (some-> (f.file-management/force-get-document-text uri db)
+                     (parser/zloc-of-string) ;; throws on invalid Clojure
+                     (parser/to-pos row col))
         {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename db)
                                                   z/node
                                                   meta)]

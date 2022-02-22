@@ -55,10 +55,13 @@
 
 (defn exclude-public-definition? [kondo-config definition]
   (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
+        excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
+        excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
         excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
         excluded-ns-or-var (set (filter simple-ident? excluded-syms))
-        keyword? (boolean (:reg definition))]
+        keyword? (boolean (:reg definition))
+        fqsn (symbol (-> definition :ns str) (-> definition :name str))]
     (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
                    (if keyword?
                      (:reg definition)
@@ -68,9 +71,11 @@
                      (symbol (str (:ns definition)) (:name definition))
                      (:name definition)))
         (contains? (set excluded-ns-or-var) (:ns definition))
+        (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
+        (some #(re-matches (re-pattern (str %)) (str (:defined-by definition))) excluded-defined-by-syms-regex)
         (-> excluded-full-qualified-vars
             set
-            (contains? (symbol (-> definition :ns str) (-> definition :name str))))
+            (contains? fqsn))
         (:export definition))))
 
 (defn ^:private kondo-finding->diagnostic

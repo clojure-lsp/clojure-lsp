@@ -13,6 +13,7 @@
   - Add `:use-source-paths-from-classpath` setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551
   - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764, #771 @mainej
   - Fix scenarios where the lint findings in individual files differed from what you'd expect based on the .clj-kondo/config.edn settings.
+  - Add `:exclude-regex` and `:exclude-when-definted-by-regex` to `:clojure-lsp/unused-public-var` linter.
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.

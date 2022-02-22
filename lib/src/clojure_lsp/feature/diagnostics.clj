@@ -6,20 +6,10 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [clojure.set :as set]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
-
-(def default-public-vars-defined-by-to-exclude
-  '#{clojure.test/deftest
-     cljs.test/deftest
-     state-flow.cljtest/defflow
-     potemkin/import-vars})
-
-(def default-public-vars-name-to-exclude
-  '#{-main})
 
 (def diagnostic-types-of-unnecessary-type
   #{:clojure-lsp/unused-public-var
@@ -53,29 +43,13 @@
                  :type :clojure-lsp/unused-public-var}]
     (reg-finding! finding)))
 
-(defn exclude-public-definition? [kondo-config definition]
-  (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
-        excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
-        excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
+(defn ^:private exclude-public-diagnostic-definition? [kondo-config definition]
+  (let [excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
-        excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
-        excluded-ns-or-var (set (filter simple-ident? excluded-syms))
-        keyword? (boolean (:reg definition))
         fqsn (symbol (-> definition :ns str) (-> definition :name str))]
-    (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
-                   (if keyword?
-                     (:reg definition)
-                     (:defined-by definition)))
-        (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
-                   (if keyword?
-                     (symbol (str (:ns definition)) (:name definition))
-                     (:name definition)))
-        (contains? (set excluded-ns-or-var) (:ns definition))
+    (or (q/exclude-public-definition? kondo-config definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some #(re-matches (re-pattern (str %)) (str (:defined-by definition))) excluded-defined-by-syms-regex)
-        (-> excluded-full-qualified-vars
-            set
-            (contains? fqsn))
         (:export definition))))
 
 (defn ^:private kondo-finding->diagnostic
@@ -173,7 +147,7 @@
   [definitions project-analysis {:keys [config reg-finding!]} max-parallelize? db]
   (let [parallelize-fn (if max-parallelize? pmap shared/pmap-light)]
     (->> definitions
-         (remove (partial exclude-public-definition? config))
+         (remove (partial exclude-public-diagnostic-definition? config))
          (parallelize-fn #(when (= 0 (count (q/find-references project-analysis % false db)))
                             %))
          (remove nil?)

@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.code-lens
   (:require
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -24,12 +23,12 @@
 
 (defn ^:private var-definitions-lens [filename kondo-config analysis]
   (->> (q/find-var-definitions analysis filename true)
-       (remove (partial f.diagnostic/exclude-public-definition? kondo-config))))
+       (remove (partial q/exclude-public-definition? kondo-config))))
 
 (defn ^:private keyword-definitions-lens
   [filename kondo-config analysis]
   (->> (q/find-keyword-definitions analysis filename)
-       (remove (partial f.diagnostic/exclude-public-definition? kondo-config))))
+       (remove (partial q/exclude-public-definition? kondo-config))))
 
 (defn reference-code-lens [uri db]
   (let [analysis (:analysis @db)

@@ -562,3 +562,32 @@
           (= name (:name %)))
     analysis
     db))
+
+(def default-public-vars-defined-by-to-exclude
+  '#{clojure.test/deftest
+     cljs.test/deftest
+     state-flow.cljtest/defflow
+     potemkin/import-vars})
+
+(def default-public-vars-name-to-exclude
+  '#{-main})
+
+(defn exclude-public-definition? [kondo-config definition]
+  (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
+        excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
+        excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
+        excluded-ns-or-var (set (filter simple-ident? excluded-syms))
+        keyword? (boolean (:reg definition))
+        fqsn (symbol (-> definition :ns str) (-> definition :name str))]
+    (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
+                   (if keyword?
+                     (:reg definition)
+                     (:defined-by definition)))
+        (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
+                   (if keyword?
+                     (symbol (str (:ns definition)) (:name definition))
+                     (:name definition)))
+        (contains? (set excluded-ns-or-var) (:ns definition))
+        (-> excluded-full-qualified-vars
+            set
+            (contains? fqsn)))))

@@ -1,4 +1,4 @@
-{:deps {org.clojure/clojure {:mvn/version "1.10.3"}
+{:deps {org.clojure/clojure {:mvn/version "1.11.0-rc1"}
         rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
         borkdude/rewrite-edn {:mvn/version "0.1.0" :exclusions [rewrite-clj/rewrite-clj]}
         com.taoensso/timbre {:mvn/version "5.1.2"}

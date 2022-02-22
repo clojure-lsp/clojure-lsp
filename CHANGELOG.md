@@ -14,6 +14,7 @@
   - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764, #771 @mainej
   - Fix scenarios where the lint findings in individual files differed from what you'd expect based on the .clj-kondo/config.edn settings.
   - Add `:exclude-regex` and `:exclude-when-definted-by-regex` to `:clojure-lsp/unused-public-var` linter.
+  - Bump `org.clojure/clojure` to `1.11.0-rc1`.
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.

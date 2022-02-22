@@ -1801,8 +1801,9 @@
 <li>Small performance improvement on code actions calcullation.</li>
 <li>Add <code>:use-source-paths-from-classpath</code> setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551</li>
 <li>Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764, #771 @mainej</li>
+<li>Fix scenarios where the lint findings in individual files differed from what you'd expect based on the .clj-kondo/config.edn settings.</li>
 <li>
-<p>Fix scenarios where the lint findings in individual files differed from what you'd expect based on the .clj-kondo/config.edn settings.</p>
+<p>Add <code>:exclude-regex</code> and <code>:exclude-when-definted-by-regex</code> to <code>:clojure-lsp/unused-public-var</code> linter.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2656,7 +2657,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 21, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 22, 2022</span>
     
   </small>
 </div>

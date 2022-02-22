@@ -182,7 +182,6 @@ jobs:
         run: make integration-test
         
   security:
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -197,7 +196,16 @@ jobs:
           cli: '1.10.3.1013'
       
       - name: Check vulnerable dependencies
-        run: clojure -Sdeps '{:deps {io.github.clj-holmes/clj-watson {:git/tag "v3.0.0" :git/sha "47d3321"}}}' -M -m clj-watson.cli scan -p deps.edn -a dev -o stdout-simple -f -s -t github-advisory
+        uses: clj-holmes/clj-watson-action@main
+        with:
+          clj-watson-sha: "b4d877d"
+          clj-watson-tag: "v3.0.1"
+          database-strategy: github-advisory
+          aliases: dev 
+          deps-edn-path: 'deps.edn'
+          output-type: 'stdout-simple'
+          suggest-fix: 'true'
+          fail-on-result: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

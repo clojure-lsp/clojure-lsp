@@ -490,13 +490,13 @@ jobs:
           asset_name: clojure-lsp-native-static-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
 
-      # - name: Upload Linux aarch64 native binary
-      #   uses: svenstaro/upload-release-action@v2
-      #   with:
-      #     repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-      #     file: clojure-lsp-native-linux-aarch64.zip/clojure-lsp-native-linux-aarch64.zip
-      #     asset_name: clojure-lsp-native-linux-aarch64.zip
-      #     tag: ${{ steps.latest-tag.outputs.tag }}
+      - name: Upload Linux aarch64 native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-linux-aarch64.zip/clojure-lsp-native-linux-aarch64.zip
+          asset_name: clojure-lsp-native-linux-aarch64.zip
+          tag: ${{ steps.latest-tag.outputs.tag }}
 
       - name: Upload MacOS native binary
         uses: svenstaro/upload-release-action@v2

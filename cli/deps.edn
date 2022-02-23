@@ -31,7 +31,7 @@
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}
-                                cider/cider-nrepl {:mvn/version "0.28.2"}}}
+                                cider/cider-nrepl {:mvn/version "0.28.3"}}}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"
                                "-Dborkdude.dynaload.aot=true"

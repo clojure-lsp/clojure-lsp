@@ -33,6 +33,8 @@
   - Add `:cljfmt-raw` config to `serverInfo/raw` for Calva. #768
   - Add support for passing specific `--filenames` for most actions. #775
 
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
 ## 2022.02.01-20.02.32
 
 - General

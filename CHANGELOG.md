@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.02.23-12.12.12
+
 - General
   - Use `:source-aliases` setting during default deps.edn and lein project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
   - Exclude from unused-public-var linter vars with metadata `^:export`. #753

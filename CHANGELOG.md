@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
+
 ## 2022.02.23-12.12.12
 
 - General

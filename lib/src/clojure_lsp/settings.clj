@@ -66,9 +66,9 @@
 (defn ^:private get-refreshed-settings [db]
   (let [{:keys [project-root-uri settings force-settings]} @db
         new-project-settings (config/resolve-for-root project-root-uri)]
-    (shared/deep-merge settings
-                       new-project-settings
-                       force-settings)))
+    (config/deep-merge-fixing-cljfmt settings
+                                     new-project-settings
+                                     force-settings)))
 
 (def ttl-threshold-milis 1000)
 

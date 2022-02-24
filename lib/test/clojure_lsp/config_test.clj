@@ -129,4 +129,11 @@
                                        'b [[:inner 0]]}}}
          (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]
                                                                      'b [[:inner 0]]}}}
-                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]}}}))))
+                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]}}})))
+  (is (= {:a 1 :b 3 :cljfmt {:indents {'a [[:block 1]]
+                                       'b [[:inner 0]]
+                                       'c [[:block 1]]}}}
+         (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]
+                                                                     'b [[:inner 0]]}}}
+                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]}}}
+                                            {:b 3 :cljfmt {:indents {'c [[:block 1]]}}}))))

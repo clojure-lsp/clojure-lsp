@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [get])
   (:require
    [clojure-lsp.config :as config]
-   [clojure-lsp.shared :as shared]
    [clojure.core.memoize :as memoize]
    [clojure.string :as string]
    [clojure.walk :as walk]

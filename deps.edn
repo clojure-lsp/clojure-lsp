@@ -4,8 +4,8 @@
                  :extra-deps {clojure-lsp/lib {:local/root "lib"}
                               clojure-lsp/cli {:local/root "cli"}
                               io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                             :tag "v0.7.7"
-                                                             :sha "1474ad6"}}}
+                                                             :tag "v0.8.0"
+                                                             :sha "e3e3532"}}}
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.60.977"}}
                   :extra-paths ["lib/src"
                                 "cli/src"

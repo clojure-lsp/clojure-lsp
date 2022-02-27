@@ -312,12 +312,17 @@
     (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
             "::alp/"
             "") "file:///someother/ns.clj")
-  (testing "return all reg keywords for that aliased keyword"
+  (testing "return all matching reg keywords for that aliased keyword"
+    (h/assert-submaps
+      [{:label "::alp/foo" :kind :keyword}
+       {:label "::alp/foob" :kind :keyword}]
+      (f.completion/completion (h/file-uri "file:///other/ns.clj") 2 8 db/db)))
+  (testing "return all reg keywords for plain alias"
     (h/assert-submaps
       [{:label "::alp/bar" :kind :keyword}
        {:label "::alp/foo" :kind :keyword}
        {:label "::alp/foob" :kind :keyword}]
-      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 6 db/db))))
+      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 db/db))))
 
 (deftest completing-sorting
   (h/load-code-and-locs

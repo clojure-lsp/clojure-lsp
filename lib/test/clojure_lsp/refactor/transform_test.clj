@@ -380,19 +380,6 @@
                        "  |(+ 1 a))")
                (extract-function "foo")
                as-strings))))
-  (testing "On multi-arity function"
-    (is (= [(h/code ""
-                    "(defn foo [a b]"
-                    "  (= a b))"
-                    "")
-            (h/code "(foo a b)")]
-           (-> (h/code "(defn mytest"
-                       "  ([a b]"
-                       "   (if |(= a b)"
-                       "      1"
-                       "      2)))")
-               (extract-function "foo")
-               as-strings))))
   (testing "from comment"
     (is (= [(h/code ""
                     "(defn foo [a]"

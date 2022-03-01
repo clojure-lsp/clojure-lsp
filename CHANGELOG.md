@@ -5,6 +5,9 @@
 - General
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
 
+- Editor
+  - Fix wrong args on extract function code action on some corner cases. #683
+
 ## 2022.02.23-12.12.12
 
 - General

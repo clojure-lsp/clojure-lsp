@@ -188,19 +188,19 @@
     (h/assert-submaps [] @findings)))
 
 (deftest lint-clj-kondo-findings
-  (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))")
-  (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///b.clj"))
+  (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))
+  (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///other_ns.clj"))
   (testing "when linter level is :off"
     (swap! db/db shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") db/db))))
   (testing "when linter level is not :off but has matching :ns-exclude-regex"
-    (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/a.clj"))
+    (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/some_ns.clj"))
     (swap! db/db merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths ["/project/src"]
-                                   :linters {:clj-kondo {:ns-exclude-regex "a.*"}}}})
+                                   :linters {:clj-kondo {:ns-exclude-regex "some-ns.*"}}}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/a.clj") db/db))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/some_ns.clj") db/db))))
   (testing "when linter level is not :off"
     (swap! db/db merge {:settings {:linters {:clj-kondo {:level :error}}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
@@ -209,7 +209,7 @@
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") db/db)))
   (testing "when linter is not specified"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
@@ -218,7 +218,7 @@
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (f.diagnostic/find-diagnostics (h/file-uri "file:///a.clj") db/db)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") db/db)))
   (testing "when inside expression?"
     (swap! db/db merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
@@ -227,7 +227,7 @@
                         :tags []
                         :severity 1
                         :source "clj-kondo"}]
-                      (f.diagnostic/find-diagnostics (h/file-uri "file:///b.clj") db/db)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///other_ns.clj") db/db)))
   (testing "when file is external"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some/place.jar:some/file.clj"))
     (swap! db/db merge {:project-root-uri (h/file-uri "file:///project")
@@ -327,6 +327,6 @@
   (testing "custom unused namespace declaration"
     (h/clean-db!)
     (h/with-mock-diagnostics
-      (h/load-code-and-locs "(ns foo.bar)")
+      (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///foo/bar.clj"))
       (is (empty?
-            (map :message (get @h/mock-diagnostics "file:///a.clj")))))))
+            (map :message (get @h/mock-diagnostics "file:////foo/bar.clj")))))))

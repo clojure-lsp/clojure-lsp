@@ -434,6 +434,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#profiling" class="md-nav__link">
+    Profiling
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -595,6 +602,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#profiling" class="md-nav__link">
+    Profiling
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -672,6 +686,24 @@
 </code></pre></div>
 <h3 id="your-favorite-editor">Your Favorite Editor<a class="headerlink" href="#your-favorite-editor" title="Permanent link">#</a></h3>
 <p>TBD. PR welcome.</p>
+<h2 id="profiling">Profiling<a class="headerlink" href="#profiling" title="Permanent link">#</a></h2>
+<p>To make a build with profiling and benchmarking tools available, in addition to an nREPL, add the following requires to the namespace you want to profile.</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:require</span>
+  ,,,
+  <span class="p">[</span><span class="nv">clj-async-profiler.core</span> <span class="ss">:as</span> <span class="nv">profiler</span><span class="p">]</span>
+  <span class="p">[</span><span class="nv">criterium.core</span> <span class="ss">:as</span> <span class="nv">bench</span><span class="p">])</span>
+</code></pre></div>
+<p>Also add an (unused) function</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">defn </span><span class="nv">stub</span> <span class="p">[]</span>
+  <span class="p">(</span><span class="nf">bench/quick-bench</span> <span class="p">(</span><span class="nb">* </span><span class="mi">2</span> <span class="mi">3</span><span class="p">))</span>
+  <span class="p">(</span><span class="nf">profiler/profile</span>
+    <span class="p">{</span><span class="ss">:min-width</span> <span class="mi">5</span><span class="p">}</span>
+    <span class="p">(</span><span class="nb">dotimes </span><span class="p">[</span><span class="nv">_</span> <span class="mi">500</span><span class="p">]</span>
+      <span class="p">(</span><span class="nb">* </span><span class="mi">2</span> <span class="mi">3</span><span class="p">))))</span>
+</code></pre></div>
+<p>Then run <code>make debug-perf-cli</code>. When the build has completed, follow the above steps to connect to an nREPL.</p>
+<p>Execute profiling code within a rich comment block, using the code from the stub function as a guideline. You'll need to be familiar with <a href="https://github.com/hugoduncan/criterium">criterium</a> and <a href="http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/">clj-async-profiler</a> to interpret the results.</p>
+<p>Note that it is often important to do profiling with this kind of nREPL, because in a regular REPL the analysis database starts off nearly empty. With a fuller database, profiling is more accurate. That said, if you do want to profile in a regular REPL, you can—start it with the <code>:performance</code> alias.</p>
                 
                   
                     

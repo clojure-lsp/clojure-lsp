@@ -60,12 +60,12 @@
              :main 'clojure-lsp.main
              :basis basis})))
 
-(defn ^:private bin []
+(defn ^:private bin [opts]
   (println "Generating bin...")
   ((requiring-resolve 'deps-bin.impl.bin/build-bin)
    {:jar uber-file
     :name "clojure-lsp"
-    :jvm-opts ["-Xmx2g" "-server"]
+    :jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])
     :skip-realign true}))
 
 (def prod-jar uber-aot)
@@ -75,11 +75,15 @@
 
 (defn debug-cli [opts]
   (uber-aot (merge opts {:extra-aliases [:debug]}))
-  (bin))
+  (bin {}))
+
+(defn debug-perf-cli [opts]
+  (uber-aot (merge opts {:extra-aliases [:debug :performance]}))
+  (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"]}))
 
 (defn prod-cli [opts]
   (prod-jar opts)
-  (bin))
+  (bin {}))
 
 (defn native-cli [opts]
   (println "Building native image...")

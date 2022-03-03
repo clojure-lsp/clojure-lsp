@@ -44,7 +44,68 @@
     (is (not (can-move-code-up? "{|:a :b :c :d}")))
     (is (not (can-move-code-up? "{:a |:b :c :d}")))
     (is (not (can-move-code-up? "(let [|a 1 c 2])")))
-    (is (not (can-move-code-up? "(let [a |1 c 2])")))))
+    (is (not (can-move-code-up? "(let [a |1 c 2])")))
+    (testing "of special functions"
+      ;; from rind of cond
+      (is (not (can-move-code-up? "(|cond a 1 b 2)")))
+      ;; from first pair of cond
+      (is (not (can-move-code-up? "(cond |a 1 b 2)")))
+      (is (not (can-move-code-up? "(cond a |1 b 2)")))
+      ;; from rind of assoc
+      (is (not (can-move-code-up? "(|assoc x :a 1 :b 2)")))
+      (is (not (can-move-code-up? "(assoc |x :a 1 :b 2)")))
+      ;; from first pair of assoc
+      (is (not (can-move-code-up? "(assoc x |:a 1 :b 2)")))
+      (is (not (can-move-code-up? "(assoc x :a |1 :b 2)")))
+      ;; from rind of assoc!
+      (is (not (can-move-code-up? "(|assoc! x :a 1 :b 2)")))
+      (is (not (can-move-code-up? "(assoc! |x :a 1 :b 2)")))
+      ;; from first pair of assoc!
+      (is (not (can-move-code-up? "(assoc! x |:a 1 :b 2)")))
+      (is (not (can-move-code-up? "(assoc! x :a |1 :b 2)")))
+      ;; from rind of cond->
+      (is (not (can-move-code-up? "(|cond-> x a inc b dec)")))
+      (is (not (can-move-code-up? "(cond-> |x a inc b dec)")))
+      ;; from first pair of cond->
+      (is (not (can-move-code-up? "(cond-> x |a inc b dec)")))
+      (is (not (can-move-code-up? "(cond-> x a |inc b dec)")))
+      ;; from rind of cond->>
+      (is (not (can-move-code-up? "(|cond->> x a inc b dec)")))
+      (is (not (can-move-code-up? "(cond->> |x a inc b dec)")))
+      ;; from first pair of cond->>
+      (is (not (can-move-code-up? "(cond->> x |a inc b dec)")))
+      (is (not (can-move-code-up? "(cond->> x a |inc b dec)")))
+      ;; from rind of case
+      (is (not (can-move-code-up? "(|case a 1 :first 2 :second)")))
+      (is (not (can-move-code-up? "(case |a 1 :first 2 :second)")))
+      (is (not (can-move-code-up? "(case a 1 :first |:else)")))
+      (is (not (can-move-code-up? "(case a |:else)")))
+      ;; from first pair of case
+      (is (not (can-move-code-up? "(case a |1 :first)")))
+      (is (not (can-move-code-up? "(case a 1 |:first)")))
+      (is (not (can-move-code-up? "(case a |1 :first 2 :second)")))
+      (is (not (can-move-code-up? "(case a 1 |:first 2 :second)")))
+      (is (not (can-move-code-up? "(case a |1 :first :else)")))
+      (is (not (can-move-code-up? "(case a 1 |:first :else)")))
+      ;; from rind of condp
+      (is (not (can-move-code-up? "(|condp = x a 1 b 2)")))
+      (is (not (can-move-code-up? "(condp |= x a 1 b 2)")))
+      (is (not (can-move-code-up? "(condp = |x a 1 b 2)")))
+      (is (not (can-move-code-up? "(condp = x a 1 |:else)")))
+      (is (not (can-move-code-up? (h/code "(condp some [1 2 3 4]"
+                                          "  #{0 6 7} :>> inc"
+                                          "  #{4 5 9} :>> dec"
+                                          "  |:else)"))))
+      ;; from first pair of condp
+      (is (not (can-move-code-up? "(condp = |x a 1 b 2)")))
+      (is (not (can-move-code-up? "(condp = x |a 1 b 2)")))
+      (is (not (can-move-code-up? (h/code "(condp some [1 2 3 4]"
+                                          "  #{0 6 7} :>> |inc)"))))
+      ;; in invalid ternary form of condp
+      (is (not (can-move-code-up? (h/code "(condp some [1 2 3 4]"
+                                          "  #{0 6 7} :>> inc"
+                                          "  |#{4 5 9} :>> dec"
+                                          "  :else :invalid)")))))))
 
 ;; These are only the negative cases, proving when move-down is NOT offered in
 ;; the actions menu. The positive cases are all tested indirectly via
@@ -70,7 +131,58 @@
     (is (not (can-move-code-down? "{:a :b |:c :d}")))
     (is (not (can-move-code-down? "{:a :b :c |:d}")))
     (is (not (can-move-code-down? "(let [a 1 |c 2])")))
-    (is (not (can-move-code-down? "(let [a 1 c |2])")))))
+    (is (not (can-move-code-down? "(let [a 1 c |2])")))
+    (testing "of special functions"
+      ;; from rind of cond
+      (is (not (can-move-code-down? "(|cond a 1 b 2)")))
+      ;; from last pair of cond
+      (is (not (can-move-code-down? "(cond a 1 |b 2)")))
+      (is (not (can-move-code-down? "(cond a 1 b |2)")))
+      ;; from rind of cond->
+      (is (not (can-move-code-down? "(|cond-> x a inc b dec)")))
+      (is (not (can-move-code-down? "(cond-> |x a inc b dec)")))
+      ;; from last pair of cond->
+      (is (not (can-move-code-down? "(cond-> x a inc |b dec)")))
+      (is (not (can-move-code-down? "(cond-> x a inc b |dec)")))
+      ;; from rind of assoc
+      (is (not (can-move-code-down? "(|assoc x :a 1 :b 2)")))
+      (is (not (can-move-code-down? "(assoc |x :a 1 :b 2)")))
+      ;; from last pair of assoc
+      (is (not (can-move-code-down? "(assoc x :a 1 |:b 2)")))
+      (is (not (can-move-code-down? "(assoc x :a 1 :b |2)")))
+      ;; from rind of assoc!
+      (is (not (can-move-code-down? "(|assoc! x :a 1 :b 2)")))
+      (is (not (can-move-code-down? "(assoc! |x :a 1 :b 2)")))
+      ;; from last pair of assoc!
+      (is (not (can-move-code-down? "(assoc! x :a 1 |:b 2)")))
+      (is (not (can-move-code-down? "(assoc! x :a 1 :b |2)")))
+      ;; from rind of cond->>
+      (is (not (can-move-code-down? "(|cond->> x a inc b dec)")))
+      (is (not (can-move-code-down? "(cond->> |x a inc b dec)")))
+      ;; from last pair of cond->>
+      (is (not (can-move-code-down? "(cond->> x a inc |b dec)")))
+      (is (not (can-move-code-down? "(cond->> x a inc b |dec)")))
+      ;; from rind of case
+      (is (not (can-move-code-down? "(|case a 1 :first 2 :second)")))
+      (is (not (can-move-code-down? "(case |a 1 :first 2 :second)")))
+      (is (not (can-move-code-down? "(case a 1 :first |:else)")))
+      (is (not (can-move-code-down? "(case a |:else)")))
+      ;; from last pair of case
+      (is (not (can-move-code-down? "(case a 1 :first |2 :second)")))
+      (is (not (can-move-code-down? "(case a 1 :first 2 |:second)")))
+      (is (not (can-move-code-down? "(case a 1 :first |2 :second :else)")))
+      (is (not (can-move-code-down? "(case a 1 :first 2 |:second :else)")))
+      ;; from rind of condp
+      (is (not (can-move-code-down? "(|condp = x a 1 b 2)")))
+      (is (not (can-move-code-down? "(condp |= x a 1 b 2)")))
+      (is (not (can-move-code-down? "(condp = |x a 1 b 2)")))
+      (is (not (can-move-code-down? "(condp = x a 1 |:else)")))
+      ;; from last pair of condp
+      (is (not (can-move-code-down? "(condp = x a 1 |b 2)")))
+      (is (not (can-move-code-down? "(condp = x a 1 b |2)")))
+      (is (not (can-move-code-down? (h/code "(condp some [1 2 3 4]"
+                                            "  |#{4 5 9} :>> dec"
+                                            "  :else)")))))))
 
 (defn move-zloc-up [zloc]
   (f.move-coll-entry/move-up zloc h/default-uri @db/db))
@@ -190,6 +302,131 @@
                             "(foo [a 1"
                             "      |b 2]"
                             "  (inc a))")))
+  (testing "within special functions"
+    (assert-move-up (h/code "(cond |b 2 a 1)")
+                    (h/code "(cond a 1 |b 2)"))
+    (assert-move-up (h/code "(cond |b 2 a 1)")
+                    (h/code "(cond a 1 b |2)"))
+    (assert-move-up (h/code "(assoc x |:b 1 :a 2)")
+                    (h/code "(assoc x :a 2 |:b 1)"))
+    (assert-move-up (h/code "(assoc x |:b 1 :a 2)")
+                    (h/code "(assoc x :a 2 :b |1)"))
+    (assert-move-up (h/code "#(assoc % |:b 2 :a 1)")
+                    (h/code "#(assoc % :a 1 |:b 2)"))
+    (assert-move-up (h/code "(-> {}"
+                            "    (assoc |:b 1 :a 2))")
+                    (h/code "(-> {}"
+                            "    (assoc :a 2 |:b 1))"))
+    (assert-move-up (h/code "(some-> {}"
+                            "        (assoc |:b 1 :a 2))")
+                    (h/code "(some-> {}"
+                            "        (assoc :a 2 |:b 1))"))
+    (assert-move-up (h/code "(cond-> {}"
+                            "  true (assoc |:b 1 :a 2))")
+                    (h/code "(cond-> {}"
+                            "  true (assoc :a 2 |:b 1))"))
+    (assert-move-up (h/code "(assoc! x |:b 1 :a 2)")
+                    (h/code "(assoc! x :a 2 |:b 1)"))
+    (assert-move-up (h/code "(assoc! x |:b 1 :a 2)")
+                    (h/code "(assoc! x :a 2 :b |1)"))
+    (assert-move-up (h/code "(-> {}"
+                            "    (assoc! |:b 1 :a 2))")
+                    (h/code "(-> {}"
+                            "    (assoc! :a 2 |:b 1))"))
+    (assert-move-up (h/code "(some-> {}"
+                            "        (assoc! |:b 1 :a 2))")
+                    (h/code "(some-> {}"
+                            "        (assoc! :a 2 |:b 1))"))
+    (assert-move-up (h/code "(cond-> {}"
+                            "  true (assoc! |:b 1 :a 2))")
+                    (h/code "(cond-> {}"
+                            "  true (assoc! :a 2 |:b 1))"))
+    (assert-move-up (h/code "(cond-> x |b dec a inc)")
+                    (h/code "(cond-> x a inc |b dec)"))
+    (assert-move-up (h/code "(cond-> x |b dec a inc)")
+                    (h/code "(cond-> x a inc b |dec)"))
+    (assert-move-up (h/code "(-> 1"
+                            "    (cond-> |b dec a inc))")
+                    (h/code "(-> 1"
+                            "    (cond-> a inc |b dec))"))
+    (assert-move-up (h/code "(some-> 1"
+                            "        (cond-> |b dec a inc))")
+                    (h/code "(some-> 1"
+                            "        (cond-> a inc |b dec))"))
+    (assert-move-up (h/code "(cond-> 1"
+                            "  true (cond-> |b dec a inc))")
+                    (h/code "(cond-> 1"
+                            "  true (cond-> a inc |b dec))"))
+    (assert-move-up (h/code "(cond->> x |b dec a inc)")
+                    (h/code "(cond->> x a inc |b dec)"))
+    (assert-move-up (h/code "(cond->> x |b dec a inc)")
+                    (h/code "(cond->> x a inc b |dec)"))
+    (assert-move-up (h/code "(-> 1"
+                            "    (cond->> |b dec a inc))")
+                    (h/code "(-> 1"
+                            "    (cond->> a inc |b dec))"))
+    (assert-move-up (h/code "(some-> 1"
+                            "        (cond->> |b dec a inc))")
+                    (h/code "(some-> 1"
+                            "        (cond->> a inc |b dec))"))
+    (assert-move-up (h/code "(cond-> 1"
+                            "  true (cond->> |b dec a inc))")
+                    (h/code "(cond-> 1"
+                            "  true (cond->> a inc |b dec))"))
+    (assert-move-up (h/code "(case a |2 :second 1 :first)")
+                    (h/code "(case a 1 :first |2 :second)"))
+    (assert-move-up (h/code "(case a |2 :second 1 :first)")
+                    (h/code "(case a 1 :first 2 |:second)"))
+    (assert-move-up (h/code "(case a |2 :second 1 :first :else)")
+                    (h/code "(case a 1 :first |2 :second :else)"))
+    (assert-move-up (h/code "(case a |2 :second 1 :first :else)")
+                    (h/code "(case a 1 :first 2 |:second :else)"))
+    (assert-move-up (h/code "(-> 1"
+                            "    (case |2 :second 1 :first))")
+                    (h/code "(-> 1"
+                            "    (case 1 :first |2 :second))"))
+    (assert-move-up (h/code "(some-> 1"
+                            "        (case |2 :second 1 :first))")
+                    (h/code "(some-> 1"
+                            "        (case 1 :first |2 :second))"))
+    (assert-move-up (h/code "(cond-> 1"
+                            "  true (case |2 :second 1 :first))")
+                    (h/code "(cond-> 1"
+                            "  true (case 1 :first |2 :second))"))
+    (assert-move-up (h/code "(condp = x |b 2 a 1)")
+                    (h/code "(condp = x a 1 |b 2)"))
+    (assert-move-up (h/code "(condp = x |b 2 a 1)")
+                    (h/code "(condp = x a 1 b |2)"))
+    (assert-move-up (h/code "(condp = x |b 2 a 1 :else)")
+                    (h/code "(condp = x a 1 |b 2 :else)"))
+    (assert-move-up (h/code "(condp = x |b 2 a 1 :else)")
+                    (h/code "(condp = x a 1 b |2 :else)"))
+    (assert-move-up (h/code "(condp some [1 2 3 4]"
+                            "  |#{4 5 9} :>> dec"
+                            "  #{0 6 7} :>> inc)")
+                    (h/code "(condp some [1 2 3 4]"
+                            "  #{0 6 7} :>> inc"
+                            "  |#{4 5 9} :>> dec)"))
+    (assert-move-up (h/code "(condp some [1 2 3 4]"
+                            "  |#{4 5 9} :>> dec"
+                            "  #{0 6 7} :>> inc)")
+                    (h/code "(condp some [1 2 3 4]"
+                            "  #{0 6 7} :>> inc"
+                            "  #{4 5 9} |:>> dec)"))
+    (assert-move-up (h/code "(condp some [1 2 3 4]"
+                            "  |#{4 5 9} :>> dec"
+                            "  #{0 6 7} :>> inc)")
+                    (h/code "(condp some [1 2 3 4]"
+                            "  #{0 6 7} :>> inc"
+                            "  #{4 5 9} :>> |dec)"))
+    (assert-move-up (h/code "(condp some [1 2 3 4]"
+                            "  |#{4 5 9} :>> dec"
+                            "  #{0 6 7} :>> inc"
+                            "  :else)")
+                    (h/code "(condp some [1 2 3 4]"
+                            "  #{0 6 7} :>> inc"
+                            "  #{4 5 9} :>> |dec"
+                            "  :else)")))
   (testing "with destructuring"
     (assert-move-up (h/code "(let [[a b] [1 2]"
                             "      |e 2"
@@ -225,19 +462,8 @@
                             ""
                             " :b 2"
                             "|"
-                            " :c 2}"))
-    ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
-    ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (h/load-code-and-zloc (h/code "[:a"
-                                                "|"
-                                                "]"))]
-      (is (can-move-zloc-up? ws-zloc))
-      (is (nil? (move-zloc-up ws-zloc))))
-    (let [ws-zloc (h/load-code-and-zloc (h/code "{:a 1"
-                                                "|"
-                                                "}"))]
-      (is (can-move-zloc-up? ws-zloc))
-      (is (nil? (move-zloc-up ws-zloc)))))
+                            " :c 2}")))
+
   (testing "comments"
     (assert-move-up (h/code "{|:b (+ 1 1) ;; two comment"
                             " :a 1 ;; one comment"
@@ -303,11 +529,21 @@
                             " ]")
                     (h/code "[a ;; a comment"
                             " |b]"))
+    (assert-move-up (h/code "[|b"
+                            "    a ;; a comment"
+                            " ]")
+                    (h/code "[a ;; a comment"
+                            "    |b]"))
     (assert-move-up (h/code "{|:b 2"
                             " :a 1 ;; one comment"
                             " }")
                     (h/code "{:a 1 ;; one comment"
                             " |:b 2}"))
+    (assert-move-up (h/code "{|:b 2"
+                            "    :a 1 ;; one comment"
+                            " }")
+                    (h/code "{:a 1 ;; one comment"
+                            "    |:b 2}"))
     ;; moves from leading comment
     (assert-move-up (h/code "{|;; b comment"
                             " :b 2 ;; two comment"
@@ -324,16 +560,17 @@
                     (h/code "{:a 1 ;; one comment"
                             " :b 2 ;; |two comment"
                             " :c 3}"))
-    ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
-    ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (h/load-code-and-zloc (h/code "[:a |;; a comment"
-                                                "]"))]
-      (is (can-move-zloc-up? ws-zloc))
-      (is (nil? (move-zloc-up ws-zloc))))
-    (let [ws-zloc (h/load-code-and-zloc (h/code "{:a 1 |;; one comment"
-                                                "}"))]
-      (is (can-move-zloc-up? ws-zloc))
-      (is (nil? (move-zloc-up ws-zloc)))))
+    ;; treats uneval as comment
+    (assert-move-up (h/code "(case 1"
+                            "  |2"
+                            "  #_=> :two"
+                            "  1"
+                            "  #_=> :one)")
+                    (h/code "(case 1"
+                            "  1"
+                            "  #_=> :one"
+                            "  |2"
+                            "  #_=> :two)")))
   (testing "multi-line elements"
     (assert-move-up (h/code "[|:c"
                             " [:a"
@@ -440,6 +677,129 @@
                               "(foo [|a 1"
                               "      b 2]"
                               "  (inc a))")))
+  (testing "within special functions"
+    (assert-move-down (h/code "(cond b 2 |a 1)")
+                      (h/code "(cond |a 1 b 2)"))
+    (assert-move-down (h/code "(cond b 2 |a 1)")
+                      (h/code "(cond a |1 b 2)"))
+    (assert-move-down (h/code "(assoc x :b 1 |:a 2)")
+                      (h/code "(assoc x |:a 2 :b 1)"))
+    (assert-move-down (h/code "(assoc x :b 1 |:a 2)")
+                      (h/code "(assoc x :a |2 :b 1)"))
+    (assert-move-down (h/code "(-> {}"
+                              "    (assoc :b 1 |:a 2))")
+                      (h/code "(-> {}"
+                              "    (assoc |:a 2 :b 1))"))
+    (assert-move-down (h/code "(some-> {}"
+                              "        (assoc :b 1 |:a 2))")
+                      (h/code "(some-> {}"
+                              "        (assoc |:a 2 :b 1))"))
+    (assert-move-down (h/code "(cond-> {}"
+                              "  true (assoc :b 1 |:a 2))")
+                      (h/code "(cond-> {}"
+                              "  true (assoc |:a 2 :b 1))"))
+    (assert-move-down (h/code "(assoc! x :b 1 |:a 2)")
+                      (h/code "(assoc! x |:a 2 :b 1)"))
+    (assert-move-down (h/code "(assoc! x :b 1 |:a 2)")
+                      (h/code "(assoc! x :a |2 :b 1)"))
+    (assert-move-down (h/code "(-> {}"
+                              "    (assoc! :b 1 |:a 2))")
+                      (h/code "(-> {}"
+                              "    (assoc! |:a 2 :b 1))"))
+    (assert-move-down (h/code "(some-> {}"
+                              "        (assoc! :b 1 |:a 2))")
+                      (h/code "(some-> {}"
+                              "        (assoc! |:a 2 :b 1))"))
+    (assert-move-down (h/code "(cond-> {}"
+                              "  true (assoc! :b 1 |:a 2))")
+                      (h/code "(cond-> {}"
+                              "  true (assoc! |:a 2 :b 1))"))
+    (assert-move-down (h/code "(cond-> x b dec |a inc)")
+                      (h/code "(cond-> x |a inc b dec)"))
+    (assert-move-down (h/code "(cond-> x b dec |a inc)")
+                      (h/code "(cond-> x a |inc b dec)"))
+    (assert-move-down (h/code "(-> 1"
+                              "    (cond-> b dec |a inc))")
+                      (h/code "(-> 1"
+                              "    (cond-> |a inc b dec))"))
+    (assert-move-down (h/code "(some-> 1"
+                              "        (cond-> b dec |a inc))")
+                      (h/code "(some-> 1"
+                              "        (cond-> |a inc b dec))"))
+    (assert-move-down (h/code "(cond-> 1"
+                              "  true (cond-> b dec |a inc))")
+                      (h/code "(cond-> 1"
+                              "  true (cond-> |a inc b dec))"))
+    (assert-move-down (h/code "(cond->> x b dec |a inc)")
+                      (h/code "(cond->> x |a inc b dec)"))
+    (assert-move-down (h/code "(cond->> x b dec |a inc)")
+                      (h/code "(cond->> x a |inc b dec)"))
+    (assert-move-down (h/code "(-> 1"
+                              "    (cond->> b dec |a inc))")
+                      (h/code "(-> 1"
+                              "    (cond->> |a inc b dec))"))
+    (assert-move-down (h/code "(some-> 1"
+                              "        (cond->> b dec |a inc))")
+                      (h/code "(some-> 1"
+                              "        (cond->> |a inc b dec))"))
+    (assert-move-down (h/code "(cond-> 1"
+                              "  true (cond->> b dec |a inc))")
+                      (h/code "(cond-> 1"
+                              "  true (cond->> |a inc b dec))"))
+    (assert-move-down (h/code "(case a 2 :second |1 :first)")
+                      (h/code "(case a |1 :first 2 :second)"))
+    (assert-move-down (h/code "(case a 2 :second |1 :first)")
+                      (h/code "(case a 1 |:first 2 :second)"))
+    (assert-move-down (h/code "(case a 2 :second |1 :first :else)")
+                      (h/code "(case a |1 :first 2 :second :else)"))
+    (assert-move-down (h/code "(case a 2 :second |1 :first :else)")
+                      (h/code "(case a 1 |:first 2 :second :else)"))
+    (assert-move-down (h/code "(-> 1"
+                              "    (case 2 :second |1 :first))")
+                      (h/code "(-> 1"
+                              "    (case |1 :first 2 :second))"))
+    (assert-move-down (h/code "(some-> 1"
+                              "        (case 2 :second |1 :first))")
+                      (h/code "(some-> 1"
+                              "        (case |1 :first 2 :second))"))
+    (assert-move-down (h/code "(cond-> 1"
+                              "  true (case 2 :second |1 :first))")
+                      (h/code "(cond-> 1"
+                              "  true (case |1 :first 2 :second))"))
+    (assert-move-down (h/code "(condp = x b 2 |a 1)")
+                      (h/code "(condp = x |a 1 b 2)"))
+    (assert-move-down (h/code "(condp = x b 2 |a 1)")
+                      (h/code "(condp = x a |1 b 2)"))
+    (assert-move-down (h/code "(condp = x b 2 |a 1 :else)")
+                      (h/code "(condp = x |a 1 b 2 :else)"))
+    (assert-move-down (h/code "(condp = x b 2 |a 1 :else)")
+                      (h/code "(condp = x a |1 b 2 :else)"))
+    (assert-move-down (h/code "(condp some [1 2 3 4]"
+                              "  #{4 5 9} :>> dec"
+                              "  |#{0 6 7} :>> inc)")
+                      (h/code "(condp some [1 2 3 4]"
+                              "  |#{0 6 7} :>> inc"
+                              "  #{4 5 9} :>> dec)"))
+    (assert-move-down (h/code "(condp some [1 2 3 4]"
+                              "  #{4 5 9} :>> dec"
+                              "  |#{0 6 7} :>> inc)")
+                      (h/code "(condp some [1 2 3 4]"
+                              "  #{0 6 7} |:>> inc"
+                              "  #{4 5 9} :>> dec)"))
+    (assert-move-down (h/code "(condp some [1 2 3 4]"
+                              "  #{4 5 9} :>> dec"
+                              "  |#{0 6 7} :>> inc)")
+                      (h/code "(condp some [1 2 3 4]"
+                              "  #{0 6 7} :>> |inc"
+                              "  #{4 5 9} :>> dec)"))
+    (assert-move-down (h/code "(condp some [1 2 3 4]"
+                              "  #{4 5 9} :>> dec"
+                              "  |#{0 6 7} :>> inc"
+                              "  :else)")
+                      (h/code "(condp some [1 2 3 4]"
+                              "  #{0 6 7} :>> |inc"
+                              "  #{4 5 9} :>> dec"
+                              "  :else)")))
   (testing "with destructuring"
     (assert-move-down (h/code "(let [[a b] [1 2]"
                               "      {:keys [c d]} {:c 1 :d 2}"
@@ -477,17 +837,7 @@
                               "|"
                               " :b 2"
                               ""
-                              " :c 2}"))
-    ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
-    ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (h/load-code-and-zloc (h/code "[|"
-                                                " :a]"))]
-      (is (can-move-zloc-down? ws-zloc))
-      (is (nil? (move-zloc-down ws-zloc))))
-    (let [ws-zloc (h/load-code-and-zloc (h/code "{|"
-                                                " :a 1}"))]
-      (is (can-move-zloc-down? ws-zloc))
-      (is (nil? (move-zloc-down ws-zloc)))))
+                              " :c 2}")))
   (testing "comments"
     (assert-move-down (h/code "{:b (+ 1 1) ;; two comment"
                               " |:a 1 ;; one comment"
@@ -575,17 +925,7 @@
                               " :c 3}")
                       (h/code "{:a 1 ;; |one comment"
                               " :b 2 ;; two comment"
-                              " :c 3}"))
-    ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
-    ;; don't at least no erroneous swaps happen
-    (let [ws-zloc (h/load-code-and-zloc (h/code "[|;; a comment"
-                                                " :a]"))]
-      (is (can-move-zloc-down? ws-zloc))
-      (is (nil? (move-zloc-down ws-zloc))))
-    (let [ws-zloc (h/load-code-and-zloc (h/code "{|;; a comment"
-                                                " :a 1}"))]
-      (is (can-move-zloc-down? ws-zloc))
-      (is (nil? (move-zloc-down ws-zloc)))))
+                              " :c 3}")))
   (testing "multi-line elements"
     (assert-move-down (h/code "[:c"
                               " |[:a"
@@ -611,3 +951,55 @@
                       (h/code "{|:c 3"
                               " :a {:a/a 1"
                               "     :a/b 2}}"))))
+
+;; These are macros so test failures have the right line numbers
+(defmacro assert-no-erroneous-up [code]
+  `(let [ws-zloc# (h/load-code-and-zloc ~code)]
+     (is (can-move-zloc-up? ws-zloc#))
+     (is (nil? (as-string (move-zloc-up ws-zloc#))))))
+(defmacro assert-no-erroneous-down [code]
+  `(let [ws-zloc# (h/load-code-and-zloc ~code)]
+     (is (can-move-zloc-down? ws-zloc#))
+     (is (nil? (as-string (move-zloc-down ws-zloc#))))))
+
+(deftest erroneous-swaps
+  ;; NOTE: ideally can-move-*? and move-* would always agree, but when they
+  ;; don't at least no erroneous swaps happen
+  (testing "from blank line after first element"
+    (assert-no-erroneous-up (h/code "[:a"
+                                    "|"
+                                    "]"))
+    (assert-no-erroneous-up (h/code "{:a 1"
+                                    "|"
+                                    "}"))
+    (assert-no-erroneous-up (h/code "(case a"
+                                    "   1 :first"
+                                    "|"
+                                    ")")))
+
+  (testing "from comment after first element"
+    (assert-no-erroneous-up (h/code "[:a |;; a comment"
+                                    "]"))
+    (assert-no-erroneous-up (h/code "{:a 1 |;; one comment"
+                                    "}"))
+    (assert-no-erroneous-up (h/code "(case a"
+                                    "   1 :first |;; one comment"
+                                    ")")))
+
+  (testing "from blank line before last element"
+    (assert-no-erroneous-down (h/code "[|"
+                                      " :a]"))
+    (assert-no-erroneous-down (h/code "{|"
+                                      " :a 1}"))
+    (assert-no-erroneous-down (h/code "(case a"
+                                      "|"
+                                      "   1 :first :else)")))
+
+  (testing "from comment before last element"
+    (assert-no-erroneous-down (h/code "[|;; a comment"
+                                      " :a]"))
+    (assert-no-erroneous-down (h/code "{|;; a comment"
+                                      " :a 1}"))
+    (assert-no-erroneous-down (h/code "(case a"
+                                      "   |;; one comment"
+                                      "   1 :first :else)"))))

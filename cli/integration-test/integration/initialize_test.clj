@@ -94,4 +94,7 @@
     (lsp/await-notification :$/progress))
 
   (testing "initialized notification"
-    (lsp/notify! (fixture/initialized-notification))))
+    (lsp/notify! (fixture/initialized-notification))
+    (h/assert-submaps
+      [{:registerOptions {:watchers [{:globPattern "**/*.{clj,cljs,cljc,edn}"}]}}]
+      (:registrations (lsp/await-client-request :client/registerCapability)))))

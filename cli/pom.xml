@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-standalone</artifactId>
-  <version>2022.02.01-20.02.32</version>
+  <version>2022.02.23-12.12.12</version>
   <name>clojure-lsp-standalone</name>
   <dependencies>
     <dependency>
@@ -15,7 +15,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.10.3</version>
+      <version>1.11.0-rc1</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -81,6 +81,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2022.02.01-20.02.32</tag>
+    <tag>2022.02.23-12.12.12</tag>
   </scm>
 </project>

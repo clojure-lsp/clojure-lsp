@@ -10,89 +10,63 @@
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [medley.core :as medley]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private find-require-suggestions [uri missing-requires db diagnostic]
-  (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
-    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (->> (f.add-missing-libspec/find-require-suggestions diagnostic-zloc missing-requires db)
-           (map #(assoc % :position position))))))
+(defn ^:private diagnostics-with-code [code-set diagnostics]
+  (filter (comp code-set :code) diagnostics))
 
-(defn ^:private find-all-require-suggestions [uri diagnostics missing-requires db]
-  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
-        unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
-    (->> (cond-> []
+(defn ^:private resolvable-diagnostics [diagnostics root-zloc]
+  (when root-zloc
+    (->> diagnostics
+         (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var"})
+         (keep (fn [{{{:keys [line character] :as position} :start} :range :as diagnostic}]
+                 (when-let [zloc (parser/to-cursor root-zloc line character)]
+                   (assoc diagnostic
+                          :zloc     zloc
+                          :position position)))))))
 
-           (seq unresolved-ns-diags)
-           (into (map (partial find-require-suggestions uri missing-requires db)) unresolved-ns-diags)
+(defn ^:private find-require-suggestions [db {:keys [position zloc]}]
+  (->> (f.add-missing-libspec/find-require-suggestions zloc db)
+       (map #(assoc % :position position))))
 
-           (seq unresolved-symbol-diags)
-           (into (map (partial find-require-suggestions uri missing-requires db)) unresolved-symbol-diags))
-         flatten
-         (remove nil?))))
+(defn ^:private find-all-require-suggestions [diagnostics missing-requires db]
+  (->> diagnostics
+       (mapcat (partial find-require-suggestions db))
+       (remove (fn [suggestion]
+                 (some (comp #{(:ns suggestion)} :ns)
+                       missing-requires)))))
 
-(defn ^:private find-missing-require [uri db diagnostic]
-  (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
-    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (when-let [missing-require (f.add-missing-libspec/find-missing-ns-require diagnostic-zloc db)]
-        (assoc missing-require :position position)))))
+(defn ^:private find-missing-require [db {:keys [position zloc]}]
+  (some-> (f.add-missing-libspec/find-missing-ns-require zloc db)
+          (assoc :position position)))
 
-(defn ^:private find-missing-requires [uri diagnostics db]
-  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
-        unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
-    (->> (cond-> []
+(defn ^:private find-missing-requires [diagnostics db]
+  (keep (partial find-missing-require db) diagnostics))
 
-           (seq unresolved-ns-diags)
-           (into (map (partial find-missing-require uri db) unresolved-ns-diags))
+(defn ^:private find-missing-import [{:keys [position zloc]}]
+  (when-let [missing-import (f.add-missing-libspec/find-missing-import zloc)]
+    {:missing-import missing-import
+     :position       position}))
 
-           (seq unresolved-symbol-diags)
-           (into (map (partial find-missing-require uri db) unresolved-symbol-diags)))
-         (remove nil?))))
+(defn ^:private find-missing-imports [diagnostics]
+  (keep find-missing-import diagnostics))
 
-(defn ^:private find-missing-import [uri db diagnostic]
-  (let [{{:keys [line character] :as position} :start} (:range diagnostic)]
-    (when-let [diagnostic-zloc (parser/safe-cursor-loc uri line character db)]
-      (when-let [missing-import (f.add-missing-libspec/find-missing-import diagnostic-zloc)]
-        {:missing-import missing-import
-         :position position}))))
-
-(defn ^:private find-missing-imports [uri diagnostics db]
-  (let [unresolved-ns-diags (filter #(= "unresolved-namespace" (:code %)) diagnostics)
-        unresolved-symbol-diags (filter #(= "unresolved-symbol" (:code %)) diagnostics)]
-    (->> (cond-> []
-
-           (seq unresolved-ns-diags)
-           (into (map (partial find-missing-import uri db) unresolved-ns-diags))
-
-           (seq unresolved-symbol-diags)
-           (into (map (partial find-missing-import uri db) unresolved-symbol-diags)))
-         (remove nil?))))
-
-(defn ^:private find-private-function-to-create [uri diagnostics db]
-  (when-let [{{{:keys [line character] :as position} :start} :range :as diag} (->> diagnostics
-                                                                                   (filter #(= "unresolved-symbol" (:code %)))
-                                                                                   first)]
-    (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
-      (when (r.transform/can-create-function? diag-loc)
-        {:name (last (string/split (:message diag) #"Unresolved symbol: "))
-         :position position}))))
+(defn ^:private find-private-function-to-create [diagnostics]
+  (when-let [{:keys [message position zloc]} (->> diagnostics
+                                                  (diagnostics-with-code #{"unresolved-symbol"})
+                                                  first)]
+    (when (r.transform/can-create-function? zloc)
+      {:name     (last (string/split message #"Unresolved symbol: "))
+       :position position})))
 
 (defn ^:private find-public-function-to-create [uri diagnostics db]
-  (when-let [{{{:keys [line character] :as position} :start} :range} (->> diagnostics
-                                                                          (filter #(or (= "unresolved-var" (:code %))
-                                                                                       (= "unresolved-namespace" (:code %))))
-                                                                          first)]
-    (when-let [diag-loc (parser/safe-cursor-loc uri line character db)]
-      (when (and (some-> diag-loc z/tag (= :token))
-                 (some-> diag-loc z/sexpr namespace))
-        (when-let [{:keys [new-ns ns name]} (r.transform/can-create-public-function? diag-loc uri db)]
-          {:ns ns
-           :new-ns new-ns
-           :name name
-           :position position})))))
+  (when-let [{:keys [zloc position]} (->> diagnostics
+                                          (diagnostics-with-code #{"unresolved-var" "unresolved-namespace"})
+                                          first)]
+    (some-> (r.transform/find-public-function-to-create zloc uri db)
+            (assoc :position position))))
 
 (defn ^:private require-suggestion-actions
   [uri alias-suggestions]
@@ -260,22 +234,25 @@
              :command   "resolve-macro-as"
              :arguments [uri row col]}})
 
-(defn all [zloc uri row col diagnostics client-capabilities db]
-  (let [line (dec row)
+(defn all [root-zloc uri row col diagnostics client-capabilities db]
+  (let [zloc (parser/to-pos root-zloc row col)
+        line (dec row)
         character (dec col)
+        resolvable-diagnostics (resolvable-diagnostics diagnostics root-zloc)
         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         inside-function?* (future (r.transform/find-function-form zloc))
-        private-function-to-create* (future (find-private-function-to-create uri diagnostics db))
-        public-function-to-create* (future (find-public-function-to-create uri diagnostics db))
+        private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
+        public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
         inside-let?* (future (r.transform/find-let-form zloc))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
-        missing-requires* (future (find-missing-requires uri diagnostics db))
-        missing-imports* (future (find-missing-imports uri diagnostics db))
-        require-suggestions* (future (find-all-require-suggestions uri diagnostics @missing-requires* db))
+        resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
+        missing-requires* (future (find-missing-requires resolvable-require-diagnostics db))
+        missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
+        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))

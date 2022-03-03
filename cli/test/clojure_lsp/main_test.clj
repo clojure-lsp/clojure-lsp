@@ -36,6 +36,13 @@
       (is (= '[abc] (:namespace (:options (#'main/parse ["--namespace" "abc"])))))
       (is (= '[abc] (:namespace (:options (#'main/parse ["-n" "abc"])))))
       (is (= '[abc bcd] (:namespace (:options (#'main/parse ["-n" "abc" "-n" "bcd"]))))))
+    (testing "filenames"
+      (is (= nil (:filenames (:options (#'main/parse [])))))
+      (is (= nil (:filenames (:options (#'main/parse ["--filenames"])))))
+      (is (= nil (:filenames (:options (#'main/parse ["--filenames" "some-file" "other-file"])))))
+      (is (= nil (:filenames (:options (#'main/parse ["--filenames" "some-file other-file"])))))
+      (is (= '["some-file" "other-file"] (map str (:filenames (:options (#'main/parse ["--filenames" "some-file:other-file"]))))))
+      (is (= '["some-file" "other-file"] (map str (:filenames (:options (#'main/parse ["--filenames" "some-file,other-file"])))))))
     (testing "ns-exclude-regex"
       (is (= "foo" (str (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "foo"]))))))
       (is (= nil (:ns-exclude-regex (:options (#'main/parse [])))))

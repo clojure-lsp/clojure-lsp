@@ -6,20 +6,10 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [clojure.set :as set]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)
-
-(def default-public-vars-defined-by-to-exclude
-  '#{clojure.test/deftest
-     cljs.test/deftest
-     state-flow.cljtest/defflow
-     potemkin/import-vars})
-
-(def default-public-vars-name-to-exclude
-  '#{-main})
 
 (def diagnostic-types-of-unnecessary-type
   #{:clojure-lsp/unused-public-var
@@ -37,42 +27,29 @@
 (def deprecated-diagnostic-types
   #{:deprecated-var})
 
-(defn ^:private reg-unused-public-var-elements! [elements reg-finding! kondo-config]
-  (mapv (fn [element]
-          (let [keyword-def? (boolean (:reg element))
-                finding {:filename (:filename element)
-                         :row (:name-row element)
-                         :col (:name-col element)
-                         :end-row (:name-end-row element)
-                         :end-col (:name-end-col element)
-                         :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
-                         :message (if keyword-def?
-                                    (if (:ns element)
-                                      (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
-                                      (format "Unused public keyword ':%s'" (:name element)))
-                                    (format "Unused public var '%s/%s'" (:ns element) (:name element)))
-                         :type :clojure-lsp/unused-public-var}]
-            (reg-finding! finding)))
-        elements))
+(defn ^:private reg-unused-public-var-element! [element reg-finding! kondo-config]
+  (let [keyword-def? (boolean (:reg element))
+        finding {:filename (:filename element)
+                 :row (:name-row element)
+                 :col (:name-col element)
+                 :end-row (:name-end-row element)
+                 :end-col (:name-end-col element)
+                 :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
+                 :message (if keyword-def?
+                            (if (:ns element)
+                              (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
+                              (format "Unused public keyword ':%s'" (:name element)))
+                            (format "Unused public var '%s/%s'" (:ns element) (:name element)))
+                 :type :clojure-lsp/unused-public-var}]
+    (reg-finding! finding)))
 
-(defn exclude-public-definition? [kondo-config definition]
-  (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
-        excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
-        excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
-        excluded-ns-or-var (set (filter simple-ident? excluded-syms))
-        keyword? (boolean (:reg definition))]
-    (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
-                   (if keyword?
-                     (:reg definition)
-                     (:defined-by definition)))
-        (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
-                   (if keyword?
-                     (symbol (str (:ns definition)) (:name definition))
-                     (:name definition)))
-        (contains? (set excluded-ns-or-var) (:ns definition))
-        (-> excluded-full-qualified-vars
-            set
-            (contains? (symbol (-> definition :ns str) (-> definition :name str))))
+(defn ^:private exclude-public-diagnostic-definition? [kondo-config definition]
+  (let [excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
+        excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
+        fqsn (symbol (-> definition :ns str) (-> definition :name str))]
+    (or (q/exclude-public-definition? kondo-config definition)
+        (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
+        (some #(re-matches (re-pattern (str %)) (str (:defined-by definition))) excluded-defined-by-syms-regex)
         (:export definition))))
 
 (defn ^:private kondo-finding->diagnostic
@@ -167,15 +144,14 @@
           (sync-lint-file! uri db))))))
 
 (defn ^:private unused-public-vars-lint!
-  [definitions project-analysis {:keys [config reg-finding!]} db]
-  (let [elements (->> definitions
-                      (remove (partial exclude-public-definition? config))
-                      (pmap (fn [definition]
-                              (when (= 0 (count (q/find-references project-analysis definition false db)))
-                                definition)))
-                      (remove nil?))]
-    (->> (reg-unused-public-var-elements! elements reg-finding! config)
+  [definitions project-analysis {:keys [config reg-finding!]} max-parallelize? db]
+  (let [parallelize-fn (if max-parallelize? pmap shared/pmap-light)]
+    (->> definitions
+         (remove (partial exclude-public-diagnostic-definition? config))
+         (parallelize-fn #(when (= 0 (count (q/find-references project-analysis % false db)))
+                            %))
          (remove nil?)
+         (mapv #(reg-unused-public-var-element! % reg-finding! config))
          (group-by :filename))))
 
 (defn ^:private project-definitions [project-analysis]
@@ -190,13 +166,13 @@
   [new-analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis new-analysis db)
         definitions (project-definitions project-analysis)]
-    (unused-public-vars-lint! definitions project-analysis kondo-ctx db)))
+    (unused-public-vars-lint! definitions project-analysis kondo-ctx true db)))
 
 (defn lint-and-publish-project-diagnostics!
   [paths new-analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis new-analysis db)
         definitions (project-definitions project-analysis)
-        kondo-findings (unused-public-vars-lint! definitions project-analysis kondo-ctx db)]
+        kondo-findings (unused-public-vars-lint! definitions project-analysis kondo-ctx false db)]
     (loop [state-db @db]
       (let [cur-findings (:findings state-db)
             new-findings (merge-with #(->> (into %1 %2)
@@ -211,7 +187,7 @@
   [filename analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis analysis db)
         definitions (file-definitions project-analysis filename)]
-    (unused-public-vars-lint! definitions project-analysis kondo-ctx db)))
+    (unused-public-vars-lint! definitions project-analysis kondo-ctx false db)))
 
 (defn unused-public-var-lint-for-single-file-merging-findings!
   [filename analysis kondo-ctx db]

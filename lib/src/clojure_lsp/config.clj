@@ -80,14 +80,17 @@
                      (edn/read-string {:readers {'re re-pattern}}
                                       (slurp (.getInputStream jar config-entry))))))))))
 
-(defn ^:private deep-merge-fixing-cljfmt [a b]
-  (let [deep-merged (shared/deep-merge a b)]
-    (if (-> deep-merged :cljfmt :indents)
-      (let [cljfmt-a (-> a :cljfmt :indents)
-            cljfmt-b (-> b :cljfmt :indents)]
-        (-> deep-merged
-            (update-in [:cljfmt :indents] merge cljfmt-a cljfmt-b)))
-      deep-merged)))
+(defn deep-merge-fixing-cljfmt
+  ([a b]
+   (let [deep-merged (shared/deep-merge a b)]
+     (if (-> deep-merged :cljfmt :indents)
+       (let [cljfmt-a (-> a :cljfmt :indents)
+             cljfmt-b (-> b :cljfmt :indents)]
+         (-> deep-merged
+             (update-in [:cljfmt :indents] merge cljfmt-a cljfmt-b)))
+       deep-merged)))
+  ([a b & more]
+   (reduce deep-merge-fixing-cljfmt (or a {}) (cons b more))))
 
 (defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]}]
   (when-let [cp-config-paths (and (coll? classpath-config-paths)

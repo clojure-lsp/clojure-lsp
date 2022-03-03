@@ -17,7 +17,8 @@
                                 "alp"
                                 "ba") (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs (h/code "(ns alpaca.ns)"
-                                "(def baff)") (h/file-uri "file:///c.cljs"))
+                                "(def baff)"
+                                "clj-") (h/file-uri "file:///c.cljs"))
   (h/load-code-and-locs (h/code "(ns d (:require [alpaca.ns :as alpaca])) frequen"
                                 "(def bar \"some good docs\"123)"
                                 "(defn barbaz [a b] 123)"
@@ -74,6 +75,9 @@
        {:label "alpaca/bazz" :kind :variable}]
       (f.completion/completion (h/file-uri "file:///a.cljc") 2 8 db/db)))
   (testing "complete-core-stuff"
+    (h/assert-submaps
+      [{:label "clj->js", :detail "cljs.core/clj->js"}]
+      (f.completion/completion (h/file-uri "file:///c.cljs") 3 4 db/db))
     (h/assert-submaps
       [{:label "frequencies", :detail "clojure.core/frequencies"}]
       (f.completion/completion (h/file-uri "file:///d.clj") 1 49 db/db))
@@ -308,12 +312,17 @@
     (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
             "::alp/"
             "") "file:///someother/ns.clj")
-  (testing "return all reg keywords for that aliased keyword"
+  (testing "return all matching reg keywords for that aliased keyword"
+    (h/assert-submaps
+      [{:label "::alp/foo" :kind :keyword}
+       {:label "::alp/foob" :kind :keyword}]
+      (f.completion/completion (h/file-uri "file:///other/ns.clj") 2 8 db/db)))
+  (testing "return all reg keywords for plain alias"
     (h/assert-submaps
       [{:label "::alp/bar" :kind :keyword}
        {:label "::alp/foo" :kind :keyword}
        {:label "::alp/foob" :kind :keyword}]
-      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 6 db/db))))
+      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 db/db))))
 
 (deftest completing-sorting
   (h/load-code-and-locs

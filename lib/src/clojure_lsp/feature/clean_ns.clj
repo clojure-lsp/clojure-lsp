@@ -338,6 +338,7 @@
 (defn clean-ns-edits
   [zloc uri db]
   (let [settings (settings/all db)
+        ;; TODO: use parser?
         safe-loc (or zloc (z/of-string (get-in @db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)
         analysis (:analysis @db)

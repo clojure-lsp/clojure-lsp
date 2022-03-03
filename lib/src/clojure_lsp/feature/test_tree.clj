@@ -36,14 +36,16 @@
   (let [filename (shared/uri->filename uri)
         ns-element (q/find-namespace-definition-by-filename (:analysis @db) filename db)
         local-analysis (get-in @db [:analysis filename])
-        deftests (->> local-analysis
-                      (filter #(and (identical? :var-definitions (:bucket %))
-                                    (contains? '#{clojure.test/deftest cljs.test/deftest}
-                                               (:defined-by %)))))
-        testings (->> local-analysis
-                      (filter #(and (identical? :var-usages (:bucket %))
-                                    (= 'testing (:name %))
-                                    (contains? '#{clojure.test cljs.test} (:to %)))))
+        deftests (into []
+                       (filter #(and (identical? :var-definitions (:bucket %))
+                                     (contains? '#{clojure.test/deftest cljs.test/deftest}
+                                                (:defined-by %))))
+                       local-analysis)
+        testings (into []
+                       (filter #(and (identical? :var-usages (:bucket %))
+                                     (= 'testing (:name %))
+                                     (contains? '#{clojure.test cljs.test} (:to %))))
+                       local-analysis)
         tests-tree (mapv #(deftest->tree % testings) deftests)]
     (when (seq tests-tree)
       {:uri uri
@@ -51,4 +53,4 @@
               :range (shared/->scope-range ns-element)
               :name-range (shared/->range ns-element)
               :kind :namespace
-              :children (mapv #(deftest->tree % testings) deftests)}})))
+              :children tests-tree}})))

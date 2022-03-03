@@ -88,15 +88,16 @@
     :else
     :reference))
 
-(defn ^:private var-defs-in-ns-named [analysis ns names]
-  ;; TODO: maybe better to use queries/find-all-var-definitions, or to refactor
-  ;; queries so that they are composable as transducer transformations.
-  (let [name-set (set names)]
+(defn ^:private var-defs-in-ns-named [analysis ns-str name-syms]
+  (let [ns (symbol ns-str)
+        name-set (set name-syms)]
     (into []
           (comp (mapcat val)
                 (filter #(= ns (:ns %)))
-                (filter #(identical? :var-definitions (:bucket %)))
-                (filter #(contains? name-set (:name %))))
+                ;; clojure.core is 98% var-definitions, so faster to filter by
+                ;; name-set before filtering for var defs.
+                (filter #(contains? name-set (:name %)))
+                (q/xf-var-defs false))
           analysis)))
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
@@ -282,31 +283,30 @@
                            (string/starts-with? (:name %) name))))
          (mapv #(element->completion-item % alias :alias-keyword)))))
 
-(defn ^:private with-clojure-core-items [matches-fn analysis]
-  (let [matches (->> common-sym/core-syms (filter (comp matches-fn str)))
-        elem-by-name (->> (var-defs-in-ns-named analysis 'clojure.core matches)
+(defn ^:private with-core-items [matches-fn analysis {:keys [filename ns-name symbols priority]}]
+  (let [matches (filter (comp matches-fn str) symbols)
+        elem-by-name (->> (var-defs-in-ns-named analysis ns-name matches)
                           (medley/index-by :name))]
     (map (fn [sym] {:label (str sym)
                     :kind (element->completion-item-kind (elem-by-name sym))
-                    :data (walk/stringify-keys {:filename "/clojure.core.clj"
-                                                :name (str sym)
-                                                :ns "clojure.core"})
-                    :detail (str "clojure.core/" sym)
-                    :priority :clojure-core})
+                    :data {"filename" filename
+                           "name" (str sym)
+                           "ns" ns-name}
+                    :detail (str ns-name "/" sym)
+                    :priority priority})
          matches)))
 
+(defn ^:private with-clojure-core-items [matches-fn analysis]
+  (with-core-items matches-fn analysis {:filename "/clojure.core.clj"
+                                        :ns-name "clojure.core"
+                                        :symbols common-sym/core-syms
+                                        :priority :clojure-core}))
+
 (defn ^:private with-clojurescript-items [matches-fn analysis]
-  (let [matches (->> common-sym/cljs-syms (filter (comp matches-fn str)))
-        elem-by-name (->> (var-defs-in-ns-named analysis 'cljs.core matches)
-                          (medley/index-by :name))]
-    (map (fn [sym] {:label (str sym)
-                    :kind (element->completion-item-kind (elem-by-name sym))
-                    :data (walk/stringify-keys {:filename "/cljs.core.cljs"
-                                                :name (str sym)
-                                                :ns "cljs.core"})
-                    :detail (str "cljs.core/" sym)
-                    :priority :clojurescript-core})
-         matches)))
+  (with-core-items matches-fn analysis {:filename "/cljs.core.cljs"
+                                        :ns-name "cljs.core"
+                                        :symbols common-sym/cljs-syms
+                                        :priority :clojurescript-core}))
 
 (defn ^:private with-java-items [matches-fn]
   (concat
@@ -323,9 +323,8 @@
                          :detail (str "java.util." sym)
                          :priority :java})))))
 
-(defn ^:private merging-snippets [items cursor-loc matches-fn text row col settings]
-  (let [next-loc (parser/safe-loc-at-pos text row (inc col))
-        snippet-items-by-label (->> (concat
+(defn ^:private merging-snippets [items cursor-loc next-loc matches-fn settings]
+  (let [snippet-items-by-label (->> (concat
                                       (f.completion-snippet/known-snippets settings)
                                       (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
                                     (map #(assoc %
@@ -356,11 +355,13 @@
        not-empty))
 
 (defn completion [uri row col db]
-  (let [{:keys [text]} (get-in @db [:documents uri])
-        cursor-loc (when-let [loc (parser/safe-loc-at-pos text row col)]
+  (let [root-zloc (parser/safe-zloc-of-file @db uri)
+        ;; (dec col) because we're completing what's behind the cursor
+        cursor-loc (when-let [loc (some-> root-zloc (parser/to-pos row (dec col)))]
                      (when (or (not (-> loc z/node meta))
                                (= row (-> loc z/node meta :row)))
-                       loc))]
+                       loc))
+        next-loc (some-> root-zloc (parser/to-pos row col))]
     ;; When not on a symbol or keyword, we want to return all valid completions
     ;; (almost 1000 in an empty file), even though it's expensive to compute.
     ;; The one exception is in comments. Some editors (nvim + coc.nvim) request
@@ -443,7 +444,7 @@
 
                       (and support-snippets?
                            simple-cursor?)
-                      (merging-snippets cursor-loc matches-fn text row col settings)))]
+                      (merging-snippets cursor-loc next-loc matches-fn settings)))]
         (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns

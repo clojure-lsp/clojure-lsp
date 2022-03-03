@@ -196,7 +196,9 @@ Example:
                                                       my-ns/bar
                                                       other-ns
                                                       my-func}
-                                           :exclude-when-defined-by #{my-ns/defflow}}}}
+                                           :exclude-regex #{"my-integration-tests.*"}
+                                           :exclude-when-defined-by #{my-ns/defflow}
+                                           :exclude-when-defined-by-regex #{"my.custom/macro-.*"}}}}
 ```
 
 #### Disable linter

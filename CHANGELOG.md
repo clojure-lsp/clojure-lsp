@@ -3,16 +3,27 @@
 ## Unreleased
 
 - General
+  - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
+
+- Editor
+  - extract-function: Fix wrong args when extracting from multi-arity fn. #683
+  - move-coll-entry: clauses move intuitively in `assoc`, `case`, `cond`, and similar functions. #780 @mainej
+
+## 2022.02.23-12.12.12
+
+- General
   - Use `:source-aliases` setting during default deps.edn and lein project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
   - Exclude from unused-public-var linter vars with metadata `^:export`. #753
   - Fix clean-ns multiple refers sort when there is a alias before the refers.
   - Bump clj-kondo from `2022.01.15` to `2022.02.09` adding support for implementation analysis and more improvements.
   - Medium performance improvement during startup when unused-public-var linter is disabled.
-  - Small performance improvement during startup on unused-public-var calculation parallelizing calculations.
+  - Medium performance improvement during startup on unused-public-var calculation parallelizing calculations.
   - Small performance improvement on code actions calcullation.
   - Add `:use-source-paths-from-classpath` setting defaulting to true, which makes clojure-lsp do not manually discovery source-paths but get from classpath excluding jar files and paths outside project-root. #752 #551
-  - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764 @mainej
+  - Improve completion performance when all clojure.core or cljs.core symbols are valid completions. #764, #771 @mainej
   - Fix scenarios where the lint findings in individual files differed from what you'd expect based on the .clj-kondo/config.edn settings.
+  - Add `:exclude-regex` and `:exclude-when-definted-by-regex` to `:clojure-lsp/unused-public-var` linter.
+  - Bump `org.clojure/clojure` to `1.11.0-rc1`.
   
 - Editor
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
@@ -29,6 +40,9 @@
   - Small performance improvement to `format`, `clean-ns`, `diagnostics`, and `rename` via parallelizing parts of the logic.
   - Fix edn->json parser of `serverInfo/raw` for Calva use cljfmt configuration. #763
   - Add `:cljfmt-raw` config to `serverInfo/raw` for Calva. #768
+  - Add support for passing specific `--filenames` for most actions. #775
+
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2022.02.01-20.02.32
 

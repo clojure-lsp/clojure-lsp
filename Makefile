@@ -40,6 +40,9 @@ cli-jar-for-native:
 debug-cli:
 	cd cli && clojure -T:build debug-cli
 	mv cli/clojure-lsp .
+debug-perf-cli:
+	cd cli && clojure -T:build debug-perf-cli
+	mv cli/clojure-lsp .
 prod-cli:
 	cd cli && clojure -T:build prod-cli
 	mv cli/clojure-lsp .

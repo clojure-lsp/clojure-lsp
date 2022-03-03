@@ -416,10 +416,10 @@
   (let [parent-zloc (z-up zloc)
         child-count (count-children parent-zloc)
         strat (case (some-> parent-zloc z/tag)
-                :map    {:breadth 2, :rind no-rind}
-                :set    {:breadth 1, :rind no-rind}
-                :vector (vector-strategy parent-zloc uri db)
-                :list   (list-strategy parent-zloc child-count)
+                :map        {:breadth 2, :rind no-rind}
+                :set        {:breadth 1, :rind no-rind}
+                :vector     (vector-strategy parent-zloc uri db)
+                (:list :fn) (list-strategy parent-zloc child-count)
                 nil)]
     (when strat
       (let [strat (assoc strat

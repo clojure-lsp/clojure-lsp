@@ -311,6 +311,8 @@
                     (h/code "(assoc x :a 2 |:b 1)"))
     (assert-move-up (h/code "(assoc x |:b 1 :a 2)")
                     (h/code "(assoc x :a 2 :b |1)"))
+    (assert-move-up (h/code "#(assoc % |:b 2 :a 1)")
+                    (h/code "#(assoc % :a 1 |:b 2)"))
     (assert-move-up (h/code "(-> {}"
                             "    (assoc |:b 1 :a 2))")
                     (h/code "(-> {}"

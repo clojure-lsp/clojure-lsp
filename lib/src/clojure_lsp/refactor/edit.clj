@@ -42,6 +42,41 @@
   [zloc p?]
   (z-filter zloc z/next p?))
 
+(defn ^:private liberal-in-range? [loc pos]
+  (or (some-> loc z/node meta (in-range? pos))
+      (let [s (z/string loc)]
+        (or (string/ends-with? s "/")
+            (string/ends-with? s ":")))))
+
+(defn right-or-up [zloc]
+  (loop [p zloc]
+    (or
+      (z/right* p)
+      (some-> p z/up* recur))))
+
+(defn by-heritability [start-zloc inherits?]
+  (loop [zloc (cond-> start-zloc
+                (= :forms (z/tag start-zloc)) z/down*)]
+    (if (z/end? zloc)
+      zloc
+      (if (inherits? zloc)
+        (if-let [inner (some-> zloc z/down* (z/find z/right* inherits?))]
+          (recur inner)
+          zloc)
+        (recur (right-or-up zloc))))))
+
+(defn find-last-by-pos-heritability [start-zloc pos]
+  (let [inherits? #(liberal-in-range? % pos)]
+    (by-heritability start-zloc inherits?)))
+
+(defn find-last-by-pos-next [zloc f pos]
+  (let [forms (z-filter zloc f #(liberal-in-range? % pos))
+        disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
+                                       (> (count forms) 1))]
+    (last
+      (cond->> forms
+        disconsider-reader-macro? (remove (comp #(= "?" %) z/string))))))
+
 ;; From rewrite-cljs
 (defn find-last-by-pos
   "Find last node (if more than one) that is in range of `pos`, from initial
@@ -53,18 +88,8 @@
   {:track-position? true}."
   ([zloc pos] (find-last-by-pos zloc z/next pos))
   ([zloc f pos]
-   (let [forms (z-filter zloc f
-                         (fn [loc]
-                           (when (or (-> loc z/node meta)
-                                     (string/ends-with? (z/string loc) "/")
-                                     (string/ends-with? (z/string loc) ":"))
-                             (in-range?
-                               (-> loc z/node meta) pos))))
-         disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
-                                        (> (count forms) 1))]
-     (if disconsider-reader-macro?
-       (last (filter (complement (comp #(= "?" %) z/string)) forms))
-       (last forms)))))
+   (find-last-by-pos-heritability zloc pos)
+   #_(find-last-by-pos-next zloc f pos)))
 
 (defn find-op
   [zloc]

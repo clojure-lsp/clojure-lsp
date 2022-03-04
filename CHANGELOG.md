@@ -4,7 +4,7 @@
 
 - General
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
-  - Fix install script for aarch64.
+  - Fix install script for aarch64. #794
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

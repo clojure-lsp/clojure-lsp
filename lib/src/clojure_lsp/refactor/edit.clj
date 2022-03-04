@@ -43,10 +43,11 @@
   (z-filter zloc z/next p?))
 
 (defn ^:private liberal-in-range? [loc pos]
-  (or (some-> loc z/node meta (in-range? pos))
-      (let [s (z/string loc)]
-        (or (string/ends-with? s "/")
-            (string/ends-with? s ":")))))
+  (if-let [node-pos (some-> loc z/node meta)]
+    (in-range? node-pos pos)
+    (let [s (z/string loc)]
+      (or (string/ends-with? s "/")
+          (string/ends-with? s ":")))))
 
 (defn right-or-up [zloc]
   (loop [p zloc]

@@ -199,18 +199,17 @@
                                           project-settings
                                           force-settings)
              :classpath-settings classpath-settings))
-    (when-not (:api? @db)
-      (async/go
-        (f.clojuredocs/refresh-cache! db)))
-    (let [settings (:settings @db)]
-      (when (stubs/check-stubs? settings)
-        (producer/publish-progress (:producer @db) 92 "Analyzing stubs" progress-token)
-        (stubs/generate-and-analyze-stubs! settings db))
-      (producer/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
-      (log/info "Analyzing source paths for project root" root-path)
-      (analyze-source-paths! (-> @db :settings :source-paths) db))
+    (producer/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
+    (log/info "Analyzing source paths for project root" root-path)
+    (analyze-source-paths! (-> @db :settings :source-paths) db)
     (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
+      (async/go
+        (f.clojuredocs/refresh-cache! db))
+      (async/go
+        (let [settings (:settings @db)]
+          (when (stubs/check-stubs? settings)
+            (stubs/generate-and-analyze-stubs! settings db))))
       (async/go
         (log/info "Analyzing test paths for project root" root-path)
         (analyze-test-paths! db)))

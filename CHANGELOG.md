@@ -9,6 +9,7 @@
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683
   - move-coll-entry: clauses move intuitively in `assoc`, `case`, `cond`, and similar functions. #780 @mainej
+  - Generate stubs async after startup, improving startup time. #788
 
 ## 2022.02.23-12.12.12
 

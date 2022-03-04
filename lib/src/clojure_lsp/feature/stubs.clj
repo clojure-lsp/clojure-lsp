@@ -4,7 +4,6 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [taoensso.timbre :as log])
@@ -54,12 +53,14 @@
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (swap! db update :analysis merge analysis)
-    (async/go
-      (-> (shared/uri->path (:project-root-uri @db))
-          (db/read-cache db)
-          (update :analysis merge analysis)
-          (db/upsert-cache! db)))))
+    (loop [state-db @db]
+      (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
+        (log/warn "Analyzis divergent from stub analysis, trying again...")
+        (recur @db)))
+    (-> (shared/uri->path (:project-root-uri @db))
+        (db/read-cache db)
+        (update :analysis merge analysis)
+        (db/upsert-cache! db))))
 
 (defn generate-and-analyze-stubs!
   [settings db]

@@ -68,3 +68,31 @@ If you re-connect regulary, you may want to add this Emacs shortcut:
 ### Your Favorite Editor
 
 TBD. PR welcome.
+
+## Profiling
+
+To make a build with profiling and benchmarking tools available, in addition to an nREPL, add the following requires to the namespace you want to profile.
+
+```clojure
+(:require
+  ,,,
+  [clj-async-profiler.core :as profiler]
+  [criterium.core :as bench])
+```
+
+Also add an (unused) function
+
+```clojure
+(defn stub []
+  (bench/quick-bench (* 2 3))
+  (profiler/profile
+    {:min-width 5}
+    (dotimes [_ 500]
+      (* 2 3))))
+```
+
+Then run `make debug-perf-cli`. When the build has completed, follow the above steps to connect to an nREPL.
+
+Execute profiling code within a rich comment block, using the code from the stub function as a guideline. You'll need to be familiar with [criterium](https://github.com/hugoduncan/criterium) and [clj-async-profiler](http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/) to interpret the results.
+
+Note that it is often important to do profiling with this kind of nREPL, because in a regular REPL the analysis database starts off nearly empty. With a fuller database, profiling is more accurate. That said, if you do want to profile in a regular REPL, you can—start it with the `:performance` alias.

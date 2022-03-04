@@ -4,9 +4,11 @@
 
 - General
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
+  - Fix install script for aarch64. #794
 
 - Editor
-  - Fix wrong args on extract function code action on some corner cases. #683
+  - extract-function: Fix wrong args when extracting from multi-arity fn. #683
+  - move-coll-entry: clauses move intuitively in `assoc`, `case`, `cond`, and similar functions. #780 @mainej
 
 ## 2022.02.23-12.12.12
 

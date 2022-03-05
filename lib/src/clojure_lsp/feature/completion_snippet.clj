@@ -13,31 +13,31 @@
     :detail "Insert comment block"
     :insert-text "(comment\n  ${0:body}\n  )"}
    {:label "comment-heading"
-    :detail "Comment Header"
+    :detail "Insert comment header"
     :insert-text
     ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; ${1:Namespace summary title}
     ;;
     ;; ${2:Brief description}\n;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n\n$0"}
    {:label "comment-separator"
-    :detail "Comment Separator"
+    :detail "Insert comment separator"
     :insert-text
     ";; ${1:Namespace summary title}\n;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n\n$0"}
    {:label "rich-comment"
-    :detail "Insert rich comment"
+    :detail "Insert rich comment block"
     :insert-text
     "(comment
       $0
   #_())"}
    {:label "rich-comment-rdd"
-    :detail "Insert comment block"
+    :detail "Insert rich comment rdd block"
     :insert-text
     "#_{:clj-kondo/ignore [:redefined-var]}
    (comment
      $0
    #_())"}
    {:label "rich-comment-hotload"
-    :detail "Rich comment library hotload"
+    :detail "Insert rich comment library hotload"
     :insert-text
     "#_{:clj-kondo/ignore [:redefined-var]}
     (comment
@@ -117,7 +117,7 @@
     :detail "Insert ns :require"
     :insert-text "(:require [${1:namespace}])$0"}
    {:label "require-as"
-    :detail "ns require with :as alias"
+    :detail "Insert ns require with :as alias"
     :insert-text "(:require [${1:namespace} :as ${2:alias}]$3)$0"}
    {:label "require-refer"
     :detail "Insert ns :require with :refer"
@@ -131,12 +131,11 @@
    {:label "req-refer"
     :detail "Insert single require dep with :refer"
     :insert-text "[${1:namespace} :refer [$2]]"}
-
    {:label "import"
     :detail "Insert import"
     :insert-text "(:import [${1:package}])"}
    {:name "use"
-    :detail "require refer preferred over use"
+    :detail "Insert require refer preferred over use"
     :snippet "(:require [${1:namespace} :refer [$2]])$0"}
 
    ;; deps.edn

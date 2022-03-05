@@ -1065,12 +1065,7 @@
     <tr>
         <td><code>comment-heading</code></td>
         <td>Insert comment Header</td>
-        <td><code>
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;; ${1:Namespace summary title}
-    ;;
-    ;; ${2:Brief description}\n;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n\n$0
-    </code></td>
+        <td><code>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n;; ${1:Namespace summary title}\n;;\n;; ${2:Brief description}\n;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n\n$0</code></td>
     </tr>
     <tr>
         <td><code>comment-separator</code></td>
@@ -1091,26 +1086,13 @@
         <td><code>rich-comment-rdd</code></td>
         <td>Insert rich comment rdd block</td>
         <td>
-<code>
-#_{:clj-kondo/ignore [:redefined-var]}
-(comment
-  $0
-#_())
-</code></td>
+<code>#_{:clj-kondo/ignore [:redefined-var]}\n(comment\n $0 #_())</code></td>
     </tr>
     <tr>
         <td><code>rich-comment-hotload</code></td>
         <td>Insert rich comment library hotload</td>
         <td>
-<code>
-#_{:clj-kondo/ignore [:redefined-var]}
-(comment
- ;; Add-lib library for hot-loading
- (require '[clojure.tools.deps.alpha.repl :refer [add-libs]])
- (add-libs '{${1:domain/library-name} {:mvn/version \"${2:1.0.0}\"}$3}) 
- $0
-)
-</code></td>
+<code>#_{:clj-kondo/ignore [:redefined-var]}\n(comment\n ;; Add-lib library for hot-loading\n (require '[clojure.tools.deps.alpha.repl :refer [add-libs]])\n (add-libs '{${1:domain/library-name} {:mvn/version \"${2:1.0.0}\"}$3})\n $0\n) </code></td>
     </tr>
     <tr>
         <td><code>condp</code></td>
@@ -1256,11 +1238,7 @@
         <td><code>deps-alias</code></td>
         <td>Insert alias with extra path & deps</td>
         <td>
-<code>
-:${1:category/name}
- {:extra-paths [\"${2:path}\"]
-  :extra-deps {${3:deps-maven or deps-git}}}$0
-</code></td>
+<code>:${1:category/name}\n {:extra-paths [\"${2:path}\"]\n :extra-deps {${3:deps-maven or deps-git}}}$0</code></td>
     </tr>
     <tr>
         <td><code>deps-maven</code></td>
@@ -1271,30 +1249,19 @@
         <td><code>deps-git</code></td>
         <td>Insert git dependency</td>
         <td>
-<code>
-${1:domain/library-name}
-  {:git/sha \"${2:git-sha-value}\"}$0
-</code></td>
+<code>${1:domain/library-name}\n {:git/sha \"${2:git-sha-value}\"}$0 </code></td>
     </tr>
     <tr>
         <td><code>deps-git-tag</code></td>
         <td>Insert git tag dependency</td>
         <td>
-<code>
-${1:domain/library-name}
- {:git/tag \"${2:git-tag-value}\"
-  :git/sha \"${3:git-sha-value}\"}$0
-</code></td>
+<code>${1:domain/library-name}\n {:git/tag \"${2:git-tag-value}\"\n :git/sha \"${3:git-sha-value}\"}$0</code></td>
     </tr>
     <tr>
         <td><code>deps-git-url</code></td>
         <td>Insert git URL dependency</td>
         <td>
-<code>
-${1:domain/library-name}
- {:git/url \"https://github.com/$1\"
-  :git/sha \"${2:git-sha-value}\"}$0
-</code></td>
+<code>${1:domain/library-name}\n {:git/url \"https://github.com/$1\"\n :git/sha \"${2:git-sha-value}\"}$0</code></td>
     </tr>
     <tr>
         <td><code>deps-local</code></td>
@@ -1306,20 +1273,13 @@ ${1:domain/library-name}
         <td><code>deftest</code></td>
         <td>Insert deftest clojure.test</td>
         <td>
-<code> 
-(deftest ${1:name}-test
-  (testing \"${2:Context of the test assertions}\"
-    (is (= ${3:assertion-values}))$4)) $0
-</code></td>
+<code>(deftest ${1:name}-test\n  (testing \"${2:Context of the test assertions}\"\n  (is (= ${3:assertion-values}))$4)) $0</code></td>
     </tr>
     <tr>
         <td><code>testing</code></td>
         <td>Insert testing clojure.test</td>
         <td>
-<code> 
-(testing \"${1:Context of the test assertions}\"
-  $0)
-</code></td>
+<code>(testing \"${1:Context of the test assertions}\"\n  $0)</code></td>
     </tr>
     <tr>
         <td><code>is</code></td>

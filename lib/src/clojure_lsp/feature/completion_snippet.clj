@@ -11,7 +11,7 @@
   [;; Documentation
    {:label "comment"
     :detail "Insert comment block"
-    :insert-text "(comment\n  ${0:body}\n  )"}
+    :insert-text "(comment\n  $0\n  )"}
    {:label "comment-heading"
     :detail "Insert comment header"
     :insert-text
@@ -50,7 +50,7 @@
    ;; Core
    {:label "condp"
     :detail "Insert condp"
-    :insert-text "(condp ${1:pred} ${2:expr}\n ${0:clauses})"}
+    :insert-text "(condp ${1:pred} ${2:expr}\n $0)"}
    {:label "def"
     :insert-text "(def ${1:name} $0)"
     :detail "Insert def"}
@@ -80,16 +80,16 @@
                            "-"))}
    {:label "defprotocol"
     :detail "Insert defprotocol"
-    :insert-text "(defprotocol ${1:Name}\n ${0:body})"}
+    :insert-text "(defprotocol ${1:Name}\n $0)"}
    {:label "defrecord"
     :detail "Insert defrecord"
-    :insert-text "(defrecord ${1:Name} [${2:fields}]\n ${3:Protocol}\n ${0:body})"}
+    :insert-text "(defrecord ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)"}
    {:label "deftype"
     :detail "Insert deftype"
-    :insert-text "(deftype ${1:Name} [${2:fields}]\n ${3:Protocol}\n ${0:body})"}
+    :insert-text "(deftype ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)"}
    {:label "fn"
     :detail "Insert fn"
-    :insert-text "(fn [${1:arg-list}] ${0:body})"}
+    :insert-text "(fn [${1:arg-list}] $0)"}
    {:label "for"
     :detail "Insert for"
     :insert-text "(for [${1:item} ${2:coll}]\n  $0)"}
@@ -104,13 +104,13 @@
     :insert-text "(let [${1:binding} ${2:value}])"}
    {:label "letfn"
     :detail "Insert letfn"
-    :insert-text "(letfn [(${1:name} [${2:args}]\n ${0:body})])"}
+    :insert-text "(letfn [(${1:name} [${2:args}]\n $0)])"}
    {:label "ns"
     :detail "Insert ns"
     :insert-text "(ns ${1:name}\n  $0:references})"}
    {:label "ns-doc"
     :detail "Insert ns with docstring"
-    :insert-text "(ns ${1:name}\n  \"${2:docstring}\"\n  ${0:references})"}
+    :insert-text "(ns ${1:name}\n  \"${2:docstring}\"\n  $0)"}
 
    ;; Requiring deps
    {:label "require"

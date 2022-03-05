@@ -339,9 +339,7 @@
              (if-let [snippet-item (get snippet-items-by-label (:label item))]
                (let [data (shared/assoc-some (:data item)
                                              "snippet-kind" (get completion-kind-enum (:kind item)))]
-                 (shared/assoc-some snippet-item
-                                    :detail (:detail item)
-                                    :data data))
+                 (shared/assoc-some snippet-item :data data))
                item))
            items)
       (remove #(get items-by-label (:label %))
@@ -415,7 +413,10 @@
                     (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
 
                     inside-require?
-                    (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+                    (cond-> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+                      (and support-snippets?
+                           simple-cursor?)
+                      (merging-snippets cursor-loc next-loc matches-fn settings))
 
                     aliased-keyword-value?
                     (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename (concat other-ns-elements external-ns-elements))

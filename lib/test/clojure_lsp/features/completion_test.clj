@@ -236,7 +236,7 @@
     (h/assert-submaps
       [{:label "comment"
         :detail "Insert comment block"
-        :insert-text "(comment\n  ${0:body}\n  )"
+        :insert-text "(comment\n  $0\n  )"
         :kind :snippet
         :insert-text-format :snippet}]
       (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 db/db)))))

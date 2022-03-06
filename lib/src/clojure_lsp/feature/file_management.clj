@@ -168,6 +168,38 @@
                                         :text final-text
                                         :version version})))
 
+(defn analyze-watched-created-files! [uris db]
+  (log/info "Analyzing uris" (vec uris))
+  (let [filenames (map shared/uri->filename uris)
+        result (shared/logging-time
+                 "Created watched files analyzed, took %s secs"
+                 (lsp.kondo/run-kondo-on-paths! filenames false db))
+        analysis (->> (:analysis result)
+                      lsp.kondo/normalize-analysis
+                      (group-by :filename))]
+    (swap! db (fn [state-db]
+                (-> state-db
+                    (update :analysis merge analysis)
+                    (assoc :kondo-config (:config result))
+                    (update :findings merge (group-by :filename (:findings result))))))
+    (producer/refresh-test-tree (:producer @db) uris)))
+
+(defn did-change-watched-files [changes db]
+  (doseq [{:keys [uri type]} changes]
+    (case type
+      :created (async/>!! db/created-watched-files-chan uri)
+      ;; TODO Fix outdated changes overwriting newer changes.
+      :changed nil #_(did-change uri
+                               [{:text (slurp filename)}]
+                               (inc (get-in @db [:documents uri :v] 0))
+                               db)
+      :deleted (let [filename (shared/uri->filename uri)]
+                 (swap! db (fn [state-db]
+                             (-> state-db
+                                 (shared/dissoc-in [:documents uri])
+                                 (shared/dissoc-in [:analysis filename])
+                                 (shared/dissoc-in [:findings filename]))))))))
+
 (defn did-close [uri db]
   (let [filename (shared/uri->filename uri)
         source-paths (settings/get db [:source-paths])]

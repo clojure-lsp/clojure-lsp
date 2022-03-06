@@ -11,6 +11,7 @@
   - move-coll-entry: clauses move intuitively in `assoc`, `case`, `cond`, and similar functions. #780 @mainej
   - Generate stubs async after startup, improving startup time. #788
   - Improve and add lots of new snippets following practicalli config. #797
+  - Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796
 
 ## 2022.02.23-12.12.12
 

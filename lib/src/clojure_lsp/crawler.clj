@@ -40,9 +40,11 @@
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (swap! db update :analysis merge analysis)
-    (swap! db assoc :kondo-config (:config result))
-    (swap! db update :findings merge (group-by :filename (:findings result)))
+    (swap! db (fn [state-db]
+                (-> state-db
+                    (update :analysis merge analysis)
+                    (assoc :kondo-config (:config result))
+                    (update :findings merge (group-by :filename (:findings result))))))
     analysis))
 
 (defn ^:private report-batch-analysis-percentage

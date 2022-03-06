@@ -555,6 +555,7 @@
         launcher (Launcher/createLauncher (ClojureLSPServer.) ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
+        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan config/created-watched-files-debounce-ms)
         producer (->LSPProducer ^ClojureLanguageClient (.getRemoteProxy launcher) db/db)]
     (nrepl/setup-nrepl db/db)
     (swap! db/db assoc :producer producer)
@@ -569,5 +570,11 @@
         (f.file-management/analyze-changes (<! debounced-changes) db/db)
         (catch Exception e
           (log/error e "Error during analyzing buffer file changes")))
+      (recur))
+    (go-loop []
+      (try
+        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) db/db)
+        (catch Exception e
+          (log/error e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))

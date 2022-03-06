@@ -413,20 +413,20 @@
   May return a movement strategy even when the zloc cannot actually be moved.
   See [[valid-strat?]] and [[can-swap?]]."
   [dir zloc uri db]
-  (let [parent-zloc (z-up zloc)
-        child-count (count-children parent-zloc)
-        strat (case (some-> parent-zloc z/tag)
-                :map        {:breadth 2, :rind no-rind}
-                :set        {:breadth 1, :rind no-rind}
-                :vector     (vector-strategy parent-zloc uri db)
-                (:list :fn) (list-strategy parent-zloc child-count)
-                nil)]
-    (when strat
-      (let [strat (assoc strat
-                         :dir dir
-                         :pulp (pulp (:rind strat) child-count))]
-        (when (valid-strat? zloc strat)
-          strat)))))
+  (when-let [parent-zloc (z-up zloc)]
+    (let [child-count (count-children parent-zloc)
+          strat (case (z/tag parent-zloc)
+                  :map        {:breadth 2, :rind no-rind}
+                  :set        {:breadth 1, :rind no-rind}
+                  :vector     (vector-strategy parent-zloc uri db)
+                  (:list :fn) (list-strategy parent-zloc child-count)
+                  nil)]
+      (when strat
+        (let [strat (assoc strat
+                           :dir dir
+                           :pulp (pulp (:rind strat) child-count))]
+          (when (valid-strat? zloc strat)
+            strat))))))
 
 (defn can-move-entry-up? [zloc uri db]
   (boolean (movement-strategy :up zloc uri db)))

@@ -116,9 +116,9 @@
 (defmacro ^:private sync-notification
   [params f handler]
   `(end
-    (->> ~params
-         coercer/java->clj
-         (~f ~handler))))
+     (->> ~params
+          coercer/java->clj
+          (~f ~handler))))
 
 (defmacro ^:private sync-request
   ([params handler response-spec]

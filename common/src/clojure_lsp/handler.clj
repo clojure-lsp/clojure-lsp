@@ -9,5 +9,4 @@
   (execute-command [this doc])
   (did-close [this doc])
   (did-change-watched-files [this doc])
-  (cursor-info-log [this doc])
-  )
+  (cursor-info-log [this doc]))

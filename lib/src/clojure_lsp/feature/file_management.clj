@@ -190,9 +190,9 @@
       :created (async/>!! db/created-watched-files-chan uri)
       ;; TODO Fix outdated changes overwriting newer changes.
       :changed nil #_(did-change uri
-                               [{:text (slurp filename)}]
-                               (inc (get-in @db [:documents uri :v] 0))
-                               db)
+                                 [{:text (slurp filename)}]
+                                 (inc (get-in @db [:documents uri :v] 0))
+                                 db)
       :deleted (let [filename (shared/uri->filename uri)]
                  (swap! db (fn [state-db]
                              (-> state-db

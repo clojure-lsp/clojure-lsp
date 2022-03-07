@@ -348,5 +348,4 @@
   (did-change-watched-files [_ doc]
     (did-change-watched-files doc))
   (cursor-info-log [_ doc]
-    (cursor-info-log doc))
-  )
+    (cursor-info-log doc)))

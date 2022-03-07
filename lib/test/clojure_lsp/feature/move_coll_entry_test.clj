@@ -29,6 +29,7 @@
     (is (not (can-move-code-up? "{1 2 |3}")))
     (is (not (can-move-code-up? "(let [1 2 |3])"))))
   (testing "outside collection"
+    (is (not (can-move-code-up? "|")))
     (is (not (can-move-code-up? "|[]")))
     (is (not (can-move-code-up? "|{:a :b :c :d}")))
     (is (not (can-move-code-up? "|#{:a :b :c :d}")))

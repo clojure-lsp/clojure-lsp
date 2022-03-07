@@ -12,6 +12,7 @@
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
+(def created-watched-files-debounce-ms 500)
 
 (defn clojure-lsp-version []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))

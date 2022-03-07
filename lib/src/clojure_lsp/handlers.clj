@@ -77,21 +77,7 @@
   (f.file-management/did-close textDocument db/db))
 
 (defn did-change-watched-files [{:keys [changes]}]
-  (doseq [{:keys [uri type]} changes]
-    (let [filename (shared/uri->filename uri)]
-      (case type
-        :created (do (f.file-management/did-open uri (slurp filename) db/db false)
-                     (producer/refresh-test-tree (:producer @db/db) [uri]))
-        ;; TODO Fix outdated changes overwriting newer changes.
-        :changed nil #_(f.file-management/did-change uri
-                                                     [{:text (slurp filename)}]
-                                                     (inc (get-in @db/db [:documents uri :v] 0))
-                                                     db/db)
-        :deleted (swap! db/db (fn [db]
-                                (-> db
-                                    (shared/dissoc-in [:documents uri])
-                                    (shared/dissoc-in [:analysis filename])
-                                    (shared/dissoc-in [:findings filename]))))))))
+  (f.file-management/did-change-watched-files changes db/db))
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)

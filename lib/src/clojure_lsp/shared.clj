@@ -331,6 +331,22 @@
   [(inc (:line position))
    (inc (:character position))])
 
+(defn debounce-all
+  "Debounce in channel with ms miliseconds returning all values."
+  [in ms]
+  (let [out (chan)]
+    (go-loop [old-values []
+              last-val nil]
+      (let [values (if (nil? last-val)
+                     [(<! in)]
+                     (conj old-values last-val))
+            timer (timeout ms)
+            [new-val ch] (alts! [in timer])]
+        (condp = ch
+          timer (do (>! out values) (recur old-values nil))
+          in (recur values new-val))))
+    out))
+
 (defn debounce-by
   "Debounce in channel with ms miliseconds distincting by by-fn."
   [in ms by-fn]

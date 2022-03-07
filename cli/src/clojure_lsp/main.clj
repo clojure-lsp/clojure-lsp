@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [run!])
   (:require
    borkdude.dynaload
-   [clojure-lsp.config :as config]
+   [clojure-lsp.shared-config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.kondo :as lsp.kondo]

@@ -1,7 +1,7 @@
 (ns clojure-lsp.server
   (:require
    [clojure-lsp.coercer :as coercer]
-   [clojure-lsp.config :as config]
+   [clojure-lsp.shared-config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
@@ -14,7 +14,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go go-loop thread timeout]]
    [clojure.java.data :as j]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.handler :as handler])
   (:import
    (clojure_lsp
      ClojureLanguageServer
@@ -113,11 +114,11 @@
       ~'_result)))
 
 (defmacro ^:private sync-notification
-  [params handler]
+  [params f handler]
   `(end
-     (->> ~params
-          coercer/java->clj
-          ~handler)))
+    (->> ~params
+         coercer/java->clj
+         (~f ~handler))))
 
 (defmacro ^:private sync-request
   ([params handler response-spec]
@@ -140,31 +141,31 @@
           (sync-request ~params ~handler ~response-spec ~extra-log-fn))))))
 
 (defmacro ^:private async-notification
-  [params handler]
+  [params f handler]
   `(CompletableFuture/supplyAsync
      (reify Supplier
        (get [this]
-         (sync-notification ~params ~handler)))))
+         (sync-notification ~params ~f ~handler)))))
 
-(deftype LSPTextDocumentService []
+(deftype LSPTextDocumentService [handler]
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (start :didOpen
-           (sync-notification params handlers/did-open)))
+           (sync-notification params handler/did-open handler)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (start :didChange
-           (sync-notification params handlers/did-change)))
+           (sync-notification params handler/did-change handler)))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (start :didSave
            (future
-             (sync-notification params handlers/did-save)))
+             (sync-notification params handler/did-save handler)))
     (CompletableFuture/completedFuture 0))
 
   (^void didClose [_ ^DidCloseTextDocumentParams params]
     (start :didClose
-           (async-notification params handlers/did-close)))
+           (async-notification params handler/did-close handler)))
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
@@ -277,12 +278,12 @@
     (start :linkedEditingRange
            (async-request params handlers/linked-editing-ranges ::coercer/linked-editing-ranges-or-error))))
 
-(deftype LSPWorkspaceService []
+(deftype LSPWorkspaceService [handler]
   WorkspaceService
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (start :executeCommand
            (future
-             (sync-notification params handlers/execute-command)))
+             (sync-notification params handler/execute-command handler)))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
@@ -290,7 +291,7 @@
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
-           (async-notification params handlers/did-change-watched-files)))
+           (async-notification params handler/did-change-watched-files handler)))
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
@@ -332,7 +333,7 @@
         (log/info "Parent process" ppid "is not running - exiting server")
         (.exit ^LanguageServer server)))))
 
-(deftype ClojureLSPServer []
+(deftype ClojureLSPServer [handler]
   ClojureLanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
@@ -418,7 +419,7 @@
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (start :cursor-info-log
            (future
-             (sync-notification params handlers/cursor-info-log))))
+             (sync-notification params handler/cursor-info-log handler))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (start :clojuredocsRaw
@@ -435,9 +436,9 @@
     (shutdown-agents)
     (System/exit 0))
   (getTextDocumentService [_]
-    (LSPTextDocumentService.))
+    (LSPTextDocumentService. handler))
   (getWorkspaceService [_]
-    (LSPWorkspaceService.)))
+    (LSPWorkspaceService. (handlers/->ClojureFeatureHandler))))
 
 (defn ^:private tee-system-in [^java.io.InputStream system-in]
   (let [buffer-size 1024
@@ -552,7 +553,7 @@
   (log/info "Starting server...")
   (let [is (or System/in (tee-system-in System/in))
         os (or System/out (tee-system-out System/out))
-        launcher (Launcher/createLauncher (ClojureLSPServer.) ClojureLanguageClient is os)
+        launcher (Launcher/createLauncher (ClojureLSPServer. (handlers/->ClojureFeatureHandler)) ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan config/created-watched-files-debounce-ms)

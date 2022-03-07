@@ -1,0 +1,2 @@
+{:deps {com.taoensso/timbre {:mvn/version "5.1.2"}}
+ :paths ["src"]}

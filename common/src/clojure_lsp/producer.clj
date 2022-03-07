@@ -1,6 +1,4 @@
-(ns clojure-lsp.producer
-  (:require
-   [taoensso.timbre :as log]))
+(ns clojure-lsp.producer)
 
 (set! *warn-on-reflection* true)
 

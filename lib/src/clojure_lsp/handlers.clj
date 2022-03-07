@@ -1,6 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.config :as config]
+   [clojure-lsp.shared-config :as config]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -25,7 +25,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.handler :as handler])
   (:import
    [java.net
     URL
@@ -331,3 +332,21 @@
   (let [row (-> position :line inc)
         col (-> position :character inc)]
     (f.linked-editing-range/ranges textDocument row col db/db)))
+
+(defrecord ClojureFeatureHandler []
+  handler/IHandler
+  (did-open [_ doc]
+    (did-open doc))
+  (did-change [_ doc]
+    (did-change doc))
+  (did-save [_ doc]
+    (did-save doc))
+  (execute-command [_ doc]
+    (execute-command doc))
+  (did-close [_ doc]
+    (did-close doc))
+  (did-change-watched-files [_ doc]
+    (did-change-watched-files doc))
+  (cursor-info-log [_ doc]
+    (cursor-info-log doc))
+  )

@@ -1,21 +1,21 @@
 (ns clojure-lsp.server
   (:require
    [clojure-lsp.coercer :as coercer]
-   [clojure-lsp.shared-config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
+   [clojure-lsp.handler :as handler]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared-config :as config]
    [clojure.core.async :refer [<! go go-loop thread timeout]]
    [clojure.java.data :as j]
-   [taoensso.timbre :as log]
-   [clojure-lsp.handler :as handler])
+   [taoensso.timbre :as log])
   (:import
    (clojure_lsp
      ClojureLanguageServer

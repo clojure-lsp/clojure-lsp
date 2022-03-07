@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.shared-config :as config]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -18,15 +17,16 @@
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
+   [clojure-lsp.handler :as handler]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared-config :as config]
    [clojure.pprint :as pprint]
-   [taoensso.timbre :as log]
-   [clojure-lsp.handler :as handler])
+   [taoensso.timbre :as log])
   (:import
    [java.net
     URL

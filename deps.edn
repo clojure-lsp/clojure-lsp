@@ -10,6 +10,7 @@
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.63.998"}}
                   :extra-paths ["lib/src"
                                 "cli/src"
+                                "common/src"
                                 "common-test/src"
                                 "lib/test"
                                 "cli/test"]

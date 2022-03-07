@@ -2,12 +2,12 @@
   (:refer-clojure :exclude [run!])
   (:require
    borkdude.dynaload
-   [clojure-lsp.shared-config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.server :as server]
+   [clojure-lsp.shared-config :as config]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]

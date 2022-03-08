@@ -47,12 +47,6 @@
   [loc pos]
   (some-> loc z/node meta (in-range? pos)))
 
-(defn right-or-up* [zloc]
-  (loop [p zloc]
-    (or
-      (z/right* p)
-      (some-> p z/up* recur))))
-
 (defn find-by-heritability
   "Find the deepest zloc from `start-zloc` that satisfies `inherits?`.
   `inherits?` must be a function such that if zloc satisifies it then so will
@@ -64,10 +58,7 @@
   satisifies `inherits?`, descending into that node, and recurring. As such, it
   can be much faster than algorithms based on z/next*, which must inspect all
   children and grandchildren, even if information in the grandparent excludes
-  the entirely family.
-
-  If no locs can be found in `start-loc`'s generation, then moves up and to the
-  right, assuming that perhaps some other family satisifies `inherits?`."
+  the entirely family."
   [start-zloc inherits?]
   (loop [zloc (cond-> start-zloc
                 (= :forms (z/tag start-zloc)) z/down*)]
@@ -77,7 +68,7 @@
         (if-let [inner (some-> zloc z/down* (z/find z/right* inherits?))]
           (recur inner)
           zloc)
-        (recur (right-or-up* zloc))))))
+        (recur (z/right* zloc))))))
 
 (defn find-at-pos
   "Find the deepest zloc whose node is at the given `row` and `col`, seeking

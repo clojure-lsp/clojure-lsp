@@ -13,6 +13,7 @@
   (is (= "1" (-> "(ns foo) 1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
   (is (= "3" (-> "(ns foo) 1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 21) z/string)))
   (is (= "1" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "2" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 19) z/string)))
   (is (= "3" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 22) z/string)))
   (is (= "some" (-> "(ns foo) some (def other {:foo/bar 1})" z/of-string (edit/find-at-pos 1 10) z/string)))
   (is (= "some" (-> "(ns foo) some (def other #:foo{:bar 1})" z/of-string (edit/find-at-pos 1 10) z/string))))

@@ -21,12 +21,6 @@
        (= c name-col)
        (= ec name-end-col)))
 
-(defn find-top-forms-in-range
-  [code pos]
-  (->> (edit/find-forms (z/of-string code) #(edit/in-range? pos (-> % z/node meta)))
-       (mapv (fn [loc] (z/find loc z/up edit/top?)))
-       (distinct)))
-
 (def ^:private zero-width-space
   "A unicode character that is incredibly unlikely to be used in regular code.
   During parsing, used as a valid and easily identified subsitute for what would

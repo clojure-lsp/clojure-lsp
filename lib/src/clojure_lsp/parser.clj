@@ -46,46 +46,46 @@
                             Throwable->map
                             :cause
                             (re-matches #"Invalid symbol: (.*)\/."))]
-    (let [true-value      (str token "/")
+    (let [real-value      (str token "/")
           temporary-value (str token zero-width-space)]
       (some-> text
-              (replace-incomplete-token true-value temporary-value)
+              (replace-incomplete-token real-value temporary-value)
               z/of-string
               (z/edit->
                 (z/find-next-value z/next (symbol temporary-value))
-                (z-replace-preserving-meta (n/token-node (symbol true-value))))))))
+                (z-replace-preserving-meta (n/token-node (symbol real-value))))))))
 
 (defn ^:private handle-single-colon-code [text exception]
   (let [cause (->> exception Throwable->map :cause)]
     (when (or (re-matches #"\[line (\d+), col (\d+)\] A single colon is not a valid keyword." cause)
               (re-matches #"\[line (\d+), col (\d+)\] Invalid keyword: ." cause))
-      (let [true-value      ":"
+      (let [real-value      ":"
             temporary-value zero-width-space]
         (some-> text
-                (replace-incomplete-token true-value temporary-value)
+                (replace-incomplete-token real-value temporary-value)
                 z/of-string
                 (z/edit->
                   (z/find-next-value z/next (symbol temporary-value))
-                  (z-replace-preserving-meta (n/token-node (symbol true-value)))))))))
+                  (z-replace-preserving-meta (n/token-node (symbol real-value)))))))))
 
 (defn ^:private handle-keyword-with-end-slash-code [text exception]
   (when-let [[_ token] (->> exception
                             Throwable->map
                             :cause
                             (re-matches #".*Invalid keyword: (.+)\/."))]
-    (let [true-value      (str token "/")
+    (let [real-value      (str token "/")
           temporary-value (str token zero-width-space)]
       (when-let [replaced-node (some-> text
-                                       (replace-incomplete-token (str ":" true-value)
+                                       (replace-incomplete-token (str ":" real-value)
                                                                  (str ":" temporary-value))
                                        z/of-string)]
         (if (z/find-next-value replaced-node z/next (keyword temporary-value))
           (z/edit-> replaced-node
                     (z/find-next-value z/next (keyword temporary-value))
-                    (z-replace-preserving-meta (n/keyword-node (keyword true-value))))
+                    (z-replace-preserving-meta (n/keyword-node (keyword real-value))))
           (z/edit-> replaced-node
                     (z/find-next-token z/next #(= (str "::" temporary-value) (z/string %)))
-                    (z-replace-preserving-meta (n/keyword-node (keyword (str ":" true-value))))))))))
+                    (z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
 
 (defn zloc-of-string [text]
   (try

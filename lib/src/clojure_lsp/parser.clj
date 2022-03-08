@@ -55,7 +55,6 @@
                 (z/find-value z/next (symbol temporary-value))
                 (z-replace-preserving-meta (n/token-node (symbol real-value))))))))
 
-
 (defn ^:private handle-single-colon-code [text exception]
   (let [cause (->> exception Throwable->map :cause)]
     (when (or (re-matches #"\[line (\d+), col (\d+)\] A single colon is not a valid keyword." cause)

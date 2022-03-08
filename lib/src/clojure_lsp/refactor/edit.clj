@@ -25,22 +25,6 @@
        (if (= r row) (>= c col) true)
        (if (= er end-row) (< ec end-col) true)))
 
-(defn z-filter
-  "Return list of nodes satisfying the given predicate `p?`, moving in direction
-  `f` from initial zipper location `zloc`."
-  ([zloc f p?]
-   (->> zloc
-        (iterate f)
-        (take-while identity)
-        (take-while (complement z/end?))
-        (filter p?))))
-
-(defn find-forms
-  "Find sexpr-able nodes satisfying the given predicate depth first from initial
-  zipper location."
-  [zloc p?]
-  (z-filter zloc z/next p?))
-
 (defn ^:private zloc-in-range?
   "Checks whether the `loc`s node is [[in-range?]] of the given `pos`."
   [loc pos]

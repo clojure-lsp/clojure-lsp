@@ -52,8 +52,9 @@
               (replace-incomplete-token real-value temporary-value)
               z/of-string
               (z/edit->
-                (z/find-next-value z/next (symbol temporary-value))
+                (z/find-value z/next (symbol temporary-value))
                 (z-replace-preserving-meta (n/token-node (symbol real-value))))))))
+
 
 (defn ^:private handle-single-colon-code [text exception]
   (let [cause (->> exception Throwable->map :cause)]
@@ -65,7 +66,7 @@
                 (replace-incomplete-token real-value temporary-value)
                 z/of-string
                 (z/edit->
-                  (z/find-next-value z/next (symbol temporary-value))
+                  (z/find-value z/next (symbol temporary-value))
                   (z-replace-preserving-meta (n/token-node (symbol real-value)))))))))
 
 (defn ^:private handle-keyword-with-end-slash-code [text exception]
@@ -79,12 +80,12 @@
                                        (replace-incomplete-token (str ":" real-value)
                                                                  (str ":" temporary-value))
                                        z/of-string)]
-        (if (z/find-next-value replaced-node z/next (keyword temporary-value))
+        (if (z/find-value replaced-node z/next (keyword temporary-value))
           (z/edit-> replaced-node
-                    (z/find-next-value z/next (keyword temporary-value))
+                    (z/find-value z/next (keyword temporary-value))
                     (z-replace-preserving-meta (n/keyword-node (keyword real-value))))
           (z/edit-> replaced-node
-                    (z/find-next-token z/next #(= (str "::" temporary-value) (z/string %)))
+                    (z/find-token z/next #(= (str "::" temporary-value) (z/string %)))
                     (z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
 
 (defn zloc-of-string [text]

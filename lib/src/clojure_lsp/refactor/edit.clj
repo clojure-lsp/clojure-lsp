@@ -15,15 +15,15 @@
       loc
       (recur (z/up loc)))))
 
-;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
-                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
-  (or (nil? form-pos)
-      (nil? selection-pos)
-      (and (>= r row)
-           (<= er end-row)
-           (if (= r row) (>= c col) true)
-           (if (= er end-row) (< ec end-col) true))))
+;; From rewrite-cljs; very similar to the private function
+;; rewrite-clj.zip.findz/position-in-range? but based on zloc meta, avoiding the
+;; need for :track-position?
+(defn in-range? [{:keys [row col end-row end-col]}
+                 {r :row c :col er :end-row ec :end-col}]
+  (and (>= r row)
+       (<= er end-row)
+       (if (= r row) (>= c col) true)
+       (if (= er end-row) (< ec end-col) true)))
 
 (defn z-filter
   "Return list of nodes satisfying the given predicate `p?`, moving in direction

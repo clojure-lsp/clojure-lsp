@@ -8,21 +8,14 @@
 
 (h/reset-db-after-test)
 
-(deftest find-last-by-pos
-  (is (= "foo/bar" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) (foo/bar 1)")
-                                                    {:row 1 :col 11 :end-row 1 :end-col 11}))))
-  (is (= "1" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #(+ 1 2) 3")
-                                              {:row 1 :col 10 :end-row 1 :end-col 10}))))
-  (is (= "3" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #(+ 1 2) 3")
-                                              {:row 1 :col 21 :end-row 1 :end-col 21}))))
-  (is (= "1" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #?(+ 1 2) 3")
-                                              {:row 1 :col 10 :end-row 1 :end-col 10}))))
-  (is (= "3" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #?(+ 1 2) 3")
-                                              {:row 1 :col 22 :end-row 1 :end-col 22}))))
-  (is (= "some" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) some (def other {:foo/bar 1})")
-                                                 {:row 1 :col 10 :end-row 1 :end-col 13}))))
-  (is (= "some" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) some (def other #:foo{:bar 1})")
-                                                 {:row 1 :col 10 :end-row 1 :end-col 13})))))
+(deftest find-at-pos
+  (is (= "foo/bar" (-> "(ns foo) (foo/bar 1)" z/of-string (edit/find-at-pos 1 11) z/string)))
+  (is (= "1" (-> "(ns foo) 1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "3" (-> "(ns foo) 1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 21) z/string)))
+  (is (= "1" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "3" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 22) z/string)))
+  (is (= "some" (-> "(ns foo) some (def other {:foo/bar 1})" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "some" (-> "(ns foo) some (def other #:foo{:bar 1})" z/of-string (edit/find-at-pos 1 10) z/string))))
 
 (deftest find-op-test
   (let [code "(foo ((x) [a] (b {c d})))"

@@ -102,7 +102,7 @@
       (log/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
 (defn to-pos [zloc row col]
-  (edit/find-last-by-pos zloc z/next* {:row row :col col :end-row row :end-col col}))
+  (edit/find-at-pos zloc row col))
 
 (defn to-cursor [zloc line character]
   (to-pos zloc (inc line) (inc character)))

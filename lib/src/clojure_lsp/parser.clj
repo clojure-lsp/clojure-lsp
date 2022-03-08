@@ -33,7 +33,7 @@
   otherwise be an invalid character."
   "\u200b")
 
-(defn ^:private replace-invalid-token [s invalid-str valid-str]
+(defn ^:private replace-incomplete-token [s invalid-str valid-str]
   (let [token-pattern (re-pattern (str invalid-str "(\\s|\\n|\\))"))]
     (when-let [[_ divider] (re-find token-pattern s)]
       (string/replace-first s token-pattern (str valid-str divider)))))
@@ -49,7 +49,7 @@
     (let [true-value      (str token "/")
           temporary-value (str token zero-width-space)]
       (some-> text
-              (replace-invalid-token true-value temporary-value)
+              (replace-incomplete-token true-value temporary-value)
               z/of-string
               (z/edit->
                 (z/find-next-value z/next (symbol temporary-value))
@@ -62,7 +62,7 @@
       (let [true-value      ":"
             temporary-value zero-width-space]
         (some-> text
-                (replace-invalid-token true-value temporary-value)
+                (replace-incomplete-token true-value temporary-value)
                 z/of-string
                 (z/edit->
                   (z/find-next-value z/next (symbol temporary-value))
@@ -76,8 +76,8 @@
     (let [true-value      (str token "/")
           temporary-value (str token zero-width-space)]
       (when-let [replaced-node (some-> text
-                                       (replace-invalid-token (str ":" true-value)
-                                                              (str ":" temporary-value))
+                                       (replace-incomplete-token (str ":" true-value)
+                                                                 (str ":" temporary-value))
                                        z/of-string)]
         (if (z/find-next-value replaced-node z/next (keyword temporary-value))
           (z/edit-> replaced-node

@@ -1,6 +1,5 @@
 (ns clojure-lsp.refactor.edit
   (:require
-   [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))

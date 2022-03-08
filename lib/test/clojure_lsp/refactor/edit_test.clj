@@ -9,14 +9,14 @@
 (h/reset-db-after-test)
 
 (deftest find-at-pos
-  (is (= "foo/bar" (-> "(ns foo) (foo/bar 1)" z/of-string (edit/find-at-pos 1 11) z/string)))
-  (is (= "1" (-> "(ns foo) 1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
-  (is (= "3" (-> "(ns foo) 1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 21) z/string)))
-  (is (= "1" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
-  (is (= "2" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 19) z/string)))
-  (is (= "3" (-> "(ns foo) 1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 22) z/string)))
-  (is (= "some" (-> "(ns foo) some (def other {:foo/bar 1})" z/of-string (edit/find-at-pos 1 10) z/string)))
-  (is (= "some" (-> "(ns foo) some (def other #:foo{:bar 1})" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "foo/bar" (-> "(foo/bar 1)" z/of-string (edit/find-at-pos 1 2) z/string)))
+  (is (= "1" (-> "1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (is (= "3" (-> "1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 12) z/string)))
+  (is (= "1" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (is (= "2" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "3" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 13) z/string)))
+  (is (= "some" (-> "some (def other {:foo/bar 1})" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (is (= "some" (-> "some (def other #:foo{:bar 1})" z/of-string (edit/find-at-pos 1 1) z/string)))
   (testing "finds in any branch"
     (let [zloc (z/of-string (h/code "(parent"
                                     "  (child-1 (grandchild-1-1)"

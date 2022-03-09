@@ -348,4 +348,64 @@
   (did-change-watched-files [_ doc]
     (did-change-watched-files doc))
   (cursor-info-log [_ doc]
-    (cursor-info-log doc)))
+    (cursor-info-log doc))
+  (cursor-info-raw [_ doc]
+    (cursor-info-raw doc))
+  (references [_ doc]
+    (references doc))
+  (completion [_ doc]
+    (completion doc))
+  (completion-resolve-item [_ doc]
+    (completion-resolve-item doc))
+  (prepare-rename [_ doc]
+    (prepare-rename doc))
+  (rename [_ doc]
+    (rename doc))
+  (hover [_ doc]
+    (hover doc))
+  (signature-help [_ doc]
+    (signature-help doc))
+  (formatting [_ doc]
+    (formatting doc))
+  (code-actions [_ doc]
+    (code-actions doc))
+  (code-lens [_ doc]
+    (code-lens doc))
+  (code-lens-resolve [_ doc]
+    (code-lens-resolve doc))
+  (definition [_ doc]
+    (definition doc))
+  (declaration [_ doc]
+    (declaration doc))
+  (implementation [_ doc]
+    (implementation doc))
+  (document-symbol [_ doc]
+    (document-symbol doc))
+  (document-highlight [_ doc]
+    (document-highlight doc))
+  (semantic-tokens-full [_ doc]
+    (semantic-tokens-full doc))
+  (semantic-tokens-range [_ doc]
+    (semantic-tokens-range doc))
+  (prepare-call-hierarchy [_ doc]
+    (prepare-call-hierarchy doc))
+  (call-hierarchy-incoming [_ doc]
+    (call-hierarchy-incoming doc))
+  (call-hierarchy-outgoing [_ doc]
+    (call-hierarchy-outgoing doc))
+  (linked-editing-ranges [_ doc]
+    (linked-editing-ranges doc))
+  (workspace-symbols [_ doc]
+    (workspace-symbols doc))
+  ;; (did-delete-files [_ doc]
+  ;;   (did-delete-files doc))
+  (server-info-raw [_]
+    (server-info-raw))
+  (server-info-log [_]
+    (server-info-log))
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
+    (initialize project-root-uri client-capabilities client-settings work-done-token))
+  (range-formatting [_ doc-id format-pos]
+    (range-formatting doc-id format-pos))
+  (extension [_ method doc-id]
+    (extension method doc-id)))

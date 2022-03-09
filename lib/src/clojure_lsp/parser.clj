@@ -27,54 +27,65 @@
        (mapv (fn [loc] (z/find loc z/up edit/top?)))
        (distinct)))
 
+(def ^:private zero-width-space
+  "A unicode character that is incredibly unlikely to be used in regular code.
+  During parsing, used as a valid and easily identified subsitute for what would
+  otherwise be an invalid character."
+  "\u200b")
+
+(defn ^:private replace-incomplete-token [s invalid-str valid-str]
+  (let [token-pattern (re-pattern (str invalid-str "(\\s|\\n|\\))"))]
+    (when-let [[_ divider] (re-find token-pattern s)]
+      (string/replace-first s token-pattern (str valid-str divider)))))
+
+(defn ^:private z-replace-preserving-meta [zloc replacement]
+  (z/replace zloc (with-meta replacement (meta (z/node zloc)))))
+
 (defn ^:private handle-end-slash-code [text exception]
   (when-let [[_ token] (->> exception
                             Throwable->map
                             :cause
-                            (re-matches #"Invalid symbol: (.*\/)."))]
-    (let [token-pattern (re-pattern (str token "(\\s|\\n|\\))"))]
-      (when-let [[_ extra-token] (re-find token-pattern text)]
-        (-> text
-            (string/replace-first token-pattern (str token "_" extra-token))
-            z/of-string
-            (z/edit->
-              (z/find-next-value z/next (symbol (str token "_")))
-              (z/replace (n/token-node (symbol token))))
-            z/up)))))
+                            (re-matches #"Invalid symbol: (.*)\/."))]
+    (let [real-value      (str token "/")
+          temporary-value (str token zero-width-space)]
+      (some-> text
+              (replace-incomplete-token real-value temporary-value)
+              z/of-string
+              (z/edit->
+                (z/find-value z/next (symbol temporary-value))
+                (z-replace-preserving-meta (n/token-node (symbol real-value))))))))
 
 (defn ^:private handle-single-colon-code [text exception]
   (let [cause (->> exception Throwable->map :cause)]
     (when (or (re-matches #"\[line (\d+), col (\d+)\] A single colon is not a valid keyword." cause)
               (re-matches #"\[line (\d+), col (\d+)\] Invalid keyword: ." cause))
-      (let [colon-pattern (re-pattern ":(\\s|\\n|\\))")]
-        (when-let [[_ extra-token] (re-find colon-pattern text)]
-          (-> text
-              (string/replace-first colon-pattern (str ":___" extra-token))
-              z/of-string
-              (z/edit->
-                (z/find-next-value z/next :___)
-                (z/replace (n/token-node (symbol ":"))))
-              z/up))))))
+      (let [real-value      ":"
+            temporary-value zero-width-space]
+        (some-> text
+                (replace-incomplete-token real-value temporary-value)
+                z/of-string
+                (z/edit->
+                  (z/find-value z/next (symbol temporary-value))
+                  (z-replace-preserving-meta (n/token-node (symbol real-value)))))))))
 
 (defn ^:private handle-keyword-with-end-slash-code [text exception]
   (when-let [[_ token] (->> exception
                             Throwable->map
                             :cause
-                            (re-matches #".*Invalid keyword: (.+\/)."))]
-    (let [token-pattern (re-pattern (str ":" token "(\\s|\\n|\\))"))]
-      (when-let [[_ extra-token] (re-find token-pattern text)]
-        (let [replaced-node (-> text
-                                (string/replace-first token-pattern (str ":" token "_" extra-token))
-                                z/of-string)]
-          (if (z/find-next-value replaced-node z/next (keyword (str token "_")))
-            (-> (z/edit-> replaced-node
-                          (z/find-next-value z/next (keyword (str token "_")))
-                          (z/replace (n/keyword-node (keyword token))))
-                z/up)
-            (-> (z/edit-> replaced-node
-                          (z/find-next-token z/next #(= (str "::" token "_") (z/string %)))
-                          (z/replace (n/keyword-node (keyword (str ":" token)))))
-                z/up)))))))
+                            (re-matches #".*Invalid keyword: (.+)\/."))]
+    (let [real-value      (str token "/")
+          temporary-value (str token zero-width-space)]
+      (when-let [replaced-node (some-> text
+                                       (replace-incomplete-token (str ":" real-value)
+                                                                 (str ":" temporary-value))
+                                       z/of-string)]
+        (if (z/find-value replaced-node z/next (keyword temporary-value))
+          (z/edit-> replaced-node
+                    (z/find-value z/next (keyword temporary-value))
+                    (z-replace-preserving-meta (n/keyword-node (keyword real-value))))
+          (z/edit-> replaced-node
+                    (z/find-token z/next #(= (str "::" temporary-value) (z/string %)))
+                    (z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
 
 (defn zloc-of-string [text]
   (try
@@ -102,7 +113,7 @@
       (log/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
 (defn to-pos [zloc row col]
-  (edit/find-last-by-pos zloc z/next* {:row row :col col :end-row row :end-col col}))
+  (edit/find-at-pos zloc row col))
 
 (defn to-cursor [zloc line character]
   (to-pos zloc (inc line) (inc character)))

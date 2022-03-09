@@ -1,6 +1,5 @@
 (ns clojure-lsp.refactor.edit
   (:require
-   [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
@@ -16,15 +15,15 @@
       loc
       (recur (z/up loc)))))
 
-;; From rewrite-cljs
-(defn in-range? [{:keys [row col end-row end-col] :as form-pos}
-                 {r :row c :col er :end-row ec :end-col :as selection-pos}]
-  (or (nil? form-pos)
-      (nil? selection-pos)
-      (and (>= r row)
-           (<= er end-row)
-           (if (= r row) (>= c col) true)
-           (if (= er end-row) (< ec end-col) true))))
+;; From rewrite-cljs; very similar to the private function
+;; rewrite-clj.zip.findz/position-in-range? but based on zloc meta, avoiding the
+;; need for :track-position?
+(defn in-range? [{:keys [row col end-row end-col]}
+                 {r :row c :col er :end-row ec :end-col}]
+  (and (>= r row)
+       (<= er end-row)
+       (if (= r row) (>= c col) true)
+       (if (= er end-row) (< ec end-col) true)))
 
 (defn z-filter
   "Return list of nodes satisfying the given predicate `p?`, moving in direction
@@ -42,29 +41,43 @@
   [zloc p?]
   (z-filter zloc z/next p?))
 
-;; From rewrite-cljs
-(defn find-last-by-pos
-  "Find last node (if more than one) that is in range of `pos`, from initial
-  zipper location `zloc`, moving in direction of `f`, which by default is depth
-  first skipping whitespace.
+(defn ^:private zloc-in-range?
+  "Checks whether the `loc`s node is [[in-range?]] of the given `pos`."
+  [loc pos]
+  (some-> loc z/node meta (in-range? pos)))
 
-  This is similar to z/find-last-by-pos, but allows incomplete forms, different
-  movement strategies and whitespace handling, and doesn't require
+(defn find-by-heritability
+  "Find the deepest zloc from `start-zloc` that satisfies `inherits?`.
+  `inherits?` must be a function such that if zloc satisifies it then so will
+  all of its ancestors. If a parent node satisifies `inherits?` but none of its
+  children do, then this returns the parent, on the assumption that the parent
+  is the last in its lineage with the trait.
+
+  This works by scanning right from start-zloc, finding the first ancestor that
+  satisifies `inherits?`, descending into that node, and recurring. As such, it
+  can be much faster than algorithms based on z/next*, which must inspect all
+  children and grandchildren, even if information in the grandparent excludes
+  the entirely family."
+  [start-zloc inherits?]
+  (loop [zloc (cond-> start-zloc
+                (= :forms (z/tag start-zloc)) z/down*)]
+    (if (z/end? zloc)
+      zloc
+      (if (inherits? zloc)
+        (if-let [inner (some-> zloc z/down* (z/find z/right* inherits?))]
+          (recur inner)
+          zloc)
+        (recur (z/right* zloc))))))
+
+(defn find-at-pos
+  "Find the deepest zloc whose node is at the given `row` and `col`, seeking
+  from initial zipper location `zloc`.
+
+  This is similar to z/find-last-by-pos, but is faster, and doesn't require
   {:track-position? true}."
-  ([zloc pos] (find-last-by-pos zloc z/next pos))
-  ([zloc f pos]
-   (let [forms (z-filter zloc f
-                         (fn [loc]
-                           (when (or (-> loc z/node meta)
-                                     (string/ends-with? (z/string loc) "/")
-                                     (string/ends-with? (z/string loc) ":"))
-                             (in-range?
-                               (-> loc z/node meta) pos))))
-         disconsider-reader-macro? (and (some #(= "?" (z/string %)) forms)
-                                        (> (count forms) 1))]
-     (if disconsider-reader-macro?
-       (last (filter (complement (comp #(= "?" %) z/string)) forms))
-       (last forms)))))
+  [zloc row col]
+  (let [exact-position {:row row, :col col, :end-row row, :end-col col}]
+    (find-by-heritability zloc #(zloc-in-range? % exact-position))))
 
 (defn find-op
   [zloc]
@@ -122,11 +135,7 @@
                                        (filter #(and (identical? :var-definitions (:bucket %))
                                                      (= (:row fn-name-loc-meta) (:name-row %))
                                                      (= (:col fn-name-loc-meta) (:name-col %))))
-                                       (map #(find-last-by-pos root-loc {:row (:name-row %)
-                                                                         :col (:name-col %)
-                                                                         :end-row (:name-row %)
-                                                                         :end-col (:name-col %)}))
-                                       (remove nil?))
+                                       (keep #(find-at-pos root-loc (:name-row %) (:name-col %))))
                                      (get-in @db [:analysis filename]))]
         (when (seq var-definition-ops)
           fn-name-loc)))))

@@ -15,11 +15,19 @@
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
    [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings])
+   [clojure-lsp.settings :as settings]
+   [clojure-lsp.handler :as handler])
   (:import
    (clojure_lsp
-     ClojureLanguageClient)
-   (clojure_lsp.lsp ClojureLSPServer)
+     ClojureLanguageClient
+     ClojureLanguageServer)
+   (clojure_lsp.feature.clojuredocs ClojuredocsParams)
+   (clojure_lsp.feature.cursor_info CursorInfoParams)
+   (clojure_lsp.lsp LSPServer)
+   (java.util.concurrent CompletableFuture)
+   (org.eclipse.lsp4j
+     InitializeParams
+     InitializedParams)
    (org.eclipse.lsp4j.jsonrpc Launcher))
   (:gen-class))
 
@@ -56,6 +64,46 @@
                    (coercer/conform-or-log ::coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
+(deftype ClojureLspServer [^LSPServer lsp-server handler]
+  ClojureLanguageServer
+  (^CompletableFuture initialize [_ ^InitializeParams params]
+    (.initialize lsp-server params))
+  (^void initialized [_ ^InitializedParams _params]
+    (.initialized lsp-server _params))
+  (^CompletableFuture shutdown [_]
+    (.shutdown lsp-server))
+  (exit [_]
+    (.exit lsp-server))
+  (getTextDocumentService [_]
+    (.getTextDocumentService lsp-server))
+  (getWorkspaceService [_]
+    (.getWorkspaceService lsp-server))
+  (^CompletableFuture serverInfoRaw [_]
+    (CompletableFuture/completedFuture
+      (->> (handler/server-info-raw handler)
+           (coercer/conform-or-log ::coercer/server-info-raw))))
+
+  (^void serverInfoLog [_]
+    (lsp/start :server-info-log
+               (future
+                 (lsp/end
+                   (handler/server-info-log handler)))))
+
+  (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
+    (lsp/start :cursorInfoRaw
+               (CompletableFuture/completedFuture
+                 (lsp/sync-request params handler/cursor-info-raw handler ::coercer/cursor-info-raw))))
+
+  (^void cursorInfoLog [_ ^CursorInfoParams params]
+    (lsp/start :cursor-info-log
+               (future
+                 (lsp/sync-notification params handler/cursor-info-log handler))))
+
+  (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
+    (lsp/start :clojuredocsRaw
+               (CompletableFuture/completedFuture
+                 (lsp/sync-request params handler/clojuredocs-raw handler ::coercer/clojuredocs-raw)))))
+
 (defn client-settings [params]
   (-> params
       :initializationOptions
@@ -68,12 +116,13 @@
   (let [is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         handler (handlers/->ClojureFeatureHandler)
-        server (ClojureLSPServer. handler
-                                  semantic-tokens/token-types-str
-                                  semantic-tokens/token-modifiers-str
-                                  f.refactor/available-refactors
-                                  settings/all
-                                  client-settings)
+        server (ClojureLspServer. (LSPServer. handler
+                                              semantic-tokens/token-types-str
+                                              semantic-tokens/token-modifiers-str
+                                              f.refactor/available-refactors
+                                              settings/all
+                                              client-settings)
+                                  handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
@@ -102,3 +151,7 @@
           (log/error e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))
+
+(comment
+  (run-server!)
+  )

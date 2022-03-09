@@ -8,11 +8,6 @@
    [clojure.core.async :refer [<! go-loop thread timeout]]
    [taoensso.timbre :as log])
   (:import
-   (clojure_lsp
-     ClojureLanguageServer
-     ClojureLanguageClient)
-   (clojure_lsp.feature.clojuredocs ClojuredocsParams)
-   (clojure_lsp.feature.cursor_info CursorInfoParams)
    (java.util.concurrent CompletableFuture
                          CompletionException)
    (java.util.function Supplier)
@@ -72,14 +67,14 @@
      WindowClientCapabilities
      WorkspaceSymbolParams)
    (org.eclipse.lsp4j.jsonrpc ResponseErrorException)
-   (org.eclipse.lsp4j.services LanguageServer TextDocumentService WorkspaceService))
+   (org.eclipse.lsp4j.services LanguageClient LanguageServer TextDocumentService WorkspaceService))
   (:gen-class))
 
 (set! *warn-on-reflection* true)
 
 (defonce formatting (atom false))
 
-(defmacro ^:private start [id & body]
+(defmacro start [id & body]
   `(let [~'_start-time (System/nanoTime)
          ~'_id ~id]
      (do ~@body)))
@@ -317,8 +312,8 @@
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(deftype ClojureLSPServer [handler token-types token-modifiers available-refactors all-settings client-settings]
-  ClojureLanguageServer
+(deftype LSPServer [handler token-types token-modifiers available-refactors all-settings client-settings]
+  LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
            (end
@@ -386,32 +381,6 @@
                                    (DidChangeWatchedFilesRegistrationOptions.
                                      [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
 
-  (^CompletableFuture serverInfoRaw [_]
-    (CompletableFuture/completedFuture
-      (->> (handler/server-info-raw handler)
-           (coercer/conform-or-log ::coercer/server-info-raw))))
-
-  (^void serverInfoLog [_]
-    (start :server-info-log
-           (future
-             (end
-               (handler/server-info-log handler)))))
-
-  (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
-    (start :cursorInfoRaw
-           (CompletableFuture/completedFuture
-             (sync-request params handler/cursor-info-raw handler ::coercer/cursor-info-raw))))
-
-  (^void cursorInfoLog [_ ^CursorInfoParams params]
-    (start :cursor-info-log
-           (future
-             (sync-notification params handler/cursor-info-log handler))))
-
-  (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
-    (start :clojuredocsRaw
-           (CompletableFuture/completedFuture
-             (sync-request params handler/clojuredocs-raw handler ::coercer/clojuredocs-raw))))
-
   (^CompletableFuture shutdown [_]
     (log/info "Shutting down")
     (reset! db/db {:documents {}})
@@ -458,7 +427,7 @@
           (log/error e "in thread"))))
     os))
 
-(defrecord LSPProducer [^ClojureLanguageClient client db]
+(defrecord LSPProducer [^LanguageClient client db]
   producer/IProducer
 
   (publish-diagnostic [_this diagnostic]

@@ -24,7 +24,10 @@
 (def ^:private zero-width-space
   "A unicode character that is incredibly unlikely to be used in regular code.
   During parsing, used as a valid and easily identified subsitute for what would
-  otherwise be an invalid character."
+  otherwise be an invalid character. This character was chosen because
+  rewrite-clj parses it as a single character in a symbol, not as whitespace,
+  and because a zero-width space is invisible and so has little use in source
+  code."
   "\u200b")
 
 (defn ^:private replace-incomplete-token [s invalid-str valid-str]

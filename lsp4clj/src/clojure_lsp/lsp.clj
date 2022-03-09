@@ -2,8 +2,6 @@
   (:require
    [clojure-lsp.coercer :as coercer]
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.refactor :as f.refactor]
-   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.handler :as handler]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
@@ -326,113 +324,113 @@
       (do
         (log/info "Parent process" ppid "is not running - exiting server")
         (.exit ^LanguageServer server)))))
-(comment
-  (deftype ClojureLSPServer [handler]
-    ClojureLanguageServer
-    (^CompletableFuture initialize [this ^InitializeParams params]
-      (start :initialize
+
+(deftype ClojureLSPServer [handler token-types token-modifiers available-refactors]
+  ClojureLanguageServer
+  (^CompletableFuture initialize [this ^InitializeParams params]
+    (start :initialize
+           (end
+             (do
+               (log/info "Initializing...")
+               (handler/initialize handler (.getRootUri params)
+                                   (client-capabilities params)
+                                   (client-settings params)
+                                   (some-> (.getWorkDoneToken params) .get str))
+               (when-let [parent-process-id (.getProcessId params)]
+                 (start-parent-process-liveness-probe! parent-process-id this))
+               (let [settings (settings/all db/db)]
+                 (CompletableFuture/completedFuture
+                   (InitializeResult. (doto (ServerCapabilities.)
+                                        (.setDocumentHighlightProvider true)
+                                        (.setHoverProvider true)
+                                        (.setDeclarationProvider true)
+                                        (.setImplementationProvider true)
+                                        (.setSignatureHelpProvider (SignatureHelpOptions. []))
+                                        (.setCallHierarchyProvider true)
+                                        (.setLinkedEditingRangeProvider true)
+                                        (.setCodeActionProvider (CodeActionOptions. (vec (vals coercer/code-action-kind))))
+                                        (.setCodeLensProvider (CodeLensOptions. true))
+                                        (.setReferencesProvider true)
+                                        (.setRenameProvider (RenameOptions. true))
+                                        (.setDefinitionProvider true)
+                                        (.setDocumentFormattingProvider ^Boolean (:document-formatting? settings))
+                                        (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting? settings))
+                                        (.setDocumentSymbolProvider true)
+                                        (.setWorkspaceSymbolProvider true)
+                                        (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
+                                                                              (:semantic-tokens? settings))
+                                                                      (doto (SemanticTokensWithRegistrationOptions.)
+                                                                        (.setLegend (doto (SemanticTokensLegend.
+                                                                                            token-types
+                                                                                            token-modifiers)))
+                                                                        (.setRange true)
+                                                                        (.setFull true))))
+                                        (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
+                                                                      (.setCommands available-refactors)))
+                                        (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
+                                                                (.setOpenClose true)
+                                                                (.setChange (case (:text-document-sync-kind settings)
+                                                                              :full TextDocumentSyncKind/Full
+                                                                              :incremental TextDocumentSyncKind/Incremental
+                                                                              TextDocumentSyncKind/Full))
+                                                                (.setSave (SaveOptions. true))))
+                                        (.setCompletionProvider (CompletionOptions. true [":" "/"]))
+                                        (.setExperimental {"testTree" true
+                                                           "cursorInfo" true
+                                                           "serverInfo" true
+                                                           "clojuredocs" true})))))))))
+
+  (^void initialized [_ ^InitializedParams _params]
+    (start :initialized
+           (end
+             (do
+               (log/info "Initialized!")
+               (producer/register-capability
+                 (:producer @db/db)
+                 (RegistrationParams.
+                   [(Registration. "id" "workspace/didChangeWatchedFiles"
+                                   (DidChangeWatchedFilesRegistrationOptions.
+                                     [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
+
+  (^CompletableFuture serverInfoRaw [_]
+    (CompletableFuture/completedFuture
+      (->> (handler/server-info-raw handler)
+           (coercer/conform-or-log ::coercer/server-info-raw))))
+
+  (^void serverInfoLog [_]
+    (start :server-info-log
+           (future
              (end
-               (do
-                 (log/info "Initializing...")
-                 (handler/initialize handler (.getRootUri params)
-                                     (client-capabilities params)
-                                     (client-settings params)
-                                     (some-> (.getWorkDoneToken params) .get str))
-                 (when-let [parent-process-id (.getProcessId params)]
-                   (start-parent-process-liveness-probe! parent-process-id this))
-                 (let [settings (settings/all db/db)]
-                   (CompletableFuture/completedFuture
-                     (InitializeResult. (doto (ServerCapabilities.)
-                                          (.setDocumentHighlightProvider true)
-                                          (.setHoverProvider true)
-                                          (.setDeclarationProvider true)
-                                          (.setImplementationProvider true)
-                                          (.setSignatureHelpProvider (SignatureHelpOptions. []))
-                                          (.setCallHierarchyProvider true)
-                                          (.setLinkedEditingRangeProvider true)
-                                          (.setCodeActionProvider (CodeActionOptions. (vec (vals coercer/code-action-kind))))
-                                          (.setCodeLensProvider (CodeLensOptions. true))
-                                          (.setReferencesProvider true)
-                                          (.setRenameProvider (RenameOptions. true))
-                                          (.setDefinitionProvider true)
-                                          (.setDocumentFormattingProvider ^Boolean (:document-formatting? settings))
-                                          (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting? settings))
-                                          (.setDocumentSymbolProvider true)
-                                          (.setWorkspaceSymbolProvider true)
-                                          (.setSemanticTokensProvider (when (or (not (contains? settings :semantic-tokens?))
-                                                                                (:semantic-tokens? settings))
-                                                                        (doto (SemanticTokensWithRegistrationOptions.)
-                                                                          (.setLegend (doto (SemanticTokensLegend.
-                                                                                              semantic-tokens/token-types-str
-                                                                                              semantic-tokens/token-modifiers-str)))
-                                                                          (.setRange true)
-                                                                          (.setFull true))))
-                                          (.setExecuteCommandProvider (doto (ExecuteCommandOptions.)
-                                                                        (.setCommands f.refactor/available-refactors)))
-                                          (.setTextDocumentSync (doto (TextDocumentSyncOptions.)
-                                                                  (.setOpenClose true)
-                                                                  (.setChange (case (:text-document-sync-kind settings)
-                                                                                :full TextDocumentSyncKind/Full
-                                                                                :incremental TextDocumentSyncKind/Incremental
-                                                                                TextDocumentSyncKind/Full))
-                                                                  (.setSave (SaveOptions. true))))
-                                          (.setCompletionProvider (CompletionOptions. true [":" "/"]))
-                                          (.setExperimental {"testTree" true
-                                                             "cursorInfo" true
-                                                             "serverInfo" true
-                                                             "clojuredocs" true})))))))))
+               (handler/server-info-log handler)))))
 
-    (^void initialized [_ ^InitializedParams _params]
-      (start :initialized
-             (end
-               (do
-                 (log/info "Initialized!")
-                 (producer/register-capability
-                   (:producer @db/db)
-                   (RegistrationParams.
-                     [(Registration. "id" "workspace/didChangeWatchedFiles"
-                                     (DidChangeWatchedFilesRegistrationOptions.
-                                       [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
+  (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
+    (start :cursorInfoRaw
+           (CompletableFuture/completedFuture
+             (sync-request params handler/cursor-info-raw handler ::coercer/cursor-info-raw))))
 
-    (^CompletableFuture serverInfoRaw [_]
-      (CompletableFuture/completedFuture
-        (->> (handler/server-info-raw handler)
-             (coercer/conform-or-log ::coercer/server-info-raw))))
+  (^void cursorInfoLog [_ ^CursorInfoParams params]
+    (start :cursor-info-log
+           (future
+             (sync-notification params handler/cursor-info-log handler))))
 
-    (^void serverInfoLog [_]
-      (start :server-info-log
-             (future
-               (end
-                 (handler/server-info-log handler)))))
+  (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
+    (start :clojuredocsRaw
+           (CompletableFuture/completedFuture
+             (sync-request params handler/clojuredocs-raw handler ::coercer/clojuredocs-raw))))
 
-    (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
-      (start :cursorInfoRaw
-             (CompletableFuture/completedFuture
-               (sync-request params handler/cursor-info-raw handler ::coercer/cursor-info-raw))))
-
-    (^void cursorInfoLog [_ ^CursorInfoParams params]
-      (start :cursor-info-log
-             (future
-               (sync-notification params handler/cursor-info-log handler))))
-
-    (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
-      (start :clojuredocsRaw
-             (CompletableFuture/completedFuture
-               (sync-request params handler/clojuredocs-raw handler ::coercer/clojuredocs-raw))))
-
-    (^CompletableFuture shutdown [_]
-      (log/info "Shutting down")
-      (reset! db/db {:documents {}})
-      (CompletableFuture/completedFuture
-        {:result nil}))
-    (exit [_]
-      (log/info "Exitting...")
-      (shutdown-agents)
-      (System/exit 0))
-    (getTextDocumentService [_]
-      (LSPTextDocumentService. handler))
-    (getWorkspaceService [_]
-      (LSPWorkspaceService. handler))))
+  (^CompletableFuture shutdown [_]
+    (log/info "Shutting down")
+    (reset! db/db {:documents {}})
+    (CompletableFuture/completedFuture
+      {:result nil}))
+  (exit [_]
+    (log/info "Exitting...")
+    (shutdown-agents)
+    (System/exit 0))
+  (getTextDocumentService [_]
+    (LSPTextDocumentService. handler))
+  (getWorkspaceService [_]
+    (LSPWorkspaceService. handler)))
 
 (defn tee-system-in [^java.io.InputStream system-in]
   (let [buffer-size 1024

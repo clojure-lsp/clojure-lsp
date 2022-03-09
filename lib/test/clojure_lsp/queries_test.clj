@@ -260,6 +260,27 @@
          :to a}]
       (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 7 9 false db/db))))
 
+(deftest find-references-from-defmethod
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(defmulti my-multi :some-key)"))
+  (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                "(defmethod f/my-multi :some-value"
+                                " [_]"
+                                " :foo)"
+                                "(f/my-multi {:some-value 123})") (h/file-uri "file:///b.clj"))
+  (testing "from defmethod method name"
+    (h/assert-submaps
+      '[{:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
+         :row 5 :col 1 :end-row 5 :end-col 31
+         :name my-multi
+         :filename "/b.clj"
+         :alias f
+         :from b
+         :arity 1
+         :bucket :var-usages
+         :to a}]
+      (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 2 12 false db/db))))
+
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
                   "(defn |x [|filename] |filename |f-alias/foo)\n"

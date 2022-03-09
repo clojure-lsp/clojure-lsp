@@ -296,7 +296,8 @@
                          (and (or (not (:from-var %))
                                   (not= (:from-var %) (:name element))
                                   (not= (:from %) (:to element)))
-                              (not (identical? :var-definitions (:bucket %))))))
+                              (not (identical? :var-definitions (:bucket %)))
+                              (not (:defmethod %)))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 

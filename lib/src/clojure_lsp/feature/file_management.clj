@@ -169,7 +169,6 @@
                                         :version version})))
 
 (defn analyze-watched-created-files! [uris db]
-  (log/info "Analyzing uris" (vec uris))
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  "Created watched files analyzed, took %s secs"

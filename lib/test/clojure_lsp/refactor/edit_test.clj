@@ -127,6 +127,10 @@
     (testing "simple" (assert-function-name "(defmulti foo [] (let [a 1] d))"))
     (testing "with meta map" (assert-function-name "(defmulti ^{:asd :ds} foo [] (let [a 1] d))"))
     (testing "with meta" (assert-function-name "(defmulti ^:private foo [] (let [a 1] d))")))
+  (testing "defmethod"
+    (testing "simple" (assert-function-name "(defmethod foo :something [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defmethod ^{:asd :ds} foo :something [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defmethod ^:private foo :something [] (let [a 1] d))")))
   (testing "defonce"
     (testing "simple" (assert-function-name "(defonce foo (let [a 1] d))"))
     (testing "with meta map" (assert-function-name "(defonce ^{:asd :ds} foo (let [a 1] d))"))

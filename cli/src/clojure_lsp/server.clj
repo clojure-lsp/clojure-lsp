@@ -124,8 +124,8 @@
   (let [is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         handler (handlers/->ClojureFeatureHandler)
-        server (ClojureLspServer. (LSPServer. db/db
-                                              handler
+        server (ClojureLspServer. (LSPServer. handler
+                                              db/db
                                               semantic-tokens/token-types-str
                                               semantic-tokens/token-modifiers-str
                                               f.refactor/available-refactors

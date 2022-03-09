@@ -401,6 +401,8 @@
   ;;   (did-delete-files doc))
   (server-info-raw [_]
     (server-info-raw))
+  (clojuredocs-raw [_ doc]
+    (clojuredocs-raw doc))
   (server-info-log [_]
     (server-info-log))
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]

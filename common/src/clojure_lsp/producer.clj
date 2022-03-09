@@ -4,7 +4,6 @@
 
 (defprotocol IProducer
   (refresh-code-lens [this])
-  (refresh-test-tree [this uris])
   (publish-diagnostic [this diagnostic])
   (publish-workspace-edit [this edit])
   (publish-progress [this percentage message progress-token])
@@ -12,3 +11,6 @@
   (show-message-request [this message type actions])
   (show-message [this message type extra])
   (register-capability [this capability]))
+
+(defprotocol IClojureProducer
+  (refresh-test-tree [this uris]))

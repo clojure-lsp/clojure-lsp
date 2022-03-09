@@ -31,14 +31,15 @@
 (defrecord TestProducer []
   producer/IProducer
   (refresh-code-lens [_this])
-  (refresh-test-tree [_this _uris])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
   (publish-progress [_this _percentage _message _progress-token])
   (show-document-request [_this _document-request])
   (show-message-request [_this _message _type _actions])
   (show-message [_this _message _type _extra])
-  (register-capability [_this _capability]))
+  (register-capability [_this _capability])
+  producer/IClojureProducer
+  (refresh-test-tree [_this _uris]))
 
 (defn clean-db!
   ([]

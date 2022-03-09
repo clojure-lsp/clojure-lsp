@@ -38,7 +38,6 @@
   producer/IProducer
 
   (refresh-code-lens [_this])
-  (refresh-test-tree [_this _uris])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
 
@@ -56,7 +55,10 @@
                            :type type
                            :extra extra}]
       (show-message-cli options message-content)))
-  (register-capability [_this _capability]))
+  (register-capability [_this _capability])
+
+  producer/IClojureProducer
+  (refresh-test-tree [_this _uris]))
 
 (defn ^:private edit->summary
   ([db uri edit]

@@ -4,13 +4,11 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
-   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handler :as handler]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! go go-loop thread timeout]]
-   [clojure.java.data :as j]
+   [clojure.core.async :refer [<! go-loop thread timeout]]
    [taoensso.timbre :as log])
   (:import
    (clojure_lsp
@@ -480,17 +478,6 @@
     (when-let [code-lens-capability ^CodeLensWorkspaceCapabilities (get-in @db [:client-capabilities :workspace :code-lens])]
       (when (.getRefreshSupport code-lens-capability)
         (.refreshCodeLenses client))))
-
-  (refresh-test-tree [_this uris]
-    (go
-      (when (some-> @db/db :client-capabilities :experimental j/from-java :testTree)
-        (shared/logging-time
-          "Refreshing testTree took %s secs"
-          (doseq [uri uris]
-            (when-let [test-tree (f.test-tree/tree uri db)]
-              (->> test-tree
-                   (coercer/conform-or-log ::coercer/publish-test-tree-params)
-                   (.publishTestTree client))))))))
 
   (publish-workspace-edit [_this edit]
     (->> edit

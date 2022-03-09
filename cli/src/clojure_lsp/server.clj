@@ -5,6 +5,7 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handler :as handler]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.lsp :as lsp]
@@ -13,7 +14,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.shared-config :as config]
-   [clojure.core.async :refer [<! go-loop]]
+   [clojure.core.async :refer [<! go go-loop]]
+   [clojure.java.data :as j]
    [taoensso.timbre :as log])
   (:import
    (clojure_lsp
@@ -181,6 +183,37 @@
   (getWorkspaceService [_]
     (LSPWorkspaceService. handler)))
 
+(defrecord ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
+  producer/IProducer
+  (publish-diagnostic [_this diagnostic]
+    (producer/publish-diagnostic lsp-producer diagnostic))
+  (refresh-code-lens [_this]
+    (producer/refresh-code-lens lsp-producer))
+  (publish-workspace-edit [_this edit]
+    (producer/publish-workspace-edit lsp-producer edit))
+  (show-document-request [_this document-request]
+    (producer/show-document-request lsp-producer document-request))
+  (publish-progress [_this percentage message progress-token]
+    (producer/publish-progress lsp-producer percentage message progress-token))
+  (show-message-request [_this message type actions]
+    (producer/show-message-request lsp-producer message type actions))
+  (show-message [_this message type extra]
+    (producer/show-message lsp-producer message type extra))
+  (register-capability [_this capability]
+    (producer/register-capability lsp-producer capability))
+
+  producer/IClojureProducer
+  (refresh-test-tree [_this uris]
+    (go
+      (when (some-> @db/db :client-capabilities :experimental j/from-java :testTree)
+        (shared/logging-time
+          "Refreshing testTree took %s secs"
+          (doseq [uri uris]
+            (when-let [test-tree (f.test-tree/tree uri db)]
+              (->> test-tree
+                   (coercer/conform-or-log ::coercer/publish-test-tree-params)
+                   (.publishTestTree client)))))))))
+
 (defn run-server! []
   (log/info "Starting server...")
   (let [is (or System/in (lsp/tee-system-in System/in))
@@ -190,7 +223,8 @@
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan config/created-watched-files-debounce-ms)
-        producer (lsp/->LSPProducer ^ClojureLanguageClient (.getRemoteProxy launcher) db/db)]
+        language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
+        producer (->ClojureLspProducer (lsp/->LSPProducer language-client db/db) language-client db/db)]
     (nrepl/setup-nrepl db/db)
     (swap! db/db assoc :producer producer)
     (swap! db/db assoc :handler handler)

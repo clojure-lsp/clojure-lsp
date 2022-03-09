@@ -8,6 +8,7 @@
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683
+  - extract-function: Fix wrong args when extracting after a local usage. #812 @mainej
   - move-coll-entry: clauses move intuitively in `assoc`, `case`, `cond`, and similar functions. #780 @mainej
   - move-coll-entry: fix NPE when when invoked from top-level #803 @mainej
   - Generate stubs async after startup, improving startup time. #788

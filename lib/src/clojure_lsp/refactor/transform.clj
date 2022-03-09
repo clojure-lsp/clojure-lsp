@@ -348,13 +348,14 @@
   [zloc uri fn-name db]
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
                       (z/skip-whitespace z/up zloc))]
-    (let [expr-loc (if (not= :token (z/tag zloc))
+    (let [;; the expression that will be extracted
+          expr-loc (if (not= :token (z/tag zloc))
                      zloc
                      (z/up (edit/find-op zloc)))
+          ;; the top-level form it will be extracted from
           form-loc (edit/to-top expr-loc)]
       (when (and expr-loc form-loc)
-        (let [{:keys [row col]}    (meta (z/node zloc))
-              expr-node            (z/node expr-loc)
+        (let [expr-node            (z/node expr-loc)
               expr-meta            (meta expr-node)
               {form-row :row
                form-col :col}      (meta (z/node form-loc))
@@ -368,8 +369,8 @@
               clj-analysis         (unify-to-one-language (:analysis @db))
               used-syms            (->> (q/find-local-usages-under-form clj-analysis
                                                                         (shared/uri->filename uri)
-                                                                        row
-                                                                        col
+                                                                        (:row expr-meta)
+                                                                        (:col expr-meta)
                                                                         (:end-row expr-meta)
                                                                         (:end-col expr-meta))
                                         (mapv (comp symbol name :name)))

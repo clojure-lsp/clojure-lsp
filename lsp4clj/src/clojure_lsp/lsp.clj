@@ -4,7 +4,6 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.handler :as handler]
    [clojure-lsp.producer :as producer]
-   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop thread timeout]]
    [taoensso.timbre :as log])
@@ -294,14 +293,6 @@
     (start :workspaceSymbol
            (async-request params handler/workspace-symbols handler ::coercer/workspace-symbols))))
 
-(defn client-settings [^InitializeParams params]
-  (-> params
-      coercer/java->clj
-      :initializationOptions
-      (or {})
-      shared/keywordize-first-depth
-      (settings/clean-client-settings)))
-
 (defn client-capabilities [^InitializeParams params]
   (some->> params
            .getCapabilities
@@ -325,7 +316,8 @@
         (log/info "Parent process" ppid "is not running - exiting server")
         (.exit ^LanguageServer server)))))
 
-(deftype ClojureLSPServer [handler token-types token-modifiers available-refactors]
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(deftype ClojureLSPServer [handler token-types token-modifiers available-refactors all-settings client-settings]
   ClojureLanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
@@ -334,11 +326,13 @@
                (log/info "Initializing...")
                (handler/initialize handler (.getRootUri params)
                                    (client-capabilities params)
-                                   (client-settings params)
+                                   (-> params
+                                       coercer/java->clj
+                                       client-settings)
                                    (some-> (.getWorkDoneToken params) .get str))
                (when-let [parent-process-id (.getProcessId params)]
                  (start-parent-process-liveness-probe! parent-process-id this))
-               (let [settings (settings/all db/db)]
+               (let [settings (all-settings db/db)]
                  (CompletableFuture/completedFuture
                    (InitializeResult. (doto (ServerCapabilities.)
                                         (.setDocumentHighlightProvider true)

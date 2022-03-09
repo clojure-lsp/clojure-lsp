@@ -14,7 +14,8 @@
    [clojure-lsp.shared-config :as config]
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as log]
+   [clojure-lsp.settings :as settings])
   (:import
    (clojure_lsp
      ClojureLanguageClient)
@@ -55,12 +56,25 @@
                    (coercer/conform-or-log ::coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
+(defn client-settings [params]
+  (-> params
+      :initializationOptions
+      (or {})
+      shared/keywordize-first-depth
+      (settings/clean-client-settings)))
+
 (defn run-server! []
   (log/info "Starting server...")
   (let [is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         handler (handlers/->ClojureFeatureHandler)
-        launcher (Launcher/createLauncher (ClojureLSPServer. handler semantic-tokens/token-types-str semantic-tokens/token-modifiers-str f.refactor/available-refactors) ClojureLanguageClient is os)
+        server (ClojureLSPServer. handler
+                                  semantic-tokens/token-types-str
+                                  semantic-tokens/token-modifiers-str
+                                  f.refactor/available-refactors
+                                  settings/all
+                                  client-settings)
+        launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan config/created-watched-files-debounce-ms)

@@ -1,5 +1,6 @@
 (ns clojure-lsp.server
   (:require
+   [clojure-lsp.clojure-coercer :as clojure-coercer]
    [clojure-lsp.coercer :as coercer]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
@@ -69,7 +70,7 @@
           (doseq [uri uris]
             (when-let [test-tree (f.test-tree/tree uri db)]
               (->> test-tree
-                   (coercer/conform-or-log ::coercer/publish-test-tree-params)
+                   (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
 (deftype ClojureLspServer [^LSPServer lsp-server handler]
@@ -89,7 +90,7 @@
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
       (->> (handler/server-info-raw handler)
-           (coercer/conform-or-log ::coercer/server-info-raw))))
+           (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (lsp/start :server-info-log
@@ -100,7 +101,7 @@
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (lsp/start :cursorInfoRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params handler/cursor-info-raw handler ::coercer/cursor-info-raw))))
+                 (lsp/sync-request params handler/cursor-info-raw handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (lsp/start :cursor-info-log
@@ -110,7 +111,7 @@
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (lsp/start :clojuredocsRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params handler/clojuredocs-raw handler ::coercer/clojuredocs-raw)))))
+                 (lsp/sync-request params handler/clojuredocs-raw handler ::clojure-coercer/clojuredocs-raw)))))
 
 (defn client-settings [params]
   (-> params

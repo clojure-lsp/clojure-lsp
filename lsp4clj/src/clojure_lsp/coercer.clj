@@ -8,10 +8,6 @@
    [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
-   (clojure_lsp.feature.test_tree
-     TestTreeParams
-     TestTreeNode
-     TestTreeKind)
    (com.google.gson JsonElement)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCall
@@ -354,32 +350,6 @@
 (s/def ::publish-diagnostics-params (s/and (s/keys :req-un [::uri ::diagnostics])
                                            (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))
 
-(def test-tree-kind-enum
-  {:namespace 1 :deftest 2 :testing 3})
-
-(s/def :test-tree/kind (s/and keyword?
-                              test-tree-kind-enum
-                              (s/conformer (fn [v] (TestTreeKind/forValue (get test-tree-kind-enum v))))))
-
-(s/def :test-tree/name-range ::range)
-(s/def :test-tree/children (s/coll-of :test-tree/test-node))
-
-(s/def :test-tree/test-node (s/and (s/keys :req-un [::name ::range :test-tree/name-range :test-tree/kind]
-                                           :opt-un [:test-tree/children])
-                                   (s/conformer #(doto (TestTreeNode.)
-                                                   (.setName (:name %1))
-                                                   (.setRange (:range %1))
-                                                   (.setNameRange (:name-range %1))
-                                                   (.setKind (:kind %1))
-                                                   (.setChildren (:children %1))))))
-
-(s/def :test-tree/tree :test-tree/test-node)
-
-(s/def ::publish-test-tree-params (s/and (s/keys :req-un [::uri :test-tree/tree])
-                                         (s/conformer #(doto (TestTreeParams.)
-                                                         (.setUri (:uri %1))
-                                                         (.setTree (:tree %1))))))
-
 (s/def ::marked-string (s/and (s/or :string string?
                                     :marked-string (s/and (s/keys :req-un [::language ::value])
                                                           (s/conformer #(MarkedString. (:language %1) (:value %1)))))
@@ -697,10 +667,6 @@
                                                        :capabilities/symbol])))
 (s/def ::client-capabilities (s/and ::legacy-debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
-
-(s/def ::server-info-raw ::bean)
-(s/def ::cursor-info-raw ::bean)
-(s/def ::clojuredocs-raw ::bean)
 
 (defn conform-or-log [spec value]
   (when value

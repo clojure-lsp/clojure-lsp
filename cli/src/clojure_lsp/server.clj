@@ -6,17 +6,17 @@
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
+   [clojure-lsp.handler :as handler]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.lsp :as lsp]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.shared-config :as config]
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
-   [taoensso.timbre :as log]
-   [clojure-lsp.settings :as settings]
-   [clojure-lsp.handler :as handler])
+   [taoensso.timbre :as log])
   (:import
    (clojure_lsp
      ClojureLanguageClient
@@ -32,6 +32,14 @@
   (:gen-class))
 
 (set! *warn-on-reflection* true)
+
+;; Called from java
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn extension [method & args]
+  (lsp/start :extension
+             (CompletableFuture/completedFuture
+               (lsp/end
+                 (apply #'handler/extension (:handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
   producer/IProducer
@@ -116,11 +124,12 @@
   (let [is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         handler (handlers/->ClojureFeatureHandler)
-        server (ClojureLspServer. (LSPServer. handler
+        server (ClojureLspServer. (LSPServer. db/db
+                                              handler
                                               semantic-tokens/token-types-str
                                               semantic-tokens/token-modifiers-str
                                               f.refactor/available-refactors
-                                              settings/all
+                                              #(settings/all db/db)
                                               client-settings)
                                   handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
@@ -153,5 +162,4 @@
     (.startListening launcher)))
 
 (comment
-  (run-server!)
-  )
+  (run-server!))

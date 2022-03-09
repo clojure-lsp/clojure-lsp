@@ -25,8 +25,8 @@ public interface ClojureLanguageServer extends LanguageServer {
     @SuppressWarnings("unchecked")
     default CompletableFuture<String> dependencyContents(TextDocumentIdentifier documentUri) {
         IFn require = Clojure.var("clojure.core", "require");
-        require.invoke(Clojure.read("clojure-lsp.lsp"));
-        IFn extension = Clojure.var("clojure-lsp.lsp", "extension");
+        require.invoke(Clojure.read("clojure-lsp.server"));
+        IFn extension = Clojure.var("clojure-lsp.server", "extension");
         return (CompletableFuture<String>) extension.invoke("dependencyContents", documentUri);
     }
 

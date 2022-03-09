@@ -1,7 +1,6 @@
 (ns clojure-lsp.lsp
   (:require
    [clojure-lsp.coercer :as coercer]
-   [clojure-lsp.db :as db]
    [clojure-lsp.handler :as handler]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
@@ -293,14 +292,6 @@
            .getCapabilities
            (coercer/conform-or-log ::coercer/client-capabilities)))
 
-;; Called from java
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn extension [method & args]
-  (start :extension
-         (CompletableFuture/completedFuture
-           (end
-             (apply #'handler/extension (:handler @db/db) method (coercer/java->clj args))))))
-
 (defn start-parent-process-liveness-probe!
   [ppid server]
   (go-loop []
@@ -312,7 +303,7 @@
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(deftype LSPServer [handler token-types token-modifiers available-refactors all-settings client-settings]
+(deftype LSPServer [handler db token-types token-modifiers available-refactors all-settings client-settings]
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
@@ -327,7 +318,7 @@
                                    (some-> (.getWorkDoneToken params) .get str))
                (when-let [parent-process-id (.getProcessId params)]
                  (start-parent-process-liveness-probe! parent-process-id this))
-               (let [settings (all-settings db/db)]
+               (let [settings (all-settings)]
                  (CompletableFuture/completedFuture
                    (InitializeResult. (doto (ServerCapabilities.)
                                         (.setDocumentHighlightProvider true)
@@ -375,7 +366,7 @@
              (do
                (log/info "Initialized!")
                (producer/register-capability
-                 (:producer @db/db)
+                 (:producer @db)
                  (RegistrationParams.
                    [(Registration. "id" "workspace/didChangeWatchedFiles"
                                    (DidChangeWatchedFilesRegistrationOptions.
@@ -383,7 +374,7 @@
 
   (^CompletableFuture shutdown [_]
     (log/info "Shutting down")
-    (reset! db/db {:documents {}})
+    (reset! db {:documents {}})
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [_]

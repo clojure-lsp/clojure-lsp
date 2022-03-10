@@ -6,6 +6,7 @@
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
   - Fix install script for aarch64. #794
   - parser: more efficiently seek to cursor position, improving performance especially in large files. #793 @mainej
+  - Fix clean-ns not sorting properly node requires for cljs. #815
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

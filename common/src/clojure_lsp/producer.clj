@@ -11,6 +11,3 @@
   (show-message-request [this message type actions])
   (show-message [this message type extra])
   (register-capability [this capability]))
-
-(defprotocol IClojureProducer
-  (refresh-test-tree [this uris]))

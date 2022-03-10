@@ -1,5 +1,6 @@
 (ns clojure-lsp.internal-api
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
@@ -57,7 +58,7 @@
       (show-message-cli options message-content)))
   (register-capability [_this _capability])
 
-  producer/IClojureProducer
+  clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
 (defn ^:private edit->summary

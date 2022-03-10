@@ -1,13 +1,14 @@
 (ns clojure-lsp.server
   (:require
    [clojure-lsp.clojure-coercer :as clojure-coercer]
+   [clojure-lsp.clojure-handler :as clojure-handler]
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.coercer :as coercer]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
-   [clojure-lsp.handler :as handler]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.lsp :as lsp]
    [clojure-lsp.nrepl :as nrepl]
@@ -40,7 +41,7 @@
   (lsp/start :extension
              (CompletableFuture/completedFuture
                (lsp/end
-                 (apply #'handler/extension (:handler @db/db) method (coercer/java->clj args))))))
+                 (apply #'clojure-handler/extension (:handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
   producer/IProducer
@@ -61,7 +62,7 @@
   (register-capability [_this capability]
     (producer/register-capability lsp-producer capability))
 
-  producer/IClojureProducer
+  clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
     (go
       (when (some-> @db/db :client-capabilities :experimental j/from-java :testTree)
@@ -89,29 +90,29 @@
     (.getWorkspaceService lsp-server))
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
-      (->> (handler/server-info-raw handler)
+      (->> (clojure-handler/server-info-raw handler)
            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (lsp/start :server-info-log
                (future
                  (lsp/end
-                   (handler/server-info-log handler)))))
+                   (clojure-handler/server-info-log handler)))))
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (lsp/start :cursorInfoRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params handler/cursor-info-raw handler ::clojure-coercer/cursor-info-raw))))
+                 (lsp/sync-request params clojure-handler/cursor-info-raw handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (lsp/start :cursor-info-log
                (future
-                 (lsp/sync-notification params handler/cursor-info-log handler))))
+                 (lsp/sync-notification params clojure-handler/cursor-info-log handler))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (lsp/start :clojuredocsRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params handler/clojuredocs-raw handler ::clojure-coercer/clojuredocs-raw)))))
+                 (lsp/sync-request params clojure-handler/clojuredocs-raw handler ::clojure-coercer/clojuredocs-raw)))))
 
 (defn client-settings [params]
   (-> params

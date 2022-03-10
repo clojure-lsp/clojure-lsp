@@ -1,5 +1,7 @@
 (ns clojure-lsp.handlers
   (:require
+   [clojure-lsp.clojure-handler :as clojure-handler]
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -60,7 +62,7 @@
   (let [uri (:uri textDocument)
         text (:text textDocument)]
     (f.file-management/did-open uri text db/db true)
-    (producer/refresh-test-tree (:producer @db/db) [uri]))
+    (clojure-producer/refresh-test-tree (:producer @db/db) [uri]))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -397,17 +399,19 @@
     (linked-editing-ranges doc))
   (workspace-symbols [_ doc]
     (workspace-symbols doc))
+
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
+    (initialize project-root-uri client-capabilities client-settings work-done-token))
+  (range-formatting [_ doc-id format-pos]
+    (range-formatting doc-id format-pos))
   ;; (did-delete-files [_ doc]
   ;;   (did-delete-files doc))
+  clojure-handler/IClojureHandler
   (server-info-raw [_]
     (server-info-raw))
   (clojuredocs-raw [_ doc]
     (clojuredocs-raw doc))
   (server-info-log [_]
     (server-info-log))
-  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
-    (initialize project-root-uri client-capabilities client-settings work-done-token))
-  (range-formatting [_ doc-id format-pos]
-    (range-formatting doc-id format-pos))
   (extension [_ method doc-id]
     (extension method doc-id)))

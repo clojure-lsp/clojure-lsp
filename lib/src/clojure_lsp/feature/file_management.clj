@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.file-management
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
@@ -154,7 +155,7 @@
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
-              (producer/refresh-test-tree (:producer @db) [uri]))
+              (clojure-producer/refresh-test-tree (:producer @db) [uri]))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]
@@ -182,7 +183,7 @@
                     (update :analysis merge analysis)
                     (assoc :kondo-config (:config result))
                     (update :findings merge (group-by :filename (:findings result))))))
-    (producer/refresh-test-tree (:producer @db) uris)))
+    (clojure-producer/refresh-test-tree (:producer @db) uris)))
 
 (defn did-change-watched-files [changes db]
   (doseq [{:keys [uri type]} changes]

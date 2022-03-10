@@ -477,6 +477,33 @@
     ns-inner-blocks-indentation
   </a>
   
+    <nav class="md-nav" aria-label="ns-inner-blocks-indentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#next-line" class="md-nav__link">
+    next-line
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#same-line" class="md-nav__link">
+    same-line
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keep" class="md-nav__link">
+    keep
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -825,6 +852,33 @@
   <a href="#ns-inner-blocks-indentation" class="md-nav__link">
     ns-inner-blocks-indentation
   </a>
+  
+    <nav class="md-nav" aria-label="ns-inner-blocks-indentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#next-line" class="md-nav__link">
+    next-line
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#same-line" class="md-nav__link">
+    same-line
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keep" class="md-nav__link">
+    keep
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1215,15 +1269,23 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <h3 id="clean">Clean<a class="headerlink" href="#clean" title="Permanent link">#</a></h3>
 <p>Default: Check <code>:clean</code> in <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">all-available-settings.edn</a>.</p>
 <h4 id="ns-inner-blocks-indentation">ns-inner-blocks-indentation<a class="headerlink" href="#ns-inner-blocks-indentation" title="Permanent link">#</a></h4>
-<p>Where to place first require/import following <a href="https://github.com/bbatsov/clojure-style-guide#line-breaks-in-ns">Clojure Style Guide</a>, <code>:same-line</code>, <code>:next-line</code> or <code>:keep</code>.</p>
+<p>How to indent ns children forms like require,import.</p>
+<h5 id="next-line"><code>next-line</code><a class="headerlink" href="#next-line" title="Permanent link">#</a></h5>
+<p>Keep first child on the next line of <code>:require</code>/<code>:import</code> and next children following the same indentation. Recommended by <a href="https://stuartsierra.com/2016/08/27/how-to-ns">how-to-ns</a> guide too.
+Check <code>;; better</code> on <a href="https://github.com/bbatsov/clojure-style-guide#line-break-ns-declaration">Clojure Style Guide</a>.</p>
+<h5 id="same-line"><code>same-line</code><a class="headerlink" href="#same-line" title="Permanent link">#</a></h5>
+<p>Keep first child on the same line of <code>:require</code>/<code>:import</code> and next children following the same indentation.
+Check <code>;; good</code> on <a href="https://github.com/bbatsov/clojure-style-guide#line-break-ns-declaration">Clojure Style Guide</a>.</p>
+<h5 id="keep"><code>keep</code><a class="headerlink" href="#keep" title="Permanent link">#</a></h5>
+<p>Don't change indentation at all, keeping the one user selected first.</p>
 <h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>
-<h5 id="ns">ns<a class="headerlink" href="#ns" title="Permanent link">#</a></h5>
-<p>Whether to enable sort of <code>ns</code> children like require,import forms following <a href="https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration">Clojure Style Guide</a>.</p>
-<h5 id="require">require<a class="headerlink" href="#require" title="Permanent link">#</a></h5>
+<h5 id="ns"><code>ns</code><a class="headerlink" href="#ns" title="Permanent link">#</a></h5>
+<p>Whether to enable sort of <code>ns</code> children like require, import forms following <a href="https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration">Clojure Style Guide</a>.</p>
+<h5 id="require"><code>require</code><a class="headerlink" href="#require" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:require</code> form. <code>true</code> to sort according to the Clojure Style Guide, <code>:lexicographically</code> to do a lexicographic sort that places unwrapped namespaces last.</p>
-<h5 id="import">import<a class="headerlink" href="#import" title="Permanent link">#</a></h5>
+<h5 id="import"><code>import</code><a class="headerlink" href="#import" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:import</code> form.</p>
-<h5 id="refer">refer<a class="headerlink" href="#refer" title="Permanent link">#</a></h5>
+<h5 id="refer"><code>refer</code><a class="headerlink" href="#refer" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:refer</code> form.</p>
 <ul>
 <li><code>:max-line-length</code>: the max refers to keep at same line before breaking the line. Default <code>80</code>.</li>

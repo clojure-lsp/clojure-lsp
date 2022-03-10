@@ -25,7 +25,9 @@
     (medley/deep-merge
       (settings/get db [:cljfmt] {})
       (when (shared/file-exists? cljfmt-config-file)
-        (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))))))
+        (if (string/ends-with? cljfmt-config-file ".clj")
+          (read-string (slurp cljfmt-config-file))
+          (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file)))))))
 
 (defn ^:private resolve-cljfmt-config [db]
   (cljfmt.main/merge-default-options

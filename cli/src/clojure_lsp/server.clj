@@ -121,6 +121,38 @@
       shared/keywordize-first-depth
       (settings/clean-client-settings)))
 
+(defn capabilites [db]
+  (let [settings (settings/all db/db)]
+    {:document-highlight-provider true
+     :hover-provider true
+     :declaration-provider true
+     :implementation-provider true
+     :signature-help-provider []
+     :call-hierarchy-provider true
+     :linked-editing-range-provider true
+     :code-action-provider (vec (vals coercer/code-action-kind))
+     :code-lens-provider true
+     :references-provider true
+     :rename-provider true
+     :definition-provider true
+     :document-formatting-provider ^Boolean (:document-formatting? settings)
+     :document-range-formatting-provider ^Boolean (:document-range-formatting? settings)
+     :document-symbol-provider true
+     :workspace-symbol-provider true
+     :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
+                                         (:semantic-tokens? settings))
+                                 {:token-types semantic-tokens/token-types-str
+                                  :token-modifiers semantic-tokens/token-modifiers-str
+                                  :range true
+                                  :full true})
+     :execute-command-provider f.refactor/available-refactors
+     :text-document-sync (:text-document-sync-kind settings)
+     :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
+     :experimental {"testTree" true
+                    "cursorInfo" true
+                    "serverInfo" true
+                    "clojuredocs" true}}))
+
 (defn run-server! []
   (log/info "Starting server...")
   (let [is (or System/in (lsp/tee-system-in System/in))
@@ -128,10 +160,7 @@
         handler (handlers/->ClojureFeatureHandler)
         server (ClojureLspServer. (LSPServer. handler
                                               db/db
-                                              semantic-tokens/token-types-str
-                                              semantic-tokens/token-modifiers-str
-                                              f.refactor/available-refactors
-                                              #(settings/all db/db)
+                                              capabilites
                                               client-settings)
                                   handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)

@@ -14,15 +14,19 @@
      CallHierarchyOutgoingCall
      CallHierarchyItem
      CodeAction
+     CodeActionOptions
      CodeActionKind
      CodeLens
+     CodeLensOptions
      Command
      CompletionItem
+     CompletionOptions
      CompletionItemKind
      Diagnostic
      DiagnosticSeverity
      DocumentHighlight
      DocumentSymbol
+     ExecuteCommandOptions
      FileChangeType
      Hover
      InsertTextFormat
@@ -42,16 +46,24 @@
      CreateFileOptions
      CreateFile
      RenameFile
+     RenameOptions
      ResponseErrorCode
      PrepareRenameResult
+     SaveOptions
      SemanticTokens
+     SemanticTokensLegend
+     SemanticTokensWithRegistrationOptions
+     ServerCapabilities
      ShowDocumentParams
      SignatureHelp
+     SignatureHelpOptions
      SignatureInformation
      SymbolKind
      SymbolInformation
      TextDocumentEdit
      TextDocumentIdentifier
+     TextDocumentSyncKind
+     TextDocumentSyncOptions
      TextEdit
      VersionedTextDocumentIdentifier
      WorkDoneProgressBegin
@@ -668,6 +680,54 @@
 (s/def ::client-capabilities (s/and ::legacy-debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
+(s/def ::signature-help-provider (s/conformer #(cond (vector? %) (SignatureHelpOptions. %)
+                                                     (map? %) (SignatureHelpOptions. (:trigger-characters %) (:retrigger-characters %))
+                                                     :else (SignatureHelpOptions. %))))
+(s/def ::code-action-provider (s/conformer #(cond (vector? %) (CodeActionOptions. %)
+                                                  (boolean? %) %
+                                                  :else false)))
+(s/def ::completion-provider (s/conformer #(when (map? %) (CompletionOptions. (:resolve-provider %1) (:trigger-characters %1)))))
+(s/def ::execute-command-provider (s/conformer #(when (vector? %) (doto (ExecuteCommandOptions.)
+                                                                    (.setCommands %)))))
+(s/def ::semantic-tokens-provider (s/conformer #(when (and (:token-types %)
+                                                           (:token-modifiers %)) (doto (SemanticTokensWithRegistrationOptions.)
+                                                                                   (.setLegend (doto (SemanticTokensLegend.
+                                                                                                       (:token-types %)
+                                                                                                       (:token-modifiers %))))
+                                                                                   (.setRange (:range %))
+                                                                                   (.setFull ^Boolean (get % :full false))))))
+(s/def ::text-document-sync (s/conformer #(doto (TextDocumentSyncOptions.)
+                                            (.setOpenClose true)
+                                            (.setChange (case %
+                                                          :full TextDocumentSyncKind/Full
+                                                          :incremental TextDocumentSyncKind/Incremental
+                                                          TextDocumentSyncKind/Full))
+                                            (.setSave (SaveOptions. true)))))
+
+(s/def ::server-capabilities (s/and (s/keys :opt-un [::signature-help-provider ::text-document-sync ::execute-command-provider ::completion-provider ::code-action-provider ::semantic-tokens-provider])
+                                    (s/conformer #(doto (ServerCapabilities.)
+                                                    (.setDocumentHighlightProvider (:document-highlight-provider %1))
+                                                    (.setHoverProvider (:hover-provider %1))
+                                                    (.setDeclarationProvider (:declaration-provider %1))
+                                                    (.setImplementationProvider (:implementation-provider %1))
+                                                    (.setSignatureHelpProvider (:signature-help-provider %1))
+                                                    (.setCallHierarchyProvider (:call-hierarchy-provider %1))
+                                                    (.setLinkedEditingRangeProvider (:linked-editing-range-provider %1))
+                                                    (.setCodeActionProvider (:code-action-provider %1))
+                                                    (.setCodeLensProvider (CodeLensOptions. (:code-lens-provider %1)))
+                                                    (.setReferencesProvider (:references-provider %1))
+                                                    (.setRenameProvider (RenameOptions. (:rename-provider %1)))
+                                                    (.setDefinitionProvider (:definition-provider %1))
+                                                    (.setDocumentFormattingProvider ^Boolean (:document-formatting-provider %1))
+                                                    (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting-provider %1))
+                                                    (.setDocumentSymbolProvider (:document-symbol-provider %1))
+                                                    (.setWorkspaceSymbolProvider (:workspace-symbol-provider %1))
+                                                    (.setSemanticTokensProvider (:semantic-tokens-provider %1))
+                                                    (.setExecuteCommandProvider (:execute-command-provider %1))
+                                                    (.setTextDocumentSync (:text-document-sync %1))
+                                                    (.setCompletionProvider (:completion-provider %1))
+                                                    (.setExperimental (:experimental %))))))
+
 (defn conform-or-log [spec value]
   (when value
     (try
@@ -679,3 +739,6 @@
         (if (instance? ResponseErrorException ex)
           (throw ex)
           (log/error ex spec value))))))
+
+(comment
+  (s/conform ::server-capabilities {:document-highlight-provider true :hover-provider false}))

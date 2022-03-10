@@ -324,6 +324,11 @@
       "(fn [element1 element2 & args] (+ 1 element1 element2 args))" "|#(+ 1 %1 %2 %&)"
       ;; implicit do
       "(fn [] (prn {}) (+ 3 4))"                                     "|#(do (prn {}) (+ 3 4))"
+      ;; with comment
+      (h/code "(fn [] ;; comment"
+              "   (+ 3 4))")
+      (h/code "|#(;; comment"
+              "   + 3 4)")
       ;; unused param
       "(fn [element1 _ element3] (+ 1 element1 element3))"           "|#(+ 1 %1 %3)"
       ;; reordered params
@@ -348,6 +353,12 @@
       "#(+ 1 %1 %2 %&)"        "|(fn [element1 element2 & args] (+ 1 element1 element2 args))"
       ;; implicit do
       "#(do (prn {}) (+ 3 4))" "|(fn [] (prn {}) (+ 3 4))"
+      ;; with comment
+      (h/code "#(;; comment"
+              "   + 3 4)")
+      (h/code "|(fn []"
+              "   ;; comment"
+              "   (+ 3 4))")
       ;; unused param
       "#(+ 1 %1 %3)"           "|(fn [element1 _ element3] (+ 1 element1 element3))"
       ;; reordered params

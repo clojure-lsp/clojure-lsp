@@ -390,7 +390,7 @@ Commands that client can request. Most code actions use these commands as action
 
 #### Refactoring
 
-Commands that change/refactor the code.
+Commands that change/refactor the code. See [above](#code-actions) for screenshots.
 
 __Note: Most of them are available via code actions and most of the time you want to call the code action and not the command manually__
 
@@ -398,6 +398,7 @@ __Note: Most of them are available via code actions and most of the time you wan
 - Add import to namespace
 - Add missing require *
 - Cycle privacy of def/defn *
+- Cycle fn literal (fn []), #() *
 - Cycle collection (#{}, {}, [], ())
 - Change collection to {}, (), #{}, [] *
 - Extract Function *

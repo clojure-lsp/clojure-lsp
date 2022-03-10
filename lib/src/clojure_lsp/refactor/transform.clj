@@ -400,10 +400,30 @@
   (when-let [literal-node (z/find-tag zloc z/up :fn)]
     [literal-node]))
 
-(defn can-convert-literal-to-fn? [zloc]
+(defn ^:private convert-fn-to-literal-params [zloc]
+  ;; skip non-fns
+  (when-let [fn-zloc (if (and (= :list (z/tag zloc))
+                              (some-> zloc z/down z/sexpr (= 'fn)))
+                       zloc
+                       (some-> zloc (edit/find-ops-up "fn") z/up))]
+    ;; skip multi-arity fns
+    (when-let [params-vector (-> fn-zloc z/down (z/find-tag z/right :vector))]
+      (let [params (z/child-sexprs params-vector)]
+        ;; skip fns with destructured params
+        (when (every? symbol? params)
+          [fn-zloc params])))))
+
+(defn ^:private can-convert-literal-to-fn? [zloc]
   (boolean (convert-literal-to-fn-params zloc)))
 
-(defn convert-literal-to-fn [zloc]
+(defn ^:private can-convert-fn-to-literal? [zloc]
+  (boolean (convert-fn-to-literal-params zloc)))
+
+(defn can-cycle-fn-literal? [zloc]
+  (or (can-convert-literal-to-fn? zloc)
+      (can-convert-fn-to-literal? zloc)))
+
+(defn ^:private convert-literal-to-fn [zloc]
   (when-let [[zloc] (convert-literal-to-fn-params zloc)]
     (let [literal-params (->> (z/down (z/subzip zloc))
                               (iterate z/next)
@@ -412,12 +432,12 @@
                                       (when (= :token (z/tag zloc))
                                         (when-let [[_ trailing] (re-find #"^%([1-9][0-9]*|&)?$" (z/string zloc))]
                                           (cond
-                                            (nil? trailing)  {:key     0
-                                                              :unnamed #{(z/sexpr zloc)}
-                                                              :named   'element}
                                             (= "&" trailing) {:key     :varargs
                                                               :unnamed #{(z/sexpr zloc)}
                                                               :named   'args}
+                                            (nil? trailing)  {:key     0
+                                                              :unnamed #{(z/sexpr zloc)}
+                                                              :named   'element}
                                             :else            (let [n (parse-long trailing)]
                                                                {:key     n
                                                                 :unnamed #{(z/sexpr zloc)}
@@ -430,9 +450,8 @@
                               param-0 (assoc 1
                                              (cond-> (assoc param-0 :key 1)
                                                param-1 (update :unnamed set/union (:unnamed param-1)))))
-          param-positions (keys (dissoc positioned-params :varargs))
-          fn-params (if (seq param-positions)
-                      (->> (range 1 (inc (apply max param-positions)))
+          fn-params (if (seq positioned-params)
+                      (->> (range 1 (inc (apply max (keys positioned-params))))
                            (mapv (fn [pos]
                                    (if-let [param (get positioned-params pos)]
                                      (:named param)
@@ -464,29 +483,17 @@
                                                                                     (not= 'do (n/sexpr %)))
                                                                                interior)]
                                   (concat before-do after-do))
-                              ;; add implicit sexpr
+                              ;; add implicit sexpr wrapper
                               :else
-                              , [(n/spaces 1) (n/list-node interior)]))))]
+                              , (let [[before-sexpr sexpr-and-more] (split-with (complement n/sexpr-able?)
+                                                                                interior)]
+                                  (concat [(n/spaces 1)]
+                                          before-sexpr
+                                          [(n/list-node sexpr-and-more)]))))))]
       [{:loc (z/replace zloc fn-node)
         :range (meta (z/node zloc))}])))
 
-(defn ^:private convert-fn-to-literal-params [zloc]
-  ;; skip non-fns
-  (when-let [fn-zloc (if (and (= :list (z/tag zloc))
-                              (some-> zloc z/down z/sexpr (= 'fn)))
-                       zloc
-                       (some-> zloc (edit/find-ops-up "fn") z/up))]
-    ;; skip multi-arity fns
-    (when-let [params-vector (-> fn-zloc z/down (z/find-tag z/right :vector))]
-      (let [params (z/child-sexprs params-vector)]
-        ;; skip fns with destructured params
-        (when (every? symbol? params)
-          [fn-zloc params])))))
-
-(defn can-convert-fn-to-literal? [zloc]
-  (boolean (convert-fn-to-literal-params zloc)))
-
-(defn convert-fn-to-literal [zloc]
+(defn ^:private convert-fn-to-literal [zloc]
   (when-let [[zloc params] (convert-fn-to-literal-params zloc)]
     (let [[positioned-params [_ vararg]] (split-with #(not= '& %) params)
           replacements (if (= 1 (count positioned-params))
@@ -510,7 +517,10 @@
                          (if (< 1 (count (filter n/sexpr-able? interior)))
                            ;; add implicit do
                            (into ['do (n/spaces 1)] interior)
-                           (mapcat n/children interior)))]
+                           ;; remove explicit sexpr wrapper
+                           (mapcat (fn [node]
+                                     (if (n/inner? node) (n/children node) [node]))
+                                   interior)))]
       [{:loc   (z/replace zloc literal-node)
         :range (meta (z/node zloc))}])))
 
@@ -519,10 +529,6 @@
     (convert-literal-to-fn zloc)
     (when-let [[zloc _] (convert-fn-to-literal-params zloc)]
       (convert-fn-to-literal zloc))))
-
-(defn can-cycle-fn-literal? [zloc]
-  (or (can-convert-literal-to-fn? zloc)
-      (can-convert-fn-to-literal? zloc)))
 
 (defn find-function-form [zloc]
   (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))

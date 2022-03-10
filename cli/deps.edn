@@ -24,7 +24,7 @@
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.8.0" :sha "e3e3532"}
-                                  com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}
+                                  com.github.ericdallo/deps-bin {:mvn/version "0.1.2"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}
                                   com.google.guava/guava {:mvn/version "31.0.1-jre"}}
                    :ns-default build}

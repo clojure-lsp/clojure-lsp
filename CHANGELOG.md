@@ -5,6 +5,7 @@
 - General
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
   - Fix install script for aarch64. #794
+  - parser: more efficiently seek to cursor position, improving performance especially in large files. #793 @mainej
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683
@@ -14,6 +15,7 @@
   - Improve and add lots of new snippets following practicalli config. #797
   - Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796
   - Fix "incoming call hierarchy" not considering usages inside defmethods. #808
+  - range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej
 
 ## 2022.02.23-12.12.12
 

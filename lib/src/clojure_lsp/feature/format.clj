@@ -3,6 +3,7 @@
    [cljfmt.core :as cljfmt]
    [cljfmt.main :as cljfmt.main]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.memoize :as memoize]
@@ -46,10 +47,23 @@
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos db]
-  (let [{:keys [text]} (get-in @db [:documents doc-id])
-        cljfmt-settings (cljfmt-config db)
-        forms (parser/find-top-forms-in-range text format-pos)]
-    (mapv (fn [form-loc]
-            {:range (shared/->range (-> form-loc z/node meta))
-             :new-text (n/string (cljfmt/reformat-form (z/node form-loc) cljfmt-settings))})
-          forms)))
+  (let [cljfmt-settings (cljfmt-config db)
+        root-loc (parser/zloc-of-file @db doc-id)
+        start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
+                      (z/leftmost* root-loc))
+        end-loc (or (parser/to-pos root-loc (:end-row format-pos) (:end-col format-pos))
+                    (z/rightmost* root-loc))
+        start-top-loc (edit/to-top start-loc)
+        end-top-loc (edit/to-top end-loc)
+
+        forms (->> start-top-loc
+                   (iterate z/right*) ;; maintain comments and whitespace between nodes
+                   (take-while (complement z/end?))
+                   (medley/take-upto #(= % end-top-loc)))
+        span (merge (-> start-top-loc z/node meta (select-keys [:row :col]))
+                    (-> end-top-loc z/node meta (select-keys [:end-row :end-col])))]
+    [{:range (shared/->range span)
+      :new-text (-> (map z/node forms)
+                    n/forms-node
+                    (cljfmt/reformat-form cljfmt-settings)
+                    n/string)}]))

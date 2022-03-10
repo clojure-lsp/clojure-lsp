@@ -80,13 +80,6 @@
       (is (= "a" (to-pos ":foo/ a" 1 7)))
       (is (= "a" (to-pos "::foo/ a" 1 8))))))
 
-(deftest find-top-forms-test
-  (let [code "(a) (b c d)"]
-    (is (= '[(a) (b c d)]
-           (->> {:row 1 :col 2 :end-row 1 :end-col (count code)}
-                (parser/find-top-forms-in-range code)
-                (map z/sexpr))))))
-
 (deftest lein-file->edn
   (testing "simple defproject on root"
     (is (= {:foo 1

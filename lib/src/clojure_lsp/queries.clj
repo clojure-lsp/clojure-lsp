@@ -67,16 +67,15 @@
          (filter (fn [{:keys [bucket] :as element}]
                    (and (= :locals bucket)
                         (shared/inside? {:name-row line :name-col column} element))))
-         (map (fn [local]
-                (find-first #(and (= :local-usages (:bucket %))
-                                  (= (:id local) (:id %))
-                                  (shared/inside? %
-                                                  {:name-row line
-                                                   :name-col column
-                                                   :name-end-row end-line
-                                                   :name-end-col end-column}))
-                            local-analysis)))
-         (remove nil?))))
+         (keep (fn [local]
+                 (find-first #(and (= :local-usages (:bucket %))
+                                   (= (:id local) (:id %))
+                                   (shared/inside? %
+                                                   {:name-row line
+                                                    :name-col column
+                                                    :name-end-row end-line
+                                                    :name-end-col end-column}))
+                             local-analysis))))))
 
 (defn find-var-usages-under-form
   [analysis filename line column end-line end-column]

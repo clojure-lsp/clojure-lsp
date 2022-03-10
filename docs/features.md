@@ -314,6 +314,7 @@ User can register additional custom snippets, for more information on how to con
 | Move coll entry up/down            | <img src="../images/features/move-coll-entry.gif" width=720>         |
 | Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
 | Cycle privacy                      |                                                                      |
+| Cycle fn literal                   | <img src="../images/features/cycle-fn-literal.gif" width=480>        |
 | Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
 | Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
 | Unwind thread                      |                                                                      |

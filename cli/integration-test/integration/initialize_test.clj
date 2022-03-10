@@ -23,6 +23,7 @@
                                             "add-import-to-namespace"
                                             "move-coll-entry-up"
                                             "cycle-privacy"
+                                            "cycle-fn-literal"
                                             "create-test"
                                             "change-coll"
                                             "thread-last-all"

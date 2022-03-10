@@ -1807,8 +1807,9 @@
 <ul>
 <li>General</li>
 <li>Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.</li>
+<li>Fix install script for aarch64. #794</li>
 <li>
-<p>Fix install script for aarch64. #794</p>
+<p>parser: more efficiently seek to cursor position, improving performance especially in large files. #793 @mainej</p>
 </li>
 <li>
 <p>Editor</p>
@@ -1820,6 +1821,7 @@
 <li>Improve and add lots of new snippets following practicalli config. #797</li>
 <li>Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796</li>
 <li>Fix "incoming call hierarchy" not considering usages inside defmethods. #808</li>
+<li>range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej</li>
 </ul>
 <h2 id="20220223-121212">2022.02.23-12.12.12<a class="headerlink" href="#20220223-121212" title="Permanent link">#</a></h2>
 <ul>

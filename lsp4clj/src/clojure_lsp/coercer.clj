@@ -46,6 +46,7 @@
      CreateFileOptions
      CreateFile
      RenameFile
+     RenameOptions
      ResponseErrorCode
      PrepareRenameResult
      SaveOptions
@@ -714,7 +715,7 @@
                                                     (.setCodeActionProvider ^CodeActionOptions (:code-action-provider %1))
                                                     (.setCodeLensProvider (CodeLensOptions. ^Boolean (:code-lens-provider %1)))
                                                     (.setReferencesProvider ^Boolean (:references-provider %1))
-                                                    (.setRenameProvider ^Boolean (:rename-provider %1))
+                                                    (.setRenameProvider (RenameOptions. ^Boolean (:rename-provider %1)))
                                                     (.setDefinitionProvider ^Boolean (:definition-provider %1))
                                                     (.setDocumentFormattingProvider ^Boolean (:document-formatting-provider %1))
                                                     (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting-provider %1))

@@ -380,6 +380,15 @@
                        "  |(+ 1 a))")
                (extract-function "foo")
                as-strings))))
+  (testing "after local usage"
+    (is (= [(h/code ""
+                    "(defn foo [b c]"
+                    "  (+ 2 b c))"
+                    "")
+            (h/code "(foo b c)")]
+           (-> "(defn a [b] (let [c 1] (+ 2 b |c)))"
+               (extract-function "foo")
+               as-strings))))
   (testing "On multi-arity function"
     (is (= [(h/code ""
                     "(defn foo [a b]"

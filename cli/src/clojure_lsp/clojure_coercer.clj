@@ -8,6 +8,8 @@
      TestTreeNode
      TestTreeKind)))
 
+(set! *warn-on-reflection* true)
+
 (def test-tree-kind-enum
   {:namespace 1 :deftest 2 :testing 3})
 

@@ -3,7 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.shared :as shared]
+   [lsp4clj.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))

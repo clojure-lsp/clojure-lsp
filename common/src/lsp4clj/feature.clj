@@ -1,8 +1,9 @@
-(ns clojure-lsp.handler)
+(ns lsp4clj.feature)
 
 (set! *warn-on-reflection* true)
 
-(defprotocol IHandler
+(defprotocol ILSPFeature
+  (initialize [this project-root-uri client-capabilities client-settings work-done-token])
   (did-open [this doc])
   (did-change [this doc])
   (did-save [this doc])
@@ -31,7 +32,6 @@
   (call-hierarchy-incoming [this doc])
   (call-hierarchy-outgoing [this doc])
   (linked-editing-ranges [this doc])
-  (workspace-symbols [this doc])
 ;;   (did-delete-files [this doc])
-  (initialize [this project-root-uri client-capabilities client-settings work-done-token])
+  (workspace-symbols [this doc])
   (range-formatting [this doc-id format-pos]))

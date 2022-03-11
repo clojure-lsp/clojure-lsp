@@ -1,7 +1,7 @@
 (ns clojure-lsp.clojure-coercer
   (:require
-   [clojure-lsp.coercer :as coercer]
-   [clojure.spec.alpha :as s])
+   [clojure.spec.alpha :as s]
+   [lsp4clj.coercer :as coercer])
   (:import
    (clojure_lsp.feature.test_tree
      TestTreeParams

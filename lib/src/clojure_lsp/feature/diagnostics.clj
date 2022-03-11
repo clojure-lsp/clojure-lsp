@@ -3,10 +3,10 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [com.climate.claypoole :as cp]
+   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
@@ -144,7 +144,7 @@
         (when (not= :unknown (shared/uri->file-type uri))
           (sync-lint-file! uri db))))))
 
-(defn pmap-light
+(defn ^:private pmap-light
   "Call claypoole pmap with less threads than pmap to avoid topping cpu."
   [f coll]
   (let [threadpool-size (int (Math/ceil (/ (.. Runtime getRuntime availableProcessors) 3)))]

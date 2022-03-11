@@ -1,6 +1,6 @@
-(ns clojure-lsp.clojure-handler)
+(ns clojure-lsp.clojure-feature)
 
-(defprotocol IClojureHandler
+(defprotocol IClojureLSPFeature
   (server-info-raw [this])
   (server-info-log [this])
   (cursor-info-raw [this doc])

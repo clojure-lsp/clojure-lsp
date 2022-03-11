@@ -1,4 +1,4 @@
-(ns clojure-lsp.coercer
+(ns lsp4clj.coercer
   (:require
    [clojure.data.json :as json]
    [clojure.java.data :as j]

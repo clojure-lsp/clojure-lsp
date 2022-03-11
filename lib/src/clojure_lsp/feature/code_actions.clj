@@ -7,8 +7,8 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.transform :as r.transform]
-   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 

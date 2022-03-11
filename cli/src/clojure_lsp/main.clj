@@ -7,11 +7,11 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.server :as server]
-   [clojure-lsp.shared-config :as config]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
+   [lsp4clj.shared :as shared]
    [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
   (:gen-class))
@@ -19,7 +19,7 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private version []
-  (->> [(str "clojure-lsp " (config/clojure-lsp-version))
+  (->> [(str "clojure-lsp " (shared/clojure-lsp-version))
         (str "clj-kondo " (lsp.kondo/clj-kondo-version))]
        (string/join \newline)))
 

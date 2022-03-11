@@ -9,12 +9,12 @@
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.logging :as logging]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    [java.io File]))

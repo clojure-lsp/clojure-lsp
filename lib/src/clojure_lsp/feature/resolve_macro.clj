@@ -3,11 +3,11 @@
    [borkdude.rewrite-edn :as r]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 

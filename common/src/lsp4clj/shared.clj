@@ -1,4 +1,4 @@
-(ns clojure-lsp.shared
+(ns lsp4clj.shared
   (:require
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
@@ -382,3 +382,5 @@
                               [(:uri text-document) edits])
                             changes))}))
 
+(defn clojure-lsp-version []
+  (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))

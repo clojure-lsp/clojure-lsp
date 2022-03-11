@@ -1,23 +1,22 @@
 (ns clojure-lsp.server
   (:require
    [clojure-lsp.clojure-coercer :as clojure-coercer]
-   [clojure-lsp.clojure-handler :as clojure-handler]
+   [clojure-lsp.clojure-feature :as clojure-feature]
    [clojure-lsp.clojure-producer :as clojure-producer]
-   [clojure-lsp.coercer :as coercer]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.lsp :as lsp]
    [clojure-lsp.nrepl :as nrepl]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
-   [clojure-lsp.shared-config :as config]
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
+   [lsp4clj.coercer :as coercer]
+   [lsp4clj.lsp :as lsp]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (clojure_lsp
@@ -25,8 +24,8 @@
      ClojureLanguageServer)
    (clojure_lsp.feature.clojuredocs ClojuredocsParams)
    (clojure_lsp.feature.cursor_info CursorInfoParams)
-   (clojure_lsp.lsp LSPServer)
    (java.util.concurrent CompletableFuture)
+   (lsp4clj.lsp LSPServer)
    (org.eclipse.lsp4j
      InitializeParams
      InitializedParams)
@@ -35,13 +34,17 @@
 
 (set! *warn-on-reflection* true)
 
+(def diagnostics-debounce-ms 100)
+(def change-debounce-ms 300)
+(def created-watched-files-debounce-ms 500)
+
 ;; Called from java
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn extension [method & args]
   (lsp/start :extension
              (CompletableFuture/completedFuture
                (lsp/end
-                 (apply #'clojure-handler/extension (:handler @db/db) method (coercer/java->clj args))))))
+                 (apply #'clojure-feature/extension (:handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
   producer/IProducer
@@ -90,29 +93,29 @@
     (.getWorkspaceService lsp-server))
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
-      (->> (clojure-handler/server-info-raw handler)
+      (->> (clojure-feature/server-info-raw handler)
            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (lsp/start :server-info-log
                (future
                  (lsp/end
-                   (clojure-handler/server-info-log handler)))))
+                   (clojure-feature/server-info-log handler)))))
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (lsp/start :cursorInfoRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-handler/cursor-info-raw handler ::clojure-coercer/cursor-info-raw))))
+                 (lsp/sync-request params clojure-feature/cursor-info-raw handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (lsp/start :cursor-info-log
                (future
-                 (lsp/sync-notification params clojure-handler/cursor-info-log handler))))
+                 (lsp/sync-notification params clojure-feature/cursor-info-log handler))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (lsp/start :clojuredocsRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-handler/clojuredocs-raw handler ::clojure-coercer/clojuredocs-raw)))))
+                 (lsp/sync-request params clojure-feature/clojuredocs-raw handler ::clojure-coercer/clojuredocs-raw)))))
 
 (defn client-settings [params]
   (-> params
@@ -164,9 +167,9 @@
                                               client-settings)
                                   handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
-        debounced-diags (shared/debounce-by db/diagnostics-chan config/diagnostics-debounce-ms :uri)
-        debounced-changes (shared/debounce-by db/current-changes-chan config/change-debounce-ms :uri)
-        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan config/created-watched-files-debounce-ms)
+        debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
+        debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
+        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer (lsp/->LSPProducer language-client db/db) language-client db/db)]
     (nrepl/setup-nrepl db/db)

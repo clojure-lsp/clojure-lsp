@@ -1,6 +1,6 @@
 (ns clojure-lsp.server-test
   (:require
-   [clojure-lsp.coercer :as coercer]
+   [lsp4clj.coercer :as coercer]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
    [clojure-lsp.server :as server])

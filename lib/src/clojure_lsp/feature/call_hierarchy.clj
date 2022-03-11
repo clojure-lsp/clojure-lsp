@@ -5,8 +5,8 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 

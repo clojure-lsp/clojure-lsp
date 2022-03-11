@@ -1,4 +1,4 @@
-(ns clojure-lsp.producer)
+(ns lsp4clj.producer)
 
 (set! *warn-on-reflection* true)
 

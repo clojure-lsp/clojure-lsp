@@ -1,6 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.clojure-handler :as clojure-handler]
+   [clojure-lsp.clojure-feature :as clojure-feature]
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
@@ -19,15 +19,14 @@
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
-   [clojure-lsp.handler :as handler]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
-   [clojure-lsp.shared-config :as config]
    [clojure.pprint :as pprint]
+   [lsp4clj.feature :as feature]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    [java.net
@@ -175,7 +174,7 @@
                    (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db))))
      :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-cli`)")
-     :server-version (config/clojure-lsp-version)
+     :server-version (shared/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))
 
@@ -336,7 +335,9 @@
     (f.linked-editing-range/ranges textDocument row col db/db)))
 
 (defrecord ClojureFeatureHandler []
-  handler/IHandler
+  feature/ILSPFeature
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
+    (initialize project-root-uri client-capabilities client-settings work-done-token))
   (did-open [_ doc]
     (did-open doc))
   (did-change [_ doc]
@@ -399,14 +400,11 @@
     (linked-editing-ranges doc))
   (workspace-symbols [_ doc]
     (workspace-symbols doc))
-
-  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
-    (initialize project-root-uri client-capabilities client-settings work-done-token))
   (range-formatting [_ doc-id format-pos]
     (range-formatting doc-id format-pos))
   ;; (did-delete-files [_ doc]
   ;;   (did-delete-files doc))
-  clojure-handler/IClojureHandler
+  clojure-feature/IClojureLSPFeature
   (server-info-raw [_]
     (server-info-raw))
   (clojuredocs-raw [_ doc]

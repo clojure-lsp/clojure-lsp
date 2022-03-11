@@ -5,13 +5,13 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 

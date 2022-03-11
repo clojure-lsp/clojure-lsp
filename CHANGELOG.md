@@ -13,6 +13,9 @@
   - Improve and add lots of new snippets following practicalli config. #797
   - Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796
 
+- API/CLI
+  - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)
+
 ## 2022.02.23-12.12.12
 
 - General

@@ -122,7 +122,7 @@
       (settings/clean-client-settings)))
 
 (defn capabilites [db]
-  (let [settings (settings/all db/db)]
+  (let [settings (settings/all db)]
     {:document-highlight-provider true
      :hover-provider true
      :declaration-provider true

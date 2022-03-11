@@ -51,10 +51,13 @@
   "Executes `body` logging `message` formatted with the time spent
   from body."
   [message & body]
-  `(let [~'start-time (System/nanoTime)
-         ~'result (do ~@body)]
-     (log/info (format ~message (start-time->end-time-seconds ~'start-time)))
-     ~'result))
+  (let [start-sym (gensym "start-time")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)]
+       ~(with-meta
+          `(log/infof ~message (start-time->end-time-seconds ~start-sym))
+          (meta &form))
+       result#)))
 
 (defn file-exists? [^java.io.File f]
   (.exists f))

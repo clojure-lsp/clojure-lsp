@@ -65,60 +65,77 @@
 (defmacro start [id & body]
   `(let [~'_start-time (System/nanoTime)
          ~'_id ~id]
-     (do ~@body)))
+     ~(with-meta `(do ~@body) (meta &form))))
 
 (defmacro end
   ([expr]
-   `(end ~expr false))
+   (with-meta `(end ~expr false) (meta &form)))
   ([expr extra-log-fn]
-   `(let [~'_result (try
-                      ~expr
-                      (catch Throwable ex#
-                        (if (instance? ResponseErrorException ex#)
-                          (throw (CompletionException. ex#))
-                          (log/error ex#))))]
-      (try
-        (let [duration# (quot (- (System/nanoTime) ~'_start-time) 1000000)]
-          (if ~extra-log-fn
-            (log/debug ~'_id (format "%sms - %s" duration# (~extra-log-fn ~'_result)))
-            (log/debug ~'_id (format "%sms" duration#))))
-        (catch Throwable ex#
-          (log/error ex#)))
-      ~'_result)))
+   (let [m (meta &form)
+         result-sym (gensym "result")
+         duration-sym (gensym "duration")
+         ex-sym (gensym "ex")]
+     `(let [~result-sym (try
+                          ~expr
+                          (catch Throwable ~ex-sym
+                            (if (instance? ResponseErrorException ~ex-sym)
+                              (throw (CompletionException. ~ex-sym))
+                              ~(with-meta `(log/error ~ex-sym) m))))]
+        (try
+          (let [~duration-sym (quot (- (System/nanoTime) ~'_start-time) 1000000)]
+            ~(if extra-log-fn
+               (with-meta `(log/debug ~'_id (format "%sms - %s" ~duration-sym (~extra-log-fn ~result-sym))) m)
+               (with-meta `(log/debug ~'_id (format "%sms" ~duration-sym)) m)))
+          (catch Throwable ~ex-sym
+            ~(with-meta `(log/error ~ex-sym) m)))
+        ~result-sym))))
 
 (defmacro sync-notification
   [params f handler]
-  `(end
-     (->> ~params
-          coercer/java->clj
-          (~f ~handler))))
+  (with-meta
+    `(end
+       (->> ~params
+            coercer/java->clj
+            (~f ~handler)))
+    (meta &form)))
 
 (defmacro sync-request
   ([params f handler response-spec]
-   `(sync-request ~params ~f ~handler ~response-spec false))
+   (with-meta
+     `(sync-request ~params ~f ~handler ~response-spec false)
+     (meta &form)))
   ([params f handler response-spec extra-log-fn]
-   `(end
-      (->> ~params
-           coercer/java->clj
-           (~f ~handler)
-           (coercer/conform-or-log ~response-spec))
-      ~extra-log-fn)))
+   (with-meta
+     `(end
+        (->> ~params
+             coercer/java->clj
+             (~f ~handler)
+             (coercer/conform-or-log ~response-spec))
+        ~extra-log-fn)
+     (meta &form))))
 
-(defmacro ^:private async-request
+(defmacro async-request
   ([params f handler response-spec]
-   `(async-request ~params ~f ~handler ~response-spec false))
+   (with-meta
+     `(async-request ~params ~f ~handler ~response-spec false)
+     (meta &form)))
   ([params f handler response-spec extra-log-fn]
    `(CompletableFuture/supplyAsync
       (reify Supplier
         (get [this]
-          (sync-request ~params ~f ~handler ~response-spec ~extra-log-fn))))))
+          ~(with-meta
+             `(sync-request ~params ~f ~handler ~response-spec ~extra-log-fn)
+             (meta &form)))))))
 
-(defmacro ^:private async-notification
+(defmacro async-notification
   [params f handler]
   `(CompletableFuture/supplyAsync
      (reify Supplier
        (get [this]
-         (sync-notification ~params ~f ~handler)))))
+         ~(with-meta
+            `(sync-notification ~params ~f ~handler)
+            (meta &form))))))
+
 
 (deftype LSPTextDocumentService [handler]
   TextDocumentService
@@ -434,4 +451,3 @@
     (.registerCapability
       client
       capability)))
-

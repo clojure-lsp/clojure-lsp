@@ -46,7 +46,6 @@
      CreateFileOptions
      CreateFile
      RenameFile
-     RenameOptions
      ResponseErrorCode
      PrepareRenameResult
      SaveOptions
@@ -703,7 +702,7 @@
                                             (.setSave (SaveOptions. true)))))
 
 (s/def ::server-capabilities (s/and (s/keys :opt-un [::document-highlight-provider
-                                                      ::signature-help-provider ::text-document-sync ::execute-command-provider ::completion-provider ::code-action-provider ::semantic-tokens-provider])
+                                                     ::signature-help-provider ::text-document-sync ::execute-command-provider ::completion-provider ::code-action-provider ::semantic-tokens-provider])
                                     (s/conformer #(doto (ServerCapabilities.)
                                                     (.setDocumentHighlightProvider ^Boolean (:document-highlight-provider %1))
                                                     (.setHoverProvider ^Boolean (:hover-provider %1))
@@ -713,7 +712,7 @@
                                                     (.setCallHierarchyProvider ^Boolean (:call-hierarchy-provider %1))
                                                     (.setLinkedEditingRangeProvider ^Boolean (:linked-editing-range-provider %1))
                                                     (.setCodeActionProvider ^CodeActionOptions (:code-action-provider %1))
-                                                    (.setCodeLensProvider ^Boolean (:code-lens-provider %1))
+                                                    (.setCodeLensProvider (CodeLensOptions. ^Boolean (:code-lens-provider %1)))
                                                     (.setReferencesProvider ^Boolean (:references-provider %1))
                                                     (.setRenameProvider ^Boolean (:rename-provider %1))
                                                     (.setDefinitionProvider ^Boolean (:definition-provider %1))

@@ -1824,8 +1824,10 @@
 <li>Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796</li>
 <li>Fix "incoming call hierarchy" not considering usages inside defmethods. #808</li>
 <li>range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej</li>
+<li>cycle-fn-literal: <em>new feature</em> convert between function-literal syntaxes <code>(fn [] ...)</code> &lt;-&gt; <code>#(...)</code>. #774</li>
+<li>Add find-implementation feature to <code>defmulti</code> and <code>defmethod</code>. #751</li>
 <li>
-<p>cycle-fn-literal: <em>new feature</em> convert between function-literal syntaxes <code>(fn [] ...)</code> &lt;-&gt; <code>#(...)</code>. #774</p>
+<p>Make find-implementation of <code>defprotocol</code> names find its implementations and find-implementation on <code>deftype</code>/<code>defrecord</code> methods find other implementations.</p>
 </li>
 <li>
 <p>API/CLI</p>

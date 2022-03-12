@@ -1,4 +1,4 @@
-(ns lsp4clj.lsp
+(ns lsp4clj.core
   (:require
    [clojure.core.async :refer [<! go-loop thread timeout]]
    [lsp4clj.coercer :as coercer]

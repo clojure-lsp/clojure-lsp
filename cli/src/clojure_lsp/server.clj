@@ -14,7 +14,7 @@
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
-   [lsp4clj.lsp :as lsp]
+   [lsp4clj.core :as lsp]
    [lsp4clj.producer :as producer]
    [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
@@ -25,7 +25,7 @@
    (clojure_lsp.feature.clojuredocs ClojuredocsParams)
    (clojure_lsp.feature.cursor_info CursorInfoParams)
    (java.util.concurrent CompletableFuture)
-   (lsp4clj.lsp LSPServer)
+   (lsp4clj.core LSPServer)
    (org.eclipse.lsp4j
      InitializeParams
      InitializedParams)

@@ -6,7 +6,7 @@ Above you can find all available features that clojure-lsp provides with example
 
 <img src="../images/features/find-definition.gif" width=340>
 
-### Find defprotocol implementations
+### Find defprotocol/defmulti implementations
 
 <img src="../images/features/find-implementation.gif" width=340>
 

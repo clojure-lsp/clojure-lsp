@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.completion-snippet
   (:require
-   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 

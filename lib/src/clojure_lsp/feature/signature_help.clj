@@ -4,8 +4,8 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared :refer [assoc-some]]
    [edamame.core :as edamame]
+   [lsp4clj.shared :as shared :refer [assoc-some]]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])

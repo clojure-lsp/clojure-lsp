@@ -1,12 +1,9 @@
-(ns clojure-lsp.producer
-  (:require
-   [taoensso.timbre :as log]))
+(ns lsp4clj.producer)
 
 (set! *warn-on-reflection* true)
 
 (defprotocol IProducer
   (refresh-code-lens [this])
-  (refresh-test-tree [this uris])
   (publish-diagnostic [this diagnostic])
   (publish-workspace-edit [this edit])
   (publish-progress [this percentage message progress-token])

@@ -1,21 +1,14 @@
 (ns clojure-lsp.config
   (:require
-   [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    [java.util.jar JarFile JarFile$JarFileEntry]))
 
 (set! *warn-on-reflection* true)
-
-(def diagnostics-debounce-ms 100)
-(def change-debounce-ms 300)
-(def created-watched-files-debounce-ms 500)
-
-(defn clojure-lsp-version []
-  (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 
 (defn read-edn-file [^java.io.File file]
   (try

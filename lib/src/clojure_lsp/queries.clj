@@ -1,9 +1,9 @@
 (ns clojure-lsp.queries
   (:require
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 

@@ -1,7 +1,7 @@
 (ns clojure-lsp.config-test
   (:require
    [clojure-lsp.config :as config]
-   [clojure-lsp.shared :as shared]
+   [lsp4clj.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 

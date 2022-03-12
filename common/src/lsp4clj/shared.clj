@@ -1,11 +1,10 @@
-(ns clojure-lsp.shared
+(ns lsp4clj.shared
   (:require
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
-   [com.climate.claypoole :as cp]
    [taoensso.timbre :as log])
   (:import
    [java.net URI URL JarURLConnection URLDecoder]
@@ -383,8 +382,5 @@
                               [(:uri text-document) edits])
                             changes))}))
 
-(defn pmap-light
-  "Call claypoole pmap with less threads than pmap to avoid topping cpu."
-  [f coll]
-  (let [threadpool-size (int (Math/ceil (/ (.. Runtime getRuntime availableProcessors) 3)))]
-    (cp/upmap threadpool-size f coll)))
+(defn clojure-lsp-version []
+  (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))

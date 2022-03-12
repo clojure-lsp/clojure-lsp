@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.linked-editing-range
   (:require
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]))
+   [lsp4clj.shared :as shared]))
 
 (set! *warn-on-reflection* true)
 

@@ -1,0 +1,3 @@
+{:deps {org.clojure/clojure {:mvn/version "1.11.0-rc1"}
+        com.taoensso/timbre {:mvn/version "5.1.2"}}
+ :paths ["src"]}

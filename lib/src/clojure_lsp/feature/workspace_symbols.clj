@@ -3,8 +3,8 @@
    [anonimitoraf.clj-flx :as flx]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)

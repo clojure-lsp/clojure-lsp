@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [run!])
   (:require
    borkdude.dynaload
-   [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -12,6 +11,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
+   [lsp4clj.shared :as shared]
    [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
   (:gen-class))
@@ -19,7 +19,7 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private version []
-  (->> [(str "clojure-lsp " (config/clojure-lsp-version))
+  (->> [(str "clojure-lsp " (shared/clojure-lsp-version))
         (str "clj-kondo " (lsp.kondo/clj-kondo-version))]
        (string/join \newline)))
 

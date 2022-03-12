@@ -20,6 +20,9 @@
   - range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej
   - cycle-fn-literal: *new feature* convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
 
+- API/CLI
+  - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)
+
 ## 2022.02.23-12.12.12
 
 - General

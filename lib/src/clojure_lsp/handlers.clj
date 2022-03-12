@@ -1,6 +1,7 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.config :as config]
+   [clojure-lsp.clojure-feature :as clojure-feature]
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -20,11 +21,12 @@
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
+   [lsp4clj.feature :as feature]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    [java.net
@@ -59,7 +61,7 @@
   (let [uri (:uri textDocument)
         text (:text textDocument)]
     (f.file-management/did-open uri text db/db true)
-    (producer/refresh-test-tree (:producer @db/db) [uri]))
+    (clojure-producer/refresh-test-tree (:producer @db/db) [uri]))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -172,7 +174,7 @@
                    (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db))))
      :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-cli`)")
-     :server-version (config/clojure-lsp-version)
+     :server-version (shared/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))
 
@@ -331,3 +333,83 @@
   (let [row (-> position :line inc)
         col (-> position :character inc)]
     (f.linked-editing-range/ranges textDocument row col db/db)))
+
+(defrecord ClojureFeatureHandler []
+  feature/ILSPFeature
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
+    (initialize project-root-uri client-capabilities client-settings work-done-token))
+  (did-open [_ doc]
+    (did-open doc))
+  (did-change [_ doc]
+    (did-change doc))
+  (did-save [_ doc]
+    (did-save doc))
+  (execute-command [_ doc]
+    (execute-command doc))
+  (did-close [_ doc]
+    (did-close doc))
+  (did-change-watched-files [_ doc]
+    (did-change-watched-files doc))
+  (cursor-info-log [_ doc]
+    (cursor-info-log doc))
+  (cursor-info-raw [_ doc]
+    (cursor-info-raw doc))
+  (references [_ doc]
+    (references doc))
+  (completion [_ doc]
+    (completion doc))
+  (completion-resolve-item [_ doc]
+    (completion-resolve-item doc))
+  (prepare-rename [_ doc]
+    (prepare-rename doc))
+  (rename [_ doc]
+    (rename doc))
+  (hover [_ doc]
+    (hover doc))
+  (signature-help [_ doc]
+    (signature-help doc))
+  (formatting [_ doc]
+    (formatting doc))
+  (code-actions [_ doc]
+    (code-actions doc))
+  (code-lens [_ doc]
+    (code-lens doc))
+  (code-lens-resolve [_ doc]
+    (code-lens-resolve doc))
+  (definition [_ doc]
+    (definition doc))
+  (declaration [_ doc]
+    (declaration doc))
+  (implementation [_ doc]
+    (implementation doc))
+  (document-symbol [_ doc]
+    (document-symbol doc))
+  (document-highlight [_ doc]
+    (document-highlight doc))
+  (semantic-tokens-full [_ doc]
+    (semantic-tokens-full doc))
+  (semantic-tokens-range [_ doc]
+    (semantic-tokens-range doc))
+  (prepare-call-hierarchy [_ doc]
+    (prepare-call-hierarchy doc))
+  (call-hierarchy-incoming [_ doc]
+    (call-hierarchy-incoming doc))
+  (call-hierarchy-outgoing [_ doc]
+    (call-hierarchy-outgoing doc))
+  (linked-editing-ranges [_ doc]
+    (linked-editing-ranges doc))
+  (workspace-symbols [_ doc]
+    (workspace-symbols doc))
+  (range-formatting [_ doc-id format-pos]
+    (range-formatting doc-id format-pos))
+  ;; (did-delete-files [_ doc]
+  ;;   (did-delete-files doc))
+  clojure-feature/IClojureLSPFeature
+  (server-info-raw [_]
+    (server-info-raw))
+  (clojuredocs-raw [_ doc]
+    (clojuredocs-raw doc))
+  (server-info-log [_]
+    (server-info-log))
+  (extension [_ method doc-id]
+    (extension method doc-id)))

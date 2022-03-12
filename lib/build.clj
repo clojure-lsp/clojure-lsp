@@ -18,13 +18,13 @@
                 :lib lib
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
-                :src-dirs ["src"]
+                :src-dirs ["src" "../common/src"]
                 :scm {:tag current-version}}))
 
 (defn jar [opts]
   (clean nil)
   (pom opts)
-  (b/copy-dir {:src-dirs ["src"]
+  (b/copy-dir {:src-dirs ["src" "../common/src"]
                :target-dir class-dir})
   (b/jar {:class-dir class-dir
           :jar-file jar-file}))

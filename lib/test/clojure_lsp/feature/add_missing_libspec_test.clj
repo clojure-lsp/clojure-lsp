@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
-   [clojure-lsp.shared :as shared]
+   [lsp4clj.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))

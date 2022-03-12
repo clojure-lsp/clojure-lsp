@@ -3,7 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as transform]
-   [clojure-lsp.shared :as shared]
+   [lsp4clj.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]
    [rewrite-clj.zip :as z]))

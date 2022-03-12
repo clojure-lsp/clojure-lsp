@@ -1,19 +1,20 @@
 (ns clojure-lsp.crawler
   (:require
    [clojure-lsp.classpath :as classpath]
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (java.net URI)))
@@ -26,7 +27,7 @@
                           keys)]
     (->> project-files
          (map #(shared/filename->uri % db))
-         (producer/refresh-test-tree (:producer @db)))))
+         (clojure-producer/refresh-test-tree (:producer @db)))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file

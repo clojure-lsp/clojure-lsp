@@ -1,12 +1,12 @@
 (ns clojure-lsp.classpath
   (:require
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
+   [lsp4clj.producer :as producer]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (java.io ByteArrayOutputStream)

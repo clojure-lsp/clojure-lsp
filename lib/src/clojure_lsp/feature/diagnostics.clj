@@ -3,9 +3,10 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
+   [com.climate.claypoole :as cp]
+   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
@@ -143,9 +144,15 @@
         (when (not= :unknown (shared/uri->file-type uri))
           (sync-lint-file! uri db))))))
 
+(defn ^:private pmap-light
+  "Call claypoole pmap with less threads than pmap to avoid topping cpu."
+  [f coll]
+  (let [threadpool-size (int (Math/ceil (/ (.. Runtime getRuntime availableProcessors) 3)))]
+    (cp/upmap threadpool-size f coll)))
+
 (defn ^:private unused-public-vars-lint!
   [definitions project-analysis {:keys [config reg-finding!]} max-parallelize? db]
-  (let [parallelize-fn (if max-parallelize? pmap shared/pmap-light)]
+  (let [parallelize-fn (if max-parallelize? pmap pmap-light)]
     (->> definitions
          (remove (partial exclude-public-diagnostic-definition? config))
          (parallelize-fn #(when (= 0 (count (q/find-references project-analysis % false db)))

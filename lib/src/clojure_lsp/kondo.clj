@@ -4,11 +4,11 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
+   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)

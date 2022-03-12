@@ -130,6 +130,13 @@
              :command   "cycle-privacy"
              :arguments [uri line character]}})
 
+(defn ^:private cycle-fn-literal-action [uri line character]
+  {:title   "Cycle function literal"
+   :kind    :refactor-rewrite
+   :command {:title     "Cycle function literal"
+             :command   "cycle-fn-literal"
+             :arguments [uri line character]}})
+
 (defn ^:private extract-function-action [uri line character]
   {:title   "Extract function"
    :kind    :refactor-extract
@@ -256,6 +263,7 @@
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
+        can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []
@@ -290,6 +298,9 @@
       @inside-function?*
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
+
+      @can-cycle-fn-literal?*
+      (conj (cycle-fn-literal-action uri line character))
 
       @can-thread?*
       (conj (thread-first-all-action uri line character)

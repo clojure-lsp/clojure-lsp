@@ -18,6 +18,7 @@
   - Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796
   - Fix "incoming call hierarchy" not considering usages inside defmethods. #808
   - range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej
+  - cycle-fn-literal: *new feature* convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
 
 ## 2022.02.23-12.12.12
 

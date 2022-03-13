@@ -35,12 +35,12 @@
 
 (set! *warn-on-reflection* true)
 
-(defmacro process-after-changes [& body]
+(defmacro process-after-changes [task-id uri & body]
   `(let [~'_time (System/nanoTime)]
      (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
-         (log/warn "Timeout waiting for changes for body")
-         (if (seq (:processing-changes @db/db))
+         (log/warnf "Timeout in %s waiting for changes to %s" ~task-id ~uri)
+         (if (contains? (:processing-changes @db/db) ~uri)
            (do
              (Thread/sleep backoff#)
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
@@ -150,6 +150,7 @@
 
 (defn document-highlight [{:keys [textDocument position]}]
   (process-after-changes
+    :document-highlight textDocument
     (let [line (-> position :line inc)
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
@@ -258,6 +259,7 @@
 
 (defn range-formatting [doc-id format-pos]
   (process-after-changes
+    :range-formatting doc-id
     (f.format/range-formatting doc-id format-pos db/db)))
 
 (defmulti extension (fn [method _] method))
@@ -274,6 +276,7 @@
 (defn code-actions
   [{:keys [range context textDocument]}]
   (process-after-changes
+    :code-actions textDocument
     (let [diagnostics (-> context :diagnostics)
           line (-> range :start :line)
           character (-> range :start :character)
@@ -286,6 +289,7 @@
 (defn code-lens
   [{:keys [textDocument]}]
   (process-after-changes
+    :code-lens textDocument
     (f.code-lens/reference-code-lens textDocument db/db)))
 
 (defn code-lens-resolve
@@ -295,12 +299,14 @@
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
   (process-after-changes
+    :semantic-tokens-full textDocument
     (let [data (f.semantic-tokens/full-tokens textDocument db/db)]
       {:data data})))
 
 (defn semantic-tokens-range
   [{:keys [textDocument] {:keys [start end]} :range}]
   (process-after-changes
+    :semantic-tokens-range textDocument
     (let [range {:name-row (inc (:line start))
                  :name-col (inc (:character start))
                  :name-end-row (inc (:line end))

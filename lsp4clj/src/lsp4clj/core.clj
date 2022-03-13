@@ -136,7 +136,6 @@
             `(sync-notification ~params ~f ~handler)
             (meta &form))))))
 
-
 (deftype LSPTextDocumentService [handler]
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]

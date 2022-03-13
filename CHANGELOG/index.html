@@ -1822,6 +1822,7 @@
 <li>Generate stubs async after startup, improving startup time. #788</li>
 <li>Improve and add lots of new snippets following practicalli config. #797</li>
 <li>Improve how watched new files are analyzed avoiding infinite loops and performance issues. #796</li>
+<li>Avoid infinite loops when several files are changed simultaneously. #796 @mainej</li>
 <li>Fix "incoming call hierarchy" not considering usages inside defmethods. #808</li>
 <li>range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej</li>
 <li>cycle-fn-literal: <em>new feature</em> convert between function-literal syntaxes <code>(fn [] ...)</code> &lt;-&gt; <code>#(...)</code>. #774</li>

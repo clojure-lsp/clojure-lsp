@@ -114,7 +114,7 @@
         ~extra-log-fn)
      (meta &form))))
 
-(defmacro async-request
+(defmacro ^:private async-request
   ([params f handler response-spec]
    (with-meta
      `(async-request ~params ~f ~handler ~response-spec false)
@@ -127,7 +127,7 @@
              `(sync-request ~params ~f ~handler ~response-spec ~extra-log-fn)
              (meta &form)))))))
 
-(defmacro async-notification
+(defmacro ^:private async-notification
   [params f handler]
   `(CompletableFuture/supplyAsync
      (reify Supplier

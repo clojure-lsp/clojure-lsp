@@ -194,6 +194,3 @@
           (log/error e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))
-
-(comment
-  (run-server!))

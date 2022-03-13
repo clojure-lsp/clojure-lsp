@@ -738,6 +738,3 @@
         (if (instance? ResponseErrorException ex)
           (throw ex)
           (log/error ex spec value))))))
-
-(comment
-  (s/conform ::server-capabilities {:document-highlight-provider true :hover-provider false}))

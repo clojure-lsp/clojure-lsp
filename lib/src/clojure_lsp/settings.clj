@@ -74,20 +74,17 @@
 (def ^:private memoized-settings
   (memoize/ttl get-refreshed-settings :ttl/threshold ttl-threshold-milis))
 
-(defn all [db]
+(defn all
+  "Get memoized settings from db.
+  Refreshes settings if memoize threshold met."
+  [db]
   (if (or (not (:settings-auto-refresh? @db))
           (#{:unit-test :api-test} (:env @db)))
     (get-refreshed-settings db)
     (memoized-settings db)))
 
 (defn get
-  "Memorize get settings from db.
-  Re-set settings in db if reaches memoize threshold."
   ([db kws]
    (get db kws nil))
   ([db kws default]
-   (let [settings (if (or (not (:settings-auto-refresh? @db))
-                          (#{:unit-test :api-test} (:env @db)))
-                    (get-refreshed-settings db)
-                    (memoized-settings db))]
-     (get-in settings kws default))))
+   (get-in (all db) kws default)))

@@ -163,6 +163,7 @@
         handler (handlers/->ClojureFeatureHandler)
         server (ClojureLspServer. (LSPServer. handler
                                               db/db
+                                              db/initial-db
                                               capabilites
                                               client-settings)
                                   handler)

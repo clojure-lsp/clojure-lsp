@@ -308,7 +308,7 @@
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(deftype LSPServer [^ILSPFeature handler db capabilities client-settings]
+(deftype LSPServer [^ILSPFeature handler db initial-db capabilities client-settings]
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
@@ -341,7 +341,7 @@
 
   (^CompletableFuture shutdown [_]
     (log/info "Shutting down")
-    (reset! db {:documents {}})
+    (reset! db initial-db)
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [_]

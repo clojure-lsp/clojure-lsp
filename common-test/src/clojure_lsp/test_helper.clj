@@ -46,8 +46,9 @@
   ([]
    (clean-db! :unit-test))
   ([env]
-   (reset! db/db {:env env
-                  :producer (->TestProducer)})
+   (reset! db/db (assoc db/initial-db
+                        :env env
+                        :producer (->TestProducer)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))

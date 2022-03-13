@@ -148,7 +148,7 @@
         (async/go-loop [tries 1]
           (if (>= tries 200)
             (log/info "Max tries reached when async custom linting" uri)
-            (if (:processing-changes @db)
+            (if (contains? (:processing-changes @db) uri)
               (do
                 (Thread/sleep 50)
                 (recur (inc tries)))

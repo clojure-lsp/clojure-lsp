@@ -53,19 +53,23 @@
         result))))
 
 (defmacro catch-kondo-errors [err-hint & body]
-  `(let [err# (java.io.StringWriter.)
-         out# (java.io.StringWriter.)]
-     (try
-       (binding [*err* err#
-                 *out* out#]
-         (let [result# (do ~@body)]
-           (when-not (string/blank? (str err#))
-             (log/warn "Non-fatal error from clj-kondo:" (str err#)))
-           (when-not (string/blank? (str out#))
-             (log/warn "Output from clj-kondo:" (str out#)))
-           result#))
-       (catch Exception e#
-         (log/error e# "Error running clj-kondo on" ~err-hint)))))
+  (let [m (meta &form)
+        err-sym (gensym "err")
+        out-sym (gensym "out")
+        e-sym (gensym "e")]
+    `(let [~err-sym (java.io.StringWriter.)
+           ~out-sym (java.io.StringWriter.)]
+       (try
+         (binding [*err* ~err-sym
+                   *out* ~out-sym]
+           (let [result# (do ~@body)]
+             (when-not (string/blank? (str ~err-sym))
+               ~(with-meta `(log/warn "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
+             (when-not (string/blank? (str ~out-sym))
+               ~(with-meta `(log/warn "Output from clj-kondo:" (str ~out-sym)) m))
+             result#))
+         (catch Exception ~e-sym
+           ~(with-meta `(log/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond

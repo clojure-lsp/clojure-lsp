@@ -40,7 +40,7 @@
      (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
          (log/warn "Timeout waiting for changes for body")
-         (if (:processing-changes @db/db)
+         (if (seq (:processing-changes @db/db))
            (do
              (Thread/sleep backoff#)
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms

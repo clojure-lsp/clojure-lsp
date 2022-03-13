@@ -3,7 +3,7 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    [java.util.jar JarFile JarFile$JarFileEntry]))

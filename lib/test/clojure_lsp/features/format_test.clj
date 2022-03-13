@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.format :as f.format]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 

@@ -23,10 +23,9 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [lsp4clj.feature-handler :as feature]
-   [lsp4clj.producer :as producer]
-   [lsp4clj.shared :as shared]
+   [lsp4clj.protocols :as protocols]
    [taoensso.timbre :as log])
   (:import
    [java.net
@@ -182,7 +181,7 @@
      :log-path (:log-path db-value)}))
 
 (defn server-info-log []
-  (producer/show-message
+  (protocols/show-message
     (:producer @db/db)
     (with-out-str (pprint/pprint (server-info)))
     :info
@@ -202,7 +201,7 @@
                                        elements))))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
-  (producer/show-message
+  (protocols/show-message
     (:producer @db/db)
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
@@ -242,9 +241,11 @@
 
     (some #(= % command) f.refactor/available-refactors)
     (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
-      (producer/publish-workspace-edit (:producer @db/db) edit)
+      (protocols/publish-workspace-edit (:producer @db/db) edit)
       (when show-document-after-edit
-        (producer/show-document-request (:producer @db/db) show-document-after-edit))
+        (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
+                                                          (shared/full-file-range)))
+             (protocols/show-document-request (:producer @db/db))))
       edit)))
 
 (defn hover [{:keys [textDocument position]}]
@@ -343,7 +344,7 @@
     (f.linked-editing-range/ranges textDocument row col db/db)))
 
 (defrecord ClojureLSPFeatureHandler []
-  feature/ILSPFeatureHandler
+  protocols/ILSPFeatureHandler
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
     (initialize project-root-uri client-capabilities client-settings work-done-token))
   (did-open [_ doc]

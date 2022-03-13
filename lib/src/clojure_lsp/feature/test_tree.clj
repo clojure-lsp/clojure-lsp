@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.test-tree
   (:require
    [clojure-lsp.queries :as q]
-   [lsp4clj.shared :as shared]))
+   [clojure-lsp.shared :as shared]))
 
 (set! *warn-on-reflection* true)
 

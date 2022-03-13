@@ -9,9 +9,9 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [clojure.walk :as walk]
-   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 

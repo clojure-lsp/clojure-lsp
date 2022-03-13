@@ -1,7 +1,7 @@
 (ns clojure-lsp.classpath-test
   (:require
    [clojure-lsp.classpath :as classpath]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 

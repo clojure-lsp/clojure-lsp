@@ -5,7 +5,7 @@
    [clojure-lsp.settings :as settings]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]

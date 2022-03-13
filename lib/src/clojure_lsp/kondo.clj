@@ -8,7 +8,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)

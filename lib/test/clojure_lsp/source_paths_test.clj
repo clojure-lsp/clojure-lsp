@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.config :as config]
    [clojure-lsp.parser :as parser]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]

@@ -11,10 +11,10 @@
    [clojure-lsp.logging :as logging]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.producer :as producer]
-   [lsp4clj.shared :as shared]
+   [lsp4clj.protocols :as protocols]
    [taoensso.timbre :as log])
   (:import
    [java.io File]))
@@ -36,7 +36,7 @@
     (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defrecord APIProducer [options]
-  producer/IProducer
+  protocols/IProducer
 
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])

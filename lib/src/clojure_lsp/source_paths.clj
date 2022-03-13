@@ -4,7 +4,7 @@
    [clojure-lsp.parser :as parser]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])
   (:import

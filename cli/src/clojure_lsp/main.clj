@@ -11,7 +11,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
   (:gen-class))

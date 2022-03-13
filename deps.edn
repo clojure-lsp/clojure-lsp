@@ -1,7 +1,7 @@
 {:paths []
  :aliases {:dev {:extra-paths ["lib/src"
                                "cli/src"
-                               "common/src"
+                               "protocols/src"
                                "lsp4clj/src"]
                  :extra-deps {clojure-lsp/lib {:local/root "lib"}
                               clojure-lsp/cli {:local/root "cli"}
@@ -11,7 +11,7 @@
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.63.998"}}
                   :extra-paths ["lib/src"
                                 "cli/src"
-                                "common/src"
+                                "protocols/src"
                                 "lsp4clj/src"
                                 "common-test/src"
                                 "lib/test"

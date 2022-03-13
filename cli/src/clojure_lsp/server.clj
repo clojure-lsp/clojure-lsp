@@ -11,12 +11,12 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.core :as lsp]
-   [lsp4clj.producer :as producer]
-   [lsp4clj.shared :as shared]
+   [lsp4clj.protocols :as protocols]
    [taoensso.timbre :as log])
   (:import
    (clojure_lsp
@@ -46,24 +46,24 @@
                (lsp/end
                  (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
 
-(defrecord ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
-  producer/IProducer
+(defrecord ^:private ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
+  protocols/IProducer
   (publish-diagnostic [_this diagnostic]
-    (producer/publish-diagnostic lsp-producer diagnostic))
+    (protocols/publish-diagnostic lsp-producer diagnostic))
   (refresh-code-lens [_this]
-    (producer/refresh-code-lens lsp-producer))
+    (protocols/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
-    (producer/publish-workspace-edit lsp-producer edit))
+    (protocols/publish-workspace-edit lsp-producer edit))
   (show-document-request [_this document-request]
-    (producer/show-document-request lsp-producer document-request))
+    (protocols/show-document-request lsp-producer document-request))
   (publish-progress [_this percentage message progress-token]
-    (producer/publish-progress lsp-producer percentage message progress-token))
+    (protocols/publish-progress lsp-producer percentage message progress-token))
   (show-message-request [_this message type actions]
-    (producer/show-message-request lsp-producer message type actions))
+    (protocols/show-message-request lsp-producer message type actions))
   (show-message [_this message type extra]
-    (producer/show-message lsp-producer message type extra))
+    (protocols/show-message lsp-producer message type extra))
   (register-capability [_this capability]
-    (producer/register-capability lsp-producer capability))
+    (protocols/register-capability lsp-producer capability))
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
@@ -177,10 +177,10 @@
     (swap! db/db assoc :producer producer)
     (swap! db/db assoc :feature-handler clojure-feature-handler)
     (go-loop [edit (<! db/edits-chan)]
-      (producer/publish-workspace-edit producer edit)
+      (protocols/publish-workspace-edit producer edit)
       (recur (<! db/edits-chan)))
     (go-loop []
-      (producer/publish-diagnostic producer (<! debounced-diags))
+      (protocols/publish-diagnostic producer (<! debounced-diags))
       (recur))
     (go-loop []
       (try

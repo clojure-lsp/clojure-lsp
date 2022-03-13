@@ -29,7 +29,7 @@
                 :lib clojars-lib
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
-                :src-dirs ["src" "../lib/src" "../common/src" "../lsp4clj/src"]
+                :src-dirs ["src" "../lib/src" "../protocols/src" "../lsp4clj/src"]
                 :resource-dirs ["resources"]
                 :scm {:tag current-version}}))
 
@@ -37,7 +37,7 @@
   (clean opts)
   (javac opts)
   (pom opts)
-  (b/copy-dir {:src-dirs ["src" "../lib/src" "../common/src" "../lsp4clj/src" "resources" "../lib/resources"]
+  (b/copy-dir {:src-dirs ["src" "../lib/src" "../protocols/src" "../lsp4clj/src" "resources" "../lib/resources"]
                :target-dir class-dir})
   (b/uber {:class-dir class-dir
            :uber-file uber-file

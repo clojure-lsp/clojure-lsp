@@ -3,10 +3,10 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [com.climate.claypoole :as cp]
-   [lsp4clj.shared :as shared]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 

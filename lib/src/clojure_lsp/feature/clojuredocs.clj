@@ -4,7 +4,7 @@
    [clojure-lsp.settings :as settings]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (java.io IOException)

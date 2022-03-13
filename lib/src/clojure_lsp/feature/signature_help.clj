@@ -5,7 +5,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [edamame.core :as edamame]
-   [lsp4clj.shared :as shared :refer [assoc-some]]
+   [clojure-lsp.shared :as shared :refer [assoc-some]]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])

@@ -549,10 +549,10 @@
 (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
 (s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
 
-(s/def :linked-editing-range/ranges (s/coll-of ::range))
+(s/def :linked-editing-shared/ranges (s/coll-of ::range))
 
 (s/def ::linked-editing-ranges
-  (s/and (s/keys :req-un [:linked-editing-range/ranges]
+  (s/and (s/keys :req-un [:linked-editing-shared/ranges]
                  :opt-un [::word-pattern])
          (s/conformer #(doto (LinkedEditingRanges.)
                          (.setRanges (:ranges %1))

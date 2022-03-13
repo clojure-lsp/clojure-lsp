@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]

@@ -1,8 +1,7 @@
-(ns lsp4clj.shared
+(ns clojure-lsp.shared
   (:require
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
-   [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
    [taoensso.timbre :as log])
@@ -44,21 +43,6 @@
   ([a b & more]
    (reduce deep-merge (or a {}) (cons b more))))
 
-(defn start-time->end-time-seconds [start-time]
-  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
-
-(defmacro logging-time
-  "Executes `body` logging `message` formatted with the time spent
-  from body."
-  [message & body]
-  (let [start-sym (gensym "start-time")]
-    `(let [~start-sym (System/nanoTime)
-           result# (do ~@body)]
-       ~(with-meta
-          `(log/infof ~message (start-time->end-time-seconds ~start-sym))
-          (meta &form))
-       result#)))
-
 (defn file-exists? [^java.io.File f]
   (.exists f))
 
@@ -95,27 +79,6 @@
 
 (def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))
-
-(defn windows-process-alive?
-  [pid]
-  (let [{:keys [out]} (shell/sh "tasklist" "/fi" (format "\"pid eq %s\"" pid))]
-    (string/includes? out (str pid))))
-
-(defn unix-process-alive?
-  [pid]
-  (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
-    (zero? exit)))
-
-(defn process-alive?
-  [pid]
-  (try
-    (if windows-os?
-      (windows-process-alive? pid)
-      (unix-process-alive? pid))
-    (catch Exception e
-      (log/warn "Checking if process is alive failed." e)
-      ;; Return true since the check failed. Assume the process is alive.
-      true)))
 
 (defn uri->file-type [uri]
   (cond
@@ -157,11 +120,11 @@
         (string/starts-with? uri "jar:file:/")
         (string/starts-with? uri "zipfile:/"))))
 
-(defn- uri-obj->filepath [uri]
+(defn ^:private uri-obj->filepath [uri]
   (-> uri Paths/get .toString
       (string/replace #"^[a-z]:\\" string/upper-case)))
 
-(defn- unescape-uri
+(defn ^:private unescape-uri
   [^String uri]
   (try
     (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
@@ -189,14 +152,14 @@
         (str (-> jar-uri-path io/file .getCanonicalPath) ":" nested-file)
         (uri-obj->filepath uri-obj)))))
 
-(defn- filepath->uri-obj ^URI [filepath]
+(defn ^:private filepath->uri-obj ^URI [filepath]
   (-> filepath io/file .toPath .toUri))
 
-(defn- uri-encode [scheme path]
+(defn ^:private uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
 
-(def jar-file-with-filename-regex #"^(.*\.jar):(.*)")
-(def jar-file-regex #"^(.*\.jar)")
+(def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
+(def ^:private jar-file-regex #"^(.*\.jar)")
 
 (defn jar-file? [filename]
   (or (boolean (re-find jar-file-with-filename-regex filename))
@@ -260,7 +223,7 @@
          "."
          (name file-type))))
 
-(defn path->folder-with-slash [^String path]
+(defn ^:private path->folder-with-slash [^String path]
   (if (directory? (io/file path))
     (if (string/ends-with? path (System/getProperty "file.separator"))
       path
@@ -288,19 +251,6 @@
 
 (defn filename->namespace [filename db]
   (uri->namespace (filename->uri filename db) filename db))
-
-(defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
-  (when element
-    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
-     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
-
-(defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
-  (when element
-    {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
-     :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
-
-(defn full-file-range []
-  (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."
@@ -387,3 +337,31 @@
 
 (defn clojure-lsp-version []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
+
+(defn start-time->end-time-seconds [start-time]
+  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
+
+(defmacro logging-time
+  "Executes `body` logging `message` formatted with the time spent
+  from body."
+  [message & body]
+  (let [start-sym (gensym "start-time")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)]
+       ~(with-meta
+          `(log/infof ~message (start-time->end-time-seconds ~start-sym))
+          (meta &form))
+       result#)))
+
+(defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
+  (when element
+    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
+     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
+
+(defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
+  (when element
+    {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
+     :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
+
+(defn full-file-range []
+  (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))

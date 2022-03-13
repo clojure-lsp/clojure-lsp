@@ -6,7 +6,7 @@
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
-   [lsp4clj.shared :as shared]
+   [clojure-lsp.shared :as shared]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))

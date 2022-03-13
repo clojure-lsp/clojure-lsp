@@ -1,15 +1,15 @@
 (ns clojure-lsp.test-helper
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
-   [lsp4clj.producer :as producer]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [taoensso.timbre :as log]
-   [clojure-lsp.clojure-producer :as clojure-producer]))
+   [lsp4clj.protocols :as protocols]
+   [taoensso.timbre :as log]))
 
 (def mock-diagnostics (atom {}))
 
@@ -30,7 +30,7 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  producer/IProducer
+  protocols/IProducer
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])

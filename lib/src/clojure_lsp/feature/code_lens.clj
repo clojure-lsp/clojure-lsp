@@ -2,8 +2,8 @@
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
-   [lsp4clj.shared :as shared]
    [taoensso.timbre :as log]))
 
 (set! *warn-on-reflection* true)

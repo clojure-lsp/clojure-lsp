@@ -7,11 +7,11 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.producer :as producer]
-   [lsp4clj.shared :as shared]
+   [lsp4clj.protocols :as protocols]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
@@ -95,7 +95,7 @@
         (crawler/analyze-reference-filenames! filenames db)
         (doseq [filename filenames]
           (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (producer/refresh-code-lens (:producer @db))))))
+        (protocols/refresh-code-lens (:producer @db))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)

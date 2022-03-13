@@ -412,7 +412,7 @@
     os))
 
 (defrecord LSPProducer [^LanguageClient client db]
-  protocols/IProducer
+  protocols/ILSPProducer
 
   (publish-diagnostic [_this diagnostic]
     (->> diagnostic

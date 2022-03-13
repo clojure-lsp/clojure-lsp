@@ -36,7 +36,7 @@
   (workspace-symbols [this doc])
   (range-formatting [this doc-id format-pos]))
 
-(defprotocol IProducer
+(defprotocol ILSPProducer
   (refresh-code-lens [this])
   (publish-diagnostic [this diagnostic])
   (publish-workspace-edit [this edit])

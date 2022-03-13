@@ -47,7 +47,7 @@
                  (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord ^:private ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
-  protocols/IProducer
+  protocols/ILSPProducer
   (publish-diagnostic [_this diagnostic]
     (protocols/publish-diagnostic lsp-producer diagnostic))
   (refresh-code-lens [_this]

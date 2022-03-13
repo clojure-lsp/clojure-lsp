@@ -30,7 +30,7 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  protocols/IProducer
+  protocols/ILSPProducer
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])

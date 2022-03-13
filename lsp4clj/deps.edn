@@ -6,7 +6,7 @@
                                                                                  com.google.code.gson/gson]}
         org.clojure/data.json {:mvn/version "2.4.0"}
         com.google.code.gson/gson {:mvn/version "2.9.0"}
-        clojure-lsp/protocols {:local/root "../protocols"}
+        lsp4clj/protocols {:local/root "../protocols"}
         medley/medley {:mvn/version "1.3.0"}
         org.clojure/java.data {:mvn/version "1.0.95"}}
  :paths ["src" "resources"]

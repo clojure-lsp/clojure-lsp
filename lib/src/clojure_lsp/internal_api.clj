@@ -36,7 +36,7 @@
     (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defrecord APIProducer [options]
-  protocols/IProducer
+  protocols/ILSPProducer
 
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])

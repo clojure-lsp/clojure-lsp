@@ -1,8 +1,8 @@
-(ns lsp4clj.feature)
+(ns lsp4clj.feature-handler)
 
 (set! *warn-on-reflection* true)
 
-(defprotocol ILSPFeature
+(defprotocol ILSPFeatureHandler
   (initialize [this project-root-uri client-capabilities client-settings work-done-token])
   (did-open [this doc])
   (did-change [this doc])

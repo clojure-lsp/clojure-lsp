@@ -44,7 +44,7 @@
   (lsp/start :extension
              (CompletableFuture/completedFuture
                (lsp/end
-                 (apply #'clojure-feature/extension (:handler @db/db) method (coercer/java->clj args))))))
+                 (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
   producer/IProducer
@@ -77,7 +77,7 @@
                    (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
-(deftype ClojureLspServer [^LSPServer lsp-server handler]
+(deftype ClojureLspServer [^LSPServer lsp-server feature-handler]
   ClojureLanguageServer
   (^CompletableFuture initialize [_ ^InitializeParams params]
     (.initialize lsp-server params))
@@ -93,29 +93,29 @@
     (.getWorkspaceService lsp-server))
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
-      (->> (clojure-feature/server-info-raw handler)
+      (->> (clojure-feature/server-info-raw feature-handler)
            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (lsp/start :server-info-log
                (future
                  (lsp/end
-                   (clojure-feature/server-info-log handler)))))
+                   (clojure-feature/server-info-log feature-handler)))))
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (lsp/start :cursorInfoRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-feature/cursor-info-raw handler ::clojure-coercer/cursor-info-raw))))
+                 (lsp/sync-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (lsp/start :cursor-info-log
                (future
-                 (lsp/sync-notification params clojure-feature/cursor-info-log handler))))
+                 (lsp/sync-notification params clojure-feature/cursor-info-log feature-handler))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (lsp/start :clojuredocsRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-feature/clojuredocs-raw handler ::clojure-coercer/clojuredocs-raw)))))
+                 (lsp/sync-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
 
 (defn client-settings [params]
   (-> params
@@ -160,13 +160,13 @@
   (log/info "Starting server...")
   (let [is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        handler (handlers/->ClojureFeatureHandler)
-        server (ClojureLspServer. (LSPServer. handler
+        clojure-feature-handler (handlers/->ClojureLSPFeatureHandler)
+        server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               db/db
                                               db/initial-db
                                               capabilites
                                               client-settings)
-                                  handler)
+                                  clojure-feature-handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
@@ -175,7 +175,7 @@
         producer (->ClojureLspProducer (lsp/->LSPProducer language-client db/db) language-client db/db)]
     (nrepl/setup-nrepl db/db)
     (swap! db/db assoc :producer producer)
-    (swap! db/db assoc :handler handler)
+    (swap! db/db assoc :feature-handler clojure-feature-handler)
     (go-loop [edit (<! db/edits-chan)]
       (producer/publish-workspace-edit producer edit)
       (recur (<! db/edits-chan)))

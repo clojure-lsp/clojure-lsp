@@ -24,7 +24,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure.pprint :as pprint]
-   [lsp4clj.feature :as feature]
+   [lsp4clj.feature-handler :as feature]
    [lsp4clj.producer :as producer]
    [lsp4clj.shared :as shared]
    [taoensso.timbre :as log])
@@ -342,8 +342,8 @@
         col (-> position :character inc)]
     (f.linked-editing-range/ranges textDocument row col db/db)))
 
-(defrecord ClojureFeatureHandler []
-  feature/ILSPFeature
+(defrecord ClojureLSPFeatureHandler []
+  feature/ILSPFeatureHandler
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
     (initialize project-root-uri client-capabilities client-settings work-done-token))
   (did-open [_ doc]

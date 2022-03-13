@@ -36,10 +36,12 @@
 (set! *warn-on-reflection* true)
 
 (defmacro process-after-changes [task-id uri & body]
-  `(let [~'_time (System/nanoTime)]
+  `(let [start-time# (System/nanoTime)]
      (loop [backoff# 1]
-       (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
-         (log/warnf "Timeout in %s waiting for changes to %s" ~task-id ~uri)
+       (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
+         ~(with-meta
+            `(log/warnf "Timeout in %s waiting for changes to %s" ~task-id ~uri)
+            (meta &form))
          (if (contains? (:processing-changes @db/db) ~uri)
            (do
              (Thread/sleep backoff#)

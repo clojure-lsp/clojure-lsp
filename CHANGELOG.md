@@ -22,6 +22,7 @@
   - cycle-fn-literal: *new feature* convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
   - Add find-implementation feature to `defmulti` and `defmethod`. #751
   - Make find-implementation of `defprotocol` names find its implementations and find-implementation on `deftype`/`defrecord` methods find other implementations.
+  - Add new code action `Introduce let` for existing command. #825
 
 - API/CLI
   - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)

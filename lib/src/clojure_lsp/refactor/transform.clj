@@ -283,6 +283,7 @@
                   (z/insert-child 'let) ; add let
                   (z/append-child* (n/newlines 1)) ; add new line after location
                   (z/append-child* (n/spaces (inc col)))  ; indent body
+                  ;; TODO we should add proper spaces to whole sym body to match indentation
                   (z/append-child sym) ; add new symbol to body of let
                   (z/down) ; enter let list
                   (z/right) ; skip 'let

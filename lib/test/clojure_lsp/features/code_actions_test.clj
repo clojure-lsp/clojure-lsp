@@ -270,6 +270,20 @@
         :command {:command "change-coll"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 5 1 [] {} db/db))))
 
+(deftest introduce-let-code-action
+  (h/load-code-and-locs (h/code "(+ (- 10 3) 2)")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when a valid zloc"
+    (h/assert-contains-submaps
+      [{:title "Introduce let"
+        :command {:command "introduce-let"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          1
+                          4
+                          [] {}
+                          db/db))))
+
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"
                                 "      b 2]"

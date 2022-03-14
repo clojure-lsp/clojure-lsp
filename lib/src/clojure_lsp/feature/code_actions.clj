@@ -116,6 +116,13 @@
              :command   "inline-symbol"
              :arguments [uri line character]}})
 
+(defn ^:private introduce-let-action [uri line character]
+  {:title   "Introduce let"
+   :kind    :refactor-extract
+   :command {:title     "Introduce let"
+             :command   "introduce-let"
+             :arguments [uri line character "new-binding"]}})
+
 (defn ^:private move-to-let-action [uri line character]
   {:title   "Move to let"
    :kind    :refactor-extract
@@ -321,6 +328,9 @@
       (and workspace-edit-capability?
            @allow-move-entry-down?*)
       (conj (move-coll-entry-down-action uri line character))
+
+      zloc
+      (conj (introduce-let-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))

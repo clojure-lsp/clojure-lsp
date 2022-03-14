@@ -40,6 +40,8 @@
                   :arguments [(h/source-path->uri sample-file-name)
                               5
                               4]}}
+       {:title "Introduce let"
+        :kind "refactor.extract"}
        {:title "Clean namespace"
         :kind "source.organizeImports"}]
       (lsp/request! (fixture/code-action-request sample-file-name 5 4)))

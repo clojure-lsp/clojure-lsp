@@ -3,9 +3,9 @@
    [clj-easy.stub.core :as stub]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (java.io File)))

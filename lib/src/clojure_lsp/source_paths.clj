@@ -2,9 +2,9 @@
   (:require
    [clojure-lsp.config :as config]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log])
   (:import

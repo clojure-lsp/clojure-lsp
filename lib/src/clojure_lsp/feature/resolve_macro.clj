@@ -5,9 +5,9 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [lsp4clj.protocols :as protocols]
-   [clojure-lsp.shared :as shared]
    [rewrite-clj.zip :as z]
    [taoensso.timbre :as log]))
 

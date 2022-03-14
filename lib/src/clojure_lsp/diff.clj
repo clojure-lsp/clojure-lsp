@@ -1,7 +1,7 @@
 (ns clojure-lsp.diff
   (:require
-   [clojure.string :as str]
-   [clojure-lsp.shared :as shared])
+   [clojure-lsp.shared :as shared]
+   [clojure.string :as str])
   (:import
    [difflib DiffUtils]))
 

@@ -7,11 +7,11 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
    [clojure-lsp.server :as server]
+   [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
-   [clojure-lsp.shared :as shared]
    [pod.clojure-lsp.api :as pod]
    [taoensso.timbre :as log])
   (:gen-class))

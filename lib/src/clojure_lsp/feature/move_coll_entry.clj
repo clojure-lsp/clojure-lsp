@@ -1,8 +1,8 @@
 (ns clojure-lsp.feature.move-coll-entry
   (:require
    [clojure-lsp.queries :as q]
-   [clojure.string :as string]
    [clojure-lsp.shared :as shared]
+   [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.node.protocols :as n.protocols]
    [rewrite-clj.zip :as z]))

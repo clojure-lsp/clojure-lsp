@@ -2,9 +2,9 @@
   "clojuredocs integration inspired on orchard implementation."
   (:require
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
-   [clojure-lsp.shared :as shared]
    [taoensso.timbre :as log])
   (:import
    (java.io IOException)

@@ -2,8 +2,7 @@
                 "babashka/fs"]
  :linters {:unresolved-var {:exclude [digest
                                       rewrite-clj.zip
-                                      rewrite-clj.node]}
-           :unused-namespace {:exclude [taoensso.timbre]}}
+                                      rewrite-clj.node]}}
  :lint-as {rewrite-clj.zip.subedit/edit->    clojure.core/->
            rewrite-clj.zip.subedit/subedit-> clojure.core/->
            clojure-lsp.refactor.edit/my-defn clojure.core/defn}}

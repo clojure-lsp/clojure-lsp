@@ -7,7 +7,6 @@
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.logging :as logging]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
@@ -88,7 +87,7 @@
 
 (defn ^:private analyze-classpath! [root-path source-paths settings progress-token db]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
-    (log/info "Analyzing classpath for project root" root-path)
+    (protocols/info (:logger @db) "Analyzing classpath for project root" root-path)
     (when-let [classpath (:classpath @db)]
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
             external-classpath (cond->> (->> classpath
@@ -145,7 +144,14 @@
     (async/go
       (db/upsert-cache! (build-db-cache db) db))))
 
-(defn initialize-project [project-root-uri client-capabilities client-settings force-settings progress-token db]
+(defn initialize-project
+  [project-root-uri
+   client-capabilities
+   client-settings
+   force-settings
+   progress-token
+   logger
+   db]
   (protocols/publish-progress (:producer @db) 0 "clojure-lsp" progress-token)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
@@ -158,7 +164,8 @@
                                     project-settings
                                     force-settings)
         _ (when-let [log-path (:log-path settings)]
-            (logging/update-log-path log-path db))
+            (protocols/set-log-path logger log-path)
+            (swap! db assoc :log-path log-path))
         settings (update settings :source-aliases #(or % source-paths/default-source-aliases))
         settings (update settings :project-specs #(or % (classpath/default-project-specs (:source-aliases settings))))]
     (swap! db assoc

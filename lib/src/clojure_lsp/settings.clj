@@ -5,8 +5,7 @@
    [clojure.core.memoize :as memoize]
    [clojure.string :as string]
    [clojure.walk :as walk]
-   [medley.core :as medley]
-   [taoensso.timbre :as log]))
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 

@@ -8,14 +8,12 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.logging :as logging]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols :as protocols])
   (:import
    [java.io File]))
 
@@ -60,6 +58,12 @@
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
+
+(defrecord CLILogger [options]
+  protocols/ILSPLogger
+  ;;TODO implement
+  ;;TODO check verbose
+  )
 
 (defn ^:private edit->summary
   ([db uri edit]
@@ -124,12 +128,13 @@
       .getCanonicalPath
       (shared/filename->uri db/db)))
 
-(defn ^:private setup-api! [{:keys [verbose] :as options}]
-  (swap! db/db assoc
-         :api? true
-         :producer (->APIProducer options))
-  (when verbose
-    (logging/set-log-to-stdout)))
+(defn ^:private setup-api! [options]
+  (let [logger (->CLILogger options)]
+    (protocols/setup logger)
+    (swap! db/db assoc
+           :api? true
+           :producer (->APIProducer options)
+           :logger logger)))
 
 (defn ^:private analyze!
   [{:keys [project-root settings log-path]}]

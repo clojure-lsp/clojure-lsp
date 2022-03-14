@@ -4,8 +4,7 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [taoensso.timbre :as log]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 
@@ -13,14 +12,14 @@
   (testing "detects URI format with lower-case drive letter and encoded colons"
     (h/clean-db!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize "file:///c%3A/project/root" {} {} nil))
+      (handlers/initialize "file:///c%3A/project/root" {} {} nil nil)) ;; TODO TestLogger?
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
            (get-in @db/db [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
     (h/clean-db!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize "file:///C:/project/root" {} {} nil))
+      (handlers/initialize "file:///C:/project/root" {} {} nil nil)) ;; TODO TestLogger?
     (is (= {:encode-colons-in-path?   false
             :upper-case-drive-letter? true}
            (get-in @db/db [:settings :uri-format])))))

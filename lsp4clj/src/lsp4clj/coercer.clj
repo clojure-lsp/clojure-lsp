@@ -5,10 +5,11 @@
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [clojure.walk :as walk]
-   [medley.core :as medley]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols :as protocols]
+   [medley.core :as medley])
   (:import
    (com.google.gson JsonElement)
+   (lsp4clj.protocols ILSPLogger)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCall
      CallHierarchyOutgoingCall
@@ -135,7 +136,6 @@
   (let [error (ResponseError. (.getValue ^ResponseErrorCode (:code e))
                               ^String (:message e)
                               nil)]
-    (log/error "Responding with error " error)
     (throw (ResponseErrorException. error))))
 
 (def error-code-enum
@@ -727,14 +727,14 @@
                                                     (.setCompletionProvider (:completion-provider %1))
                                                     (.setExperimental (:experimental %))))))
 
-(defn conform-or-log [spec value]
+(defn conform-or-log [spec value ^ILSPLogger logger]
   (when value
     (try
       (let [result (s/conform spec value)]
         (if (= :clojure.spec.alpha/invalid result)
-          (log/error (s/explain-data spec value))
+          (protocols/error logger (s/explain-data spec value))
           result))
       (catch Exception ex
         (if (instance? ResponseErrorException ex)
           (throw ex)
-          (log/error ex spec value))))))
+          (protocols/error logger ex spec value))))))

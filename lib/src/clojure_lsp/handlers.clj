@@ -47,7 +47,7 @@
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
-(defn initialize [project-root-uri client-capabilities client-settings work-done-token]
+(defn initialize [project-root-uri client-capabilities client-settings work-done-token logger]
   (swap! db/db assoc :project-analysis-type :project-and-deps)
   (when project-root-uri
     (crawler/initialize-project
@@ -56,6 +56,7 @@
       client-settings
       {}
       work-done-token
+      logger
       db/db)))
 
 (defn did-open [{:keys [textDocument]}]
@@ -345,8 +346,8 @@
 
 (defrecord ClojureLSPFeatureHandler []
   protocols/ILSPFeatureHandler
-  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
-    (initialize project-root-uri client-capabilities client-settings work-done-token))
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token logger]
+    (initialize project-root-uri client-capabilities client-settings work-done-token logger))
   (did-open [_ doc]
     (did-open doc))
   (did-change [_ doc]

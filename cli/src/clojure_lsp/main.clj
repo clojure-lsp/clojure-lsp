@@ -2,18 +2,15 @@
   (:refer-clojure :exclude [run!])
   (:require
    borkdude.dynaload
-   [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.logging :as logging]
    [clojure-lsp.server :as server]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
-   [pod.clojure-lsp.api :as pod]
-   [taoensso.timbre :as log])
+   [pod.clojure-lsp.api :as pod])
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -158,7 +155,6 @@
 (defn run!
   "Entrypoint for clojure-lsp CLI, Use `clojure-lsp.api` for a better API usage."
   [& args]
-  (logging/setup-logging db/db)
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
       {:result-code (if ok? 0 1)

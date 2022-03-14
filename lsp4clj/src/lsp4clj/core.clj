@@ -11,7 +11,9 @@
      CompletableFuture
      CompletionException)
    (java.util.function Supplier)
-   (lsp4clj.protocols ILSPFeatureHandler)
+   (lsp4clj.protocols
+     ILSPFeatureHandler
+     ILSPLogger)
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams
      CallHierarchyIncomingCallsParams
@@ -105,17 +107,17 @@
     (meta &form)))
 
 (defmacro sync-request
-  ([params f handler response-spec]
+  ([logger params f handler response-spec]
    (with-meta
-     `(sync-request ~params ~f ~handler ~response-spec false)
+     `(sync-request ~logger ~params ~f ~handler ~response-spec false)
      (meta &form)))
-  ([params f handler response-spec extra-log-fn]
+  ([logger params f handler response-spec extra-log-fn]
    (with-meta
      `(end
         (->> ~params
              coercer/java->clj
              (~f ~handler)
-             (coercer/conform-or-log ~response-spec))
+             (coercer/conform-or-log ~response-spec ~logger))
         ~extra-log-fn)
      (meta &form))))
 
@@ -141,7 +143,9 @@
             `(sync-notification ~params ~f ~handler)
             (meta &form))))))
 
-(deftype LSPTextDocumentService [^ILSPFeatureHandler handler]
+(deftype LSPTextDocumentService
+         [^ILSPFeatureHandler handler
+          ^ILSPLogger logger]
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (start :didOpen
@@ -209,7 +213,8 @@
                                                                          {:row (inc (.getLine start))
                                                                           :col (inc (.getCharacter start))
                                                                           :end-row (inc (.getLine end))
-                                                                          :end-col (inc (.getCharacter end))})))
+                                                                          :end-col (inc (.getCharacter end))})
+                                                        logger))
                               (catch Exception e
                                 (log/error e))
                               (finally
@@ -297,10 +302,12 @@
     (start :workspaceSymbol
            (async-request params protocols/workspace-symbols handler ::coercer/workspace-symbols))))
 
-(defn client-capabilities [^InitializeParams params]
+(defn client-capabilities
+  [^InitializeParams params
+   ^ILSPLogger logger]
   (some->> params
            .getCapabilities
-           (coercer/conform-or-log ::coercer/client-capabilities)))
+           (coercer/conform-or-log ::coercer/client-capabilities logger)))
 
 (defn ^:private windows-process-alive?
   [pid]
@@ -334,24 +341,32 @@
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(deftype LSPServer [^ILSPFeatureHandler protocols db initial-db capabilities-fn client-settings]
+(deftype LSPServer
+         [^ILSPFeatureHandler feature-handler
+          ^ILSPLogger logger
+          db
+          initial-db
+          capabilities-fn
+          client-settings]
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
            (end
              (do
                (log/info "Initializing...")
-               (protocols/initialize protocols (.getRootUri params)
-                                     (client-capabilities params)
+               (protocols/initialize feature-handler
+                                     (.getRootUri params)
+                                     (client-capabilities params logger)
                                      (-> params
                                          coercer/java->clj
                                          client-settings)
-                                     (some-> (.getWorkDoneToken params) .get str))
+                                     (some-> (.getWorkDoneToken params) .get str)
+                                     logger)
                (when-let [parent-process-id (.getProcessId params)]
                  (start-parent-process-liveness-probe! parent-process-id this))
                (let [capabilities (capabilities-fn db)]
                  (CompletableFuture/completedFuture
-                   (InitializeResult. (coercer/conform-or-log ::coercer/server-capabilities capabilities))))))))
+                   (InitializeResult. (coercer/conform-or-log ::coercer/server-capabilities capabilities logger))))))))
 
   (^void initialized [_ ^InitializedParams _params]
     (start :initialized
@@ -375,9 +390,9 @@
     (shutdown-agents)
     (System/exit 0))
   (getTextDocumentService [_]
-    (LSPTextDocumentService. protocols))
+    (LSPTextDocumentService. feature-handler))
   (getWorkspaceService [_]
-    (LSPWorkspaceService. protocols)))
+    (LSPWorkspaceService. feature-handler)))
 
 (defn tee-system-in [^java.io.InputStream system-in]
   (let [buffer-size 1024
@@ -411,12 +426,15 @@
           (log/error e "in thread"))))
     os))
 
-(defrecord LSPProducer [^LanguageClient client db]
+(defrecord LSPProducer
+           [^LanguageClient client
+            ^ILSPLogger logger
+            db]
   protocols/ILSPProducer
 
   (publish-diagnostic [_this diagnostic]
     (->> diagnostic
-         (coercer/conform-or-log ::coercer/publish-diagnostics-params)
+         (coercer/conform-or-log ::coercer/publish-diagnostics-params logger)
          (.publishDiagnostics client)))
 
   (refresh-code-lens [_this]
@@ -426,7 +444,7 @@
 
   (publish-workspace-edit [_this edit]
     (->> edit
-         (coercer/conform-or-log ::coercer/workspace-edit-or-error)
+         (coercer/conform-or-log ::coercer/workspace-edit-or-error logger)
          ApplyWorkspaceEditParams.
          (.applyEdit client)))
 
@@ -434,7 +452,7 @@
     (log/info "Requesting to show on editor the document" document-request)
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
       (->> document-request
-           (coercer/conform-or-log ::coercer/show-document-request)
+           (coercer/conform-or-log ::coercer/show-document-request logger)
            (.showDocument client))))
 
   (publish-progress [_this percentage message progress-token]
@@ -450,14 +468,14 @@
                       :percentage percentage})]
       (->> {:token (or progress-token "clojure-lsp")
             :value progress}
-           (coercer/conform-or-log ::coercer/notify-progress)
+           (coercer/conform-or-log ::coercer/notify-progress logger)
            (.notifyProgress client))))
 
   (show-message-request [_this message type actions]
     (let [result (->> {:type type
                        :message message
                        :actions actions}
-                      (coercer/conform-or-log ::coercer/show-message-request)
+                      (coercer/conform-or-log ::coercer/show-message-request logger)
                       (.showMessageRequest client)
                       .get)]
       (.getTitle ^MessageActionItem result)))
@@ -468,7 +486,7 @@
                            :extra extra}]
       (log/info message-content)
       (->> message-content
-           (coercer/conform-or-log ::coercer/show-message)
+           (coercer/conform-or-log ::coercer/show-message logger)
            (.showMessage client))))
 
   (register-capability [_this capability]

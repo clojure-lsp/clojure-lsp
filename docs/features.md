@@ -6,7 +6,7 @@ Above you can find all available features that clojure-lsp provides with example
 
 <img src="../images/features/find-definition.gif" width=340>
 
-### Find defprotocol implementations
+### Find defprotocol/defmulti implementations
 
 <img src="../images/features/find-implementation.gif" width=340>
 
@@ -314,6 +314,7 @@ User can register additional custom snippets, for more information on how to con
 | Move coll entry up/down            | <img src="../images/features/move-coll-entry.gif" width=720>         |
 | Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
 | Cycle privacy                      |                                                                      |
+| Cycle fn literal                   | <img src="../images/features/cycle-fn-literal.gif" width=480>        |
 | Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
 | Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
 | Unwind thread                      |                                                                      |
@@ -389,7 +390,7 @@ Commands that client can request. Most code actions use these commands as action
 
 #### Refactoring
 
-Commands that change/refactor the code.
+Commands that change/refactor the code. See [above](#code-actions) for screenshots.
 
 __Note: Most of them are available via code actions and most of the time you want to call the code action and not the command manually__
 
@@ -397,6 +398,7 @@ __Note: Most of them are available via code actions and most of the time you wan
 - Add import to namespace
 - Add missing require *
 - Cycle privacy of def/defn *
+- Cycle fn literal (fn []), #() *
 - Cycle collection (#{}, {}, [], ())
 - Change collection to {}, (), #{}, [] *
 - Extract Function *

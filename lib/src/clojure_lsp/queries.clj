@@ -67,16 +67,15 @@
          (filter (fn [{:keys [bucket] :as element}]
                    (and (= :locals bucket)
                         (shared/inside? {:name-row line :name-col column} element))))
-         (map (fn [local]
-                (find-first #(and (= :local-usages (:bucket %))
-                                  (= (:id local) (:id %))
-                                  (shared/inside? %
-                                                  {:name-row line
-                                                   :name-col column
-                                                   :name-end-row end-line
-                                                   :name-end-col end-column}))
-                            local-analysis)))
-         (remove nil?))))
+         (keep (fn [local]
+                 (find-first #(and (= :local-usages (:bucket %))
+                                   (= (:id local) (:id %))
+                                   (shared/inside? %
+                                                   {:name-row line
+                                                    :name-col column
+                                                    :name-end-row end-line
+                                                    :name-end-col end-column}))
+                             local-analysis))))))
 
 (defn find-var-usages-under-form
   [analysis filename line column end-line end-column]
@@ -206,9 +205,29 @@
   (into []
         (comp
           (mapcat val)
-          (filter #(identical? :protocol-impls (:bucket %)))
-          (filter #(safe-equal? (:ns element) (:protocol-ns %)))
-          (filter #(safe-equal? (:name element) (:method-name %)))
+          (cond
+            ;; protocol method definition
+            (and (= 'clojure.core/defprotocol (:defined-by element))
+                 (:protocol-name element))
+            (filter #(and (identical? :protocol-impls (:bucket %))
+                          (safe-equal? (:ns element) (:protocol-ns %))
+                          (safe-equal? (:name element) (:method-name %))))
+
+            ;; protocol name definition
+            (= 'clojure.core/defprotocol (:defined-by element))
+            (filter #(and (identical? :var-usages (:bucket %))
+                          (safe-equal? (:ns element) (:to %))
+                          (safe-equal? (:name element) (:name %))))
+
+            ;; defmulti definition
+            (= 'clojure.core/defmulti (:defined-by element))
+            (filter #(and (identical? :var-usages (:bucket %))
+                          (:defmethod %)
+                          (safe-equal? (:ns element) (:to %))
+                          (safe-equal? (:name element) (:name %))))
+
+            :else
+            (constantly false))
           (filter #(match-file-lang % element))
           (medley/distinct-by (juxt :filename :name :row :col)))
         analysis))
@@ -220,9 +239,23 @@
     (into []
           (comp
             (mapcat val)
-            (filter #(identical? :protocol-impls (:bucket %)))
-            (filter #(safe-equal? (:to element) (:protocol-ns %)))
-            (filter #(safe-equal? (:name element) (:method-name %)))
+            (cond
+              ;; defmethod declaration
+              (:defmethod element)
+              (filter #(and (identical? :var-usages (:bucket %))
+                            (:defmethod %)
+                            (safe-equal? (:to element) (:to %))
+                            (safe-equal? (:name element) (:name %))))
+
+              ;; protocol method usage or defmethod usage
+              :else
+              (filter #(or (and (identical? :protocol-impls (:bucket %))
+                                (safe-equal? (:to element) (:protocol-ns %))
+                                (safe-equal? (:name element) (:method-name %)))
+                           (and (identical? :var-usages (:bucket %))
+                                (:defmethod %)
+                                (safe-equal? (:to element) (:to %))
+                                (safe-equal? (:name element) (:name %))))))
             (filter #(match-file-lang % element))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))

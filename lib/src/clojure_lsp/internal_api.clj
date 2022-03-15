@@ -1,5 +1,6 @@
 (ns clojure-lsp.internal-api
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
@@ -8,12 +9,12 @@
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.logging :as logging]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.protocols :as protocols]
    [taoensso.timbre :as log])
   (:import
    [java.io File]))
@@ -35,10 +36,9 @@
     (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defrecord APIProducer [options]
-  producer/IProducer
+  protocols/ILSPProducer
 
   (refresh-code-lens [_this])
-  (refresh-test-tree [_this _uris])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
 
@@ -56,7 +56,10 @@
                            :type type
                            :extra extra}]
       (show-message-cli options message-content)))
-  (register-capability [_this _capability]))
+  (register-capability [_this _capability])
+
+  clojure-producer/IClojureProducer
+  (refresh-test-tree [_this _uris]))
 
 (defn ^:private edit->summary
   ([db uri edit]

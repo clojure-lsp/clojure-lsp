@@ -26,10 +26,15 @@ lib-pom:
 	cd lib && clojure -T:build pom
 cli-pom:
 	cd cli && clojure -T:build pom
+lsp4clj-pom:
+	cd lsp4clj && clojure -T:build pom
 
 lib-jar:
 	cd lib && clojure -T:build jar
 	mv lib/target/clojure-lsp.jar .
+lsp4clj-jar:
+	cd lsp4clj && clojure -T:build jar
+	mv lsp4clj/target/lsp4clj.jar .
 cli-jar:
 	cd cli && clojure -T:build prod-jar
 	mv cli/target/clojure-lsp-standalone.jar .
@@ -80,6 +85,8 @@ deploy-clojars:
 	cd lib && clojure -T:build deploy-clojars
 deploy-clojars-standalone:
 	cd cli && clojure -T:build deploy-clojars
+deploy-clojars-lsp4clj:
+	cd lsp4clj && clojure -T:build deploy-clojars
 
 local-webpage:
 	cp -rf CHANGELOG.md README.md images docs

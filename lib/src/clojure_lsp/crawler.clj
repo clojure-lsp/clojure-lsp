@@ -1,19 +1,20 @@
 (ns clojure-lsp.crawler
   (:require
    [clojure-lsp.classpath :as classpath]
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logging :as logging]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.protocols :as protocols]
    [taoensso.timbre :as log])
   (:import
    (java.net URI)))
@@ -26,7 +27,7 @@
                           keys)]
     (->> project-files
          (map #(shared/filename->uri % db))
-         (producer/refresh-test-tree (:producer @db)))))
+         (clojure-producer/refresh-test-tree (:producer @db)))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
@@ -50,7 +51,7 @@
 (defn ^:private report-batch-analysis-percentage
   [start-progress-percentage fulfill-progress-percentage progress-token db index count]
   (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
-    (producer/publish-progress
+    (protocols/publish-progress
       (:producer @db)
       (+ start-progress-percentage (/ (* index real-percentage) count))
       "Analyzing external classpath"
@@ -145,7 +146,7 @@
       (db/upsert-cache! (build-db-cache db) db))))
 
 (defn initialize-project [project-root-uri client-capabilities client-settings force-settings progress-token db]
-  (producer/publish-progress (:producer @db) 0 "clojure-lsp" progress-token)
+  (protocols/publish-progress (:producer @db) 0 "clojure-lsp" progress-token)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -167,9 +168,9 @@
            :force-settings force-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (producer/publish-progress (:producer @db) 5 "Finding kondo config" progress-token)
+    (protocols/publish-progress (:producer @db) 5 "Finding kondo config" progress-token)
     (ensure-kondo-config-dir-exists! project-root-uri db)
-    (producer/publish-progress (:producer @db) 10 "Finding cache" progress-token)
+    (protocols/publish-progress (:producer @db) 10 "Finding cache" progress-token)
     (load-db-cache! root-path db)
     (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
@@ -181,7 +182,7 @@
           (swap! db assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
-          (producer/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
+          (protocols/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
           (let [classpath (classpath/scan-classpath! db)]
             (swap! db assoc
                    :project-hash project-hash
@@ -191,7 +192,7 @@
           (when (= :project-and-deps (:project-analysis-type @db))
             (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token db))
           (upsert-db-cache! db))))
-    (producer/publish-progress (:producer @db) 90 "Resolving config paths" progress-token)
+    (protocols/publish-progress (:producer @db) 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                        (:classpath @db)
                                        (config/resolve-from-classpath-config-paths (:classpath @db) settings))]
@@ -201,7 +202,7 @@
                                           project-settings
                                           force-settings)
              :classpath-settings classpath-settings))
-    (producer/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
+    (protocols/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
     (log/info "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (-> @db :settings :source-paths) db)
     (swap! db assoc :settings-auto-refresh? true)
@@ -215,4 +216,4 @@
       (async/go
         (log/info "Analyzing test paths for project root" root-path)
         (analyze-test-paths! db)))
-    (producer/publish-progress (:producer @db) 100 "Project analyzed" progress-token)))
+    (protocols/publish-progress (:producer @db) 100 "Project analyzed" progress-token)))

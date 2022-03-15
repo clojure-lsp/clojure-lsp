@@ -1,13 +1,14 @@
 (ns clojure-lsp.test-helper
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.producer :as producer]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
+   [lsp4clj.protocols :as protocols]
    [taoensso.timbre :as log]))
 
 (def mock-diagnostics (atom {}))
@@ -29,23 +30,25 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  producer/IProducer
+  protocols/ILSPProducer
   (refresh-code-lens [_this])
-  (refresh-test-tree [_this _uris])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
   (publish-progress [_this _percentage _message _progress-token])
   (show-document-request [_this _document-request])
   (show-message-request [_this _message _type _actions])
   (show-message [_this _message _type _extra])
-  (register-capability [_this _capability]))
+  (register-capability [_this _capability])
+  clojure-producer/IClojureProducer
+  (refresh-test-tree [_this _uris]))
 
 (defn clean-db!
   ([]
    (clean-db! :unit-test))
   ([env]
-   (reset! db/db {:env env
-                  :producer (->TestProducer)})
+   (reset! db/db (assoc db/initial-db
+                        :env env
+                        :producer (->TestProducer)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))

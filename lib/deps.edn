@@ -13,7 +13,8 @@
                              :exclude [com.cognitect/transit-clj]}
         com.cognitect/transit-clj {:mvn/version "1.0.329"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
-        com.climate/claypoole {:mvn/version "1.1.4"}}
+        com.climate/claypoole {:mvn/version "1.1.4"}
+        lsp4clj/protocols {:local/root "../protocols"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.63.998"}}
@@ -21,7 +22,7 @@
                   :main-opts ["-m" "kaocha.runner"]}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.8.0"
-                                                         :sha "e3e3532"}
+                                                         :tag "v0.8.1"
+                                                         :sha "7d40500"}
                           slipset/deps-deploy {:mvn/version "0.2.0"}}
                    :ns-default build}}}

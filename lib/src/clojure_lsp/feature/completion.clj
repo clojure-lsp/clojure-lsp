@@ -379,11 +379,7 @@
                                    (mapcat val))
             external-ns-elements (->> (q/filter-external-analysis (dissoc analysis filename) db)
                                       (mapcat val))
-            cursor-element (loop [try-column col]
-                             (if-let [usage (q/find-element-under-cursor analysis filename row col)]
-                               usage
-                               (when (pos? try-column)
-                                 (recur (dec try-column)))))
+            cursor-element (q/find-element-under-cursor analysis filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
                            (if (z/sexpr-able? cursor-loc)

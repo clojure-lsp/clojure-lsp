@@ -263,15 +263,21 @@
       (find-alias-require-suggestions alias-str db)
       (find-refer-require-suggestions sym db))))
 
+(defn ^:private find-forms [zloc p?]
+  (->> zloc
+       (iterate z/next)
+       (take-while (complement z/end?))
+       (filter p?)))
+
 (defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
   (seq
     (if chosen-alias
       (concat (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
               ;; When we're aliasing clojure.string to string, we want to change
               ;; all subnodes like clojure.string/split to string/split.
-              (->> (edit/find-forms zloc #(when-let [sym (safe-sym %)]
-                                            (and (= chosen-ns (namespace sym))
-                                                 (not= chosen-alias (namespace sym)))))
+              (->> (find-forms zloc #(when-let [sym (safe-sym %)]
+                                       (and (= chosen-ns (namespace sym))
+                                            (not= chosen-alias (namespace sym)))))
                    (map (fn [node]
                           (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
                                               n/token-node

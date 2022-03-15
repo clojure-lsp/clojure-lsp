@@ -400,8 +400,7 @@
         ana (:analysis @db/db)]
     (testing "from usage with alias"
       (h/assert-submap
-        {:filename "/b.clj"
-         :alias 'foob
+        {:alias 'foob
          :from 'sample
          :bucket
          :namespace-alias
@@ -409,14 +408,13 @@
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c db/db)))
     (testing "from usage with refer all"
       (h/assert-submap
-        {:filename "/b.clj"
-         :from 'sample
+        {:from 'sample
          :bucket
          :namespace-usages
          :name 'foo.baz}
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c db/db)))))
 
-(deftest find-implementations-from-cursor
+(deftest find-implementations-from-cursor-protocols
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(defprotocol Foo"
                                 "  (something []))"))
@@ -429,7 +427,24 @@
                                 " (^void something [_] 456))"
                                 "(f/something (->FooImpl1))"
                                 "(f/something (->FooImpl2))") (h/file-uri "file:///b.clj"))
-  (testing "from protocol definitions"
+  (testing "from protocol name definition"
+    (h/assert-submaps
+      '[{:name Foo
+         :name-row 3 :name-col 2 :name-end-row 3 :name-end-col 7
+         :row 3 :col 2 :end-row 3 :end-col 7
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}
+        {:name-row 6 :name-col 2 :name-end-row 6 :name-end-col 7
+         :row 6 :col 2 :end-row 6 :end-col 7
+         :alias f
+         :name Foo
+         :from b
+         :bucket :var-usages
+         :to a}]
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 16 db/db)))
+  (testing "from protocol method definitions"
     (h/assert-submaps
       [{:impl-ns 'b
         :protocol-ns 'a
@@ -438,7 +453,6 @@
         :row 4 :col 2 :end-row 4 :end-col 21
         :defined-by 'clojure.core/defrecord
         :protocol-name 'Foo
-        :filename "/b.clj"
         :bucket :protocol-impls}
        {:impl-ns 'b
         :name-row 7 :name-col 9 :name-end-row 7 :name-end-col 18
@@ -447,7 +461,6 @@
         :method-name 'something
         :defined-by 'clojure.core/defrecord
         :protocol-name 'Foo
-        :filename "/b.clj"
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 3 4 db/db)))
   (testing "from implementation usage"
@@ -459,7 +472,6 @@
         :row 4 :col 2 :end-row 4 :end-col 21
         :defined-by 'clojure.core/defrecord
         :protocol-name 'Foo
-        :filename "/b.clj"
         :bucket :protocol-impls}
        {:impl-ns 'b
         :name-row 7 :name-col 9 :name-end-row 7 :name-end-col 18
@@ -468,9 +480,78 @@
         :method-name 'something
         :defined-by 'clojure.core/defrecord
         :protocol-name 'Foo
-        :filename "/b.clj"
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 9 2 db/db))))
+
+(deftest find-implementations-from-cursor-defmulti
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(defmulti foo :some-key)"))
+  (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                "(defmethod f/foo :some-value"
+                                "  [_]"
+                                "  1)"
+                                "(defmethod f/foo :default"
+                                "  [_]"
+                                "  2)"
+                                "(f/foo {:some-key :some-value})"
+                                "(f/foo {})") (h/file-uri "file:///b.clj"))
+  (testing "from defmulti definition"
+    (h/assert-submaps
+      '[{:name foo
+         :name-row 2 :name-col 12 :name-end-row 2 :name-end-col 17
+         :row 2 :col 12 :end-row 2 :end-col 17
+         :defmethod true
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}
+        {:name-row 5 :name-col 12 :name-end-row 5 :name-end-col 17
+         :row 5 :col 12 :end-row 5 :end-col 17
+         :name foo
+         :defmethod true
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}]
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 12 db/db)))
+  (testing "from defmethod declaration"
+    (h/assert-submaps
+      '[{:name foo
+         :name-row 2 :name-col 12 :name-end-row 2 :name-end-col 17
+         :row 2 :col 12 :end-row 2 :end-col 17
+         :defmethod true
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}
+        {:name-row 5 :name-col 12 :name-end-row 5 :name-end-col 17
+         :row 5 :col 12 :end-row 5 :end-col 17
+         :name foo
+         :defmethod true
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}]
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 2 13 db/db)))
+  (testing "from defmethod usage"
+    (h/assert-submaps
+      '[{:name foo
+         :name-row 2 :name-col 12 :name-end-row 2 :name-end-col 17
+         :row 2 :col 12 :end-row 2 :end-col 17
+         :defmethod true
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}
+        {:name-row 5 :name-col 12 :name-end-row 5 :name-end-col 17
+         :row 5 :col 12 :end-row 5 :end-col 17
+         :name foo
+         :defmethod true
+         :alias f
+         :from b
+         :bucket :var-usages
+         :to a}]
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 8 2 db/db))))
 
 (deftest find-unused-aliases
   (testing "clj"

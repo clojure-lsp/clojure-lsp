@@ -1,16 +1,17 @@
 (ns clojure-lsp.feature.file-management
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.protocols :as protocols]
    [medley.core :as medley]
    [taoensso.timbre :as log]))
 
@@ -94,7 +95,7 @@
         (crawler/analyze-reference-filenames! filenames db)
         (doseq [filename filenames]
           (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (producer/refresh-code-lens (:producer @db))))))
+        (protocols/refresh-code-lens (:producer @db))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -148,13 +149,13 @@
           (if (compare-and-set! db state-db (-> state-db
                                                 (update-analysis uri (:analysis kondo-result))
                                                 (update-findings uri (:findings kondo-result))
-                                                (assoc :processing-changes false)
+                                                (update :processing-changes disj uri)
                                                 (assoc :kondo-config (:config kondo-result))))
             (do
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db))
-              (producer/refresh-test-tree (:producer @db) [uri]))
+              (clojure-producer/refresh-test-tree (:producer @db) [uri]))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]
@@ -163,7 +164,7 @@
     (swap! db (fn [state-db] (-> state-db
                                  (assoc-in [:documents uri :v] version)
                                  (assoc-in [:documents uri :text] final-text)
-                                 (assoc :processing-changes true))))
+                                 (update :processing-changes conj uri))))
     (async/>!! db/current-changes-chan {:uri uri
                                         :text final-text
                                         :version version})))
@@ -181,7 +182,7 @@
                     (update :analysis merge analysis)
                     (assoc :kondo-config (:config result))
                     (update :findings merge (group-by :filename (:findings result))))))
-    (producer/refresh-test-tree (:producer @db) uris)))
+    (clojure-producer/refresh-test-tree (:producer @db) uris)))
 
 (defn did-change-watched-files [changes db]
   (doseq [{:keys [uri type]} changes]

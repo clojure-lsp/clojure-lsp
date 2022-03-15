@@ -7,8 +7,7 @@
    [clojure-lsp.shared :as shared :refer [assoc-some]]
    [edamame.core :as edamame]
    [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log])
+   [rewrite-clj.zip :as z])
   (:import
    [clojure.lang PersistentVector]))
 

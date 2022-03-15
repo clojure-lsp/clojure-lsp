@@ -8,7 +8,7 @@
    [clojure.java.io :as io]
    [com.climate.claypoole :as cp]
    [medley.core :as medley]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -74,10 +74,10 @@
                "clojure-lsp"
                "clj-kondo")}))
 
-(defn ^:private valid-finding? [{:keys [row col level] :as finding}]
+(defn ^:private valid-finding? [logger {:keys [row col level] :as finding}]
   (when (not= level :off)
     (or (and row col)
-        (log/warn "Invalid clj-kondo finding. Cannot find position data for" finding))))
+        (logger/warn logger "Invalid clj-kondo finding. Cannot find position data for" finding))))
 
 (defn ^:private exclude-ns? [filename linter db]
   (when-let [namespace (shared/filename->namespace filename db)]
@@ -88,7 +88,7 @@
   (when-not (exclude-ns? filename linter db)
     (->> (get (:findings @db) filename)
          (filter #(= filename (:filename %)))
-         (filter valid-finding?)
+         (filter (partial valid-finding? (:logger @db)))
          (mapv kondo-finding->diagnostic))))
 
 (defn severity->level [severity]

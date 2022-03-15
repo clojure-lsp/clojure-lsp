@@ -9,7 +9,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -41,7 +41,7 @@
   (config-path (project-config-dir project-root-uri)))
 
 (defn config-hash
-  [project-root]
+  [project-root logger]
   (let [err (java.io.StringWriter.)]
     (binding [*err* err]
       (let [result (-> project-root
@@ -49,10 +49,10 @@
                        kondo/resolve-config
                        kondo/config-hash)]
         (when-not (string/blank? (str err))
-          (log/error (str err)))
+          (logger/error logger (str err)))
         result))))
 
-(defmacro catch-kondo-errors [err-hint & body]
+(defmacro catch-kondo-errors [logger err-hint & body]
   (let [m (meta &form)
         err-sym (gensym "err")
         out-sym (gensym "out")
@@ -64,12 +64,12 @@
                    *out* ~out-sym]
            (let [result# (do ~@body)]
              (when-not (string/blank? (str ~err-sym))
-               ~(with-meta `(log/warn "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
+               ~(with-meta `(logger/warn ~logger "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
              (when-not (string/blank? (str ~out-sym))
-               ~(with-meta `(log/warn "Output from clj-kondo:" (str ~out-sym)) m))
+               ~(with-meta `(logger/warn ~logger "Output from clj-kondo:" (str ~out-sym)) m))
              result#))
          (catch Exception ~e-sym
-           ~(with-meta `(log/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
+           ~(with-meta `(logger/error ~logger ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond
@@ -117,22 +117,26 @@
 (defn ^:private project-custom-lint!
   [paths db {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
-    (let [new-analysis (group-by :filename (normalize-analysis analysis))]
+    (let [new-analysis (group-by :filename (normalize-analysis analysis))
+          logger (:logger @db)]
       (if (:api? @db)
         (do
-          (log/info (format "Starting to lint whole project files..."))
+          (logger/info logger (format "Starting to lint whole project files..."))
           (shared/logging-time
+            logger
             "Linting whole project files took %s secs"
             (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
         (when (settings/get db [:lint-project-files-after-startup?] true)
           (async/go
             (shared/logging-time
+              logger
               "Linting whole project files took %s secs"
               (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db))))))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]
   (shared/logging-time
+    (:logger @db)
     "Linting references took %s secs"
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
@@ -147,7 +151,7 @@
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
         (async/go-loop [tries 1]
           (if (>= tries 200)
-            (log/info "Max tries reached when async custom linting" uri)
+            (logger/info (:logger @db) "Max tries reached when async custom linting" uri)
             (if (contains? (:processing-changes @db) uri)
               (do
                 (Thread/sleep 50)
@@ -193,8 +197,8 @@
                          :canonical-paths true}}}
       (with-additional-config (settings/all db))))
 
-(defn run-kondo-on-paths! [paths external-analysis-only? db]
-  (catch-kondo-errors (str "paths " (string/join ", " paths))
+(defn run-kondo-on-paths! [paths external-analysis-only? db logger]
+  (catch-kondo-errors logger (str "paths " (string/join ", " paths))
     (kondo/run! (kondo-for-paths paths db external-analysis-only?))))
 
 (defn run-kondo-on-paths-batch!
@@ -202,22 +206,23 @@
   kondo more times but with fewer paths to analyze, improving memory."
   [paths public-only? update-callback db]
   (let [total (count paths)
-        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
-    (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
+        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))
+        logger (:logger @db)]
+    (logger/info logger (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
     (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths public-only? db)
+      (run-kondo-on-paths! paths public-only? db logger)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
-                          (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
+                          (logger/info logger "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (update-callback (inc index) batch-count)
-                          (run-kondo-on-paths! batch-paths public-only? db)))
+                          (run-kondo-on-paths! batch-paths public-only? db logger)))
            (reduce shared/deep-merge)))))
 
-(defn run-kondo-on-reference-filenames! [filenames db]
-  (catch-kondo-errors (str "files " (string/join ", " filenames))
+(defn run-kondo-on-reference-filenames! [filenames db logger]
+  (catch-kondo-errors logger (str "files " (string/join ", " filenames))
     (kondo/run! (kondo-for-reference-filenames filenames db))))
 
-(defn run-kondo-on-text! [text uri db]
-  (catch-kondo-errors (shared/uri->filename uri)
+(defn run-kondo-on-text! [text uri db logger]
+  (catch-kondo-errors logger (shared/uri->filename uri)
     (with-in-str text (kondo/run! (kondo-for-single-file uri db)))))

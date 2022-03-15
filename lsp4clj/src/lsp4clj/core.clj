@@ -5,15 +5,14 @@
    [clojure.string :as string]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    (java.util.concurrent
      CompletableFuture
      CompletionException)
    (java.util.function Supplier)
-   (lsp4clj.protocols
-     ILSPFeatureHandler
-     ILSPLogger)
+   (lsp4clj.protocols ILSPFeatureHandler)
+   (lsp4clj.protocols.logger ILSPLogger)
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams
      CallHierarchyIncomingCallsParams
@@ -75,9 +74,9 @@
      ~(with-meta `(do ~@body) (meta &form))))
 
 (defmacro end
-  ([expr]
-   (with-meta `(end ~expr false) (meta &form)))
-  ([expr extra-log-fn]
+  ([logger expr]
+   (with-meta `(end ~logger ~expr false) (meta &form)))
+  ([logger expr extra-log-fn]
    (let [m (meta &form)
          result-sym (gensym "result")
          duration-sym (gensym "duration")
@@ -87,20 +86,21 @@
                           (catch Throwable ~ex-sym
                             (if (instance? ResponseErrorException ~ex-sym)
                               (throw (CompletionException. ~ex-sym))
-                              ~(with-meta `(log/error ~ex-sym) m))))]
+                              ~(with-meta `(logger/error ~logger ~ex-sym) m))))]
         (try
           (let [~duration-sym (quot (- (System/nanoTime) ~'_start-time) 1000000)]
             ~(if extra-log-fn
-               (with-meta `(log/debug ~'_id (format "%sms - %s" ~duration-sym (~extra-log-fn ~result-sym))) m)
-               (with-meta `(log/debug ~'_id (format "%sms" ~duration-sym)) m)))
+               (with-meta `(logger/debug ~logger ~'_id (format "%sms - %s" ~duration-sym (~extra-log-fn ~result-sym))) m)
+               (with-meta `(logger/debug ~logger ~'_id (format "%sms" ~duration-sym)) m)))
           (catch Throwable ~ex-sym
-            ~(with-meta `(log/error ~ex-sym) m)))
+            ~(with-meta `(logger/error ~logger ~ex-sym) m)))
         ~result-sym))))
 
 (defmacro sync-notification
-  [params f handler]
+  [logger params f handler]
   (with-meta
     `(end
+       ~logger
        (->> ~params
             coercer/java->clj
             (~f ~handler)))
@@ -114,33 +114,34 @@
   ([logger params f handler response-spec extra-log-fn]
    (with-meta
      `(end
+        ~logger
         (->> ~params
              coercer/java->clj
              (~f ~handler)
-             (coercer/conform-or-log ~response-spec ~logger))
+             (coercer/conform-or-log ~logger ~response-spec))
         ~extra-log-fn)
      (meta &form))))
 
 (defmacro ^:private async-request
-  ([params f handler response-spec]
+  ([logger params f handler response-spec]
    (with-meta
-     `(async-request ~params ~f ~handler ~response-spec false)
+     `(async-request ~logger ~params ~f ~handler ~response-spec false)
      (meta &form)))
-  ([params f handler response-spec extra-log-fn]
+  ([logger params f handler response-spec extra-log-fn]
    `(CompletableFuture/supplyAsync
       (reify Supplier
         (get [this]
           ~(with-meta
-             `(sync-request ~params ~f ~handler ~response-spec ~extra-log-fn)
+             `(sync-request ~logger ~params ~f ~handler ~response-spec ~extra-log-fn)
              (meta &form)))))))
 
 (defmacro ^:private async-notification
-  [params f handler]
+  [logger params f handler]
   `(CompletableFuture/supplyAsync
      (reify Supplier
        (get [this]
          ~(with-meta
-            `(sync-notification ~params ~f ~handler)
+            `(sync-notification ~logger ~params ~f ~handler)
             (meta &form))))))
 
 (deftype LSPTextDocumentService
@@ -149,74 +150,76 @@
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (start :didOpen
-           (sync-notification params protocols/did-open handler)))
+           (sync-notification logger params protocols/did-open handler)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (start :didChange
-           (sync-notification params protocols/did-change handler)))
+           (sync-notification logger params protocols/did-change handler)))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (start :didSave
            (future
-             (sync-notification params protocols/did-save handler)))
+             (sync-notification logger params protocols/did-save handler)))
     (CompletableFuture/completedFuture 0))
 
   (^void didClose [_ ^DidCloseTextDocumentParams params]
     (start :didClose
-           (async-notification params protocols/did-close handler)))
+           (async-notification logger params protocols/did-close handler)))
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
-           (async-request params protocols/references handler ::coercer/locations)))
+           (async-request logger params protocols/references handler ::coercer/locations)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
-           (async-request params protocols/completion handler ::coercer/completion-items (fn [items]
-                                                                                           (format "total items: %s" (count items))))))
+           (async-request logger params protocols/completion handler ::coercer/completion-items (fn [items]
+                                                                                                  (format "total items: %s" (count items))))))
 
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem
-           (async-request item protocols/completion-resolve-item handler ::coercer/completion-item)))
+           (async-request logger item protocols/completion-resolve-item handler ::coercer/completion-item)))
 
   (^CompletableFuture prepareRename [_ ^PrepareRenameParams params]
     (start :prepare-rename
-           (async-request params protocols/prepare-rename handler ::coercer/prepare-rename-or-error)))
+           (async-request logger params protocols/prepare-rename handler ::coercer/prepare-rename-or-error)))
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
-           (async-request params protocols/rename handler ::coercer/workspace-edit-or-error)))
+           (async-request logger params protocols/rename handler ::coercer/workspace-edit-or-error)))
 
   (^CompletableFuture hover [_ ^HoverParams params]
     (start :hover
-           (async-request params protocols/hover handler ::coercer/hover)))
+           (async-request logger params protocols/hover handler ::coercer/hover)))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams params]
     (start :signatureHelp
-           (async-request params protocols/signature-help handler ::coercer/signature-help)))
+           (async-request logger params protocols/signature-help handler ::coercer/signature-help)))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
     (start :formatting
-           (async-request params protocols/formatting handler ::coercer/edits)))
+           (async-request logger params protocols/formatting handler ::coercer/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (start :rangeFormatting
            (end
+             logger
              (let [result (when (compare-and-set! formatting false true)
                             (try
                               (let [doc-id (coercer/document->uri (.getTextDocument params))
                                     range (.getRange params)
                                     start (.getStart range)
                                     end (.getEnd range)]
-                                (coercer/conform-or-log ::coercer/edits (#'protocols/range-formatting
-                                                                         handler
-                                                                         doc-id
-                                                                         {:row (inc (.getLine start))
-                                                                          :col (inc (.getCharacter start))
-                                                                          :end-row (inc (.getLine end))
-                                                                          :end-col (inc (.getCharacter end))})
-                                                        logger))
+                                (coercer/conform-or-log logger
+                                                        ::coercer/edits
+                                                        (protocols/range-formatting
+                                                         handler
+                                                         doc-id
+                                                         {:row (inc (.getLine start))
+                                                          :col (inc (.getCharacter start))
+                                                          :end-row (inc (.getLine end))
+                                                          :end-col (inc (.getCharacter end))})))
                               (catch Exception e
-                                (log/error e))
+                                (logger/error logger e))
                               (finally
                                 (reset! formatting false))))]
                (CompletableFuture/completedFuture
@@ -224,74 +227,76 @@
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (start :codeAction
-           (async-request params protocols/code-actions handler ::coercer/code-actions)))
+           (async-request logger params protocols/code-actions handler ::coercer/code-actions)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (start :codeLens
-           (async-request params protocols/code-lens handler ::coercer/code-lenses)))
+           (async-request logger params protocols/code-lens handler ::coercer/code-lenses)))
 
   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
     (start :resolveCodeLens
-           (async-request params protocols/code-lens-resolve handler ::coercer/code-lens)))
+           (async-request logger params protocols/code-lens-resolve handler ::coercer/code-lens)))
 
   (^CompletableFuture definition [_ ^DefinitionParams params]
     (start :definition
-           (async-request params protocols/definition handler ::coercer/location)))
+           (async-request logger params protocols/definition handler ::coercer/location)))
 
   (^CompletableFuture declaration [_ ^DeclarationParams params]
     (start :declaration
-           (async-request params protocols/declaration handler ::coercer/location)))
+           (async-request logger params protocols/declaration handler ::coercer/location)))
 
   (^CompletableFuture implementation [_ ^ImplementationParams params]
     (start :implementation
-           (async-request params protocols/implementation handler ::coercer/locations)))
+           (async-request logger params protocols/implementation handler ::coercer/locations)))
 
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
-           (async-request params protocols/document-symbol handler ::coercer/document-symbols)))
+           (async-request logger params protocols/document-symbol handler ::coercer/document-symbols)))
 
   (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
     (start :documentHighlight
-           (async-request params protocols/document-highlight handler ::coercer/document-highlights)))
+           (async-request logger params protocols/document-highlight handler ::coercer/document-highlights)))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
     (start :semanticTokensFull
-           (async-request params protocols/semantic-tokens-full handler ::coercer/semantic-tokens)))
+           (async-request logger params protocols/semantic-tokens-full handler ::coercer/semantic-tokens)))
 
   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
     (start :semanticTokensRange
-           (async-request params protocols/semantic-tokens-range handler ::coercer/semantic-tokens)))
+           (async-request logger params protocols/semantic-tokens-range handler ::coercer/semantic-tokens)))
 
   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
     (start :prepareCallHierarchy
-           (async-request params protocols/prepare-call-hierarchy handler ::coercer/call-hierarchy-items)))
+           (async-request logger params protocols/prepare-call-hierarchy handler ::coercer/call-hierarchy-items)))
 
   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
     (start :callHierarchyIncomingCalls
-           (async-request params protocols/call-hierarchy-incoming handler ::coercer/call-hierarchy-incoming-calls)))
+           (async-request logger params protocols/call-hierarchy-incoming handler ::coercer/call-hierarchy-incoming-calls)))
 
   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
     (start :callHierarchyOutgoingCalls
-           (async-request params protocols/call-hierarchy-outgoing handler ::coercer/call-hierarchy-outgoing-calls)))
+           (async-request logger params protocols/call-hierarchy-outgoing handler ::coercer/call-hierarchy-outgoing-calls)))
 
   (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
     (start :linkedEditingRange
-           (async-request params protocols/linked-editing-ranges handler ::coercer/linked-editing-ranges-or-error))))
+           (async-request logger params protocols/linked-editing-ranges handler ::coercer/linked-editing-ranges-or-error))))
 
-(deftype LSPWorkspaceService [handler]
+(deftype LSPWorkspaceService
+         [^ILSPFeatureHandler handler
+          ^ILSPLogger logger]
   WorkspaceService
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (start :executeCommand
            (future
-             (sync-notification params protocols/execute-command handler)))
+             (sync-notification logger params protocols/execute-command handler)))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
-    (log/warn (coercer/java->clj params)))
+    (logger/warn logger (coercer/java->clj params)))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
-           (async-notification params protocols/did-change-watched-files handler)))
+           (async-notification logger params protocols/did-change-watched-files handler)))
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
@@ -300,14 +305,14 @@
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (start :workspaceSymbol
-           (async-request params protocols/workspace-symbols handler ::coercer/workspace-symbols))))
+           (async-request logger params protocols/workspace-symbols handler ::coercer/workspace-symbols))))
 
 (defn client-capabilities
   [^InitializeParams params
    ^ILSPLogger logger]
   (some->> params
            .getCapabilities
-           (coercer/conform-or-log ::coercer/client-capabilities logger)))
+           (coercer/conform-or-log logger ::coercer/client-capabilities)))
 
 (defn ^:private windows-process-alive?
   [pid]
@@ -320,24 +325,24 @@
     (zero? exit)))
 
 (defn ^:private process-alive?
-  [pid]
+  [pid logger]
   (try
     (if (.contains (System/getProperty "os.name") "Windows")
       (windows-process-alive? pid)
       (unix-process-alive? pid))
     (catch Exception e
-      (log/warn "Checking if process is alive failed." e)
+      (logger/warn logger "Checking if process is alive failed." e)
       ;; Return true since the check failed. Assume the process is alive.
       true)))
 
 (defn start-parent-process-liveness-probe!
-  [ppid server]
+  [ppid logger server]
   (go-loop []
     (<! (timeout 5000))
-    (if (process-alive? ppid)
+    (if (process-alive? ppid logger)
       (recur)
       (do
-        (log/info "Parent process" ppid "is not running - exiting server")
+        (logger/info logger "Parent process" ppid "is not running - exiting server")
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -352,8 +357,9 @@
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
            (end
+             logger
              (do
-               (log/info "Initializing...")
+               (logger/info logger "Initializing...")
                (protocols/initialize feature-handler
                                      (.getRootUri params)
                                      (client-capabilities params logger)
@@ -363,16 +369,17 @@
                                      (some-> (.getWorkDoneToken params) .get str)
                                      logger)
                (when-let [parent-process-id (.getProcessId params)]
-                 (start-parent-process-liveness-probe! parent-process-id this))
+                 (start-parent-process-liveness-probe! parent-process-id logger this))
                (let [capabilities (capabilities-fn db)]
                  (CompletableFuture/completedFuture
-                   (InitializeResult. (coercer/conform-or-log ::coercer/server-capabilities capabilities logger))))))))
+                   (InitializeResult. (coercer/conform-or-log logger ::coercer/server-capabilities capabilities))))))))
 
   (^void initialized [_ ^InitializedParams _params]
     (start :initialized
            (end
+             logger
              (do
-               (log/info "Initialized!")
+               (logger/info logger "Initialized!")
                (protocols/register-capability
                  (:producer @db)
                  (RegistrationParams.
@@ -381,20 +388,20 @@
                                      [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
 
   (^CompletableFuture shutdown [_]
-    (log/info "Shutting down")
+    (logger/info logger "Shutting down")
     (reset! db initial-db)
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [_]
-    (log/info "Exitting...")
+    (logger/info logger "Exitting...")
     (shutdown-agents)
     (System/exit 0))
   (getTextDocumentService [_]
-    (LSPTextDocumentService. feature-handler))
+    (LSPTextDocumentService. feature-handler logger))
   (getWorkspaceService [_]
-    (LSPWorkspaceService. feature-handler)))
+    (LSPWorkspaceService. feature-handler logger)))
 
-(defn tee-system-in [^java.io.InputStream system-in]
+(defn tee-system-in [^java.io.InputStream system-in logger]
   (let [buffer-size 1024
         os (java.io.PipedOutputStream.)
         is (java.io.PipedInputStream. os)]
@@ -403,14 +410,14 @@
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read system-in buffer 0 buffer-size)]
             (when (pos? chs)
-              (log/warn "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (logger/warn logger "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
               (.write os buffer 0 chs)
               (recur (.read system-in buffer 0 buffer-size)))))
         (catch Exception e
-          (log/error e "in thread"))))
+          (logger/warn logger e "in thread"))))
     is))
 
-(defn tee-system-out [^java.io.OutputStream system-out]
+(defn tee-system-out [^java.io.OutputStream system-out logger]
   (let [buffer-size 1024
         is (java.io.PipedInputStream.)
         os (java.io.PipedOutputStream. is)]
@@ -419,11 +426,11 @@
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read is buffer 0 buffer-size)]
             (when (pos? chs)
-              (log/warn "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (logger/warn logger "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
               (.write system-out buffer)
               (recur (.read is buffer 0 buffer-size)))))
         (catch Exception e
-          (log/error e "in thread"))))
+          (logger/error logger e "in thread"))))
     os))
 
 (defrecord LSPProducer
@@ -434,7 +441,7 @@
 
   (publish-diagnostic [_this diagnostic]
     (->> diagnostic
-         (coercer/conform-or-log ::coercer/publish-diagnostics-params logger)
+         (coercer/conform-or-log logger ::coercer/publish-diagnostics-params)
          (.publishDiagnostics client)))
 
   (refresh-code-lens [_this]
@@ -444,15 +451,15 @@
 
   (publish-workspace-edit [_this edit]
     (->> edit
-         (coercer/conform-or-log ::coercer/workspace-edit-or-error logger)
+         (coercer/conform-or-log logger ::coercer/workspace-edit-or-error)
          ApplyWorkspaceEditParams.
          (.applyEdit client)))
 
   (show-document-request [_this document-request]
-    (log/info "Requesting to show on editor the document" document-request)
+    (logger/info logger "Requesting to show on editor the document" document-request)
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
       (->> document-request
-           (coercer/conform-or-log ::coercer/show-document-request logger)
+           (coercer/conform-or-log logger ::coercer/show-document-request)
            (.showDocument client))))
 
   (publish-progress [_this percentage message progress-token]
@@ -468,14 +475,14 @@
                       :percentage percentage})]
       (->> {:token (or progress-token "clojure-lsp")
             :value progress}
-           (coercer/conform-or-log ::coercer/notify-progress logger)
+           (coercer/conform-or-log logger ::coercer/notify-progress)
            (.notifyProgress client))))
 
   (show-message-request [_this message type actions]
     (let [result (->> {:type type
                        :message message
                        :actions actions}
-                      (coercer/conform-or-log ::coercer/show-message-request logger)
+                      (coercer/conform-or-log logger ::coercer/show-message-request)
                       (.showMessageRequest client)
                       .get)]
       (.getTitle ^MessageActionItem result)))
@@ -484,9 +491,9 @@
     (let [message-content {:message message
                            :type type
                            :extra extra}]
-      (log/info message-content)
+      (logger/info logger message-content)
       (->> message-content
-           (coercer/conform-or-log ::coercer/show-message logger)
+           (coercer/conform-or-log logger ::coercer/show-message)
            (.showMessage client))))
 
   (register-capability [_this capability]

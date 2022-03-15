@@ -5,7 +5,7 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [cognitect.transit :as transit]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -52,11 +52,12 @@
 (defn remove-db! [project-root-path db]
   (io/delete-file (transit-db-file project-root-path db)))
 
-(defn upsert-cache! [{:keys [project-root] :as project-cache} db]
+(defn upsert-cache! [{:keys [project-root] :as project-cache} db logger]
   (remove-old-sqlite-db-file! project-root)
   (remove-old-datalevin-db-file! project-root)
   (try
     (shared/logging-time
+      logger
       "Upserting transit analysis cache took %s secs"
       (let [cache-file (transit-db-file project-root db)]
         (with-open [;; first we write to a baos as a workaround for transit-clj #43
@@ -67,11 +68,12 @@
             (transit/write writer project-cache)
             (io/copy (.toByteArray bos) cache-file)))))
     (catch Throwable e
-      (log/error "Could not upsert db cache" e))))
+      (logger/error (:logger @db) "Could not upsert db cache" e))))
 
-(defn read-cache [project-root db]
+(defn read-cache [project-root db logger]
   (try
     (shared/logging-time
+      logger
       "Reading transit analysis cache from db took %s secs"
       (let [db-file (transit-db-file project-root db)]
         (if (shared/file-exists? db-file)
@@ -80,6 +82,6 @@
             (when (and (= (str project-root) (:project-root project-analysis))
                        (= version (:version project-analysis)))
               project-analysis))
-          (log/error "No cache DB file found"))))
+          (logger/error (:logger @db) "No cache DB file found"))))
     (catch Throwable e
-      (log/error "Could not load project cache from DB" e))))
+      (logger/error (:logger @db) "Could not load project cache from DB" e))))

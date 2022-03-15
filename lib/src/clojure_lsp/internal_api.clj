@@ -13,7 +13,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols])
+   [lsp4clj.protocols :as protocols]
+   [lsp4clj.protocols.logger :as logger])
   (:import
    [java.io File]))
 
@@ -60,7 +61,7 @@
   (refresh-test-tree [_this _uris]))
 
 (defrecord CLILogger [options]
-  protocols/ILSPLogger
+  logger/ILSPLogger
   ;;TODO implement
   ;;TODO check verbose
   )
@@ -130,7 +131,7 @@
 
 (defn ^:private setup-api! [options]
   (let [logger (->CLILogger options)]
-    (protocols/setup logger)
+    (logger/setup logger)
     (swap! db/db assoc
            :api? true
            :producer (->APIProducer options)
@@ -149,6 +150,7 @@
                :log-path log-path)
              settings)
       nil
+      (:logger @db/db)
       db/db)
     true
     (catch clojure.lang.ExceptionInfo e

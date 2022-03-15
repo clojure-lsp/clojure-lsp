@@ -25,8 +25,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols :as protocols])
   (:import
    [java.net
     URL
@@ -39,7 +39,7 @@
      (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
          ~(with-meta
-            `(log/warnf "Timeout in %s waiting for changes to %s" ~task-id ~uri)
+            `(logger/warn (:logger @db/db) (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
             (meta &form))
          (if (contains? (:processing-changes @db/db) ~uri)
            (do
@@ -97,7 +97,7 @@
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db/db))))
 
 (defn completion-resolve-item [item]
-  (f.completion/resolve-item item db/db))
+  (f.completion/resolve-item item db/db (:logger @db/db)))
 
 (defn prepare-rename [{:keys [textDocument position]}]
   (let [[row col] (shared/position->line-column position)]
@@ -212,9 +212,9 @@
   (cursor-info [textDocument (:line position) (:character position)]))
 
 (defn clojuredocs-raw [{:keys [symName symNs]}]
-  (f.clojuredocs/find-docs-for symName symNs db/db))
+  (f.clojuredocs/find-docs-for symName symNs db/db (:logger @db/db)))
 
-(defn ^:private refactor [refactoring [doc-id line character & args] db]
+(defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db] :as components}]
   (let [row (inc (int line))
         col (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change
@@ -228,7 +228,7 @@
                                :col         col
                                :args        args
                                :version     v}
-                              db)))
+                              components)))
 
 (defn execute-command [{:keys [command arguments]}]
   (cond
@@ -241,7 +241,10 @@
                                  :character (nth arguments 2)}})
 
     (some #(= % command) f.refactor/available-refactors)
-    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
+    ;; TODO move components upper to a common place
+    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments {:db db/db
+                                                                                    :producer (:producer @db/db)
+                                                                                    :logger (:logger @db/db)})]
       (protocols/publish-workspace-edit (:producer @db/db) edit)
       (when show-document-after-edit
         (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
@@ -252,7 +255,7 @@
 (defn hover [{:keys [textDocument position]}]
   (let [[line column] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)]
-    (f.hover/hover filename line column db/db)))
+    (f.hover/hover filename line column db/db (:logger @db/db))))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (let [[line column] (shared/position->line-column position)]

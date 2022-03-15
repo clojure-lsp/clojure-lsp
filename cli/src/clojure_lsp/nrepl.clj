@@ -1,7 +1,7 @@
 (ns clojure-lsp.nrepl
   (:require
    [borkdude.dynaload :refer [dynaload]]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -15,7 +15,7 @@
 (defn setup-nrepl [db]
   (try
     (when-let [port (repl-port)]
-      (log/info "====== LSP nrepl server started on port" port)
+      (logger/info (:logger @db) "====== LSP nrepl server started on port" port)
       (swap! db assoc :port port))
     (catch Throwable _
-      (log/debug "nrepl not found, skipping nrepl server start..."))))
+      (logger/debug (:logger @db) "nrepl not found, skipping nrepl server start..."))))

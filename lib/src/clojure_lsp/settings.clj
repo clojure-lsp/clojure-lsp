@@ -61,9 +61,9 @@
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
 
-(defn ^:private get-refreshed-settings [db]
+(defn ^:private get-refreshed-settings [db logger]
   (let [{:keys [project-root-uri settings force-settings]} @db
-        new-project-settings (config/resolve-for-root project-root-uri)]
+        new-project-settings (config/resolve-for-root project-root-uri logger)]
     (config/deep-merge-fixing-cljfmt settings
                                      new-project-settings
                                      force-settings)))
@@ -79,8 +79,8 @@
   [db]
   (if (or (not (:settings-auto-refresh? @db))
           (#{:unit-test :api-test} (:env @db)))
-    (get-refreshed-settings db)
-    (memoized-settings db)))
+    (get-refreshed-settings db (:logger @db))
+    (memoized-settings db (:logger @db))))
 
 (defn get
   ([db kws]

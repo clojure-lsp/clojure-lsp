@@ -8,8 +8,7 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols :as protocols]))
 
 (def mock-diagnostics (atom {}))
 

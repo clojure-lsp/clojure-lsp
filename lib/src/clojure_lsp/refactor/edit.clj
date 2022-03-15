@@ -1,8 +1,7 @@
 (ns clojure-lsp.refactor.edit
   (:require
    [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 

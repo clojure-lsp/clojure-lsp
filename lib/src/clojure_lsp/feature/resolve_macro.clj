@@ -8,8 +8,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [lsp4clj.protocols :as protocols]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -67,7 +67,7 @@
    "clj-kondo.lint-as/def-catch-all"])
 
 (defn resolve-macro-as!
-  [zloc uri db]
+  [zloc uri db logger]
   (let [project-root-uri (:project-root-uri @db)
         producer (:producer @db)
         resolved-full-symbol-str (protocols/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
@@ -81,9 +81,10 @@
         (f.file-management/analyze-changes {:uri uri
                                             :version (:v document)
                                             :text (:text document)}
-                                           db)
-        (log/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
+                                           db
+                                           logger)
+        (logger/info logger (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
       (do
-        (log/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+        (logger/error logger (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
         (protocols/show-message (:producer @db) (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
     {:no-op? true}))

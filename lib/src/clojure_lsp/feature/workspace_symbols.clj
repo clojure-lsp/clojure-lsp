@@ -4,8 +4,7 @@
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
-   [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 

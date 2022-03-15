@@ -4,7 +4,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    [java.net URI URL JarURLConnection URLDecoder]
    [java.nio.charset StandardCharsets]
@@ -97,10 +97,10 @@
     :else #{}))
 
 (defn ^:private conform-uri
-  [uri format-settings]
+  [uri format-settings logger]
   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
     (when-not match
-      (log/error "Found invalid URI:" uri))
+      (logger/error logger "Found invalid URI:" uri))
     (str scheme+auth
          (-> path
              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
@@ -110,8 +110,8 @@
              (cond-> (:encode-colons-in-path? format-settings)
                (string/replace ":" "%3A"))))))
 
-(defn uri->path ^java.nio.file.Path [uri]
-  (-> (conform-uri uri {:upper-case-drive-letter? true})
+(defn uri->path ^java.nio.file.Path [uri db]
+  (-> (conform-uri uri {:upper-case-drive-letter? true} (:logger @db))
       URI. Paths/get))
 
 (defn plain-uri? [uri]
@@ -128,11 +128,9 @@
   [^String uri]
   (try
     (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
-    (catch UnsupportedOperationException e
-      (log/warn "Unable to decode URI. Returning URI as-is." e)
+    (catch UnsupportedOperationException _
       uri)
-    (catch IllegalArgumentException e
-      (log/warn "Unable to decode URI. Returning URI as-is." e)
+    (catch IllegalArgumentException _
       uri)))
 
 (defn uri->filename
@@ -185,7 +183,8 @@
           (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
         (.toString (filepath->uri-obj filename)))
-      (get-in @db [:settings :uri-format]))))
+      (get-in @db [:settings :uri-format])
+      (:logger @db))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
@@ -352,12 +351,12 @@
 (defmacro logging-time
   "Executes `body` logging `message` formatted with the time spent
   from body."
-  [message & body]
+  [logger message & body]
   (let [start-sym (gensym "start-time")]
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(log/infof ~message (start-time->end-time-seconds ~start-sym))
+          `(logger/info ~logger (format  ~message (start-time->end-time-seconds ~start-sym)))
           (meta &form))
        result#)))
 

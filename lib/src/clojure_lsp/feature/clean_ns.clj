@@ -8,8 +8,7 @@
    [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
-   [rewrite-clj.zip.subedit :as zsub]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip.subedit :as zsub]))
 
 (set! *warn-on-reflection* true)
 

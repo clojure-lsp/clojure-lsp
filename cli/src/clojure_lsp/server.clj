@@ -9,7 +9,6 @@
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handlers]
-   [clojure-lsp.logging :as logging]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -17,7 +16,9 @@
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.core :as lsp]
-   [lsp4clj.protocols :as protocols])
+   [lsp4clj.protocols :as protocols]
+   [lsp4clj.protocols.logger :as logger]
+   [taoensso.timbre :as log])
   (:import
    (clojure_lsp
      ClojureLanguageClient
@@ -25,11 +26,9 @@
    (clojure_lsp.feature.clojuredocs ClojuredocsParams)
    (clojure_lsp.feature.cursor_info CursorInfoParams)
    (java.util.concurrent CompletableFuture)
-   (lsp4clj.core
-     LSPServer
-     ILSPFeatureHandler
-     ILSPProducer
-     ILSPLogger)
+   (lsp4clj.core LSPServer)
+   (lsp4clj.protocols ILSPFeatureHandler ILSPProducer)
+   (lsp4clj.protocols.logger ILSPLogger)
    (org.eclipse.lsp4j
      InitializeParams
      InitializedParams)
@@ -48,7 +47,37 @@
   (lsp/start :extension
              (CompletableFuture/completedFuture
                (lsp/end
+                 (:logger @db/db)
                  (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
+
+(defrecord TimbreLogger [db]
+  logger/ILSPLogger
+  (setup [_this]
+    (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
+      (log/merge-config! {:middleware [#(assoc % :hostname_ "")]
+                          :appenders {:println {:enabled? false}
+                                      :spit (log/spit-appender {:fname log-path})}})
+      (log/handle-uncaught-jvm-exceptions!)
+      (swap! db assoc :log-path log-path)))
+
+  (set-log-path [_this log-path]
+    (log/merge-config! {:appenders {:spit (log/spit-appender {:fname log-path})}}))
+
+  (info [_this arg1] (log/info arg1))
+  (info [_this arg1 arg2] (log/info arg1 arg2))
+  (info [_this arg1 arg2 arg3] (log/info arg1 arg2 arg3))
+
+  (warn [_this arg1] (log/warn arg1))
+  (warn [_this arg1 arg2] (log/warn arg1 arg2))
+  (warn [_this arg1 arg2 arg3] (log/warn arg1 arg2 arg3))
+
+  (error [_this arg1] (log/error arg1))
+  (error [_this arg1 arg2] (log/error arg1 arg2))
+  (error [_this arg1 arg2 arg3] (log/error arg1 arg2 arg3))
+
+  (debug [_this arg1] (log/debug arg1))
+  (debug [_this arg1 arg2] (log/debug arg1 arg2))
+  (debug [_this arg1 arg2 arg3] (log/debug arg1 arg2 arg3)))
 
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
@@ -78,11 +107,12 @@
     (go
       (when (some-> @db/db :client-capabilities :experimental j/from-java :testTree)
         (shared/logging-time
+          logger
           "Refreshing testTree took %s secs"
           (doseq [uri uris]
             (when-let [test-tree (f.test-tree/tree uri db)]
               (->> test-tree
-                   (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params logger)
+                   (coercer/conform-or-log logger ::clojure-coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
 (deftype ClojureLspServer
@@ -105,12 +135,13 @@
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
       (->> (clojure-feature/server-info-raw feature-handler)
-           (coercer/conform-or-log ::clojure-coercer/server-info-raw logger))))
+           (coercer/conform-or-log logger ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (lsp/start :server-info-log
                (future
                  (lsp/end
+                   logger
                    (clojure-feature/server-info-log feature-handler)))))
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
@@ -121,7 +152,7 @@
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (lsp/start :cursor-info-log
                (future
-                 (lsp/sync-notification params clojure-feature/cursor-info-log feature-handler))))
+                 (lsp/sync-notification logger params clojure-feature/cursor-info-log feature-handler))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (lsp/start :clojuredocsRaw
@@ -168,17 +199,20 @@
                     "clojuredocs" true}}))
 
 (defn run-server! []
-  (let [timbre-logger (logging/->TimbreLogger db/db)
-        _ (protocols/info timbre-logger "Starting server...")
-        is (or System/in (lsp/tee-system-in System/in))
-        os (or System/out (lsp/tee-system-out System/out))
+  (let [timbre-logger (->TimbreLogger db/db)
+        _ (logger/setup timbre-logger)
+        _ (logger/info timbre-logger "Starting server...")
+        is (or System/in (lsp/tee-system-in System/in timbre-logger))
+        os (or System/out (lsp/tee-system-out System/out timbre-logger))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
+                                              timbre-logger
                                               db/db
                                               db/initial-db
                                               capabilites
                                               client-settings)
-                                  clojure-feature-handler)
+                                  clojure-feature-handler
+                                  timbre-logger)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
@@ -188,9 +222,11 @@
                                        (lsp/->LSPProducer language-client timbre-logger db/db)
                                        timbre-logger
                                        db/db)]
+    (swap! db/db assoc
+           :producer producer
+           :logger timbre-logger
+           :feature-handler clojure-feature-handler)
     (nrepl/setup-nrepl db/db)
-    (swap! db/db assoc :producer producer)
-    (swap! db/db assoc :feature-handler clojure-feature-handler)
     (go-loop [edit (<! db/edits-chan)]
       (protocols/publish-workspace-edit producer edit)
       (recur (<! db/edits-chan)))
@@ -199,14 +235,14 @@
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-changes (<! debounced-changes) db/db)
+        (f.file-management/analyze-changes (<! debounced-changes) db/db timbre-logger)
         (catch Exception e
-          (protocols/error timbre-logger e "Error during analyzing buffer file changes")))
+          (logger/error timbre-logger e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) db/db)
+        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) db/db timbre-logger)
         (catch Exception e
-          (protocols/error timbre-logger e "Error during analyzing created watched files")))
+          (logger/error timbre-logger e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))

@@ -2,6 +2,8 @@
 
 (set! *warn-on-reflection* true)
 
+;; TODO move each protocol to its own namespace under lsp4clj.protocols
+
 (defprotocol ILSPFeatureHandler
   (initialize [this project-root-uri client-capabilities client-settings work-done-token logger])
   (did-open [this doc])
@@ -45,25 +47,3 @@
   (show-message-request [this message type actions])
   (show-message [this message type extra])
   (register-capability [this capability]))
-
-(defprotocol ILSPLogger
-  (setup [this])
-
-  (set-log-path [_this log-path])
-
-  (info
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3])
-  (warn
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3])
-  (error
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3])
-  (debug
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3]))

@@ -12,8 +12,7 @@
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 

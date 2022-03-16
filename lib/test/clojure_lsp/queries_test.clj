@@ -426,7 +426,8 @@
                                 " f/Foo"
                                 " (^void something [_] 456))"
                                 "(f/something (->FooImpl1))"
-                                "(f/something (->FooImpl2))") (h/file-uri "file:///b.clj"))
+                                "(f/something (->FooImpl2))"
+                                "(defn make-foo [] (reify f/Foo (something [_] 123)))") (h/file-uri "file:///b.clj"))
   (testing "from protocol name definition"
     (h/assert-submaps
       '[{:name Foo
@@ -441,6 +442,15 @@
          :alias f
          :name Foo
          :from b
+         :bucket :var-usages
+         :to a}
+        {:name-row 10 :name-col 26 :name-end-row 10 :name-end-col 31
+         :row 10 :col 26 :end-col 31 :end-row 10
+         :name Foo
+         :alias f
+         :from b
+         :context {}
+         :from-var make-foo
          :bucket :var-usages
          :to a}]
       (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 16 db/db)))
@@ -461,6 +471,15 @@
         :method-name 'something
         :defined-by 'clojure.core/defrecord
         :protocol-name 'Foo
+        :bucket :protocol-impls}
+       {:impl-ns 'b
+        :row 10 :col 32 :end-row 10 :end-col 51
+        :name-row 10 :name-col 33 :name-end-row 10 :name-end-col 42
+        :protocol-ns 'a
+        :method-name 'something
+        :defined-by "extend-type"
+        :protocol-name 'Foo
+        :filename "/b.clj"
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 3 4 db/db)))
   (testing "from implementation usage"
@@ -480,6 +499,15 @@
         :method-name 'something
         :defined-by 'clojure.core/defrecord
         :protocol-name 'Foo
+        :bucket :protocol-impls}
+       {:impl-ns 'b
+        :row 10 :col 32 :end-row 10 :end-col 51
+        :name-row 10 :name-col 33 :name-end-row 10 :name-end-col 42
+        :protocol-ns 'a
+        :method-name 'something
+        :defined-by "extend-type"
+        :protocol-name 'Foo
+        :filename "/b.clj"
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 9 2 db/db))))
 

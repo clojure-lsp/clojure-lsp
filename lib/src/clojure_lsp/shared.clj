@@ -241,13 +241,21 @@
          file-type (uri->file-type uri)]
      (when (and in-project? (not= :unknown file-type))
        (->> source-paths
-            (some (fn [source-path]
+            (keep (fn [source-path]
                     (when (string/starts-with? filename (path->folder-with-slash source-path))
                       (some-> (relativize-filepath filename source-path)
                               (->> (re-find #"^(.+)\.\S+$"))
                               (nth 1)
                               (string/replace (System/getProperty "file.separator") ".")
-                              (string/replace #"_" "-"))))))))))
+                              (string/replace #"_" "-")))))
+            (reduce (fn [source-path-a source-path-b]
+                      (cond
+                        (not source-path-b) source-path-a
+                        (not source-path-a) source-path-b
+                        :else (if (> (count source-path-a)
+                                     (count source-path-b))
+                                source-path-b
+                                source-path-a))) nil))))))
 
 (defn filename->namespace [filename db]
   (uri->namespace (filename->uri filename db) filename db))

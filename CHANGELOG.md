@@ -25,6 +25,7 @@
   - Make find-implementation of `defprotocol` names find its implementations and find-implementation on `deftype`/`defrecord` methods find other implementations.
   - Add new code action `Introduce let` for existing command. #825
   - Make find-implementations consider `reify`. #827
+  - Fix namespace on file creation when nested source-paths are available. #832
 
 - API/CLI
   - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)

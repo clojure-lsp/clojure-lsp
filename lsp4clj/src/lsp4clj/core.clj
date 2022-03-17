@@ -212,12 +212,12 @@
                                 (coercer/conform-or-log logger
                                                         ::coercer/edits
                                                         (protocols/range-formatting
-                                                         handler
-                                                         doc-id
-                                                         {:row (inc (.getLine start))
-                                                          :col (inc (.getCharacter start))
-                                                          :end-row (inc (.getLine end))
-                                                          :end-col (inc (.getCharacter end))})))
+                                                          handler
+                                                          doc-id
+                                                          {:row (inc (.getLine start))
+                                                           :col (inc (.getCharacter start))
+                                                           :end-row (inc (.getLine end))
+                                                           :end-col (inc (.getCharacter end))})))
                               (catch Exception e
                                 (logger/error logger e))
                               (finally

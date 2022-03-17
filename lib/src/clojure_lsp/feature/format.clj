@@ -18,18 +18,18 @@
 (set! *warn-on-reflection* true)
 
 (defn resolve-user-cljfmt-config [db]
-  (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
-        project-root (shared/uri->filename (:project-root-uri @db))
-        cljfmt-config-file (if (string/starts-with? config-path "/")
-                             (io/file config-path)
-                             (io/file project-root config-path))]
-    (medley/deep-merge
-      (settings/get db [:cljfmt] {})
-      (when (shared/file-exists? cljfmt-config-file)
-        (if (string/ends-with? cljfmt-config-file ".clj")
-          (binding [*read-eval* false]
-            (read-string (slurp cljfmt-config-file)))
-          (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file)))))))
+  (when-let [project-root (shared/uri->filename (:project-root-uri @db))]
+    (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
+          cljfmt-config-file (if (string/starts-with? config-path "/")
+                               (io/file config-path)
+                               (io/file project-root config-path))]
+      (medley/deep-merge
+        (settings/get db [:cljfmt] {})
+        (when (shared/file-exists? cljfmt-config-file)
+          (if (string/ends-with? cljfmt-config-file ".clj")
+            (binding [*read-eval* false]
+              (read-string (slurp cljfmt-config-file)))
+            (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))))))))
 
 (defn ^:private resolve-cljfmt-config [db]
   (cljfmt.main/merge-default-options

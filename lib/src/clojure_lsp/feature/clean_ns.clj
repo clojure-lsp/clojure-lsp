@@ -67,12 +67,23 @@
                               (remove #(or (nil? %)
                                            (n/printable-only? %)))
                               (sort-by-if-enabled
-                                (comp
-                                  #(cond
-                                     (symbol? %) (string/lower-case %)
-                                     (vector? (first %)) (some-> % ffirst string/lower-case)
-                                     :else (some-> % first string/lower-case))
-                                  n/sexpr)
+                                (fn [node]
+                                  (let [tag (n/tag node)]
+                                    (cond
+                                      (identical? :token tag)
+                                      (string/lower-case (n/string node))
+
+                                      (and (identical? :vector tag)
+                                           (identical? :vector (some-> node n/children first n/tag)))
+                                      (some-> node n/sexpr ffirst string/lower-case)
+
+                                      (and (or (identical? :vector tag)
+                                               (identical? :list tag))
+                                           (first (n/children node)))
+                                      (-> node n/children first n/string string/lower-case)
+
+                                      :else
+                                      (some-> node n/sexpr first string/lower-case))))
                                 form-type
                                 (:db clean-ctx))
                               (map

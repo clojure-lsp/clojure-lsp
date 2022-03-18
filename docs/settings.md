@@ -229,23 +229,37 @@ Default: Check `:clean` in [all-available-settings.edn](https://github.com/cloju
 
 #### ns-inner-blocks-indentation 
 
-Where to place first require/import following [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#line-breaks-in-ns), `:same-line`, `:next-line` or `:keep`.
+How to indent ns children forms like require,import.
+
+##### `next-line`
+
+Keep first child on the next line of `:require`/`:import` and next children following the same indentation. Recommended by [how-to-ns](https://stuartsierra.com/2016/08/27/how-to-ns) guide too.
+Check `;; better` on [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#line-break-ns-declaration).
+
+##### `same-line`
+
+Keep first child on the same line of `:require`/`:import` and next children following the same indentation.
+Check `;; good` on [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#line-break-ns-declaration).
+
+##### `keep`
+
+Don't change indentation at all, keeping the one user selected first.
 
 #### sort
 
-##### ns
+##### `ns`
 
-Whether to enable sort of `ns` children like require,import forms following [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration).
+Whether to enable sort of `ns` children like require, import forms following [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration).
 
-##### require
+##### `require`
 
 Whether to enable sort of `:require` form. `true` to sort according to the Clojure Style Guide, `:lexicographically` to do a lexicographic sort that places unwrapped namespaces last.
 
-##### import
+##### `import`
 
 Whether to enable sort of `:import` form.
 
-##### refer
+##### `refer`
 
 Whether to enable sort of `:refer` form.
 

@@ -116,6 +116,13 @@
              :command   "inline-symbol"
              :arguments [uri line character]}})
 
+(defn ^:private introduce-let-action [uri line character]
+  {:title   "Introduce let"
+   :kind    :refactor-extract
+   :command {:title     "Introduce let"
+             :command   "introduce-let"
+             :arguments [uri line character "new-binding"]}})
+
 (defn ^:private move-to-let-action [uri line character]
   {:title   "Move to let"
    :kind    :refactor-extract
@@ -128,6 +135,13 @@
    :kind    :refactor-rewrite
    :command {:title     "Cycle privacy"
              :command   "cycle-privacy"
+             :arguments [uri line character]}})
+
+(defn ^:private cycle-fn-literal-action [uri line character]
+  {:title   "Cycle function literal"
+   :kind    :refactor-rewrite
+   :command {:title     "Cycle function literal"
+             :command   "cycle-fn-literal"
              :arguments [uri line character]}})
 
 (defn ^:private extract-function-action [uri line character]
@@ -256,6 +270,7 @@
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
+        can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []
@@ -291,6 +306,9 @@
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
 
+      @can-cycle-fn-literal?*
+      (conj (cycle-fn-literal-action uri line character))
+
       @can-thread?*
       (conj (thread-first-all-action uri line character)
             (thread-last-all-action uri line character))
@@ -310,6 +328,9 @@
       (and workspace-edit-capability?
            @allow-move-entry-down?*)
       (conj (move-coll-entry-down-action uri line character))
+
+      zloc
+      (conj (introduce-let-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))

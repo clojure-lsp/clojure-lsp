@@ -8,21 +8,37 @@
 
 (h/reset-db-after-test)
 
-(deftest find-last-by-pos
-  (is (= "foo/bar" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) (foo/bar 1)")
-                                                    {:row 1 :col 11 :end-row 1 :end-col 11}))))
-  (is (= "1" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #(+ 1 2) 3")
-                                              {:row 1 :col 10 :end-row 1 :end-col 10}))))
-  (is (= "3" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #(+ 1 2) 3")
-                                              {:row 1 :col 21 :end-row 1 :end-col 21}))))
-  (is (= "1" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #?(+ 1 2) 3")
-                                              {:row 1 :col 10 :end-row 1 :end-col 10}))))
-  (is (= "3" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) 1 #?(+ 1 2) 3")
-                                              {:row 1 :col 22 :end-row 1 :end-col 22}))))
-  (is (= "some" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) some (def other {:foo/bar 1})")
-                                                 {:row 1 :col 10 :end-row 1 :end-col 13}))))
-  (is (= "some" (z/string (edit/find-last-by-pos (z/of-string "(ns foo) some (def other #:foo{:bar 1})")
-                                                 {:row 1 :col 10 :end-row 1 :end-col 13})))))
+(deftest find-at-pos
+  (is (= "foo/bar" (-> "(foo/bar 1)" z/of-string (edit/find-at-pos 1 2) z/string)))
+  (is (= "1" (-> "1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (is (= "3" (-> "1 #(+ 1 2) 3" z/of-string (edit/find-at-pos 1 12) z/string)))
+  (is (= "1" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (is (= "2" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
+  (is (= "3" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 13) z/string)))
+  (is (= "some" (-> "some (def other {:foo/bar 1})" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (is (= "some" (-> "some (def other #:foo{:bar 1})" z/of-string (edit/find-at-pos 1 1) z/string)))
+  (testing "finds in any branch"
+    (let [zloc (z/of-string (h/code "(parent"
+                                    "  (child-1 (grandchild-1-1)"
+                                    "           (grandchild-1-2))"
+                                    "  (child-2 (grandchild-2-1)"
+                                    "           (grandchild-2-2))"
+                                    "  (child-3 (grandchild-3-1)"
+                                    "           (grandchild-3-2)))"))]
+      (is (= "parent" (-> zloc (edit/find-at-pos 1 2) z/string)))
+      (is (= "child-1" (-> zloc (edit/find-at-pos 2 4) z/string)))
+      (is (= "grandchild-1-1" (-> zloc (edit/find-at-pos 2 13) z/string)))
+      (is (= "grandchild-1-2" (-> zloc (edit/find-at-pos 3 13) z/string)))
+      (is (= "child-2" (-> zloc (edit/find-at-pos 4 4) z/string)))
+      (is (= "grandchild-2-1" (-> zloc (edit/find-at-pos 4 13) z/string)))
+      (is (= "grandchild-2-2" (-> zloc (edit/find-at-pos 5 13) z/string)))
+      (is (= "child-3" (-> zloc (edit/find-at-pos 6 4) z/string)))
+      (is (= "grandchild-3-1" (-> zloc (edit/find-at-pos 6 13) z/string)))
+      (is (= "grandchild-3-2" (-> zloc (edit/find-at-pos 7 13) z/string)))))
+  (testing "finds last in lineage"
+    (let [zloc (z/of-string "(parent (child (grandchild)))")]
+      (is (= "(child (grandchild))" (-> zloc (edit/find-at-pos 1 9) z/string)))
+      (is (= "(child (grandchild))" (-> zloc (edit/find-at-pos 1 28) z/string))))))
 
 (deftest find-op-test
   (let [code "(foo ((x) [a] (b {c d})))"
@@ -111,6 +127,10 @@
     (testing "simple" (assert-function-name "(defmulti foo [] (let [a 1] d))"))
     (testing "with meta map" (assert-function-name "(defmulti ^{:asd :ds} foo [] (let [a 1] d))"))
     (testing "with meta" (assert-function-name "(defmulti ^:private foo [] (let [a 1] d))")))
+  (testing "defmethod"
+    (testing "simple" (assert-function-name "(defmethod foo :something [] (let [a 1] d))"))
+    (testing "with meta map" (assert-function-name "(defmethod ^{:asd :ds} foo :something [] (let [a 1] d))"))
+    (testing "with meta" (assert-function-name "(defmethod ^:private foo :something [] (let [a 1] d))")))
   (testing "defonce"
     (testing "simple" (assert-function-name "(defonce foo (let [a 1] d))"))
     (testing "with meta map" (assert-function-name "(defonce ^{:asd :ds} foo (let [a 1] d))"))

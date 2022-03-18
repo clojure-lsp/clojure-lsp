@@ -39,6 +39,9 @@
 (defmethod refactor :cycle-privacy [{:keys [loc db]}]
   (r.transform/cycle-privacy loc db))
 
+(defmethod refactor :cycle-fn-literal [{:keys [loc]}]
+  (r.transform/cycle-fn-literal loc))
+
 (defmethod refactor :expand-let [{:keys [loc]}]
   (r.transform/expand-let loc))
 

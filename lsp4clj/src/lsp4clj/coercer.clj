@@ -1,4 +1,4 @@
-(ns clojure-lsp.coercer
+(ns lsp4clj.coercer
   (:require
    [clojure.data.json :as json]
    [clojure.java.data :as j]
@@ -8,25 +8,25 @@
    [medley.core :as medley]
    [taoensso.timbre :as log])
   (:import
-   (clojure_lsp.feature.test_tree
-     TestTreeParams
-     TestTreeNode
-     TestTreeKind)
    (com.google.gson JsonElement)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCall
      CallHierarchyOutgoingCall
      CallHierarchyItem
      CodeAction
+     CodeActionOptions
      CodeActionKind
      CodeLens
+     CodeLensOptions
      Command
      CompletionItem
+     CompletionOptions
      CompletionItemKind
      Diagnostic
      DiagnosticSeverity
      DocumentHighlight
      DocumentSymbol
+     ExecuteCommandOptions
      FileChangeType
      Hover
      InsertTextFormat
@@ -46,16 +46,24 @@
      CreateFileOptions
      CreateFile
      RenameFile
+     RenameOptions
      ResponseErrorCode
      PrepareRenameResult
+     SaveOptions
      SemanticTokens
+     SemanticTokensLegend
+     SemanticTokensWithRegistrationOptions
+     ServerCapabilities
      ShowDocumentParams
      SignatureHelp
+     SignatureHelpOptions
      SignatureInformation
      SymbolKind
      SymbolInformation
      TextDocumentEdit
      TextDocumentIdentifier
+     TextDocumentSyncKind
+     TextDocumentSyncOptions
      TextEdit
      VersionedTextDocumentIdentifier
      WorkDoneProgressBegin
@@ -353,32 +361,6 @@
 (s/def ::diagnostics (s/coll-of ::diagnostic))
 (s/def ::publish-diagnostics-params (s/and (s/keys :req-un [::uri ::diagnostics])
                                            (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))
-
-(def test-tree-kind-enum
-  {:namespace 1 :deftest 2 :testing 3})
-
-(s/def :test-tree/kind (s/and keyword?
-                              test-tree-kind-enum
-                              (s/conformer (fn [v] (TestTreeKind/forValue (get test-tree-kind-enum v))))))
-
-(s/def :test-tree/name-range ::range)
-(s/def :test-tree/children (s/coll-of :test-tree/test-node))
-
-(s/def :test-tree/test-node (s/and (s/keys :req-un [::name ::range :test-tree/name-range :test-tree/kind]
-                                           :opt-un [:test-tree/children])
-                                   (s/conformer #(doto (TestTreeNode.)
-                                                   (.setName (:name %1))
-                                                   (.setRange (:range %1))
-                                                   (.setNameRange (:name-range %1))
-                                                   (.setKind (:kind %1))
-                                                   (.setChildren (:children %1))))))
-
-(s/def :test-tree/tree :test-tree/test-node)
-
-(s/def ::publish-test-tree-params (s/and (s/keys :req-un [::uri :test-tree/tree])
-                                         (s/conformer #(doto (TestTreeParams.)
-                                                         (.setUri (:uri %1))
-                                                         (.setTree (:tree %1))))))
 
 (s/def ::marked-string (s/and (s/or :string string?
                                     :marked-string (s/and (s/keys :req-un [::language ::value])
@@ -698,9 +680,52 @@
 (s/def ::client-capabilities (s/and ::legacy-debean
                                     (s/keys :opt-un [:capabilities/workspace :capabilities/text-document])))
 
-(s/def ::server-info-raw ::bean)
-(s/def ::cursor-info-raw ::bean)
-(s/def ::clojuredocs-raw ::bean)
+(s/def ::signature-help-provider (s/conformer #(cond (vector? %) (SignatureHelpOptions. %)
+                                                     (map? %) (SignatureHelpOptions. (:trigger-characters %) (:retrigger-characters %))
+                                                     :else (SignatureHelpOptions. %))))
+(s/def ::code-action-provider (s/conformer #(when (vector? %) (CodeActionOptions. %))))
+(s/def ::completion-provider (s/conformer #(when (map? %) (CompletionOptions. (:resolve-provider %1) (:trigger-characters %1)))))
+(s/def ::execute-command-provider (s/conformer #(when (vector? %) (doto (ExecuteCommandOptions.)
+                                                                    (.setCommands %)))))
+(s/def ::semantic-tokens-provider (s/conformer #(when (and (:token-types %)
+                                                           (:token-modifiers %)) (doto (SemanticTokensWithRegistrationOptions.)
+                                                                                   (.setLegend (doto (SemanticTokensLegend.
+                                                                                                       (:token-types %)
+                                                                                                       (:token-modifiers %))))
+                                                                                   (.setRange (:range %))
+                                                                                   (.setFull ^Boolean (get % :full false))))))
+(s/def ::text-document-sync (s/conformer #(doto (TextDocumentSyncOptions.)
+                                            (.setOpenClose true)
+                                            (.setChange (case %
+                                                          :full TextDocumentSyncKind/Full
+                                                          :incremental TextDocumentSyncKind/Incremental
+                                                          TextDocumentSyncKind/Full))
+                                            (.setSave (SaveOptions. true)))))
+
+(s/def ::server-capabilities (s/and (s/keys :opt-un [::document-highlight-provider
+                                                     ::signature-help-provider ::text-document-sync ::execute-command-provider ::completion-provider ::code-action-provider ::semantic-tokens-provider])
+                                    (s/conformer #(doto (ServerCapabilities.)
+                                                    (.setDocumentHighlightProvider ^Boolean (:document-highlight-provider %1))
+                                                    (.setHoverProvider ^Boolean (:hover-provider %1))
+                                                    (.setDeclarationProvider ^Boolean (:declaration-provider %1))
+                                                    (.setImplementationProvider ^Boolean (:implementation-provider %1))
+                                                    (.setSignatureHelpProvider (:signature-help-provider %1))
+                                                    (.setCallHierarchyProvider ^Boolean (:call-hierarchy-provider %1))
+                                                    (.setLinkedEditingRangeProvider ^Boolean (:linked-editing-range-provider %1))
+                                                    (.setCodeActionProvider ^CodeActionOptions (:code-action-provider %1))
+                                                    (.setCodeLensProvider (CodeLensOptions. ^Boolean (:code-lens-provider %1)))
+                                                    (.setReferencesProvider ^Boolean (:references-provider %1))
+                                                    (.setRenameProvider (RenameOptions. ^Boolean (:rename-provider %1)))
+                                                    (.setDefinitionProvider ^Boolean (:definition-provider %1))
+                                                    (.setDocumentFormattingProvider ^Boolean (:document-formatting-provider %1))
+                                                    (.setDocumentRangeFormattingProvider ^Boolean (:document-range-formatting-provider %1))
+                                                    (.setDocumentSymbolProvider ^Boolean (:document-symbol-provider %1))
+                                                    (.setWorkspaceSymbolProvider ^Boolean (:workspace-symbol-provider %1))
+                                                    (.setSemanticTokensProvider (:semantic-tokens-provider %1))
+                                                    (.setExecuteCommandProvider (:execute-command-provider %1))
+                                                    (.setTextDocumentSync ^TextDocumentSyncOptions (:text-document-sync %1))
+                                                    (.setCompletionProvider (:completion-provider %1))
+                                                    (.setExperimental (:experimental %))))))
 
 (defn conform-or-log [spec value]
   (when value

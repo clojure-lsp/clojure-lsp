@@ -1,6 +1,6 @@
 (ns integration.stubs-test
   (:require
-   [clojure.test :refer [deftest testing]]
+   [clojure.test :refer [deftest testing is]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
    [integration.lsp :as lsp]))
@@ -11,9 +11,11 @@
   (h/delete-project-file "../../.lsp/.cache")
   (h/delete-project-file "../../.clj-kondo/.cache")
   (lsp/start-process!)
-  (lsp/request! (fixture/initialize-request {:initializationOptions (assoc fixture/default-init-options
-                                                                           :stubs {:generation {:namespaces #{"datomic.api"}}})}))
+  (lsp/request! (fixture/initialize-request
+                  {:initializationOptions (assoc fixture/default-init-options
+                                                 :stubs {:generation {:namespaces #{"datomic.api"}}})}))
   (lsp/notify! (fixture/initialized-notification))
+  (Thread/sleep 5000) ;; Wait for async stubs generation
   (lsp/notify! (fixture/did-open-notification "stubs/a.clj"))
 
   (testing "After stub generation we find datomic.api analysis and diagnostics."

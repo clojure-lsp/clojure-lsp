@@ -10,12 +10,6 @@
 
 (set! *warn-on-reflection* true)
 
-(def diagnostics-debounce-ms 100)
-(def change-debounce-ms 300)
-
-(defn clojure-lsp-version []
-  (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
-
 (defn read-edn-file [^java.io.File file]
   (try
     (->> (slurp file)

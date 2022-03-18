@@ -9,9 +9,12 @@
 
 (set! *warn-on-reflection* true)
 
-(defonce db (atom {:documents {}}))
+(def initial-db {:documents {}
+                 :processing-changes #{}})
+(defonce db (atom initial-db))
 (defonce current-changes-chan (async/chan 1))
 (defonce diagnostics-chan (async/chan 1))
+(defonce created-watched-files-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
 (def version 1)

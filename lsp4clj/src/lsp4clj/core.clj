@@ -174,7 +174,7 @@
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
            (async-request logger params feature-handler/completion handler ::coercer/completion-items (fn [items]
-                                                                                                  (format "total items: %s" (count items))))))
+                                                                                                        (format "total items: %s" (count items))))))
 
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem
@@ -362,13 +362,13 @@
              (do
                (logger/info logger "Initializing...")
                (feature-handler/initialize feature-handler
-                                     (.getRootUri params)
-                                     (client-capabilities params logger)
-                                     (-> params
-                                         coercer/java->clj
-                                         client-settings)
-                                     (some-> (.getWorkDoneToken params) .get str)
-                                     logger)
+                                           (.getRootUri params)
+                                           (client-capabilities params logger)
+                                           (-> params
+                                               coercer/java->clj
+                                               client-settings)
+                                           (some-> (.getWorkDoneToken params) .get str)
+                                           logger)
                (when-let [parent-process-id (.getProcessId params)]
                  (start-parent-process-liveness-probe! parent-process-id logger this))
                (let [capabilities (capabilities-fn db)]

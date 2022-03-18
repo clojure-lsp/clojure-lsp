@@ -7,8 +7,8 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [com.climate.claypoole :as cp]
-   [medley.core :as medley]
-   [lsp4clj.protocols.logger :as logger]))
+   [lsp4clj.protocols.logger :as logger]
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 

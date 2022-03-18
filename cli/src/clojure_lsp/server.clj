@@ -205,8 +205,8 @@
 
 (defn run-server! []
   (let [db db/db
-        timbre-logger (->TimbreLogger db)
-        _ (logger/setup timbre-logger)
+        timbre-logger (doto (->TimbreLogger db)
+                        (logger/setup))
         _ (logger/info timbre-logger "Starting server...")
         is (or System/in (lsp/tee-system-in System/in timbre-logger))
         os (or System/out (lsp/tee-system-out System/out timbre-logger))

@@ -13,9 +13,9 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [lsp4clj.components :as components]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
-   [lsp4clj.components :as components])
+   [lsp4clj.protocols.producer :as producer])
   (:import
    [java.io File]))
 

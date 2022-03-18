@@ -161,7 +161,7 @@
   (h/load-code-and-locs "(ns a) (def foo \"Some docs\" 1)")
   (testing "When element does not contains data"
     (is (= {:label "Some" :kind :module}
-           (f.completion/resolve-item {:label "Some" :kind :module} db/db))))
+           (f.completion/resolve-item {:label "Some" :kind :module} h/components))))
   (testing "When element contains data of a element/knows the element"
     (h/assert-submap {:label "foo"
                       :documentation [{:language "clojure" :value "a/foo"}
@@ -174,7 +174,7 @@
                                                         :filename (h/file-path "/a.clj")
                                                         :name-row 1
                                                         :name-col 13}}
-                                                db/db)))
+                                                h/components)))
   (testing "When element contains data of a element/knows the element"
     (h/assert-submap {:label "foo"
                       :documentation [{:language "clojure" :value "a/foo"}
@@ -188,7 +188,7 @@
                                                         :name-row 1
                                                         :name-col 13
                                                         :ns "a"}}
-                                                db/db))))
+                                                h/components))))
 
 (deftest completing-refers
   (h/load-code-and-locs

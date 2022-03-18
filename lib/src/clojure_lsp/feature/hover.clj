@@ -62,7 +62,7 @@
                              (string/join "\n---\n"))))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} {:keys [db components]}]
+  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} {:keys [db] :as components}]
   (let [content-formats (get-in @db [:client-capabilities :text-document :hover :content-format])
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
                                 (settings/get db [:show-docs-arity-on-same-line?]))

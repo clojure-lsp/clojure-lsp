@@ -8,6 +8,8 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
+   [lsp4clj.components :as components]
+   [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer]))
 
 (def mock-diagnostics (atom {}))
@@ -41,13 +43,39 @@
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
+(defrecord TestLogger []
+  logger/ILSPLogger
+  (setup [_])
+
+  (set-log-path [_this _log-path])
+
+  (info [_this _arg1])
+  (info [_this _arg1 _arg2])
+  (info [_this _arg1 _arg2 _arg3])
+  (warn [_this _arg1])
+  (warn [_this _arg1 _arg2])
+  (warn [_this _arg1 _arg2 _arg3])
+  (error [_this _arg1])
+  (error [_this _arg1 _arg2])
+  (error [_this _arg1 _arg2 _arg3])
+  (debug [_this _arg1])
+  (debug [_this _arg1 _arg2])
+  (debug [_this _arg1 _arg2 _arg3]))
+
+(def components
+  (components/->components
+    db/db
+    (->TestLogger)
+    (->TestProducer)))
+
 (defn clean-db!
   ([]
    (clean-db! :unit-test))
   ([env]
    (reset! db/db (assoc db/initial-db
                         :env env
-                        :producer (->TestProducer)))
+                        :producer (:producer components)
+                        :logger (:logger components)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))

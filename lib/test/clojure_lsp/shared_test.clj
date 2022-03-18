@@ -102,11 +102,13 @@
   (testing "lower case drive letter and encode colons"
     (is (= "file:///c%3A/path"
            (#'shared/conform-uri "file:///C:/path" {:encode-colons-in-path?   true
-                                                    :upper-case-drive-letter? false}))))
+                                                    :upper-case-drive-letter? false}
+                                 (:logger h/components)))))
   (testing "upper case drive letter and do not encode colons"
     (is (= "file:///C:/path"
            (#'shared/conform-uri "file:///c:/path" {:encode-colons-in-path?   false
-                                                    :upper-case-drive-letter? true})))))
+                                                    :upper-case-drive-letter? true}
+                                 (:logger h/components))))))
 
 (deftest relativize-filepath
   (is (= (h/file-path "some/path.clj")

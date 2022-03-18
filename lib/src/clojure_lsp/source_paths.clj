@@ -191,7 +191,7 @@
        :source-paths source-paths
        :classpath-paths source-paths})))
 
-(defn ^:private resolve-source-paths [root-path classpath settings given-source-paths logger]
+(defn ^:private resolve-source-paths [root-path classpath given-source-paths settings logger]
   (if given-source-paths
     {:source-paths given-source-paths
      :origins #{:settings}}
@@ -202,7 +202,7 @@
          :origins #{:default}})))
 
 (defn process-source-paths [root-path classpath settings logger given-source-paths]
-  (let [{:keys [origins source-paths classpath-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path classpath settings given-source-paths logger)]
+  (let [{:keys [origins source-paths classpath-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path classpath given-source-paths settings logger)]
     (when (contains? origins :settings) (logger/info logger "Using given source-paths:" given-source-paths))
     (when (contains? origins :classpath) (logger/info logger "Using source-paths from classpath:" classpath-paths))
     (when (contains? origins :deps-edn) (logger/info logger "Manually resolved source-paths from deps.edn:" deps-source-paths))

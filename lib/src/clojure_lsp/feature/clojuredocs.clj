@@ -66,6 +66,6 @@
             (refresh-cache! components))
           nil)))))
 
-(defn find-hover-docs-for [sym-name sym-ns {:keys [db] :as component}]
+(defn find-hover-docs-for [sym-name sym-ns {:keys [db] :as components}]
   (when (settings/get db [:hover :clojuredocs] true)
-    (find-docs-for sym-name sym-ns component)))
+    (find-docs-for sym-name sym-ns components)))

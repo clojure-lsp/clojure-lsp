@@ -1,8 +1,4 @@
-(ns lsp4clj.protocols)
-
-(set! *warn-on-reflection* true)
-
-;; TODO move each protocol to its own namespace under lsp4clj.protocols
+(ns lsp4clj.protocols.feature-handler)
 
 (defprotocol ILSPFeatureHandler
   (initialize [this project-root-uri client-capabilities client-settings work-done-token logger])
@@ -37,13 +33,3 @@
   ;; (did-delete-files [this doc])
   (workspace-symbols [this doc])
   (range-formatting [this doc-id format-pos]))
-
-(defprotocol ILSPProducer
-  (refresh-code-lens [this])
-  (publish-diagnostic [this diagnostic])
-  (publish-workspace-edit [this edit])
-  (publish-progress [this percentage message progress-token])
-  (show-document-request [this document-request])
-  (show-message-request [this message type actions])
-  (show-message [this message type extra])
-  (register-capability [this capability]))

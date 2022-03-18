@@ -4,14 +4,15 @@
    [clojure.java.shell :as shell]
    [clojure.string :as string]
    [lsp4clj.coercer :as coercer]
-   [lsp4clj.protocols :as protocols]
-   [lsp4clj.protocols.logger :as logger])
+   [lsp4clj.protocols.feature-handler :as feature-handler]
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer])
   (:import
    (java.util.concurrent
      CompletableFuture
      CompletionException)
    (java.util.function Supplier)
-   (lsp4clj.protocols ILSPFeatureHandler)
+   (lsp4clj.protocols.feature_handler ILSPFeatureHandler)
    (lsp4clj.protocols.logger ILSPLogger)
    (org.eclipse.lsp4j
      ApplyWorkspaceEditParams
@@ -150,54 +151,54 @@
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
     (start :didOpen
-           (sync-notification logger params protocols/did-open handler)))
+           (sync-notification logger params feature-handler/did-open handler)))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
     (start :didChange
-           (sync-notification logger params protocols/did-change handler)))
+           (sync-notification logger params feature-handler/did-change handler)))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
     (start :didSave
            (future
-             (sync-notification logger params protocols/did-save handler)))
+             (sync-notification logger params feature-handler/did-save handler)))
     (CompletableFuture/completedFuture 0))
 
   (^void didClose [_ ^DidCloseTextDocumentParams params]
     (start :didClose
-           (async-notification logger params protocols/did-close handler)))
+           (async-notification logger params feature-handler/did-close handler)))
 
   (^CompletableFuture references [_ ^ReferenceParams params]
     (start :references
-           (async-request logger params protocols/references handler ::coercer/locations)))
+           (async-request logger params feature-handler/references handler ::coercer/locations)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
-           (async-request logger params protocols/completion handler ::coercer/completion-items (fn [items]
+           (async-request logger params feature-handler/completion handler ::coercer/completion-items (fn [items]
                                                                                                   (format "total items: %s" (count items))))))
 
   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
     (start :resolveCompletionItem
-           (async-request logger item protocols/completion-resolve-item handler ::coercer/completion-item)))
+           (async-request logger item feature-handler/completion-resolve-item handler ::coercer/completion-item)))
 
   (^CompletableFuture prepareRename [_ ^PrepareRenameParams params]
     (start :prepare-rename
-           (async-request logger params protocols/prepare-rename handler ::coercer/prepare-rename-or-error)))
+           (async-request logger params feature-handler/prepare-rename handler ::coercer/prepare-rename-or-error)))
 
   (^CompletableFuture rename [_ ^RenameParams params]
     (start :rename
-           (async-request logger params protocols/rename handler ::coercer/workspace-edit-or-error)))
+           (async-request logger params feature-handler/rename handler ::coercer/workspace-edit-or-error)))
 
   (^CompletableFuture hover [_ ^HoverParams params]
     (start :hover
-           (async-request logger params protocols/hover handler ::coercer/hover)))
+           (async-request logger params feature-handler/hover handler ::coercer/hover)))
 
   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams params]
     (start :signatureHelp
-           (async-request logger params protocols/signature-help handler ::coercer/signature-help)))
+           (async-request logger params feature-handler/signature-help handler ::coercer/signature-help)))
 
   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
     (start :formatting
-           (async-request logger params protocols/formatting handler ::coercer/edits)))
+           (async-request logger params feature-handler/formatting handler ::coercer/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
     (start :rangeFormatting
@@ -211,7 +212,7 @@
                                     end (.getEnd range)]
                                 (coercer/conform-or-log logger
                                                         ::coercer/edits
-                                                        (protocols/range-formatting
+                                                        (feature-handler/range-formatting
                                                           handler
                                                           doc-id
                                                           {:row (inc (.getLine start))
@@ -227,59 +228,59 @@
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
     (start :codeAction
-           (async-request logger params protocols/code-actions handler ::coercer/code-actions)))
+           (async-request logger params feature-handler/code-actions handler ::coercer/code-actions)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
     (start :codeLens
-           (async-request logger params protocols/code-lens handler ::coercer/code-lenses)))
+           (async-request logger params feature-handler/code-lens handler ::coercer/code-lenses)))
 
   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
     (start :resolveCodeLens
-           (async-request logger params protocols/code-lens-resolve handler ::coercer/code-lens)))
+           (async-request logger params feature-handler/code-lens-resolve handler ::coercer/code-lens)))
 
   (^CompletableFuture definition [_ ^DefinitionParams params]
     (start :definition
-           (async-request logger params protocols/definition handler ::coercer/location)))
+           (async-request logger params feature-handler/definition handler ::coercer/location)))
 
   (^CompletableFuture declaration [_ ^DeclarationParams params]
     (start :declaration
-           (async-request logger params protocols/declaration handler ::coercer/location)))
+           (async-request logger params feature-handler/declaration handler ::coercer/location)))
 
   (^CompletableFuture implementation [_ ^ImplementationParams params]
     (start :implementation
-           (async-request logger params protocols/implementation handler ::coercer/locations)))
+           (async-request logger params feature-handler/implementation handler ::coercer/locations)))
 
   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
     (start :documentSymbol
-           (async-request logger params protocols/document-symbol handler ::coercer/document-symbols)))
+           (async-request logger params feature-handler/document-symbol handler ::coercer/document-symbols)))
 
   (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
     (start :documentHighlight
-           (async-request logger params protocols/document-highlight handler ::coercer/document-highlights)))
+           (async-request logger params feature-handler/document-highlight handler ::coercer/document-highlights)))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
     (start :semanticTokensFull
-           (async-request logger params protocols/semantic-tokens-full handler ::coercer/semantic-tokens)))
+           (async-request logger params feature-handler/semantic-tokens-full handler ::coercer/semantic-tokens)))
 
   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
     (start :semanticTokensRange
-           (async-request logger params protocols/semantic-tokens-range handler ::coercer/semantic-tokens)))
+           (async-request logger params feature-handler/semantic-tokens-range handler ::coercer/semantic-tokens)))
 
   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
     (start :prepareCallHierarchy
-           (async-request logger params protocols/prepare-call-hierarchy handler ::coercer/call-hierarchy-items)))
+           (async-request logger params feature-handler/prepare-call-hierarchy handler ::coercer/call-hierarchy-items)))
 
   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
     (start :callHierarchyIncomingCalls
-           (async-request logger params protocols/call-hierarchy-incoming handler ::coercer/call-hierarchy-incoming-calls)))
+           (async-request logger params feature-handler/call-hierarchy-incoming handler ::coercer/call-hierarchy-incoming-calls)))
 
   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
     (start :callHierarchyOutgoingCalls
-           (async-request logger params protocols/call-hierarchy-outgoing handler ::coercer/call-hierarchy-outgoing-calls)))
+           (async-request logger params feature-handler/call-hierarchy-outgoing handler ::coercer/call-hierarchy-outgoing-calls)))
 
   (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
     (start :linkedEditingRange
-           (async-request logger params protocols/linked-editing-ranges handler ::coercer/linked-editing-ranges-or-error))))
+           (async-request logger params feature-handler/linked-editing-ranges handler ::coercer/linked-editing-ranges-or-error))))
 
 (deftype LSPWorkspaceService
          [^ILSPFeatureHandler handler
@@ -288,7 +289,7 @@
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
     (start :executeCommand
            (future
-             (sync-notification logger params protocols/execute-command handler)))
+             (sync-notification logger params feature-handler/execute-command handler)))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
@@ -296,7 +297,7 @@
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
-           (async-notification logger params protocols/did-change-watched-files handler)))
+           (async-notification logger params feature-handler/did-change-watched-files handler)))
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
@@ -305,7 +306,7 @@
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (start :workspaceSymbol
-           (async-request logger params protocols/workspace-symbols handler ::coercer/workspace-symbols))))
+           (async-request logger params feature-handler/workspace-symbols handler ::coercer/workspace-symbols))))
 
 (defn client-capabilities
   [^InitializeParams params
@@ -360,7 +361,7 @@
              logger
              (do
                (logger/info logger "Initializing...")
-               (protocols/initialize feature-handler
+               (feature-handler/initialize feature-handler
                                      (.getRootUri params)
                                      (client-capabilities params logger)
                                      (-> params
@@ -380,7 +381,7 @@
              logger
              (do
                (logger/info logger "Initialized!")
-               (protocols/register-capability
+               (producer/register-capability
                  (:producer @db)
                  (RegistrationParams.
                    [(Registration. "id" "workspace/didChangeWatchedFiles"
@@ -437,7 +438,7 @@
            [^LanguageClient client
             ^ILSPLogger logger
             db]
-  protocols/ILSPProducer
+  producer/ILSPProducer
 
   (publish-diagnostic [_this diagnostic]
     (->> diagnostic

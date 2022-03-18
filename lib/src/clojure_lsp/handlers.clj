@@ -25,8 +25,9 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
+   [lsp4clj.protocols.feature-handler :as feature-handler]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols :as protocols])
+   [lsp4clj.protocols.producer :as producer])
   (:import
    [java.net
     URL
@@ -47,8 +48,13 @@
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
-(defn initialize [project-root-uri client-capabilities client-settings work-done-token logger]
-  (swap! db/db assoc :project-analysis-type :project-and-deps)
+(defn initialize
+  [project-root-uri
+   client-capabilities
+   client-settings
+   work-done-token
+   {:keys [db] :as components}]
+  (swap! db assoc :project-analysis-type :project-and-deps)
   (when project-root-uri
     (crawler/initialize-project
       project-root-uri
@@ -56,8 +62,7 @@
       client-settings
       {}
       work-done-token
-      logger
-      db/db)))
+      components)))
 
 (defn did-open [{:keys [textDocument]}]
   (let [uri (:uri textDocument)
@@ -96,8 +101,7 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db/db))))
 
-(defn completion-resolve-item [item]
-  (f.completion/resolve-item item db/db (:logger @db/db)))
+(def completion-resolve-item f.completion/resolve-item)
 
 (defn prepare-rename [{:keys [textDocument position]}]
   (let [[row col] (shared/position->line-column position)]
@@ -182,7 +186,7 @@
      :log-path (:log-path db-value)}))
 
 (defn server-info-log []
-  (protocols/show-message
+  (producer/show-message
     (:producer @db/db)
     (with-out-str (pprint/pprint (server-info)))
     :info
@@ -202,7 +206,7 @@
                                        elements))))
 
 (defn cursor-info-log [{:keys [textDocument position]}]
-  (protocols/show-message
+  (producer/show-message
     (:producer @db/db)
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
@@ -211,8 +215,8 @@
 (defn cursor-info-raw [{:keys [textDocument position]}]
   (cursor-info [textDocument (:line position) (:character position)]))
 
-(defn clojuredocs-raw [{:keys [symName symNs]}]
-  (f.clojuredocs/find-docs-for symName symNs db/db (:logger @db/db)))
+(defn clojuredocs-raw [{:keys [symName symNs]} components]
+  (f.clojuredocs/find-docs-for symName symNs components))
 
 (defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db] :as components}]
   (let [row (inc (int line))
@@ -245,17 +249,17 @@
     (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments {:db db/db
                                                                                     :producer (:producer @db/db)
                                                                                     :logger (:logger @db/db)})]
-      (protocols/publish-workspace-edit (:producer @db/db) edit)
+      (producer/publish-workspace-edit (:producer @db/db) edit)
       (when show-document-after-edit
         (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
                                                           (shared/full-file-range)))
-             (protocols/show-document-request (:producer @db/db))))
+             (producer/show-document-request (:producer @db/db))))
       edit)))
 
-(defn hover [{:keys [textDocument position]}]
+(defn hover [{:keys [textDocument position]} components]
   (let [[line column] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)]
-    (f.hover/hover filename line column db/db (:logger @db/db))))
+    (f.hover/hover filename line column components)))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (let [[line column] (shared/position->line-column position)]
@@ -347,10 +351,10 @@
         col (-> position :character inc)]
     (f.linked-editing-range/ranges textDocument row col db/db)))
 
-(defrecord ClojureLSPFeatureHandler []
-  protocols/ILSPFeatureHandler
-  (initialize [_ project-root-uri client-capabilities client-settings work-done-token logger]
-    (initialize project-root-uri client-capabilities client-settings work-done-token logger))
+(defrecord ClojureLSPFeatureHandler [components*]
+  feature-handler/ILSPFeatureHandler
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token _logger]
+    (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
   (did-open [_ doc]
     (did-open doc))
   (did-change [_ doc]
@@ -372,13 +376,13 @@
   (completion [_ doc]
     (completion doc))
   (completion-resolve-item [_ doc]
-    (completion-resolve-item doc))
+    (completion-resolve-item doc @components*))
   (prepare-rename [_ doc]
     (prepare-rename doc))
   (rename [_ doc]
     (rename doc))
   (hover [_ doc]
-    (hover doc))
+    (hover doc @components*))
   (signature-help [_ doc]
     (signature-help doc))
   (formatting [_ doc]
@@ -421,7 +425,7 @@
   (server-info-raw [_]
     (server-info-raw))
   (clojuredocs-raw [_ doc]
-    (clojuredocs-raw doc))
+    (clojuredocs-raw doc @components*))
   (server-info-log [_]
     (server-info-log))
   (extension [_ method doc-id]

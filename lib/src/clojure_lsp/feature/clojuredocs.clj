@@ -34,10 +34,10 @@
         (finally
           (.disconnect conn))))))
 
-(defn refresh-cache! [db logger]
+(defn refresh-cache! [{:keys [db logger]}]
   (when (and (settings/get db [:hover :clojuredocs] true)
              (not (-> @db :clojuredocs :refreshing?)))
-    (logger/info (:logger @db) "Refreshing clojuredocs cache...")
+    (logger/info logger "Refreshing clojuredocs cache...")
     (swap! db assoc-in [:clojuredocs :refreshing?] true)
     (shared/logging-time
       logger
@@ -46,26 +46,26 @@
         (let [;; connection check not to wait too long
               [downloadable? conn-ex] (test-remote-url clojuredocs-edn-file-url)]
           (if (not downloadable?)
-            (logger/error (:logger @db) "Could not refresh clojuredocs." conn-ex)
+            (logger/error logger "Could not refresh clojuredocs." conn-ex)
             (swap! db assoc :clojuredocs {:cache (-> clojuredocs-edn-file-url
                                                      slurp
                                                      edn/read-string)})))
         (catch Exception e
-          (logger/error (:logger @db) "Error refreshing clojuredocs information." e)
+          (logger/error logger "Error refreshing clojuredocs information." e)
           nil)
         (finally
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))
 
-(defn find-docs-for [sym-name sym-ns db logger]
+(defn find-docs-for [sym-name sym-ns {:keys [db] :as components}]
   (when sym-ns
     (let [full-keyword (keyword (str sym-ns) (str sym-name))]
       (if-let [cache (-> @db :clojuredocs :cache)]
         (get cache full-keyword)
         (do
           (async/go
-            (refresh-cache! db logger))
+            (refresh-cache! components))
           nil)))))
 
-(defn find-hover-docs-for [sym-name sym-ns db logger]
+(defn find-hover-docs-for [sym-name sym-ns {:keys [db] :as component}]
   (when (settings/get db [:hover :clojuredocs] true)
-    (find-docs-for sym-name sym-ns db logger)))
+    (find-docs-for sym-name sym-ns component)))

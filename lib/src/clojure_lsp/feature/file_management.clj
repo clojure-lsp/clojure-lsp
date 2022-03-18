@@ -11,8 +11,8 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols]
    [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]
    [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
@@ -69,7 +69,7 @@
            (remove (partial compare-fn old-var-usages new-var-usages) new-var-usages))
          (medley/distinct-by (juxt :name)))))
 
-(defn ^:private notify-references [filename old-local-analysis new-local-analysis db logger]
+(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db logger]}]
   (async/go
     (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
           source-paths (settings/get db [:source-paths])
@@ -95,7 +95,7 @@
         (crawler/analyze-reference-filenames! filenames db logger)
         (doseq [filename filenames]
           (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (protocols/refresh-code-lens (:producer @db))))))
+        (producer/refresh-code-lens (:producer @db))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -138,7 +138,7 @@
       ;; the full content of the document.
       new-text)))
 
-(defn analyze-changes [{:keys [uri text version]} db logger]
+(defn analyze-changes [{:keys [uri text version]} {:keys [db logger] :as components}]
   (loop [state-db @db]
     (when (>= version (get-in state-db [:documents uri :v] -1))
       (when-let [kondo-result (shared/logging-time
@@ -155,7 +155,7 @@
             (do
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) db logger))
+                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
               (clojure-producer/refresh-test-tree (:producer @db) [uri]))
             (recur @db)))))))
 
@@ -170,12 +170,12 @@
                                         :text final-text
                                         :version version})))
 
-(defn analyze-watched-created-files! [uris db logger]
+(defn analyze-watched-created-files! [uris {:keys [logger db] :as components}]
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  logger
                  "Created watched files analyzed, took %s secs"
-                 (lsp.kondo/run-kondo-on-paths! filenames false db logger))
+                 (lsp.kondo/run-kondo-on-paths! filenames false components))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]

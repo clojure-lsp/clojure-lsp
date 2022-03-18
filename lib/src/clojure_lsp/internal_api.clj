@@ -13,8 +13,9 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols]
-   [lsp4clj.protocols.logger :as logger])
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]
+   [lsp4clj.components :as components])
   (:import
    [java.io File]))
 
@@ -56,7 +57,7 @@
     (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defrecord APIProducer [options]
-  protocols/ILSPProducer
+  producer/ILSPProducer
 
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
@@ -81,11 +82,12 @@
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
-(defn build-components [options]
-  {:db db/db
-   :logger (doto (->CLILogger options)
-             (logger/setup))
-   :producer (->APIProducer options)})
+(defn ^:private build-components [options]
+  (components/->components
+    db/db
+    (doto (->CLILogger options)
+      (logger/setup))
+    (->APIProducer options)))
 
 (defn ^:private edit->summary
   ([db uri edit]
@@ -171,8 +173,7 @@
                :log-path log-path)
              settings)
       nil
-      (:logger components)
-      (:db components))
+      components)
     true
     (catch clojure.lang.ExceptionInfo e
       (throw e))

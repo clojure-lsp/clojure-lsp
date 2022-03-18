@@ -6,8 +6,8 @@
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols]
-   [lsp4clj.protocols.logger :as logger])
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer])
   (:import
    (java.io ByteArrayOutputStream)
    (java.security MessageDigest)))
@@ -66,13 +66,13 @@
             paths)
           (do
             (logger/error logger (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-            (protocols/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
+            (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
             [])))
       (catch clojure.lang.ExceptionInfo e
         (throw e))
       (catch Exception e
         (logger/error logger e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-        (protocols/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
+        (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
         []))))
 
 (defn scan-classpath! [db logger]

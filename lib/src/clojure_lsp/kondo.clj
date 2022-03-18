@@ -210,26 +210,25 @@
                          :canonical-paths true}}}
       (with-additional-config (settings/all db))))
 
-(defn run-kondo-on-paths! [paths external-analysis-only? db logger]
+(defn run-kondo-on-paths! [paths external-analysis-only? {:keys [db logger]}]
   (catch-kondo-errors logger (str "paths " (string/join ", " paths))
     (kondo/run! (kondo-for-paths paths db external-analysis-only?))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
-  [paths public-only? update-callback db]
+  [paths public-only? update-callback {:keys [logger] :as components}]
   (let [total (count paths)
-        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))
-        logger (:logger @db)]
+        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (logger/info logger (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
     (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths public-only? db logger)
+      (run-kondo-on-paths! paths public-only? components)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
                           (logger/info logger "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (update-callback (inc index) batch-count)
-                          (run-kondo-on-paths! batch-paths public-only? db logger)))
+                          (run-kondo-on-paths! batch-paths public-only? components)))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db logger]

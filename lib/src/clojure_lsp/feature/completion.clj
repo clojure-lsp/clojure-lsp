@@ -445,7 +445,7 @@
         (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns
-  [{{:keys [name ns filename]} :data :as item} db logger]
+  [{{:keys [name ns filename]} :data :as item} {:keys [db] :as components}]
   (let [analysis (:analysis @db)
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
@@ -453,11 +453,11 @@
                                                 :bucket :var-usages} db)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db logger)))
+          (assoc :documentation (f.hover/hover-documentation definition components)))
       item)))
 
 (defn ^:private resolve-item-by-definition
-  [{{:keys [name filename name-row name-col]} :data :as item} db logger]
+  [{{:keys [name filename name-row name-col]} :data :as item} {:keys [db] :as components}]
   (let [local-analysis (get-in @db [:analysis filename])
         definition (q/find-first #(and (identical? :var-definitions (:bucket %))
                                        (= name (str (:name %)))
@@ -465,10 +465,10 @@
                                        (= name-col (:name-col %))) local-analysis)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db logger)))
+          (assoc :documentation (f.hover/hover-documentation definition components)))
       item)))
 
-(defn resolve-item [{{:keys [ns]} :data :as item} db logger]
+(defn resolve-item [{{:keys [ns]} :data :as item} components]
   (let [item (shared/assoc-some item
                                 :insert-text-format (:insertTextFormat item)
                                 :text-edit (:textEdit item)
@@ -476,6 +476,6 @@
                                 :insert-text (:insertText item))]
     (if (:data item)
       (if ns
-        (resolve-item-by-ns item db logger)
-        (resolve-item-by-definition item db logger))
+        (resolve-item-by-ns item components)
+        (resolve-item-by-definition item components))
       item)))

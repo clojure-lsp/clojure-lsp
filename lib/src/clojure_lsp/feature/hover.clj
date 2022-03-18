@@ -62,7 +62,7 @@
                              (string/join "\n---\n"))))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db logger]
+  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} {:keys [db components]}]
   (let [content-formats (get-in @db [:client-capabilities :text-document :hover :content-format])
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
                                 (settings/get db [:show-docs-arity-on-same-line?]))
@@ -80,7 +80,7 @@
                    (if markdown?
                      (docstring->formatted-markdown doc)
                      doc))
-        clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db logger)]
+        clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns components)]
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
@@ -107,7 +107,7 @@
         sym (cons {:language "clojure"
                    :value (if arity-on-same-line? sym-line sym)})))))
 
-(defn hover [filename line column db logger]
+(defn hover [filename line column {:keys [db] :as components}]
   (let [analysis (:analysis @db)
         element (loop [try-column column]
                   (if-let [usage (q/find-element-under-cursor analysis filename line try-column)]
@@ -118,11 +118,11 @@
     (cond
       definition
       {:range (shared/->range element)
-       :contents (hover-documentation definition db logger)}
+       :contents (hover-documentation definition components)}
 
       element
       {:range (shared/->range element)
-       :contents (hover-documentation element db logger)}
+       :contents (hover-documentation element components)}
 
       :else
       {:contents []})))

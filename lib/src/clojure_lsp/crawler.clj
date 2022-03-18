@@ -13,31 +13,31 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols]
-   [lsp4clj.protocols.logger :as logger])
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer])
   (:import
    (java.net URI)))
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private analyze-test-paths! [db]
-  (let [project-files (-> (:analysis @db/db)
-                          (q/filter-project-analysis db/db)
+(defn ^:private analyze-test-paths! [{:keys [db producer]}]
+  (let [project-files (-> (:analysis @db)
+                          (q/filter-project-analysis db)
                           keys)]
     (->> project-files
          (map #(shared/filename->uri % db))
-         (clojure-producer/refresh-test-tree (:producer @db)))))
+         (clojure-producer/refresh-test-tree producer))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-source-paths! [paths db logger]
+(defn ^:private analyze-source-paths! [paths {:keys [db logger] :as components}]
   (let [result (shared/logging-time
                  logger
                  "Project only paths analyzed, took %s secs"
-                 (lsp.kondo/run-kondo-on-paths! paths false db logger))
+                 (lsp.kondo/run-kondo-on-paths! paths false components))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
@@ -49,21 +49,21 @@
     analysis))
 
 (defn ^:private report-batch-analysis-percentage
-  [start-progress-percentage fulfill-progress-percentage progress-token db index count]
+  [start-progress-percentage fulfill-progress-percentage progress-token producer index count]
   (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
-    (protocols/publish-progress
-      (:producer @db)
+    (producer/publish-progress
+      producer
       (+ start-progress-percentage (/ (* index real-percentage) count))
       "Analyzing external classpath"
       progress-token)))
 
 (defn ^:private analyze-external-classpath!
-  [paths start-progress-percentage fulfill-progress-percentage progress-token db logger]
-  (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage progress-token db)
+  [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db logger producer] :as components}]
+  (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage progress-token producer)
         result (shared/logging-time
                  logger
                  "External classpath paths analyzed, took %s secs. Caching for next startups..."
-                 (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback db))
+                 (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback components))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages)
                            (update :var-definitions (fn [usages] (remove :private usages))))
@@ -88,16 +88,16 @@
     (swap! db update :findings merge new-findings)
     analysis))
 
-(defn ^:private analyze-classpath! [root-path source-paths settings progress-token db logger]
+(defn ^:private analyze-classpath! [root-path source-paths settings progress-token {:keys [db logger] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
-    (logger/info (:logger @db) "Analyzing classpath for project root" root-path)
+    (logger/info logger "Analyzing classpath for project root" root-path)
     (when-let [classpath (:classpath @db)]
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
             external-classpath (cond->> (->> classpath
                                              (remove (set source-paths-abs))
                                              (remove (set source-paths)))
                                  ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-            analysis (analyze-external-classpath! external-classpath 15 80 progress-token db logger)]
+            analysis (analyze-external-classpath! external-classpath 15 80 progress-token components)]
         (swap! db update :analysis merge analysis)
         (shared/logging-time
           logger
@@ -154,9 +154,8 @@
    client-settings
    force-settings
    progress-token
-   logger
-   db]
-  (protocols/publish-progress (:producer @db) 0 "clojure-lsp" progress-token)
+   {:keys [db logger producer] :as components}]
+  (producer/publish-progress producer 0 "clojure-lsp" progress-token)
   (let [project-settings (config/resolve-for-root project-root-uri logger)
         root-path (shared/uri->path project-root-uri db)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -179,9 +178,9 @@
            :force-settings force-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (protocols/publish-progress (:producer @db) 5 "Finding kondo config" progress-token)
+    (producer/publish-progress producer 5 "Finding kondo config" progress-token)
     (ensure-kondo-config-dir-exists! project-root-uri db logger)
-    (protocols/publish-progress (:producer @db) 10 "Finding cache" progress-token)
+    (producer/publish-progress producer 10 "Finding cache" progress-token)
     (load-db-cache! root-path db logger)
     (let [project-hash (classpath/project-specs->hash root-path settings logger)
           kondo-config-hash (lsp.kondo/config-hash (str root-path) logger)
@@ -193,7 +192,7 @@
           (swap! db assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings logger))))
         (do
-          (protocols/publish-progress (:producer @db) 15 "Discovering classpath" progress-token)
+          (producer/publish-progress producer 15 "Discovering classpath" progress-token)
           (let [classpath (classpath/scan-classpath! db logger)]
             (swap! db assoc
                    :project-hash project-hash
@@ -201,9 +200,9 @@
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings logger))))
           (when (= :project-and-deps (:project-analysis-type @db))
-            (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token db logger))
+            (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token components))
           (upsert-db-cache! db logger))))
-    (protocols/publish-progress (:producer @db) 90 "Resolving config paths" progress-token)
+    (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                        (:classpath @db)
                                        (config/resolve-from-classpath-config-paths (:classpath @db) settings logger))]
@@ -213,18 +212,18 @@
                                           project-settings
                                           force-settings)
              :classpath-settings classpath-settings))
-    (protocols/publish-progress (:producer @db) 95 "Analyzing project files" progress-token)
+    (producer/publish-progress producer 95 "Analyzing project files" progress-token)
     (logger/info logger "Analyzing source paths for project root" root-path)
-    (analyze-source-paths! (-> @db :settings :source-paths) db logger)
+    (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
       (async/go
-        (f.clojuredocs/refresh-cache! db logger))
+        (f.clojuredocs/refresh-cache! components))
       (async/go
         (let [settings (:settings @db)]
           (when (stubs/check-stubs? settings)
-            (stubs/generate-and-analyze-stubs! settings db logger))))
+            (stubs/generate-and-analyze-stubs! settings components))))
       (async/go
         (logger/info logger "Analyzing test paths for project root" root-path)
-        (analyze-test-paths! db)))
-    (protocols/publish-progress (:producer @db) 100 "Project analyzed" progress-token)))
+        (analyze-test-paths! components)))
+    (producer/publish-progress producer 100 "Project analyzed" progress-token)))

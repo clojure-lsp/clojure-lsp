@@ -9,7 +9,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.protocols :as protocols]
+   [lsp4clj.protocols.producer :as producer]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -816,7 +816,7 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
-              chosen-source-path (protocols/show-message-request (:producer @db) "Choose a source-path to create the test file" :info actions)]
+              chosen-source-path (producer/show-message-request (:producer @db) "Choose a source-path to create the test file" :info actions)]
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
         ;; No source paths besides current one

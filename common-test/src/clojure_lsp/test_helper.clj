@@ -8,7 +8,7 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [lsp4clj.protocols :as protocols]))
+   [lsp4clj.protocols.producer :as producer]))
 
 (def mock-diagnostics (atom {}))
 
@@ -29,7 +29,7 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  protocols/ILSPProducer
+  producer/ILSPProducer
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])

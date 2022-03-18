@@ -18,8 +18,10 @@
 ;; From rewrite-cljs; very similar to the private function
 ;; rewrite-clj.zip.findz/position-in-range? but based on zloc meta, avoiding the
 ;; need for :track-position?
-(defn in-range? [{:keys [row col end-row end-col]}
-                 {r :row c :col er :end-row ec :end-col}]
+(defn in-range?
+  "True if b is contained within a."
+  [{:keys [row col end-row end-col] :as _a}
+   {r :row c :col er :end-row ec :end-col :as _b}]
   (and (>= r row)
        (<= er end-row)
        (if (= r row) (>= c col) true)

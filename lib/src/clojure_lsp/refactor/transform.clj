@@ -37,6 +37,19 @@
                 (dissoc :loc))))
         zip-edits))
 
+(defn- unify-to-one-language
+  "Drop the clojurescript analysis info when there is also clojure info"
+  [analysis]
+  (let [langs-present (->> analysis
+                           vals
+                           flatten
+                           (map :lang)
+                           (into #{}))
+        non-clj-lang? (fn [{:keys [lang]}] (and lang (not (= :clj lang))))]
+    (if (= #{:clj :cljs} langs-present)
+      (medley/map-vals (partial remove non-clj-lang?) analysis)
+      analysis)))
+
 (defn- coll-tag [zloc]
   (get #{:vector :set :list :map} (z/tag zloc)))
 
@@ -228,16 +241,40 @@
         (recur next-loc (or marked? exists?))
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
-(defn find-let-form [zloc]
-  (some-> zloc
-          (edit/find-ops-up "let")
-          z/up))
+(defn find-let-form
+  "Finds a let-form that would be valid to move zloc to"
+  [zloc uri db]
+  (let [let-loc (some-> zloc
+                        (edit/find-ops-up "let")
+                        z/up)]
+    (when let-loc
+      (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
+            clj-analysis (unify-to-one-language (:analysis @db))
+            bindings-loc (z/right (z/down (zsub/subzip let-loc)))
+            local-defs (->> (q/find-local-usages-under-form
+                              clj-analysis
+                              (shared/uri->filename uri)
+                              row
+                              col
+                              end-row
+                              end-col)
+                            (map #(q/find-definition clj-analysis % db)))
+            valid? (->> local-defs
+                        (every? (fn [definition]
+                                  (or
+                                    ;; definition is defined in the let
+                                    (edit/in-range? (meta (z/node bindings-loc)) definition)
+                                    ;; definition's encloses the let
+                                    (edit/in-range? (set/rename-keys definition {:scope-end-row :end-row :scope-end-col :end-col})
+                                                    (meta (z/node let-loc)))))))]
+        (when valid?
+          let-loc)))))
 
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
-  [zloc binding-name]
+  [zloc binding-name uri db]
   (let [zloc (z/skip-whitespace z/right zloc)]
-    (when-let [let-top-loc (find-let-form zloc)]
+    (when-let [let-top-loc (find-let-form zloc uri db)]
       (let [let-loc       (z/down (zsub/subzip let-top-loc))
             bound-string  (z/string zloc)
             bound-node    (z/node zloc)
@@ -328,19 +365,6 @@
                        (meta (z/node (z/up (z/up let-loc))))
                        parent-meta)
               :loc (edit/join-let result-loc)}]))))))
-
-(defn- unify-to-one-language
-  "Drop the clojurescript analysis info when there is also clojure info"
-  [analysis]
-  (let [langs-present (->> analysis
-                           vals
-                           flatten
-                           (map :lang)
-                           (into #{}))
-        non-clj-lang? (fn [{:keys [lang]}] (and lang (not (= :clj lang))))]
-    (if (= #{:clj :cljs} langs-present)
-      (medley/map-vals (partial remove non-clj-lang?) analysis)
-      analysis)))
 
 (defn extract-function
   [zloc uri fn-name db]

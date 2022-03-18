@@ -54,8 +54,8 @@
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc args))
 
-(defmethod refactor :move-to-let [{:keys [loc args]}]
-  (apply r.transform/move-to-let loc args))
+(defmethod refactor :move-to-let [{:keys [loc args uri db]}]
+  (apply r.transform/move-to-let loc args uri db))
 
 (defmethod refactor :thread-first [{:keys [loc db]}]
   (r.transform/thread-first loc db))

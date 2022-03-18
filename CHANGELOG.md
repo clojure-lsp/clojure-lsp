@@ -8,6 +8,7 @@
   - Fix handling cljfmt config files that end in `.clj` https://github.com/weavejester/cljfmt/issues/190
   - parser: more efficiently seek to cursor position, improving performance especially in large files. #793 @mainej
   - Fix clean-ns not sorting properly node requires for cljs. #815
+  - Fix move-to-let to ensure locals don't move out of scope. #830
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

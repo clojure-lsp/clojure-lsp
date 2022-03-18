@@ -257,7 +257,7 @@
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
         public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
-        inside-let?* (future (r.transform/find-let-form zloc))
+        inside-let?* (future (r.transform/find-let-form zloc uri db))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))

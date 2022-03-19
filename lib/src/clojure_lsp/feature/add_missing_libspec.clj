@@ -4,6 +4,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
@@ -152,23 +154,6 @@
   (when (and qualified-ns-to-add refer-to-add)
     (add-to-namespace zloc :require-refer qualified-ns-to-add refer-to-add db)))
 
-(defn ^:private add-missing-alias-ns [zloc db]
-  (let [require-alias (some-> zloc safe-sym namespace symbol)
-        qualified-ns-to-add (:ns (find-missing-ns-alias-require zloc db))]
-    (add-known-alias zloc require-alias qualified-ns-to-add db)))
-
-(defn ^:private add-missing-refer-ns [zloc db]
-  (let [require-refer (some-> zloc safe-sym)
-        qualified-ns-to-add (:ns (find-missing-ns-refer-require zloc))]
-    (add-known-refer zloc require-refer qualified-ns-to-add db)))
-
-(defn add-missing-libspec
-  [zloc db]
-  (when-let [sym (some-> zloc safe-sym)]
-    (if (namespace sym)
-      (add-missing-alias-ns zloc db)
-      (add-missing-refer-ns zloc db))))
-
 (defn ^:private sub-segment?
   [alias-segs def-segs]
   (loop [def-segs def-segs
@@ -200,68 +185,158 @@
                    0
                    found-first-match?)))))))
 
+(defn ^:private resolve-best-alias-suggestions
+  "Turns a namespace like clojure.data.json.internal into suggested aliases
+   `[internal json.internal data.json.internal]`
+   removing existing project aliases and limiting to 1 suggestion."
+  [ns-str aliases->namespaces]
+  (->> (string/split ns-str #"\.")
+       reverse
+       (drop-while #(= "core" %))
+       (reductions
+         (fn [accum ns-str]
+           (str ns-str "." accum)))
+       (remove aliases->namespaces)
+       (remove #(= ns-str %))
+       (take 1)))
+
 (defn ^:private resolve-best-namespaces-suggestions
-  [alias-str ns-definitions]
+  [alias-str aliases->namespaces namespaces->aliases]
   (let [alias-segments (string/split alias-str #"\.")
-        all-definition-segments (map (comp #(string/split % #"\.") str) ns-definitions)]
+        all-definition-segments (map #(string/split % #"\.") (keys namespaces->aliases))]
     (->> all-definition-segments
          (filter #(sub-segment? alias-segments %))
          (filter #(not (string/ends-with? (last %) "-test")))
          (map #(string/join "." %))
-         set)))
+         (remove aliases->namespaces)
+         (mapcat (fn [suggested-ns]
+                   ;; Does the ns have existing aliases
+                   (if-let [aliases (->> (get namespaces->aliases suggested-ns)
+                                         (map (fn [[alias n]]
+                                                {:alias alias
+                                                 :ns suggested-ns
+                                                 :count n}))
+                                         seq)]
+                     aliases
+                     ;; Can we generate good alias suggestions for the found namespace
+                     (if-let [alias-suggestions (->> (resolve-best-alias-suggestions suggested-ns aliases->namespaces)
+                                                     (map (fn [suggested-alias]
+                                                            {:alias suggested-alias
+                                                             :ns suggested-ns}))
+                                                     seq)]
+                       alias-suggestions
+                       ;; We found it so use the given alias as last resort
+                       [{:alias alias-str
+                         :ns suggested-ns}]))))
+         seq)))
 
-(defn ^:private resolve-best-alias-suggestion
-  [ns-str all-aliases drop-core?]
-  (if-let [dot-index (string/last-index-of ns-str ".")]
-    (let [suggestion (subs ns-str (inc dot-index))]
-      (if (and drop-core?
-               (= "core" suggestion))
-        (resolve-best-alias-suggestion (subs ns-str 0 dot-index) all-aliases drop-core?)
-        suggestion))
-    ns-str))
+(defn ^:private find-namespace-suggestions
+  "Given a list of `[[\"ns\" \"alias\"]] pairs suggest possible requires.
+   Will only suggest existing namespaces.
+   Suggestions should be ordered from most commonly used to least."
+  [cursor-namespace-str ns-alias-pairs]
+  (let [aliases->namespaces (->> ns-alias-pairs
+                                 (group-by second)
+                                 (medley/map-vals (fn [vs]
+                                                    (->> vs
+                                                         (map first)
+                                                         frequencies
+                                                         (sort-by val)
+                                                         reverse
+                                                         (into (array-map))))))
+        namespaces->aliases (->> ns-alias-pairs
+                                 (group-by first)
+                                 (medley/map-vals (fn [vs]
+                                                    (->> vs
+                                                         (map second)
+                                                         (remove nil?)
+                                                         frequencies
+                                                         (sort-by val)
+                                                         reverse
+                                                         (into (array-map))))))
+        alias-namespaces (get aliases->namespaces cursor-namespace-str)
+        namespace-aliases (get namespaces->aliases cursor-namespace-str)
+        common-namespace (some-> (get common-sym/common-alias->info (symbol cursor-namespace-str)) str)
+        common-aliases (seq (get namespaces->aliases common-namespace))]
+    (cond
+      ;; This alias is used in the project, so suggest the aliased namespaces
+      alias-namespaces
+      (->> alias-namespaces
+           (map (fn [[alias-namespace ns-count]]
+                  {:ns alias-namespace
+                   :alias cursor-namespace-str
+                   :count ns-count})))
 
-(defn ^:private resolve-best-alias-suggestions
-  [ns-str all-aliases]
-  (let [alias (resolve-best-alias-suggestion ns-str all-aliases true)]
-    (if (contains? all-aliases (symbol alias))
-      (if-let [dot-index (string/last-index-of ns-str ".")]
-        (let [ns-without-alias (subs ns-str 0 dot-index)
-              second-alias-suggestion (resolve-best-alias-suggestion ns-without-alias all-aliases false)]
-          (if (= second-alias-suggestion alias)
-            #{alias}
-            (conj #{alias}
-                  (str second-alias-suggestion "." alias))))
-        #{alias})
-      #{alias})))
+      ;; This namespace has existing aliases
+      (and namespace-aliases (seq namespace-aliases))
+      (->> namespace-aliases
+           (mapv (fn [[namespace-alias alias-count]]
+                   {:ns cursor-namespace-str
+                    :alias namespace-alias
+                    :count alias-count})))
 
-(defn ^:private find-alias-require-suggestions [alias-str db]
-  (let [analysis (:analysis @db)
-        ns-definitions (q/find-all-ns-definition-names analysis)
-        all-aliases (->> (q/find-all-aliases analysis)
-                         (map :alias)
-                         set)]
-    (if (contains? ns-definitions (symbol alias-str))
-      (->> (resolve-best-alias-suggestions alias-str all-aliases)
-           (map (fn [suggestion]
-                  {:ns    alias-str
-                   :alias suggestion})))
-      (->> (resolve-best-namespaces-suggestions alias-str ns-definitions)
-           (map (fn [suggestion]
-                  {:ns    suggestion
-                   :alias alias-str}))))))
+      ;; This is not an existing alias, so assume an existing, fully qualified namespace
+      ;; Derive suggestions for new aliases
+      namespace-aliases
+      (conj
+        (->> (resolve-best-alias-suggestions cursor-namespace-str aliases->namespaces)
+             (mapv (fn [suggestion]
+                     {:ns cursor-namespace-str
+                      :alias suggestion})))
+        {:ns cursor-namespace-str})
 
-(defn ^:private find-refer-require-suggestions [refer db]
-  (->> (q/find-all-var-definitions (:analysis @db))
-       (filter #(= refer (:name %)))
-       (map (fn [element]
-              {:ns    (str (:ns element))
-               :refer (str refer)}))))
+      ;; Common namespace alias, aliased as something else
+      (and common-namespace common-aliases)
+      (->> common-aliases
+           (mapv (fn [[common-alias n]]
+                   {:ns common-namespace
+                    :alias common-alias
+                    :count n})))
 
-(defn find-require-suggestions [zloc db]
-  (when-let [sym (safe-sym zloc)]
-    (if-let [alias-str (namespace sym)]
-      (find-alias-require-suggestions alias-str db)
-      (find-refer-require-suggestions sym db))))
+      ;; Common namespace alias, not aliased as something else
+      common-namespace
+      [{:ns common-namespace
+        :alias cursor-namespace-str}
+       {:ns common-namespace}]
+
+      ;; not a valid namespace maybe trying to fuzzy match like `c.f.a`)
+      :else
+      (resolve-best-namespaces-suggestions cursor-namespace-str aliases->namespaces namespaces->aliases))))
+
+
+(defn find-require-suggestions [zloc uri db]
+  (when-let [cursor-sym (safe-sym zloc)]
+    (let [cursor-namespace-str (namespace cursor-sym)
+          cursor-name-str (name cursor-sym)
+          analysis (:analysis @db)
+          langs (shared/uri->available-langs uri)
+          all-aliases (->> (q/find-all-aliases analysis)
+                           (filter (fn [element]
+                                     (seq (set/intersection (-> element
+                                                                :filename
+                                                                (shared/filename->uri db)
+                                                                shared/uri->available-langs)
+                                                       langs))))
+                           (map (juxt (comp str :to) (comp str :alias))))
+          ns-definition-names (->> (q/find-all-ns-definition-names analysis)
+                                   (map (juxt str (constantly nil))))
+          alias-ns-pairs (concat all-aliases ns-definition-names)
+          namespace-suggestions (find-namespace-suggestions
+                                  (or cursor-namespace-str cursor-name-str)
+                                  alias-ns-pairs)
+          suggestions (if (namespace cursor-sym)
+                        namespace-suggestions
+                        (concat
+                          namespace-suggestions
+                          (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
+                            [{:ns (name common-refer)
+                              :refer cursor-name-str}]
+                            (->> (q/find-all-var-definitions analysis)
+                                 (filter #(= cursor-name-str (str (:name %))))
+                                 (map (fn [element]
+                                        {:ns (str (:ns element))
+                                         :refer cursor-name-str}))))))]
+      suggestions)))
 
 (defn ^:private find-forms [zloc p?]
   (->> zloc
@@ -269,20 +344,46 @@
        (take-while (complement z/end?))
        (filter p?)))
 
+(defn add-ns-to-loc-change [loc chosen-alias]
+  (let [replaced-loc (-> loc
+                         (z/replace (-> (symbol chosen-alias (-> loc safe-sym name))
+                                        n/token-node
+                                        (with-meta (meta (z/node loc))))))]
+    {:range (meta (z/node replaced-loc))
+     :loc replaced-loc}))
+
 (defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
-  (seq
-    (if chosen-alias
-      (concat (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
-              ;; When we're aliasing clojure.string to string, we want to change
-              ;; all subnodes like clojure.string/split to string/split.
-              (->> (find-forms zloc #(when-let [sym (safe-sym %)]
-                                       (and (= chosen-ns (namespace sym))
-                                            (not= chosen-alias (namespace sym)))))
-                   (map (fn [node]
-                          (z/replace node (-> (symbol chosen-alias (-> node z/sexpr name))
-                                              n/token-node
-                                              (with-meta (meta (z/node node)))))))
-                   (map (fn [loc]
-                          {:range (meta (z/node loc))
-                           :loc   loc}))))
-      (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))))
+  (when-let [cursor-sym (safe-sym zloc)]
+    (let [cursor-namespace-str (namespace cursor-sym)]
+      (seq
+        (if chosen-alias
+          (concat (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
+                  (cond
+                    cursor-namespace-str
+                    ;; When we're aliasing clojure.string to string, we want to change
+                    ;; all nodes after the namespace like clojure.string/split to string/split.
+                    (->> (find-forms (z/next (edit/find-namespace zloc))
+                                     #(when-let [sym-ns (some-> % safe-sym namespace)]
+                                        (and (or
+                                               (= chosen-ns sym-ns)
+                                               (= cursor-namespace-str sym-ns))
+                                             (not= chosen-alias sym-ns))))
+                         (map #(add-ns-to-loc-change % chosen-alias)))
+
+                    (some-> zloc safe-sym)
+                    [(add-ns-to-loc-change zloc chosen-alias)]))
+          (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db))))))
+
+(defn add-missing-libspec
+  [zloc uri db]
+  (when zloc
+    (let [all-suggestions (find-require-suggestions zloc uri db)]
+      (when-let [suggestion (some->> all-suggestions
+                              seq
+                              first)]
+        (add-require-suggestion
+          zloc
+          (:ns suggestion)
+          (:alias suggestion)
+          (:refer suggestion)
+          db)))))

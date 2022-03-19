@@ -44,11 +44,9 @@
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 2 :character 3}}}] {}
                           db/db)))
-  (testing "already used alias, we add one more suggestion"
+  (testing "already used alias, we add proper suggestion"
     (h/assert-contains-submaps
-      [{:title "Add require '[clojure.data.json :as json]'"
-        :command {:command "add-require-suggestion"}}
-       {:title "Add require '[clojure.data.json :as data.json]'"
+      [{:title "Add require '[clojure.data.json :as data.json]'"
         :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
@@ -118,7 +116,7 @@
   (testing "when it has unresolved-namespace and can find namespace"
     (h/assert-contains-submaps
       [{:title "Add require '[some-ns :as sns]'"
-        :command {:command "add-missing-libspec"}}]
+        :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           3
@@ -138,7 +136,7 @@
   (testing "when it has unresolved-symbol and it's a known refer"
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.test :refer [deftest]]'"
-        :command {:command "add-missing-libspec"}}]
+        :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           4

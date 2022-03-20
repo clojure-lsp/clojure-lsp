@@ -303,7 +303,6 @@
       :else
       (resolve-best-namespaces-suggestions cursor-namespace-str aliases->namespaces namespaces->aliases))))
 
-
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
@@ -316,7 +315,7 @@
                                                                 :filename
                                                                 (shared/filename->uri db)
                                                                 shared/uri->available-langs)
-                                                       langs))))
+                                                            langs))))
                            (map (juxt (comp str :to) (comp str :alias))))
           ns-definition-names (->> (q/find-all-ns-definition-names analysis)
                                    (map (juxt str (constantly nil))))
@@ -379,8 +378,8 @@
   (when zloc
     (let [all-suggestions (find-require-suggestions zloc uri db)]
       (when-let [suggestion (some->> all-suggestions
-                              seq
-                              first)]
+                                     seq
+                                     first)]
         (add-require-suggestion
           zloc
           (:ns suggestion)

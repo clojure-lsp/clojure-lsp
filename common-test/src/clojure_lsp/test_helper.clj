@@ -74,8 +74,7 @@
   ([env]
    (reset! db/db (assoc db/initial-db
                         :env env
-                        :producer (:producer components)
-                        :logger (:logger components)))
+                        :producer (:producer components)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))

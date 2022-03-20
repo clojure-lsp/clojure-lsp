@@ -12,19 +12,19 @@
     (with-redefs [config/get-property (constantly nil)
                   shared/file-exists? (constantly nil)
                   config/get-env (constantly nil)]
-      (is (= {} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/") (:logger h/components))))))
+      (is (= {} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when user doesn't have a home config but has a project config"
     (with-redefs [config/get-property (constantly nil)
                   config/get-env (constantly nil)
                   shared/file-exists? #(= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %))
                   slurp (constantly "{:foo {:bar 1}}")]
-      (is (= {:foo {:bar 1}} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/") (:logger h/components))))))
+      (is (= {:foo {:bar 1}} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when user has a home config but doesn't have a project config"
     (with-redefs [config/get-property (constantly (h/file-path "/home/user"))
                   config/get-env (constantly nil)
                   shared/file-exists? #(= (h/file-path "/home/user/.lsp/config.edn") (str %))
                   slurp (constantly "{:foo {:bar 1}}")]
-      (is (= {:foo {:bar 1}} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/") (:logger h/components))))))
+      (is (= {:foo {:bar 1}} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when user has a home config and a project config we merge with project as priority"
     (with-redefs [config/get-property (constantly (h/file-path "/home/user"))
                   config/get-env (constantly nil)
@@ -36,7 +36,7 @@
                             "{:foo {:baz 2}}"))]
       (is (= {:foo {:bar 1
                     :baz 2}
-              :home :bla} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/") (:logger h/components))))))
+              :home :bla} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when XDG_CONFIG_HOME is unset but user has XDG config and a project config we merge with project as priority"
     (with-redefs [config/get-property (constantly "/home/user")
                   shared/file-exists? #(or (= (h/file-path "/home/user/.config/clojure-lsp/config.edn") (str %))
@@ -49,7 +49,7 @@
       (is (= {:foo {:bar 1
                     :baz 2}
               :xdg :bla}
-             (config/resolve-for-root (h/file-uri "file:///home/user/some/project/") (:logger h/components))))))
+             (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when XDG_CONFIG_HOME is set and both global and a project config exist we merge with project as priority"
     (with-redefs [config/get-property (constantly "/home/user")
                   shared/file-exists? #(or (= (h/file-path "/tmp/config/clojure-lsp/config.edn") (str %))
@@ -66,36 +66,36 @@
       (is (= {:foo {:bar 1
                     :baz 3}
               :xdg :tmp}
-             (config/resolve-for-root (h/file-uri "file:///home/user/some/project/") (:logger h/components)))))))
+             (config/resolve-for-root (h/file-uri "file:///home/user/some/project/")))))))
 
 (deftest resolve-from-classpath-config-paths
   (testing "when empty classpath and no classpath-config-paths is provided"
     (is (= nil
            (config/resolve-from-classpath-config-paths []
                                                        {}
-                                                       (:logger h/components)))))
+                                                      ))))
   (testing "when no classpath-config-paths is provided and classpath has no libs with clojure-lsp config"
     (is (= nil
            (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
                                                        {}
-                                                       (:logger h/components)))))
+                                                      ))))
   (testing "when classpath-config-paths is provided and classpath has no libs with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (constantly nil)]
       (is (= nil
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
                                                          {:classpath-config-paths ["my/other-lib"]}
-                                                         (:logger h/components))))))
+                                                        )))))
   (testing "when classpath-config-paths is provided and classpath has one lib with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (constantly {:a 1 :b {:c 2 :d 3}})]
       (is (= {:a 1 :b {:c 2 :d 3}}
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
                                                          {:classpath-config-paths ["my/other-lib"]}
-                                                         (:logger h/components))))))
+                                                        )))))
   (testing "when classpath-config-paths is provided and classpath has recursive libs with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
-                  config/jar-file->config (fn [jar cp-config-paths _logger]
+                  config/jar-file->config (fn [jar cp-config-paths]
                                             (cond
                                               (and (= "/my/lib.jar" (str jar))
                                                    (= "my/other-lib" (first cp-config-paths)))
@@ -110,7 +110,7 @@
               :classpath-config-paths ["my/another-lib"]}
              (config/resolve-from-classpath-config-paths ["/my/lib.jar" "/my/otherlib.jar"]
                                                          {:classpath-config-paths ["my/other-lib"]}
-                                                         (:logger h/components)))))))
+                                                        ))))))
 
 (deftest deep-merge-fixing-cljfmt
   (is (= {} (#'config/deep-merge-fixing-cljfmt {} {})))

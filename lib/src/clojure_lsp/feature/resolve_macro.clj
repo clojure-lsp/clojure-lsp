@@ -67,7 +67,7 @@
    "clj-kondo.lint-as/def-catch-all"])
 
 (defn resolve-macro-as!
-  [zloc uri {:keys [db logger producer] :as components}]
+  [zloc uri {:keys [db producer] :as components}]
   (let [project-root-uri (:project-root-uri @db)
         resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
@@ -81,8 +81,8 @@
                                             :version (:v document)
                                             :text (:text document)}
                                            components)
-        (logger/info logger (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
+        (logger/info* (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
       (do
-        (logger/error logger (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+        (logger/error* (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
         (producer/show-message producer (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
     {:no-op? true}))

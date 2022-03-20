@@ -97,10 +97,10 @@
     :else #{}))
 
 (defn ^:private conform-uri
-  [uri format-settings logger]
+  [uri format-settings]
   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
     (when-not match
-      (logger/error logger "Found invalid URI:" uri))
+      (logger/error* "Found invalid URI:" uri))
     (str scheme+auth
          (-> path
              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
@@ -110,8 +110,8 @@
              (cond-> (:encode-colons-in-path? format-settings)
                (string/replace ":" "%3A"))))))
 
-(defn uri->path ^java.nio.file.Path [uri db]
-  (-> (conform-uri uri {:upper-case-drive-letter? true} (:logger @db))
+(defn uri->path ^java.nio.file.Path [uri]
+  (-> (conform-uri uri {:upper-case-drive-letter? true})
       URI. Paths/get))
 
 (defn plain-uri? [uri]
@@ -183,8 +183,7 @@
           (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
         (.toString (filepath->uri-obj filename)))
-      (get-in @db [:settings :uri-format])
-      (:logger @db))))
+      (get-in @db [:settings :uri-format]))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
@@ -351,12 +350,12 @@
 (defmacro logging-time
   "Executes `body` logging `message` formatted with the time spent
   from body."
-  [logger message & body]
+  [message & body]
   (let [start-sym (gensym "start-time")]
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(logger/info ~logger (format  ~message (start-time->end-time-seconds ~start-sym)))
+          `(logger/info* (format  ~message (start-time->end-time-seconds ~start-sym)))
           (meta &form))
        result#)))
 

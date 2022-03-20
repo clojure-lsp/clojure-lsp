@@ -9,7 +9,6 @@
    [medley.core :as medley])
   (:import
    (com.google.gson JsonElement)
-   (lsp4clj.protocols.logger ILSPLogger)
    (org.eclipse.lsp4j
      CallHierarchyIncomingCall
      CallHierarchyOutgoingCall
@@ -727,14 +726,14 @@
                                                     (.setCompletionProvider (:completion-provider %1))
                                                     (.setExperimental (:experimental %))))))
 
-(defn conform-or-log [^ILSPLogger logger spec value]
+(defn conform-or-log [spec value]
   (when value
     (try
       (let [result (s/conform spec value)]
         (if (= :clojure.spec.alpha/invalid result)
-          (logger/error logger (s/explain-data spec value))
+          (logger/error* (s/explain-data spec value))
           result))
       (catch Exception ex
         (if (instance? ResponseErrorException ex)
           (throw ex)
-          (logger/error logger ex spec value))))))
+          (logger/error* ex spec value))))))

@@ -49,18 +49,18 @@
   (lsp/start :extension
              (CompletableFuture/completedFuture
                (lsp/end
-                 (:logger @db/db)
                  (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord TimbreLogger [db]
   logger/ILSPLogger
-  (setup [_this]
+  (setup [this]
     (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
       (log/merge-config! {:middleware [#(assoc % :hostname_ "")]
                           :appenders {:println {:enabled? false}
                                       :spit (log/spit-appender {:fname log-path})}})
       (log/handle-uncaught-jvm-exceptions!)
-      (swap! db assoc :log-path log-path)))
+      (swap! db assoc :log-path log-path)
+      (alter-var-root #'logger/*logger* (constantly this))))
 
   (set-log-path [_this log-path]
     (log/merge-config! {:appenders {:spit (log/spit-appender {:fname log-path})}}))
@@ -109,18 +109,16 @@
     (go
       (when (some-> @db :client-capabilities :experimental j/from-java :testTree)
         (shared/logging-time
-          logger
           "Refreshing testTree took %s secs"
           (doseq [uri uris]
             (when-let [test-tree (f.test-tree/tree uri db)]
               (->> test-tree
-                   (coercer/conform-or-log logger ::clojure-coercer/publish-test-tree-params)
+                   (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
 (deftype ClojureLspServer
          [^LSPServer lsp-server
-          ^ILSPFeatureHandler feature-handler
-          ^ILSPLogger logger]
+          ^ILSPFeatureHandler feature-handler]
   ClojureLanguageServer
   (^CompletableFuture initialize [_ ^InitializeParams params]
     (.initialize lsp-server params))
@@ -137,29 +135,28 @@
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
       (->> (clojure-feature/server-info-raw feature-handler)
-           (coercer/conform-or-log logger ::clojure-coercer/server-info-raw))))
+           (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
     (lsp/start :server-info-log
                (future
                  (lsp/end
-                   logger
                    (clojure-feature/server-info-log feature-handler)))))
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (lsp/start :cursorInfoRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request logger params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
+                 (lsp/sync-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (lsp/start :cursor-info-log
                (future
-                 (lsp/sync-notification logger params clojure-feature/cursor-info-log feature-handler))))
+                 (lsp/sync-notification params clojure-feature/cursor-info-log feature-handler))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (lsp/start :clojuredocsRaw
                (CompletableFuture/completedFuture
-                 (lsp/sync-request logger params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
+                 (lsp/sync-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
 
 (defn client-settings [params]
   (-> params
@@ -207,23 +204,21 @@
   (let [db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
-        _ (logger/info timbre-logger "Starting server...")
-        is (or System/in (lsp/tee-system-in System/in timbre-logger))
-        os (or System/out (lsp/tee-system-out System/out timbre-logger))
+        _ (logger/info* "Starting server...")
+        is (or System/in (lsp/tee-system-in System/in))
+        os (or System/out (lsp/tee-system-out System/out))
         _ (swap! components merge (components/->components db timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
-                                              timbre-logger
                                               db
                                               db/initial-db
                                               capabilites
                                               client-settings)
-                                  clojure-feature-handler
-                                  timbre-logger)
+                                  clojure-feature-handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
-                                       (lsp/->LSPProducer language-client timbre-logger db)
+                                       (lsp/->LSPProducer language-client db)
                                        timbre-logger
                                        db)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
@@ -233,7 +228,6 @@
     ;; TODO stop associng components and use from components params
     (swap! db assoc
            :producer producer
-           :logger timbre-logger
            :feature-handler clojure-feature-handler)
     (nrepl/setup-nrepl db)
     (go-loop [edit (<! db/edits-chan)]
@@ -246,12 +240,12 @@
       (try
         (f.file-management/analyze-changes (<! debounced-changes) @components)
         (catch Exception e
-          (logger/error timbre-logger e "Error during analyzing buffer file changes")))
+          (logger/error* e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
         (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components)
         (catch Exception e
-          (logger/error timbre-logger e "Error during analyzing created watched files")))
+          (logger/error* e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))

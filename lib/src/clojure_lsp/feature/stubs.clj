@@ -23,16 +23,15 @@
     (run! delete-directory-recursive (.listFiles file)))
   (io/delete-file file true))
 
-(defn ^:private generate-stubs! [namespaces settings db logger]
+(defn ^:private generate-stubs! [namespaces settings db]
   (try
     (if-let [classpath (string/join ":" (:classpath @db))]
       (let [java-command (or (-> settings :stubs :generation :java-command)
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]
         (delete-directory-recursive output-dir)
-        (logger/info logger (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
+        (logger/info* (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
         (shared/logging-time
-          logger
           "Stub generation process took %s secs."
           (stub/generate! {:output-dir output-dir
                            :namespaces namespaces
@@ -45,9 +44,8 @@
        :message (str "Error: " e)})))
 
 (defn ^:private analyze-stubs!
-  [dirs {:keys [logger db] :as components}]
+  [dirs {:keys [db] :as components}]
   (let [result (shared/logging-time
-                 logger
                  "Stubs analyzed, took %s secs."
                  (lsp.kondo/run-kondo-on-paths! dirs true components))
         kondo-analysis (-> (:analysis result)
@@ -57,26 +55,26 @@
                       (group-by :filename))]
     (loop [state-db @db]
       (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
-        (logger/warn logger "Analyzis divergent from stub analysis, trying again...")
+        (logger/warn* "Analyzis divergent from stub analysis, trying again...")
         (recur @db)))
-    (-> (shared/uri->path (:project-root-uri @db) db)
-        (db/read-cache db logger)
+    (-> (shared/uri->path (:project-root-uri @db))
+        (db/read-cache db)
         (update :analysis merge analysis)
-        (db/upsert-cache! db logger))))
+        (db/upsert-cache! db))))
 
 (defn generate-and-analyze-stubs!
-  [settings {:keys [db logger] :as components}]
+  [settings {:keys [db] :as components}]
   (let [namespaces (->> settings :stubs :generation :namespaces (map str) set)
         extra-dirs (-> settings :stubs :extra-dirs)]
     (if (and (seq namespaces)
              (or (:full-scan-analysis-startup @db)
                  (not= namespaces (:stubs-generation-namespaces @db))))
-      (let [{:keys [result-code message]} (generate-stubs! namespaces settings db logger)]
+      (let [{:keys [result-code message]} (generate-stubs! namespaces settings db)]
         (if (= 0 result-code)
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)
                           components)
-          (logger/error logger (str "Stub generation failed." message))))
+          (logger/error* (str "Stub generation failed." message))))
       (when (seq extra-dirs)
         (analyze-stubs! extra-dirs components)))))
 

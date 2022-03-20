@@ -40,7 +40,7 @@
      (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
          ~(with-meta
-            `(logger/warn (:logger @db/db) (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
+            `(logger/warn* (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
             (meta &form))
          (if (contains? (:processing-changes @db/db) ~uri)
            (do
@@ -234,7 +234,7 @@
                                :version     v}
                               components)))
 
-(defn execute-command [{:keys [command arguments]}]
+(defn execute-command [{:keys [command arguments]} components]
   (cond
     (= command "server-info")
     (server-info-log)
@@ -246,9 +246,7 @@
 
     (some #(= % command) f.refactor/available-refactors)
     ;; TODO move components upper to a common place
-    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments {:db db/db
-                                                                                    :producer (:producer @db/db)
-                                                                                    :logger (:logger @db/db)})]
+    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
       (producer/publish-workspace-edit (:producer @db/db) edit)
       (when show-document-after-edit
         (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
@@ -353,7 +351,7 @@
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler
-  (initialize [_ project-root-uri client-capabilities client-settings work-done-token _logger]
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
     (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
   (did-open [_ doc]
     (did-open doc))
@@ -362,7 +360,7 @@
   (did-save [_ doc]
     (did-save doc))
   (execute-command [_ doc]
-    (execute-command doc))
+    (execute-command doc @components*))
   (did-close [_ doc]
     (did-close doc))
   (did-change-watched-files [_ doc]

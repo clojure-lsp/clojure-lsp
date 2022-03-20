@@ -1,5 +1,9 @@
 (ns lsp4clj.protocols.logger)
 
+(def ^:dynamic *logger*
+  "Optional logger state to avoid having component available everywhere."
+  nil)
+
 (defprotocol ILSPLogger
   (setup [this])
 
@@ -21,3 +25,19 @@
     [this arg1]
     [this arg1 arg2]
     [this arg1 arg2 arg3]))
+
+(defn info* [& args]
+  (when *logger*
+    (apply info *logger* args)))
+
+(defn warn* [& args]
+  (when *logger*
+    (apply warn *logger* args)))
+
+(defn error* [& args]
+  (when *logger*
+    (apply error *logger* args)))
+
+(defn debug* [& args]
+  (when *logger*
+    (apply debug *logger* args)))

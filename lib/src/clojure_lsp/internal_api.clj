@@ -152,12 +152,11 @@
       .getCanonicalPath
       (shared/filename->uri db)))
 
-(defn ^:private setup-api! [{:keys [logger producer db]}]
+(defn ^:private setup-api! [{:keys [producer db]}]
   ;; TODO do not add components to db after all usages relies on components from outside db.
   (swap! db assoc
          :api? true
-         :producer producer
-         :logger logger))
+         :producer producer))
 
 (defn ^:private analyze!
   [{:keys [project-root settings log-path]}
@@ -278,7 +277,8 @@
                    (map open-file!)
                    (pmap (comp :document-changes
                                #(handlers/execute-command {:command "clean-ns"
-                                                           :arguments [(:uri %) 0 0]})))
+                                                           :arguments [(:uri %) 0 0]}
+                                                          components)))
                    (apply concat)
                    (pmap #(document-change->edit-summary % db))
                    (remove nil?))]

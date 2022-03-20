@@ -74,10 +74,10 @@
                "clojure-lsp"
                "clj-kondo")}))
 
-(defn ^:private valid-finding? [logger {:keys [row col level] :as finding}]
+(defn ^:private valid-finding? [{:keys [row col level] :as finding}]
   (when (not= level :off)
     (or (and row col)
-        (logger/warn logger "Invalid clj-kondo finding. Cannot find position data for" finding))))
+        (logger/warn* "Invalid clj-kondo finding. Cannot find position data for" finding))))
 
 (defn ^:private exclude-ns? [filename linter db]
   (when-let [namespace (shared/filename->namespace filename db)]
@@ -88,7 +88,7 @@
   (when-not (exclude-ns? filename linter db)
     (->> (get (:findings @db) filename)
          (filter #(= filename (:filename %)))
-         (filter (partial valid-finding? (:logger @db)))
+         (filter valid-finding?)
          (mapv kondo-finding->diagnostic))))
 
 (defn severity->level [severity]

@@ -28,10 +28,10 @@
   (let [project-file (shared/to-file root-path project-path)]
     (shared/file-exists? project-file)))
 
-(defn ^:private project-root->project-dep-files [project-root dep-file-path settings logger]
+(defn ^:private project-root->project-dep-files [project-root dep-file-path settings]
   (let [project-dep-file (io/file project-root dep-file-path)]
     (if (string/ends-with? (str project-dep-file) "deps.edn")
-      (if-let [local-roots (seq (source-paths/deps-file->local-roots project-dep-file settings logger))]
+      (if-let [local-roots (seq (source-paths/deps-file->local-roots project-dep-file settings))]
         (concat [project-dep-file]
                 (->> local-roots
                      (map #(shared/relativize-filepath % project-root))
@@ -40,17 +40,17 @@
         [project-dep-file])
       [project-dep-file])))
 
-(defn project-specs->hash [root-path settings logger]
+(defn project-specs->hash [root-path settings]
   (->> (:project-specs settings)
        (filter (partial valid-project-spec? root-path))
        (map (fn [{:keys [project-path]}]
-              (map md5 (project-root->project-dep-files (str root-path) project-path settings logger))))
+              (map md5 (project-root->project-dep-files (str root-path) project-path settings))))
        flatten
        (reduce str)))
 
-(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db logger]
+(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
   (let [command (string/join " " classpath-cmd)]
-    (logger/info logger (format "Finding classpath via `%s`" command))
+    (logger/info* (format "Finding classpath via `%s`" command))
     (try
       (let [sep (re-pattern (System/getProperty "path.separator"))
             {:keys [exit out err]} (apply shell/sh (into classpath-cmd
@@ -62,24 +62,24 @@
                           last
                           string/trim-newline
                           (string/split sep))]
-            (logger/debug logger "Classpath found, paths: " paths)
+            (logger/debug* "Classpath found, paths: " paths)
             paths)
           (do
-            (logger/error logger (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
+            (logger/error* (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
             (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
             [])))
       (catch clojure.lang.ExceptionInfo e
         (throw e))
       (catch Exception e
-        (logger/error logger e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
+        (logger/error* e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
         (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
         []))))
 
-(defn scan-classpath! [db logger]
-  (let [root-path (shared/uri->path (:project-root-uri @db) db)]
+(defn scan-classpath! [db]
+  (let [root-path (shared/uri->path (:project-root-uri @db))]
     (->> (settings/get db [:project-specs])
          (filter (partial valid-project-spec? root-path))
-         (mapcat #(lookup-classpath root-path % db logger))
+         (mapcat #(lookup-classpath root-path % db))
          vec
          seq)))
 

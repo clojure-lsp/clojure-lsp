@@ -40,8 +40,8 @@
          (remove nil?))))
 
 (defn ^:private deps-file->source-paths
-  [deps-file settings logger]
-  (let [{:keys [paths extra-paths aliases]} (config/read-edn-file deps-file logger)
+  [deps-file settings]
+  (let [{:keys [paths extra-paths aliases]} (config/read-edn-file deps-file)
         source-aliases (or (:source-aliases settings) default-source-aliases)
         root-source-paths (extract-source-paths paths extra-paths aliases)]
     (->> source-aliases
@@ -57,8 +57,8 @@
     (shared/normalize-file (io/file (.getParentFile deps-file) file))))
 
 (defn deps-file->local-roots
-  [deps-file settings logger]
-  (let [{:keys [deps extra-deps aliases]} (config/read-edn-file deps-file logger)
+  [deps-file settings]
+  (let [{:keys [deps extra-deps aliases]} (config/read-edn-file deps-file)
         source-aliases (or (:source-aliases settings) default-source-aliases)
         deps-local-roots (extract-local-roots deps)
         extra-deps-local-roots (extract-local-roots extra-deps)]
@@ -72,21 +72,21 @@
          (remove nil?))))
 
 (defn ^:private resolve-deps-source-paths
-  [deps-file root-path settings logger]
+  [deps-file root-path settings]
   (loop [deps-files-by-root [[nil deps-file]]
          accum-source-paths nil
          recur-level 1]
     (if (>= recur-level 500)
-      (logger/warn logger "Max deps source-paths resolve level found" recur-level ", maybe a cyclic dependency?")
+      (logger/warn* "Max deps source-paths resolve level found" recur-level ", maybe a cyclic dependency?")
       (let [source-paths (->> deps-files-by-root
                               (map (fn [[local-root deps-file]]
-                                     (->> (deps-file->source-paths deps-file settings logger)
+                                     (->> (deps-file->source-paths deps-file settings)
                                           (map #(if local-root (str (io/file local-root %)) %))
                                           set)))
                               (reduce set/union))
             local-roots (->> deps-files-by-root
                              (map second)
-                             (map #(deps-file->local-roots % settings logger))
+                             (map #(deps-file->local-roots % settings))
                              flatten
                              (remove nil?))
             deps-files-by-local-root (->> local-roots
@@ -131,7 +131,7 @@
   [{:keys [paths]}]
   (set (map str paths)))
 
-(defn ^:private manual-source-paths-calculation [root-path settings logger]
+(defn ^:private manual-source-paths-calculation [root-path settings]
   (let [deps-file (shared/to-file root-path "deps.edn")
         lein-file (shared/to-file root-path "project.clj")
         bb-file (shared/to-file root-path "bb.edn")
@@ -139,7 +139,7 @@
         (cond-> []
           (shared/file-exists? deps-file)
           (conj
-            (let [deps-source-paths (resolve-deps-source-paths deps-file (str root-path) settings logger)]
+            (let [deps-source-paths (resolve-deps-source-paths deps-file (str root-path) settings)]
               (if (seq deps-source-paths)
                 {:deps-source-paths deps-source-paths
                  :source-paths deps-source-paths
@@ -160,7 +160,7 @@
 
           (shared/file-exists? bb-file)
           (conj
-            (let [bb-edn (config/read-edn-file bb-file logger)
+            (let [bb-edn (config/read-edn-file bb-file)
                   bb-paths (resolve-bb-source-paths bb-edn)]
               (if (seq bb-paths)
                 {:bb-source-paths bb-paths
@@ -191,25 +191,25 @@
        :source-paths source-paths
        :classpath-paths source-paths})))
 
-(defn ^:private resolve-source-paths [root-path classpath given-source-paths settings logger]
+(defn ^:private resolve-source-paths [root-path classpath given-source-paths settings]
   (if given-source-paths
     {:source-paths given-source-paths
      :origins #{:settings}}
     (or (if (get settings :use-source-paths-from-classpath true)
           (classpath->source-paths root-path classpath)
-          (manual-source-paths-calculation root-path settings logger))
+          (manual-source-paths-calculation root-path settings))
         {:source-paths default-source-paths
          :origins #{:default}})))
 
-(defn process-source-paths [root-path classpath settings logger given-source-paths]
-  (let [{:keys [origins source-paths classpath-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path classpath given-source-paths settings logger)]
-    (when (contains? origins :settings) (logger/info logger "Using given source-paths:" given-source-paths))
-    (when (contains? origins :classpath) (logger/info logger "Using source-paths from classpath:" classpath-paths))
-    (when (contains? origins :deps-edn) (logger/info logger "Manually resolved source-paths from deps.edn:" deps-source-paths))
-    (when (contains? origins :leiningen) (logger/info logger "Manually resolved source-paths from project.clj:" lein-source-paths))
-    (when (contains? origins :bb) (logger/info logger "Manually resolved source-paths from bb.edn:" bb-source-paths))
-    (when (contains? origins :empty-deps-edn) (logger/info logger "Empty deps.edn source-paths, using default source-paths:" default-source-paths))
-    (when (contains? origins :empty-leiningen) (logger/info logger "Empty project.clj source-paths, using default source-paths:" default-source-paths))
-    (when (contains? origins :empty-bb) (logger/info logger "Empty bb.edn paths, using default source-paths:" default-source-paths))
-    (when (contains? origins :default) (logger/info logger "Using default source-paths:" default-source-paths))
+(defn process-source-paths [root-path classpath settings given-source-paths]
+  (let [{:keys [origins source-paths classpath-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path classpath given-source-paths settings)]
+    (when (contains? origins :settings) (logger/info* "Using given source-paths:" given-source-paths))
+    (when (contains? origins :classpath) (logger/info* "Using source-paths from classpath:" classpath-paths))
+    (when (contains? origins :deps-edn) (logger/info* "Manually resolved source-paths from deps.edn:" deps-source-paths))
+    (when (contains? origins :leiningen) (logger/info* "Manually resolved source-paths from project.clj:" lein-source-paths))
+    (when (contains? origins :bb) (logger/info* "Manually resolved source-paths from bb.edn:" bb-source-paths))
+    (when (contains? origins :empty-deps-edn) (logger/info* "Empty deps.edn source-paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :empty-leiningen) (logger/info* "Empty project.clj source-paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :empty-bb) (logger/info* "Empty bb.edn paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :default) (logger/info* "Using default source-paths:" default-source-paths))
     (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) source-paths)))

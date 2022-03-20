@@ -1,7 +1,7 @@
 (ns lsp4clj.protocols.feature-handler)
 
 (defprotocol ILSPFeatureHandler
-  (initialize [this project-root-uri client-capabilities client-settings work-done-token logger])
+  (initialize [this project-root-uri client-capabilities client-settings work-done-token])
   (did-open [this doc])
   (did-change [this doc])
   (did-save [this doc])

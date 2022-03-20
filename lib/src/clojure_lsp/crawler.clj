@@ -33,9 +33,8 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-source-paths! [paths {:keys [db logger] :as components}]
+(defn ^:private analyze-source-paths! [paths {:keys [db] :as components}]
   (let [result (shared/logging-time
-                 logger
                  "Project only paths analyzed, took %s secs"
                  (lsp.kondo/run-kondo-on-paths! paths false components))
         analysis (->> (:analysis result)
@@ -58,10 +57,9 @@
       progress-token)))
 
 (defn ^:private analyze-external-classpath!
-  [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db logger producer] :as components}]
+  [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db producer] :as components}]
   (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage progress-token producer)
         result (shared/logging-time
-                 logger
                  "External classpath paths analyzed, took %s secs. Caching for next startups..."
                  (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback components))
         kondo-analysis (-> (:analysis result)
@@ -73,11 +71,10 @@
     (swap! db assoc :kondo-config (:config result))
     analysis))
 
-(defn analyze-reference-filenames! [filenames db logger]
+(defn analyze-reference-filenames! [filenames db]
   (let [result (shared/logging-time
-                 logger
                  "Files analyzed, took %s secs"
-                 (lsp.kondo/run-kondo-on-reference-filenames! filenames db logger))
+                 (lsp.kondo/run-kondo-on-reference-filenames! filenames db))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
                       (group-by :filename))
@@ -88,9 +85,9 @@
     (swap! db update :findings merge new-findings)
     analysis))
 
-(defn ^:private analyze-classpath! [root-path source-paths settings progress-token {:keys [db logger] :as components}]
+(defn ^:private analyze-classpath! [root-path source-paths settings progress-token {:keys [db] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
-    (logger/info logger "Analyzing classpath for project root" root-path)
+    (logger/info* "Analyzing classpath for project root" root-path)
     (when-let [classpath (:classpath @db)]
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
             external-classpath (cond->> (->> classpath
@@ -100,31 +97,30 @@
             analysis (analyze-external-classpath! external-classpath 15 80 progress-token components)]
         (swap! db update :analysis merge analysis)
         (shared/logging-time
-          logger
           "Manual GC after classpath scan took %s secs"
           (System/gc))
         (swap! db assoc :full-scan-analysis-startup true)))))
 
-(defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder logger]
+(defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
-    (logger/info logger (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
+    (logger/info* (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
     (.mkdir clj-kondo-folder)
     (catch Exception e
-      (logger/error logger "Error when creating '.clj-kondo' dir on project-root" e))))
+      (logger/error* "Error when creating '.clj-kondo' dir on project-root" e))))
 
 (defn ^:private ensure-kondo-config-dir-exists!
-  [project-root-uri db logger]
+  [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
-        project-root-path (shared/uri->path project-root-uri db)
+        project-root-path (shared/uri->path project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
-      (create-kondo-folder! clj-kondo-folder logger)
+      (create-kondo-folder! clj-kondo-folder)
       (when (db/db-exists? project-root-path db)
-        (logger/info logger "Removing outdated cached lsp db...")
+        (logger/info* "Removing outdated cached lsp db...")
         (db/remove-db! project-root-path db)))))
 
-(defn ^:private load-db-cache! [root-path db logger]
-  (when-let [db-cache (db/read-cache root-path db logger)]
+(defn ^:private load-db-cache! [root-path db]
+  (when-let [db-cache (db/read-cache root-path db)]
     (when-not (and (= :project-and-deps (:project-analysis-type @db))
                    (= :project-only (:project-analysis-type db-cache)))
       (swap! db (fn [state-db]
@@ -140,13 +136,13 @@
       (select-keys [:project-hash :kondo-config-hash :project-analysis-type :classpath :analysis])
       (merge {:stubs-generation-namespaces (->> @db :settings :stubs :generation :namespaces (map str) set)
               :version db/version
-              :project-root (str (shared/uri->path (:project-root-uri @db) db))})))
+              :project-root (str (shared/uri->path (:project-root-uri @db)))})))
 
-(defn ^:private upsert-db-cache! [db logger]
+(defn ^:private upsert-db-cache! [db]
   (if (:api? @db)
-    (db/upsert-cache! (build-db-cache db) db logger)
+    (db/upsert-cache! (build-db-cache db) db)
     (async/go
-      (db/upsert-cache! (build-db-cache db) db logger))))
+      (db/upsert-cache! (build-db-cache db) db))))
 
 (defn initialize-project
   [project-root-uri
@@ -156,8 +152,8 @@
    progress-token
    {:keys [db logger producer] :as components}]
   (producer/publish-progress producer 0 "clojure-lsp" progress-token)
-  (let [project-settings (config/resolve-for-root project-root-uri logger)
-        root-path (shared/uri->path project-root-uri db)
+  (let [project-settings (config/resolve-for-root project-root-uri)
+        root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
@@ -179,33 +175,33 @@
            :settings settings
            :client-capabilities client-capabilities)
     (producer/publish-progress producer 5 "Finding kondo config" progress-token)
-    (ensure-kondo-config-dir-exists! project-root-uri db logger)
+    (ensure-kondo-config-dir-exists! project-root-uri db)
     (producer/publish-progress producer 10 "Finding cache" progress-token)
-    (load-db-cache! root-path db logger)
-    (let [project-hash (classpath/project-specs->hash root-path settings logger)
-          kondo-config-hash (lsp.kondo/config-hash (str root-path) logger)
+    (load-db-cache! root-path db)
+    (let [project-hash (classpath/project-specs->hash root-path settings)
+          kondo-config-hash (lsp.kondo/config-hash (str root-path))
           use-db-analysis? (and (= (:project-hash @db) project-hash)
                                 (= (:kondo-config-hash @db) kondo-config-hash))]
       (if use-db-analysis?
         (do
-          (logger/info logger "Using cached db for project root" root-path logger)
+          (logger/info* "Using cached db for project root" root-path)
           (swap! db assoc
-                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings logger))))
+                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
           (producer/publish-progress producer 15 "Discovering classpath" progress-token)
-          (let [classpath (classpath/scan-classpath! db logger)]
+          (let [classpath (classpath/scan-classpath! db)]
             (swap! db assoc
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
                    :classpath classpath
-                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings logger))))
+                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings))))
           (when (= :project-and-deps (:project-analysis-type @db))
             (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token components))
-          (upsert-db-cache! db logger))))
+          (upsert-db-cache! db))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                        (:classpath @db)
-                                       (config/resolve-from-classpath-config-paths (:classpath @db) settings logger))]
+                                       (config/resolve-from-classpath-config-paths (:classpath @db) settings))]
       (swap! db assoc
              :settings (shared/deep-merge (:settings @db)
                                           classpath-settings
@@ -213,7 +209,7 @@
                                           force-settings)
              :classpath-settings classpath-settings))
     (producer/publish-progress producer 95 "Analyzing project files" progress-token)
-    (logger/info logger "Analyzing source paths for project root" root-path)
+    (logger/info* "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
@@ -224,6 +220,6 @@
           (when (stubs/check-stubs? settings)
             (stubs/generate-and-analyze-stubs! settings components))))
       (async/go
-        (logger/info logger "Analyzing test paths for project root" root-path)
+        (logger/info* "Analyzing test paths for project root" root-path)
         (analyze-test-paths! components)))
     (producer/publish-progress producer 100 "Project analyzed" progress-token)))

@@ -108,7 +108,7 @@
                   :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
     (shared/client-changes changes db)))
 
-(defn call-refactor [{:keys [loc uri refactoring row col version] :as data} {:keys [db logger] :as components}]
+(defn call-refactor [{:keys [loc uri refactoring row col version] :as data} {:keys [db] :as components}]
 
   (let [result (refactor (assoc data :components components))]
     (cond
@@ -117,7 +117,7 @@
 
       (and (not loc)
            (not= :clean-ns refactoring))
-      (logger/warn logger (str "Could not find a form at this location. row " row " col " col " file " uri))
+      (logger/warn* (str "Could not find a form at this location. row " row " col " col " file " uri))
 
       (map? result)
       (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
@@ -135,7 +135,7 @@
       {:edit (refactor-client-seq-changes uri version result db)}
 
       (empty? result)
-      (logger/warn logger refactoring "made no changes" (z/string loc))
+      (logger/warn* refactoring "made no changes" (z/string loc))
 
       :else
-      (logger/warn logger (str "Could not apply " refactoring " to form: " (z/string loc))))))
+      (logger/warn* (str "Could not apply " refactoring " to form: " (z/string loc))))))

@@ -10,13 +10,13 @@
 
 (set! *warn-on-reflection* true)
 
-(defn read-edn-file [^java.io.File file logger]
+(defn read-edn-file [^java.io.File file]
   (try
     (->> (slurp file)
          (edn/read-string {:readers {'re re-pattern}})
          shared/keywordize-first-depth)
     (catch Exception e
-      (logger/error logger "WARNING: error while reading" (.getCanonicalPath file) (format "(%s)" (.getMessage e))))))
+      (logger/error* "WARNING: error while reading" (.getCanonicalPath file) (format "(%s)" (.getMessage e))))))
 
 (defn get-property [p]
   (System/getProperty p))
@@ -33,11 +33,11 @@
       xdg-config
       home-config)))
 
-(defn ^:private resolve-home-config [^java.io.File home-dir-file logger]
+(defn ^:private resolve-home-config [^java.io.File home-dir-file]
   (when (shared/file-exists? home-dir-file)
-    (read-edn-file home-dir-file logger)))
+    (read-edn-file home-dir-file)))
 
-(defn ^:private resolve-project-configs [project-root-uri ^java.io.File home-dir-file logger]
+(defn ^:private resolve-project-configs [project-root-uri ^java.io.File home-dir-file]
   (loop [dir (io/file (shared/uri->filename project-root-uri))
          configs []]
     (let [file (io/file dir ".lsp" "config.edn")
@@ -46,20 +46,20 @@
         (recur parent (cond->> configs
                         (and (shared/file-exists? file)
                              (not (= (.getAbsolutePath home-dir-file) (.getAbsolutePath file))))
-                        (concat [(read-edn-file file logger)])))
+                        (concat [(read-edn-file file)])))
         configs))))
 
-(defn resolve-for-root [project-root-uri logger]
+(defn resolve-for-root [project-root-uri]
   (when project-root-uri
     (let [home-dir-file (get-home-config-file)
-          project-configs (resolve-project-configs project-root-uri home-dir-file logger)]
+          project-configs (resolve-project-configs project-root-uri home-dir-file)]
       (reduce shared/deep-merge
               (merge {}
-                     (resolve-home-config home-dir-file logger))
+                     (resolve-home-config home-dir-file))
               project-configs))))
 
 (defn ^:private jar-file->config
-  [^java.io.File file config-paths logger]
+  [^java.io.File file config-paths]
   (with-open [jar (JarFile. file)]
     (->> (enumeration-seq (.entries jar))
          (filter (fn [^JarFile$JarFileEntry entry]
@@ -70,7 +70,7 @@
                  (let [[_ group artifact] (string/split (.getName config-entry) #"/")]
                    (when (some #(and (string/starts-with? % group)
                                      (string/ends-with? % artifact)) config-paths)
-                     (logger/info logger (format "Resolving found clojure-lsp config for '%s/%s' in classpath" group artifact))
+                     (logger/info* (format "Resolving found clojure-lsp config for '%s/%s' in classpath" group artifact))
                      (edn/read-string {:readers {'re re-pattern}}
                                       (slurp (.getInputStream jar config-entry))))))))))
 
@@ -86,7 +86,7 @@
   ([a b & more]
    (reduce deep-merge-fixing-cljfmt (or a {}) (cons b more))))
 
-(defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]} logger]
+(defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]}]
   (when-let [cp-config-paths (and (coll? classpath-config-paths)
                                   (seq classpath-config-paths))]
     (when-let [jar-files (->> classpath
@@ -95,7 +95,7 @@
                               (map io/file)
                               (filter shared/file-exists?))]
       (when-let [configs (->> jar-files
-                              (map #(jar-file->config % cp-config-paths logger))
+                              (map #(jar-file->config % cp-config-paths))
                               flatten
                               (remove nil?)
                               seq)]
@@ -105,14 +105,13 @@
   (and (coll? classpath-config-paths)
        (seq classpath-config-paths)))
 
-(defn resolve-from-classpath-config-paths [classpath settings logger]
+(defn resolve-from-classpath-config-paths [classpath settings]
   (shared/logging-time
-    logger
     "Finding classpath configs took %s secs"
-    (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings logger)
+    (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
            merge-config nil]
       (if (and (coll? classpath-config-paths)
                (seq classpath-config-paths))
-        (recur (resolve-from-classpath-config-paths-impl classpath cp-settings logger)
+        (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
                cp-settings)
         (shared/deep-merge merge-config cp-settings)))))

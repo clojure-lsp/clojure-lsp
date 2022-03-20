@@ -49,18 +49,10 @@
 
   (set-log-path [_this _log-path])
 
-  (info [_this _arg1])
-  (info [_this _arg1 _arg2])
-  (info [_this _arg1 _arg2 _arg3])
-  (warn [_this _arg1])
-  (warn [_this _arg1 _arg2])
-  (warn [_this _arg1 _arg2 _arg3])
-  (error [_this _arg1])
-  (error [_this _arg1 _arg2])
-  (error [_this _arg1 _arg2 _arg3])
-  (debug [_this _arg1])
-  (debug [_this _arg1 _arg2])
-  (debug [_this _arg1 _arg2 _arg3]))
+  (-info [_this _message])
+  (-warn [_this _message])
+  (-error [_this _message])
+  (-debug [_this _message]))
 
 (def components
   (components/->components

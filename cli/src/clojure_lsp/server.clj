@@ -19,7 +19,7 @@
    [lsp4clj.core :as lsp]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer]
-   [taoensso.timbre :as log])
+   [taoensso.timbre :as timbre])
   (:import
    (clojure_lsp
      ClojureLanguageClient
@@ -53,33 +53,23 @@
 
 (defrecord TimbreLogger [db]
   logger/ILSPLogger
+
   (setup [this]
     (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
-      (log/merge-config! {:middleware [#(assoc % :hostname_ "")]
-                          :appenders {:println {:enabled? false}
-                                      :spit (log/spit-appender {:fname log-path})}})
-      (log/handle-uncaught-jvm-exceptions!)
+      (timbre/merge-config! {:middleware [#(assoc % :hostname_ "")]
+                             :appenders {:println {:enabled? false}
+                                         :spit (timbre/spit-appender {:fname log-path})}})
+      (timbre/handle-uncaught-jvm-exceptions!)
       (swap! db assoc :log-path log-path)
-      (alter-var-root #'logger/*logger* (constantly this))))
+      (logger/set-logger! this)))
 
   (set-log-path [_this log-path]
-    (log/merge-config! {:appenders {:spit (log/spit-appender {:fname log-path})}}))
+    (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
 
-  (info [_this arg1] (log/info arg1))
-  (info [_this arg1 arg2] (log/info arg1 arg2))
-  (info [_this arg1 arg2 arg3] (log/info arg1 arg2 arg3))
-
-  (warn [_this arg1] (log/warn arg1))
-  (warn [_this arg1 arg2] (log/warn arg1 arg2))
-  (warn [_this arg1 arg2 arg3] (log/warn arg1 arg2 arg3))
-
-  (error [_this arg1] (log/error arg1))
-  (error [_this arg1 arg2] (log/error arg1 arg2))
-  (error [_this arg1 arg2 arg3] (log/error arg1 arg2 arg3))
-
-  (debug [_this arg1] (log/debug arg1))
-  (debug [_this arg1 arg2] (log/debug arg1 arg2))
-  (debug [_this arg1 arg2 arg3] (log/debug arg1 arg2 arg3)))
+  (-info [_this message] (timbre/info message))
+  (-warn [_this message] (timbre/warn message))
+  (-error [_this message] (timbre/error message))
+  (-debug [_this message] (timbre/debug message)))
 
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
@@ -204,7 +194,7 @@
   (let [db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
-        _ (logger/info* "Starting server...")
+        _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         _ (swap! components merge (components/->components db timbre-logger nil))
@@ -240,12 +230,12 @@
       (try
         (f.file-management/analyze-changes (<! debounced-changes) @components)
         (catch Exception e
-          (logger/error* e "Error during analyzing buffer file changes")))
+          (logger/error e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
         (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components)
         (catch Exception e
-          (logger/error* e "Error during analyzing created watched files")))
+          (logger/error e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))

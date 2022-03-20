@@ -40,7 +40,7 @@
      (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
          ~(with-meta
-            `(logger/warn* (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
+            `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
             (meta &form))
          (if (contains? (:processing-changes @db/db) ~uri)
            (do

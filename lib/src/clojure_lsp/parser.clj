@@ -107,7 +107,7 @@
   (try
     (zloc-of-file db uri)
     (catch Exception _
-      (logger/warn* "It was not possible to parse file. Probably not valid clojure code."))))
+      (logger/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
 (defn to-pos [zloc row col]
   (edit/find-at-pos zloc row col))

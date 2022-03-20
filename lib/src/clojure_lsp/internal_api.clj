@@ -29,26 +29,19 @@
   (when-not (:raw? options)
     (apply cli-print (update-in (vec msg) [(dec (count msg))] str "\n"))))
 
-(defn ^:private log-print [type {:keys [verbose] :as options} & messages]
+(defn ^:private log-print [type {:keys [verbose] :as options} message]
   (when verbose
-    (apply cli-println options type messages)))
+    (apply cli-println options type message)))
 
 (defrecord ^:private CLILogger [options]
   logger/ILSPLogger
-  (setup [_])
+  (setup [this]
+    (logger/set-logger! this))
   (set-log-path [_ _])
-  (info [_ arg1] (log-print "[INFO]" options arg1))
-  (info [_ arg1 arg2] (log-print "[INFO]" options arg1 arg2))
-  (info [_ arg1 arg2 arg3] (log-print "[INFO]" options arg1 arg2 arg3))
-  (warn [_ arg1] (log-print "[WARN]" options arg1))
-  (warn [_ arg1 arg2] (log-print "[WARN]" options arg1 arg2))
-  (warn [_ arg1 arg2 arg3] (log-print "[WARN]" options arg1 arg2 arg3))
-  (error [_ arg1] (log-print "[ERROR]" options arg1))
-  (error [_ arg1 arg2] (log-print "[ERROR]" options arg1 arg2))
-  (error [_ arg1 arg2 arg3] (log-print "[ERROR]" options arg1 arg2 arg3))
-  (debug [_ arg1] (log-print "[DEBUG]" options arg1))
-  (debug [_ arg1 arg2] (log-print "[DEBUG]" options arg1 arg2))
-  (debug [_ arg1 arg2 arg3] (log-print "[DEBUG]" options arg1 arg2 arg3)))
+  (-info [_ message] (log-print "[INFO]" options message))
+  (-warn [_ message] (log-print "[WARN]" options message))
+  (-error [_ message] (log-print "[ERROR]" options message))
+  (-debug [_ message] (log-print "[DEBUG]" options message)))
 
 (defn ^:private show-message-cli [options {:keys [message extra type]}]
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))

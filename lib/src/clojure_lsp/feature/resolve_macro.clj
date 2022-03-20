@@ -81,8 +81,8 @@
                                             :version (:v document)
                                             :text (:text document)}
                                            components)
-        (logger/info* (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
+        (logger/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
       (do
-        (logger/error* (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+        (logger/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
         (producer/show-message producer (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
     {:no-op? true}))

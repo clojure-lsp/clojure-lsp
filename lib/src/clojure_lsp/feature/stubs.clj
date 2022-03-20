@@ -30,7 +30,7 @@
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]
         (delete-directory-recursive output-dir)
-        (logger/info* (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
+        (logger/info (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
         (shared/logging-time
           "Stub generation process took %s secs."
           (stub/generate! {:output-dir output-dir
@@ -55,7 +55,7 @@
                       (group-by :filename))]
     (loop [state-db @db]
       (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
-        (logger/warn* "Analyzis divergent from stub analysis, trying again...")
+        (logger/warn "Analyzis divergent from stub analysis, trying again...")
         (recur @db)))
     (-> (shared/uri->path (:project-root-uri @db))
         (db/read-cache db)
@@ -74,7 +74,7 @@
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)
                           components)
-          (logger/error* (str "Stub generation failed." message))))
+          (logger/error (str "Stub generation failed." message))))
       (when (seq extra-dirs)
         (analyze-stubs! extra-dirs components)))))
 

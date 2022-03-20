@@ -49,7 +49,7 @@
                        kondo/resolve-config
                        kondo/config-hash)]
         (when-not (string/blank? (str err))
-          (logger/error* (str err)))
+          (logger/error (str err)))
         result))))
 
 (defmacro catch-kondo-errors [err-hint & body]
@@ -64,12 +64,12 @@
                    *out* ~out-sym]
            (let [result# (do ~@body)]
              (when-not (string/blank? (str ~err-sym))
-               ~(with-meta `(logger/warn* "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
+               ~(with-meta `(logger/warn "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
              (when-not (string/blank? (str ~out-sym))
-               ~(with-meta `(logger/warn* "Output from clj-kondo:" (str ~out-sym)) m))
+               ~(with-meta `(logger/warn "Output from clj-kondo:" (str ~out-sym)) m))
              result#))
          (catch Exception ~e-sym
-           ~(with-meta `(logger/error* ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
+           ~(with-meta `(logger/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond
@@ -120,7 +120,7 @@
     (let [new-analysis (group-by :filename (normalize-analysis analysis))]
       (if (:api? @db)
         (do
-          (logger/info* (format "Starting to lint whole project files..."))
+          (logger/info (format "Starting to lint whole project files..."))
           (shared/logging-time
             "Linting whole project files took %s secs"
             (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
@@ -147,7 +147,7 @@
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
         (async/go-loop [tries 1]
           (if (>= tries 200)
-            (logger/info* "Max tries reached when async custom linting" uri)
+            (logger/info "Max tries reached when async custom linting" uri)
             (if (contains? (:processing-changes @db) uri)
               (do
                 (Thread/sleep 50)
@@ -216,13 +216,13 @@
   [paths public-only? update-callback components]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
-    (logger/info* (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
+    (logger/info (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
     (if (<= total clj-kondo-analysis-batch-size)
       (run-kondo-on-paths! paths public-only? components)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
-                          (logger/info* "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
+                          (logger/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (update-callback (inc index) batch-count)
                           (run-kondo-on-paths! batch-paths public-only? components)))
            (reduce shared/deep-merge)))))

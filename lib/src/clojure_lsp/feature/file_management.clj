@@ -91,7 +91,7 @@
                          (remove #(= filename %))
                          set)]
       (when (seq filenames)
-        (logger/debug* "Analyzing references for files:" filenames)
+        (logger/debug "Analyzing references for files:" filenames)
         (crawler/analyze-reference-filenames! filenames db)
         (doseq [filename filenames]
           (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))

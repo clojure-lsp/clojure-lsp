@@ -100,7 +100,7 @@
   [uri format-settings]
   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
     (when-not match
-      (logger/error* "Found invalid URI:" uri))
+      (logger/error "Found invalid URI:" uri))
     (str scheme+auth
          (-> path
              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
@@ -355,7 +355,7 @@
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(logger/info* (format  ~message (start-time->end-time-seconds ~start-sym)))
+          `(logger/info (format  ~message (start-time->end-time-seconds ~start-sym)))
           (meta &form))
        result#)))
 

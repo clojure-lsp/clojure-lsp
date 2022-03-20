@@ -37,7 +37,7 @@
 (defn refresh-cache! [{:keys [db]}]
   (when (and (settings/get db [:hover :clojuredocs] true)
              (not (-> @db :clojuredocs :refreshing?)))
-    (logger/info* "Refreshing clojuredocs cache...")
+    (logger/info "Refreshing clojuredocs cache...")
     (swap! db assoc-in [:clojuredocs :refreshing?] true)
     (shared/logging-time
       "Refreshing clojuredocs cache took %s secs."
@@ -45,12 +45,12 @@
         (let [;; connection check not to wait too long
               [downloadable? conn-ex] (test-remote-url clojuredocs-edn-file-url)]
           (if (not downloadable?)
-            (logger/error* "Could not refresh clojuredocs." conn-ex)
+            (logger/error "Could not refresh clojuredocs." conn-ex)
             (swap! db assoc :clojuredocs {:cache (-> clojuredocs-edn-file-url
                                                      slurp
                                                      edn/read-string)})))
         (catch Exception e
-          (logger/error* "Error refreshing clojuredocs information." e)
+          (logger/error "Error refreshing clojuredocs information." e)
           nil)
         (finally
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))

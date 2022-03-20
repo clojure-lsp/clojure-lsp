@@ -117,7 +117,7 @@
 
       (and (not loc)
            (not= :clean-ns refactoring))
-      (logger/warn* (str "Could not find a form at this location. row " row " col " col " file " uri))
+      (logger/warn (str "Could not find a form at this location. row " row " col " col " file " uri))
 
       (map? result)
       (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
@@ -135,7 +135,7 @@
       {:edit (refactor-client-seq-changes uri version result db)}
 
       (empty? result)
-      (logger/warn* refactoring "made no changes" (z/string loc))
+      (logger/warn refactoring "made no changes" (z/string loc))
 
       :else
-      (logger/warn* (str "Could not apply " refactoring " to form: " (z/string loc))))))
+      (logger/warn (str "Could not apply " refactoring " to form: " (z/string loc))))))

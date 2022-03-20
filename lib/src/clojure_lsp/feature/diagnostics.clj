@@ -77,7 +77,7 @@
 (defn ^:private valid-finding? [{:keys [row col level] :as finding}]
   (when (not= level :off)
     (or (and row col)
-        (logger/warn* "Invalid clj-kondo finding. Cannot find position data for" finding))))
+        (logger/warn "Invalid clj-kondo finding. Cannot find position data for" finding))))
 
 (defn ^:private exclude-ns? [filename linter db]
   (when-let [namespace (shared/filename->namespace filename db)]

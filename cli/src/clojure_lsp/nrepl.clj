@@ -15,7 +15,7 @@
 (defn setup-nrepl [db]
   (try
     (when-let [port (repl-port)]
-      (logger/info* "====== LSP nrepl server started on port" port)
+      (logger/info "====== LSP nrepl server started on port" port)
       (swap! db assoc :port port))
     (catch Throwable _
-      (logger/debug* "nrepl not found, skipping nrepl server start..."))))
+      (logger/debug "nrepl not found, skipping nrepl server start..."))))

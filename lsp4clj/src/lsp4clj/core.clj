@@ -86,14 +86,14 @@
                           (catch Throwable ~ex-sym
                             (if (instance? ResponseErrorException ~ex-sym)
                               (throw (CompletionException. ~ex-sym))
-                              ~(with-meta `(logger/error* ~ex-sym) m))))]
+                              ~(with-meta `(logger/error ~ex-sym) m))))]
         (try
           (let [~duration-sym (quot (- (System/nanoTime) ~'_start-time) 1000000)]
             ~(if extra-log-fn
-               (with-meta `(logger/debug* ~'_id (format "%sms - %s" ~duration-sym (~extra-log-fn ~result-sym))) m)
-               (with-meta `(logger/debug* ~'_id (format "%sms" ~duration-sym)) m)))
+               (with-meta `(logger/debug ~'_id (format "%sms - %s" ~duration-sym (~extra-log-fn ~result-sym))) m)
+               (with-meta `(logger/debug ~'_id (format "%sms" ~duration-sym)) m)))
           (catch Throwable ~ex-sym
-            ~(with-meta `(logger/error* ~ex-sym) m)))
+            ~(with-meta `(logger/error ~ex-sym) m)))
         ~result-sym))))
 
 (defmacro sync-notification
@@ -214,7 +214,7 @@
                                                            :end-row (inc (.getLine end))
                                                            :end-col (inc (.getCharacter end))})))
                               (catch Exception e
-                                (logger/error* e))
+                                (logger/error e))
                               (finally
                                 (reset! formatting false))))]
                (CompletableFuture/completedFuture
@@ -286,7 +286,7 @@
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
-    (logger/warn* (coercer/java->clj params)))
+    (logger/warn (coercer/java->clj params)))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
     (start :didChangeWatchedFiles
@@ -324,7 +324,7 @@
       (windows-process-alive? pid)
       (unix-process-alive? pid))
     (catch Exception e
-      (logger/warn* "Checking if process is alive failed." e)
+      (logger/warn "Checking if process is alive failed." e)
       ;; Return true since the check failed. Assume the process is alive.
       true)))
 
@@ -335,7 +335,7 @@
     (if (process-alive? ppid)
       (recur)
       (do
-        (logger/info* "Parent process" ppid "is not running - exiting server")
+        (logger/info "Parent process" ppid "is not running - exiting server")
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -350,7 +350,7 @@
     (start :initialize
            (end
              (do
-               (logger/info* "Initializing...")
+               (logger/info "Initializing...")
                (feature-handler/initialize feature-handler
                                            (.getRootUri params)
                                            (client-capabilities params)
@@ -369,7 +369,7 @@
     (start :initialized
            (end
              (do
-               (logger/info* "Initialized!")
+               (logger/info "Initialized!")
                (producer/register-capability
                  (:producer @db)
                  (RegistrationParams.
@@ -378,12 +378,12 @@
                                      [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
 
   (^CompletableFuture shutdown [_]
-    (logger/info* "Shutting down")
+    (logger/info "Shutting down")
     (reset! db initial-db)
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [_]
-    (logger/info* "Exitting...")
+    (logger/info "Exitting...")
     (shutdown-agents)
     (System/exit 0))
   (getTextDocumentService [_]
@@ -400,11 +400,11 @@
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read system-in buffer 0 buffer-size)]
             (when (pos? chs)
-              (logger/warn* "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (logger/warn "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
               (.write os buffer 0 chs)
               (recur (.read system-in buffer 0 buffer-size)))))
         (catch Exception e
-          (logger/warn* e "in thread"))))
+          (logger/warn e "in thread"))))
     is))
 
 (defn tee-system-out [^java.io.OutputStream system-out]
@@ -416,11 +416,11 @@
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read is buffer 0 buffer-size)]
             (when (pos? chs)
-              (logger/warn* "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (logger/warn "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
               (.write system-out buffer)
               (recur (.read is buffer 0 buffer-size)))))
         (catch Exception e
-          (logger/error* e "in thread"))))
+          (logger/error e "in thread"))))
     os))
 
 (defrecord LSPProducer [^LanguageClient client db]
@@ -443,7 +443,7 @@
          (.applyEdit client)))
 
   (show-document-request [_this document-request]
-    (logger/info* "Requesting to show on editor the document" document-request)
+    (logger/info "Requesting to show on editor the document" document-request)
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
       (->> document-request
            (coercer/conform-or-log ::coercer/show-document-request)
@@ -478,7 +478,7 @@
     (let [message-content {:message message
                            :type type
                            :extra extra}]
-      (logger/info* message-content)
+      (logger/info message-content)
       (->> message-content
            (coercer/conform-or-log ::coercer/show-message)
            (.showMessage client))))

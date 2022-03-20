@@ -731,9 +731,9 @@
     (try
       (let [result (s/conform spec value)]
         (if (= :clojure.spec.alpha/invalid result)
-          (logger/error* (s/explain-data spec value))
+          (logger/error (s/explain-data spec value))
           result))
       (catch Exception ex
         (if (instance? ResponseErrorException ex)
           (throw ex)
-          (logger/error* ex spec value))))))
+          (logger/error ex spec value))))))

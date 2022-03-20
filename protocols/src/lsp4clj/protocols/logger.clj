@@ -1,4 +1,6 @@
-(ns lsp4clj.protocols.logger)
+(ns lsp4clj.protocols.logger
+  (:require
+   [clojure.string :as string]))
 
 (def ^:dynamic *logger*
   "Optional logger state to avoid having component available everywhere."
@@ -9,35 +11,26 @@
 
   (set-log-path [_this log-path])
 
-  (info
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3])
-  (warn
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3])
-  (error
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3])
-  (debug
-    [this arg1]
-    [this arg1 arg2]
-    [this arg1 arg2 arg3]))
+  (-info [this message])
+  (-warn [this message])
+  (-error [this message])
+  (-debug [this message]))
 
-(defn info* [& args]
-  (when *logger*
-    (apply info *logger* args)))
+(defn set-logger! [logger]
+  (alter-var-root #'*logger* (constantly logger)))
 
-(defn warn* [& args]
+(defn info [& args]
   (when *logger*
-    (apply warn *logger* args)))
+    (-info *logger* (string/join " " args))))
 
-(defn error* [& args]
+(defn warn [& args]
   (when *logger*
-    (apply error *logger* args)))
+    (-warn *logger* (string/join " " args))))
 
-(defn debug* [& args]
+(defn error [& args]
   (when *logger*
-    (apply debug *logger* args)))
+    (-error *logger* (string/join " " args))))
+
+(defn debug [& args]
+  (when *logger*
+    (-debug *logger* (string/join " " args))))

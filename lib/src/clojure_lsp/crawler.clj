@@ -87,7 +87,7 @@
 
 (defn ^:private analyze-classpath! [root-path source-paths settings progress-token {:keys [db] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
-    (logger/info* "Analyzing classpath for project root" root-path)
+    (logger/info "Analyzing classpath for project root" root-path)
     (when-let [classpath (:classpath @db)]
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
             external-classpath (cond->> (->> classpath
@@ -103,10 +103,10 @@
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
-    (logger/info* (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
+    (logger/info (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
     (.mkdir clj-kondo-folder)
     (catch Exception e
-      (logger/error* "Error when creating '.clj-kondo' dir on project-root" e))))
+      (logger/error "Error when creating '.clj-kondo' dir on project-root" e))))
 
 (defn ^:private ensure-kondo-config-dir-exists!
   [project-root-uri db]
@@ -116,7 +116,7 @@
     (when-not (shared/file-exists? clj-kondo-folder)
       (create-kondo-folder! clj-kondo-folder)
       (when (db/db-exists? project-root-path db)
-        (logger/info* "Removing outdated cached lsp db...")
+        (logger/info "Removing outdated cached lsp db...")
         (db/remove-db! project-root-path db)))))
 
 (defn ^:private load-db-cache! [root-path db]
@@ -184,7 +184,7 @@
                                 (= (:kondo-config-hash @db) kondo-config-hash))]
       (if use-db-analysis?
         (do
-          (logger/info* "Using cached db for project root" root-path)
+          (logger/info "Using cached db for project root" root-path)
           (swap! db assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
@@ -209,7 +209,7 @@
                                           force-settings)
              :classpath-settings classpath-settings))
     (producer/publish-progress producer 95 "Analyzing project files" progress-token)
-    (logger/info* "Analyzing source paths for project root" root-path)
+    (logger/info "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
@@ -220,6 +220,6 @@
           (when (stubs/check-stubs? settings)
             (stubs/generate-and-analyze-stubs! settings components))))
       (async/go
-        (logger/info* "Analyzing test paths for project root" root-path)
+        (logger/info "Analyzing test paths for project root" root-path)
         (analyze-test-paths! components)))
     (producer/publish-progress producer 100 "Project analyzed" progress-token)))

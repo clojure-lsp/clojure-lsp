@@ -52,13 +52,13 @@
                             (shared/uri->available-langs (:filename check-element)))]
     (seq (set/intersection match-file-lang check-file-lang))))
 
-(defn ^:private defrecord-names-for [{:keys [name]}]
-  #{name
-    (symbol (str "->" name))
-    (symbol (str "map->" name))})
-
-(defn ^:private deftype-names-for [{:keys [name]}]
-  #{name (symbol (str "->" name))})
+(defn ^:private var-definition-names [{:keys [defined-by name]}]
+  (case defined-by
+    clojure.core/defrecord
+    , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
+    clojure.core/deftype
+    , #{name (symbol (str "->" name))}
+    , #{name}))
 
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
@@ -316,45 +316,32 @@
           (get analysis filename))))
 
 (defmethod find-references :var-usages
-  [analysis element include-declaration? _db]
+  [analysis element include-declaration? db]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     [element]
-    (into []
-          (comp
-            (mapcat val)
-            (filter #(not (identical? :keywords (:bucket %))))
-            (filter #(safe-equal? (:name element) (:name %)))
-            (filter #(safe-equal? (:to element) (or (:ns %) (:to %))))
-            (filter #(or include-declaration?
-                         (and (or (not (:from-var %))
-                                  (not= (:from-var %) (:name element))
-                                  (not= (:from %) (:to element)))
-                              (not (identical? :var-definitions (:bucket %)))
-                              (not (:defmethod %)))))
-            (medley/distinct-by (juxt :filename :name :row :col)))
-          analysis)))
+    (let [var-definition {:ns (:to element)
+                          :name (:name element)
+                          :bucket :var-definitions}]
+      (find-references analysis var-definition include-declaration? db))))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration? _db]
-  (let [defrecord? (= 'clojure.core/defrecord (:defined-by element))
-        deftype? (= 'clojure.core/deftype (:defined-by element))
-        names (cond
-                defrecord? (defrecord-names-for element)
-                deftype? (deftype-names-for element))]
+  (let [names (var-definition-names element)
+        exclude-declaration? (not include-declaration?)]
     (into []
           (comp
             (mapcat val)
-            (filter #(not (identical? :keywords (:bucket %))))
-            (filter #(or (safe-equal? (:name element) (:name %))
-                         (and (or defrecord? deftype?)
-                              (contains? names (:name %)))))
+            (remove #(identical? :keywords (:bucket %)))
+            (filter #(contains? names (:name %)))
             (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
-            (filter #(or include-declaration?
-                         (and (or (not (identical? :var-definitions (:bucket %)))
-                                  (= (:defined-by %) 'clojure.core/declare))
-                              (or (not (:from-var %))
-                                  (not= (:from-var %) (:name element))
-                                  (not= (:from %) (:ns element))))))
+            (remove #(and exclude-declaration?
+                          (or
+                            (identical? :var-definitions (:bucket %))
+                            ;; usage from own definition
+                            (and (:from-var %)
+                                 (= (:from-var %) (:name element))
+                                 (= (:from %) (:ns element)))
+                            (:defmethod %))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 

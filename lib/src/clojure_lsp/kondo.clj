@@ -152,8 +152,21 @@
               (do
                 (Thread/sleep 50)
                 (recur (inc tries)))
-              (let [new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
-                (swap! db assoc-in [:findings filename] new-findings)
+              (let [old-findings (get-in @db [:findings filename])
+                    new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
+                ;; This equality check doesn't seem necessary, but it helps
+                ;; avoid an infinite loop. See
+                ;; https://github.com/clojure-lsp/clojure-lsp/issues/796#issuecomment-1065830737
+                ;; and the surrounding discussion. Even if the new-findings are
+                ;; `=` to the old-findings, they never seem to be `identical?`.
+                ;; (TODO: understand why?). If we swap them in, the
+                ;; `compare-and-set!` in `file-management.analyze-changes` is
+                ;; guaranteed to fail (since `compare-and-set!` is based on
+                ;; object identity, not equality). That will trigger a
+                ;; re-analysis and re-linting, bringing us back to this line and
+                ;; starting the loop again.
+                (when (not= old-findings new-findings)
+                  (swap! db assoc-in [:findings filename] new-findings))
                 (when (not= :unknown (shared/uri->file-type uri))
                   (f.diagnostic/sync-lint-file! uri db))))))
         (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db)))))

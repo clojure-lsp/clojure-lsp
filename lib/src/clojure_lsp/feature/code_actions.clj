@@ -27,13 +27,13 @@
                           :zloc     zloc
                           :position position)))))))
 
-(defn ^:private find-require-suggestions [db {:keys [position zloc]}]
-  (->> (f.add-missing-libspec/find-require-suggestions zloc db)
+(defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]
+  (->> (f.add-missing-libspec/find-require-suggestions zloc uri db)
        (map #(assoc % :position position))))
 
-(defn ^:private find-all-require-suggestions [diagnostics missing-requires db]
+(defn ^:private find-all-require-suggestions [diagnostics missing-requires uri db]
   (->> diagnostics
-       (mapcat (partial find-require-suggestions db))
+       (mapcat (partial find-require-suggestions uri db))
        (remove (fn [suggestion]
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
@@ -78,17 +78,6 @@
                        :command   "add-require-suggestion"
                        :arguments [uri (:line position) (:character position) ns alias refer]}})
        alias-suggestions))
-
-(defn ^:private missing-require-actions
-  [uri missing-requires]
-  (map (fn [{:keys [ns alias refer position]}]
-         {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
-          :kind       :quick-fix
-          :preferred? true
-          :command    {:title     "Add missing require"
-                       :command   "add-missing-libspec"
-                       :arguments [uri (:line position) (:character position)]}})
-       missing-requires))
 
 (defn ^:private missing-import-actions [uri missing-imports]
   (map (fn [{:keys [missing-import position]}]
@@ -266,7 +255,7 @@
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
-        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* db))
+        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
@@ -274,10 +263,6 @@
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []
-
-      (seq @missing-requires*)
-      (into (missing-require-actions uri @missing-requires*))
-
       (seq @missing-imports*)
       (into (missing-import-actions uri @missing-imports*))
 

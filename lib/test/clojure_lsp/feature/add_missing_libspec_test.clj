@@ -11,70 +11,124 @@
 
 (deftest resolve-best-alias-suggestions-test
   (testing "alias not exists"
-    (is (= #{"foo"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo" '#{bar})))
-    (is (= #{"string"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "clojure.string" '#{foo bar})))
-    (is (= #{"json"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "clojure.data.json" '#{foo bar}))))
+    (is (= nil
+           (#'f.add-missing-libspec/find-namespace-suggestions "foo" {})))
+    (is (= [{:ns "clojure.string" :alias "string"}
+            {:ns "clojure.string"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.string" {"clojure.string" nil})))
+    (is (= [{:ns "clojure.set" :alias "s" :count 1}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.set" {"clojure.set" "s"})))
+    (is (= [{:ns "clojure.spec.alpha" :alias "spec"} {:ns "clojure.spec.alpha"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "spec" {"clojure.spec.alpha" nil})))
+    (is (= [{:ns "clojure.spec.alpha" :alias "s" :count 1}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "spec" {"clojure.spec.alpha" "s"})))
+    (is (= [{:ns "clojure.data.json" :alias "json"}
+            {:ns "clojure.data.json"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" nil}))))
   (testing "alias already exists"
-    (is (= #{"foo"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo" '#{foo bar})))
-    (is (= #{"string" "clojure.string"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "clojure.string" '#{foo bar string})))
-    (is (= #{"json" "data.json"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "clojure.data.json" '#{foo bar json})))
-    (is (= #{"impl" "edn.impl"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "clojure.data.edn.impl" '#{foo bar json impl edn.impl}))))
-  (testing "core ns"
-    (is (= #{"medley"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "medley.core" '#{})))
-    (is (= #{"bar"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo.bar.core" '#{})))
-    (is (= #{"bar"} (#'f.add-missing-libspec/resolve-best-alias-suggestions "foo.bar.core" '#{bar})))))
+    (is (= [{:ns "bar" :alias "foo" :count 1}] (#'f.add-missing-libspec/find-namespace-suggestions "foo" {"bar" "foo"})))
+    (is (= [{:ns "clojure.string"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.string" {"clojure.string" nil "utils.string" "string"})))
+    (is (= [{:alias "data.json" :ns "clojure.data.json"}
+            {:ns "clojure.data.json"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" nil "something.else" "json"})))
+    (is (= [{:alias "data.edn", :count 3, :ns "clojure.data.edn.impl"}
+            {:alias "edn.impl", :count 2, :ns "clojure.data.edn.impl"}
+            {:alias "impl", :count 1, :ns "clojure.data.edn.impl"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.edn.impl"
+                                                               [["clojure.data.edn.impl" "impl"]
+                                                                ["clojure.data.edn.impl" "data.edn"]
+                                                                ["clojure.data.edn.impl" "data.edn"]
+                                                                ["clojure.data.edn.impl" "data.edn"]
+                                                                ["clojure.data.edn.impl" "edn.impl"]
+                                                                ["clojure.data.edn.impl" "edn.impl"]])))
 
-(deftest resolve-best-namespaces-suggestions-test
+    (is (= [{:alias "data.edn.impl", :ns "clojure.data.edn.impl"}
+            {:ns "clojure.data.edn.impl"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.edn.impl"
+                                                               [["clojure.data.edn.impl" nil]
+                                                                ["other.data.edn.impl" "impl"]
+                                                                ["other.data.edn.impl" "data.edn"]
+                                                                ["other.data.edn.impl" "data.edn"]
+                                                                ["other.data.edn.impl" "data.edn"]
+                                                                ["other.data.edn.impl" "edn.impl"]
+                                                                ["other.data.edn.impl" "edn.impl"]]))))
+  (testing "core ns"
+    (is (= [{:ns "medley.core" :alias "medley"} {:ns "medley.core"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "medley.core" {"medley.core" nil})))
+    (is (= [{:ns "foo.bar.core" :alias "bar"} {:ns "foo.bar.core"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "foo.bar.core" {"foo.bar.core" nil})))
+    (is (= [{:ns "foo.bar.core" :alias "foo.bar"} {:ns "foo.bar.core"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "foo.bar.core" {"foo.bar.core" nil "something.else" "bar"}))))
+
   (testing "when alias segments match namespaces in the order"
-    (is (= #{"foo.dar.zas"} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
-                             "d.z" '#{foo.bar.baz
-                                      foo.dar.zas})))
-    (is (= #{"foo.dar.zas"} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
-                             "da.zas" '#{foo.bar.baz
-                                         foo.dar.zas})))
-    (is (= #{} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
-                "dai.zas" '#{foo.bar.baz
-                             foo.dar.zas})))
-    (is (= #{"foo.dar.zas"
-             "foo.dow.zsr"} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
-                             "d.z" '#{foo.dar.zas
-                                      foo.bar.baz
-                                      foo.dow.zsr})))
-    (is (= #{"foo.dar.zas"
-             "foo.dow.zsr"} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
-                             "f.d.z" '#{foo.dar.zas
-                                        baz.dar.zas
-                                        zaz.dar.zas
-                                        foo.bar.baz
-                                        foo.dow.zsr})))
-    (is (= #{"foo.bar"} (#'f.add-missing-libspec/resolve-best-namespaces-suggestions
-                         "foo.bar" '#{foo.bar.zas
-                                      foo.bar
-                                      foo.bar-test})))))
+    (is (= [{:alias "zas" :ns "foo.dar.zas"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "d.z" {"foo.bar.baz" nil "foo.dar.zas" nil})))
+    (is (= [{:alias "zas" :ns "foo.dar.zas"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "da.zas" {"foo.bar.baz" nil "foo.dar.zas" nil})))
+    (is (= nil
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "dai.zas" {"foo.bar.baz" nil "foo.dar.zas" nil})))
+    (is (= [{:alias "zas" :ns "foo.dar.zas"}
+            {:alias "zsr" :ns "foo.dow.zsr"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "d.z" {"foo.dar.zas" nil "foo.bar.baz" nil "foo.dow.zsr" nil})))
+    (is (= [{:alias "zas" :ns "foo.dar.zas"}
+            {:alias "zsr" :ns "foo.dow.zsr"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "f.d.z" {"foo.dar.zas" nil "baz.dar.zas" nil "zaz.dar.zas" nil "foo.bar.baz" nil "foo.dow.zsr" nil}))))
+
+  (testing "use cases"
+    (is (= nil
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {})))
+    (is (= [{:ns "taoensso.timbre" :alias "log" :count 1}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "log" {"taoensso.timbre" "log" "clojure.tools.logging" nil})))
+    (is (= [{:ns "clojure.tools.logging" :alias "logging"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "log" {"clojure.tools.logging" nil})))
+    (is (= [{:ns "clojure.data.json" :alias "json"}
+            {:ns "clojure.data.json"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" nil})))
+    (is (= [{:ns "clojure.data.json" :alias "data.json"}
+            {:ns "clojure.data.json"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" nil "cheshire.core" "json"})))
+    (is (= [{:ns "cheshire.core" :alias "cheshire"}
+            {:ns "cheshire.core"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "cheshire.core" {"cheshire.core" nil})))
+    (is (= [{:ns "clojure.data.json" :alias "x" :count 1}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" "x"})))
+    (is (= [{:ns "clojure.data.json" :alias "x" :count 1}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "c.d.j" {"clojure.data.json" "x"})))
+    (is (= [{:ns "clojure.data.json" :alias "x" :count 1}
+            {:ns "clojure.delta.json" :alias "delta.json"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions "c.d.j" {"clojure.data.json" "x"
+                                                                        "clojure.delta.json" nil
+                                                                        "cheshire.core" "json"})))))
 
 (defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/zloc-from-code code) db/db))
+  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" db/db))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
-    (h/load-code-and-locs "(ns project.some.cool.namespace)")
+    (h/load-code-and-locs "(ns project.some.cool.namespace)" "file:///d.clj")
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
     (h/load-code-and-locs "(ns project.some.cool.namespace-test)" "file:///c.clj")
     (h/assert-submaps
       [{:ns "project.some.cool.namespace"
-        :alias "s.cool.namespace"}
+        :alias "namespace"}
        {:ns "other-project.some.coolio.namespace"
-        :alias "s.cool.namespace"}]
+        :alias "namespace"}]
       (find-require-suggestions "|s.cool.namespace/foo")))
   (testing "Suggested alias"
     (h/load-code-and-locs "(ns project.some.cool.namespace)")
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
     (h/assert-submaps
-      [{:ns "project.some.cool.namespace"
-        :alias "namespace"}]
+      [{:ns "project.some.cool.namespace" :alias "namespace"}
+       {:ns "project.some.cool.namespace"}]
       (find-require-suggestions "|project.some.cool.namespace/foo")))
   (testing "Suggested refers"
-    (h/load-code-and-locs "(ns project.some.cool.namespace) (def bla 1) (def blow 2)")
+    (h/load-code-and-locs "(ns project.some.cool.namespace) (def bla 1) (def blow 2)" "file:///c.clj")
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace) (def bli)" "file:///b.clj")
     (h/assert-submaps
       [{:ns "project.some.cool.namespace"
@@ -86,7 +140,7 @@
       (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
-  (f.add-missing-libspec/add-missing-libspec (h/zloc-from-code code) db/db))
+  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" db/db))
 
 (defn ^:private as-sexp [[{:keys [loc]} :as locs]]
   (assert (= 1 (count locs)))
@@ -103,17 +157,41 @@
 (deftest add-missing-libspec-test
   (testing "aliases"
     (testing "known aliases in project"
-      (h/load-code-and-locs "(ns a (:require [foo.s :as s]))")
+      (h/clean-db!)
+      (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.clj")
       (is (= '(ns foo (:require [foo.s :as s]))
              (-> "(ns foo) |s/thing"
                  add-missing-libspec
                  as-sexp))))
+    (testing "Do not add from wrong language"
+      (h/clean-db!)
+      (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.cljs")
+      (is (= nil
+             (-> "(ns foo) |s/thing"
+                 add-missing-libspec))))
     (testing "common ns aliases"
       (h/clean-db!)
       (is (= '(ns foo (:require [clojure.set :as set]))
              (-> "(ns foo) |set/subset?"
                  add-missing-libspec
                  as-sexp))))
+    (testing "Don't add an alias that already exists"
+      (h/clean-db!)
+      (is (= nil
+             (-> "(ns foo (:require [foo.set :as set])) |set/subset?"
+                 add-missing-libspec))))
+    (testing "Don't add a namespace that already exists, but fix alias."
+      (h/clean-db!)
+      (is (= "s/subset?"
+             (-> "(ns foo (:require [clojure.set :as s])) |set/subset?"
+                 add-missing-libspec
+                 as-str))))
+    (testing "Don't add a namespace that already exists, but fix alias."
+      (h/clean-db!)
+      (is (= "s/subset?"
+             (-> "(ns foo (:require [clojure.set :as s])) |c.s/subset?"
+                 add-missing-libspec
+                 as-str))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})

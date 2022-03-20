@@ -249,16 +249,16 @@
                         z/up)]
     (when let-loc
       (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-            clj-analysis (unify-to-one-language (:analysis @db))
             bindings-loc (z/right (z/down (zsub/subzip let-loc)))
+            analysis (:analysis @db)
             local-defs (->> (q/find-local-usages-under-form
-                              clj-analysis
+                              analysis
                               (shared/uri->filename uri)
                               row
                               col
                               end-row
                               end-col)
-                            (map #(q/find-definition clj-analysis % db)))
+                            (map #(q/find-definition analysis % db)))
             valid? (->> local-defs
                         (every? (fn [definition]
                                   (or
@@ -272,7 +272,7 @@
 
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
-  [zloc binding-name uri db]
+  [zloc uri db binding-name]
   (let [zloc (z/skip-whitespace z/right zloc)]
     (when-let [let-top-loc (find-let-form zloc uri db)]
       (let [let-loc       (z/down (zsub/subzip let-top-loc))

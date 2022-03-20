@@ -1,7 +1,6 @@
 {:deps {org.clojure/clojure {:mvn/version "1.11.0-rc1"}
         rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
         borkdude/rewrite-edn {:mvn/version "0.1.0" :exclusions [rewrite-clj/rewrite-clj]}
-        com.taoensso/timbre {:mvn/version "5.1.2"}
         org.clojure/core.async {:mvn/version "1.5.648"}
         cljfmt/cljfmt {:mvn/version "0.8.0"
                        :exclusions [rewrite-cljs/rewrite-cljs

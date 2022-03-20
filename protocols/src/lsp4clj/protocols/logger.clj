@@ -2,10 +2,6 @@
   (:require
    [clojure.string :as string]))
 
-(def ^:dynamic *logger*
-  "Optional logger state to avoid having component available everywhere."
-  nil)
-
 (defprotocol ILSPLogger
   (setup [this])
 
@@ -15,6 +11,10 @@
   (-warn [this message])
   (-error [this message])
   (-debug [this message]))
+
+(def ^:dynamic *logger*
+  "Optional logger state to avoid having component available everywhere."
+  nil)
 
 (defn set-logger! [logger]
   (alter-var-root #'*logger* (constantly logger)))

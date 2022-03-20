@@ -778,7 +778,7 @@
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" h/components)
             results-to-assert (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
@@ -802,7 +802,7 @@
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.cljs")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" h/components)
             results-to-assert (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
@@ -832,7 +832,7 @@
           (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")
-                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" h/components)
                 results-to-assert (update-map changes-by-uri with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
@@ -848,7 +848,7 @@
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns-test) (deftest |foo [b] (+ 1 2))"
                                        "file:///project/test/some/ns_test.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" h/components)]
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
 

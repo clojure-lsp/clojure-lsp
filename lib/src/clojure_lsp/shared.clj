@@ -4,7 +4,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    [java.net URI URL JarURLConnection URLDecoder]
    [java.nio.charset StandardCharsets]
@@ -100,7 +100,7 @@
   [uri format-settings]
   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
     (when-not match
-      (log/error "Found invalid URI:" uri))
+      (logger/error "Found invalid URI:" uri))
     (str scheme+auth
          (-> path
              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
@@ -128,11 +128,9 @@
   [^String uri]
   (try
     (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
-    (catch UnsupportedOperationException e
-      (log/warn "Unable to decode URI. Returning URI as-is." e)
+    (catch UnsupportedOperationException _
       uri)
-    (catch IllegalArgumentException e
-      (log/warn "Unable to decode URI. Returning URI as-is." e)
+    (catch IllegalArgumentException _
       uri)))
 
 (defn uri->filename
@@ -357,7 +355,7 @@
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(log/infof ~message (start-time->end-time-seconds ~start-sym))
+          `(logger/info (format  ~message (start-time->end-time-seconds ~start-sym)))
           (meta &form))
        result#)))
 

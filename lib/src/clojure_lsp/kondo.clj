@@ -9,7 +9,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -49,7 +49,7 @@
                        kondo/resolve-config
                        kondo/config-hash)]
         (when-not (string/blank? (str err))
-          (log/error (str err)))
+          (logger/error (str err)))
         result))))
 
 (defmacro catch-kondo-errors [err-hint & body]
@@ -64,12 +64,12 @@
                    *out* ~out-sym]
            (let [result# (do ~@body)]
              (when-not (string/blank? (str ~err-sym))
-               ~(with-meta `(log/warn "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
+               ~(with-meta `(logger/warn "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
              (when-not (string/blank? (str ~out-sym))
-               ~(with-meta `(log/warn "Output from clj-kondo:" (str ~out-sym)) m))
+               ~(with-meta `(logger/warn "Output from clj-kondo:" (str ~out-sym)) m))
              result#))
          (catch Exception ~e-sym
-           ~(with-meta `(log/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
+           ~(with-meta `(logger/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
 
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond
@@ -120,7 +120,7 @@
     (let [new-analysis (group-by :filename (normalize-analysis analysis))]
       (if (:api? @db)
         (do
-          (log/info (format "Starting to lint whole project files..."))
+          (logger/info (format "Starting to lint whole project files..."))
           (shared/logging-time
             "Linting whole project files took %s secs"
             (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
@@ -147,7 +147,7 @@
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
         (async/go-loop [tries 1]
           (if (>= tries 200)
-            (log/info "Max tries reached when async custom linting" uri)
+            (logger/info "Max tries reached when async custom linting" uri)
             (if (contains? (:processing-changes @db) uri)
               (do
                 (Thread/sleep 50)
@@ -206,25 +206,25 @@
                          :canonical-paths true}}}
       (with-additional-config (settings/all db))))
 
-(defn run-kondo-on-paths! [paths external-analysis-only? db]
+(defn run-kondo-on-paths! [paths external-analysis-only? {:keys [db]}]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
     (kondo/run! (kondo-for-paths paths db external-analysis-only?))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
-  [paths public-only? update-callback db]
+  [paths public-only? update-callback components]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
-    (log/info "Analyzing" total "paths with clj-kondo with batch size of" batch-count "...")
+    (logger/info (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
     (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths public-only? db)
+      (run-kondo-on-paths! paths public-only? components)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
-                          (log/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
+                          (logger/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (update-callback (inc index) batch-count)
-                          (run-kondo-on-paths! batch-paths public-only? db)))
+                          (run-kondo-on-paths! batch-paths public-only? components)))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db]

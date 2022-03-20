@@ -4,8 +4,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [taoensso.timbre :as log]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

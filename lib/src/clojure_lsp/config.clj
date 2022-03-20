@@ -4,7 +4,7 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    [java.util.jar JarFile JarFile$JarFileEntry]))
 
@@ -16,7 +16,7 @@
          (edn/read-string {:readers {'re re-pattern}})
          shared/keywordize-first-depth)
     (catch Exception e
-      (log/error "WARNING: error while reading" (.getCanonicalPath file) (format "(%s)" (.getMessage e))))))
+      (logger/error "WARNING: error while reading" (.getCanonicalPath file) (format "(%s)" (.getMessage e))))))
 
 (defn get-property [p]
   (System/getProperty p))
@@ -70,7 +70,7 @@
                  (let [[_ group artifact] (string/split (.getName config-entry) #"/")]
                    (when (some #(and (string/starts-with? % group)
                                      (string/ends-with? % artifact)) config-paths)
-                     (log/info (format "Resolving found clojure-lsp config for '%s/%s' in classpath" group artifact))
+                     (logger/info (format "Resolving found clojure-lsp config for '%s/%s' in classpath" group artifact))
                      (edn/read-string {:readers {'re re-pattern}}
                                       (slurp (.getInputStream jar config-entry))))))))))
 

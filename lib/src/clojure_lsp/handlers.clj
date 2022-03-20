@@ -25,8 +25,9 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.feature-handler :as feature-handler]
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer])
   (:import
    [java.net
     URL
@@ -39,7 +40,7 @@
      (loop [backoff# 1]
        (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
          ~(with-meta
-            `(log/warnf "Timeout in %s waiting for changes to %s" ~task-id ~uri)
+            `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
             (meta &form))
          (if (contains? (:processing-changes @db/db) ~uri)
            (do
@@ -47,8 +48,13 @@
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
-(defn initialize [project-root-uri client-capabilities client-settings work-done-token]
-  (swap! db/db assoc :project-analysis-type :project-and-deps)
+(defn initialize
+  [project-root-uri
+   client-capabilities
+   client-settings
+   work-done-token
+   {:keys [db] :as components}]
+  (swap! db assoc :project-analysis-type :project-and-deps)
   (when project-root-uri
     (crawler/initialize-project
       project-root-uri
@@ -56,13 +62,13 @@
       client-settings
       {}
       work-done-token
-      db/db)))
+      components)))
 
-(defn did-open [{:keys [textDocument]}]
+(defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)
         text (:text textDocument)]
-    (f.file-management/did-open uri text db/db true)
-    (clojure-producer/refresh-test-tree (:producer @db/db) [uri]))
+    (f.file-management/did-open uri text db true)
+    (clojure-producer/refresh-test-tree producer [uri]))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -95,8 +101,7 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db/db))))
 
-(defn completion-resolve-item [item]
-  (f.completion/resolve-item item db/db))
+(def completion-resolve-item f.completion/resolve-item)
 
 (defn prepare-rename [{:keys [textDocument position]}]
   (let [[row col] (shared/position->line-column position)]
@@ -180,9 +185,9 @@
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))
 
-(defn server-info-log []
-  (protocols/show-message
-    (:producer @db/db)
+(defn server-info-log [{:keys [producer]}]
+  (producer/show-message
+    producer
     (with-out-str (pprint/pprint (server-info)))
     :info
     nil))
@@ -200,9 +205,9 @@
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
-(defn cursor-info-log [{:keys [textDocument position]}]
-  (protocols/show-message
-    (:producer @db/db)
+(defn cursor-info-log [{:keys [textDocument position]} {:keys [producer]}]
+  (producer/show-message
+    producer
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
     nil))
@@ -210,10 +215,10 @@
 (defn cursor-info-raw [{:keys [textDocument position]}]
   (cursor-info [textDocument (:line position) (:character position)]))
 
-(defn clojuredocs-raw [{:keys [symName symNs]}]
-  (f.clojuredocs/find-docs-for symName symNs db/db))
+(defn clojuredocs-raw [{:keys [symName symNs]} components]
+  (f.clojuredocs/find-docs-for symName symNs components))
 
-(defn ^:private refactor [refactoring [doc-id line character & args] db]
+(defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db] :as components}]
   (let [row (inc (int line))
         col (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change
@@ -227,31 +232,33 @@
                                :col         col
                                :args        args
                                :version     v}
-                              db)))
+                              components)))
 
-(defn execute-command [{:keys [command arguments]}]
+(defn execute-command [{:keys [command arguments]} {:keys [producer] :as components}]
   (cond
     (= command "server-info")
-    (server-info-log)
+    (server-info-log components)
 
     (= command "cursor-info")
     (cursor-info-log {:textDocument (nth arguments 0)
                       :position {:line (nth arguments 1)
-                                 :character (nth arguments 2)}})
+                                 :character (nth arguments 2)}}
+                     components)
 
     (some #(= % command) f.refactor/available-refactors)
-    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
-      (protocols/publish-workspace-edit (:producer @db/db) edit)
+    ;; TODO move components upper to a common place
+    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
+      (producer/publish-workspace-edit producer edit)
       (when show-document-after-edit
         (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
                                                           (shared/full-file-range)))
-             (protocols/show-document-request (:producer @db/db))))
+             (producer/show-document-request producer)))
       edit)))
 
-(defn hover [{:keys [textDocument position]}]
+(defn hover [{:keys [textDocument position]} components]
   (let [[line column] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)]
-    (f.hover/hover filename line column db/db)))
+    (f.hover/hover filename line column components)))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (let [[line column] (shared/position->line-column position)]
@@ -265,10 +272,7 @@
     :range-formatting doc-id
     (f.format/range-formatting doc-id format-pos db/db)))
 
-(defmulti extension (fn [method _] method))
-
-(defmethod extension "dependencyContents"
-  [_ doc-id]
+(defn dependency-contents [doc-id]
   (let [url (URL. doc-id)
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)
@@ -343,24 +347,24 @@
         col (-> position :character inc)]
     (f.linked-editing-range/ranges textDocument row col db/db)))
 
-(defrecord ClojureLSPFeatureHandler []
-  protocols/ILSPFeatureHandler
+(defrecord ClojureLSPFeatureHandler [components*]
+  feature-handler/ILSPFeatureHandler
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
-    (initialize project-root-uri client-capabilities client-settings work-done-token))
+    (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
   (did-open [_ doc]
-    (did-open doc))
+    (did-open doc @components*))
   (did-change [_ doc]
     (did-change doc))
   (did-save [_ doc]
     (did-save doc))
   (execute-command [_ doc]
-    (execute-command doc))
+    (execute-command doc @components*))
   (did-close [_ doc]
     (did-close doc))
   (did-change-watched-files [_ doc]
     (did-change-watched-files doc))
   (cursor-info-log [_ doc]
-    (cursor-info-log doc))
+    (cursor-info-log doc @components*))
   (cursor-info-raw [_ doc]
     (cursor-info-raw doc))
   (references [_ doc]
@@ -368,13 +372,13 @@
   (completion [_ doc]
     (completion doc))
   (completion-resolve-item [_ doc]
-    (completion-resolve-item doc))
+    (completion-resolve-item doc @components*))
   (prepare-rename [_ doc]
     (prepare-rename doc))
   (rename [_ doc]
     (rename doc))
   (hover [_ doc]
-    (hover doc))
+    (hover doc @components*))
   (signature-help [_ doc]
     (signature-help doc))
   (formatting [_ doc]
@@ -417,8 +421,8 @@
   (server-info-raw [_]
     (server-info-raw))
   (clojuredocs-raw [_ doc]
-    (clojuredocs-raw doc))
+    (clojuredocs-raw doc @components*))
   (server-info-log [_]
-    (server-info-log))
-  (extension [_ method doc-id]
-    (extension method doc-id)))
+    (server-info-log @components*))
+  (dependency-contents [_ doc-id]
+    (dependency-contents doc-id)))

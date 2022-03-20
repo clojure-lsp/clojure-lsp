@@ -2,9 +2,9 @@
   (:require
    [clojure-lsp.refactor.edit :as edit]
    [clojure.string :as string]
+   [lsp4clj.protocols.logger :as logger]
    [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -98,7 +98,7 @@
   (try
     (zloc-of-string text)
     (catch Exception _e
-      (log/warn "It was not possible to parse text. Probably not valid clojure code."))))
+      (println "It was not possible to parse text. Probably not valid clojure code."))))
 
 (defn zloc-of-file [db uri]
   (zloc-of-string (get-in db [:documents uri :text])))
@@ -107,7 +107,7 @@
   (try
     (zloc-of-file db uri)
     (catch Exception _
-      (log/warn "It was not possible to parse file. Probably not valid clojure code."))))
+      (logger/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
 (defn to-pos [zloc row col]
   (edit/find-at-pos zloc row col))

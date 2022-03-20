@@ -5,8 +5,8 @@
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [clojure.walk :as walk]
-   [medley.core :as medley]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger]
+   [medley.core :as medley])
   (:import
    (com.google.gson JsonElement)
    (org.eclipse.lsp4j
@@ -135,7 +135,6 @@
   (let [error (ResponseError. (.getValue ^ResponseErrorCode (:code e))
                               ^String (:message e)
                               nil)]
-    (log/error "Responding with error " error)
     (throw (ResponseErrorException. error))))
 
 (def error-code-enum
@@ -732,9 +731,9 @@
     (try
       (let [result (s/conform spec value)]
         (if (= :clojure.spec.alpha/invalid result)
-          (log/error (s/explain-data spec value))
+          (logger/error (s/explain-data spec value))
           result))
       (catch Exception ex
         (if (instance? ResponseErrorException ex)
           (throw ex)
-          (log/error ex spec value))))))
+          (logger/error ex spec value))))))

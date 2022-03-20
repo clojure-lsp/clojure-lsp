@@ -1,9 +1,7 @@
 (ns clojure-lsp.api
   "Entrypoint for main clojure-lsp features"
   (:require
-   [clojure-lsp.db :as db]
-   [clojure-lsp.internal-api :as internal-api]
-   [clojure-lsp.logging :as logging])
+   [clojure-lsp.internal-api :as internal-api])
   (:import
    [java.io File]))
 
@@ -50,7 +48,6 @@
                   (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))]}
-  (logging/setup-logging db/db)
   (safe-process-message
     options
     (internal-api/analyze-project-and-deps! options)))
@@ -83,7 +80,6 @@
                   (.exists ^File project-root)))
          (or (nil? settings)
              (map? settings))]}
-  (logging/setup-logging db/db)
   (safe-process-message
     options
     (internal-api/analyze-project-only! options)))
@@ -125,7 +121,6 @@
              (coll? filenames))
          (or (nil? ns-exclude-regex)
              (instance? java.util.regex.Pattern ns-exclude-regex))]}
-  (logging/setup-logging db/db)
   (safe-process-message
     options
     (internal-api/clean-ns! options)))
@@ -168,7 +163,6 @@
              (coll? filenames))
          (or (nil? settings)
              (map? settings))]}
-  (logging/setup-logging db/db)
   (safe-process-message
     options
     (internal-api/diagnostics options)))
@@ -209,7 +203,6 @@
              (coll? filenames))
          (or (nil? ns-exclude-regex)
              (instance? java.util.regex.Pattern ns-exclude-regex))]}
-  (logging/setup-logging db/db)
   (safe-process-message
     options
     (internal-api/format! options)))
@@ -249,7 +242,6 @@
              (simple-symbol? to))
          (or (not (simple-symbol? to))
              (simple-symbol? from))]}
-  (logging/setup-logging db/db)
   (safe-process-message
     options
     (internal-api/rename! options)))

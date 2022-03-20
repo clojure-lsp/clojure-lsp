@@ -3,8 +3,7 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (h/reset-db-after-test)
 

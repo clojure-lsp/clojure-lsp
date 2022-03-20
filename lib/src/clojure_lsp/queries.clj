@@ -4,8 +4,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
-   [medley.core :as medley]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 
@@ -423,28 +423,28 @@
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-definition analysis element db))
     (catch Throwable e
-      (log/error e "can't find definition"))))
+      (logger/error e "can't find definition"))))
 
 (defn find-declaration-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-declaration analysis element db))
     (catch Throwable e
-      (log/error e "can't find declaration"))))
+      (logger/error e "can't find declaration"))))
 
 (defn find-implementations-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-implementations analysis element db))
     (catch Throwable e
-      (log/error e "can't find implementation"))))
+      (logger/error e "can't find implementation"))))
 
 (defn find-references-from-cursor [analysis filename line column include-declaration? db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-references analysis element include-declaration? db))
     (catch Throwable e
-      (log/error e "can't find references"))))
+      (logger/error e "can't find references"))))
 
 (defn xf-var-defs [include-private?]
   (comp

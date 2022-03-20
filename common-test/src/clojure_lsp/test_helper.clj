@@ -8,8 +8,9 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log]))
+   [lsp4clj.components :as components]
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]))
 
 (def mock-diagnostics (atom {}))
 
@@ -30,7 +31,7 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  protocols/ILSPProducer
+  producer/ILSPProducer
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
@@ -42,13 +43,30 @@
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
+(defrecord TestLogger []
+  logger/ILSPLogger
+  (setup [_])
+
+  (set-log-path [_this _log-path])
+
+  (-info [_this _message])
+  (-warn [_this _message])
+  (-error [_this _message])
+  (-debug [_this _message]))
+
+(def components
+  (components/->components
+    db/db
+    (->TestLogger)
+    (->TestProducer)))
+
 (defn clean-db!
   ([]
    (clean-db! :unit-test))
   ([env]
    (reset! db/db (assoc db/initial-db
                         :env env
-                        :producer (->TestProducer)))
+                        :producer (:producer components)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
@@ -126,7 +144,7 @@
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
         uri (or uri default-uri)]
-    (handlers/did-open {:textDocument {:uri uri :text code}})
+    (handlers/did-open {:textDocument {:uri uri :text code}} components)
     positions))
 
 (defmacro with-mock-diagnostics [& body]

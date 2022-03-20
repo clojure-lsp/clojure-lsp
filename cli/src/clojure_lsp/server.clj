@@ -15,9 +15,11 @@
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
+   [lsp4clj.components :as components]
    [lsp4clj.core :as lsp]
-   [lsp4clj.protocols :as protocols]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]
+   [taoensso.timbre :as timbre])
   (:import
    (clojure_lsp
      ClojureLanguageClient
@@ -26,9 +28,13 @@
    (clojure_lsp.feature.cursor_info CursorInfoParams)
    (java.util.concurrent CompletableFuture)
    (lsp4clj.core LSPServer)
+   (lsp4clj.protocols.feature_handler ILSPFeatureHandler)
+   (lsp4clj.protocols.logger ILSPLogger)
+   (lsp4clj.protocols.producer ILSPProducer)
    (org.eclipse.lsp4j
      InitializeParams
-     InitializedParams)
+     InitializedParams
+     TextDocumentIdentifier)
    (org.eclipse.lsp4j.jsonrpc Launcher))
   (:gen-class))
 
@@ -38,37 +44,53 @@
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
 
-;; Called from java
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn extension [method & args]
-  (lsp/start :extension
-             (CompletableFuture/completedFuture
-               (lsp/end
-                 (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
+(defrecord TimbreLogger [db]
+  logger/ILSPLogger
 
-(defrecord ^:private ClojureLspProducer [lsp-producer ^ClojureLanguageClient client db]
-  protocols/ILSPProducer
+  (setup [this]
+    (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
+      (timbre/merge-config! {:middleware [#(assoc % :hostname_ "")]
+                             :appenders {:println {:enabled? false}
+                                         :spit (timbre/spit-appender {:fname log-path})}})
+      (timbre/handle-uncaught-jvm-exceptions!)
+      (swap! db assoc :log-path log-path)
+      (logger/set-logger! this)))
+
+  (set-log-path [_this log-path]
+    (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
+
+  (-info [_this message] (timbre/info message))
+  (-warn [_this message] (timbre/warn message))
+  (-error [_this message] (timbre/error message))
+  (-debug [_this message] (timbre/debug message)))
+
+(defrecord ^:private ClojureLspProducer
+           [^ClojureLanguageClient client
+            ^ILSPProducer lsp-producer
+            ^ILSPLogger logger
+            db]
+  producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
-    (protocols/publish-diagnostic lsp-producer diagnostic))
+    (producer/publish-diagnostic lsp-producer diagnostic))
   (refresh-code-lens [_this]
-    (protocols/refresh-code-lens lsp-producer))
+    (producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
-    (protocols/publish-workspace-edit lsp-producer edit))
+    (producer/publish-workspace-edit lsp-producer edit))
   (show-document-request [_this document-request]
-    (protocols/show-document-request lsp-producer document-request))
+    (producer/show-document-request lsp-producer document-request))
   (publish-progress [_this percentage message progress-token]
-    (protocols/publish-progress lsp-producer percentage message progress-token))
+    (producer/publish-progress lsp-producer percentage message progress-token))
   (show-message-request [_this message type actions]
-    (protocols/show-message-request lsp-producer message type actions))
+    (producer/show-message-request lsp-producer message type actions))
   (show-message [_this message type extra]
-    (protocols/show-message lsp-producer message type extra))
+    (producer/show-message lsp-producer message type extra))
   (register-capability [_this capability]
-    (protocols/register-capability lsp-producer capability))
+    (producer/register-capability lsp-producer capability))
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
     (go
-      (when (some-> @db/db :client-capabilities :experimental j/from-java :testTree)
+      (when (some-> @db :client-capabilities :experimental j/from-java :testTree)
         (shared/logging-time
           "Refreshing testTree took %s secs"
           (doseq [uri uris]
@@ -77,7 +99,9 @@
                    (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))
 
-(deftype ClojureLspServer [^LSPServer lsp-server feature-handler]
+(deftype ClojureLspServer
+         [^LSPServer lsp-server
+          ^ILSPFeatureHandler feature-handler]
   ClojureLanguageServer
   (^CompletableFuture initialize [_ ^InitializeParams params]
     (.initialize lsp-server params))
@@ -91,6 +115,11 @@
     (.getTextDocumentService lsp-server))
   (getWorkspaceService [_]
     (.getWorkspaceService lsp-server))
+  (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
+    (lsp/start :dependencyContents
+               (CompletableFuture/completedFuture
+                 (lsp/sync-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri))))
+
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
       (->> (clojure-feature/server-info-raw feature-handler)
@@ -157,41 +186,52 @@
                     "clojuredocs" true}}))
 
 (defn run-server! []
-  (log/info "Starting server...")
-  (let [is (or System/in (lsp/tee-system-in System/in))
+  (let [components* (atom {})
+        producer* (atom nil)
+        db db/db
+        timbre-logger (doto (->TimbreLogger db)
+                        (logger/setup))
+        _ (logger/info "Starting server...")
+        is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        clojure-feature-handler (handlers/->ClojureLSPFeatureHandler)
+        _ (swap! components* merge (components/->components db timbre-logger nil))
+        clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
-                                              db/db
+                                              producer*
+                                              db
                                               db/initial-db
                                               capabilites
                                               client-settings)
                                   clojure-feature-handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
+        language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
+        producer (->ClojureLspProducer language-client
+                                       (lsp/->LSPProducer language-client db)
+                                       timbre-logger
+                                       db)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
-        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)
-        language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
-        producer (->ClojureLspProducer (lsp/->LSPProducer language-client db/db) language-client db/db)]
-    (nrepl/setup-nrepl db/db)
-    (swap! db/db assoc :producer producer)
-    (swap! db/db assoc :feature-handler clojure-feature-handler)
+        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
+    ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
+    (reset! producer* producer)
+    (swap! components* assoc :producer producer)
+    (nrepl/setup-nrepl db)
     (go-loop [edit (<! db/edits-chan)]
-      (protocols/publish-workspace-edit producer edit)
+      (producer/publish-workspace-edit producer edit)
       (recur (<! db/edits-chan)))
     (go-loop []
-      (protocols/publish-diagnostic producer (<! debounced-diags))
+      (producer/publish-diagnostic producer (<! debounced-diags))
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-changes (<! debounced-changes) db/db)
+        (f.file-management/analyze-changes (<! debounced-changes) @components*)
         (catch Exception e
-          (log/error e "Error during analyzing buffer file changes")))
+          (logger/error e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) db/db)
+        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components*)
         (catch Exception e
-          (log/error e "Error during analyzing created watched files")))
+          (logger/error e "Error during analyzing created watched files")))
       (recur))
     (.startListening launcher)))

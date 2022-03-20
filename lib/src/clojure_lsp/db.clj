@@ -5,7 +5,7 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [cognitect.transit :as transit]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -67,7 +67,7 @@
             (transit/write writer project-cache)
             (io/copy (.toByteArray bos) cache-file)))))
     (catch Throwable e
-      (log/error "Could not upsert db cache" e))))
+      (logger/error "Could not upsert db cache" e))))
 
 (defn read-cache [project-root db]
   (try
@@ -80,6 +80,6 @@
             (when (and (= (str project-root) (:project-root project-analysis))
                        (= version (:version project-analysis)))
               project-analysis))
-          (log/error "No cache DB file found"))))
+          (logger/error "No cache DB file found"))))
     (catch Throwable e
-      (log/error "Could not load project cache from DB" e))))
+      (logger/error "Could not load project cache from DB" e))))

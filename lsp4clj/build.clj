@@ -5,7 +5,7 @@
    [clojure.tools.build.api :as b]))
 
 (def lib 'com.github.clojure-lsp/lsp4clj)
-(def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
+(def current-version "0.0.1")
 (def class-dir "target/classes")
 (def basis {:project "deps.edn"})
 (def jar-file (format "target/%s.jar" (name lib)))

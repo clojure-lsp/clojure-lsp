@@ -22,14 +22,8 @@ import clojure_lsp.feature.clojuredocs.ClojuredocsParams;
 public interface ClojureLanguageServer extends LanguageServer {
 
     @JsonRequest("clojure/dependencyContents")
-    @SuppressWarnings("unchecked")
-    default CompletableFuture<String> dependencyContents(TextDocumentIdentifier documentUri) {
-        IFn require = Clojure.var("clojure.core", "require");
-        require.invoke(Clojure.read("clojure-lsp.server"));
-        IFn extension = Clojure.var("clojure-lsp.server", "extension");
-        return (CompletableFuture<String>) extension.invoke("dependencyContents", documentUri);
-    }
-
+    CompletableFuture<String> dependencyContents(TextDocumentIdentifier documentUri); 
+      
     @JsonRequest("clojure/serverInfo/raw")
     CompletableFuture<Object> serverInfoRaw();
 

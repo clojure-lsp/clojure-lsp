@@ -5,7 +5,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    (java.io IOException)
    (java.net URL)
@@ -34,10 +34,10 @@
         (finally
           (.disconnect conn))))))
 
-(defn refresh-cache! [db]
+(defn refresh-cache! [{:keys [db]}]
   (when (and (settings/get db [:hover :clojuredocs] true)
              (not (-> @db :clojuredocs :refreshing?)))
-    (log/info "Refreshing clojuredocs cache...")
+    (logger/info "Refreshing clojuredocs cache...")
     (swap! db assoc-in [:clojuredocs :refreshing?] true)
     (shared/logging-time
       "Refreshing clojuredocs cache took %s secs."
@@ -45,26 +45,26 @@
         (let [;; connection check not to wait too long
               [downloadable? conn-ex] (test-remote-url clojuredocs-edn-file-url)]
           (if (not downloadable?)
-            (log/error "Could not refresh clojuredocs." conn-ex)
+            (logger/error "Could not refresh clojuredocs." conn-ex)
             (swap! db assoc :clojuredocs {:cache (-> clojuredocs-edn-file-url
                                                      slurp
                                                      edn/read-string)})))
         (catch Exception e
-          (log/error "Error refreshing clojuredocs information." e)
+          (logger/error "Error refreshing clojuredocs information." e)
           nil)
         (finally
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))
 
-(defn find-docs-for [sym-name sym-ns db]
+(defn find-docs-for [sym-name sym-ns {:keys [db] :as components}]
   (when sym-ns
     (let [full-keyword (keyword (str sym-ns) (str sym-name))]
       (if-let [cache (-> @db :clojuredocs :cache)]
         (get cache full-keyword)
         (do
           (async/go
-            (refresh-cache! db))
+            (refresh-cache! components))
           nil)))))
 
-(defn find-hover-docs-for [sym-name sym-ns db]
+(defn find-hover-docs-for [sym-name sym-ns {:keys [db] :as components}]
   (when (settings/get db [:hover :clojuredocs] true)
-    (find-docs-for sym-name sym-ns db)))
+    (find-docs-for sym-name sym-ns components)))

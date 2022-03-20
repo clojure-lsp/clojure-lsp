@@ -202,8 +202,8 @@
        (mapv #(cli-println options "Namespace" (:namespace %) "not found")))
   (filter :uri ns+uris))
 
-(defn ^:private open-file! [{:keys [uri] :as ns+uri}]
-  (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}})
+(defn ^:private open-file! [{:keys [uri] :as ns+uri} components]
+  (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}} components)
   ns+uri)
 
 (defn ^:private find-new-uri-checking-rename
@@ -267,7 +267,7 @@
         ns+uris (pmap #(ns->ns+uri % components) namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
-                   (map open-file!)
+                   (map #(open-file! % components))
                    (pmap (comp :document-changes
                                #(handlers/execute-command {:command "clean-ns"
                                                            :arguments [(:uri %) 0 0]}
@@ -338,7 +338,7 @@
         ns+uris (pmap #(ns->ns+uri % components) namespaces)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
-                   (map open-file!)
+                   (map #(open-file! % components))
                    (pmap (comp (fn [{:keys [uri]}]
                                  (some->> (handlers/formatting {:textDocument uri})
                                           (map #(edit->summary db uri %))))))
@@ -369,7 +369,7 @@
                             (q/find-namespace-definition-by-namespace project-analysis from-ns db)
                             (q/find-element-by-full-name project-analysis from-name from-ns db))]
       (let [uri (shared/filename->uri (:filename from-element) db)]
-        (open-file! {:uri uri :namespace from-ns})
+        (open-file! {:uri uri :namespace from-ns} components)
         (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db)]
           (if document-changes
             (if-let [edits (->> document-changes

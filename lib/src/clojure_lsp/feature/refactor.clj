@@ -93,8 +93,8 @@
 (defmethod refactor :create-function [{:keys [loc uri] {:keys [db]} :components}]
   (r.transform/create-function loc uri db))
 
-(defmethod refactor :create-test [{:keys [loc uri] {:keys [db]} :components}]
-  (r.transform/create-test loc uri db))
+(defmethod refactor :create-test [{:keys [loc uri] components :components}]
+  (r.transform/create-test loc uri components))
 
 (def available-refactors
   (->> refactor

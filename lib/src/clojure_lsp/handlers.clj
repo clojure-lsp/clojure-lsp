@@ -64,11 +64,11 @@
       work-done-token
       components)))
 
-(defn did-open [{:keys [textDocument]}]
+(defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)
         text (:text textDocument)]
-    (f.file-management/did-open uri text db/db true)
-    (clojure-producer/refresh-test-tree (:producer @db/db) [uri]))
+    (f.file-management/did-open uri text db true)
+    (clojure-producer/refresh-test-tree producer [uri]))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -185,9 +185,9 @@
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))
 
-(defn server-info-log []
+(defn server-info-log [{:keys [producer]}]
   (producer/show-message
-    (:producer @db/db)
+    producer
     (with-out-str (pprint/pprint (server-info)))
     :info
     nil))
@@ -205,9 +205,9 @@
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
-(defn cursor-info-log [{:keys [textDocument position]}]
+(defn cursor-info-log [{:keys [textDocument position]} {:keys [producer]}]
   (producer/show-message
-    (:producer @db/db)
+    producer
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
     nil))
@@ -234,24 +234,25 @@
                                :version     v}
                               components)))
 
-(defn execute-command [{:keys [command arguments]} components]
+(defn execute-command [{:keys [command arguments]} {:keys [producer] :as components}]
   (cond
     (= command "server-info")
-    (server-info-log)
+    (server-info-log components)
 
     (= command "cursor-info")
     (cursor-info-log {:textDocument (nth arguments 0)
                       :position {:line (nth arguments 1)
-                                 :character (nth arguments 2)}})
+                                 :character (nth arguments 2)}}
+                     components)
 
     (some #(= % command) f.refactor/available-refactors)
     ;; TODO move components upper to a common place
     (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
-      (producer/publish-workspace-edit (:producer @db/db) edit)
+      (producer/publish-workspace-edit producer edit)
       (when show-document-after-edit
         (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
                                                           (shared/full-file-range)))
-             (producer/show-document-request (:producer @db/db))))
+             (producer/show-document-request producer)))
       edit)))
 
 (defn hover [{:keys [textDocument position]} components]
@@ -271,10 +272,7 @@
     :range-formatting doc-id
     (f.format/range-formatting doc-id format-pos db/db)))
 
-(defmulti extension (fn [method _] method))
-
-(defmethod extension "dependencyContents"
-  [_ doc-id]
+(defn dependency-contents [doc-id]
   (let [url (URL. doc-id)
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)
@@ -354,7 +352,7 @@
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
     (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
   (did-open [_ doc]
-    (did-open doc))
+    (did-open doc @components*))
   (did-change [_ doc]
     (did-change doc))
   (did-save [_ doc]
@@ -366,7 +364,7 @@
   (did-change-watched-files [_ doc]
     (did-change-watched-files doc))
   (cursor-info-log [_ doc]
-    (cursor-info-log doc))
+    (cursor-info-log doc @components*))
   (cursor-info-raw [_ doc]
     (cursor-info-raw doc))
   (references [_ doc]
@@ -425,6 +423,6 @@
   (clojuredocs-raw [_ doc]
     (clojuredocs-raw doc @components*))
   (server-info-log [_]
-    (server-info-log))
-  (extension [_ method doc-id]
-    (extension method doc-id)))
+    (server-info-log @components*))
+  (dependency-contents [_ doc-id]
+    (dependency-contents doc-id)))

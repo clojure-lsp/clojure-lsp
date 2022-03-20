@@ -48,7 +48,7 @@
        flatten
        (reduce str)))
 
-(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} db]
+(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} {:keys [producer]}]
   (let [command (string/join " " classpath-cmd)]
     (logger/info (format "Finding classpath via `%s`" command))
     (try
@@ -66,20 +66,20 @@
             paths)
           (do
             (logger/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-            (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
+            (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
             [])))
       (catch clojure.lang.ExceptionInfo e
         (throw e))
       (catch Exception e
         (logger/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-        (producer/show-message (:producer @db) (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
+        (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
         []))))
 
-(defn scan-classpath! [db]
+(defn scan-classpath! [{:keys [db] :as components}]
   (let [root-path (shared/uri->path (:project-root-uri @db))]
     (->> (settings/get db [:project-specs])
          (filter (partial valid-project-spec? root-path))
-         (mapcat #(lookup-classpath root-path % db))
+         (mapcat #(lookup-classpath root-path % components))
          vec
          seq)))
 

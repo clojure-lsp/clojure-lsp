@@ -69,7 +69,7 @@
            (remove (partial compare-fn old-var-usages new-var-usages) new-var-usages))
          (medley/distinct-by (juxt :name)))))
 
-(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db]}]
+(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
   (async/go
     (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
           source-paths (settings/get db [:source-paths])
@@ -95,7 +95,7 @@
         (crawler/analyze-reference-filenames! filenames db)
         (doseq [filename filenames]
           (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (producer/refresh-code-lens (:producer @db))))))
+        (producer/refresh-code-lens producer)))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -138,7 +138,7 @@
       ;; the full content of the document.
       new-text)))
 
-(defn analyze-changes [{:keys [uri text version]} {:keys [db] :as components}]
+(defn analyze-changes [{:keys [uri text version]} {:keys [producer db] :as components}]
   (loop [state-db @db]
     (when (>= version (get-in state-db [:documents uri :v] -1))
       (when-let [kondo-result (shared/logging-time
@@ -155,7 +155,7 @@
               (f.diagnostic/sync-lint-file! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
-              (clojure-producer/refresh-test-tree (:producer @db) [uri]))
+              (clojure-producer/refresh-test-tree producer [uri]))
             (recur @db)))))))
 
 (defn did-change [uri changes version db]
@@ -169,7 +169,7 @@
                                         :text final-text
                                         :version version})))
 
-(defn analyze-watched-created-files! [uris {:keys [db] :as components}]
+(defn analyze-watched-created-files! [uris {:keys [db producer] :as components}]
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  "Created watched files analyzed, took %s secs"
@@ -182,7 +182,7 @@
                     (update :analysis merge analysis)
                     (assoc :kondo-config (:config result))
                     (update :findings merge (group-by :filename (:findings result))))))
-    (clojure-producer/refresh-test-tree (:producer @db) uris)))
+    (clojure-producer/refresh-test-tree producer uris)))
 
 (defn did-change-watched-files [changes db]
   (doseq [{:keys [uri type]} changes]

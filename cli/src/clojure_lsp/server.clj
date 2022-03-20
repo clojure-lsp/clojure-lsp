@@ -33,7 +33,8 @@
    (lsp4clj.protocols.producer ILSPProducer)
    (org.eclipse.lsp4j
      InitializeParams
-     InitializedParams)
+     InitializedParams
+     TextDocumentIdentifier)
    (org.eclipse.lsp4j.jsonrpc Launcher))
   (:gen-class))
 
@@ -42,14 +43,6 @@
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
-
-;; Called from java
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn extension [method & args]
-  (lsp/start :extension
-             (CompletableFuture/completedFuture
-               (lsp/end
-                 (apply #'clojure-feature/extension (:feature-handler @db/db) method (coercer/java->clj args))))))
 
 (defrecord TimbreLogger [db]
   logger/ILSPLogger
@@ -122,6 +115,11 @@
     (.getTextDocumentService lsp-server))
   (getWorkspaceService [_]
     (.getWorkspaceService lsp-server))
+  (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
+    (lsp/start :dependencyContents
+               (CompletableFuture/completedFuture
+                 (lsp/sync-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri))))
+
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
       (->> (clojure-feature/server-info-raw feature-handler)
@@ -187,19 +185,19 @@
                     "serverInfo" true
                     "clojuredocs" true}}))
 
-;; TODO remove atom, think in a way to build all components in the same place and not need to assoc.
-(defonce ^:private components (atom {}))
-
 (defn run-server! []
-  (let [db db/db
+  (let [components* (atom {})
+        producer* (atom nil)
+        db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
         _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        _ (swap! components merge (components/->components db timbre-logger nil))
-        clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components)
+        _ (swap! components* merge (components/->components db timbre-logger nil))
+        clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
+                                              producer*
                                               db
                                               db/initial-db
                                               capabilites
@@ -214,11 +212,9 @@
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
-    (swap! components assoc :producer producer)
-    ;; TODO stop associng components and use from components params
-    (swap! db assoc
-           :producer producer
-           :feature-handler clojure-feature-handler)
+    ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
+    (reset! producer* producer)
+    (swap! components* assoc :producer producer)
     (nrepl/setup-nrepl db)
     (go-loop [edit (<! db/edits-chan)]
       (producer/publish-workspace-edit producer edit)
@@ -228,13 +224,13 @@
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-changes (<! debounced-changes) @components)
+        (f.file-management/analyze-changes (<! debounced-changes) @components*)
         (catch Exception e
           (logger/error e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components)
+        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components*)
         (catch Exception e
           (logger/error e "Error during analyzing created watched files")))
       (recur))

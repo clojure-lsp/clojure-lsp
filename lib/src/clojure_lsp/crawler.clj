@@ -189,7 +189,7 @@
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
           (producer/publish-progress producer 15 "Discovering classpath" progress-token)
-          (let [classpath (classpath/scan-classpath! db)]
+          (let [classpath (classpath/scan-classpath! components)]
             (swap! db assoc
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash

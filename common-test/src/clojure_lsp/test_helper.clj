@@ -144,7 +144,7 @@
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
         uri (or uri default-uri)]
-    (handlers/did-open {:textDocument {:uri uri :text code}})
+    (handlers/did-open {:textDocument {:uri uri :text code}} components)
     positions))
 
 (defmacro with-mock-diagnostics [& body]

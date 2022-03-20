@@ -341,6 +341,7 @@
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (deftype LSPServer
          [^ILSPFeatureHandler feature-handler
+          producer*
           db
           initial-db
           capabilities-fn
@@ -371,7 +372,7 @@
              (do
                (logger/info "Initialized!")
                (producer/register-capability
-                 (:producer @db)
+                 @producer*
                  (RegistrationParams.
                    [(Registration. "id" "workspace/didChangeWatchedFiles"
                                    (DidChangeWatchedFilesRegistrationOptions.

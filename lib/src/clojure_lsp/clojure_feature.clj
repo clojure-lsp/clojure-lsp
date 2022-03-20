@@ -6,4 +6,4 @@
   (cursor-info-raw [this doc])
   (cursor-info-log [this doc])
   (clojuredocs-raw [this doc])
-  (extension [this method doc-id]))
+  (dependency-contents [this doc-id]))

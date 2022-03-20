@@ -805,7 +805,7 @@
          :current-source-path current-source-path
          :function-name-loc function-name-loc}))))
 
-(defn create-test [zloc uri db]
+(defn create-test [zloc uri {:keys [db producer]}]
   (when-let [{:keys [source-paths
                      current-source-path
                      function-name-loc]} (can-create-test? zloc uri db)]
@@ -816,7 +816,7 @@
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
-              chosen-source-path (producer/show-message-request (:producer @db) "Choose a source-path to create the test file" :info actions)]
+              chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
           (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
         ;; No source paths besides current one

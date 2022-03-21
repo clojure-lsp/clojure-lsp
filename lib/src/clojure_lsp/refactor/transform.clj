@@ -243,7 +243,7 @@
 
 (defn ^:private widest-scoped-local [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        analysis (:analysis @db)
+        analysis (:analysis db)
         local-defs (->> (q/find-local-usages-under-form
                           analysis
                           (shared/uri->filename uri)

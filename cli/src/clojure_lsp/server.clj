@@ -191,7 +191,7 @@
         _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        components* (atom (components/->components db timbre-logger producer*))
+        components* (atom (components/->components db timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               producer*
@@ -211,6 +211,7 @@
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
     (reset! producer* producer)
+    (swap! components* assoc :producer producer)
     (nrepl/setup-nrepl db)
     (go-loop [edit (<! db/edits-chan)]
       (producer/publish-workspace-edit producer edit)

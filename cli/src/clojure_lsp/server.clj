@@ -29,7 +29,6 @@
    (java.util.concurrent CompletableFuture)
    (lsp4clj.core LSPServer)
    (lsp4clj.protocols.feature_handler ILSPFeatureHandler)
-   (lsp4clj.protocols.logger ILSPLogger)
    (lsp4clj.protocols.producer ILSPProducer)
    (org.eclipse.lsp4j
      InitializeParams
@@ -67,7 +66,6 @@
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
             ^ILSPProducer lsp-producer
-            ^ILSPLogger logger
             db]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
@@ -186,15 +184,14 @@
                     "clojuredocs" true}}))
 
 (defn run-server! []
-  (let [components* (atom {})
-        producer* (atom nil)
+  (let [producer* (atom nil)
         db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
         _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        _ (swap! components* merge (components/->components db timbre-logger nil))
+        components* (atom (components/->components db timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               producer*
@@ -208,7 +205,6 @@
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db)
-                                       timbre-logger
                                        db)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)

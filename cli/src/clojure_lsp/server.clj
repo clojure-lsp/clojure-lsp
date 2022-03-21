@@ -201,7 +201,8 @@
                                               db
                                               db/initial-db
                                               capabilites
-                                              client-settings)
+                                              client-settings
+                                              "**/*.{clj,cljs,cljc,edn}")
                                   clojure-feature-handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)

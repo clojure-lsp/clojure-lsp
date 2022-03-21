@@ -52,13 +52,18 @@
                             (shared/uri->available-langs (:filename check-element)))]
     (seq (set/intersection match-file-lang check-file-lang))))
 
-(defn ^:private var-definition-names [{:keys [defined-by name]}]
+(defn var-definition-names [{:keys [defined-by name]}]
   (case defined-by
     clojure.core/defrecord
     , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
     clojure.core/deftype
     , #{name (symbol (str "->" name))}
     , #{name}))
+
+(defn var-usage-from-own-definition? [usage]
+  (and (:from-var usage)
+       (= (:from-var usage) (:name usage))
+       (= (:from usage) (:to usage))))
 
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
@@ -337,10 +342,7 @@
             (remove #(and exclude-declaration?
                           (or
                             (identical? :var-definitions (:bucket %))
-                            ;; usage from own definition
-                            (and (:from-var %)
-                                 (= (:from-var %) (:name element))
-                                 (= (:from %) (:ns element))))))
+                            (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 

@@ -67,7 +67,6 @@
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
             ^ILSPProducer lsp-producer
-            ^ILSPLogger logger
             db]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
@@ -186,15 +185,14 @@
                     "clojuredocs" true}}))
 
 (defn run-server! []
-  (let [components* (atom {})
-        producer* (atom nil)
+  (let [producer* (atom nil)
         db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
         _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        _ (swap! components* merge (components/->components db timbre-logger nil))
+        components* (atom (components/->components db timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               producer*
@@ -208,14 +206,12 @@
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db)
-                                       timbre-logger
                                        db)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
     (reset! producer* producer)
-    (swap! components* assoc :producer producer)
     (nrepl/setup-nrepl db)
     (go-loop [edit (<! db/edits-chan)]
       (producer/publish-workspace-edit producer edit)

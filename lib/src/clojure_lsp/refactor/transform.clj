@@ -391,7 +391,7 @@
         [{:range (meta (z/node (z/up let-loc)))
           :loc   new-let-loc}])
       ;; There's no existing let to move to, introduce-let and expand until it stops.
-      (loop [{:keys [range loc] :as current-edit} (first (introduce-let zloc binding-name))
+      (loop [{:keys [loc] :as current-edit} (first (introduce-let zloc binding-name))
              previous-edit nil]
         (if current-edit
           (recur (first (expand-let loc false uri db)) current-edit)

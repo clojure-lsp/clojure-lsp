@@ -241,6 +241,37 @@
         (recur next-loc (or marked? exists?))
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
+(defn ^:private widest-scoped-local [zloc uri db]
+  (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
+        analysis (:analysis @db)
+        local-defs (->> (q/find-local-usages-under-form
+                          analysis
+                          (shared/uri->filename uri)
+                          row
+                          col
+                          end-row
+                          end-col)
+                        (map #(q/find-definition analysis % db)))]
+    (reduce
+      (fn [accum d]
+        (if (or (not accum)
+                (< (:row accum) (:row d))
+                (and (= (:row accum) (:row d))
+                     (< (:col accum) (:col d))))
+          d
+          accum))
+      nil
+      local-defs)))
+
+(defn ^:private in-scope-of-definition? [loc definition]
+  (if (not definition)
+    true
+    (when loc
+      (edit/in-range? (-> definition
+                          (set/rename-keys {:scope-end-row :end-row :scope-end-col :end-col})
+                          (update :end-col inc))
+                      (meta (z/node loc))))))
+
 (defn find-let-form
   "Finds a let-form that would be valid to move zloc to"
   [zloc uri db]
@@ -248,33 +279,89 @@
                         (edit/find-ops-up "let")
                         z/up)]
     (when let-loc
-      (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-            bindings-loc (z/right (z/down (zsub/subzip let-loc)))
-            analysis (:analysis @db)
-            local-defs (->> (q/find-local-usages-under-form
-                              analysis
-                              (shared/uri->filename uri)
-                              row
-                              col
-                              end-row
-                              end-col)
-                            (map #(q/find-definition analysis % db)))
-            valid? (->> local-defs
-                        (every? (fn [definition]
-                                  (or
-                                    ;; definition is defined in the let
-                                    (edit/in-range? (meta (z/node bindings-loc)) definition)
-                                    ;; definition's encloses the let
-                                    (edit/in-range? (set/rename-keys definition {:scope-end-row :end-row :scope-end-col :end-col})
-                                                    (meta (z/node let-loc)))))))]
+      (let [bindings-loc (z/right (z/down (zsub/subzip let-loc)))
+            definition (widest-scoped-local zloc uri db)
+            valid? (or
+                     (not definition)
+                     ;; definition is defined in the let
+                     (edit/in-range? (meta (z/node bindings-loc)) definition)
+                     ;; definition's encloses the let
+                     (in-scope-of-definition? let-loc definition))]
         (when valid?
           let-loc)))))
+
+(defn introduce-let
+  "Adds a let around the current form."
+  [zloc binding-name]
+
+  (prn [ (z/sexpr (z/skip-whitespace z/right zloc))
+            (edit/top? zloc)
+             (z/sexpr (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))])
+   (when-let [zloc (or (z/skip-whitespace z/right zloc)
+                        (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
+      (let [sym (symbol binding-name)
+            {:keys [col]} (meta (z/node zloc))
+            loc (-> zloc
+                    (edit/wrap-around :list) ; wrap with new let list
+                    (z/insert-child 'let) ; add let
+                    (z/append-child* (n/newlines 1)) ; add new line after location
+                    (z/append-child* (n/spaces (inc col)))  ; indent body
+                    ;; TODO we should add proper spaces to whole sym body to match indentation
+                    (z/append-child sym) ; add new symbol to body of let
+                    (z/down) ; enter let list
+                    (z/right) ; skip 'let
+                    (edit/wrap-around :vector) ; wrap binding vec around form
+                    (z/insert-child sym) ; add new symbol as binding
+                    z/up
+                    (edit/join-let))]
+        [{:range (meta (z/node (or loc zloc)))
+          :loc   loc}])))
+
+(defn expand-let
+  "Expand the scope of the next let up the tree."
+  ([zloc uri db]
+   (expand-let zloc true uri db))
+  ([zloc expand-to-top? uri db]
+   (let [let-loc (some-> zloc
+                         (edit/find-ops-up "let")
+                         z/up)]
+     (when (and let-loc (not (edit/top? let-loc)))
+       (let [bind-node (-> let-loc z/down z/right z/node)
+             parent-let-loc (edit/parent-let? let-loc)
+             parent-loc (some-> let-loc z/up)]
+         (if parent-let-loc
+           [{:range (meta (z/node parent-let-loc))
+             :loc (edit/join-let let-loc)}]
+           (when (and (or expand-to-top? (not (edit/top? parent-loc)))
+                      (in-scope-of-definition? parent-loc (widest-scoped-local let-loc uri db)))
+             (let [{:keys [col] :as parent-meta} (meta (z/node parent-loc))
+                   result-loc (-> let-loc
+                                  (z/insert-child ::dummy) ; prepend dummy element to let form
+                                  (z/splice) ; splice in let
+                                  (z/right)
+                                  (z/remove) ; remove let
+                                  (z/right)
+                                  (z/remove) ; remove binding
+                                  (z/find z/up #(= (z/tag %) :list)) ; go to parent form container
+                                  (z/edit->
+                                    (z/find-value z/next ::dummy)
+                                    (z/remove)) ; remove dummy element
+                                  (edit/wrap-around :list) ; wrap with new let list
+                                  (z/insert-child* (n/spaces col)) ; insert let and bindings backwards
+                                  (z/insert-child* (n/newlines 1)) ; insert let and bindings backwards
+                                  (z/insert-child bind-node)
+                                  (z/insert-child 'let))
+                   merge-result-with-parent-let? (edit/parent-let? result-loc)]
+               [{:range (if merge-result-with-parent-let?
+                          (meta (z/node (z/up (z/up let-loc))))
+                          parent-meta)
+                 :loc (edit/join-let result-loc)}]))))))))
 
 (defn move-to-let
   "Adds form and symbol to a let further up the tree"
   [zloc uri db binding-name]
   (let [zloc (z/skip-whitespace z/right zloc)]
-    (when-let [let-top-loc (find-let-form zloc uri db)]
+    (if-let [let-top-loc (find-let-form zloc uri db)]
       (let [let-loc       (z/down (zsub/subzip let-top-loc))
             bound-string  (z/string zloc)
             bound-node    (z/node zloc)
@@ -306,65 +393,13 @@
                               (= (z/string loc) bound-string) (recur (z/next (z/replace loc binding-sym)))
                               :else                           (recur (z/next loc))))]
         [{:range (meta (z/node (z/up let-loc)))
-          :loc   new-let-loc}]))))
-
-(defn introduce-let
-  "Adds a let around the current form."
-  [zloc binding-name]
-  (when-let [zloc (or (z/skip-whitespace z/right zloc)
-                      (z/skip-whitespace z/up zloc))]
-    (let [sym (symbol binding-name)
-          {:keys [col]} (meta (z/node zloc))
-          loc (-> zloc
-                  (edit/wrap-around :list) ; wrap with new let list
-                  (z/insert-child 'let) ; add let
-                  (z/append-child* (n/newlines 1)) ; add new line after location
-                  (z/append-child* (n/spaces (inc col)))  ; indent body
-                  ;; TODO we should add proper spaces to whole sym body to match indentation
-                  (z/append-child sym) ; add new symbol to body of let
-                  (z/down) ; enter let list
-                  (z/right) ; skip 'let
-                  (edit/wrap-around :vector) ; wrap binding vec around form
-                  (z/insert-child sym) ; add new symbol as binding
-                  z/up
-                  (edit/join-let))]
-      [{:range (meta (z/node (or loc zloc)))
-        :loc   loc}])))
-
-(defn expand-let
-  "Expand the scope of the next let up the tree."
-  [zloc]
-  (let [let-loc (some-> zloc
-                        (edit/find-ops-up "let")
-                        z/up)]
-    (when let-loc
-      (let [bind-node (-> let-loc z/down z/right z/node)
-            parent-loc (edit/parent-let? let-loc)]
-        (if parent-loc
-          [{:range (meta (z/node parent-loc))
-            :loc (edit/join-let let-loc)}]
-          (let [{:keys [col] :as parent-meta} (meta (z/node (z/up let-loc)))
-                result-loc (-> let-loc
-                               (z/insert-child ::dummy) ; prepend dummy element to let form
-                               (z/splice) ; splice in let
-                               (z/right)
-                               (z/remove) ; remove let
-                               (z/right)
-                               (z/remove) ; remove binding
-                               (z/find z/up #(= (z/tag %) :list)) ; go to parent form container
-                               (z/edit->
-                                 (z/find-value z/next ::dummy)
-                                 (z/remove)) ; remove dummy element
-                               (edit/wrap-around :list) ; wrap with new let list
-                               (z/insert-child* (n/spaces col)) ; insert let and bindings backwards
-                               (z/insert-child* (n/newlines 1)) ; insert let and bindings backwards
-                               (z/insert-child bind-node)
-                               (z/insert-child 'let))
-                merge-result-with-parent-let? (edit/parent-let? result-loc)]
-            [{:range (if merge-result-with-parent-let?
-                       (meta (z/node (z/up (z/up let-loc))))
-                       parent-meta)
-              :loc (edit/join-let result-loc)}]))))))
+          :loc   new-let-loc}])
+      ;; There's no existing let to move to, introduce-let and expand until it stops.
+      (loop [{:keys [range loc] :as current-edit} (first (introduce-let zloc binding-name))
+             previous-edit nil]
+        (if current-edit
+          (recur (first (expand-let loc false uri db)) current-edit)
+          (some-> previous-edit vector))))))
 
 (defn extract-function
   [zloc uri fn-name db]

@@ -29,7 +29,6 @@
    (java.util.concurrent CompletableFuture)
    (lsp4clj.core LSPServer)
    (lsp4clj.protocols.feature_handler ILSPFeatureHandler)
-   (lsp4clj.protocols.logger ILSPLogger)
    (lsp4clj.protocols.producer ILSPProducer)
    (org.eclipse.lsp4j
      InitializeParams
@@ -192,7 +191,7 @@
         _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        components* (atom (components/->components db timbre-logger nil))
+        components* (atom (components/->components db timbre-logger producer*))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               producer*

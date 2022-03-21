@@ -20,7 +20,9 @@
 
   (testing "When a code action is available"
     (h/assert-submaps
-      [{:title "Cycle privacy"
+      [{:title "Move to let"
+        :kind "refactor.extract"}
+       {:title "Cycle privacy"
         :kind "refactor.rewrite"}
        {:title "Extract function"
         :kind "refactor.extract"}

@@ -10,6 +10,7 @@
   - Fix clean-ns not sorting properly node requires for cljs. #815
   - Fix move-to-let to ensure locals don't move out of scope. #830
   - Improve logic around require suggestions. #837
+  - Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

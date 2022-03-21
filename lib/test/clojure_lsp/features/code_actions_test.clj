@@ -280,7 +280,15 @@
                           1
                           4
                           [] {}
-                          db/db))))
+                          db/db)))
+  (testing "when not a valid zloc"
+    (is (not-any? #(= (:title %) "Introduce let")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      4
+                                      14
+                                      [] {}
+                                      db/db)))))
 
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"
@@ -288,12 +296,12 @@
                                 "  (+ 1 2))"
                                 "(+ 1 2)")
                         (h/file-uri "file:///b.clj"))
-  (testing "when not inside a let form"
+  (testing "when a valid zloc"
     (is (not-any? #(= (:title %) "Move to let")
                   (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                                       (h/file-uri "file:///b.clj")
                                       4
-                                      1
+                                      14
                                       [] {}
                                       db/db))))
   (testing "when inside let form"

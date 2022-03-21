@@ -293,29 +293,25 @@
 (defn introduce-let
   "Adds a let around the current form."
   [zloc binding-name]
-
-  (prn [ (z/sexpr (z/skip-whitespace z/right zloc))
-            (edit/top? zloc)
-             (z/sexpr (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))])
-   (when-let [zloc (or (z/skip-whitespace z/right zloc)
-                        (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
-      (let [sym (symbol binding-name)
-            {:keys [col]} (meta (z/node zloc))
-            loc (-> zloc
-                    (edit/wrap-around :list) ; wrap with new let list
-                    (z/insert-child 'let) ; add let
-                    (z/append-child* (n/newlines 1)) ; add new line after location
-                    (z/append-child* (n/spaces (inc col)))  ; indent body
+  (when-let [zloc (or (z/skip-whitespace z/right zloc)
+                      (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
+    (let [sym (symbol binding-name)
+          {:keys [col]} (meta (z/node zloc))
+          loc (-> zloc
+                  (edit/wrap-around :list) ; wrap with new let list
+                  (z/insert-child 'let) ; add let
+                  (z/append-child* (n/newlines 1)) ; add new line after location
+                  (z/append-child* (n/spaces (inc col)))  ; indent body
                     ;; TODO we should add proper spaces to whole sym body to match indentation
-                    (z/append-child sym) ; add new symbol to body of let
-                    (z/down) ; enter let list
-                    (z/right) ; skip 'let
-                    (edit/wrap-around :vector) ; wrap binding vec around form
-                    (z/insert-child sym) ; add new symbol as binding
-                    z/up
-                    (edit/join-let))]
-        [{:range (meta (z/node (or loc zloc)))
-          :loc   loc}])))
+                  (z/append-child sym) ; add new symbol to body of let
+                  (z/down) ; enter let list
+                  (z/right) ; skip 'let
+                  (edit/wrap-around :vector) ; wrap binding vec around form
+                  (z/insert-child sym) ; add new symbol as binding
+                  z/up
+                  (edit/join-let))]
+      [{:range (meta (z/node (or loc zloc)))
+        :loc   loc}])))
 
 (defn expand-let
   "Expand the scope of the next let up the tree."

@@ -6,7 +6,7 @@ Above you can find all available features that clojure-lsp provides with example
 
 <img src="../images/features/find-definition.gif" width=340>
 
-### Find defprotocol implementations
+### Find defprotocol/defmulti implementations
 
 <img src="../images/features/find-implementation.gif" width=340>
 
@@ -62,98 +62,232 @@ Also, it's possible to live rename symbols on the same buffer with `linkedEditin
 <tbody>
     <tr>
         <td><code>comment</code></td>
-        <td>Create comment block</td>
-        <td><code>(comment\n  $0\n  )</code></td>
+        <td>Insert comment block</td>
+        <td><code>(comment\n  ${0:body}\n  )</code></td>
+    </tr>
+    <tr>
+        <td><code>comment-heading</code></td>
+        <td>Insert comment Header</td>
+        <td><code>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n;; ${1:Namespace summary title}\n;;\n;; ${2:Brief description}\n;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n\n$0</code></td>
+    </tr>
+    <tr>
+        <td><code>comment-separator</code></td>
+        <td>Insert comment separator</td>
+        <td><code> ;; ${1:Namespace summary title}\n;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n\n$0</code></td>
+    </tr>
+    <tr>
+        <td><code>rich-comment</code></td>
+        <td>Insert rich comment</td>
+        <td>
+<code>
+(comment
+  $0
+#_())
+</code></td>
+    </tr>
+    <tr>
+        <td><code>rich-comment-rdd</code></td>
+        <td>Insert rich comment rdd block</td>
+        <td>
+<code>#_{:clj-kondo/ignore [:redefined-var]}\n(comment\n $0 #_())</code></td>
+    </tr>
+    <tr>
+        <td><code>rich-comment-hotload</code></td>
+        <td>Insert rich comment library hotload</td>
+        <td>
+<code>#_{:clj-kondo/ignore [:redefined-var]}\n(comment\n ;; Add-lib library for hot-loading\n (require '[clojure.tools.deps.alpha.repl :refer [add-libs]])\n (add-libs '{${1:domain/library-name} {:mvn/version \"${2:1.0.0}\"}$3})\n $0\n) </code></td>
     </tr>
     <tr>
         <td><code>condp</code></td>
-        <td>Create condp</td>
+        <td>Insert condp</td>
         <td><code>(condp ${1:pred} ${2:expr}\n $0)</code></td>
     </tr>
     <tr>
         <td><code>def</code></td>
-        <td>Create def</td>
+        <td>Insert def</td>
         <td><code>(def ${1:name} $0)</code></td>
     </tr>
     <tr>
+        <td><code>def-</code></td>
+        <td>Insert def private</td>
+        <td><code>(def ^:private ${1:name} $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>def-doc</code></td>
+        <td>Insert def with docstring</td>
+        <td><code>(def ${1:name}\n  \"${2:docstring}\"\n  $0)</code></td>
+    </tr>
+    <tr>
         <td><code>defmethod</code></td>
-        <td>Create defmethod</td>
+        <td>Insert defmethod</td>
         <td><code>(defmethod ${1:name} ${2:match}\n [${3:args}]\n $0)</code></td>
     </tr>
     <tr>
         <td><code>defmulti</code></td>
-        <td>Create defmulti</td>
+        <td>Insert defmulti</td>
         <td><code>(defmulti ${1:name} ${2:dispatch-fn})</code></td>
     </tr>
     <tr>
+        <td><code>defn</code></td>
+        <td>Insert public defn</td>
+        <td><code>(defn ${1:name} [$2]\n  $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>defn-doc</code></td>
+        <td>Insert public defn with docstring</td>
+        <td><code>(defn ${1:name}\n  \"${2:docstring}\"\n   [${3:args}]\n  $0)</code></td>
+    </tr>
+    <tr>
         <td><code>defn-</code></td>
-        <td>Create private function</td>
+        <td>Insert private defn</td>
         <td><code>(defn%s ${1:name} [$2]\n  $0)</code></td>
     </tr>
     <tr>
-        <td><code>defn</code></td>
-        <td>Create public function</td>
-        <td><code>(defn ${1:foo} [$2]\n  $0)</code></td>
-    </tr>
-    <tr>
         <td><code>defprotocol</code></td>
-        <td>Create defprotocol</td>
+        <td>Insert defprotocol</td>
         <td><code>(defprotocol ${1:Name}\n $0)</code></td>
     </tr>
     <tr>
         <td><code>defrecord</code></td>
-        <td>Create defrecord</td>
+        <td>Insert defrecord</td>
         <td><code>(defrecord ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)</code></td>
     </tr>
     <tr>
         <td><code>deftype</code></td>
-        <td>Create deftype</td>
+        <td>Insert deftype</td>
         <td><code>(deftype ${1:Name} [${2:fields}]\n ${3:Protocol}\n $0)</code></td>
     </tr>
     <tr>
         <td><code>fn</code></td>
-        <td>Create fn</td>
+        <td>Insert fn</td>
         <td><code>(fn [${1:arg-list}] $0)</code></td>
     </tr>
     <tr>
+        <td><code>for</code></td>
+        <td>Insert for</td>
+        <td><code>(for [${1:item} ${2:coll}]\n  $0)</code></td>
+    </tr>
+    <tr>
         <td><code>if</code></td>
-        <td>Create if</td>
+        <td>Insert if</td>
         <td><code>(if ${1:test-expr}\n ${2:then-expr}\n ${3:else-expr})</code></td>
     </tr>
     <tr>
-        <td><code>import</code></td>
-        <td>Create import</td>
-        <td><code>(:import [${1:package}])</code></td>
-    </tr>
-    <tr>
         <td><code>kwargs</code></td>
-        <td>Create keyword args</td>
+        <td>Insert keyword args</td>
         <td><code>{:keys [${1:keys}] :or {${2:defaults}}}</code></td>
     </tr>
     <tr>
         <td><code>let</code></td>
-        <td>Create let</td>
+        <td>Insert let</td>
         <td><code>(let [$0])</code></td>
     </tr>
     <tr>
         <td><code>letfn</code></td>
-        <td>Create letfn</td>
+        <td>Insert letfn</td>
         <td><code>(letfn [(${1:name} [${2:args}]\n $0)])</code></td>
     </tr>
     <tr>
         <td><code>ns</code></td>
-        <td>Create ns</td>
-        <td><code>(ns $1\n  $0)</code></td>
+        <td>Insert ns</td>
+        <td><code>(ns ${1:name}\n  $0:references})</code></td>
+    </tr>
+    <tr>
+        <td><code>ns-doc</code></td>
+        <td>Insert ns with docstring</td>
+        <td><code>(ns ${1:name}\n  \"${2:docstring}\"\n  ${0:references})</code></td>
     </tr>
     <tr>
         <td><code>require</code></td>
-        <td>Create require</td>
-        <td><code>(:require [${1:namespace} :as [$0]])</code></td>
+        <td>Insert ns :require</td>
+        <td><code>(:require [${1:namespace}])$0</code></td>
+    </tr>
+    <tr>
+        <td><code>require-as</code></td>
+        <td>Insert ns require with :as alias</td>
+        <td><code>(:require [${1:namespace} :as ${2:alias}]$3)</code></td>
+    </tr>
+    <tr>
+        <td><code>require-refer</code></td>
+        <td>Insert ns :require with :refer</td>
+        <td><code>(:require [${1:namespace} :refer [$2]]$3)</code></td>
+    </tr>
+    <tr>
+        <td><code>require-rdd</code></td>
+        <td>Insert require for rich comment experiments</td>
+        <td><code>(require '[${1:namespace} :as ${2:alias}]$3)$0</code></td>
+    </tr>
+    <tr>
+        <td><code>req-as</code></td>
+        <td>Insert single require dep :as alias</td>
+        <td><code>[${1:namespace} :as ${2:alias}]</code></td>
+    </tr>
+    <tr>
+        <td><code>req-refer</code></td>
+        <td>Insert single require dep with :refer</td>
+        <td><code>[${1:namespace} :refer [$2]]</code></td>
+    </tr>
+    <tr>
+        <td><code>import</code></td>
+        <td>Insert import</td>
+        <td><code>(:import [${1:package}])</code></td>
     </tr>
     <tr>
         <td><code>use</code></td>
-        <td>Create use</td>
-        <td><code>(:use [${1:namespace} :only [$0]])</code></td>
+        <td>Insert require refer preferred over use</td>
+        <td><code>(:require [${1:namespace} :refer [$2]])</code></td>
+    </tr>
+    <tr>
+        <td><code>deps-alias</code></td>
+        <td>Insert alias with extra path & deps</td>
+        <td>
+<code>:${1:category/name}\n {:extra-paths [\"${2:path}\"]\n :extra-deps {${3:deps-maven or deps-git}}}$0</code></td>
+    </tr>
+    <tr>
+        <td><code>deps-maven</code></td>
+        <td>Insert maven dependency</td>
+        <td><code>${1:domain/library-name} {:mvn/version \"${2:1.0.0}\"}$0</code></td>
+    </tr>
+    <tr>
+        <td><code>deps-git</code></td>
+        <td>Insert git dependency</td>
+        <td>
+<code>${1:domain/library-name}\n {:git/sha \"${2:git-sha-value}\"}$0 </code></td>
+    </tr>
+    <tr>
+        <td><code>deps-git-tag</code></td>
+        <td>Insert git tag dependency</td>
+        <td>
+<code>${1:domain/library-name}\n {:git/tag \"${2:git-tag-value}\"\n :git/sha \"${3:git-sha-value}\"}$0</code></td>
+    </tr>
+    <tr>
+        <td><code>deps-git-url</code></td>
+        <td>Insert git URL dependency</td>
+        <td>
+<code>${1:domain/library-name}\n {:git/url \"https://github.com/$1\"\n :git/sha \"${2:git-sha-value}\"}$0</code></td>
+    </tr>
+    <tr>
+        <td><code>deps-local</code></td>
+        <td>Insert local dependency</td>
+        <td>
+<code> ${1:domain/library-name} {:local/root \"${2:/path/to/project/root}\"}$0 </code></td>
+    </tr>
+    <tr>
+        <td><code>deftest</code></td>
+        <td>Insert deftest clojure.test</td>
+        <td>
+<code>(deftest ${1:name}-test\n  (testing \"${2:Context of the test assertions}\"\n  (is (= ${3:assertion-values}))$4)) $0</code></td>
+    </tr>
+    <tr>
+        <td><code>testing</code></td>
+        <td>Insert testing clojure.test</td>
+        <td>
+<code>(testing \"${1:Context of the test assertions}\"\n  $0)</code></td>
+    </tr>
+    <tr>
+        <td><code>is</code></td>
+        <td>Insert is clojure.test</td>
+        <td><code>(is (= ${1:assertion-values}))</code></td>
     </tr>
 </tbody>
 </table>
@@ -180,6 +314,7 @@ User can register additional custom snippets, for more information on how to con
 | Move coll entry up/down            | <img src="../images/features/move-coll-entry.gif" width=720>         |
 | Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
 | Cycle privacy                      |                                                                      |
+| Cycle fn literal                   | <img src="../images/features/cycle-fn-literal.gif" width=480>        |
 | Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
 | Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
 | Unwind thread                      |                                                                      |
@@ -255,7 +390,7 @@ Commands that client can request. Most code actions use these commands as action
 
 #### Refactoring
 
-Commands that change/refactor the code.
+Commands that change/refactor the code. See [above](#code-actions) for screenshots.
 
 __Note: Most of them are available via code actions and most of the time you want to call the code action and not the command manually__
 
@@ -263,6 +398,7 @@ __Note: Most of them are available via code actions and most of the time you wan
 - Add import to namespace
 - Add missing require *
 - Cycle privacy of def/defn *
+- Cycle fn literal (fn []), #() *
 - Cycle collection (#{}, {}, [], ())
 - Change collection to {}, (), #{}, [] *
 - Extract Function *

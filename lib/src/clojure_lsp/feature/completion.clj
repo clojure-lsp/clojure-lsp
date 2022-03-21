@@ -339,9 +339,7 @@
              (if-let [snippet-item (get snippet-items-by-label (:label item))]
                (let [data (shared/assoc-some (:data item)
                                              "snippet-kind" (get completion-kind-enum (:kind item)))]
-                 (shared/assoc-some snippet-item
-                                    :detail (:detail item)
-                                    :data data))
+                 (shared/assoc-some snippet-item :data data))
                item))
            items)
       (remove #(get items-by-label (:label %))
@@ -381,11 +379,7 @@
                                    (mapcat val))
             external-ns-elements (->> (q/filter-external-analysis (dissoc analysis filename) db)
                                       (mapcat val))
-            cursor-element (loop [try-column col]
-                             (if-let [usage (q/find-element-under-cursor analysis filename row col)]
-                               usage
-                               (when (pos? try-column)
-                                 (recur (dec try-column)))))
+            cursor-element (q/find-element-under-cursor analysis filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
                            (if (z/sexpr-able? cursor-loc)
@@ -415,7 +409,10 @@
                     (with-refer-elements matches-fn cursor-loc (concat other-ns-elements external-ns-elements))
 
                     inside-require?
-                    (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+                    (cond-> (with-ns-definition-elements matches-fn (concat other-ns-elements external-ns-elements))
+                      (and support-snippets?
+                           simple-cursor?)
+                      (merging-snippets cursor-loc next-loc matches-fn settings))
 
                     aliased-keyword-value?
                     (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename (concat other-ns-elements external-ns-elements))
@@ -448,7 +445,7 @@
         (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns
-  [{{:keys [name ns filename]} :data :as item} db]
+  [{{:keys [name ns filename]} :data :as item} {:keys [db] :as components}]
   (let [analysis (:analysis @db)
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
@@ -456,11 +453,11 @@
                                                 :bucket :var-usages} db)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db)))
+          (assoc :documentation (f.hover/hover-documentation definition components)))
       item)))
 
 (defn ^:private resolve-item-by-definition
-  [{{:keys [name filename name-row name-col]} :data :as item} db]
+  [{{:keys [name filename name-row name-col]} :data :as item} {:keys [db] :as components}]
   (let [local-analysis (get-in @db [:analysis filename])
         definition (q/find-first #(and (identical? :var-definitions (:bucket %))
                                        (= name (str (:name %)))
@@ -468,10 +465,10 @@
                                        (= name-col (:name-col %))) local-analysis)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db)))
+          (assoc :documentation (f.hover/hover-documentation definition components)))
       item)))
 
-(defn resolve-item [{{:keys [ns]} :data :as item} db]
+(defn resolve-item [{{:keys [ns]} :data :as item} components]
   (let [item (shared/assoc-some item
                                 :insert-text-format (:insertTextFormat item)
                                 :text-edit (:textEdit item)
@@ -479,6 +476,6 @@
                                 :insert-text (:insertText item))]
     (if (:data item)
       (if ns
-        (resolve-item-by-ns item db)
-        (resolve-item-by-definition item db))
+        (resolve-item-by-ns item components)
+        (resolve-item-by-definition item components))
       item)))

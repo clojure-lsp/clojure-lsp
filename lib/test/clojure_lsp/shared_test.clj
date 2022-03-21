@@ -84,6 +84,13 @@
                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") db/db))))
+  (testing "when it has a project root and nested source-paths"
+    (swap! db/db shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
+                                               :source-paths #{(h/file-path "/user/project/src")
+                                                               (h/file-path "/user/project/src/some")}}
+                                    :project-root-uri (h/file-uri "file:///user/project")})
+    (is (= "foo.bar"
+           (shared/uri->namespace (h/file-uri "file:///user/project/src/some/foo/bar.clj") db/db))))
   (testing "when an invalid source-path with a valid source-path prefixing it"
     (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
                                     :project-root-uri (h/file-uri "file:///user/project")})

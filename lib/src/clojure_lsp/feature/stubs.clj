@@ -4,10 +4,9 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    (java.io File)))
 
@@ -31,7 +30,7 @@
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]
         (delete-directory-recursive output-dir)
-        (log/info "Generating stubs for analysis for namespaces" namespaces "on" (str output-dir))
+        (logger/info (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
         (shared/logging-time
           "Stub generation process took %s secs."
           (stub/generate! {:output-dir output-dir
@@ -45,24 +44,26 @@
        :message (str "Error: " e)})))
 
 (defn ^:private analyze-stubs!
-  [dirs db]
+  [dirs {:keys [db] :as components}]
   (let [result (shared/logging-time
                  "Stubs analyzed, took %s secs."
-                 (lsp.kondo/run-kondo-on-paths! dirs true db))
+                 (lsp.kondo/run-kondo-on-paths! dirs true components))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages))
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (swap! db update :analysis merge analysis)
-    (async/go
-      (-> (shared/uri->path (:project-root-uri @db))
-          (db/read-cache db)
-          (update :analysis merge analysis)
-          (db/upsert-cache! db)))))
+    (loop [state-db @db]
+      (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
+        (logger/warn "Analyzis divergent from stub analysis, trying again...")
+        (recur @db)))
+    (-> (shared/uri->path (:project-root-uri @db))
+        (db/read-cache db)
+        (update :analysis merge analysis)
+        (db/upsert-cache! db))))
 
 (defn generate-and-analyze-stubs!
-  [settings db]
+  [settings {:keys [db] :as components}]
   (let [namespaces (->> settings :stubs :generation :namespaces (map str) set)
         extra-dirs (-> settings :stubs :extra-dirs)]
     (if (and (seq namespaces)
@@ -72,10 +73,10 @@
         (if (= 0 result-code)
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)
-                          db)
-          (log/error (str "Stub generation failed." message))))
+                          components)
+          (logger/error (str "Stub generation failed." message))))
       (when (seq extra-dirs)
-        (analyze-stubs! extra-dirs db)))))
+        (analyze-stubs! extra-dirs components)))))
 
 (defn check-stubs? [settings]
   (or (-> settings :stubs :generation :namespaces seq)

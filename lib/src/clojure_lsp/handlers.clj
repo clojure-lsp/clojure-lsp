@@ -1,6 +1,7 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.config :as config]
+   [clojure-lsp.clojure-feature :as clojure-feature]
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -20,12 +21,13 @@
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.pprint :as pprint]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.feature-handler :as feature-handler]
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer])
   (:import
    [java.net
     URL
@@ -33,19 +35,26 @@
 
 (set! *warn-on-reflection* true)
 
-(defmacro process-after-changes [& body]
-  `(let [~'_time (System/nanoTime)]
+(defmacro process-after-changes [task-id uri & body]
+  `(let [start-time# (System/nanoTime)]
      (loop [backoff# 1]
-       (if (> (quot (- (System/nanoTime) ~'_time) 1000000) 60000) ; one minute timeout
-         (log/warn "Timeout waiting for changes for body")
-         (if (:processing-changes @db/db)
+       (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
+         ~(with-meta
+            `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
+            (meta &form))
+         (if (contains? (:processing-changes @db/db) ~uri)
            (do
              (Thread/sleep backoff#)
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
-(defn initialize [project-root-uri client-capabilities client-settings work-done-token]
-  (swap! db/db assoc :project-analysis-type :project-and-deps)
+(defn initialize
+  [project-root-uri
+   client-capabilities
+   client-settings
+   work-done-token
+   {:keys [db] :as components}]
+  (swap! db assoc :project-analysis-type :project-and-deps)
   (when project-root-uri
     (crawler/initialize-project
       project-root-uri
@@ -53,13 +62,13 @@
       client-settings
       {}
       work-done-token
-      db/db)))
+      components)))
 
-(defn did-open [{:keys [textDocument]}]
+(defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)
         text (:text textDocument)]
-    (f.file-management/did-open uri text db/db true)
-    (producer/refresh-test-tree (:producer @db/db) [uri]))
+    (f.file-management/did-open uri text db true)
+    (clojure-producer/refresh-test-tree producer [uri]))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
@@ -77,21 +86,7 @@
   (f.file-management/did-close textDocument db/db))
 
 (defn did-change-watched-files [{:keys [changes]}]
-  (doseq [{:keys [uri type]} changes]
-    (let [filename (shared/uri->filename uri)]
-      (case type
-        :created (do (f.file-management/did-open uri (slurp filename) db/db false)
-                     (producer/refresh-test-tree (:producer @db/db) [uri]))
-        ;; TODO Fix outdated changes overwriting newer changes.
-        :changed nil #_(f.file-management/did-change uri
-                                                     [{:text (slurp filename)}]
-                                                     (inc (get-in @db/db [:documents uri :v] 0))
-                                                     db/db)
-        :deleted (swap! db/db (fn [db]
-                                (-> db
-                                    (shared/dissoc-in [:documents uri])
-                                    (shared/dissoc-in [:analysis filename])
-                                    (shared/dissoc-in [:findings filename]))))))))
+  (f.file-management/did-change-watched-files changes db/db))
 
 (defn completion [{:keys [textDocument position]}]
   (let [row (-> position :line inc)
@@ -106,8 +101,7 @@
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db/db))))
 
-(defn completion-resolve-item [item]
-  (f.completion/resolve-item item db/db))
+(def completion-resolve-item f.completion/resolve-item)
 
 (defn prepare-rename [{:keys [textDocument position]}]
   (let [[row col] (shared/position->line-column position)]
@@ -162,6 +156,7 @@
 
 (defn document-highlight [{:keys [textDocument position]}]
   (process-after-changes
+    :document-highlight textDocument
     (let [line (-> position :line inc)
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
@@ -186,13 +181,13 @@
                    (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db))))
      :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-cli`)")
-     :server-version (config/clojure-lsp-version)
+     :server-version (shared/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))
 
-(defn server-info-log []
+(defn server-info-log [{:keys [producer]}]
   (producer/show-message
-    (:producer @db/db)
+    producer
     (with-out-str (pprint/pprint (server-info)))
     :info
     nil))
@@ -210,9 +205,9 @@
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
-(defn cursor-info-log [{:keys [textDocument position]}]
+(defn cursor-info-log [{:keys [textDocument position]} {:keys [producer]}]
   (producer/show-message
-    (:producer @db/db)
+    producer
     (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
     :info
     nil))
@@ -220,10 +215,10 @@
 (defn cursor-info-raw [{:keys [textDocument position]}]
   (cursor-info [textDocument (:line position) (:character position)]))
 
-(defn clojuredocs-raw [{:keys [symName symNs]}]
-  (f.clojuredocs/find-docs-for symName symNs db/db))
+(defn clojuredocs-raw [{:keys [symName symNs]} components]
+  (f.clojuredocs/find-docs-for symName symNs components))
 
-(defn ^:private refactor [refactoring [doc-id line character & args] db]
+(defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db] :as components}]
   (let [row (inc (int line))
         col (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change
@@ -237,29 +232,33 @@
                                :col         col
                                :args        args
                                :version     v}
-                              db)))
+                              components)))
 
-(defn execute-command [{:keys [command arguments]}]
+(defn execute-command [{:keys [command arguments]} {:keys [producer] :as components}]
   (cond
     (= command "server-info")
-    (server-info-log)
+    (server-info-log components)
 
     (= command "cursor-info")
     (cursor-info-log {:textDocument (nth arguments 0)
                       :position {:line (nth arguments 1)
-                                 :character (nth arguments 2)}})
+                                 :character (nth arguments 2)}}
+                     components)
 
     (some #(= % command) f.refactor/available-refactors)
-    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments db/db)]
-      (producer/publish-workspace-edit (:producer @db/db) edit)
+    ;; TODO move components upper to a common place
+    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
+      (producer/publish-workspace-edit producer edit)
       (when show-document-after-edit
-        (producer/show-document-request (:producer @db/db) show-document-after-edit))
+        (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
+                                                          (shared/full-file-range)))
+             (producer/show-document-request producer)))
       edit)))
 
-(defn hover [{:keys [textDocument position]}]
+(defn hover [{:keys [textDocument position]} components]
   (let [[line column] (shared/position->line-column position)
         filename (shared/uri->filename textDocument)]
-    (f.hover/hover filename line column db/db)))
+    (f.hover/hover filename line column components)))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (let [[line column] (shared/position->line-column position)]
@@ -270,12 +269,10 @@
 
 (defn range-formatting [doc-id format-pos]
   (process-after-changes
+    :range-formatting doc-id
     (f.format/range-formatting doc-id format-pos db/db)))
 
-(defmulti extension (fn [method _] method))
-
-(defmethod extension "dependencyContents"
-  [_ doc-id]
+(defn dependency-contents [doc-id]
   (let [url (URL. doc-id)
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)
@@ -286,6 +283,7 @@
 (defn code-actions
   [{:keys [range context textDocument]}]
   (process-after-changes
+    :code-actions textDocument
     (let [diagnostics (-> context :diagnostics)
           line (-> range :start :line)
           character (-> range :start :character)
@@ -298,6 +296,7 @@
 (defn code-lens
   [{:keys [textDocument]}]
   (process-after-changes
+    :code-lens textDocument
     (f.code-lens/reference-code-lens textDocument db/db)))
 
 (defn code-lens-resolve
@@ -307,12 +306,14 @@
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
   (process-after-changes
+    :semantic-tokens-full textDocument
     (let [data (f.semantic-tokens/full-tokens textDocument db/db)]
       {:data data})))
 
 (defn semantic-tokens-range
   [{:keys [textDocument] {:keys [start end]} :range}]
   (process-after-changes
+    :semantic-tokens-range textDocument
     (let [range {:name-row (inc (:line start))
                  :name-col (inc (:character start))
                  :name-end-row (inc (:line end))
@@ -345,3 +346,83 @@
   (let [row (-> position :line inc)
         col (-> position :character inc)]
     (f.linked-editing-range/ranges textDocument row col db/db)))
+
+(defrecord ClojureLSPFeatureHandler [components*]
+  feature-handler/ILSPFeatureHandler
+  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
+    (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
+  (did-open [_ doc]
+    (did-open doc @components*))
+  (did-change [_ doc]
+    (did-change doc))
+  (did-save [_ doc]
+    (did-save doc))
+  (execute-command [_ doc]
+    (execute-command doc @components*))
+  (did-close [_ doc]
+    (did-close doc))
+  (did-change-watched-files [_ doc]
+    (did-change-watched-files doc))
+  (references [_ doc]
+    (references doc))
+  (completion [_ doc]
+    (completion doc))
+  (completion-resolve-item [_ doc]
+    (completion-resolve-item doc @components*))
+  (prepare-rename [_ doc]
+    (prepare-rename doc))
+  (rename [_ doc]
+    (rename doc))
+  (hover [_ doc]
+    (hover doc @components*))
+  (signature-help [_ doc]
+    (signature-help doc))
+  (formatting [_ doc]
+    (formatting doc))
+  (code-actions [_ doc]
+    (code-actions doc))
+  (code-lens [_ doc]
+    (code-lens doc))
+  (code-lens-resolve [_ doc]
+    (code-lens-resolve doc))
+  (definition [_ doc]
+    (definition doc))
+  (declaration [_ doc]
+    (declaration doc))
+  (implementation [_ doc]
+    (implementation doc))
+  (document-symbol [_ doc]
+    (document-symbol doc))
+  (document-highlight [_ doc]
+    (document-highlight doc))
+  (semantic-tokens-full [_ doc]
+    (semantic-tokens-full doc))
+  (semantic-tokens-range [_ doc]
+    (semantic-tokens-range doc))
+  (prepare-call-hierarchy [_ doc]
+    (prepare-call-hierarchy doc))
+  (call-hierarchy-incoming [_ doc]
+    (call-hierarchy-incoming doc))
+  (call-hierarchy-outgoing [_ doc]
+    (call-hierarchy-outgoing doc))
+  (linked-editing-ranges [_ doc]
+    (linked-editing-ranges doc))
+  (workspace-symbols [_ doc]
+    (workspace-symbols doc))
+  (range-formatting [_ doc-id format-pos]
+    (range-formatting doc-id format-pos))
+  ;; (did-delete-files [_ doc]
+  ;;   (did-delete-files doc))
+  clojure-feature/IClojureLSPFeature
+  (cursor-info-log [_ doc]
+    (cursor-info-log doc @components*))
+  (cursor-info-raw [_ doc]
+    (cursor-info-raw doc))
+  (server-info-raw [_]
+    (server-info-raw))
+  (clojuredocs-raw [_ doc]
+    (clojuredocs-raw doc @components*))
+  (server-info-log [_]
+    (server-info-log @components*))
+  (dependency-contents [_ doc-id]
+    (dependency-contents doc-id)))

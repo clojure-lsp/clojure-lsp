@@ -5,13 +5,16 @@
         org.eclipse.xtend/org.eclipse.xtend.lib {:mvn/version "2.25.0"}
         org.eclipse.lsp4j/org.eclipse.lsp4j {:mvn/version "0.12.0"  :exclusions [org.eclipse.xtend/org.eclipse.xtend.lib
                                                                                  com.google.code.gson/gson]}
-        com.google.code.gson/gson {:mvn/version "2.8.9"}
+        com.google.code.gson/gson {:mvn/version "2.9.0"}
         borkdude/dynaload {:mvn/version "0.2.2"}
         nrepl/bencode {:mvn/version "1.1.0"}
+        com.taoensso/timbre {:mvn/version "5.1.2"}
+        lsp4clj/core {:local/root "../lsp4clj"}
+        lsp4clj/protocols {:local/root "../protocols"}
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources" "target/lsp-classes"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.60.977"}}
+                               lambdaisland/kaocha {:mvn/version "1.63.998"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
@@ -23,8 +26,8 @@
                                                    :sha "538fc6f4147badf3a457b3eb8f9f95dd3bc947b1"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.8.0" :sha "e3e3532"}
-                                  com.github.ericdallo/deps-bin {:mvn/version "0.1.1"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.8.1" :sha "7d40500"}
+                                  com.github.ericdallo/deps-bin {:mvn/version "0.1.2"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}
                                   com.google.guava/guava {:mvn/version "31.1-jre"}}
                    :ns-default build}

@@ -27,13 +27,13 @@
                           :zloc     zloc
                           :position position)))))))
 
-(defn ^:private find-require-suggestions [db {:keys [position zloc]}]
-  (->> (f.add-missing-libspec/find-require-suggestions zloc db)
+(defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]
+  (->> (f.add-missing-libspec/find-require-suggestions zloc uri db)
        (map #(assoc % :position position))))
 
-(defn ^:private find-all-require-suggestions [diagnostics missing-requires db]
+(defn ^:private find-all-require-suggestions [diagnostics missing-requires uri db]
   (->> diagnostics
-       (mapcat (partial find-require-suggestions db))
+       (mapcat (partial find-require-suggestions uri db))
        (remove (fn [suggestion]
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
@@ -79,17 +79,6 @@
                        :arguments [uri (:line position) (:character position) ns alias refer]}})
        alias-suggestions))
 
-(defn ^:private missing-require-actions
-  [uri missing-requires]
-  (map (fn [{:keys [ns alias refer position]}]
-         {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
-          :kind       :quick-fix
-          :preferred? true
-          :command    {:title     "Add missing require"
-                       :command   "add-missing-libspec"
-                       :arguments [uri (:line position) (:character position)]}})
-       missing-requires))
-
 (defn ^:private missing-import-actions [uri missing-imports]
   (map (fn [{:keys [missing-import position]}]
          {:title      (str "Add import '" missing-import "'")
@@ -116,6 +105,13 @@
              :command   "inline-symbol"
              :arguments [uri line character]}})
 
+(defn ^:private introduce-let-action [uri line character]
+  {:title   "Introduce let"
+   :kind    :refactor-extract
+   :command {:title     "Introduce let"
+             :command   "introduce-let"
+             :arguments [uri line character "new-binding"]}})
+
 (defn ^:private move-to-let-action [uri line character]
   {:title   "Move to let"
    :kind    :refactor-extract
@@ -128,6 +124,13 @@
    :kind    :refactor-rewrite
    :command {:title     "Cycle privacy"
              :command   "cycle-privacy"
+             :arguments [uri line character]}})
+
+(defn ^:private cycle-fn-literal-action [uri line character]
+  {:title   "Cycle function literal"
+   :kind    :refactor-rewrite
+   :command {:title     "Cycle function literal"
+             :command   "cycle-fn-literal"
              :arguments [uri line character]}})
 
 (defn ^:private extract-function-action [uri line character]
@@ -243,7 +246,7 @@
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
         public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
-        inside-let?* (future (r.transform/find-let-form zloc))
+        inside-let?* (future (r.transform/find-let-form zloc uri db))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
@@ -252,17 +255,14 @@
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
-        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* db))
+        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
+        can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))]
     (cond-> []
-
-      (seq @missing-requires*)
-      (into (missing-require-actions uri @missing-requires*))
-
       (seq @missing-imports*)
       (into (missing-import-actions uri @missing-imports*))
 
@@ -291,6 +291,9 @@
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
 
+      @can-cycle-fn-literal?*
+      (conj (cycle-fn-literal-action uri line character))
+
       @can-thread?*
       (conj (thread-first-all-action uri line character)
             (thread-last-all-action uri line character))
@@ -310,6 +313,9 @@
       (and workspace-edit-capability?
            @allow-move-entry-down?*)
       (conj (move-coll-entry-down-action uri line character))
+
+      zloc
+      (conj (introduce-let-action uri line character))
 
       (and workspace-edit-capability?
            (seq diagnostics))

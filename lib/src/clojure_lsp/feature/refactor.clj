@@ -7,27 +7,27 @@
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
+   [lsp4clj.protocols.logger :as logger]
    [medley.core :as medley]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
 (defmulti refactor :refactoring)
 
-(defmethod refactor :add-import-to-namespace [{:keys [loc args db]}]
+(defmethod refactor :add-import-to-namespace [{:keys [loc args] {:keys [db]} :components}]
   (apply f.add-missing-libspec/add-import-to-namespace loc (concat args [db])))
 
-(defmethod refactor :add-missing-libspec [{:keys [loc db]}]
-  (f.add-missing-libspec/add-missing-libspec loc db))
+(defmethod refactor :add-missing-libspec [{:keys [loc uri] {:keys [db]} :components}]
+  (f.add-missing-libspec/add-missing-libspec loc uri db))
 
-(defmethod refactor :add-require-suggestion [{:keys [loc args db]}]
+(defmethod refactor :add-require-suggestion [{:keys [loc args] {:keys [db]} :components}]
   (apply f.add-missing-libspec/add-require-suggestion loc (concat args [db])))
 
-(defmethod refactor :add-missing-import [{:keys [loc db]}]
+(defmethod refactor :add-missing-import [{:keys [loc] {:keys [db]} :components}]
   (f.add-missing-libspec/add-common-import-to-namespace loc db))
 
-(defmethod refactor :clean-ns [{:keys [loc uri db]}]
+(defmethod refactor :clean-ns [{:keys [loc uri] {:keys [db]} :components}]
   (f.clean-ns/clean-ns-edits loc uri db))
 
 (defmethod refactor :cycle-coll [{:keys [loc]}]
@@ -36,34 +36,37 @@
 (defmethod refactor :change-coll [{:keys [loc args]}]
   (apply r.transform/change-coll loc args))
 
-(defmethod refactor :cycle-privacy [{:keys [loc db]}]
+(defmethod refactor :cycle-privacy [{:keys [loc] {:keys [db]} :components}]
   (r.transform/cycle-privacy loc db))
+
+(defmethod refactor :cycle-fn-literal [{:keys [loc]}]
+  (r.transform/cycle-fn-literal loc))
 
 (defmethod refactor :expand-let [{:keys [loc]}]
   (r.transform/expand-let loc))
 
-(defmethod refactor :extract-function [{:keys [loc uri args db]}]
+(defmethod refactor :extract-function [{:keys [loc uri args] {:keys [db]} :components}]
   (apply r.transform/extract-function loc uri (concat args [db])))
 
-(defmethod refactor :inline-symbol [{:keys [uri row col db]}]
+(defmethod refactor :inline-symbol [{:keys [uri row col] {:keys [db]} :components}]
   (r.transform/inline-symbol uri row col db))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc args))
 
-(defmethod refactor :move-to-let [{:keys [loc args]}]
-  (apply r.transform/move-to-let loc args))
+(defmethod refactor :move-to-let [{:keys [loc args uri db]}]
+  (apply r.transform/move-to-let loc uri db args))
 
-(defmethod refactor :thread-first [{:keys [loc db]}]
+(defmethod refactor :thread-first [{:keys [loc] {:keys [db]} :components}]
   (r.transform/thread-first loc db))
 
-(defmethod refactor :thread-first-all [{:keys [loc db]}]
+(defmethod refactor :thread-first-all [{:keys [loc] {:keys [db]} :components}]
   (r.transform/thread-first-all loc db))
 
-(defmethod refactor :thread-last [{:keys [loc db]}]
+(defmethod refactor :thread-last [{:keys [loc] {:keys [db]} :components}]
   (r.transform/thread-last loc db))
 
-(defmethod refactor :thread-last-all [{:keys [loc db]}]
+(defmethod refactor :thread-last-all [{:keys [loc] {:keys [db]} :components}]
   (r.transform/thread-last-all loc db))
 
 (defmethod refactor :unwind-all [{:keys [loc]}]
@@ -72,26 +75,26 @@
 (defmethod refactor :unwind-thread [{:keys [loc]}]
   (r.transform/unwind-thread loc))
 
-(defmethod refactor :resolve-macro-as [{:keys [loc uri db]}]
-  (f.resolve-macro/resolve-macro-as! loc uri db))
+(defmethod refactor :resolve-macro-as [{:keys [loc uri components]}]
+  (f.resolve-macro/resolve-macro-as! loc uri components))
 
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))
 
-(defmethod refactor :move-coll-entry-up [{:keys [loc uri db]}]
+(defmethod refactor :move-coll-entry-up [{:keys [loc uri] {:keys [db]} :components}]
   (f.move-coll-entry/move-up loc uri db))
 
-(defmethod refactor :move-coll-entry-down [{:keys [loc uri db]}]
+(defmethod refactor :move-coll-entry-down [{:keys [loc uri] {:keys [db]} :components}]
   (f.move-coll-entry/move-down loc uri db))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc args))
 
-(defmethod refactor :create-function [{:keys [loc uri db]}]
+(defmethod refactor :create-function [{:keys [loc uri] {:keys [db]} :components}]
   (r.transform/create-function loc uri db))
 
-(defmethod refactor :create-test [{:keys [loc uri db]}]
-  (r.transform/create-test loc uri db))
+(defmethod refactor :create-test [{:keys [loc uri] components :components}]
+  (r.transform/create-test loc uri components))
 
 (def available-refactors
   (->> refactor
@@ -105,15 +108,16 @@
                   :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
     (shared/client-changes changes db)))
 
-(defn call-refactor [{:keys [loc uri refactoring row col version] :as data} db]
-  (let [result (refactor (assoc data :db db))]
+(defn call-refactor [{:keys [loc uri refactoring row col version] :as data} {:keys [db] :as components}]
+
+  (let [result (refactor (assoc data :components components))]
     (cond
       (:no-op? result)
       nil
 
       (and (not loc)
            (not= :clean-ns refactoring))
-      (log/warn "Could not find a form at this location. row" row "col" col "file" uri)
+      (logger/warn (str "Could not find a form at this location. row " row " col " col " file " uri))
 
       (map? result)
       (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
@@ -131,7 +135,7 @@
       {:edit (refactor-client-seq-changes uri version result db)}
 
       (empty? result)
-      (log/warn refactoring "made no changes" (z/string loc))
+      (logger/warn refactoring "made no changes" (z/string loc))
 
       :else
-      (log/warn "Could not apply" refactoring "to form: " (z/string loc)))))
+      (logger/warn (str "Could not apply " refactoring " to form: " (z/string loc))))))

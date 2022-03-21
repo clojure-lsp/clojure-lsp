@@ -7,8 +7,7 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 

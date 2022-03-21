@@ -1,14 +1,16 @@
 (ns clojure-lsp.test-helper
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.producer :as producer]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [taoensso.timbre :as log]))
+   [lsp4clj.components :as components]
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]))
 
 (def mock-diagnostics (atom {}))
 
@@ -29,23 +31,42 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  producer/IProducer
+  producer/ILSPProducer
   (refresh-code-lens [_this])
-  (refresh-test-tree [_this _uris])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
   (publish-progress [_this _percentage _message _progress-token])
   (show-document-request [_this _document-request])
   (show-message-request [_this _message _type _actions])
   (show-message [_this _message _type _extra])
-  (register-capability [_this _capability]))
+  (register-capability [_this _capability])
+  clojure-producer/IClojureProducer
+  (refresh-test-tree [_this _uris]))
+
+(defrecord TestLogger []
+  logger/ILSPLogger
+  (setup [_])
+
+  (set-log-path [_this _log-path])
+
+  (-info [_this _message])
+  (-warn [_this _message])
+  (-error [_this _message])
+  (-debug [_this _message]))
+
+(def components
+  (components/->components
+    db/db
+    (->TestLogger)
+    (->TestProducer)))
 
 (defn clean-db!
   ([]
    (clean-db! :unit-test))
   ([env]
-   (reset! db/db {:env env
-                  :producer (->TestProducer)})
+   (reset! db/db (assoc db/initial-db
+                        :env env
+                        :producer (:producer components)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
@@ -123,7 +144,7 @@
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
         uri (or uri default-uri)]
-    (handlers/did-open {:textDocument {:uri uri :text code}})
+    (handlers/did-open {:textDocument {:uri uri :text code}} components)
     positions))
 
 (defmacro with-mock-diagnostics [& body]

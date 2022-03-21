@@ -4,8 +4,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [taoensso.timbre :as log]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 

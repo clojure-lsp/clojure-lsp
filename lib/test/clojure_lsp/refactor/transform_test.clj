@@ -105,7 +105,7 @@
            (thread-last-all "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let [code new-sym]
-  (as-root-string (transform/move-to-let (h/zloc-from-code code) new-sym)))
+  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) "file:///a.clj" db/db new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
@@ -159,13 +159,18 @@
                      " |    ;; comment"
                      "     2))")
              (move-to-let 'x))))
+  (is (= (h/code "(doseq [x xs] (let [a x] a))")
+         (move-to-let "(doseq [x xs] (let [] |x))" 'a)))
+  (is (nil? (move-to-let "(let [] (when-let [x xs] |x))" 'a)))
+  (is (nil? (move-to-let "(let [] (doseq [x xs] |x))" 'a)))
+  (is (nil? (move-to-let "(do |x)" 'a)))
   (is (nil? (-> (h/code "(let [a 1]"
                         "  (+ a"
                         "     2"
                         "     |;; comment"
                         "))")
                 (move-to-let 'x))))
-  (is (nil? (transform/move-to-let nil 'x))))
+  (is (nil? (transform/move-to-let nil "file:///a.clj" db/db 'x))))
 
 (defn- introduce-let [code new-sym]
   (as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
@@ -303,6 +308,93 @@
     (is (= "^:private a" (cycle-privacy "(defn |a [])")))
     (is (= "a" (cycle-privacy "(defn ^:private |a [])")))))
 
+(defn cycle-fn-literal [code]
+  (as-string (transform/cycle-fn-literal (h/zloc-from-code code))))
+
+(deftest cycle-fn-literal-test
+  (testing "literal to fn"
+    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
+      ;; basic params
+      "(fn [])"                                                      "|#()"
+      "(fn [] (+ 1 2))"                                              "|#(+ 1 2)"
+      "(fn [element] (+ 1 element))"                                 "|#(+ 1 %)"
+      "(fn [element1] (+ 1 element1))"                               "|#(+ 1 %1)"
+      "(fn [element1 element2] (+ 1 element1 element2))"             "|#(+ 1 %1 %2)"
+      ;; mixed numbering styles
+      "(fn [element] (+ 1 element element))"                         "|#(+ 1 % %1)"
+      "(fn [element element2] (+ 1 element element2))"               "|#(+ 1 % %2)"
+      ;; vararg
+      "(fn [& args] (+ 1 args))"                                     "|#(+ 1 %&)"
+      "(fn [element & args] (+ 1 element args))"                     "|#(+ 1 % %&)"
+      "(fn [element1 element2 & args] (+ 1 element1 element2 args))" "|#(+ 1 %1 %2 %&)"
+      ;; implicit do
+      "(fn [] (prn {}) (+ 3 4))"                                     "|#(do (prn {}) (+ 3 4))"
+      ;; with comment
+      (h/code "(fn [] ;; comment"
+              "   (+ 3 4))")
+      (h/code "|#(;; comment"
+              "   + 3 4)")
+      ;; unused param
+      "(fn [element1 _ element3] (+ 1 element1 element3))"           "|#(+ 1 %1 %3)"
+      ;; reordered params
+      "(fn [element1 element2] (+ 1 element2 element1))"             "|#(+ 1 %2 %1)"
+      ;; duplicate param
+      "(fn [element1] (+ 1 element1 element1))"                      "|#(+ 1 %1 %1)"
+      ;; subsequent literals
+      "(fn [element] (+ 1 element))"                                 "|#(+ 1 %) #(+ 2 %1 %2)"
+      ;; from inside
+      "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
+      "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
+  (testing "fn to literal"
+    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
+      ;; basic params
+      "#()"                    "|(fn [])"
+      "#(+ 1 2)"               "|(fn [] (+ 1 2))"
+      "#(+ 1 %)"               "|(fn [element] (+ 1 element))"
+      "#(+ 1 %1 %2)"           "|(fn [element1 element2] (+ 1 element1 element2))"
+      ;; vararg
+      "#(+ 1 %&)"              "|(fn [& args] (+ 1 args))"
+      "#(+ 1 % %&)"            "|(fn [element & args] (+ 1 element args))"
+      "#(+ 1 %1 %2 %&)"        "|(fn [element1 element2 & args] (+ 1 element1 element2 args))"
+      ;; implicit do
+      "#(do (prn {}) (+ 3 4))" "|(fn [] (prn {}) (+ 3 4))"
+      ;; with comment
+      (h/code "#(;; comment"
+              "   + 3 4)")
+      (h/code "|(fn []"
+              "   ;; comment"
+              "   (+ 3 4))")
+      ;; unused param
+      "#(+ 1 %1 %3)"           "|(fn [element1 _ element3] (+ 1 element1 element3))"
+      ;; reordered params
+      "#(+ 1 %2 %1)"           "|(fn [element1 element2] (+ 1 element2 element1))"
+      ;; duplicate param
+      "#(+ 1 % %)"             "|(fn [element1] (+ 1 element1 element1))"
+      ;; subsequent fn
+      "#(+ 1 %)"               "|(fn [element1] (+ 1 element1)) (fn [element1 element2] (+ 1 element1 element2))"
+      ;; named function
+      "#(+ 1 2)"               "|(fn named [] (+ 1 2))"
+      ;; from inside
+      "#(+ 1 2)"               "(|fn [] (+ 1 2))"
+      "#(+ 1 2)"               "(fn |[] (+ 1 2))"
+      "#(+ 1 2)"               "(fn [] (+ 1| 2))"))
+  (testing "when nested prefers literal to fn, because literals can't be nested"
+    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
+      ;; on literal in fn
+      "(fn [element] (+ a element))"                  "(fn [a coll] (map |#(+ a %) coll))"
+      ;; on fn in literal
+      "(fn [element] (map (fn [a] (+ a 1)) element))" "#(map |(fn [a] (+ a 1)) %)")))
+
+(deftest can-cycle-fn-literal-test
+  (are [code] (not (transform/can-cycle-fn-literal? (h/zloc-from-code code)))
+    ;; non fn-literals
+    "(+ |1 2)"
+    "|(+ 1 2)"
+    ;; destructured param
+    "|(fn [{:keys [element1 element2]}] (+ 1 element1 element1))"
+    ;; multi-arity fn
+    "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
+
 (defn change-coll [code coll-type]
   (as-string (transform/change-coll (z/of-string code) coll-type)))
 
@@ -378,6 +470,15 @@
             (h/code "(foo a)")]
            (-> (h/code "(let [a 1 b 2 c 3]"
                        "  |(+ 1 a))")
+               (extract-function "foo")
+               as-strings))))
+  (testing "after local usage"
+    (is (= [(h/code ""
+                    "(defn foo [b c]"
+                    "  (+ 2 b c))"
+                    "")
+            (h/code "(foo b c)")]
+           (-> "(defn a [b] (let [c 1] (+ 2 b |c)))"
                (extract-function "foo")
                as-strings))))
   (testing "On multi-arity function"
@@ -677,7 +778,7 @@
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" h/components)
             results-to-assert (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
@@ -701,7 +802,7 @@
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.cljs")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" db/db)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" h/components)
             results-to-assert (update-map changes-by-uri with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
@@ -731,7 +832,7 @@
           (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")
-                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" db/db)
+                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" h/components)
                 results-to-assert (update-map changes-by-uri with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
@@ -747,7 +848,7 @@
                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns-test) (deftest |foo [b] (+ 1 2))"
                                        "file:///project/test/some/ns_test.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" db/db)]
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" h/components)]
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
 

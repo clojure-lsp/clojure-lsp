@@ -72,23 +72,27 @@
   (testing "when empty classpath and no classpath-config-paths is provided"
     (is (= nil
            (config/resolve-from-classpath-config-paths []
-                                                       {}))))
+                                                       {}
+                                                      ))))
   (testing "when no classpath-config-paths is provided and classpath has no libs with clojure-lsp config"
     (is (= nil
            (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
-                                                       {}))))
+                                                       {}
+                                                      ))))
   (testing "when classpath-config-paths is provided and classpath has no libs with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (constantly nil)]
       (is (= nil
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
-                                                         {:classpath-config-paths ["my/other-lib"]})))))
+                                                         {:classpath-config-paths ["my/other-lib"]}
+                                                        )))))
   (testing "when classpath-config-paths is provided and classpath has one lib with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (constantly {:a 1 :b {:c 2 :d 3}})]
       (is (= {:a 1 :b {:c 2 :d 3}}
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
-                                                         {:classpath-config-paths ["my/other-lib"]})))))
+                                                         {:classpath-config-paths ["my/other-lib"]}
+                                                        )))))
   (testing "when classpath-config-paths is provided and classpath has recursive libs with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (fn [jar cp-config-paths]
@@ -105,7 +109,8 @@
               :e 5
               :classpath-config-paths ["my/another-lib"]}
              (config/resolve-from-classpath-config-paths ["/my/lib.jar" "/my/otherlib.jar"]
-                                                         {:classpath-config-paths ["my/other-lib"]}))))))
+                                                         {:classpath-config-paths ["my/other-lib"]}
+                                                        ))))))
 
 (deftest deep-merge-fixing-cljfmt
   (is (= {} (#'config/deep-merge-fixing-cljfmt {} {})))

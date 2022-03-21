@@ -44,11 +44,9 @@
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 2 :character 3}}}] {}
                           db/db)))
-  (testing "already used alias, we add one more suggestion"
+  (testing "already used alias, we add proper suggestion"
     (h/assert-contains-submaps
-      [{:title "Add require '[clojure.data.json :as json]'"
-        :command {:command "add-require-suggestion"}}
-       {:title "Add require '[clojure.data.json :as data.json]'"
+      [{:title "Add require '[clojure.data.json :as data.json]'"
         :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
@@ -118,7 +116,7 @@
   (testing "when it has unresolved-namespace and can find namespace"
     (h/assert-contains-submaps
       [{:title "Add require '[some-ns :as sns]'"
-        :command {:command "add-missing-libspec"}}]
+        :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           3
@@ -138,7 +136,7 @@
   (testing "when it has unresolved-symbol and it's a known refer"
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.test :refer [deftest]]'"
-        :command {:command "add-missing-libspec"}}]
+        :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
                           4
@@ -269,6 +267,20 @@
       [{:title "Change coll to list"
         :command {:command "change-coll"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 5 1 [] {} db/db))))
+
+(deftest introduce-let-code-action
+  (h/load-code-and-locs (h/code "(+ (- 10 3) 2)")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when a valid zloc"
+    (h/assert-contains-submaps
+      [{:title "Introduce let"
+        :command {:command "introduce-let"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          1
+                          4
+                          [] {}
+                          db/db))))
 
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"

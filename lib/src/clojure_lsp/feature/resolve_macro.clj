@@ -3,13 +3,13 @@
    [borkdude.rewrite-edn :as r]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -67,9 +67,8 @@
    "clj-kondo.lint-as/def-catch-all"])
 
 (defn resolve-macro-as!
-  [zloc uri db]
+  [zloc uri {:keys [db producer] :as components}]
   (let [project-root-uri (:project-root-uri @db)
-        producer (:producer @db)
         resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
                                     (lsp.kondo/home-config-path)]
@@ -81,9 +80,9 @@
         (f.file-management/analyze-changes {:uri uri
                                             :version (:v document)
                                             :text (:text document)}
-                                           db)
-        (log/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
+                                           components)
+        (logger/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
       (do
-        (log/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
-        (producer/show-message (:producer @db) (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
+        (logger/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+        (producer/show-message producer (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
     {:no-op? true}))

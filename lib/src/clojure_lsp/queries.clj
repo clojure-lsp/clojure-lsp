@@ -4,8 +4,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
-   [medley.core :as medley]
-   [taoensso.timbre :as log]))
+   [lsp4clj.protocols.logger :as logger]
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 
@@ -67,16 +67,15 @@
          (filter (fn [{:keys [bucket] :as element}]
                    (and (= :locals bucket)
                         (shared/inside? {:name-row line :name-col column} element))))
-         (map (fn [local]
-                (find-first #(and (= :local-usages (:bucket %))
-                                  (= (:id local) (:id %))
-                                  (shared/inside? %
-                                                  {:name-row line
-                                                   :name-col column
-                                                   :name-end-row end-line
-                                                   :name-end-col end-column}))
-                            local-analysis)))
-         (remove nil?))))
+         (keep (fn [local]
+                 (find-first #(and (= :local-usages (:bucket %))
+                                   (= (:id local) (:id %))
+                                   (shared/inside? %
+                                                   {:name-row line
+                                                    :name-col column
+                                                    :name-end-row end-line
+                                                    :name-end-col end-column}))
+                             local-analysis))))))
 
 (defn find-var-usages-under-form
   [analysis filename line column end-line end-column]
@@ -206,9 +205,29 @@
   (into []
         (comp
           (mapcat val)
-          (filter #(identical? :protocol-impls (:bucket %)))
-          (filter #(safe-equal? (:ns element) (:protocol-ns %)))
-          (filter #(safe-equal? (:name element) (:method-name %)))
+          (cond
+            ;; protocol method definition
+            (and (= 'clojure.core/defprotocol (:defined-by element))
+                 (:protocol-name element))
+            (filter #(and (identical? :protocol-impls (:bucket %))
+                          (safe-equal? (:ns element) (:protocol-ns %))
+                          (safe-equal? (:name element) (:method-name %))))
+
+            ;; protocol name definition
+            (= 'clojure.core/defprotocol (:defined-by element))
+            (filter #(and (identical? :var-usages (:bucket %))
+                          (safe-equal? (:ns element) (:to %))
+                          (safe-equal? (:name element) (:name %))))
+
+            ;; defmulti definition
+            (= 'clojure.core/defmulti (:defined-by element))
+            (filter #(and (identical? :var-usages (:bucket %))
+                          (:defmethod %)
+                          (safe-equal? (:ns element) (:to %))
+                          (safe-equal? (:name element) (:name %))))
+
+            :else
+            (constantly false))
           (filter #(match-file-lang % element))
           (medley/distinct-by (juxt :filename :name :row :col)))
         analysis))
@@ -220,9 +239,23 @@
     (into []
           (comp
             (mapcat val)
-            (filter #(identical? :protocol-impls (:bucket %)))
-            (filter #(safe-equal? (:to element) (:protocol-ns %)))
-            (filter #(safe-equal? (:name element) (:method-name %)))
+            (cond
+              ;; defmethod declaration
+              (:defmethod element)
+              (filter #(and (identical? :var-usages (:bucket %))
+                            (:defmethod %)
+                            (safe-equal? (:to element) (:to %))
+                            (safe-equal? (:name element) (:name %))))
+
+              ;; protocol method usage or defmethod usage
+              :else
+              (filter #(or (and (identical? :protocol-impls (:bucket %))
+                                (safe-equal? (:to element) (:protocol-ns %))
+                                (safe-equal? (:name element) (:method-name %)))
+                           (and (identical? :var-usages (:bucket %))
+                                (:defmethod %)
+                                (safe-equal? (:to element) (:to %))
+                                (safe-equal? (:name element) (:name %))))))
             (filter #(match-file-lang % element))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
@@ -296,7 +329,8 @@
                          (and (or (not (:from-var %))
                                   (not= (:from-var %) (:name element))
                                   (not= (:from %) (:to element)))
-                              (not (identical? :var-definitions (:bucket %))))))
+                              (not (identical? :var-definitions (:bucket %)))
+                              (not (:defmethod %)))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 
@@ -389,28 +423,28 @@
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-definition analysis element db))
     (catch Throwable e
-      (log/error e "can't find definition"))))
+      (logger/error e "can't find definition"))))
 
 (defn find-declaration-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-declaration analysis element db))
     (catch Throwable e
-      (log/error e "can't find declaration"))))
+      (logger/error e "can't find declaration"))))
 
 (defn find-implementations-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-implementations analysis element db))
     (catch Throwable e
-      (log/error e "can't find implementation"))))
+      (logger/error e "can't find implementation"))))
 
 (defn find-references-from-cursor [analysis filename line column include-declaration? db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
       (find-references analysis element include-declaration? db))
     (catch Throwable e
-      (log/error e "can't find references"))))
+      (logger/error e "can't find references"))))
 
 (defn xf-var-defs [include-private?]
   (comp

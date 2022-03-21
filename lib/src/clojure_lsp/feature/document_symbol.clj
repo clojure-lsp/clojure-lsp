@@ -1,6 +1,4 @@
-(ns clojure-lsp.feature.document-symbol
-  (:require
-   [taoensso.timbre :as log]))
+(ns clojure-lsp.feature.document-symbol)
 
 (set! *warn-on-reflection* true)
 

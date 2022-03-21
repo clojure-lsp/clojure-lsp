@@ -2,11 +2,9 @@
   (:require
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
-   [clojure.java.shell :as shell]
    [clojure.set :as set]
    [clojure.string :as string]
-   [com.climate.claypoole :as cp]
-   [taoensso.timbre :as log])
+   [lsp4clj.protocols.logger :as logger])
   (:import
    [java.net URI URL JarURLConnection URLDecoder]
    [java.nio.charset StandardCharsets]
@@ -45,18 +43,6 @@
   ([a b & more]
    (reduce deep-merge (or a {}) (cons b more))))
 
-(defn start-time->end-time-seconds [start-time]
-  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
-
-(defmacro logging-time
-  "Executes `body` logging `message` formatted with the time spent
-  from body."
-  [message & body]
-  `(let [~'start-time (System/nanoTime)
-         ~'result (do ~@body)]
-     (log/info (format ~message (start-time->end-time-seconds ~'start-time)))
-     ~'result))
-
 (defn file-exists? [^java.io.File f]
   (.exists f))
 
@@ -94,27 +80,6 @@
 (def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))
 
-(defn windows-process-alive?
-  [pid]
-  (let [{:keys [out]} (shell/sh "tasklist" "/fi" (format "\"pid eq %s\"" pid))]
-    (string/includes? out (str pid))))
-
-(defn unix-process-alive?
-  [pid]
-  (let [{:keys [exit]} (shell/sh "kill" "-0" (str pid))]
-    (zero? exit)))
-
-(defn process-alive?
-  [pid]
-  (try
-    (if windows-os?
-      (windows-process-alive? pid)
-      (unix-process-alive? pid))
-    (catch Exception e
-      (log/warn "Checking if process is alive failed." e)
-      ;; Return true since the check failed. Assume the process is alive.
-      true)))
-
 (defn uri->file-type [uri]
   (cond
     (string/ends-with? uri ".cljs") :cljs
@@ -135,7 +100,7 @@
   [uri format-settings]
   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
     (when-not match
-      (log/error "Found invalid URI:" uri))
+      (logger/error "Found invalid URI:" uri))
     (str scheme+auth
          (-> path
              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
@@ -155,19 +120,17 @@
         (string/starts-with? uri "jar:file:/")
         (string/starts-with? uri "zipfile:/"))))
 
-(defn- uri-obj->filepath [uri]
+(defn ^:private uri-obj->filepath [uri]
   (-> uri Paths/get .toString
       (string/replace #"^[a-z]:\\" string/upper-case)))
 
-(defn- unescape-uri
+(defn ^:private unescape-uri
   [^String uri]
   (try
     (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
-    (catch UnsupportedOperationException e
-      (log/warn "Unable to decode URI. Returning URI as-is." e)
+    (catch UnsupportedOperationException _
       uri)
-    (catch IllegalArgumentException e
-      (log/warn "Unable to decode URI. Returning URI as-is." e)
+    (catch IllegalArgumentException _
       uri)))
 
 (defn uri->filename
@@ -187,14 +150,14 @@
         (str (-> jar-uri-path io/file .getCanonicalPath) ":" nested-file)
         (uri-obj->filepath uri-obj)))))
 
-(defn- filepath->uri-obj ^URI [filepath]
+(defn ^:private filepath->uri-obj ^URI [filepath]
   (-> filepath io/file .toPath .toUri))
 
-(defn- uri-encode [scheme path]
+(defn ^:private uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
 
-(def jar-file-with-filename-regex #"^(.*\.jar):(.*)")
-(def jar-file-regex #"^(.*\.jar)")
+(def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
+(def ^:private jar-file-regex #"^(.*\.jar)")
 
 (defn jar-file? [filename]
   (or (boolean (re-find jar-file-with-filename-regex filename))
@@ -258,7 +221,7 @@
          "."
          (name file-type))))
 
-(defn path->folder-with-slash [^String path]
+(defn ^:private path->folder-with-slash [^String path]
   (if (directory? (io/file path))
     (if (string/ends-with? path (System/getProperty "file.separator"))
       path
@@ -276,29 +239,24 @@
          file-type (uri->file-type uri)]
      (when (and in-project? (not= :unknown file-type))
        (->> source-paths
-            (some (fn [source-path]
+            (keep (fn [source-path]
                     (when (string/starts-with? filename (path->folder-with-slash source-path))
                       (some-> (relativize-filepath filename source-path)
                               (->> (re-find #"^(.+)\.\S+$"))
                               (nth 1)
                               (string/replace (System/getProperty "file.separator") ".")
-                              (string/replace #"_" "-"))))))))))
+                              (string/replace #"_" "-")))))
+            (reduce (fn [source-path-a source-path-b]
+                      (cond
+                        (not source-path-b) source-path-a
+                        (not source-path-a) source-path-b
+                        :else (if (> (count source-path-a)
+                                     (count source-path-b))
+                                source-path-b
+                                source-path-a))) nil))))))
 
 (defn filename->namespace [filename db]
   (uri->namespace (filename->uri filename db) filename db))
-
-(defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
-  (when element
-    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
-     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
-
-(defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
-  (when element
-    {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
-     :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
-
-(defn full-file-range []
-  (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."
@@ -330,6 +288,22 @@
 (defn position->line-column [position]
   [(inc (:line position))
    (inc (:character position))])
+
+(defn debounce-all
+  "Debounce in channel with ms miliseconds returning all values."
+  [in ms]
+  (let [out (chan)]
+    (go-loop [old-values []
+              last-val nil]
+      (let [values (if (nil? last-val)
+                     [(<! in)]
+                     (conj old-values last-val))
+            timer (timeout ms)
+            [new-val ch] (alts! [in timer])]
+        (condp = ch
+          timer (do (>! out values) (recur old-values nil))
+          in (recur values new-val))))
+    out))
 
 (defn debounce-by
   "Debounce in channel with ms miliseconds distincting by by-fn."
@@ -367,8 +341,33 @@
                               [(:uri text-document) edits])
                             changes))}))
 
-(defn pmap-light
-  "Call claypoole pmap with less threads than pmap to avoid topping cpu."
-  [f coll]
-  (let [threadpool-size (int (Math/ceil (/ (.. Runtime getRuntime availableProcessors) 3)))]
-    (cp/upmap threadpool-size f coll)))
+(defn clojure-lsp-version []
+  (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
+
+(defn start-time->end-time-seconds [start-time]
+  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
+
+(defmacro logging-time
+  "Executes `body` logging `message` formatted with the time spent
+  from body."
+  [message & body]
+  (let [start-sym (gensym "start-time")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)]
+       ~(with-meta
+          `(logger/info (format  ~message (start-time->end-time-seconds ~start-sym)))
+          (meta &form))
+       result#)))
+
+(defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
+  (when element
+    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
+     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
+
+(defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
+  (when element
+    {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
+     :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
+
+(defn full-file-range []
+  (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))

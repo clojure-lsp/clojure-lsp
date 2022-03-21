@@ -42,7 +42,7 @@
 (defmethod refactor :cycle-fn-literal [{:keys [loc]}]
   (r.transform/cycle-fn-literal loc))
 
-(defmethod refactor :expand-let [{:keys [loc uri db]}]
+(defmethod refactor :expand-let [{:keys [loc uri] {:keys [db]} :components}]
   (r.transform/expand-let loc uri db))
 
 (defmethod refactor :extract-function [{:keys [loc uri args] {:keys [db]} :components}]
@@ -54,7 +54,7 @@
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc args))
 
-(defmethod refactor :move-to-let [{:keys [loc args uri db]}]
+(defmethod refactor :move-to-let [{:keys [loc args uri] {:keys [db]} :components}]
   (apply r.transform/move-to-let loc uri db args))
 
 (defmethod refactor :thread-first [{:keys [loc] {:keys [db]} :components}]

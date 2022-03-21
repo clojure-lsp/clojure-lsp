@@ -423,6 +423,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#vim-with-cocnvim-and-fireplace" class="md-nav__link">
+    Vim with coc.nvim and Fireplace
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#your-favorite-editor" class="md-nav__link">
     Your Favorite Editor
   </a>
@@ -591,6 +598,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#vim-with-cocnvim-and-fireplace" class="md-nav__link">
+    Vim with coc.nvim and Fireplace
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#your-favorite-editor" class="md-nav__link">
     Your Favorite Editor
   </a>
@@ -684,6 +698,20 @@
         <span class="p">(</span><span class="nv">cider-connect-clj</span> <span class="o">`</span><span class="p">(</span><span class="nb">:host</span> <span class="s">&quot;localhost&quot;</span>
                              <span class="nb">:port</span> <span class="o">,</span><span class="nv">port</span><span class="p">))))))</span>
 </code></pre></div>
+<h3 id="vim-with-cocnvim-and-fireplace">Vim with coc.nvim and Fireplace<a class="headerlink" href="#vim-with-cocnvim-and-fireplace" title="Permanent link">#</a></h3>
+<ul>
+<li>Change <code>coc-settings.json</code> (<code>:CocConfig</code>) <code>clojure-lsp: {command: "~/path/to/clojure-lsp/clojure-lsp"}</code>, adjusting the past as necessary.</li>
+<li>To restart the clojure-lsp server use <code>:CocRestart</code></li>
+<li>To find the server info, <code>:echo CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['port']</code></li>
+<li>To find the server log, <code>:echo CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['log-path']</code></li>
+<li>To connect the nREPL client, run <code>:Connect &lt;port&gt;</code></li>
+</ul>
+<p>If you re-connect regulary, you may want to add something like this to your vimrc:</p>
+<div class="highlight"><pre><span></span><code>&quot; Copies the log-path to your clipboard
+nnoremap &lt;silent&gt; crsl :call setreg(&#39;*&#39;, CocRequest(&#39;clojure-lsp&#39;, &#39;clojure/serverInfo/raw&#39;)[&#39;log-path&#39;])&lt;CR&gt;
+&quot; Connects to nrepl
+nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-lsp&#39;, &#39;clojure/serverInfo/raw&#39;)[&#39;port&#39;]&lt;CR&gt;
+</code></pre></div>
 <h3 id="your-favorite-editor">Your Favorite Editor<a class="headerlink" href="#your-favorite-editor" title="Permanent link">#</a></h3>
 <p>TBD. PR welcome.</p>
 <h2 id="profiling">Profiling<a class="headerlink" href="#profiling" title="Permanent link">#</a></h2>
@@ -712,7 +740,7 @@
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 20, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 21, 2022</span>
     
   </small>
 </div>

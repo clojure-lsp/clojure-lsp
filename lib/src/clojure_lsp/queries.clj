@@ -166,6 +166,14 @@
     analysis
     db))
 
+(defmethod find-definition :java-class-usages
+  [analysis element db]
+  (find-last-order-by-project-analysis
+    #(and (identical? :java-class-definitions (:bucket %))
+          (safe-equal? (:class %) (:class element)))
+    analysis
+    db))
+
 (defmethod find-definition :default
   [_analysis element _db]
   element)
@@ -535,9 +543,12 @@
           (comp
             (filter (comp #(identical? :unused-import %) :type))
             (remove (fn [finding]
-                      (some #(and (identical? :var-usages (:bucket %))
-                                  (safe-equal? (str (:class finding))
-                                               (str (:to %) "." (:name %))))
+                      (some #(or (and (identical? :var-usages (:bucket %))
+                                      (safe-equal? (str (:class finding))
+                                                   (str (:to %) "." (:name %))))
+                                 (and (identical? :java-class-usages (:bucket %))
+                                      (safe-equal? (str (:class finding))
+                                                   (:class %))))
                             local-analysis)))
             (map :class))
           (get findings filename))))

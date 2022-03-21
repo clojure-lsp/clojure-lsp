@@ -10,6 +10,7 @@
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
+   [clojure-lsp.feature.file-content-reader :as f.file-content-reader]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
@@ -27,11 +28,7 @@
    [clojure.pprint :as pprint]
    [lsp4clj.protocols.feature-handler :as feature-handler]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer])
-  (:import
-   [java.net
-    URL
-    JarURLConnection]))
+   [lsp4clj.protocols.producer :as producer]))
 
 (set! *warn-on-reflection* true)
 
@@ -272,13 +269,8 @@
     :range-formatting doc-id
     (f.format/range-formatting doc-id format-pos db/db)))
 
-(defn dependency-contents [doc-id]
-  (let [url (URL. doc-id)
-        connection ^JarURLConnection (.openConnection url)
-        jar (.getJarFile connection)
-        entry (.getJarEntry connection)]
-    (with-open [stream (.getInputStream jar entry)]
-      (slurp stream))))
+(defn dependency-contents [doc-id components]
+  (f.file-content-reader/read-content doc-id components))
 
 (defn code-actions
   [{:keys [range context textDocument]}]
@@ -425,4 +417,4 @@
   (server-info-log [_]
     (server-info-log @components*))
   (dependency-contents [_ doc-id]
-    (dependency-contents doc-id)))
+    (dependency-contents doc-id @components*)))

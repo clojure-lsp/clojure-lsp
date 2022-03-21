@@ -202,8 +202,8 @@
                                                 :newName "xx"}))]
         (is (= {(h/file-uri "file:///b.clj")
                 [{:range (h/->range balias-start balias-stop) :new-text "xx"}
-                 {:range (h/->range ba1-start bbar-stop) :new-text "xx/bar"}
-                 {:range (h/->range ba2-kw-start ba2-kw-stop) :new-text "::xx/bar"}]}
+                 {:range (h/->range ba2-kw-start ba2-kw-stop) :new-text "::xx/bar"}
+                 {:range (h/->range ba1-start bbar-stop) :new-text "xx/bar"}]}
                changes))))))
 
 (deftest test-code-actions-handle

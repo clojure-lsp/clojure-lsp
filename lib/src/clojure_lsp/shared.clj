@@ -163,6 +163,11 @@
   (or (boolean (re-find jar-file-with-filename-regex filename))
       (boolean (re-find jar-file-regex filename))))
 
+(def ^:private class-file-regex #"^(.*\.class)$")
+
+(defn class-file? [uri]
+  (boolean (re-find class-file-regex uri)))
+
 (defn external-filename? [filename source-paths]
   (and filename
        (or (-> filename name jar-file?)

@@ -814,7 +814,7 @@
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
              (q/find-unused-imports (:analysis @db/db) (:findings @db/db) (h/file-path "/a.cljc")))))
     (testing "used import in a reader conditional"
-      (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) #?(:clj LocalTime.)" (h/file-uri "file:///a.cljc"))
+      (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) #?(:clj (LocalTime.))" (h/file-uri "file:///a.cljc"))
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
              (q/find-unused-imports (:analysis @db/db) (:findings @db/db) (h/file-path "/a.cljc")))))))
 

@@ -32,7 +32,7 @@
 
 (defn ^:private transit-db-file [project-root db]
   (let [overwritten-path (some-> (settings/get db [:cache-path])
-                                 io/file)
+                                 (io/file "db.transit.json"))
         default (io/file (str project-root) ".lsp" ".cache" "db.transit.json")]
     ^java.io.File (or overwritten-path default)))
 

@@ -74,7 +74,7 @@
 (defn entry->normalized-entries [{:keys [bucket] :as element}]
   (cond
     ;; We create two entries here (and maybe more for refer)
-    (= :namespace-usages bucket)
+    (identical? :namespace-usages bucket)
     (cond-> [(set/rename-keys element {:to :name})]
       (:alias element)
       (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
@@ -89,10 +89,26 @@
                 :name-end-row (or (:name-end-row element) (:end-row element))
                 :name-end-col (or (:name-end-col element) (:end-col element))))]
 
+    (identical? :java-class-definitions bucket)
+    [(-> element
+         (dissoc :uri)
+         (assoc :name-row 0
+                :name-col 0
+                :name-end-row 0
+                :name-end-col 0))]
+
+    (identical? :java-class-usages bucket)
+    [(-> element
+         (dissoc :uri)
+         (assoc :name-row (or (:name-row element) (:row element))
+                :name-col (or (:name-col element) (:col element))
+                :name-end-row (or (:name-end-row element) (:end-row element))
+                :name-end-col (or (:name-end-col element) (:end-col element))))]
+
     :else
     [element]))
 
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col] :as _element}]
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
   (and name-row
        name-col
        name-end-row
@@ -169,10 +185,12 @@
        :config {:output {:analysis {:arglists true
                                     :locals false
                                     :keywords true
-                                    :protocol-impls true}
+                                    :protocol-impls true
+                                    :java-class-definitions true}
                          :canonical-paths true}}}
-      (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
-                                           (partial project-custom-lint! db)))
+      (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
+                                                (partial project-custom-lint! db)))
+      (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
       (with-additional-config (settings/all db))))
 
 (defn kondo-copy-configs [paths db]
@@ -199,6 +217,8 @@
                                     :locals true
                                     :keywords true
                                     :protocol-impls true
+                                    :java-class-definitions true
+                                    :java-class-usages true
                                     :context [:clojure.test
                                               :re-frame.core]}
                          :canonical-paths true}}}

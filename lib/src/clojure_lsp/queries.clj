@@ -60,7 +60,7 @@
     , #{name (symbol (str "->" name))}
     , #{name}))
 
-(defn var-usage-from-own-definition? [usage]
+(defn ^:private var-usage-from-own-definition? [usage]
   (and (:from-var usage)
        (= (:from-var usage) (:name usage))
        (= (:from usage) (:to usage))))
@@ -613,3 +613,16 @@
         (-> excluded-full-qualified-vars
             set
             (contains? fqsn)))))
+
+(defn xf-all-var-usages-to-namespaces [namespaces]
+  (comp
+    (mapcat val)
+    (filter #(identical? :var-usages (:bucket %)))
+    (filter #(contains? namespaces (:to %)))
+    (remove var-usage-from-own-definition?)))
+
+(def xf-all-keyword-usages
+  (comp
+    (mapcat val)
+    (filter #(identical? :keywords (:bucket %)))
+    (remove :reg)))

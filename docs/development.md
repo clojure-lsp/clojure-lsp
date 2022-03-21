@@ -65,6 +65,23 @@ If you re-connect regulary, you may want to add this Emacs shortcut:
                              :port ,port))))))
 ```
 
+### Vim with coc.nvim and Fireplace
+
+* Change `coc-settings.json` (`:CocConfig`) `clojure-lsp: {command: "~/path/to/clojure-lsp/clojure-lsp"}`, adjusting the past as necessary.
+* To restart the clojure-lsp server use `:CocRestart`
+* To find the server info, `:echo CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['port']`
+* To find the server log, `:echo CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['log-path']`
+* To connect the nREPL client, run `:Connect <port>`
+
+If you re-connect regulary, you may want to add something like this to your vimrc:
+
+```viml
+" Copies the log-path to your clipboard
+nnoremap <silent> crsl :call setreg('*', CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['log-path'])<CR>
+" Connects to nrepl
+nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['port']<CR>
+```
+
 ### Your Favorite Editor
 
 TBD. PR welcome.

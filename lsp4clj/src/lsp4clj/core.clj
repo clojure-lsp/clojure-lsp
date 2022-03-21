@@ -345,7 +345,8 @@
           db
           initial-db
           capabilities-fn
-          client-settings]
+          client-settings
+          files]
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
     (start :initialize
@@ -376,7 +377,7 @@
                  (RegistrationParams.
                    [(Registration. "id" "workspace/didChangeWatchedFiles"
                                    (DidChangeWatchedFilesRegistrationOptions.
-                                     [(FileSystemWatcher. "**/*.{clj,cljs,cljc,edn}")]))]))))))
+                                     [(FileSystemWatcher. files)]))]))))))
 
   (^CompletableFuture shutdown [_]
     (logger/info "Shutting down")

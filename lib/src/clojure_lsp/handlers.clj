@@ -363,10 +363,6 @@
     (did-close doc))
   (did-change-watched-files [_ doc]
     (did-change-watched-files doc))
-  (cursor-info-log [_ doc]
-    (cursor-info-log doc @components*))
-  (cursor-info-raw [_ doc]
-    (cursor-info-raw doc))
   (references [_ doc]
     (references doc))
   (completion [_ doc]
@@ -418,6 +414,10 @@
   ;; (did-delete-files [_ doc]
   ;;   (did-delete-files doc))
   clojure-feature/IClojureLSPFeature
+  (cursor-info-log [_ doc]
+    (cursor-info-log doc @components*))
+  (cursor-info-raw [_ doc]
+    (cursor-info-raw doc))
   (server-info-raw [_]
     (server-info-raw))
   (clojuredocs-raw [_ doc]

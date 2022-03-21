@@ -415,7 +415,7 @@
   ;;   (did-delete-files doc))
   clojure-feature/IClojureLSPFeature
   (cursor-info-log [_ doc]
-    (cursor-info-log doc))
+    (cursor-info-log doc @components*))
   (cursor-info-raw [_ doc]
     (cursor-info-raw doc))
   (server-info-raw [_]

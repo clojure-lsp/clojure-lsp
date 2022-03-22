@@ -340,8 +340,7 @@
                             ;; usage from own definition
                             (and (:from-var %)
                                  (= (:from-var %) (:name element))
-                                 (= (:from %) (:ns element)))
-                            (:defmethod %))))
+                                 (= (:from %) (:ns element))))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 

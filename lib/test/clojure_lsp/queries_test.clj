@@ -259,7 +259,7 @@
          :to a}]
       (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 7 9 false db/db))))
 
-(deftest find-references-from-defmethod
+(deftest find-references-for-defmulti
   (let [[[defmulti-r defmulti-c]]
         (h/load-code-and-locs (h/code "(ns a)"
                                       "(defmulti |my-multi :some-key)"))
@@ -270,29 +270,40 @@
                                       " [_]"
                                       " :foo)"
                                       "(|f/my-multi {:some-value 123})") (h/file-uri "file:///b.clj"))
-        usage-element '{:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
-                        :row 5 :col 1 :end-row 5 :end-col 31
-                        :name my-multi
-                        :filename "/b.clj"
-                        :alias f
-                        :from b
-                        :arity 1
-                        :bucket :var-usages
-                        :to a}]
+        references '[;; defmethod
+                     {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
+                      :row 2 :col 12 :end-row 2 :end-col 22
+                      :name my-multi
+                      :filename "/b.clj"
+                      :alias f
+                      :from b
+                      :bucket :var-usages
+                      :defmethod true
+                      :to a}
+                     ;; usage
+                     {:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
+                      :row 5 :col 1 :end-row 5 :end-col 31
+                      :name my-multi
+                      :filename "/b.clj"
+                      :alias f
+                      :from b
+                      :arity 1
+                      :bucket :var-usages
+                      :to a}]]
     (testing "from defmulti method name"
       (h/assert-submaps
-        [usage-element]
+        references
         (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") defmulti-r defmulti-c false db/db)))
     (testing "from defmethod method name"
       (h/assert-submaps
-        [usage-element]
+        references
         (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") defmethod-r defmethod-c false db/db)))
     (testing "from usage name"
       (h/assert-submaps
-        [usage-element]
+        references
         (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") usage-r usage-c false db/db)))))
 
-(deftest find-references-from-defmethod-without-usages
+(deftest find-references-for-defmulti-without-usages
   (let [[[defmulti-r defmulti-c]]
         (h/load-code-and-locs (h/code "(ns a)"
                                       "(defmulti |my-multi :some-key)"))
@@ -300,14 +311,24 @@
         (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
                                       "(defmethod |f/my-multi :some-value"
                                       " [_]"
-                                      " :foo)") (h/file-uri "file:///b.clj"))]
+                                      " :foo)") (h/file-uri "file:///b.clj"))
+        references '[;; defmethod
+                     {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
+                      :row 2 :col 12 :end-row 2 :end-col 22
+                      :name my-multi
+                      :filename "/b.clj"
+                      :alias f
+                      :from b
+                      :bucket :var-usages
+                      :defmethod true
+                      :to a}]]
     (testing "from defmulti method name"
       (h/assert-submaps
-        '[]
+        references
         (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") defmulti-r defmulti-c false db/db)))
     (testing "from defmethod method name"
       (h/assert-submaps
-        '[]
+        references
         (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") defmethod-r defmethod-c false db/db)))))
 
 (deftest find-references-from-declare

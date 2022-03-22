@@ -175,6 +175,14 @@
                                            (partial project-custom-lint! db)))
       (with-additional-config (settings/all db))))
 
+(defn kondo-copy-configs [paths db]
+  {:cache true
+   :parallel true
+   :skip-lint true
+   :copy-configs (settings/get db [:copy-kondo-configs?] true)
+   :lint [(string/join (System/getProperty "path.separator") paths)]
+   :config {:output {:canonical-paths true}}})
+
 (defn kondo-for-reference-filenames [filenames db]
   (-> (kondo-for-paths filenames db false)
       (assoc :custom-lint-fn (partial custom-lint-for-reference-files! filenames db))))
@@ -224,3 +232,7 @@
 (defn run-kondo-on-text! [text uri db]
   (catch-kondo-errors (shared/uri->filename uri)
     (with-in-str text (kondo/run! (kondo-for-single-file uri db)))))
+
+(defn run-kondo-copy-configs! [paths {:keys [db]}]
+  (catch-kondo-errors (str "paths " (string/join ", " paths))
+    (kondo/run! (kondo-copy-configs paths db))))

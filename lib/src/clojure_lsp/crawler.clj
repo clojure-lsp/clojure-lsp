@@ -85,10 +85,10 @@
     (swap! db update :findings merge new-findings)
     analysis))
 
-(defn ^:private analyze-classpath! [root-path source-paths settings progress-token {:keys [db] :as components}]
+(defn ^:private analyze-classpath! [root-path source-paths classpath settings progress-token {:keys [db] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
     (logger/info "Analyzing classpath for project root" root-path)
-    (when-let [classpath (:classpath @db)]
+    (when classpath
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
             external-classpath (cond->> (->> classpath
                                              (remove (set source-paths-abs))
@@ -100,6 +100,15 @@
           "Manual GC after classpath scan took %s secs"
           (System/gc))
         (swap! db assoc :full-scan-analysis-startup true)))))
+
+(defn ^:private copy-configs-from-classpath! [classpath settings progress-token {:keys [producer] :as components}]
+  (when (get settings :copy-kondo-configs? true)
+    (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
+    (logger/info "Copying kondo configs from classpath to project if any...")
+    (when classpath
+      (shared/logging-time
+        "Copied kondo configs, took %s secs."
+        (lsp.kondo/run-kondo-copy-configs! classpath components)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
@@ -194,9 +203,10 @@
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
                    :classpath classpath
-                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings))))
-          (when (= :project-and-deps (:project-analysis-type @db))
-            (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token components))
+                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
+            (if (= :project-and-deps (:project-analysis-type @db))
+              (analyze-classpath! root-path (-> @db :settings :source-paths) classpath settings progress-token components)
+              (copy-configs-from-classpath! classpath settings progress-token components)))
           (upsert-db-cache! db))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)

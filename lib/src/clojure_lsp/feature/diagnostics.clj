@@ -147,10 +147,11 @@
   [var-defs kw-defs project-analysis {:keys [config reg-finding!]}]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
+        var-usage-signature (juxt :to :name)
         var-usages (into #{}
                          (comp
                            (q/xf-all-var-usages-to-namespaces var-nses)
-                           (map (juxt :to :name)))
+                           (map var-usage-signature))
                          project-analysis)
         var-used? (fn [var-def]
                     (some (fn [var-name]
@@ -171,17 +172,11 @@
       (reg-unused-public-var-element! unused-element reg-finding! config))
     (group-by :filename unused-elements)))
 
-(defn ^:private project-var-definitions [project-analysis]
-  (q/find-all-var-definitions project-analysis))
-
-(defn ^:private project-kw-definitions [project-analysis]
-  (q/find-all-keyword-definitions project-analysis))
-
 (defn ^:private file-var-definitions [project-analysis filename]
   (q/find-var-definitions project-analysis filename false))
-
-(defn ^:private file-kw-definitions [project-analysis filename]
-  (q/find-keyword-definitions project-analysis filename))
+(def ^:private file-kw-definitions q/find-keyword-definitions)
+(def ^:private project-var-definitions q/find-all-var-definitions)
+(def ^:private project-kw-definitions q/find-all-keyword-definitions)
 
 (defn lint-project-diagnostics!
   [new-analysis kondo-ctx db]

@@ -206,22 +206,23 @@
           z/root-string))
 
 (defn- as-position [change]
-  (when-let [{:keys [row col]} (some-> change
-                                       :show-document-after-edit
-                                       :range)]
-    [row col]))
+  (when-let [{:keys [row col end-row end-col]} (some-> change
+                                                       :show-document-after-edit
+                                                       :range)]
+    [[row col] [end-row end-col]]))
 
 ;; These are macros so test failures have the right line numbers
 (defmacro assert-move-up [expected code]
   `(let [moved#         (move-code-up ~code)
          [text# [pos#]] (h/positions-from-text ~expected)]
      (is (= text# (as-string moved#)))
-     (is (= pos# (as-position moved#)))))
+     ;; Range should only be single char
+     (is (= [pos# pos#] (as-position moved#)))))
 (defmacro assert-move-down [expected code]
   `(let [moved#         (move-code-down ~code)
          [text# [pos#]] (h/positions-from-text ~expected)]
      (is (= text# (as-string moved#)))
-     (is (= pos# (as-position moved#)))))
+     (is (= [pos# pos#] (as-position moved#)))))
 
 (deftest move-up
   (testing "common cases"

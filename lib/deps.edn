@@ -1,4 +1,4 @@
-{:deps {org.clojure/clojure {:mvn/version "1.11.0-rc1"}
+{:deps {org.clojure/clojure {:mvn/version "1.11.0"}
         rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
         borkdude/rewrite-edn {:mvn/version "0.1.0" :exclusions [rewrite-clj/rewrite-clj]}
         org.clojure/core.async {:mvn/version "1.5.648"}
@@ -16,7 +16,7 @@
         lsp4clj/protocols {:local/root "../protocols"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.63.998"}}
+                               lambdaisland/kaocha {:mvn/version "1.64.1010"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :build {:extra-paths ["resources"]

@@ -10,6 +10,8 @@
   - Fix clean-ns not sorting properly node requires for cljs. #815
   - Fix move-to-let to ensure locals don't move out of scope. #830
   - Improve logic around require suggestions. #837
+  - Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829
+  - Bump `org.clojure/clojure` to `1.11.0`.
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683
@@ -28,6 +30,7 @@
   - Add new code action `Introduce let` for existing command. #825
   - Make find-implementations consider `reify`. #827
   - Fix namespace on file creation when nested source-paths are available. #832
+  - unused-public-var: fix to show warnings on vars defined with declare. #840
 
 - API/CLI
   - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)

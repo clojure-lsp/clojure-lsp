@@ -1,16 +1,14 @@
-(ns lsp4clj.protocols.logger
-  (:require
-   [clojure.string :as string]))
+(ns lsp4clj.protocols.logger)
 
 (defprotocol ILSPLogger
   (setup [this])
 
   (set-log-path [_this log-path])
 
-  (-info [this message])
-  (-warn [this message])
-  (-error [this message])
-  (-debug [this message]))
+  (-info [this arg1] [this arg1 arg2] [this arg1 arg2 arg3])
+  (-warn [this arg1] [this arg1 arg2] [this arg1 arg2 arg3])
+  (-error [this arg1] [this arg1 arg2] [this arg1 arg2 arg3])
+  (-debug [this arg1] [this arg1 arg2] [this arg1 arg2 arg3]))
 
 (def ^:dynamic *logger*
   "Optional logger state to avoid having component available everywhere."
@@ -21,16 +19,16 @@
 
 (defn info [& args]
   (when *logger*
-    (-info *logger* (string/join " " args))))
+    (apply -info *logger* args)))
 
 (defn warn [& args]
   (when *logger*
-    (-warn *logger* (string/join " " args))))
+    (apply -warn *logger* args)))
 
 (defn error [& args]
   (when *logger*
-    (-error *logger* (string/join " " args))))
+    (apply -error *logger* args)))
 
 (defn debug [& args]
   (when *logger*
-    (-debug *logger* (string/join " " args))))
+    (apply -debug *logger* args)))

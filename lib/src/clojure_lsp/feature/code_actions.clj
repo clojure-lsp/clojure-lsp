@@ -6,6 +6,7 @@
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
@@ -246,7 +247,6 @@
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
         public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
-        inside-let?* (future (r.transform/find-let-form zloc uri db))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
@@ -261,7 +261,9 @@
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
         definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
-        inline-symbol?* (future (r.transform/inline-symbol? definition db))]
+        inline-symbol?* (future (r.transform/inline-symbol? definition db))
+        can-add-let? (or (z/skip-whitespace z/right zloc)
+                         (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []
       (seq @missing-imports*)
       (into (missing-import-actions uri @missing-imports*))
@@ -284,7 +286,7 @@
       @other-colls*
       (into (change-colls-actions uri line character @other-colls*))
 
-      @inside-let?*
+      can-add-let?
       (conj (move-to-let-action uri line character))
 
       @inside-function?*
@@ -314,7 +316,7 @@
            @allow-move-entry-down?*)
       (conj (move-coll-entry-down-action uri line character))
 
-      zloc
+      can-add-let?
       (conj (introduce-let-action uri line character))
 
       (and workspace-edit-capability?

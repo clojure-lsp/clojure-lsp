@@ -58,10 +58,18 @@
   (set-log-path [_this log-path]
     (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
 
-  (-info [_this message] (timbre/info message))
-  (-warn [_this message] (timbre/warn message))
-  (-error [_this message] (timbre/error message))
-  (-debug [_this message] (timbre/debug message)))
+  (-info [_this arg1] (timbre/info arg1))
+  (-info [_this arg1 arg2] (timbre/info arg1 arg2))
+  (-info [_this arg1 arg2 arg3] (timbre/info arg1 arg2 arg3))
+  (-warn [_this arg1] (timbre/warn arg1))
+  (-warn [_this arg1 arg2] (timbre/warn arg1 arg2))
+  (-warn [_this arg1 arg2 arg3] (timbre/warn arg1 arg2 arg3))
+  (-error [_this arg1] (timbre/error arg1))
+  (-error [_this arg1 arg2] (timbre/error arg1 arg2))
+  (-error [_this arg1 arg2 arg3] (timbre/error arg1 arg2 arg3))
+  (-debug [_this arg1] (timbre/debug arg1))
+  (-debug [_this arg1 arg2] (timbre/debug arg1 arg2))
+  (-debug [_this arg1 arg2 arg3] (timbre/debug arg1 arg2 arg3)))
 
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
@@ -183,6 +191,8 @@
                     "serverInfo" true
                     "clojuredocs" true}}))
 
+(defonce ^:private components* (atom {}))
+
 (defn run-server! []
   (let [producer* (atom nil)
         db db/db
@@ -191,7 +201,7 @@
         _ (logger/info "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        components* (atom (components/->components db timbre-logger nil))
+        _ (reset! components* (components/->components db timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               producer*

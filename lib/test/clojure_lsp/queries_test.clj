@@ -259,26 +259,120 @@
          :to a}]
       (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 7 9 false db/db))))
 
-(deftest find-references-from-defmethod
-  (h/load-code-and-locs (h/code "(ns a)"
-                                "(defmulti my-multi :some-key)"))
-  (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
-                                "(defmethod f/my-multi :some-value"
-                                " [_]"
-                                " :foo)"
-                                "(f/my-multi {:some-value 123})") (h/file-uri "file:///b.clj"))
-  (testing "from defmethod method name"
-    (h/assert-submaps
-      '[{:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
-         :row 5 :col 1 :end-row 5 :end-col 31
-         :name my-multi
-         :filename "/b.clj"
-         :alias f
-         :from b
-         :arity 1
-         :bucket :var-usages
-         :to a}]
-      (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 2 12 false db/db))))
+(deftest find-references-for-defmulti
+  (let [[[defmulti-r defmulti-c]]
+        (h/load-code-and-locs (h/code "(ns a)"
+                                      "(defmulti |my-multi :some-key)"))
+        [[defmethod-r defmethod-c]
+         [usage-r usage-c]]
+        (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                      "(defmethod |f/my-multi :some-value"
+                                      " [_]"
+                                      " :foo)"
+                                      "(|f/my-multi {:some-value 123})") (h/file-uri "file:///b.clj"))
+        references '[;; defmethod
+                     {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
+                      :row 2 :col 12 :end-row 2 :end-col 22
+                      :name my-multi
+                      :filename "/b.clj"
+                      :alias f
+                      :from b
+                      :bucket :var-usages
+                      :defmethod true
+                      :to a}
+                     ;; usage
+                     {:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
+                      :row 5 :col 1 :end-row 5 :end-col 31
+                      :name my-multi
+                      :filename "/b.clj"
+                      :alias f
+                      :from b
+                      :arity 1
+                      :bucket :var-usages
+                      :to a}]]
+    (testing "from defmulti method name"
+      (h/assert-submaps
+        references
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") defmulti-r defmulti-c false db/db)))
+    (testing "from defmethod method name"
+      (h/assert-submaps
+        references
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") defmethod-r defmethod-c false db/db)))
+    (testing "from usage name"
+      (h/assert-submaps
+        references
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") usage-r usage-c false db/db)))))
+
+(deftest find-references-for-defmulti-without-usages
+  (let [[[defmulti-r defmulti-c]]
+        (h/load-code-and-locs (h/code "(ns a)"
+                                      "(defmulti |my-multi :some-key)"))
+        [[defmethod-r defmethod-c]]
+        (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                      "(defmethod |f/my-multi :some-value"
+                                      " [_]"
+                                      " :foo)") (h/file-uri "file:///b.clj"))
+        references '[;; defmethod
+                     {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
+                      :row 2 :col 12 :end-row 2 :end-col 22
+                      :name my-multi
+                      :filename "/b.clj"
+                      :alias f
+                      :from b
+                      :bucket :var-usages
+                      :defmethod true
+                      :to a}]]
+    (testing "from defmulti method name"
+      (h/assert-submaps
+        references
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") defmulti-r defmulti-c false db/db)))
+    (testing "from defmethod method name"
+      (h/assert-submaps
+        references
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") defmethod-r defmethod-c false db/db)))))
+
+(deftest find-references-from-declare
+  (let [[[declare-r declare-c]
+         [def-r def-c]
+         [usage-r usage-c]]
+        (h/load-code-and-locs (h/code "(ns a)"
+                                      "(declare |my-declared)"
+                                      "(def |my-declared 1)"
+                                      "(inc |my-declared)"))
+        usage-element '{:name-row 4 :name-col 6 :name-end-row 4 :name-end-col 17
+                        :row 4 :col 6 :end-row 4 :end-col 17
+                        :name my-declared
+                        :filename "/a.clj"
+                        :from a
+                        :bucket :var-usages
+                        :to a}]
+    (testing "from declare"
+      (h/assert-submaps
+        [usage-element]
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") declare-r declare-c false db/db)))
+    (testing "from def"
+      (h/assert-submaps
+        [usage-element]
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") def-r def-c false db/db)))
+    (testing "from usage name"
+      (h/assert-submaps
+        [usage-element]
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") usage-r usage-c false db/db)))))
+
+(deftest find-references-from-declare-without-usages
+  (let [[[declare-r declare-c]
+         [def-r def-c]]
+        (h/load-code-and-locs (h/code "(ns a)"
+                                      "(declare |my-declared)"
+                                      "(def |my-declared 1)"))]
+    (testing "from declare"
+      (h/assert-submaps
+        '[]
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/a.clj") declare-r declare-c false db/db)))
+    (testing "from def"
+      (h/assert-submaps
+        '[]
+        (q/find-references-from-cursor (:analysis @db/db) (h/file-path "/b.clj") def-r def-c false db/db)))))
 
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

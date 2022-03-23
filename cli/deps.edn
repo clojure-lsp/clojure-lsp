@@ -1,4 +1,4 @@
-{:deps {org.clojure/clojure {:mvn/version "1.11.0-rc1"}
+{:deps {org.clojure/clojure {:mvn/version "1.11.0"}
         org.clojure/data.json {:mvn/version "2.4.0"}
         org.clojure/java.data {:mvn/version "1.0.95"}
         org.clojure/tools.cli {:mvn/version "1.0.206"}
@@ -8,13 +8,13 @@
         com.google.code.gson/gson {:mvn/version "2.9.0"}
         borkdude/dynaload {:mvn/version "0.2.2"}
         nrepl/bencode {:mvn/version "1.1.0"}
-        com.taoensso/timbre {:mvn/version "5.1.2"}
+        com.taoensso/timbre {:mvn/version "5.2.1"}
         lsp4clj/core {:local/root "../lsp4clj"}
         lsp4clj/protocols {:local/root "../protocols"}
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources" "target/lsp-classes"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.63.998"}}
+                               lambdaisland/kaocha {:mvn/version "1.64.1010"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
@@ -23,7 +23,7 @@
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
                                                   :sha "cc75980b43011773162b485f46f939dc5fba91e4"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
-                                                   :sha "538fc6f4147badf3a457b3eb8f9f95dd3bc947b1"}}
+                                                   :sha "8f059da7e62f5c68a5e4ed2e878c53d3f77ef25a"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.8.1" :sha "7d40500"}

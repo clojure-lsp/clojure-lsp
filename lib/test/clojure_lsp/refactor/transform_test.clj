@@ -117,7 +117,9 @@
   (is (= (h/code "(let [a 1"
                  "      b (inc a)] (thing b))")
          (move-to-let "(let [a 1] (thing |(inc a)))" 'b)))
-  (is (nil? (move-to-let "(let [a 1] a) |(inc b)" 'b)))
+  (is (= (h/code "(let [a 1] a) (let [b (inc b)]"
+                 "                b)")
+         (move-to-let "(let [a 1] a) |(inc b)" 'b)))
   (is (= (h/code "(let [as [{:a :a}]"
                  "      b b] b)")
          (move-to-let "(let [as [{:a :a}]] |b)" 'b)))
@@ -161,9 +163,15 @@
              (move-to-let 'x))))
   (is (= (h/code "(doseq [x xs] (let [a x] a))")
          (move-to-let "(doseq [x xs] (let [] |x))" 'a)))
-  (is (nil? (move-to-let "(let [] (when-let [x xs] |x))" 'a)))
-  (is (nil? (move-to-let "(let [] (doseq [x xs] |x))" 'a)))
-  (is (nil? (move-to-let "(do |x)" 'a)))
+  (is (= (h/code "(let [] (when-let [x xs] (let [a x]"
+                 "                           a)))")
+         (move-to-let "(let [] (when-let [x xs] |x))" 'a)))
+  (is (= (h/code "(let [] (doseq [x xs] (let [a x]"
+                 "                        a)))")
+         (move-to-let "(let [] (doseq [x xs] |x))" 'a)))
+  (is (= (h/code "(do (let [a x]"
+                 "      a))")
+         (move-to-let "(do |x)" 'a)))
   (is (nil? (-> (h/code "(let [a 1]"
                         "  (+ a"
                         "     2"
@@ -192,11 +200,13 @@
                    ";; comment"
                    ""
                    "(let [b (inc a)]"
-                   "  b)")
+                   "  b)"
+                   "(inc c)")
            (-> (h/code "foo"
                        "|;; comment"
                        ""
-                       "(inc a)")
+                       "(inc a)"
+                       "(inc c)")
                (introduce-let 'b)))))
   (testing "from whitespace"
     (is (= (h/code "foo"
@@ -209,21 +219,16 @@
                        "|"
                        "(inc a)")
                (introduce-let 'b)))))
-  (testing "from trailing comment"
-    (is (= (h/code "(let [b (inc a)"
-                   ""
-                   ";; comment"
-                   "]"
-                   "  b)")
-           (-> (h/code "(inc a)"
-                       ""
-                       "|;; comment"
-                       "")
-               (introduce-let 'b)))))
+  (testing "trailing whitespace or comments"
+    (is (nil? (introduce-let (h/code "(inc 1)" "(inc 2)|") 'b)))
+    (is (nil? (introduce-let (h/code "(inc 1)" "(inc 2)" "|") 'b)))
+    (is (nil? (introduce-let (h/code "(inc 1)" "(inc 2)" "| ;; comment") 'b)))
+    (is (nil? (introduce-let (h/code "(inc 1)" "(inc 2)" "|;; comment") 'b)))
+    (is (nil? (introduce-let (h/code "(inc 1)" "(inc 2)" "|;; comment" "") 'b))))
   (is (nil? (transform/introduce-let nil 'b))))
 
 (defn- expand-let [code]
-  (as-root-string (transform/expand-let (h/zloc-from-code code))))
+  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" db/db)))
 
 (deftest expand-let-test
   (testing "simple"

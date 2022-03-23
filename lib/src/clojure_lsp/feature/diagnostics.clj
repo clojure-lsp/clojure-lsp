@@ -27,21 +27,20 @@
 (def deprecated-diagnostic-types
   #{:deprecated-var})
 
-(defn ^:private reg-unused-public-var-element! [element reg-finding! kondo-config]
-  (let [keyword-def? (boolean (:reg element))
-        finding {:filename (:filename element)
-                 :row (:name-row element)
-                 :col (:name-col element)
-                 :end-row (:name-end-row element)
-                 :end-col (:name-end-col element)
-                 :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
-                 :message (if keyword-def?
-                            (if (:ns element)
-                              (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
-                              (format "Unused public keyword ':%s'" (:name element)))
-                            (format "Unused public var '%s/%s'" (:ns element) (:name element)))
-                 :type :clojure-lsp/unused-public-var}]
-    (reg-finding! finding)))
+(defn ^:private unused-public-var->finding [element kondo-config]
+  (let [keyword-def? (boolean (:reg element))]
+    {:filename (:filename element)
+     :row (:name-row element)
+     :col (:name-col element)
+     :end-row (:name-end-row element)
+     :end-col (:name-end-col element)
+     :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
+     :message (if keyword-def?
+                (if (:ns element)
+                  (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
+                  (format "Unused public keyword ':%s'" (:name element)))
+                (format "Unused public var '%s/%s'" (:ns element) (:name element)))
+     :type :clojure-lsp/unused-public-var}))
 
 (defn ^:private exclude-public-diagnostic-definition? [kondo-config definition]
   (let [excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
@@ -166,11 +165,13 @@
                         project-analysis)
         kw-used? (fn [kw-def]
                    (contains? kw-usages (kw-signature kw-def)))
-        unused-elements (concat (remove var-used? var-definitions)
-                                (remove kw-used? kw-definitions))]
-    (doseq [unused-element unused-elements] ;; side-effect to register findings
-      (reg-unused-public-var-element! unused-element reg-finding! config))
-    (group-by :filename unused-elements)))
+        findings (->> (concat (remove var-used? var-definitions)
+                              (remove kw-used? kw-definitions))
+                      (map (fn [unused-var]
+                             (unused-public-var->finding unused-var config))))]
+    (doseq [finding findings] ;; side-effect to register findings
+      (reg-finding! finding))
+    (group-by :filename findings)))
 
 (defn ^:private file-var-definitions [project-analysis filename]
   (q/find-var-definitions project-analysis filename false))

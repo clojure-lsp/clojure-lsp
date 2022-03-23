@@ -188,10 +188,7 @@
 
 (defn lint-and-publish-project-diagnostics!
   [paths new-analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis new-analysis db)
-        kondo-findings (unused-public-vars-lint! (project-var-definitions project-analysis)
-                                                 (project-kw-definitions project-analysis)
-                                                 project-analysis kondo-ctx)]
+  (let [kondo-findings (lint-project-diagnostics! new-analysis kondo-ctx db)]
     (loop [state-db @db]
       (let [cur-findings (:findings state-db)
             new-findings (merge-with #(->> (into %1 %2)

@@ -5,9 +5,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.java.io :as io]
-   [lsp4clj.protocols.logger :as logger]
-   [medley.core :as medley]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -134,14 +132,6 @@
                 {:uri uri
                  :diagnostics []}))))
 
-(defn ^:private lint-project-files [paths db]
-  (doseq [path paths]
-    (doseq [file (file-seq (io/file path))]
-      (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename db)]
-        (when (not= :unknown (shared/uri->file-type uri))
-          (sync-lint-file! uri db))))))
-
 (defn ^:private unused-public-vars-lint!
   [var-defs kw-defs project-analysis {:keys [config reg-finding!]}]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
@@ -183,25 +173,10 @@
   [new-analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis new-analysis db)]
     (shared/logging-time
-      "Linting whole project took %s secs"
+      "Linting whole project for unused-public-var took %s secs"
       (unused-public-vars-lint! (project-var-definitions project-analysis)
                                 (project-kw-definitions project-analysis)
                                 project-analysis kondo-ctx))))
-
-(defn lint-and-publish-project-diagnostics!
-  [paths new-analysis kondo-ctx db]
-  (let [kondo-findings (lint-project-diagnostics! new-analysis kondo-ctx db)]
-    (shared/logging-time
-      "Linting waited %s secs to publish project diagnostics"
-      (loop [state-db @db]
-        (let [cur-findings (:findings state-db)
-              new-findings (merge-with #(->> (into %1 %2)
-                                             (medley/distinct-by (juxt :row :col :end-row :end-col)))
-                                       cur-findings
-                                       kondo-findings)]
-          (if (compare-and-set! db state-db (assoc state-db :findings new-findings))
-            (lint-project-files paths db)
-            (recur @db)))))))
 
 (defn unused-public-var-lint-for-single-file!
   [filename analysis kondo-ctx db]

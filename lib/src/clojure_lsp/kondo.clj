@@ -115,16 +115,10 @@
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn ^:private project-custom-lint!
-  [paths db {:keys [analysis config] :as kondo-ctx}]
+  [db {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [new-analysis (group-by :filename (normalize-analysis analysis))]
-      (if (:api? @db)
-        (do
-          (logger/info (format "Starting to lint whole project files..."))
-          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db))
-        (when (settings/get db [:lint-project-files-after-startup?] true)
-          (async/go
-            (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)))))))
+      (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]
@@ -178,7 +172,7 @@
                                     :protocol-impls true}
                          :canonical-paths true}}}
       (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
-                                           (partial project-custom-lint! paths db)))
+                                           (partial project-custom-lint! db)))
       (with-additional-config (settings/all db))))
 
 (defn kondo-for-reference-filenames [filenames db]

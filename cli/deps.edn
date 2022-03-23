@@ -29,7 +29,7 @@
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.8.1" :sha "7d40500"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.1.2"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}
-                                  com.google.guava/guava {:mvn/version "31.0.1-jre"}}
+                                  com.google.guava/guava {:mvn/version "31.1-jre"}}
                    :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}

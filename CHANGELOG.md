@@ -12,6 +12,7 @@
   - Improve logic around require suggestions. #837
   - Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829
   - Bump `org.clojure/clojure` to `1.11.0`.
+  - Fix move-coll-entry to maintain cursor position instead of a range. #862
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

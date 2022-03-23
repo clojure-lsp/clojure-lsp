@@ -8,7 +8,7 @@
         com.google.code.gson/gson {:mvn/version "2.9.0"}
         borkdude/dynaload {:mvn/version "0.2.2"}
         nrepl/bencode {:mvn/version "1.1.0"}
-        com.taoensso/timbre {:mvn/version "5.1.2"}
+        com.taoensso/timbre {:mvn/version "5.2.1"}
         lsp4clj/core {:local/root "../lsp4clj"}
         lsp4clj/protocols {:local/root "../protocols"}
         clojure-lsp/lib {:local/root "../lib"}}

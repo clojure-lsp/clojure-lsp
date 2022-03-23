@@ -36,17 +36,23 @@
 (set! *warn-on-reflection* true)
 
 (defmacro process-after-changes [task-id uri & body]
-  `(let [start-time# (System/nanoTime)]
-     (loop [backoff# 1]
-       (if (> (quot (- (System/nanoTime) start-time#) 1000000) 60000) ; one minute timeout
-         ~(with-meta
-            `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
-            (meta &form))
-         (if (contains? (:processing-changes @db/db) ~uri)
-           (do
-             (Thread/sleep backoff#)
-             (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
-           ~@body)))))
+  (let [start-sym (gensym "start-time")]
+    `(let [~start-sym (System/nanoTime)]
+       (loop [backoff# 1]
+         (if (> (quot (- (System/nanoTime) ~start-sym) 1000000) 60000) ; one minute timeout
+           ~(with-meta
+              `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
+              (meta &form))
+           (if (contains? (:processing-changes @db/db) ~uri)
+             (do
+               (Thread/sleep backoff#)
+               (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
+             (do
+               (when (< 1 backoff#)
+                 ~(with-meta
+                    `(logger/info (format "%s waited %s for changes to process" ~task-id (shared/start-time->end-time-ms ~start-sym)))
+                    (meta &form)))
+               ~@body)))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
   (let [project-files (-> (:analysis @db)

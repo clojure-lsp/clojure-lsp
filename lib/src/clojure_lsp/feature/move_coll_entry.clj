@@ -461,7 +461,7 @@
 (defn ^:private changes [uri parent-loc cursor-position]
   {:show-document-after-edit {:uri         uri
                               :take-focus? true
-                              :range       cursor-position}
+                              :range       (assoc cursor-position :end-row (:row cursor-position) :end-col (:col cursor-position))}
    :changes-by-uri           {uri
                               [{:range (z-cursor-position parent-loc)
                                 :loc   parent-loc}]}})

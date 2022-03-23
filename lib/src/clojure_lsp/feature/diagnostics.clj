@@ -182,22 +182,26 @@
 (defn lint-project-diagnostics!
   [new-analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis new-analysis db)]
-    (unused-public-vars-lint! (project-var-definitions project-analysis)
-                              (project-kw-definitions project-analysis)
-                              project-analysis kondo-ctx)))
+    (shared/logging-time
+      "Linting whole project took %s secs"
+      (unused-public-vars-lint! (project-var-definitions project-analysis)
+                                (project-kw-definitions project-analysis)
+                                project-analysis kondo-ctx))))
 
 (defn lint-and-publish-project-diagnostics!
   [paths new-analysis kondo-ctx db]
   (let [kondo-findings (lint-project-diagnostics! new-analysis kondo-ctx db)]
-    (loop [state-db @db]
-      (let [cur-findings (:findings state-db)
-            new-findings (merge-with #(->> (into %1 %2)
-                                           (medley/distinct-by (juxt :row :col :end-row :end-col)))
-                                     cur-findings
-                                     kondo-findings)]
-        (if (compare-and-set! db state-db (assoc state-db :findings new-findings))
-          (lint-project-files paths db)
-          (recur @db))))))
+    (shared/logging-time
+      "Linting waited %s secs to publish project diagnostics"
+      (loop [state-db @db]
+        (let [cur-findings (:findings state-db)
+              new-findings (merge-with #(->> (into %1 %2)
+                                             (medley/distinct-by (juxt :row :col :end-row :end-col)))
+                                       cur-findings
+                                       kondo-findings)]
+          (if (compare-and-set! db state-db (assoc state-db :findings new-findings))
+            (lint-project-files paths db)
+            (recur @db)))))))
 
 (defn unused-public-var-lint-for-single-file!
   [filename analysis kondo-ctx db]

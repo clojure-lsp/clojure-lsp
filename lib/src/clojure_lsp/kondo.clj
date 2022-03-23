@@ -121,14 +121,10 @@
       (if (:api? @db)
         (do
           (logger/info (format "Starting to lint whole project files..."))
-          (shared/logging-time
-            "Linting whole project files took %s secs"
-            (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
+          (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db))
         (when (settings/get db [:lint-project-files-after-startup?] true)
           (async/go
-            (shared/logging-time
-              "Linting whole project files took %s secs"
-              (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db))))))))
+            (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db)))))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]

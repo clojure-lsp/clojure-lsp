@@ -53,7 +53,7 @@
   (remove-old-datalevin-db-file!)
   (try
     (shared/logging-time
-      (str db-logger-tag " Upserting transit analysis cache took %s secs")
+      (str db-logger-tag " Upserting transit analysis cache took %s")
       (let [cache-file (transit-db-file db)]
         (with-open [;; first we write to a baos as a workaround for transit-clj #43
                     bos (java.io.ByteArrayOutputStream. 1024)
@@ -68,7 +68,7 @@
 (defn read-cache [project-root db]
   (try
     (shared/logging-time
-      (str db-logger-tag " Reading transit analysis cache from db took %s secs")
+      (str db-logger-tag " Reading transit analysis cache from db took %s")
       (let [db-file (transit-db-file db)]
         (if (shared/file-exists? db-file)
           (let [project-analysis (with-open [is (io/input-stream db-file)]

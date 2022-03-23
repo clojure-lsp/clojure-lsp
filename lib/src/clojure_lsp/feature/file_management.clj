@@ -142,7 +142,7 @@
   (loop [state-db @db]
     (when (>= version (get-in state-db [:documents uri :v] -1))
       (when-let [kondo-result (shared/logging-time
-                                (str "changes analyzed by clj-kondo took %s secs")
+                                (str "changes analyzed by clj-kondo took %s")
                                 (lsp.kondo/run-kondo-on-text! text uri db))]
         (let [filename (shared/uri->filename uri)
               old-local-analysis (get-in @db [:analysis filename])]
@@ -172,7 +172,7 @@
 (defn analyze-watched-created-files! [uris {:keys [db producer] :as components}]
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
-                 "Created watched files analyzed, took %s secs"
+                 "Created watched files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-paths! filenames false components))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis

@@ -25,7 +25,7 @@
 
 (defn ^:private analyze-source-paths! [paths {:keys [db] :as components}]
   (let [result (shared/logging-time
-                 (str startup-logger-tag " Project only paths analyzed, took %s secs")
+                 (str startup-logger-tag " Project only paths analyzed, took %s")
                  (lsp.kondo/run-kondo-on-paths! paths false components))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
@@ -50,7 +50,7 @@
   [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db producer] :as components}]
   (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage progress-token producer)
         result (shared/logging-time
-                 "External classpath paths analyzed, took %s secs. Caching for next startups..."
+                 "External classpath paths analyzed, took %s. Caching for next startups..."
                  (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback components))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages)
@@ -63,7 +63,7 @@
 
 (defn analyze-reference-filenames! [filenames db]
   (let [result (shared/logging-time
-                 "Files analyzed, took %s secs"
+                 "Files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-reference-filenames! filenames db))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
@@ -87,7 +87,7 @@
             analysis (analyze-external-classpath! external-classpath 20 80 progress-token components)]
         (swap! db update :analysis merge analysis)
         (shared/logging-time
-          "Manual GC after classpath scan took %s secs"
+          "Manual GC after classpath scan took %s"
           (System/gc))
         (swap! db assoc :full-scan-analysis-startup true)))))
 

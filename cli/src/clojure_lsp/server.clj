@@ -98,7 +98,7 @@
     (go
       (when (some-> @db :client-capabilities :experimental j/from-java :testTree)
         (shared/logging-time
-          "Refreshing testTree took %s secs"
+          "Refreshing testTree took %s"
           (doseq [uri uris]
             (when-let [test-tree (f.test-tree/tree uri db)]
               (->> test-tree

@@ -139,7 +139,7 @@
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]
   (shared/logging-time
-    "Linting references took %s secs"
+    "Linting references took %s"
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
       (doseq [file files]

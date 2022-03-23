@@ -21,7 +21,7 @@
     (logger/info clojuredocs-logger-tag "Refreshing clojuredocs cache...")
     (swap! db assoc-in [:clojuredocs :refreshing?] true)
     (shared/logging-time
-      (str clojuredocs-logger-tag " Refreshing clojuredocs cache took %s secs.")
+      (str clojuredocs-logger-tag " Refreshing clojuredocs cache took %s.")
       (try
         (let [;; connection check not to wait too long
               [downloadable? conn-ex] (http/test-remote-url! clojuredocs-edn-file-url)]

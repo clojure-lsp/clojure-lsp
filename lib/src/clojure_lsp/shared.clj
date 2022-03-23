@@ -356,8 +356,8 @@
 (defn clojure-lsp-version []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 
-(defn start-time->end-time-seconds [start-time]
-  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
+(defn start-time->end-time-ms [start-time]
+  (format "%.0fms" (float (/ (- (System/nanoTime) start-time) 1000000))))
 
 (defmacro logging-time
   "Executes `body` logging `message` formatted with the time spent
@@ -367,7 +367,7 @@
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(logger/info (format  ~message (start-time->end-time-seconds ~start-sym)))
+          `(logger/info (format  ~message (start-time->end-time-ms ~start-sym)))
           (meta &form))
        result#)))
 

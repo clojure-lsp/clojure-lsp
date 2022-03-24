@@ -115,15 +115,6 @@
             ~(with-meta `(logger/error ~ex-sym) m)))
         ~result-sym))))
 
-(defmacro sync-notification
-  [params f handler]
-  (with-meta
-    `(end
-       (->> ~params
-            coercer/java->clj
-            (~f ~handler)))
-    (meta &form)))
-
 (defmacro sync-request
   ([params f handler response-spec]
    (with-meta
@@ -152,39 +143,27 @@
              `(sync-request ~params ~f ~handler ~response-spec ~extra-log-fn)
              (meta &form)))))))
 
-(defmacro ^:private async-notification
-  [params f handler]
-  `(CompletableFuture/supplyAsync
-     (reify Supplier
-       (get [this]
-         ~(with-meta
-            `(sync-notification ~params ~f ~handler)
-            (meta &form))))))
-
 (deftype LSPTextDocumentService
          [^ILSPFeatureHandler handler]
   TextDocumentService
   (^void didOpen [_ ^DidOpenTextDocumentParams params]
-    (start :didOpen
-           (sync-notification params feature-handler/did-open handler)))
+    (handle-notification params feature-handler/did-open handler))
 
   (^void didChange [_ ^DidChangeTextDocumentParams params]
-    (start :didChange
-           (sync-notification params feature-handler/did-change handler)))
+    (handle-notification params feature-handler/did-change handler))
 
   (^void didSave [_ ^DidSaveTextDocumentParams params]
-    (start :didSave
-           (future
-             (sync-notification params feature-handler/did-save handler)))
+    (future
+      (handle-notification params feature-handler/did-save handler))
     (CompletableFuture/completedFuture 0))
 
   (^void didClose [_ ^DidCloseTextDocumentParams params]
-    (start :didClose
-           (async-notification params feature-handler/did-close handler)))
+    (in-completable-future
+      (handle-notification params feature-handler/did-close handler)))
 
   (^CompletableFuture references [_ ^ReferenceParams params]
-    (start :references
-           (async-request params feature-handler/references handler ::coercer/locations)))
+    (in-completable-future
+      (handle-request params feature-handler/references handler ::coercer/locations)))
 
   (^CompletableFuture completion [_ ^CompletionParams params]
     (start :completion
@@ -285,22 +264,21 @@
          [^ILSPFeatureHandler handler]
   WorkspaceService
   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
-    (start :executeCommand
-           (future
-             (sync-notification params feature-handler/execute-command handler)))
+    (future
+      (handle-notification params feature-handler/execute-command handler))
     (CompletableFuture/completedFuture 0))
 
   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
     (logger/warn (coercer/java->clj params)))
 
   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
-    (start :didChangeWatchedFiles
-           (async-notification params feature-handler/did-change-watched-files handler)))
+    (in-completable-future
+      (handle-notification params feature-handler/did-change-watched-files handler)))
 
   ;; TODO wait for lsp4j release
   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
-                          (start :didSave
-                                 (sync-handler params handler/did-delete-files habdler)))
+                          (in-completable-future
+                            (handle-notification params handler/did-delete-files handler)))
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (start :workspaceSymbol

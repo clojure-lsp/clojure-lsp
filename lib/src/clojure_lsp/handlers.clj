@@ -35,30 +35,31 @@
 
 (set! *warn-on-reflection* true)
 
-(defmacro logging-task-timing [task-id & body]
-  (let [msg (str task-id " %s")]
-    `(shared/logging-time ~msg ~@body)))
-
 (defmacro process-after-changes [task-id uri & body]
-  (let [start-sym (gensym "start-time")]
-    `(let [~start-sym (System/nanoTime)]
-       (loop [backoff# 1]
-         (if (> (quot (- (System/nanoTime) ~start-sym) 1000000) 60000) ; one minute timeout
+  (let [waiting-start-sym (gensym "waiting-start-time")
+        start-sym (gensym "start-time")
+        backoff-sym (gensym "backoff")
+        process-msg (str task-id " %s")
+        wait-and-process-msg (str task-id " %s - waited %s")]
+    `(let [~waiting-start-sym (System/nanoTime)]
+       (loop [~backoff-sym 1]
+         (if (> (quot (- (System/nanoTime) ~waiting-start-sym) 1000000) 60000) ; one minute timeout
            ~(with-meta
               `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
               (meta &form))
            (if (contains? (:processing-changes @db/db) ~uri)
              (do
-               (Thread/sleep backoff#)
-               (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
-             (do
-               (when (< 1 backoff#)
-                 ~(with-meta
-                    `(logger/info (format "%s waited %s for changes to process" ~task-id (shared/start-time->end-time-ms ~start-sym)))
-                    (meta &form)))
-               (logging-task-timing
-                 ~task-id
-                 ~@body))))))))
+               (Thread/sleep ~backoff-sym)
+               (recur (min 200 (* 2 ~backoff-sym)))) ; 2^0, 2^1, ..., up to 200ms
+             (let [~start-sym (System/nanoTime)
+                   result# (do ~@body)]
+               ~(with-meta
+                  `(logger/info
+                     (if (= 1 ~backoff-sym)
+                       (format ~process-msg (shared/start-time->end-time-ms ~waiting-start-sym))
+                       (format ~wait-and-process-msg (shared/start-time->end-time-ms ~start-sym) (shared/start-time->end-time-ms ~waiting-start-sym))))
+                  (meta &form))
+               result#)))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
   (let [project-files (-> (:analysis @db)
@@ -107,7 +108,9 @@
   nil)
 
 (defn did-save [{:keys [textDocument]}]
-  (swap! db/db #(assoc-in % [:documents textDocument :saved-on-disk] true)))
+  (shared/logging-task
+    :did-save
+    (swap! db/db #(assoc-in % [:documents textDocument :saved-on-disk] true))))
 
 ;; TODO wait for lsp4j release
 #_(defn did-delete-files [{:keys [textDocument]}]
@@ -118,7 +121,9 @@
   (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db))
 
 (defn did-close [{:keys [textDocument]}]
-  (f.file-management/did-close textDocument db/db))
+  (shared/logging-task
+    :did-close
+    (f.file-management/did-close textDocument db/db)))
 
 (defn did-change-watched-files [{:keys [changes]}]
   (f.file-management/did-change-watched-files changes db/db))
@@ -129,14 +134,16 @@
     (f.completion/completion textDocument row col db/db)))
 
 (defn references [{:keys [textDocument position context]} {:keys [db] :as components}]
-  (let [row (-> position :line inc)
-        col (-> position :character inc)]
-    (mapv (fn [reference]
-            {:uri (-> (:filename reference)
-                      (shared/filename->uri db)
-                      (f.java-interop/uri->translated-uri components))
-             :range (shared/->range reference)})
-          (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db))))
+  (shared/logging-task
+    :references
+    (let [row (-> position :line inc)
+          col (-> position :character inc)]
+      (mapv (fn [reference]
+              {:uri (-> (:filename reference)
+                        (shared/filename->uri db)
+                        (f.java-interop/uri->translated-uri components))
+               :range (shared/->range reference)})
+            (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db)))))
 
 (def completion-resolve-item f.completion/resolve-item)
 
@@ -249,11 +256,13 @@
                                        elements))))
 
 (defn cursor-info-log [{:keys [textDocument position]} {:keys [producer]}]
-  (producer/show-message
-    producer
-    (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
-    :info
-    nil))
+  (shared/logging-task
+    :cursor-info-log
+    (producer/show-message
+      producer
+      (with-out-str (pprint/pprint (cursor-info [textDocument (:line position) (:character position)])))
+      :info
+      nil)))
 
 (defn cursor-info-raw [{:keys [textDocument position]}]
   (cursor-info [textDocument (:line position) (:character position)]))
@@ -289,14 +298,16 @@
                      components)
 
     (some #(= % command) f.refactor/available-refactors)
-    ;; TODO move components upper to a common place
-    (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
-      (producer/publish-workspace-edit producer edit)
-      (when show-document-after-edit
-        (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
-                                                          (shared/full-file-range)))
-             (producer/show-document-request producer)))
-      edit)))
+    (shared/logging-task
+      :execute-command
+      ;; TODO move components upper to a common place
+      (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
+        (producer/publish-workspace-edit producer edit)
+        (when show-document-after-edit
+          (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
+                                                            (shared/full-file-range)))
+               (producer/show-document-request producer)))
+        edit))))
 
 (defn hover [{:keys [textDocument position]} components]
   (let [[line column] (shared/position->line-column position)

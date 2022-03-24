@@ -371,6 +371,10 @@
           (meta &form))
        result#)))
 
+(defmacro logging-task [task-id & body]
+  (let [msg (str task-id " %s")]
+    `(logging-time ~msg ~@body)))
+
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
     {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}

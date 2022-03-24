@@ -70,8 +70,8 @@
 
 (defmacro handle-request [params f handler response-spec]
   `(coercer/conform-or-log
-    ~response-spec
-    (~f ~handler (coercer/java->clj ~params))))
+     ~response-spec
+     (~f ~handler (coercer/java->clj ~params))))
 
 (defmacro handle-notification [params f handler]
   `(~f ~handler (coercer/java->clj ~params)))
@@ -227,7 +227,7 @@
 
   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
     (in-completable-future
-     (handle-request params feature-handler/workspace-symbols handler ::coercer/workspace-symbols))))
+      (handle-request params feature-handler/workspace-symbols handler ::coercer/workspace-symbols))))
 
 (defn client-capabilities
   [^InitializeParams params]

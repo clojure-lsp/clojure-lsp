@@ -204,13 +204,13 @@
                                  (inc (get-in @db [:documents uri :v] 0))
                                  db)
       :deleted (shared/logging-task
-                :delete-watched-file
-                (let [filename (shared/uri->filename uri)]
-                  (swap! db (fn [state-db]
-                              (-> state-db
-                                  (shared/dissoc-in [:documents uri])
-                                  (shared/dissoc-in [:analysis filename])
-                                  (shared/dissoc-in [:findings filename])))))))))
+                 :delete-watched-file
+                 (let [filename (shared/uri->filename uri)]
+                   (swap! db (fn [state-db]
+                               (-> state-db
+                                   (shared/dissoc-in [:documents uri])
+                                   (shared/dissoc-in [:analysis filename])
+                                   (shared/dissoc-in [:findings filename])))))))))
 
 (defn did-close [uri db]
   (shared/logging-task

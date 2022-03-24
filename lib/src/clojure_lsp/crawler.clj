@@ -94,16 +94,15 @@
                                              (remove (set source-paths-abs))
                                              (remove (set source-paths)))
                                  ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-            analysis (analyze-external-classpath! external-classpath 15 80 progress-token components)]
+            analysis (analyze-external-classpath! external-classpath 20 80 progress-token components)]
         (swap! db update :analysis merge analysis)
         (shared/logging-time
           "Manual GC after classpath scan took %s secs"
           (System/gc))
         (swap! db assoc :full-scan-analysis-startup true)))))
 
-(defn ^:private copy-configs-from-classpath! [classpath settings progress-token {:keys [producer] :as components}]
+(defn ^:private copy-configs-from-classpath! [classpath settings components]
   (when (get settings :copy-kondo-configs? true)
-    (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
     (logger/info "Copying kondo configs from classpath to project if any...")
     (when classpath
       (shared/logging-time
@@ -204,9 +203,10 @@
                    :kondo-config-hash kondo-config-hash
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
-            (if (= :project-and-deps (:project-analysis-type @db))
-              (analyze-classpath! root-path (-> @db :settings :source-paths) classpath settings progress-token components)
-              (copy-configs-from-classpath! classpath settings progress-token components)))
+            (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
+            (copy-configs-from-classpath! classpath settings components)
+            (when (= :project-and-deps (:project-analysis-type @db))
+              (analyze-classpath! root-path (-> @db :settings :source-paths) classpath settings progress-token components)))
           (upsert-db-cache! db))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)

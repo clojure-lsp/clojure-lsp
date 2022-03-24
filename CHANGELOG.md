@@ -36,6 +36,7 @@
 
 - API/CLI
   - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)
+  - Fix inconsistency with clean-ns/format not copying kondo configs.
 
 ## 2022.02.23-12.12.12
 

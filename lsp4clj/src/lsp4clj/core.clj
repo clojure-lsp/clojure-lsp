@@ -69,7 +69,9 @@
 (defonce formatting (atom false))
 
 (defmacro handle-request [params f handler response-spec]
-  `(coercer/conform-or-log ~response-spec (~f ~handler (coercer/java->clj ~params))))
+  `(coercer/conform-or-log
+    ~response-spec
+    (~f ~handler (coercer/java->clj ~params))))
 
 (defmacro handle-notification [params f handler]
   `(~f ~handler (coercer/java->clj ~params)))

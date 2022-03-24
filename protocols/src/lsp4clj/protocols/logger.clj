@@ -29,7 +29,7 @@
                      :file *file*
                      :ns-str (str *ns*))]
     `(when *logger*
-       (apply -warn *logger* ~fmeta ~@args))))
+       (-warn *logger* ~fmeta ~@args))))
 
 (defmacro error [& args]
   (let [fmeta (assoc (meta &form)

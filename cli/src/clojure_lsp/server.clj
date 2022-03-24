@@ -122,9 +122,8 @@
   (getWorkspaceService [_]
     (.getWorkspaceService lsp-server))
   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
-    (lsp/start :dependencyContents
-               (CompletableFuture/completedFuture
-                 (lsp/sync-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri))))
+    (CompletableFuture/completedFuture
+      (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri)))
 
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
@@ -132,24 +131,21 @@
            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
-    (lsp/start :server-info-log
-               (future
-                 (lsp/end
-                   (clojure-feature/server-info-log feature-handler)))))
+    (future
+      (clojure-feature/server-info-log feature-handler))
+    nil)
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
-    (lsp/start :cursorInfoRaw
-               (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
+    (CompletableFuture/completedFuture
+      (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw)))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (future
       (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
-    (lsp/start :clojuredocsRaw
-               (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
+    (CompletableFuture/completedFuture
+      (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw))))
 
 (defn client-settings [params]
   (-> params

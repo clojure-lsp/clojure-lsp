@@ -210,15 +210,17 @@
                                   (shared/dissoc-in [:findings filename])))))))))
 
 (defn did-close [uri db]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get db [:source-paths])]
-    (when (and (not (shared/external-filename? filename source-paths))
-               (not (shared/file-exists? (io/file filename))))
-      (swap! db (fn [state-db] (-> state-db
-                                   (shared/dissoc-in [:documents uri])
-                                   (shared/dissoc-in [:analysis filename])
-                                   (shared/dissoc-in [:findings filename]))))
-      (f.diagnostic/clean! uri db))))
+  (shared/logging-task
+    :did-close
+    (let [filename (shared/uri->filename uri)
+          source-paths (settings/get db [:source-paths])]
+      (when (and (not (shared/external-filename? filename source-paths))
+                 (not (shared/file-exists? (io/file filename))))
+        (swap! db (fn [state-db] (-> state-db
+                                     (shared/dissoc-in [:documents uri])
+                                     (shared/dissoc-in [:analysis filename])
+                                     (shared/dissoc-in [:findings filename]))))
+        (f.diagnostic/clean! uri db)))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -227,3 +229,8 @@
       (do
         (did-open uri (slurp uri) db false)
         (get-in @db [:documents uri :text]))))
+
+(defn did-save [uri db]
+  (shared/logging-task
+    :did-save
+    (swap! db #(assoc-in % [:documents uri :saved-on-disk] true))))

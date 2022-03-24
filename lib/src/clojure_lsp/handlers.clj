@@ -75,30 +75,32 @@
    client-settings
    work-done-token
    {:keys [db] :as components}]
-  (swap! db assoc :project-analysis-type :project-and-deps)
-  (when project-root-uri
-    (crawler/initialize-project
-      project-root-uri
-      client-capabilities
-      client-settings
-      {}
-      work-done-token
-      components)
-    (when (settings/get db [:lint-project-files-after-startup?] true)
+  (shared/logging-task
+    :initialize
+    (swap! db assoc :project-analysis-type :project-and-deps)
+    (when project-root-uri
+      (crawler/initialize-project
+        project-root-uri
+        client-capabilities
+        client-settings
+        {}
+        work-done-token
+        components)
+      (when (settings/get db [:lint-project-files-after-startup?] true)
+        (async/go
+          (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db)))
       (async/go
-        (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db)))
-    (async/go
-      (f.clojuredocs/refresh-cache! components))
-    (async/go
-      (let [settings (:settings @db)]
-        (when (stubs/check-stubs? settings)
-          (stubs/generate-and-analyze-stubs! settings components))))
-    (async/go
-      (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-      (analyze-test-paths! components))
-    (when (settings/get db [:java] true)
+        (f.clojuredocs/refresh-cache! components))
       (async/go
-        (f.java-interop/retrieve-jdk-source-and-analyze! components)))))
+        (let [settings (:settings @db)]
+          (when (stubs/check-stubs? settings)
+            (stubs/generate-and-analyze-stubs! settings components))))
+      (async/go
+        (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+        (analyze-test-paths! components))
+      (when (settings/get db [:java] true)
+        (async/go
+          (f.java-interop/retrieve-jdk-source-and-analyze! components))))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)
@@ -108,9 +110,7 @@
   nil)
 
 (defn did-save [{:keys [textDocument]}]
-  (shared/logging-task
-    :did-save
-    (swap! db/db #(assoc-in % [:documents textDocument :saved-on-disk] true))))
+  (f.file-management/did-save textDocument db/db))
 
 ;; TODO wait for lsp4j release
 #_(defn did-delete-files [{:keys [textDocument]}]
@@ -121,17 +121,18 @@
   (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db))
 
 (defn did-close [{:keys [textDocument]}]
-  (shared/logging-task
-    :did-close
-    (f.file-management/did-close textDocument db/db)))
+  (f.file-management/did-close textDocument db/db))
 
 (defn did-change-watched-files [{:keys [changes]}]
   (f.file-management/did-change-watched-files changes db/db))
 
 (defn completion [{:keys [textDocument position]}]
-  (let [row (-> position :line inc)
-        col (-> position :character inc)]
-    (f.completion/completion textDocument row col db/db)))
+  (shared/logging-results
+    ":completion %s - total items: %s"
+    count
+    (let [row (-> position :line inc)
+          col (-> position :character inc)]
+      (f.completion/completion textDocument row col db/db))))
 
 (defn references [{:keys [textDocument position context]} {:keys [db] :as components}]
   (shared/logging-task
@@ -145,64 +146,79 @@
                :range (shared/->range reference)})
             (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db)))))
 
-(def completion-resolve-item f.completion/resolve-item)
+(defn completion-resolve-item [item components]
+  (shared/logging-task
+    :resolve-completion-item
+    (f.completion/resolve-item item components)))
 
 (defn prepare-rename [{:keys [textDocument position]}]
-  (let [[row col] (shared/position->line-column position)]
-    (f.rename/prepare-rename textDocument row col db/db)))
+  (shared/logging-task
+    :prepare-rename
+    (let [[row col] (shared/position->line-column position)]
+      (f.rename/prepare-rename textDocument row col db/db))))
 
 (defn rename [{:keys [textDocument position newName]}]
-  (let [[row col] (shared/position->line-column position)]
-    (f.rename/rename textDocument newName row col db/db)))
+  (shared/logging-task
+    :rename
+    (let [[row col] (shared/position->line-column position)]
+      (f.rename/rename textDocument newName row col db/db))))
 
 (defn definition [{:keys [textDocument position]} {:keys [db] :as components}]
-  (let [[line column] (shared/position->line-column position)]
-    (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
-      {:uri (-> (:filename definition)
-                (shared/filename->uri db)
-                (f.java-interop/uri->translated-uri components))
-       :range (shared/->range definition)})))
+  (shared/logging-task
+    :definition
+    (let [[line column] (shared/position->line-column position)]
+      (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
+        {:uri (-> (:filename definition)
+                  (shared/filename->uri db)
+                  (f.java-interop/uri->translated-uri components))
+         :range (shared/->range definition)}))))
 
 (defn declaration [{:keys [textDocument position]} {:keys [db] :as components}]
-  (let [[line column] (shared/position->line-column position)]
-    (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
-      {:uri (-> (:filename declaration)
-                (shared/filename->uri db)
-                (f.java-interop/uri->translated-uri components))
-       :range (shared/->range declaration)})))
+  (shared/logging-task
+    :declaration
+    (let [[line column] (shared/position->line-column position)]
+      (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
+        {:uri (-> (:filename declaration)
+                  (shared/filename->uri db)
+                  (f.java-interop/uri->translated-uri components))
+         :range (shared/->range declaration)}))))
 
 (defn implementation [{:keys [textDocument position]} {:keys [db] :as components}]
-  (let [[row col] (shared/position->line-column position)]
-    (mapv (fn [implementation]
-            {:uri (-> (:filename implementation)
-                      (shared/filename->uri db)
-                      (f.java-interop/uri->translated-uri components))
-             :range (shared/->range implementation)})
-          (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col db))))
+  (shared/logging-task
+    :implementation
+    (let [[row col] (shared/position->line-column position)]
+      (mapv (fn [implementation]
+              {:uri (-> (:filename implementation)
+                        (shared/filename->uri db)
+                        (f.java-interop/uri->translated-uri components))
+               :range (shared/->range implementation)})
+            (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col db)))))
 
 (defn document-symbol [{:keys [textDocument]}]
-  (let [filename (shared/uri->filename textDocument)
-        analysis (:analysis @db/db)
-        namespace-definition (->> (get analysis filename)
-                                  (q/find-first (comp #{:namespace-definitions} :bucket)))]
-    [{:name (or (some-> namespace-definition :name name)
-                filename)
-      :kind (f.document-symbol/element->symbol-kind namespace-definition)
-      :range (shared/full-file-range)
-      :selection-range (if namespace-definition
-                         (shared/->scope-range namespace-definition)
-                         (shared/full-file-range))
-      :children (->> (q/find-var-definitions analysis filename true)
-                     (mapv (fn [e]
-                             (shared/assoc-some
-                               {:name (-> e :name name)
-                                :kind (f.document-symbol/element->symbol-kind e)
-                                :range (shared/->scope-range e)
-                                :selection-range (shared/->range e)
-                                :tags (cond-> []
-                                        (:deprecated e) (conj 1))}
-                               :detail (when (:private e)
-                                         "private")))))}]))
+  (shared/logging-task
+    :document-symbol
+    (let [filename (shared/uri->filename textDocument)
+          analysis (:analysis @db/db)
+          namespace-definition (->> (get analysis filename)
+                                    (q/find-first (comp #{:namespace-definitions} :bucket)))]
+      [{:name (or (some-> namespace-definition :name name)
+                  filename)
+        :kind (f.document-symbol/element->symbol-kind namespace-definition)
+        :range (shared/full-file-range)
+        :selection-range (if namespace-definition
+                           (shared/->scope-range namespace-definition)
+                           (shared/full-file-range))
+        :children (->> (q/find-var-definitions analysis filename true)
+                       (mapv (fn [e]
+                               (shared/assoc-some
+                                 {:name (-> e :name name)
+                                  :kind (f.document-symbol/element->symbol-kind e)
+                                  :range (shared/->scope-range e)
+                                  :selection-range (shared/->range e)
+                                  :tags (cond-> []
+                                          (:deprecated e) (conj 1))}
+                                 :detail (when (:private e)
+                                           "private")))))}])))
 
 (defn document-highlight [{:keys [textDocument position]}]
   (process-after-changes
@@ -217,7 +233,9 @@
             references))))
 
 (defn workspace-symbols [{:keys [query]}]
-  (f.workspace-symbols/workspace-symbols query db/db))
+  (shared/logging-task
+    :workspace-symbol
+    (f.workspace-symbols/workspace-symbols query db/db)))
 
 (defn ^:private server-info []
   (let [db-value @db/db]
@@ -236,11 +254,13 @@
      :log-path (:log-path db-value)}))
 
 (defn server-info-log [{:keys [producer]}]
-  (producer/show-message
-    producer
-    (with-out-str (pprint/pprint (server-info)))
-    :info
-    nil))
+  (shared/logging-task
+    :server-info-log
+    (producer/show-message
+      producer
+      (with-out-str (pprint/pprint (server-info)))
+      :info
+      nil)))
 
 (def server-info-raw #'server-info)
 
@@ -265,10 +285,14 @@
       nil)))
 
 (defn cursor-info-raw [{:keys [textDocument position]}]
-  (cursor-info [textDocument (:line position) (:character position)]))
+  (shared/logging-task
+    :cursor-info-raw
+    (cursor-info [textDocument (:line position) (:character position)])))
 
 (defn clojuredocs-raw [{:keys [symName symNs]} components]
-  (f.clojuredocs/find-docs-for symName symNs components))
+  (shared/logging-task
+    :clojuredocs-raw
+    (f.clojuredocs/find-docs-for symName symNs components)))
 
 (defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db] :as components}]
   (let [row (inc (int line))
@@ -310,16 +334,22 @@
         edit))))
 
 (defn hover [{:keys [textDocument position]} components]
-  (let [[line column] (shared/position->line-column position)
-        filename (shared/uri->filename textDocument)]
-    (f.hover/hover filename line column components)))
+  (shared/logging-task
+    :hover
+    (let [[line column] (shared/position->line-column position)
+          filename (shared/uri->filename textDocument)]
+      (f.hover/hover filename line column components))))
 
 (defn signature-help [{:keys [textDocument position _context]}]
-  (let [[line column] (shared/position->line-column position)]
-    (f.signature-help/signature-help textDocument line column db/db)))
+  (shared/logging-task
+    :signature-help
+    (let [[line column] (shared/position->line-column position)]
+      (f.signature-help/signature-help textDocument line column db/db))))
 
 (defn formatting [{:keys [textDocument]}]
-  (f.format/formatting textDocument db/db))
+  (shared/logging-task
+    :formatting
+    (f.format/formatting textDocument db/db)))
 
 (defn range-formatting [{:keys [textDocument range]}]
   (process-after-changes
@@ -333,7 +363,9 @@
       (f.format/range-formatting textDocument format-pos db/db))))
 
 (defn dependency-contents [doc-id components]
-  (f.java-interop/read-content! doc-id components))
+  (shared/logging-task
+    :dependency-contents
+    (f.java-interop/read-content! doc-id components)))
 
 (defn code-actions
   [{:keys [range context textDocument]}]
@@ -356,7 +388,9 @@
 
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
-  (f.code-lens/resolve-code-lens text-document row col range db/db))
+  (shared/logging-task
+    :resolve-code-lens
+    (f.code-lens/resolve-code-lens text-document row col range db/db)))
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
@@ -378,29 +412,37 @@
 
 (defn prepare-call-hierarchy
   [{:keys [textDocument position]}]
-  (f.call-hierarchy/prepare textDocument
-                            (inc (:line position))
-                            (inc (:character position)) db/db))
+  (shared/logging-task
+    :prepare-call-hierarchy
+    (f.call-hierarchy/prepare textDocument
+                              (inc (:line position))
+                              (inc (:character position)) db/db)))
 
 (defn call-hierarchy-incoming
   [{:keys [item]}]
-  (let [uri (:uri item)
-        row (inc (-> item :range :start :line))
-        col (inc (-> item :range :start :character))]
-    (f.call-hierarchy/incoming uri row col db/db)))
+  (shared/logging-task
+    :call-hierarchy-incoming-calls
+    (let [uri (:uri item)
+          row (inc (-> item :range :start :line))
+          col (inc (-> item :range :start :character))]
+      (f.call-hierarchy/incoming uri row col db/db))))
 
 (defn call-hierarchy-outgoing
   [{:keys [item]}]
-  (let [uri (:uri item)
-        row (inc (-> item :range :start :line))
-        col (inc (-> item :range :start :character))]
-    (f.call-hierarchy/outgoing uri row col db/db)))
+  (shared/logging-task
+    :call-hierarchy-outgoing-calls
+    (let [uri (:uri item)
+          row (inc (-> item :range :start :line))
+          col (inc (-> item :range :start :character))]
+      (f.call-hierarchy/outgoing uri row col db/db))))
 
 (defn linked-editing-ranges
   [{:keys [textDocument position]}]
-  (let [row (-> position :line inc)
-        col (-> position :character inc)]
-    (f.linked-editing-range/ranges textDocument row col db/db)))
+  (shared/logging-task
+    :linked-editing-range
+    (let [row (-> position :line inc)
+          col (-> position :character inc)]
+      (f.linked-editing-range/ranges textDocument row col db/db))))
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler

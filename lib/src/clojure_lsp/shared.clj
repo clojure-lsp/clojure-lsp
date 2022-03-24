@@ -371,6 +371,21 @@
           (meta &form))
        result#)))
 
+(defmacro logging-results
+  "Executes `body`, passing the results to `results-fn`, which should return a
+  results message string. Logs `message` formatted with the time spent from body
+  and the results message."
+  [message results-fn & body]
+  (let [start-sym (gensym "start-time")
+        results-msg (gensym "results-msg")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)
+           ~results-msg (~results-fn result#)]
+       ~(with-meta
+          `(logger/info (format ~message (start-time->end-time-ms ~start-sym) ~results-msg))
+          (meta &form))
+       result#)))
+
 (defmacro logging-task [task-id & body]
   (let [msg (str task-id " %s")]
     `(logging-time ~msg ~@body)))

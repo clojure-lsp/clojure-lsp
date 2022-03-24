@@ -68,6 +68,25 @@
 
 (defonce formatting (atom false))
 
+(defmacro handle-request [params f handler response-spec]
+  `(coercer/conform-or-log ~response-spec (~f ~handler (coercer/java->clj ~params))))
+
+(defmacro handle-notification [params f handler]
+  `(~f ~handler (coercer/java->clj ~params)))
+
+(defmacro in-completable-future [& body]
+  (let [m (meta &form)
+        ex-sym (gensym "ex")]
+    `(CompletableFuture/supplyAsync
+       (reify Supplier
+         (get [this#]
+           (try
+             ~@body
+             (catch Throwable ~ex-sym
+               (if (instance? ResponseErrorException ~ex-sym)
+                 (throw (CompletionException. ~ex-sym))
+                 ~(with-meta `(logger/error ~ex-sym) m)))))))))
+
 (defmacro start [id & body]
   `(let [~'_start-time (System/nanoTime)
          ~'_id ~id]
@@ -197,36 +216,22 @@
            (async-request params feature-handler/formatting handler ::coercer/edits)))
 
   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
-    (start :rangeFormatting
-           (end
-             (let [result (when (compare-and-set! formatting false true)
-                            (try
-                              (let [doc-id (coercer/document->uri (.getTextDocument params))
-                                    range (.getRange params)
-                                    start (.getStart range)
-                                    end (.getEnd range)]
-                                (coercer/conform-or-log ::coercer/edits
-                                                        (feature-handler/range-formatting
-                                                          handler
-                                                          doc-id
-                                                          {:row (inc (.getLine start))
-                                                           :col (inc (.getCharacter start))
-                                                           :end-row (inc (.getLine end))
-                                                           :end-col (inc (.getCharacter end))})))
-                              (catch Exception e
-                                (logger/error e))
-                              (finally
-                                (reset! formatting false))))]
-               (CompletableFuture/completedFuture
-                 result)))))
+    (CompletableFuture/completedFuture
+      (when (compare-and-set! formatting false true)
+        (try
+          (handle-request params feature-handler/range-formatting handler ::coercer/edits)
+          (catch Exception e
+            (logger/error e))
+          (finally
+            (reset! formatting false))))))
 
   (^CompletableFuture codeAction [_ ^CodeActionParams params]
-    (start :codeAction
-           (async-request params feature-handler/code-actions handler ::coercer/code-actions)))
+    (in-completable-future
+      (handle-request params feature-handler/code-actions handler ::coercer/code-actions)))
 
   (^CompletableFuture codeLens [_ ^CodeLensParams params]
-    (start :codeLens
-           (async-request params feature-handler/code-lens handler ::coercer/code-lenses)))
+    (in-completable-future
+      (handle-request params feature-handler/code-lens handler ::coercer/code-lenses)))
 
   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
     (start :resolveCodeLens
@@ -249,16 +254,16 @@
            (async-request params feature-handler/document-symbol handler ::coercer/document-symbols)))
 
   (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
-    (start :documentHighlight
-           (async-request params feature-handler/document-highlight handler ::coercer/document-highlights)))
+    (in-completable-future
+      (handle-request params feature-handler/document-highlight handler ::coercer/document-highlights)))
 
   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
-    (start :semanticTokensFull
-           (async-request params feature-handler/semantic-tokens-full handler ::coercer/semantic-tokens)))
+    (in-completable-future
+      (handle-request params feature-handler/semantic-tokens-full handler ::coercer/semantic-tokens)))
 
   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
-    (start :semanticTokensRange
-           (async-request params feature-handler/semantic-tokens-range handler ::coercer/semantic-tokens)))
+    (in-completable-future
+      (handle-request params feature-handler/semantic-tokens-range handler ::coercer/semantic-tokens)))
 
   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
     (start :prepareCallHierarchy

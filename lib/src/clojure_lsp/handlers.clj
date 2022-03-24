@@ -35,6 +35,10 @@
 
 (set! *warn-on-reflection* true)
 
+(defmacro logging-task-timing [task-id & body]
+  (let [msg (str task-id " %s")]
+    `(shared/logging-time ~msg ~@body)))
+
 (defmacro process-after-changes [task-id uri & body]
   (let [start-sym (gensym "start-time")]
     `(let [~start-sym (System/nanoTime)]
@@ -52,7 +56,9 @@
                  ~(with-meta
                     `(logger/info (format "%s waited %s for changes to process" ~task-id (shared/start-time->end-time-ms ~start-sym)))
                     (meta &form)))
-               ~@body)))))))
+               (logging-task-timing
+                 ~task-id
+                 ~@body))))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
   (let [project-files (-> (:analysis @db)
@@ -304,10 +310,16 @@
 (defn formatting [{:keys [textDocument]}]
   (f.format/formatting textDocument db/db))
 
-(defn range-formatting [doc-id format-pos]
+(defn range-formatting [{:keys [textDocument range]}]
   (process-after-changes
-    :range-formatting doc-id
-    (f.format/range-formatting doc-id format-pos db/db)))
+    :range-formatting textDocument
+    (let [start (:start range)
+          end (:end range)
+          format-pos {:row (inc (:line start))
+                      :col (inc (:character start))
+                      :end-row (inc (:line end))
+                      :end-col (inc (:character end))}]
+      (f.format/range-formatting textDocument format-pos db/db))))
 
 (defn dependency-contents [doc-id components]
   (f.java-interop/read-content! doc-id components))
@@ -441,8 +453,8 @@
     (linked-editing-ranges doc))
   (workspace-symbols [_ doc]
     (workspace-symbols doc))
-  (range-formatting [_ doc-id format-pos]
-    (range-formatting doc-id format-pos))
+  (range-formatting [_ doc]
+    (range-formatting doc))
   ;; (did-delete-files [_ doc]
   ;;   (did-delete-files doc))
   clojure-feature/IClojureLSPFeature

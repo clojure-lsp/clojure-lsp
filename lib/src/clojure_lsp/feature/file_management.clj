@@ -142,7 +142,7 @@
 
 (defn analyze-changes [{:keys [uri text version]} {:keys [producer db] :as components}]
   (shared/logging-task
-    :analyze-changes
+    :analyze-file
     (loop [state-db @db]
       (when (>= version (get-in state-db [:documents uri :v] -1))
         (when-let [kondo-result (shared/logging-time

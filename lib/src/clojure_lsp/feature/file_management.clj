@@ -140,7 +140,7 @@
       ;; the full content of the document.
       new-text)))
 
-(defn analyze-changes [{:keys [uri text version]} {:keys [producer db] :as components}]
+(defn analyze-changes [{:keys [uri text version done]} {:keys [producer db] :as components}]
   (shared/logging-task
     :analyze-file
     (loop [state-db @db]
@@ -153,9 +153,10 @@
             (if (compare-and-set! db state-db (-> state-db
                                                   (update-analysis uri (:analysis kondo-result))
                                                   (update-findings uri (:findings kondo-result))
-                                                  (update :processing-changes disj uri)
+                                                  (update :processing-changes dissoc uri)
                                                   (assoc :kondo-config (:config kondo-result))))
               (do
+                (deliver done :done)
                 (f.diagnostic/sync-lint-file! uri db)
                 (when (settings/get db [:notify-references-on-file-change] true)
                   (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
@@ -164,14 +165,16 @@
 
 (defn did-change [uri changes version db]
   (let [old-text (get-in @db [:documents uri :text])
-        final-text (reduce handle-change old-text changes)]
+        final-text (reduce handle-change old-text changes)
+        done (promise)]
     (swap! db (fn [state-db] (-> state-db
                                  (assoc-in [:documents uri :v] version)
                                  (assoc-in [:documents uri :text] final-text)
-                                 (update :processing-changes conj uri))))
+                                 (assoc-in [:processing-changes uri] done))))
     (async/>!! db/current-changes-chan {:uri uri
                                         :text final-text
-                                        :version version})))
+                                        :version version
+                                        :done done})))
 
 (defn analyze-watched-created-files! [uris {:keys [db producer] :as components}]
   (shared/logging-task

@@ -35,41 +35,22 @@
 
 (set! *warn-on-reflection* true)
 
-;; e.g. 2^0, 2^1, ..., up to 200ms
-(def backoff-start 5)
-(def backoff-mult 1.2)
-(def backoff-max 200)
-(comment
-  (->> backoff-start
-       (iterate #(min backoff-max (Math/ceil (* backoff-mult %))))
-       (reductions +)
-       (take 15)))
-
 (defmacro process-after-changes [task-id uri & body]
-  (let [waiting-start-sym (gensym "waiting-start-time")
-        start-sym (gensym "start-time")
-        backoff-sym (gensym "backoff")
-        process-msg (str task-id " %s")
-        wait-and-process-msg (str task-id " %s - waited %s")]
-    `(let [~waiting-start-sym (System/nanoTime)]
-       (loop [~backoff-sym backoff-start]
-         (if (> (quot (- (System/nanoTime) ~waiting-start-sym) 1000000) 60000) ; one minute timeout
+  (let [waited-msg-sym (gensym "waited-msg")]
+    `(if-let [done-changing# (get-in @db/db [:processing-changes ~uri])]
+       (let [waiting-start# (System/nanoTime)
+             waiting-result# (deref done-changing# 60000 :timeout)]
+         (if (= :timeout waiting-result#)
            ~(with-meta
               `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
               (meta &form))
-           (if (contains? (:processing-changes @db/db) ~uri)
-             (do
-               (Thread/sleep ~backoff-sym)
-               (recur (min backoff-max (* backoff-mult ~backoff-sym))))
-             (let [~start-sym (System/nanoTime)
-                   result# (do ~@body)]
-               ~(with-meta
-                  `(logger/info
-                     (if (= backoff-start ~backoff-sym)
-                       (format ~process-msg (shared/start-time->end-time-ms ~waiting-start-sym))
-                       (format ~wait-and-process-msg (shared/start-time->end-time-ms ~start-sym) (shared/start-time->end-time-ms ~waiting-start-sym))))
-                  (meta &form))
-               result#)))))))
+           (let [~waited-msg-sym (format "%s %%s - waited %s" ~task-id (shared/format-time-ms (shared/time-delta-ms waiting-start# (System/nanoTime))))]
+             ~(with-meta
+                `(shared/logging-time ~waited-msg-sym ~@body)
+                (meta &form)))))
+       ~(with-meta
+          `(shared/logging-task ~task-id ~@body)
+          (meta &form)))))
 
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
   (let [project-files (-> (:analysis @db)

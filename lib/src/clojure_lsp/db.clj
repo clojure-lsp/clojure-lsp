@@ -12,7 +12,7 @@
 (def ^:private db-logger-tag (shared/colorize "[DB]" :red))
 
 (def initial-db {:documents {}
-                 :processing-changes #{}})
+                 :processing-changes {}})
 (defonce db (atom initial-db))
 (defonce current-changes-chan (async/chan 1))
 (defonce diagnostics-chan (async/chan 1))

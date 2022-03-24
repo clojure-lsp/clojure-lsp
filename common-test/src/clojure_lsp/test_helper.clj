@@ -49,18 +49,18 @@
 
   (set-log-path [_this _log-path])
 
-  (-info [_this _arg1])
-  (-info [_this _arg1 _arg2])
-  (-info [_this _arg1 _arg2 _arg3])
-  (-warn [_this _arg1])
-  (-warn [_this _arg1 _arg2])
-  (-warn [_this _arg1 _arg2 _arg3])
-  (-error [_this _arg1])
-  (-error [_this _arg1 _arg2])
-  (-error [_this _arg1 _arg2 _arg3])
-  (-debug [_this _arg1])
-  (-debug [_this _arg1 _arg2])
-  (-debug [_this _arg1 _arg2 _arg3]))
+  (-info [_this _fmeta _arg1])
+  (-info [_this _fmeta _arg1 _arg2])
+  (-info [_this _fmeta _arg1 _arg2 _arg3])
+  (-warn [_this _fmeta _arg1])
+  (-warn [_this _fmeta _arg1 _arg2])
+  (-warn [_this _fmeta _arg1 _arg2 _arg3])
+  (-error [_this _fmeta _arg1])
+  (-error [_this _fmeta _arg1 _arg2])
+  (-error [_this _fmeta _arg1 _arg2 _arg3])
+  (-debug [_this _fmeta _arg1])
+  (-debug [_this _fmeta _arg1 _arg2])
+  (-debug [_this _fmeta _arg1 _arg2 _arg3]))
 
 (def components
   (components/->components

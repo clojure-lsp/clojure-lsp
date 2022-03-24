@@ -5,10 +5,10 @@
 
   (set-log-path [_this log-path])
 
-  (-info [this arg1] [this arg1 arg2] [this arg1 arg2 arg3])
-  (-warn [this arg1] [this arg1 arg2] [this arg1 arg2 arg3])
-  (-error [this arg1] [this arg1 arg2] [this arg1 arg2 arg3])
-  (-debug [this arg1] [this arg1 arg2] [this arg1 arg2 arg3]))
+  (-info [this fmeta arg1] [this fmeta arg1 arg2] [this fmeta arg1 arg2 arg3])
+  (-warn [this fmeta arg1] [this fmeta arg1 arg2] [this fmeta arg1 arg2 arg3])
+  (-error [this fmeta arg1] [this fmeta arg1 arg2] [this fmeta arg1 arg2 arg3])
+  (-debug [this fmeta arg1] [this fmeta arg1 arg2] [this fmeta arg1 arg2 arg3]))
 
 (def ^:dynamic *logger*
   "Optional logger state to avoid having component available everywhere."
@@ -17,18 +17,30 @@
 (defn set-logger! [logger]
   (alter-var-root #'*logger* (constantly logger)))
 
-(defn info [& args]
-  (when *logger*
-    (apply -info *logger* args)))
+(defmacro info [& args]
+  (let [fmeta (assoc (meta &form)
+                     :file *file*
+                     :ns-str (str *ns*))]
+    `(when *logger*
+       (-info *logger* ~fmeta ~@args))))
 
-(defn warn [& args]
-  (when *logger*
-    (apply -warn *logger* args)))
+(defmacro warn [& args]
+  (let [fmeta (assoc (meta &form)
+                     :file *file*
+                     :ns-str (str *ns*))]
+    `(when *logger*
+       (apply -warn *logger* ~fmeta ~@args))))
 
-(defn error [& args]
-  (when *logger*
-    (apply -error *logger* args)))
+(defmacro error [& args]
+  (let [fmeta (assoc (meta &form)
+                     :file *file*
+                     :ns-str (str *ns*))]
+    `(when *logger*
+       (-error *logger* ~fmeta ~@args))))
 
-(defn debug [& args]
-  (when *logger*
-    (apply -debug *logger* args)))
+(defmacro debug [& args]
+  (let [fmeta (assoc (meta &form)
+                     :file *file*
+                     :ns-str (str *ns*))]
+    `(when *logger*
+       (-debug *logger* ~fmeta ~@args))))

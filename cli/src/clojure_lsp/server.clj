@@ -43,6 +43,11 @@
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
 
+(defn log! [level args fmeta]
+  (timbre/log! level :p args {:?line (:line fmeta)
+                              :?file (:file fmeta)
+                              :?ns-str (:ns-str fmeta)}))
+
 (defrecord TimbreLogger [db]
   logger/ILSPLogger
 
@@ -58,18 +63,18 @@
   (set-log-path [_this log-path]
     (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
 
-  (-info [_this arg1] (timbre/info arg1))
-  (-info [_this arg1 arg2] (timbre/info arg1 arg2))
-  (-info [_this arg1 arg2 arg3] (timbre/info arg1 arg2 arg3))
-  (-warn [_this arg1] (timbre/warn arg1))
-  (-warn [_this arg1 arg2] (timbre/warn arg1 arg2))
-  (-warn [_this arg1 arg2 arg3] (timbre/warn arg1 arg2 arg3))
-  (-error [_this arg1] (timbre/error arg1))
-  (-error [_this arg1 arg2] (timbre/error arg1 arg2))
-  (-error [_this arg1 arg2 arg3] (timbre/error arg1 arg2 arg3))
-  (-debug [_this arg1] (timbre/debug arg1))
-  (-debug [_this arg1 arg2] (timbre/debug arg1 arg2))
-  (-debug [_this arg1 arg2 arg3] (timbre/debug arg1 arg2 arg3)))
+  (-info [_this fmeta arg1] (log! :info [arg1] fmeta))
+  (-info [_this fmeta arg1 arg2] (log! :info [arg1 arg2] fmeta))
+  (-info [_this fmeta arg1 arg2 arg3] (log! :info [arg1 arg2 arg3] fmeta))
+  (-warn [_this fmeta arg1] (log! :warn [arg1] fmeta))
+  (-warn [_this fmeta arg1 arg2] (log! :warn [arg1 arg2] fmeta))
+  (-warn [_this fmeta arg1 arg2 arg3] (log! :warn [arg1 arg2 arg3] fmeta))
+  (-error [_this fmeta arg1] (log! :error [arg1] fmeta))
+  (-error [_this fmeta arg1 arg2] (log! :error [arg1 arg2] fmeta))
+  (-error [_this fmeta arg1 arg2 arg3] (log! :error [arg1 arg2 arg3] fmeta))
+  (-debug [_this fmeta arg1] (log! :debug [arg1] fmeta))
+  (-debug [_this fmeta arg1 arg2] (log! :debug [arg1 arg2] fmeta))
+  (-debug [_this fmeta arg1 arg2 arg3] (log! :debug [arg1 arg2 arg3] fmeta)))
 
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client

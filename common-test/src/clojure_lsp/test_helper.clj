@@ -199,7 +199,7 @@
   (let [lines->count (->> doc
                           string/split-lines
                           (map-indexed vector)
-                          (map (juxt first (comp count second)))
+                          (map (juxt first (comp inc count second)))
                           (into {}))
         char-results (->> doc-results
                           (reduce

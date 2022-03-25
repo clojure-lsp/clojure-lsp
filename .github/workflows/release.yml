@@ -400,7 +400,7 @@ jobs:
   release:
     name: Create Release
     environment: prod-release
-    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, linux-aarch64 macos, windows]
+    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, linux-aarch64, macos, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.2.0

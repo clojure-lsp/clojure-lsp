@@ -490,13 +490,21 @@
           (map :name))
         analysis))
 
-(defn find-all-aliases [analysis]
-  (into #{}
-        (comp
-          (mapcat val)
-          (filter #(identical? :namespace-alias (:bucket %)))
-          (filter :alias))
-        analysis))
+(defn find-all-aliases
+  [analysis uri db]
+  (let [langs (shared/uri->available-langs uri)]
+    (into #{}
+          (comp
+            (mapcat val)
+            (filter #(identical? :namespace-alias (:bucket %)))
+            (filter :alias)
+            (filter (fn [element]
+                      (seq (set/intersection (-> element
+                                                 :filename
+                                                 (shared/filename->uri db)
+                                                 shared/uri->available-langs)
+                                             langs)))))
+          analysis)))
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]

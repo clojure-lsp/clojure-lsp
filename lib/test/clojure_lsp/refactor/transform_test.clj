@@ -10,9 +10,6 @@
 
 (h/reset-db-after-test)
 
-(defn with-strings [results]
-  (map #(update % :loc z/string) results))
-
 (defn as-strings [results]
   (map (comp z/string :loc) results))
 
@@ -551,7 +548,7 @@
                   ";; {:something true}"
                   "(defn a [b] (|let [c 1] (b c)))")
           (extract-function "foo")
-          with-strings)))
+          h/with-strings)))
   (testing "with comments above origin function with spaces"
     (h/assert-submaps
       [{:loc   (h/code ""
@@ -567,7 +564,7 @@
                   "#_{:something true}"
                   "(defn a [b] (|let [c 1] (b c)))")
           (extract-function "foo")
-          with-strings)))
+          h/with-strings)))
   (testing "with comments above origin function with multi line comments"
     (h/assert-submaps
       [{:loc   (h/code ""
@@ -583,7 +580,7 @@
                   ";; other comment"
                   "(defn a [b] (|let [c 1] (b c)))")
           (extract-function "foo")
-          with-strings)))
+          h/with-strings)))
   (testing "from end of file"
     (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" db/db)))
     (h/assert-submaps
@@ -681,7 +678,7 @@
       (h/clean-db!)
       (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
       (let [{:keys [changes-by-uri]} (create-function "(ns foo (:require [bar :as b])) (|b/something)")
-            result (update-map changes-by-uri with-strings)]
+            result (update-map changes-by-uri h/with-strings)]
         (is (= {(h/file-uri "file:///a.clj")
                 []
                 (h/file-uri "file:///bar.clj")
@@ -701,7 +698,7 @@
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" db/db)
-            result (update-map changes-by-uri with-strings)]
+            result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
                  :options {:overwrite? false, :ignore-if-exists? true}}]
@@ -731,7 +728,7 @@
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" db/db)
-            result (update-map changes-by-uri with-strings)]
+            result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
                  :options {:overwrite? false, :ignore-if-exists? true}}]
@@ -784,7 +781,7 @@
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" h/components)
-            results-to-assert (update-map changes-by-uri with-strings)]
+            results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
                  :options {:overwrite? false :ignore-if-exists? true}}]
@@ -808,7 +805,7 @@
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.cljs")
             {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" h/components)
-            results-to-assert (update-map changes-by-uri with-strings)]
+            results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
                  :options {:overwrite? false :ignore-if-exists? true}}]
@@ -838,7 +835,7 @@
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")
                 {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" h/components)
-                results-to-assert (update-map changes-by-uri with-strings)]
+                results-to-assert (update-map changes-by-uri h/with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
               {(h/file-uri "file:///project/test/some/ns_test.clj")
@@ -904,7 +901,7 @@
       (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db))))))
 
 (defn suppress-diagnostic [code diagnostic-code]
-  (with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))
+  (h/with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))
 
 (deftest suppress-diagnostic-test
   (testing "when op has no spaces"

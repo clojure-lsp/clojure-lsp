@@ -3,6 +3,7 @@
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
+   [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.refactor.transform :as r.transform]
@@ -95,6 +96,9 @@
 
 (defmethod refactor :create-test [{:keys [loc uri] components :components}]
   (r.transform/create-test loc uri components))
+
+(defmethod refactor :move-form [{:keys [loc uri args] {:keys [db]} :components}]
+  (apply f.move-form/move-form loc uri db args))
 
 (def available-refactors
   (->> refactor

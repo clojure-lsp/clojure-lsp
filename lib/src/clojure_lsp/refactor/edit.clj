@@ -111,8 +111,7 @@
     :else
     (z/next loc)))
 
-;; TODO Move the query part to queries.clj ?
-(defn find-var-definition-name-loc [loc filename db]
+(defn find-var-definition [loc filename db]
   (when-let [root-loc (to-top loc)]
     (when-let [fn-name-loc (some-> loc to-top z/next var-name-loc-from-op)]
       (let [fn-name-loc-meta (meta (z/node fn-name-loc))
@@ -128,7 +127,12 @@
                                        (keep #(find-at-pos root-loc (:name-row %) (:name-col %))))
                                      (get-in @db [:analysis filename]))]
         (when (seq var-definition-ops)
-          fn-name-loc)))))
+          {:fn-name-loc fn-name-loc
+           :var-definitions var-definition-ops})))))
+
+;; TODO Move the query part to queries.clj ?
+(defn find-var-definition-name-loc [loc filename db]
+  (:fn-name-loc (find-var-definition loc filename db)))
 
 (defn find-function-usage-name-loc [zloc]
   (some-> zloc

@@ -342,13 +342,9 @@ jobs:
           iwr -useb download.clojure.org/install/win-install-1.10.3.1013.ps1 | iex
 
       - name: Install Babashka
-        run: |
-          iwr -useb get.scoop.sh -outfile 'install.ps1'
-          .\install.ps1 -RunAsAdmin [-OtherParameters ...]
-          scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
-          scoop bucket add extras
-          scoop install babashka --independent
-          echo "$HOME\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        uses: turtlequeue/setup-babashka@v1.3.0
+        with:
+          babashka-version: 0.7.8
 
       - name: Install MSVC
         uses: ilammy/msvc-dev-cmd@v1

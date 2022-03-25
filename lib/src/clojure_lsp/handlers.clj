@@ -37,11 +37,12 @@
 
 (defmacro process-after-changes [task-id uri & body]
   (let [waited-msg-sym (gensym "waited-msg")]
-    `(if-let [analyzing?# (get-in @db/db [:processing-changes ~uri])]
-       (let [waiting-start# (System/nanoTime)]
-         (if (= :timeout (deref analyzing?# 60000 :timeout))
+    `(if-let [done-changing# (get-in @db/db [:processing-changes ~uri])]
+       (let [waiting-start# (System/nanoTime)
+             waiting-result# (deref done-changing# 60000 :timeout)]
+         (if (= :timeout waiting-result#)
            ~(with-meta
-              `(logger/warn (format "%s timed out waiting for analysis of %s" ~task-id ~uri))
+              `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
               (meta &form))
            (let [~waited-msg-sym (format "%s %%s - waited %s" ~task-id (shared/format-time-ms (shared/time-delta-ms waiting-start# (System/nanoTime))))]
              ~(with-meta

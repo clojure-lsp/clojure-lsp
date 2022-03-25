@@ -5,6 +5,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -150,10 +151,13 @@
     (let [filename (-> analysis :var-definitions first :filename)
           updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
-        (future
-          (let [analyzing? (get-in @db [:processing-changes uri])]
-            (if (and analyzing? (= :timeout (deref analyzing? 10000 :timeout)))
-              (logger/info "async custom linting timed out waiting for analysis of" uri)
+        (async/go-loop [tries 1]
+          (if (>= tries 200)
+            (logger/info "Max tries reached when async custom linting" uri)
+            (if (contains? (:processing-changes @db) uri)
+              (do
+                (Thread/sleep 50)
+                (recur (inc tries)))
               (let [old-findings (get-in @db [:findings filename])
                     new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
                 ;; This equality check doesn't seem necessary, but it helps

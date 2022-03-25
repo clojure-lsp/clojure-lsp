@@ -168,7 +168,8 @@
       {:workspace {:workspace-edit {:document-changes true}}}
       (settings/clean-client-settings {})
       (merge (shared/assoc-some
-               {:text-document-sync-kind :full}
+               {:lint-project-files-after-startup? false
+                :text-document-sync-kind :full}
                :log-path log-path)
              settings)
       nil

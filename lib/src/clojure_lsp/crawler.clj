@@ -224,8 +224,9 @@
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
-      (async/go
-        (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db))
+      (when (get settings :lint-project-files-after-startup? true)
+        (async/go
+          (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db)))
       (async/go
         (f.clojuredocs/refresh-cache! components))
       (async/go

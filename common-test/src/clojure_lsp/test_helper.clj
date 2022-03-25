@@ -234,7 +234,12 @@
 (defn with-strings [results]
   (map #(update % :loc z/string) results))
 
-(defn changes->code [results uri db]
-  (let [doc (get-in @db [:documents uri :text])
-        doc-results (get results uri)]
-    (results->doc doc (vec (with-strings doc-results)))))
+(defn changes->code
+  ([changes db]
+   (changes->code changes "file:///a.clj" db))
+  ([changes uri db]
+   (let [doc (get-in @db [:documents uri :text])]
+     (results->doc doc (vec (with-strings changes))))))
+
+(defn changes-by-uri->code [changes-by-uri uri db]
+  (changes->code (get changes-by-uri uri) uri db))

@@ -13,8 +13,8 @@
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)"))
           _ (h/load-code-and-locs "(ns bread)" b-uri)
           results (:changes-by-uri (move-form/move-form zloc a-uri db/db "/b.clj"))
-          a-results (h/changes->code results a-uri db/db)
-          b-results (h/changes->code results b-uri db/db)]
+          a-results (h/changes-by-uri->code results a-uri db/db)
+          b-results (h/changes-by-uri->code results b-uri db/db)]
       (is (= (h/code "(ns apple "
                      "  (:require"
                      "    bread))"
@@ -47,10 +47,10 @@
                                           "(apple/foo 1)"
                                           "(bar 2)") d-uri)
           results (:changes-by-uri (move-form/move-form zloc a-uri db/db "/b.clj"))
-          a-results (h/changes->code results a-uri db/db)
-          b-results (h/changes->code results b-uri db/db)
-          c-results (h/changes->code results c-uri db/db)
-          d-results (h/changes->code results d-uri db/db)]
+          a-results (h/changes-by-uri->code results a-uri db/db)
+          b-results (h/changes-by-uri->code results b-uri db/db)
+          c-results (h/changes-by-uri->code results c-uri db/db)
+          d-results (h/changes-by-uri->code results d-uri db/db)]
       (is (= (h/code "(ns apple (:require [bread :as b]))"
                      ""
                      "(def qux 1)"

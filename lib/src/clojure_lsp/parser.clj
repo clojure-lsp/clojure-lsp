@@ -11,7 +11,7 @@
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro zspy [loc]
   `(do
-     (timbre/warn '~loc (pr-str (z/sexpr ~loc)))
+     (taoensso.timbre/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
 (defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as _a-pos}

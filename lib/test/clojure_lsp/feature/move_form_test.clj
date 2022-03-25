@@ -1,9 +1,9 @@
 (ns clojure-lsp.feature.move-form-test
   (:require
-    [clojure.test :refer [deftest testing is]]
-    [clojure-lsp.test-helper :as h]
-    [clojure-lsp.feature.move-form :as move-form]
-    [clojure-lsp.db :as db]))
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.move-form :as move-form]
+   [clojure-lsp.test-helper :as h]
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest move-form-test
   (testing "simple"

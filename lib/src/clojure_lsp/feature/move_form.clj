@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.move-form
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
-   [clojure-lsp.parser :as parser]
+   [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
@@ -69,7 +69,8 @@
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
             per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
             dest-uri (shared/filename->uri dest-filename db)
-            insertion-loc (some-> (parser/safe-zloc-of-file @db dest-uri)
+            insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db)
+                                  z/of-string
                                   z/rightmost)
             insertion-pos (meta (z/node insertion-loc))
             dest-inner-usages (->> inner-usages
@@ -88,10 +89,10 @@
             usage-changes-by-uri (->> (dissoc per-file-usages dest-uri)
                                       (medley/map-kv-vals
                                         (fn [file-uri usages]
-                                          #_(taoensso.timbre/warn file-uri ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
                                           (let [usage (first usages)
                                                 filename (:filename usage)
-                                                file-loc (parser/safe-zloc-of-file @db file-uri)
+                                                file-loc (-> (f.file-management/force-get-document-text file-uri db)
+                                                             z/of-string)
                                                 namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
                                                                         (str dest-ns)
                                                                         (f.add-missing-libspec/find-alias-ns-pairs analysis uri db))

@@ -1816,8 +1816,9 @@
 <li>Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829</li>
 <li>Bump <code>org.clojure/clojure</code> to <code>1.11.0</code>.</li>
 <li>Fix move-coll-entry to maintain cursor position instead of a range. #862</li>
+<li>Remove <code>:lint-project-files-after-startup?</code> setting not needed anymore.</li>
 <li>
-<p>Remove <code>:lint-project-files-after-startup?</code> setting not needed anymore.</p>
+<p>Clean ns automatically after adding missing require/imports, enabled by default under new <code>:clean :after-ns-refactor</code> flag. #558</p>
 </li>
 <li>
 <p>Editor</p>

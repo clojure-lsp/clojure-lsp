@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.03.25-12.02.59
+
 - General
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
   - Fix install script for aarch64. #794

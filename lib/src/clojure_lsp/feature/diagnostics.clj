@@ -5,6 +5,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.java.io :as io]
    [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
@@ -194,3 +195,11 @@
          (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)
          vec)))
+
+(defn lint-project-files! [paths db]
+  (doseq [path paths]
+    (doseq [file (file-seq (io/file path))]
+      (let [filename (.getAbsolutePath ^java.io.File file)
+            uri (shared/filename->uri filename db)]
+        (when (not= :unknown (shared/uri->file-type uri))
+          (sync-lint-file! uri db))))))

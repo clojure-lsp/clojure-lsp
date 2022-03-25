@@ -5,6 +5,7 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.queries :as q]
@@ -223,6 +224,8 @@
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
     (when-not (:api? @db)
+      (async/go
+        (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db))
       (async/go
         (f.clojuredocs/refresh-cache! components))
       (async/go

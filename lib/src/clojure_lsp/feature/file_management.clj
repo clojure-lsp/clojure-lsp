@@ -182,6 +182,7 @@
                     (update :analysis merge analysis)
                     (assoc :kondo-config (:config result))
                     (update :findings merge (group-by :filename (:findings result))))))
+    (f.diagnostic/lint-project-files! filenames db)
     (clojure-producer/refresh-test-tree producer uris)))
 
 (defn did-change-watched-files [changes db]

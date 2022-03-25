@@ -1,12 +1,12 @@
 (ns clojure-lsp.feature.move-form
   (:require
-    [clojure-lsp.refactor.edit :as edit]
-    [rewrite-clj.zip :as z]
-    [clojure-lsp.queries :as q]
-    [clojure-lsp.shared :as shared]
-    [medley.core :as medley]
-    [clojure-lsp.parser :as parser]
-    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]))
+   [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :as shared]
+   [medley.core :as medley]
+   [rewrite-clj.zip :as z]))
 
 (defn drop-ns-from-dest [zloc usages]
   (loop [[usage & other-usages] usages

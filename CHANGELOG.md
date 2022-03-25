@@ -14,6 +14,7 @@
   - Bump `org.clojure/clojure` to `1.11.0`.
   - Fix move-coll-entry to maintain cursor position instead of a range. #862
   - Remove `:lint-project-files-after-startup?` setting not needed anymore.
+  - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :after-ns-refactor` flag. #558
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

@@ -228,6 +228,10 @@ Some features require know the available source paths of your project, where you
 
 Default: Check `:clean` in [all-available-settings.edn](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn).
 
+#### after-ns-refactor
+
+Whether to call clean-ns on the namespace after applying any refactor to it like adding missing require/imports/refers.
+
 #### ns-inner-blocks-indentation
 
 How to indent ns children forms like require,import.

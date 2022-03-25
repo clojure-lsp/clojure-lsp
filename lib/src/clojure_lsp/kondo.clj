@@ -115,20 +115,10 @@
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn ^:private project-custom-lint!
-  [paths db {:keys [analysis config] :as kondo-ctx}]
+  [db {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [new-analysis (group-by :filename (normalize-analysis analysis))]
-      (if (:api? @db)
-        (do
-          (logger/info (format "Starting to lint whole project files..."))
-          (shared/logging-time
-            "Linting whole project files took %s secs"
-            (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db)))
-        (when (settings/get db [:lint-project-files-after-startup?] true)
-          (async/go
-            (shared/logging-time
-              "Linting whole project files took %s secs"
-              (f.diagnostic/lint-and-publish-project-diagnostics! paths new-analysis kondo-ctx db))))))))
+      (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db))))
 
 (defn ^:private custom-lint-for-reference-files!
   [files db {:keys [analysis] :as kondo-ctx}]
@@ -182,8 +172,16 @@
                                     :protocol-impls true}
                          :canonical-paths true}}}
       (shared/assoc-some :custom-lint-fn (when-not external-analysis-only?
-                                           (partial project-custom-lint! paths db)))
+                                           (partial project-custom-lint! db)))
       (with-additional-config (settings/all db))))
+
+(defn kondo-copy-configs [paths db]
+  {:cache true
+   :parallel true
+   :skip-lint true
+   :copy-configs (settings/get db [:copy-kondo-configs?] true)
+   :lint [(string/join (System/getProperty "path.separator") paths)]
+   :config {:output {:canonical-paths true}}})
 
 (defn kondo-for-reference-filenames [filenames db]
   (-> (kondo-for-paths filenames db false)
@@ -234,3 +232,7 @@
 (defn run-kondo-on-text! [text uri db]
   (catch-kondo-errors (shared/uri->filename uri)
     (with-in-str text (kondo/run! (kondo-for-single-file uri db)))))
+
+(defn run-kondo-copy-configs! [paths {:keys [db]}]
+  (catch-kondo-errors (str "paths " (string/join ", " paths))
+    (kondo/run! (kondo-copy-configs paths db))))

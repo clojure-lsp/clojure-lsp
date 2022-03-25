@@ -203,15 +203,25 @@
       (testing "next requires follow the same pattern"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
-                       "  (:require [foo :as bar]"
-                       "            [clojure.set :as set]))")
+                       "  (:require [clojure.set :as set]"
+                       "            [foo :as bar]))")
                (-> (h/code "(ns foo "
                            "  (:require [foo :as bar])) |set/subset?")
                    add-missing-libspec
                    as-str)))))
+    (testing "do not clean if disbled"
+      (swap! db/db shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor false}}})
+      (is (= (h/code "(ns foo "
+                     "  (:require [foo :as bar]"
+                     "            [clojure.set :as set]))")
+             (-> (h/code "(ns foo "
+                         "  (:require [foo :as bar])) |set/subset?")
+                 add-missing-libspec
+                 as-str))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
-        (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! db/db shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true
+                                                           :ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
                        "  (:require [clojure.set :as set]))")
                (-> "(ns foo) |set/subset?"
@@ -220,8 +230,8 @@
       (testing "next requires follow the same pattern"
         (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
-                       "  (:require [foo :as bar]"
-                       "            [clojure.set :as set]))")
+                       "  (:require [clojure.set :as set]"
+                       "            [foo :as bar]))")
                (-> (h/code "(ns foo "
                            "  (:require [foo :as bar])) |set/subset?")
                    add-missing-libspec
@@ -235,21 +245,22 @@
                  as-sexp))))
     (testing "when already exists another require"
       (h/clean-db!)
-      (is (= '(ns foo (:require [clojure.set :refer [subset?]]
-                                [clojure.test :refer [deftest]]))
-             (-> "(ns foo (:require [clojure.set :refer [subset?]])) |deftest"
+      (is (= '(ns foo (:require
+                       [clojure.set :refer [subset?]]
+                       [clojure.test :refer [deftest]]))
+             (-> "(ns foo (:require [clojure.set :refer [subset?]])) |deftest subset?"
                  add-missing-libspec
                  as-sexp))))
     (testing "when already exists that ns with alias and no refers"
       (h/clean-db!)
       (is (= '(ns foo (:require [clojure.test :as t :refer [testing]]))
-             (-> "(ns foo (:require [clojure.test :as t])) |testing"
+             (-> "(ns foo (:require [clojure.test :as t])) |testing t/deftest"
                  add-missing-libspec
                  as-sexp))))
     (testing "when already exists that ns with another refer"
       (h/clean-db!)
       (is (= '(ns foo (:require [clojure.test :refer [deftest testing]]))
-             (-> "(ns foo (:require [clojure.test :refer [deftest]])) |testing"
+             (-> "(ns foo (:require [clojure.test :refer [deftest]])) |testing deftest"
                  add-missing-libspec
                  as-sexp))))
     (testing "we don't add existing refers"
@@ -257,8 +268,9 @@
       (is (nil? (add-missing-libspec "(ns foo (:require [clojure.test :refer [testing]])) |testing"))))
     (testing "we can add multiple refers"
       (h/clean-db!)
-      (is (= '(ns foo (:require [clojure.test :refer [deftest testing is]]))
-             (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is"
+      (is (= '(ns foo (:require
+                       [clojure.test :refer [deftest is testing]]))
+             (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is deftest testing"
                  add-missing-libspec
                  as-sexp)))))
   (testing "when on invalid location"
@@ -267,14 +279,14 @@
                   add-missing-libspec)))))
 
 (defn add-import-to-namespace [code import-name]
-  (f.add-missing-libspec/add-import-to-namespace (h/zloc-from-code code) import-name db/db))
+  (f.add-missing-libspec/add-missing-import (h/zloc-from-code code) "file:///a.clj" import-name db/db))
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
     (h/clean-db!)
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "    java.util.Date))")
+                   "   java.util.Date))")
            (-> "(ns foo.bar) |Date."
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
@@ -295,9 +307,9 @@
   (testing "when there is a :import form already"
     (h/clean-db!)
     (is (= (h/code "(ns foo.bar "
-                   "  (:import "
-                   "    java.util.Calendar"
-                   "    java.util.Date))")
+                   "  (:import"
+                   "   java.util.Calendar"
+                   "   java.util.Date))")
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    java.util.Calendar)) |Date.")
@@ -314,9 +326,9 @@
     (h/clean-db!)
     (is (= (h/code "(ns foo.bar"
                    "  (:require"
-                   "    [foo.baz :as baz]) "
+                   "   [foo.baz :as baz]) "
                    "  (:import"
-                   "    java.util.Date))")
+                   "   java.util.Date))")
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])) |Date.")
@@ -326,10 +338,10 @@
     (h/clean-db!)
     (is (= (h/code "(ns foo.bar"
                    "  (:require"
-                   "    [foo.baz :as baz])"
+                   "   [foo.baz :as baz])"
                    "  (:import"
-                   "    java.util.Calendar"
-                   "    java.util.Date))")
+                   "   java.util.Calendar"
+                   "   java.util.Date))")
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])"
@@ -342,24 +354,21 @@
     (is (nil? (-> (h/code "(ns foo.bar) |;; comment")
                   (add-import-to-namespace "java.util.Date"))))))
 
-(defn add-common-import-to-namespace [code]
-  (f.add-missing-libspec/add-common-import-to-namespace (h/zloc-from-code code) db/db))
-
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "    java.util.Date))")
+                   "   java.util.Date))")
            (-> "(ns foo.bar) |Date."
-               add-common-import-to-namespace
+               (add-import-to-namespace nil)
                as-root-str))))
   (testing "when we don't known the import"
-    (is (nil? (add-common-import-to-namespace "(ns foo.bar) |MyClass."))))
+    (is (nil? (add-import-to-namespace "(ns foo.bar) |MyClass." nil))))
   (testing "when on invalid location"
-    (is (nil? (add-common-import-to-namespace "(ns foo.bar) |;; comment")))))
+    (is (nil? (add-import-to-namespace "(ns foo.bar) |;; comment" nil)))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) chosen-ns chosen-alias chosen-refer db/db))
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer db/db))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
@@ -367,7 +376,7 @@
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "
                      "  (:require"
-                     "    [clojure.string :as str]))")
+                     "   [clojure.string :as str]))")
              (-> (h/code "(ns foo.bar)"
                          "|str/a")
                  (add-require-suggestion "clojure.string" "str" nil)
@@ -380,7 +389,7 @@
                                     (add-require-suggestion "clojure.string" "my-str" nil))]
         (is (= (h/code "(ns foo.bar "
                        "  (:require"
-                       "    [clojure.string :as my-str]))")
+                       "   [clojure.string :as my-str]))")
                (z/root-string (:loc ns-edit))))
         ;; If we are aliasing to something other than the full namespace, we change
         ;; uses of the namespace to the alias.
@@ -405,7 +414,7 @@
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "
                      "  (:require"
-                     "    [clojure.string :refer [split]]))")
+                     "   [clojure.string :refer [split]]))")
              (-> (h/code "(ns foo.bar)"
                          "|split")
                  (add-require-suggestion "clojure.string" nil "split")

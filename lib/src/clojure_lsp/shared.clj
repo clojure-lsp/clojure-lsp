@@ -377,3 +377,13 @@
 
 (defn full-file-range []
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
+
+(def ^:private ansi-colors
+  {:reset "[0m"
+   :red   "[31m"
+   :green "[32m"
+   :yellow "[33m"
+   :cyan  "[36m"})
+
+(defn colorize [s color]
+  (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))

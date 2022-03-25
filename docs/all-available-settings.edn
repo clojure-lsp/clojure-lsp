@@ -5,13 +5,13 @@
  :project-specs [] ;; Check the default at clojure-lsp.crawler/default-project-specs
  :ignore-classpath-directories false
  :use-source-paths-from-classpath true
- :lint-project-files-after-startup? true ;; false for clojure-lsp.api usage
  :notify-references-on-file-change true
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""
                        :async-custom-lint? true}}
- :clean {:ns-inner-blocks-indentation :next-line
+ :clean {:automatically-after-ns-refactor true
+         :ns-inner-blocks-indentation :next-line
          :sort {:ns true
                 :require true
                 :import true

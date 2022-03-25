@@ -6,7 +6,7 @@
 (set! *warn-on-reflection* true)
 
 (defn top? [loc]
-  (= :forms (z/tag (z/up loc))))
+  (identical? :forms (z/tag (z/up loc))))
 
 (defn to-top [loc]
   (when loc

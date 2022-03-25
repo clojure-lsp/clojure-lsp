@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.add-missing-libspec
   (:require
    [clojure-lsp.common-symbols :as common-sym]
+   [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -27,6 +28,22 @@
       (if (settings/get db [:keep-require-at-start?])
         :same-line
         :next-line)))
+
+(defn ^:private cleaning-ns-edits [uri db edits]
+  (if (settings/get db [:clean :automatically-after-ns-refactor] true)
+    (->> edits
+         (map (fn [{:keys [loc range] :as edit}]
+                (if (z/find-value loc z/next 'ns)
+                  ;; re-read zloc to get a unchanged zloc with :forms
+                  (some-> loc
+                          z/root-string
+                          z/of-string
+                          (f.clean-ns/clean-ns-edits uri db)
+                          first
+                          (assoc :range range))
+                  edit)))
+         seq)
+    edits))
 
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
@@ -163,12 +180,11 @@
                     :import {:type :import :lib sym})]
       (add-to-namespace* zloc libspec db))))
 
-(defn add-import-to-namespace [zloc import-name db]
-  (add-to-namespace zloc :import nil (symbol import-name) db))
-
-(defn add-common-import-to-namespace [zloc db]
-  (when-let [import-name (find-missing-import zloc)]
-    (add-import-to-namespace zloc import-name db)))
+(defn add-missing-import [zloc uri import-name db]
+  (when-let [import-name (or import-name
+                             (find-missing-import zloc))]
+    (->> (add-to-namespace zloc :import nil (symbol import-name) db)
+         (cleaning-ns-edits uri db))))
 
 (defn add-known-alias
   [zloc alias-to-add qualified-ns-to-add db]
@@ -376,36 +392,38 @@
     {:range (meta (z/node replaced-loc))
      :loc replaced-loc}))
 
-(defn add-require-suggestion [zloc chosen-ns chosen-alias chosen-refer db]
+(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))]
-      (seq
-        (concat
-          (cond
-            chosen-refer
-            (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
 
-            chosen-alias
-            (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
+      (->> (concat
+             (cond
+               chosen-refer
+               (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
 
-            :else
-            (add-simple-require zloc (symbol chosen-ns) db))
-          (when chosen-alias-or-ns
-            (cond
-              cursor-namespace-str
-              ;; When we're aliasing clojure.string to string, we want to change
-              ;; all nodes after the namespace like clojure.string/split to string/split.
-              (->> (find-forms (z/next (edit/find-namespace zloc))
-                               #(when-let [sym-ns (some-> % safe-sym namespace)]
-                                  (and (or
-                                         (= chosen-ns sym-ns)
-                                         (= cursor-namespace-str sym-ns))
-                                       (not= chosen-alias-or-ns sym-ns))))
-                   (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
+               chosen-alias
+               (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
 
-              (some-> zloc safe-sym)
-              [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))))))
+               :else
+               (add-simple-require zloc (symbol chosen-ns) db))
+             (when chosen-alias-or-ns
+               (cond
+                 cursor-namespace-str
+                 ;; When we're aliasing clojure.string to string, we want to change
+                 ;; all nodes after the namespace like clojure.string/split to string/split.
+                 (->> (find-forms (z/next (edit/find-namespace zloc))
+                                  #(when-let [sym-ns (some-> % safe-sym namespace)]
+                                     (and (or
+                                            (= chosen-ns sym-ns)
+                                            (= cursor-namespace-str sym-ns))
+                                          (not= chosen-alias-or-ns sym-ns))))
+                      (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
+
+                 (some-> zloc safe-sym)
+                 [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
+           seq
+           (cleaning-ns-edits uri db)))))
 
 (defn add-missing-libspec
   [zloc uri db]
@@ -416,6 +434,7 @@
                                      first)]
         (add-require-suggestion
           zloc
+          uri
           (:ns suggestion)
           (:alias suggestion)
           (:refer suggestion)

@@ -12,6 +12,9 @@
   - Improve logic around require suggestions. #837
   - Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829
   - Bump `org.clojure/clojure` to `1.11.0`.
+  - Fix move-coll-entry to maintain cursor position instead of a range. #862
+  - Remove `:lint-project-files-after-startup?` setting not needed anymore.
+  - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :after-ns-refactor` flag. #558
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683
@@ -31,9 +34,11 @@
   - Make find-implementations consider `reify`. #827
   - Fix namespace on file creation when nested source-paths are available. #832
   - unused-public-var: fix to show warnings on vars defined with declare. #840
+  - unused-public-var: large performance improvements, especially for large projects. #861 @mainej
 
 - API/CLI
   - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)
+  - Fix inconsistency with clean-ns/format not copying kondo configs.
 
 ## 2022.02.23-12.12.12
 

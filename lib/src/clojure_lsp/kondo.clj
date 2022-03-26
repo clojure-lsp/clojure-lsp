@@ -134,7 +134,7 @@
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [filename (-> analysis :var-definitions first :filename)
           updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
-      (if (settings/get db [:linters :clj-kondo :async-custom-lint?] true)
+      (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
           (if (>= tries 200)
             (logger/info "Max tries reached when async custom linting" uri)

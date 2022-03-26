@@ -29,7 +29,7 @@
         :same-line
         :next-line)))
 
-(defn ^:private cleaning-ns-edits [uri db edits]
+(defn cleaning-ns-edits [uri db edits]
   (if (settings/get db [:clean :automatically-after-ns-refactor] true)
     (->> edits
          (map (fn [{:keys [loc range] :as edit}]

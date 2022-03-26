@@ -42,6 +42,62 @@
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
 
+(defn ^:private determine-ns-edits [local-analysis file-loc def-to-move source-ns source-refer libspec uri db]
+  (let [other-source-refers (filter #(and (:refer %)
+                                          (= (:to %) source-ns)
+                                          (not= (:name %) (:name def-to-move)))
+                                    local-analysis)
+
+        other-source-usages (filter #(and (not (:refer %))
+                                          (not (:alias %))
+                                          (= (:to %) source-ns)
+                                          (not= (:name %) (:name def-to-move)))
+                                    local-analysis)
+        source-require (first (filter #(and (= :namespace-usages (:bucket %))
+                                            (= (:name %) source-ns))
+                                      local-analysis))
+        remove-source-require? (and source-require (empty? other-source-usages))
+        namespace-loc (edit/find-namespace file-loc)]
+    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec db)]
+      (cond-> add-to-ns-changes
+        remove-source-require?
+        (update-in
+          [0 :loc]
+          (fn [loc]
+            (z/subedit->
+              loc
+              (edit/find-at-usage source-require)
+              z/up
+              z/remove)))
+
+        (and (not remove-source-require?) source-refer)
+        (update-in
+          [0 :loc]
+          (fn [loc]
+            (z/subedit->
+              loc
+              (edit/find-at-usage-name source-refer)
+              z/remove
+              (cond-> (empty? other-source-refers) (-> z/remove z/remove)))))
+
+        :always
+        (->> (f.add-missing-libspec/cleaning-ns-edits uri db)))
+      (when (or remove-source-require? source-refer)
+        (->> [{:loc (cond-> namespace-loc
+                      remove-source-require?
+                      (z/subedit->
+                        (edit/find-at-usage source-require)
+                        z/up
+                        z/remove)
+
+                      (and (not remove-source-require?) source-refer)
+                      (z/subedit->
+                        (edit/find-at-usage-name source-refer)
+                        z/remove
+                        (cond-> (empty? other-source-refers) (-> z/remove z/remove))))
+               :range (meta (z/node namespace-loc))}]
+             (f.add-missing-libspec/cleaning-ns-edits uri db))))))
+
 (defn move-form [zloc uri db dest-filename]
   (let [form-loc (edit/to-top zloc)
         analysis (:analysis @db)
@@ -93,31 +149,25 @@
                                                 filename (:filename usage)
                                                 file-loc (-> (f.file-management/force-get-document-text file-uri db)
                                                              z/of-string)
-                                                namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
-                                                                        (str dest-ns)
-                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri db))
-                                                suggestion (first namespace-suggestions)
                                                 local-analysis (vec (get analysis filename))
                                                 source-refer (first (filter #(and (:refer %)
                                                                                   (= (:to %) source-ns)
                                                                                   (= (:name %) (:name def-to-move)))
                                                                             local-analysis))
-                                                other-source-refers (filter #(and (:refer %)
-                                                                                  (= (:to %) source-ns)
-                                                                                  (not= (:name %) (:name def-to-move)))
-                                                                            local-analysis)
-                                                source-require (first (filter #(and (= :namespace-usages (:bucket %))
-                                                                                    (= (:name %) source-ns))
-                                                                              local-analysis))
+
+                                                dest-require (first (filter #(and (= :namespace-usages (:bucket %))
+                                                                                  (= (:name %) dest-ns))
+                                                                            local-analysis))
+                                                namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
+                                                                        (str dest-ns)
+                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri db))
+                                                suggestion (if dest-require
+                                                             {:alias (str (:alias dest-require))}
+                                                             (first namespace-suggestions))
                                                 usages (filter #(and (not (:refer %))
                                                                      (= (:to %) source-ns)
                                                                      (= (:name %) (:name def-to-move)))
                                                                local-analysis)
-                                                other-source-usages (filter #(and (not (:refer %))
-                                                                                  (not (:alias %))
-                                                                                  (= (:to %) source-ns)
-                                                                                  (not= (:name %) (:name def-to-move)))
-                                                                            local-analysis)
                                                 libspec (merge
                                                           {:type :require
                                                            :lib dest-ns}
@@ -125,27 +175,8 @@
                                                             {:alias (some-> suggestion :alias symbol)})
                                                           (when source-refer
                                                             {:refer (:name source-refer)}))
-                                                remove-source-require? (and source-require (empty? other-source-usages))
-                                                ns-changes (cond-> (f.add-missing-libspec/add-to-namespace* file-loc libspec db)
-                                                             remove-source-require?
-                                                             (update-in
-                                                               [0 :loc]
-                                                               (fn [loc]
-                                                                 (z/subedit->
-                                                                   loc
-                                                                   (edit/find-at-usage source-require)
-                                                                   z/up
-                                                                   z/remove)))
 
-                                                             (and (not remove-source-require?) source-refer)
-                                                             (update-in
-                                                               [0 :loc]
-                                                               (fn [loc]
-                                                                 (z/subedit->
-                                                                   loc
-                                                                   (edit/find-at-usage-name source-refer)
-                                                                   z/remove
-                                                                   (cond-> (empty? other-source-refers) (-> z/remove z/remove))))))
+                                                ns-changes (determine-ns-edits local-analysis file-loc def-to-move source-ns source-refer libspec uri db)
                                                 replacement-ns (cond
                                                                  (:alias libspec)
                                                                  (:alias libspec)

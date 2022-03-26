@@ -4,15 +4,14 @@
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
    [rewrite-clj.node :as n]
-   [rewrite-clj.zip :as z]
-   [taoensso.timbre :as timbre]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro zspy [loc]
   `(do
-     (timbre/warn '~loc (pr-str (z/sexpr ~loc)))
+     (taoensso.timbre/warn '~loc (pr-str (z/sexpr ~loc)))
      ~loc))
 
 (defn same-range? [{:keys [name-row name-col name-end-row name-end-col] :as _a-pos}

@@ -167,12 +167,15 @@
     db))
 
 (defmethod find-definition :java-class-usages
-  [analysis element db]
-  (find-last-order-by-project-analysis
-    #(and (identical? :java-class-definitions (:bucket %))
-          (safe-equal? (:class %) (:class element)))
-    analysis
-    db))
+  [analysis element _db]
+  (->> analysis
+       (into []
+             (comp
+               (mapcat val)
+               (filter #(and (identical? :java-class-definitions (:bucket %))
+                             (safe-equal? (:class %) (:class element))))))
+       (sort-by (complement #(string/ends-with? (:filename %) ".java")))
+       first))
 
 (defmethod find-definition :default
   [_analysis element _db]

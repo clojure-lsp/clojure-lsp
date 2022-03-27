@@ -1,8 +1,7 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
    [clojure-lsp.shared :as shared]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.string :as string])
   (:import
    [clojure.lang PersistentVector]))
 

@@ -38,7 +38,7 @@
       (with-out-str
         (.analyse driver [class-path]))
       (when-not (string/blank? (str err-sym))
-        (logger/warn "Non-fatal error from cfr:" (str err-sym))))
+        (logger/warn "Non-fatal error from CFR:" (str err-sym))))
     (slurp (io/file decompiled-file dest-path))))
 
 (defn read-content! [uri {:keys [db]}]
@@ -46,9 +46,8 @@
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)
         entry (.getJarEntry connection)]
-    (if (shared/class-file? uri)
-      (let [file (with-open [stream (.getInputStream jar entry)]
-                   (copy-class-file uri entry stream db))]
-        (decompile! file (string/replace (str entry) #".class$" ".java") db))
-      (with-open [stream (.getInputStream jar entry)]
+    (with-open [stream (.getInputStream jar entry)]
+      (if (shared/class-file? uri)
+        (let [file (copy-class-file uri entry stream db)]
+          (decompile! file (string/replace (str entry) #".class$" ".java") db))
         (slurp stream)))))

@@ -19,6 +19,7 @@
     integration.document-symbol-test
     integration.linked-editing-range-test
     integration.cursor-info-test
+    integration.java-interop-test
     integration.stubs-test
     integration.api.version-test
     integration.api.clean-ns-test

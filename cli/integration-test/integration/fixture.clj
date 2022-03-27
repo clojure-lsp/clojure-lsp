@@ -92,6 +92,10 @@
                 {:textDocument {:uri (h/source-path->uri path)}
                  :position {:line row :character col}}))
 
+(defn clojure-dependency-contents-request [uri]
+  (lsp-json-rpc "clojure/dependencyContents"
+                {:uri uri}))
+
 (defn initialized-notification []
   (lsp-json-rpc :initialized {}))
 

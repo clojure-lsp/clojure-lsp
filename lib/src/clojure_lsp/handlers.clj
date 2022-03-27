@@ -90,13 +90,15 @@
         col (-> position :character inc)]
     (f.completion/completion textDocument row col db/db)))
 
-(defn references [{:keys [textDocument position context]}]
+(defn references [{:keys [textDocument position context]} {:keys [db] :as components}]
   (let [row (-> position :line inc)
         col (-> position :character inc)]
     (mapv (fn [reference]
-            {:uri (shared/filename->uri (:filename reference) db/db)
+            {:uri (-> (:filename reference)
+                      (shared/filename->uri db)
+                      (f.dependency-content-reader/uri->translated-uri components))
              :range (shared/->range reference)})
-          (q/find-references-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db/db))))
+          (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db))))
 
 (def completion-resolve-item f.completion/resolve-item)
 
@@ -108,24 +110,30 @@
   (let [[row col] (shared/position->line-column position)]
     (f.rename/rename textDocument newName row col db/db)))
 
-(defn definition [{:keys [textDocument position]}]
+(defn definition [{:keys [textDocument position]} {:keys [db] :as components}]
   (let [[line column] (shared/position->line-column position)]
-    (when-let [definition (q/find-definition-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column db/db)]
-      {:uri (shared/filename->uri (:filename definition) db/db)
+    (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
+      {:uri (-> (:filename definition)
+                (shared/filename->uri db)
+                (f.dependency-content-reader/uri->translated-uri components))
        :range (shared/->range definition)})))
 
-(defn declaration [{:keys [textDocument position]}]
+(defn declaration [{:keys [textDocument position]} {:keys [db] :as components}]
   (let [[line column] (shared/position->line-column position)]
-    (when-let [declaration (q/find-declaration-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) line column db/db)]
-      {:uri (shared/filename->uri (:filename declaration) db/db)
+    (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
+      {:uri (-> (:filename declaration)
+                (shared/filename->uri db)
+                (f.dependency-content-reader/uri->translated-uri components))
        :range (shared/->range declaration)})))
 
-(defn implementation [{:keys [textDocument position]}]
+(defn implementation [{:keys [textDocument position]} {:keys [db] :as components}]
   (let [[row col] (shared/position->line-column position)]
     (mapv (fn [implementation]
-            {:uri (shared/filename->uri (:filename implementation) db/db)
+            {:uri (-> (:filename implementation)
+                      (shared/filename->uri db)
+                      (f.dependency-content-reader/uri->translated-uri components))
              :range (shared/->range implementation)})
-          (q/find-implementations-from-cursor (:analysis @db/db) (shared/uri->filename textDocument) row col db/db))))
+          (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col db))))
 
 (defn document-symbol [{:keys [textDocument]}]
   (let [filename (shared/uri->filename textDocument)
@@ -356,7 +364,7 @@
   (did-change-watched-files [_ doc]
     (did-change-watched-files doc))
   (references [_ doc]
-    (references doc))
+    (references doc @components*))
   (completion [_ doc]
     (completion doc))
   (completion-resolve-item [_ doc]
@@ -378,11 +386,11 @@
   (code-lens-resolve [_ doc]
     (code-lens-resolve doc))
   (definition [_ doc]
-    (definition doc))
+    (definition doc @components*))
   (declaration [_ doc]
-    (declaration doc))
+    (declaration doc @components*))
   (implementation [_ doc]
-    (implementation doc))
+    (implementation doc @components*))
   (document-symbol [_ doc]
     (document-symbol doc))
   (document-highlight [_ doc]

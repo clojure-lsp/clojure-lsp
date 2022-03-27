@@ -39,16 +39,25 @@
         (.analyse driver [class-path]))
       (when-not (string/blank? (str err-sym))
         (logger/warn "Non-fatal error from CFR:" (str err-sym))))
-    (slurp (io/file decompiled-file dest-path))))
+    (io/file decompiled-file dest-path)))
 
-(defn read-content! [uri {:keys [db]}]
-  (let [jar-uri (shared/ensure-jarfile uri)
-        url (URL. jar-uri)
-        connection ^JarURLConnection (.openConnection url)
-        jar (.getJarFile connection)
-        entry (.getJarEntry connection)]
-    (with-open [stream (.getInputStream jar entry)]
+(defn ^:private uri->translated-file [uri {:keys [db]}]
+  (if (shared/jar-file? uri)
+    (let [jar-uri (shared/ensure-jarfile uri)]
       (if (shared/class-file? jar-uri)
-        (let [file (copy-class-file jar-uri entry stream db)]
-          (decompile! file (string/replace (str entry) #".class$" ".java") db))
-        (slurp stream)))))
+        (let [url (URL. jar-uri)
+              connection ^JarURLConnection (.openConnection url)
+              jar (.getJarFile connection)
+              entry (.getJarEntry connection)]
+          (with-open [stream (.getInputStream jar entry)]
+            (let [file (copy-class-file jar-uri entry stream db)
+                  dest-file (string/replace (str entry) #".class$" ".java")]
+              (shared/filename->uri (.getCanonicalPath ^File (decompile! file dest-file db)) db))))
+        jar-uri))
+    uri))
+
+(defn uri->translated-uri [uri components]
+  (uri->translated-file uri components))
+
+(defn read-content! [uri components]
+  (slurp (uri->translated-file uri components)))

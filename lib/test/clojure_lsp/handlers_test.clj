@@ -103,7 +103,8 @@
         [{:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
         (handlers/references {:textDocument (h/file-uri "file:///a.clj")
-                              :position (h/->position bar-def-pos)}))))
+                              :position (h/->position bar-def-pos)}
+                             h/components))))
   (testing "when including declaration"
     (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
           _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" (h/file-uri "file:///b.clj"))]
@@ -114,7 +115,8 @@
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
         (handlers/references {:textDocument (h/file-uri "file:///a.clj")
                               :position (h/->position bar-def-pos)
-                              :context {:includeDeclaration true}})))))
+                              :context {:includeDeclaration true}}
+                             h/components)))))
 
 (deftest test-rename
   (let [[abar-start abar-stop

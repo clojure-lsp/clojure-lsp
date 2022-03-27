@@ -1,5 +1,6 @@
 (ns integration.java-interop-test
   (:require
+   [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
@@ -33,10 +34,13 @@
   (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
     (testing "We find java compiled class first"
       (h/assert-submap
-        {:range {:start {:line 0 :character 0}
+        {:uri (-> "integration-test/sample-test/.lsp/.cache/java/decompiled/clojure/lang/PersistentVector.java"
+                  io/as-relative-path
+                  io/file
+                  h/file->uri)
+         :range {:start {:line 0 :character 0}
                  :end {:line 0 :character 0}}}
-        result)
-      (is (string/includes? (:uri result) ".jar::clojure/lang/PersistentVector.class")))
+        result))
 
     (testing "we decompile the class file and get its contents"
       (let [class-content (lsp/request! (fixture/clojure-dependency-contents-request (:uri result)))]

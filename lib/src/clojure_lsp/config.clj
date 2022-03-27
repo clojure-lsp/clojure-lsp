@@ -115,3 +115,10 @@
         (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
                cp-settings)
         (shared/deep-merge merge-config cp-settings)))))
+
+(defn cache-file [db]
+  (let [project-root (shared/uri->path (:project-root-uri @db))
+        overwritten-path (some-> (get @db [:settings :cache-path])
+                                 io/file)
+        default (io/file (str project-root) ".lsp" ".cache")]
+    ^java.io.File (or overwritten-path default)))

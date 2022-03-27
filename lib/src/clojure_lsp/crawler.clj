@@ -120,13 +120,12 @@
 (defn ^:private ensure-kondo-config-dir-exists!
   [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
-        project-root-path (shared/uri->path project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
       (create-kondo-folder! clj-kondo-folder)
-      (when (db/db-exists? project-root-path db)
+      (when (db/db-exists? db)
         (logger/info "Removing outdated cached lsp db...")
-        (db/remove-db! project-root-path db)))))
+        (db/remove-db! db)))))
 
 (defn ^:private load-db-cache! [root-path db]
   (when-let [db-cache (db/read-cache root-path db)]

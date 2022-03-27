@@ -9,8 +9,8 @@
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.feature.completion :as f.completion]
+   [clojure-lsp.feature.dependency-content-reader :as f.dependency-content-reader]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
-   [clojure-lsp.feature.file-content-reader :as f.file-content-reader]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
@@ -270,7 +270,7 @@
     (f.format/range-formatting doc-id format-pos db/db)))
 
 (defn dependency-contents [doc-id components]
-  (f.file-content-reader/read-content doc-id components))
+  (f.dependency-content-reader/read-content! doc-id components))
 
 (defn code-actions
   [{:keys [range context textDocument]}]

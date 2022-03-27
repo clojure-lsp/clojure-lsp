@@ -42,12 +42,13 @@
     (slurp (io/file decompiled-file dest-path))))
 
 (defn read-content! [uri {:keys [db]}]
-  (let [url (URL. uri)
+  (let [jar-uri (shared/ensure-jarfile uri)
+        url (URL. jar-uri)
         connection ^JarURLConnection (.openConnection url)
         jar (.getJarFile connection)
         entry (.getJarEntry connection)]
     (with-open [stream (.getInputStream jar entry)]
-      (if (shared/class-file? uri)
-        (let [file (copy-class-file uri entry stream db)]
+      (if (shared/class-file? jar-uri)
+        (let [file (copy-class-file jar-uri entry stream db)]
           (decompile! file (string/replace (str entry) #".class$" ".java") db))
         (slurp stream)))))

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add java class find-definition support, decompiling .class files when available. #762 
+
 ## 2022.03.26-18.47.08
 
 - Fix unused-public-var not considering excluding comments, changing `async-custom-lint?` setting to false.

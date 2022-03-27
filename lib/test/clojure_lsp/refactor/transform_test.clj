@@ -259,7 +259,11 @@
   (testing "with inner let one level after outer let"
     (is (= (h/code "(let [x 5"
                    " y 2] (when x y))")
-           (expand-let "(let [x 5] (when x (let [|y 2] y)))")))))
+           (expand-let "(let [x 5] (when x (let [|y 2] y)))"))))
+  (testing "within coll"
+    (is (= (h/code "(do (let [f 1]"
+                   "     [f]))")
+           (expand-let "(do [(let [f 1] |f)])")))))
 
 (deftest unwind-thread-test
   (testing "from thread position"

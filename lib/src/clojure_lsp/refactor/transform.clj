@@ -338,7 +338,7 @@
                                   (z/remove) ; remove let
                                   (z/right)
                                   (z/remove) ; remove binding
-                                  (z/find z/up #(= (z/tag %) :list)) ; go to parent form container
+                                  (z/find z/up #(not= (z/tag %) :token)) ; go to parent form container
                                   (z/edit->
                                     (z/find-value z/next ::dummy)
                                     (z/remove)) ; remove dummy element

@@ -418,7 +418,7 @@
 (defn add-missing-libspec
   [zloc uri db]
   (when zloc
-    (let [all-suggestions (vec (remove :remove-from-add-missing? (find-require-suggestions zloc uri db)))]
+    (let [all-suggestions (find-require-suggestions zloc uri db)]
       (when-let [suggestion (some->> all-suggestions
                                      seq
                                      first)]

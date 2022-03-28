@@ -68,7 +68,7 @@
 (defn read-content! [uri components]
   (slurp (uri->translated-file uri components)))
 
-(def ^:private default-jdk-source-download-uri
+(def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
 
 (defn ^:private download-jdk!
@@ -120,20 +120,24 @@
         (update :analysis merge analysis)
         (db/upsert-cache! db))))
 
-(defn analyze-jdk-source-from-path!
-  [path db]
-  (logger/info "[JDK] Analyzing JDK source...")
-  (analyze-jdk-source! path db)
-  (logger/info "[JDK] Source analyzed successfully."))
-
-(defn download-and-analyze! [{:keys [db]}]
-  (let [jdk-download-url (settings/get db [:java :jdk-source-download-uri] default-jdk-source-download-uri)
-        global-cache-dir (config/global-lsp-cache-dir)
+(defn ^:private download-jdk-source
+  [jdk-source-uri db]
+  (let [global-cache-dir (config/global-lsp-cache-dir)
         dest-jdk-file (io/file global-cache-dir "jdk")
         dest-jdk-result-file (io/file dest-jdk-file "successfully-downloaded")]
     (if (shared/file-exists? dest-jdk-result-file)
       (logger/info "[JDK] Skipping downloading JDK source, already found at" dest-jdk-file)
       (do
-        (download-jdk! jdk-download-url dest-jdk-file)
-        (spit dest-jdk-result-file "1")))
-    (analyze-jdk-source-from-path! (.getCanonicalPath dest-jdk-file) db)))
+       (download-jdk! jdk-source-uri dest-jdk-file)
+       (spit dest-jdk-result-file "1")))
+    (.getCanonicalPath dest-jdk-file) db))
+
+(defn retrieve-and-analyze! [{:keys [db]}]
+  (let [jdk-source-uri (settings/get db [:java :jdk-source-uri] default-jdk-source-uri)
+        download-jdk-source? (settings/get db [:java :download-jdk-source?] false)]
+    (when-let [jdk-source-uri' (or (and (shared/plain-uri? jdk-source-uri)
+                                        (shared/filename->uri jdk-source-uri db))
+                                   (when download-jdk-source? (download-jdk-source jdk-source-uri db)))]
+      (logger/info (str "[JDK] Analyzing JDK source found at " jdk-source-uri "..."))
+      (analyze-jdk-source! jdk-source-uri' db)
+      (logger/info (str "[JDK] Source found at " jdk-source-uri " analyzed successfully.")))))

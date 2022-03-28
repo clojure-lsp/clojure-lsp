@@ -96,8 +96,7 @@
                            flatten))]
     (some->> paths
              (filter #(.canRead ^File %))
-             first))
-  nil)
+             first)))
 
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
@@ -170,7 +169,9 @@
         user-jdk-source-uri (settings/get db [:java :jdk-source-uri])
         jdk-source-uri (or user-jdk-source-uri default-jdk-source-uri)]
 
-    (if-not installed-jdk-source-uri
+    (if (or (not installed-jdk-source-uri)
+            (and user-jdk-source-uri
+                 (= installed-jdk-source-uri user-jdk-source-uri)))
       (if-let [local-jdk-source-zip (and (not user-jdk-source-uri)
                                          (find-local-jdk-source))]
         (do
@@ -179,11 +180,12 @@
           (spit jdk-result-file (.getCanonicalPath ^File local-jdk-source-zip)))
         (do
           (logger/info logger-tag "Local JDK source not found.")
-          (if-let [local-jdk-uri (and (shared/plain-uri? jdk-source-uri)
-                                      (shared/filename->uri jdk-source-uri db))]
+          (if-let [local-jdk-uri (or (and (shared/plain-uri? jdk-source-uri)
+                                          jdk-source-uri)
+                                     (shared/filename->uri jdk-source-uri db))]
             (do
               (logger/info logger-tag "Found local JDK source URI, extracting to global LSP cache dir...")
-              (fs/unzip local-jdk-uri jdk-dir-file {:replace-existing true})
+              (fs/unzip (io/file (shared/uri->filename local-jdk-uri)) jdk-dir-file {:replace-existing true})
               (spit jdk-result-file local-jdk-uri))
             (if (settings/get db [:java :download-jdk-source?] false)
               (do

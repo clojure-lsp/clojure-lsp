@@ -388,6 +388,8 @@
   {:reset "[0m"
    :red   "[31m"
    :green "[32m"
+   :bright-green "[92m"
+   :bright-yellow "[93m"
    :yellow "[33m"
    :cyan  "[36m"})
 

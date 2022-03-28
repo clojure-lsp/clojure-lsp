@@ -83,8 +83,9 @@
     (async/go
       (logger/info "Analyzing test paths for project root" project-root-uri)
       (analyze-test-paths! components))
-    (async/go
-      (f.java-interop/retrieve-and-analyze! components))))
+    (when (settings/get db [:java] true)
+      (async/go
+        (f.java-interop/retrieve-jdk-source-and-analyze! components)))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)

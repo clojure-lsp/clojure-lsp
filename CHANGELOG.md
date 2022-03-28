@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Add java class find-definition support, decompiling .class files when available. #762 
-- Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally. Disabled by default, enable if you want to hava java support for JDK classes.
+- Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.
+- Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.
 
 ## 2022.03.26-18.47.08
 

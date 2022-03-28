@@ -1117,6 +1117,16 @@
 <td><code>false</code></td>
 </tr>
 <tr>
+<td><code>java</code> <code>download-jdk-source?</code></td>
+<td>Whether to download JDK source from <code>:java :jdk-source-download-uri</code> and cache after startup for JDK classes java support.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>java</code> <code>jdk-source-download-uri</code></td>
+<td>URI containing the JDK source to be used if <code>download-jdk-source?</code> is enabled, Check <code>https://github.com/clojure-lsp/jdk-source</code>for more sources.</td>
+<td><code>https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip</code></td>
+</tr>
+<tr>
 <td><code>keep-parens-when-threading?</code></td>
 <td>Whether to keep parenthesis when threading single arity functions.</td>
 <td><code>false</code></td>
@@ -1358,7 +1368,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 27, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 28, 2022</span>
     
   </small>
 </div>

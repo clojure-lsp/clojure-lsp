@@ -10,26 +10,28 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:private clojuredocs-logger-tag (shared/colorize "[Clojuredocs]" :green))
+
 (def ^:private clojuredocs-edn-file-url
   "https://github.com/clojure-emacs/clojuredocs-export-edn/raw/master/exports/export.compact.edn")
 
 (defn refresh-cache! [{:keys [db]}]
   (when (and (settings/get db [:hover :clojuredocs] true)
              (not (-> @db :clojuredocs :refreshing?)))
-    (logger/info "Refreshing clojuredocs cache...")
+    (logger/info clojuredocs-logger-tag "Refreshing clojuredocs cache...")
     (swap! db assoc-in [:clojuredocs :refreshing?] true)
     (shared/logging-time
-      "Refreshing clojuredocs cache took %s secs."
+      (str clojuredocs-logger-tag " Refreshing clojuredocs cache took %s secs.")
       (try
         (let [;; connection check not to wait too long
               [downloadable? conn-ex] (http/test-remote-url! clojuredocs-edn-file-url)]
           (if (not downloadable?)
-            (logger/error "Could not refresh clojuredocs." conn-ex)
+            (logger/error clojuredocs-logger-tag "Could not refresh clojuredocs." conn-ex)
             (swap! db assoc :clojuredocs {:cache (-> clojuredocs-edn-file-url
                                                      slurp
                                                      edn/read-string)})))
         (catch Exception e
-          (logger/error "Error refreshing clojuredocs information." e)
+          (logger/error clojuredocs-logger-tag "Error refreshing clojuredocs information." e)
           nil)
         (finally
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))

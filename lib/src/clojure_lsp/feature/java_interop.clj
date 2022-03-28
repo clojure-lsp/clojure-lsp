@@ -23,13 +23,13 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private logger-tag (shared/colorize "[Java]" :bright-yellow))
+(def ^:private java-logger-tag (shared/colorize "[Java]" :bright-yellow))
 
 (defn ^:private decompile! [^File class-file dest-path db]
   (let [cache-path (config/cache-file db)
         decompiled-file (io/file cache-path "java" "decompiled")
         class-path (.getCanonicalPath class-file)
-        _ (logger/info logger-tag (format "Decompiling java class %s" class-path))
+        _ (logger/info java-logger-tag (format "Decompiling java class %s" class-path))
         driver ^CfrDriver (.. (CfrDriver$Builder.)
                               ;; CFR stout is not reliable, prefer output to file so we can read later
                               (withOptions {"outputdir" (.getCanonicalPath decompiled-file)})
@@ -39,13 +39,13 @@
       (with-out-str
         (.analyse driver [class-path]))
       (when-not (string/blank? (str err-sym))
-        (logger/warn logger-tag "Non-fatal error from CFR:" (str err-sym))))
+        (logger/warn java-logger-tag "Non-fatal error from CFR:" (str err-sym))))
     (io/file decompiled-file dest-path)))
 
 (defn ^:private copy-class-file [uri entry stream db]
   (let [cache-path (config/cache-file db)
         dest-file (io/file cache-path "java" "classes" (str entry))]
-    (logger/info logger-tag (format "Copying class URI %s to %s" uri dest-file))
+    (logger/info java-logger-tag (format "Copying class URI %s to %s" uri dest-file))
     (io/make-parents dest-file)
     (io/copy stream dest-file)
     dest-file))
@@ -106,12 +106,12 @@
    ^File dest-jdk-file]
   (io/make-parents dest-jdk-file)
   (shared/logging-time
-    (str logger-tag " Downloading JDK source took %s secs.")
+    (str java-logger-tag " Downloading JDK source took %s secs.")
     (try
       (let [{:keys [body content-type status error]} (http/request! jdk-download-url)]
         (if (or error
                 (not= 200 status))
-          (logger/error logger-tag "Could not download JDK source." error)
+          (logger/error java-logger-tag "Could not download JDK source." error)
           ;; TODO handle more common downloadable content-types
           (case content-type
             "application/zip"
@@ -128,13 +128,13 @@
                           (.mkdirs parentDir))
                         (clojure.java.io/copy stream saveFile)))
                     (recur (.getNextEntry stream))))))
-            (logger/error logger-tag "Could not download JDK source, unknown content-type" content-type))))
+            (logger/error java-logger-tag "Could not download JDK source, unknown content-type" content-type))))
       (catch Exception e
-        (logger/error logger-tag "Error Downloading JDK source." e)))))
+        (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
 (defn ^:private analyze-jdk-source! [path db]
   (let [result (shared/logging-time
-                 (str logger-tag " Analyzing JDK source with clj-kondo took %s secs.")
+                 (str java-logger-tag " Analyzing JDK source with clj-kondo took %s secs.")
                  (lsp.kondo/run-kondo-on-jdk-source! path))
         kondo-analysis (select-keys (:analysis result) [:java-class-definitions])
         analysis (->> kondo-analysis
@@ -142,7 +142,7 @@
                       (group-by :filename))]
     (loop [state-db @db]
       (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
-        (logger/warn logger-tag "Analyzis outdated from java analysis, trying again...")
+        (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
         (recur @db)))
     (-> (shared/uri->path (:project-root-uri @db))
         (db/read-cache db)
@@ -175,30 +175,30 @@
       (if-let [local-jdk-source-zip (and (not user-jdk-source-uri)
                                          (find-local-jdk-source))]
         (do
-          (logger/info logger-tag "Found local JDK source zip, extracting to global LSP cache dir...")
+          (logger/info java-logger-tag "Found local JDK source zip, extracting to global LSP cache dir...")
           (fs/unzip local-jdk-source-zip jdk-dir-file {:replace-existing true})
           (spit jdk-result-file (.getCanonicalPath ^File local-jdk-source-zip)))
         (do
-          (logger/info logger-tag "Local JDK source not found.")
+          (logger/info java-logger-tag "Local JDK source not found.")
           (if-let [local-jdk-uri (or (and (shared/plain-uri? jdk-source-uri)
                                           jdk-source-uri)
                                      (shared/filename->uri jdk-source-uri db))]
             (do
-              (logger/info logger-tag "Found local JDK source URI, extracting to global LSP cache dir...")
+              (logger/info java-logger-tag "Found local JDK source URI, extracting to global LSP cache dir...")
               (fs/unzip (io/file (shared/uri->filename local-jdk-uri)) jdk-dir-file {:replace-existing true})
               (spit jdk-result-file local-jdk-uri))
             (if (settings/get db [:java :download-jdk-source?] false)
               (do
-                (logger/info logger-tag "Downloading JDK source to global LSP cache dir...")
+                (logger/info java-logger-tag "Downloading JDK source to global LSP cache dir...")
                 (download-jdk! jdk-source-uri jdk-dir-file)
                 (spit jdk-result-file jdk-source-uri))
-              (logger/warn logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled.")))))
-      (logger/info logger-tag "JDK source already present on global LSP cache dir."))
+              (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled.")))))
+      (logger/info java-logger-tag "JDK source already present on global LSP cache dir."))
 
     (if (or installed-jdk-source-uri
             (and (shared/file-exists? jdk-result-file)
                  (slurp jdk-result-file)))
       (do
         (analyze-jdk-source! (.getCanonicalPath jdk-dir-file) db)
-        (logger/info logger-tag "JDK Source analyzed successfully."))
-      (logger/warn logger-tag "JDK Source not found, skipping java analysis."))))
+        (logger/info java-logger-tag "JDK Source analyzed successfully."))
+      (logger/warn java-logger-tag "JDK Source not found, skipping java analysis."))))

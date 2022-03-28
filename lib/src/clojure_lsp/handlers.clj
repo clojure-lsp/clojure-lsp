@@ -81,7 +81,7 @@
         (when (stubs/check-stubs? settings)
           (stubs/generate-and-analyze-stubs! settings components))))
     (async/go
-      (logger/info "Analyzing test paths for project root" project-root-uri)
+      (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
       (analyze-test-paths! components))
     (when (settings/get db [:java] true)
       (async/go

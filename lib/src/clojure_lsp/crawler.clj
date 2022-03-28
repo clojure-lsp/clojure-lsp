@@ -16,6 +16,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def startup-logger-tag (shared/colorize "[Startup]" :cyan))
+
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
         (.isDirectory e) :directory
@@ -23,7 +25,7 @@
 
 (defn ^:private analyze-source-paths! [paths {:keys [db] :as components}]
   (let [result (shared/logging-time
-                 "Project only paths analyzed, took %s secs"
+                 (str startup-logger-tag " Project only paths analyzed, took %s secs")
                  (lsp.kondo/run-kondo-on-paths! paths false components))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
@@ -111,7 +113,7 @@
     (when-not (shared/file-exists? clj-kondo-folder)
       (create-kondo-folder! clj-kondo-folder)
       (when (db/db-exists? db)
-        (logger/info "Removing outdated cached lsp db...")
+        (logger/info startup-logger-tag "Removing outdated cached lsp db...")
         (db/remove-db! db)))))
 
 (defn ^:private load-db-cache! [root-path db]
@@ -179,7 +181,7 @@
                                 (= (:kondo-config-hash @db) kondo-config-hash))]
       (if use-db-analysis?
         (do
-          (logger/info "Using cached db for project root" root-path)
+          (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
@@ -206,7 +208,7 @@
                                           force-settings)
              :classpath-settings classpath-settings))
     (producer/publish-progress producer 95 "Analyzing project files" progress-token)
-    (logger/info "Analyzing source paths for project root" root-path)
+    (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
     (producer/publish-progress producer 100 "Project analyzed" progress-token)))

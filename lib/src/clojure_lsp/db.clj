@@ -9,6 +9,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:private db-logger-tag (shared/colorize "[DB]" :red))
+
 (def initial-db {:documents {}
                  :processing-changes #{}})
 (defonce db (atom initial-db))
@@ -51,7 +53,7 @@
   (remove-old-datalevin-db-file!)
   (try
     (shared/logging-time
-      "Upserting transit analysis cache took %s secs"
+      (str db-logger-tag " Upserting transit analysis cache took %s secs")
       (let [cache-file (transit-db-file db)]
         (with-open [;; first we write to a baos as a workaround for transit-clj #43
                     bos (java.io.ByteArrayOutputStream. 1024)
@@ -61,12 +63,12 @@
             (transit/write writer project-cache)
             (io/copy (.toByteArray bos) cache-file)))))
     (catch Throwable e
-      (logger/error "Could not upsert db cache" e))))
+      (logger/error db-logger-tag "Could not upsert db cache" e))))
 
 (defn read-cache [project-root db]
   (try
     (shared/logging-time
-      "Reading transit analysis cache from db took %s secs"
+      (str db-logger-tag " Reading transit analysis cache from db took %s secs")
       (let [db-file (transit-db-file db)]
         (if (shared/file-exists? db-file)
           (let [project-analysis (with-open [is (io/input-stream db-file)]
@@ -74,6 +76,6 @@
             (when (and (= (str project-root) (:project-root project-analysis))
                        (= version (:version project-analysis)))
               project-analysis))
-          (logger/error "No cache DB file found"))))
+          (logger/error db-logger-tag "No cache DB file found"))))
     (catch Throwable e
-      (logger/error "Could not load project cache from DB" e))))
+      (logger/error db-logger-tag "Could not load project cache from DB" e))))

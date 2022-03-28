@@ -128,8 +128,8 @@
     (if (shared/file-exists? dest-jdk-result-file)
       (logger/info "[JDK] Skipping downloading JDK source, already found at" dest-jdk-file)
       (do
-       (download-jdk! jdk-source-uri dest-jdk-file)
-       (spit dest-jdk-result-file "1")))
+        (download-jdk! jdk-source-uri dest-jdk-file)
+        (spit dest-jdk-result-file "1")))
     (.getCanonicalPath dest-jdk-file) db))
 
 (defn retrieve-and-analyze! [{:keys [db]}]

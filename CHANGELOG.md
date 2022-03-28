@@ -6,6 +6,8 @@
 - Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.
 - Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.
 
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
 ## 2022.03.26-18.47.08
 
 - Fix unused-public-var not considering excluding comments, changing `async-custom-lint?` setting to false.

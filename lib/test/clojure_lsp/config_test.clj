@@ -39,7 +39,8 @@
               :home :bla} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when XDG_CONFIG_HOME is unset but user has XDG config and a project config we merge with project as priority"
     (with-redefs [config/get-property (constantly "/home/user")
-                  shared/file-exists? #(or (= (h/file-path "/home/user/.config/clojure-lsp/config.edn") (str %))
+                  shared/file-exists? #(or (= (h/file-path "/home/user/.config/clojure-lsp") (str %))
+                                           (= (h/file-path "/home/user/.config/clojure-lsp/config.edn") (str %))
                                            (= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %)))
                   config/get-env (constantly nil)
                   slurp (fn [f]
@@ -52,7 +53,8 @@
              (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when XDG_CONFIG_HOME is set and both global and a project config exist we merge with project as priority"
     (with-redefs [config/get-property (constantly "/home/user")
-                  shared/file-exists? #(or (= (h/file-path "/tmp/config/clojure-lsp/config.edn") (str %))
+                  shared/file-exists? #(or (= (h/file-path "/tmp/config/clojure-lsp") (str %))
+                                           (= (h/file-path "/tmp/config/clojure-lsp/config.edn") (str %))
                                            (= (h/file-path "/home/user/.config/clojure-lsp/config.edn") (str %))
                                            (= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %)))
                   config/get-env (constantly "/tmp/config")

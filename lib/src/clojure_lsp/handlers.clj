@@ -9,22 +9,25 @@
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.feature.completion :as f.completion]
-   [clojure-lsp.feature.dependency-content-reader :as f.dependency-content-reader]
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
+   [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [lsp4clj.protocols.feature-handler :as feature-handler]
    [lsp4clj.protocols.logger :as logger]
@@ -45,6 +48,14 @@
              (recur (min 200 (* 2 backoff#)))) ; 2^0, 2^1, ..., up to 200ms
            ~@body)))))
 
+(defn ^:private analyze-test-paths! [{:keys [db producer]}]
+  (let [project-files (-> (:analysis @db)
+                          (q/filter-project-analysis db)
+                          keys)]
+    (->> project-files
+         (map #(shared/filename->uri % db))
+         (clojure-producer/refresh-test-tree producer))))
+
 (defn initialize
   [project-root-uri
    client-capabilities
@@ -59,7 +70,22 @@
       client-settings
       {}
       work-done-token
-      components)))
+      components)
+    (when (settings/get db [:lint-project-files-after-startup?] true)
+      (async/go
+        (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db)))
+    (async/go
+      (f.clojuredocs/refresh-cache! components))
+    (async/go
+      (let [settings (:settings @db)]
+        (when (stubs/check-stubs? settings)
+          (stubs/generate-and-analyze-stubs! settings components))))
+    (async/go
+      (logger/info "Analyzing test paths for project root" project-root-uri)
+      (analyze-test-paths! components))
+    (when (settings/get db [:java :download-jdk-source?] false)
+      (async/go
+        (f.java-interop/download-and-analyze! components)))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)
@@ -96,7 +122,7 @@
     (mapv (fn [reference]
             {:uri (-> (:filename reference)
                       (shared/filename->uri db)
-                      (f.dependency-content-reader/uri->translated-uri components))
+                      (f.java-interop/uri->translated-uri components))
              :range (shared/->range reference)})
           (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db))))
 
@@ -115,7 +141,7 @@
     (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
       {:uri (-> (:filename definition)
                 (shared/filename->uri db)
-                (f.dependency-content-reader/uri->translated-uri components))
+                (f.java-interop/uri->translated-uri components))
        :range (shared/->range definition)})))
 
 (defn declaration [{:keys [textDocument position]} {:keys [db] :as components}]
@@ -123,7 +149,7 @@
     (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
       {:uri (-> (:filename declaration)
                 (shared/filename->uri db)
-                (f.dependency-content-reader/uri->translated-uri components))
+                (f.java-interop/uri->translated-uri components))
        :range (shared/->range declaration)})))
 
 (defn implementation [{:keys [textDocument position]} {:keys [db] :as components}]
@@ -131,7 +157,7 @@
     (mapv (fn [implementation]
             {:uri (-> (:filename implementation)
                       (shared/filename->uri db)
-                      (f.dependency-content-reader/uri->translated-uri components))
+                      (f.java-interop/uri->translated-uri components))
              :range (shared/->range implementation)})
           (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col db))))
 
@@ -278,7 +304,7 @@
     (f.format/range-formatting doc-id format-pos db/db)))
 
 (defn dependency-contents [doc-id components]
-  (f.dependency-content-reader/read-content! doc-id components))
+  (f.java-interop/read-content! doc-id components))
 
 (defn code-actions
   [{:keys [range context textDocument]}]

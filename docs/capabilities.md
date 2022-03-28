@@ -24,7 +24,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | workspace/workspaceFolders             |      |                                                                               |
 | workspace/didChangeWorkspaceFolders    |      |                                                                               |
 | workspace/didChangeConfiguration       | √    | Currently does nothing but log                                                |
-| workspace/configuration                |      |                                                                               |
+| workspace/configuration                |      | We use a more robust settings concept (.lsp/config.edn)                       |
 | workspace/didChangeWatchedFiles        | √    |                                                                               |
 | workspace/symbol                       | √    |                                                                               |
 | workspace/executeCommand               | √    | See [Extra capabilities](#extra-capabilities)                                 |
@@ -41,9 +41,9 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/hover                     | √    |                                                                               |
 | textDocument/signatureHelp             | √    | Missing support for active parameter ATM                                      |
 | textDocument/declaration               | √    | Show where the symbol was declared on the file, like alias/refer  definitions |
-| textDocument/definition                | √    | TODO: Find java classes definition                                            |
+| textDocument/definition                | √    |                                                                               |
 | textDocument/typeDefinition            |      |                                                                               |
-| textDocument/implementation            | √    | Implementation of defprotocols showing deftypes and defrecords                |
+| textDocument/implementation            | √    | Implementation of defprotocols/defmulti showing deftypes and defrecords       |
 | textDocument/references                | √    |                                                                               |
 | textDocument/documentHighlight         | √    |                                                                               |
 | textDocument/documentSymbol            | √    |                                                                               |

@@ -1,14 +1,9 @@
 (ns clojure-lsp.crawler
   (:require
    [clojure-lsp.classpath :as classpath]
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
-   [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
@@ -20,14 +15,6 @@
    (java.net URI)))
 
 (set! *warn-on-reflection* true)
-
-(defn ^:private analyze-test-paths! [{:keys [db producer]}]
-  (let [project-files (-> (:analysis @db)
-                          (q/filter-project-analysis db)
-                          keys)]
-    (->> project-files
-         (map #(shared/filename->uri % db))
-         (clojure-producer/refresh-test-tree producer))))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
@@ -222,17 +209,4 @@
     (logger/info "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
-    (when-not (:api? @db)
-      (when (get settings :lint-project-files-after-startup? true)
-        (async/go
-          (f.diagnostic/lint-project-files! (-> @db :settings :source-paths) db)))
-      (async/go
-        (f.clojuredocs/refresh-cache! components))
-      (async/go
-        (let [settings (:settings @db)]
-          (when (stubs/check-stubs? settings)
-            (stubs/generate-and-analyze-stubs! settings components))))
-      (async/go
-        (logger/info "Analyzing test paths for project root" root-path)
-        (analyze-test-paths! components)))
     (producer/publish-progress producer 100 "Project analyzed" progress-token)))

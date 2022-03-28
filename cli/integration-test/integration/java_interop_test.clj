@@ -9,10 +9,10 @@
 
 (lsp/clean-after-test)
 
-#_(deftest find-definition-of-java-class-when-source-exists
+(deftest find-definition-of-java-class-when-source-exists
     (lsp/start-process!)
     (lsp/request! (fixture/initialize-request
-                    {:initializationOptions fixture/default-init-options}))
+                    {:initializationOptions (dissoc fixture/default-init-options :java)}))
     (lsp/notify! (fixture/initialized-notification))
     (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 
@@ -27,7 +27,7 @@
   (h/delete-project-file "../../.lsp/.cache/java")
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
-                  {:initializationOptions fixture/default-init-options}))
+                  {:initializationOptions (dissoc fixture/default-init-options :java)}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 

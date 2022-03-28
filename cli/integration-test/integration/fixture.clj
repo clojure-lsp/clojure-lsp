@@ -12,7 +12,8 @@
      :params params
      :id (lsp/inc-request-id)}))
 
-(def default-init-options {:lint-project-files-after-startup? false})
+(def default-init-options {:lint-project-files-after-startup? false
+                           :java false})
 
 (defn initialize-request
   ([]

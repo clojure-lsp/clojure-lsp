@@ -140,4 +140,4 @@
                                    (when download-jdk-source? (download-jdk-source jdk-source-uri db)))]
       (logger/info (str "[JDK] Analyzing JDK source found at " jdk-source-uri "..."))
       (analyze-jdk-source! jdk-source-uri' db)
-      (logger/info (str "[JDK] Source found at " jdk-source-uri " analyzed successfully.")))))
+      (logger/info "[JDK] Source analyzed successfully."))))

@@ -85,7 +85,10 @@
       (analyze-test-paths! components))
     (when (settings/get db [:java :download-jdk-source?] false)
       (async/go
-        (f.java-interop/download-and-analyze! components)))))
+        (f.java-interop/download-and-analyze! components)))
+    (when-let [jdk-source-path (settings/get db [:java :jdk-source-path] nil)]
+      (async/go
+        (f.java-interop/analyze-jdk-source-from-path! jdk-source-path db)))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)

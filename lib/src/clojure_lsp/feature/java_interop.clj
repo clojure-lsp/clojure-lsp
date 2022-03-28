@@ -120,6 +120,12 @@
         (update :analysis merge analysis)
         (db/upsert-cache! db))))
 
+(defn analyze-jdk-source-from-path!
+  [path db]
+  (logger/info "[JDK] Analyzing JDK source...")
+  (analyze-jdk-source! path db)
+  (logger/info "[JDK] Source analyzed successfully."))
+
 (defn download-and-analyze! [{:keys [db]}]
   (let [jdk-download-url (settings/get db [:java :jdk-source-download-uri] default-jdk-source-download-uri)
         global-cache-dir (config/global-lsp-cache-dir)
@@ -130,6 +136,4 @@
       (do
         (download-jdk! jdk-download-url dest-jdk-file)
         (spit dest-jdk-result-file "1")))
-    (logger/info "[JDK] Analyzing JDK source...")
-    (analyze-jdk-source! (.getCanonicalPath dest-jdk-file) db)
-    (logger/info "[JDK] Source analyzed successfully.")))
+    (analyze-jdk-source-from-path! (.getCanonicalPath dest-jdk-file) db)))

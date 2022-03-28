@@ -20,7 +20,7 @@
  :hover {:hide-file-location? false
          :arity-on-same-line? false
          :clojuredocs true}
- :java {:jdk-source-download-uri "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip"
+ :java {:jdk-source-uri "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip" ; "file:///usr/lib/jvm/java-17-openjdk/lib/src.zip"
         :download-jdk-source? false}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true

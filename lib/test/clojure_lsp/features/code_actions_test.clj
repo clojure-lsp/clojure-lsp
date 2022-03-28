@@ -115,7 +115,7 @@
                                       db/db))))
   (testing "when it has unresolved-namespace and can find namespace"
     (h/assert-contains-submaps
-      [{:title "Add require '[some-ns :as sns]'"
+      [{:title "Add require '[some-ns :as sns]' × 1"
         :command {:command "add-require-suggestion"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")

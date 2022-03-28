@@ -503,13 +503,13 @@
           (map :name))
         analysis))
 
-(defn find-all-aliases [analysis]
+(defn find-all-aliases [analysis db]
   (into #{}
         (comp
           (mapcat val)
           (filter #(identical? :namespace-alias (:bucket %)))
           (filter :alias))
-        analysis))
+        (filter-project-analysis analysis db)))
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]

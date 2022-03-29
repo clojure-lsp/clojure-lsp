@@ -43,16 +43,6 @@ jobs:
           path: clojure-lsp-standalone.jar
           name: clojure-lsp-standalone.jar
 
-      - name: Notify Clojurians Slack
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.CLOJURIANS_SLACK_WEBHOOK }}
-          SLACK_USERNAME: "clojure-lsp-bot"
-          SLACK_ICON_EMOJI: ":clojure-lsp:"
-          SLACK_TITLE: "clojure-lsp-standalone.jar"
-          SLACK_MESSAGE: "https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-standalone.jar"
-          MSG_MINIMAL: true
-
   linux-amd64:
     needs: [build-cli-jar]
     continue-on-error: true
@@ -98,24 +88,11 @@ jobs:
         with:
           file: clojure-lsp
 
-      - name: Zip binary
-        run: zip clojure-lsp-native-linux-amd64.zip clojure-lsp
-
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: clojure-lsp-native-linux-amd64.zip
+          name: clojure-lsp
           path: clojure-lsp-native-linux-amd64.zip
-
-      - name: Notify Clojurians Slack
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.CLOJURIANS_SLACK_WEBHOOK }}
-          SLACK_USERNAME: "clojure-lsp-bot"
-          SLACK_ICON_EMOJI: ":clojure-lsp:"
-          SLACK_TITLE: "clojure-lsp-native-linux-amd64.zip"
-          SLACK_MESSAGE: "https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-linux-amd64.zip"
-          MSG_MINIMAL: true
 
   linux-amd64-static:
     needs: [build-cli-jar]
@@ -168,16 +145,6 @@ jobs:
           path: clojure-lsp
           name: clojure-lsp-native-static-linux-amd64.zip
 
-      - name: Notify Clojurians Slack
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.CLOJURIANS_SLACK_WEBHOOK }}
-          SLACK_USERNAME: "clojure-lsp-bot"
-          SLACK_ICON_EMOJI: ":clojure-lsp:"
-          SLACK_TITLE: "clojure-lsp-native-static-linux-amd64.zip"
-          SLACK_MESSAGE: "https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-static-linux-amd64.zip"
-          MSG_MINIMAL: true
-
   macos:
     needs: [build-cli-jar]
     continue-on-error: true
@@ -217,31 +184,11 @@ jobs:
         run: |
           make native-cli
 
-      - name: Zip binary
-        run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
-
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          path: clojure-lsp-native-macos-amd64.zip
+          path: clojure-lsp
           name: clojure-lsp-native-macos-amd64.zip
-
-  macos-notify:
-    needs: [macos]
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-      - name: Notify Clojurians Slack
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.CLOJURIANS_SLACK_WEBHOOK }}
-          SLACK_USERNAME: "clojure-lsp-bot"
-          SLACK_ICON_EMOJI: ":clojure-lsp:"
-          SLACK_TITLE: "clojure-lsp-native-macos-amd64.zip"
-          SLACK_MESSAGE: "https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-macos-amd64.zip"
-          MSG_MINIMAL: true
 
   windows:
     needs: [build-cli-jar]
@@ -308,18 +255,14 @@ jobs:
         with:
           file: clojure-lsp.exe
 
-      - name: Zip binary
-        run: |
-          jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
-
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          path: clojure-lsp-native-windows-amd64.zip
+          path: clojure-lsp.exe
           name: clojure-lsp-native-windows-amd64.zip
 
-  windows-notify:
-    needs: [windows]
+  notify:
+    needs: [build-cli-jar, linux-amd64, linux-amd64-static, macos]
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
@@ -331,6 +274,11 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.CLOJURIANS_SLACK_WEBHOOK }}
           SLACK_USERNAME: "clojure-lsp-bot"
           SLACK_ICON_EMOJI: ":clojure-lsp:"
-          SLACK_TITLE: "clojure-lsp-native-windows-amd64.zip"
-          SLACK_MESSAGE: "https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-windows-amd64.zip"
+          SLACK_TITLE: "New nightly build"
+          SLACK_MESSAGE: |
+https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-standalone.jar
+https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-linux-amd64.zip
+https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-static-linux-amd64.zip
+https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-macos-amd64.zip
+https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-windows-amd64.zip
           MSG_MINIMAL: true

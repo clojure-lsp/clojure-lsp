@@ -14,8 +14,10 @@ brew install clojure-lsp/brew/clojure-lsp-native
 ## Script
 
 ```bash
-sudo bash < <(curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install)
+bash <(curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install)
 ```
+
+Note: for nightly builds pass `--version nightly` option to install script.
 
 ## Nix
 

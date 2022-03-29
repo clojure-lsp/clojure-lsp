@@ -12,6 +12,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def startup-paths-logger-tag (shared/colorize "[Startup]" :cyan))
+
 (def default-source-paths #{"src" "test"})
 
 (def default-lein-source-paths ["src" "src/main/clojure"])
@@ -203,13 +205,13 @@
 
 (defn process-source-paths [root-path classpath settings given-source-paths]
   (let [{:keys [origins source-paths classpath-paths deps-source-paths lein-source-paths bb-source-paths]} (resolve-source-paths root-path classpath given-source-paths settings)]
-    (when (contains? origins :settings) (logger/info "Using given source-paths:" given-source-paths))
-    (when (contains? origins :classpath) (logger/info "Using source-paths from classpath:" classpath-paths))
-    (when (contains? origins :deps-edn) (logger/info "Manually resolved source-paths from deps.edn:" deps-source-paths))
-    (when (contains? origins :leiningen) (logger/info "Manually resolved source-paths from project.clj:" lein-source-paths))
-    (when (contains? origins :bb) (logger/info "Manually resolved source-paths from bb.edn:" bb-source-paths))
-    (when (contains? origins :empty-deps-edn) (logger/info "Empty deps.edn source-paths, using default source-paths:" default-source-paths))
-    (when (contains? origins :empty-leiningen) (logger/info "Empty project.clj source-paths, using default source-paths:" default-source-paths))
-    (when (contains? origins :empty-bb) (logger/info "Empty bb.edn paths, using default source-paths:" default-source-paths))
-    (when (contains? origins :default) (logger/info "Using default source-paths:" default-source-paths))
+    (when (contains? origins :settings) (logger/info startup-paths-logger-tag "Using given source-paths:" given-source-paths))
+    (when (contains? origins :classpath) (logger/info startup-paths-logger-tag "Using source-paths from classpath:" classpath-paths))
+    (when (contains? origins :deps-edn) (logger/info startup-paths-logger-tag "Manually resolved source-paths from deps.edn:" deps-source-paths))
+    (when (contains? origins :leiningen) (logger/info startup-paths-logger-tag "Manually resolved source-paths from project.clj:" lein-source-paths))
+    (when (contains? origins :bb) (logger/info startup-paths-logger-tag "Manually resolved source-paths from bb.edn:" bb-source-paths))
+    (when (contains? origins :empty-deps-edn) (logger/info startup-paths-logger-tag "Empty deps.edn source-paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :empty-leiningen) (logger/info startup-paths-logger-tag "Empty project.clj source-paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :empty-bb) (logger/info startup-paths-logger-tag "Empty bb.edn paths, using default source-paths:" default-source-paths))
+    (when (contains? origins :default) (logger/info startup-paths-logger-tag "Using default source-paths:" default-source-paths))
     (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) source-paths)))

@@ -72,6 +72,20 @@
     (.indexOf ^PersistentVector token-types token-type)
     (token-modifiers->decimal-bit token-modifier)]))
 
+(defn ^:private java-class-element->absolute-tokens
+  [element]
+  (cond
+    ;; TODO Color only until /
+    ;; clj-kondo needs to return more info to handle File/createTempFile and java.io.File/createTempFile
+    ;;
+    ;; (string/includes? class "/")
+    ;; (let [slash (string/index-of class "/")
+    ;;       class-pos (assoc element :name-end-col slash)]
+    ;;   [(element->absolute-token class-pos :class)])
+
+    :else
+    [(element->absolute-token element :class)]))
+
 (defn ^:private var-definition-element->absolute-tokens
   [{:keys [defined-by] :as element}]
   (cond
@@ -149,11 +163,9 @@
        (map
          (fn [{:keys [bucket] :as element}]
            (cond
-             ;; TODO needs better way to know it's class related
-             ;; (and (= bucket :var-usages)
-             ;;      (not alias)
-             ;;      (Character/isUpperCase (.charAt ^String (str name) 0)))
-             ;; [(element->absolute-token element :class)]
+             (contains? #{:java-class-definitions
+                          :java-class-usages} bucket)
+             (java-class-element->absolute-tokens element)
 
              (= bucket :var-usages)
              (var-usage-element->absolute-tokens element)

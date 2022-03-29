@@ -32,7 +32,7 @@
         (delete-directory-recursive output-dir)
         (logger/info (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
         (shared/logging-time
-          "Stub generation process took %s secs."
+          "Stub generation process took %s."
           (stub/generate! {:output-dir output-dir
                            :namespaces namespaces
                            :classpath classpath
@@ -46,7 +46,7 @@
 (defn ^:private analyze-stubs!
   [dirs {:keys [db] :as components}]
   (let [result (shared/logging-time
-                 "Stubs analyzed, took %s secs."
+                 "Stubs analyzed, took %s."
                  (lsp.kondo/run-kondo-on-paths! dirs true components))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages))

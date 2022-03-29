@@ -6,7 +6,7 @@
 (set! *warn-on-reflection* true)
 
 (defn top? [loc]
-  (= :forms (z/tag (z/up loc))))
+  (identical? :forms (z/tag (z/up loc))))
 
 (defn to-top [loc]
   (when loc
@@ -42,7 +42,7 @@
   satisifies `inherits?`, descending into that node, and recurring. As such, it
   can be much faster than algorithms based on z/next*, which must inspect all
   children and grandchildren, even if information in the grandparent excludes
-  the entirely family."
+  the entire family."
   [start-zloc inherits?]
   (loop [zloc (cond-> start-zloc
                 (= :forms (z/tag start-zloc)) z/down*)]

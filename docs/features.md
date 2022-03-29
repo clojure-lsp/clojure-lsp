@@ -40,6 +40,10 @@ Also, it's possible to live rename symbols on the same buffer with `linkedEditin
 
 <img src="../images/features/hover-clojuredocs.png">
 
+### Java support
+
+<img src="../images/features/java-find-definition.gif" width=340>
+
 ### Completion
 
 <img src="../images/features/completion.gif" width=340>

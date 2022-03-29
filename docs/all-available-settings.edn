@@ -5,13 +5,14 @@
  :project-specs [] ;; Check the default at clojure-lsp.crawler/default-project-specs
  :ignore-classpath-directories false
  :use-source-paths-from-classpath true
- :lint-project-files-after-startup? true ;; false for clojure-lsp.api usage
+ :lint-project-files-after-startup? true
  :notify-references-on-file-change true
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""
-                       :async-custom-lint? true}}
- :clean {:ns-inner-blocks-indentation :next-line
+                       :async-custom-lint? false}}
+ :clean {:automatically-after-ns-refactor true
+         :ns-inner-blocks-indentation :next-line
          :sort {:ns true
                 :require true
                 :import true
@@ -19,6 +20,8 @@
  :hover {:hide-file-location? false
          :arity-on-same-line? false
          :clojuredocs true}
+ :java {:jdk-source-uri "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip" ; "file:///usr/lib/jvm/java-17-openjdk/lib/src.zip"
+        :download-jdk-source? false}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
  :use-metadata-for-privacy? false

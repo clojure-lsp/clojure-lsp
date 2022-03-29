@@ -480,6 +480,18 @@
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
 
+;; Uncoment after clj-kondo solves https://github.com/clj-kondo/clj-kondo/issues/1632
+#_(deftest find-definition-form-java-class-usage
+  (h/load-code-and-locs (h/code "package project;"
+                                "class Foo {}") (h/file-uri "file:///project/Foo.java"))
+  (h/load-code-and-locs (h/code "123456") (h/file-uri "file:///project/Foo.class"))
+  (testing "Finding java source even if class exists"
+    (let [[[foo-r foo-c]] (h/load-code-and-locs (h/code "(ns a (:import (project Foo)))"
+                                                        "(|Foo.)") (h/file-uri "file:///a.clj"))]
+      (h/assert-submap
+        {} ;; TODO
+        (q/find-definition-from-cursor (:analysis @db/db) (h/file-path "/a.clj") foo-r foo-c db/db)))))
+
 (deftest find-declaration-from-cursor
   (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))
   (let [[[something-r something-c]

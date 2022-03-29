@@ -24,20 +24,26 @@
 (defn get-env [p]
   (System/getenv p))
 
-(defn ^:private get-home-config-file []
+(defn ^:private global-lsp-dir []
   (let [xdg-config-home (or (get-env "XDG_CONFIG_HOME")
                             (io/file (get-property "user.home") ".config"))
-        xdg-config (io/file xdg-config-home "clojure-lsp" "config.edn")
-        home-config (io/file (get-property "user.home") ".lsp" "config.edn")]
+        xdg-config (io/file xdg-config-home "clojure-lsp")
+        home-config (io/file (get-property "user.home") ".lsp")]
     (if (shared/file-exists? xdg-config)
       xdg-config
       home-config)))
 
-(defn ^:private resolve-home-config [^java.io.File home-dir-file]
-  (when (shared/file-exists? home-dir-file)
-    (read-edn-file home-dir-file)))
+(defn ^:private global-lsp-config-file []
+  (io/file (global-lsp-dir) "config.edn"))
 
-(defn ^:private resolve-project-configs [project-root-uri ^java.io.File home-dir-file]
+(defn global-lsp-cache-dir []
+  (io/file (global-lsp-dir) ".cache"))
+
+(defn ^:private resolve-global-config [^java.io.File global-lsp-config-file]
+  (when (shared/file-exists? global-lsp-config-file)
+    (read-edn-file global-lsp-config-file)))
+
+(defn ^:private resolve-project-configs [project-root-uri ^java.io.File global-lsp-config-file]
   (loop [dir (io/file (shared/uri->filename project-root-uri))
          configs []]
     (let [file (io/file dir ".lsp" "config.edn")
@@ -45,17 +51,17 @@
       (if parent
         (recur parent (cond->> configs
                         (and (shared/file-exists? file)
-                             (not (= (.getAbsolutePath home-dir-file) (.getAbsolutePath file))))
+                             (not (= (.getAbsolutePath global-lsp-config-file) (.getAbsolutePath file))))
                         (concat [(read-edn-file file)])))
         configs))))
 
 (defn resolve-for-root [project-root-uri]
   (when project-root-uri
-    (let [home-dir-file (get-home-config-file)
-          project-configs (resolve-project-configs project-root-uri home-dir-file)]
+    (let [global-lsp-config-file (global-lsp-config-file)
+          project-configs (resolve-project-configs project-root-uri global-lsp-config-file)]
       (reduce shared/deep-merge
               (merge {}
-                     (resolve-home-config home-dir-file))
+                     (resolve-global-config global-lsp-config-file))
               project-configs))))
 
 (defn ^:private jar-file->config
@@ -107,7 +113,7 @@
 
 (defn resolve-from-classpath-config-paths [classpath settings]
   (shared/logging-time
-    "Finding classpath configs took %s secs"
+    "Finding classpath configs took %s"
     (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
            merge-config nil]
       (if (and (coll? classpath-config-paths)
@@ -115,3 +121,10 @@
         (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
                cp-settings)
         (shared/deep-merge merge-config cp-settings)))))
+
+(defn cache-file [db]
+  (let [project-root (shared/uri->path (:project-root-uri @db))
+        overwritten-path (some-> (get @db [:settings :cache-path])
+                                 io/file)
+        default (io/file (str project-root) ".lsp" ".cache")]
+    ^java.io.File (or overwritten-path default)))

@@ -3,7 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.test-helper :as h]
-   [clojure.string :as clojure.string]
+   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
@@ -41,7 +41,7 @@
 (def refered-tokens
   (map #(->token % :function) refered-usages))
 
-(defn code [& strings] (clojure.string/join "\n" strings))
+(defn code [& strings] (string/join "\n" strings))
 
 (deftest usage->absolute-token
   (is (= [6 3 3 2 0]

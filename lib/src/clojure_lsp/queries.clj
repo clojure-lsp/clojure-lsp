@@ -52,13 +52,18 @@
                             (shared/uri->available-langs (:filename check-element)))]
     (seq (set/intersection match-file-lang check-file-lang))))
 
-(defn ^:private var-definition-names [{:keys [defined-by name]}]
+(defn var-definition-names [{:keys [defined-by name]}]
   (case defined-by
     clojure.core/defrecord
     , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
     clojure.core/deftype
     , #{name (symbol (str "->" name))}
     , #{name}))
+
+(defn ^:private var-usage-from-own-definition? [usage]
+  (and (:from-var usage)
+       (= (:from-var usage) (:name usage))
+       (= (:from usage) (:to usage))))
 
 (defn find-local-usages-under-form
   [analysis filename line column end-line end-column]
@@ -160,6 +165,17 @@
           (match-file-lang % element))
     analysis
     db))
+
+(defmethod find-definition :java-class-usages
+  [analysis element _db]
+  (->> analysis
+       (into []
+             (comp
+               (mapcat val)
+               (filter #(and (identical? :java-class-definitions (:bucket %))
+                             (safe-equal? (:class %) (:class element))))))
+       (sort-by (complement #(string/ends-with? (:filename %) ".java")))
+       first))
 
 (defmethod find-definition :default
   [_analysis element _db]
@@ -337,10 +353,7 @@
             (remove #(and exclude-declaration?
                           (or
                             (identical? :var-definitions (:bucket %))
-                            ;; usage from own definition
-                            (and (:from-var %)
-                                 (= (:from-var %) (:name element))
-                                 (= (:from %) (:ns element))))))
+                            (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :filename :name :row :col)))
           analysis)))
 
@@ -490,13 +503,13 @@
           (map :name))
         analysis))
 
-(defn find-all-aliases [analysis]
+(defn find-all-aliases [analysis db]
   (into #{}
         (comp
           (mapcat val)
           (filter #(identical? :namespace-alias (:bucket %)))
           (filter :alias))
-        analysis))
+        (filter-project-analysis analysis db)))
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]
@@ -533,9 +546,12 @@
           (comp
             (filter (comp #(identical? :unused-import %) :type))
             (remove (fn [finding]
-                      (some #(and (identical? :var-usages (:bucket %))
-                                  (safe-equal? (str (:class finding))
-                                               (str (:to %) "." (:name %))))
+                      (some #(or (and (identical? :var-usages (:bucket %))
+                                      (safe-equal? (str (:class finding))
+                                                   (str (:to %) "." (:name %))))
+                                 (and (identical? :java-class-usages (:bucket %))
+                                      (safe-equal? (str (:class finding))
+                                                   (:class %))))
                             local-analysis)))
             (map :class))
           (get findings filename))))
@@ -611,3 +627,16 @@
         (-> excluded-full-qualified-vars
             set
             (contains? fqsn)))))
+
+(defn xf-all-var-usages-to-namespaces [namespaces]
+  (comp
+    (mapcat val)
+    (filter #(identical? :var-usages (:bucket %)))
+    (filter #(contains? namespaces (:to %)))
+    (remove var-usage-from-own-definition?)))
+
+(def xf-all-keyword-usages
+  (comp
+    (mapcat val)
+    (filter #(identical? :keywords (:bucket %)))
+    (remove :reg)))

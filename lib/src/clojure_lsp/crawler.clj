@@ -1,13 +1,9 @@
 (ns clojure-lsp.crawler
   (:require
    [clojure-lsp.classpath :as classpath]
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
-   [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
@@ -20,13 +16,7 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private analyze-test-paths! [{:keys [db producer]}]
-  (let [project-files (-> (:analysis @db)
-                          (q/filter-project-analysis db)
-                          keys)]
-    (->> project-files
-         (map #(shared/filename->uri % db))
-         (clojure-producer/refresh-test-tree producer))))
+(def startup-logger-tag (shared/colorize "[Startup]" :cyan))
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file
@@ -35,7 +25,7 @@
 
 (defn ^:private analyze-source-paths! [paths {:keys [db] :as components}]
   (let [result (shared/logging-time
-                 "Project only paths analyzed, took %s secs"
+                 (str startup-logger-tag " Project only paths analyzed, took %s")
                  (lsp.kondo/run-kondo-on-paths! paths false components))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
@@ -60,7 +50,7 @@
   [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db producer] :as components}]
   (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage progress-token producer)
         result (shared/logging-time
-                 "External classpath paths analyzed, took %s secs. Caching for next startups..."
+                 "External classpath paths analyzed, took %s. Caching for next startups..."
                  (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback components))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages)
@@ -72,8 +62,8 @@
     analysis))
 
 (defn analyze-reference-filenames! [filenames db]
-  (let [result (shared/logging-time
-                 "Files analyzed, took %s secs"
+  (let [result (shared/logging-task
+                 :analyze-reference-files
                  (lsp.kondo/run-kondo-on-reference-filenames! filenames db))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
@@ -85,21 +75,29 @@
     (swap! db update :findings merge new-findings)
     analysis))
 
-(defn ^:private analyze-classpath! [root-path source-paths settings progress-token {:keys [db] :as components}]
+(defn ^:private analyze-classpath! [root-path source-paths classpath settings progress-token {:keys [db] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
     (logger/info "Analyzing classpath for project root" root-path)
-    (when-let [classpath (:classpath @db)]
+    (when classpath
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
             external-classpath (cond->> (->> classpath
                                              (remove (set source-paths-abs))
                                              (remove (set source-paths)))
                                  ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-            analysis (analyze-external-classpath! external-classpath 15 80 progress-token components)]
+            analysis (analyze-external-classpath! external-classpath 20 80 progress-token components)]
         (swap! db update :analysis merge analysis)
         (shared/logging-time
-          "Manual GC after classpath scan took %s secs"
+          "Manual GC after classpath scan took %s"
           (System/gc))
         (swap! db assoc :full-scan-analysis-startup true)))))
+
+(defn ^:private copy-configs-from-classpath! [classpath settings components]
+  (when (get settings :copy-kondo-configs? true)
+    (logger/info "Copying kondo configs from classpath to project if any...")
+    (when classpath
+      (shared/logging-time
+        "Copied kondo configs, took %s secs."
+        (lsp.kondo/run-kondo-copy-configs! classpath components)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
@@ -111,13 +109,12 @@
 (defn ^:private ensure-kondo-config-dir-exists!
   [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
-        project-root-path (shared/uri->path project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
       (create-kondo-folder! clj-kondo-folder)
-      (when (db/db-exists? project-root-path db)
-        (logger/info "Removing outdated cached lsp db...")
-        (db/remove-db! project-root-path db)))))
+      (when (db/db-exists? db)
+        (logger/info startup-logger-tag "Removing outdated cached lsp db...")
+        (db/remove-db! db)))))
 
 (defn ^:private load-db-cache! [root-path db]
   (when-let [db-cache (db/read-cache root-path db)]
@@ -184,7 +181,7 @@
                                 (= (:kondo-config-hash @db) kondo-config-hash))]
       (if use-db-analysis?
         (do
-          (logger/info "Using cached db for project root" root-path)
+          (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db) settings))))
         (do
@@ -194,9 +191,11 @@
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
                    :classpath classpath
-                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings))))
-          (when (= :project-and-deps (:project-analysis-type @db))
-            (analyze-classpath! root-path (-> @db :settings :source-paths) settings progress-token components))
+                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
+            (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
+            (copy-configs-from-classpath! classpath settings components)
+            (when (= :project-and-deps (:project-analysis-type @db))
+              (analyze-classpath! root-path (-> @db :settings :source-paths) classpath settings progress-token components)))
           (upsert-db-cache! db))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
@@ -209,17 +208,7 @@
                                           force-settings)
              :classpath-settings classpath-settings))
     (producer/publish-progress producer 95 "Analyzing project files" progress-token)
-    (logger/info "Analyzing source paths for project root" root-path)
+    (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
     (analyze-source-paths! (-> @db :settings :source-paths) components)
     (swap! db assoc :settings-auto-refresh? true)
-    (when-not (:api? @db)
-      (async/go
-        (f.clojuredocs/refresh-cache! components))
-      (async/go
-        (let [settings (:settings @db)]
-          (when (stubs/check-stubs? settings)
-            (stubs/generate-and-analyze-stubs! settings components))))
-      (async/go
-        (logger/info "Analyzing test paths for project root" root-path)
-        (analyze-test-paths! components)))
     (producer/publish-progress producer 100 "Project analyzed" progress-token)))

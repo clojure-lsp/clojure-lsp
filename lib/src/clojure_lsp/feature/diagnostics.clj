@@ -6,9 +6,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [com.climate.claypoole :as cp]
-   [lsp4clj.protocols.logger :as logger]
-   [medley.core :as medley]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -28,21 +26,20 @@
 (def deprecated-diagnostic-types
   #{:deprecated-var})
 
-(defn ^:private reg-unused-public-var-element! [element reg-finding! kondo-config]
-  (let [keyword-def? (boolean (:reg element))
-        finding {:filename (:filename element)
-                 :row (:name-row element)
-                 :col (:name-col element)
-                 :end-row (:name-end-row element)
-                 :end-col (:name-end-col element)
-                 :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
-                 :message (if keyword-def?
-                            (if (:ns element)
-                              (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
-                              (format "Unused public keyword ':%s'" (:name element)))
-                            (format "Unused public var '%s/%s'" (:ns element) (:name element)))
-                 :type :clojure-lsp/unused-public-var}]
-    (reg-finding! finding)))
+(defn ^:private unused-public-var->finding [element kondo-config]
+  (let [keyword-def? (boolean (:reg element))]
+    {:filename (:filename element)
+     :row (:name-row element)
+     :col (:name-col element)
+     :end-row (:name-end-row element)
+     :end-col (:name-end-col element)
+     :level (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)
+     :message (if keyword-def?
+                (if (:ns element)
+                  (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
+                  (format "Unused public keyword ':%s'" (:name element)))
+                (format "Unused public var '%s/%s'" (:ns element) (:name element)))
+     :type :clojure-lsp/unused-public-var}))
 
 (defn ^:private exclude-public-diagnostic-definition? [kondo-config definition]
   (let [excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
@@ -136,65 +133,58 @@
                 {:uri uri
                  :diagnostics []}))))
 
-(defn ^:private lint-project-files [paths db]
-  (doseq [path paths]
-    (doseq [file (file-seq (io/file path))]
-      (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename db)]
-        (when (not= :unknown (shared/uri->file-type uri))
-          (sync-lint-file! uri db))))))
-
-(defn ^:private pmap-light
-  "Call claypoole pmap with less threads than pmap to avoid topping cpu."
-  [f coll]
-  (let [threadpool-size (int (Math/ceil (/ (.. Runtime getRuntime availableProcessors) 3)))]
-    (cp/upmap threadpool-size f coll)))
-
 (defn ^:private unused-public-vars-lint!
-  [definitions project-analysis {:keys [config reg-finding!]} max-parallelize? db]
-  (let [parallelize-fn (if max-parallelize? pmap pmap-light)]
-    (->> definitions
-         (remove (partial exclude-public-diagnostic-definition? config))
-         (parallelize-fn #(when (= 0 (count (q/find-references project-analysis % false db)))
-                            %))
-         (remove nil?)
-         (mapv #(reg-unused-public-var-element! % reg-finding! config))
-         (group-by :filename))))
+  [var-defs kw-defs project-analysis {:keys [config reg-finding!]}]
+  (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
+        var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
+        var-usage-signature (juxt :to :name)
+        var-usages (into #{}
+                         (comp
+                           (q/xf-all-var-usages-to-namespaces var-nses)
+                           (map var-usage-signature))
+                         project-analysis)
+        var-used? (fn [var-def]
+                    (some (fn [var-name]
+                            (contains? var-usages [(:ns var-def) var-name]))
+                          (q/var-definition-names var-def)))
+        kw-signature (juxt :ns :name)
+        kw-definitions (remove (partial exclude-public-diagnostic-definition? config) kw-defs)
+        kw-usages (into #{}
+                        (comp
+                          q/xf-all-keyword-usages
+                          (map kw-signature))
+                        project-analysis)
+        kw-used? (fn [kw-def]
+                   (contains? kw-usages (kw-signature kw-def)))
+        findings (->> (concat (remove var-used? var-definitions)
+                              (remove kw-used? kw-definitions))
+                      (map (fn [unused-var]
+                             (unused-public-var->finding unused-var config))))]
+    (doseq [finding findings] ;; side-effect to register findings
+      (reg-finding! finding))
+    (group-by :filename findings)))
 
-(defn ^:private project-definitions [project-analysis]
-  (concat (q/find-all-var-definitions project-analysis)
-          (q/find-all-keyword-definitions project-analysis)))
-
-(defn ^:private file-definitions [project-analysis filename]
-  (concat (q/find-var-definitions project-analysis filename false)
-          (q/find-keyword-definitions project-analysis filename)))
+(defn ^:private file-var-definitions [project-analysis filename]
+  (q/find-var-definitions project-analysis filename false))
+(def ^:private file-kw-definitions q/find-keyword-definitions)
+(def ^:private project-var-definitions q/find-all-var-definitions)
+(def ^:private project-kw-definitions q/find-all-keyword-definitions)
 
 (defn lint-project-diagnostics!
   [new-analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis new-analysis db)
-        definitions (project-definitions project-analysis)]
-    (unused-public-vars-lint! definitions project-analysis kondo-ctx true db)))
-
-(defn lint-and-publish-project-diagnostics!
-  [paths new-analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis new-analysis db)
-        definitions (project-definitions project-analysis)
-        kondo-findings (unused-public-vars-lint! definitions project-analysis kondo-ctx false db)]
-    (loop [state-db @db]
-      (let [cur-findings (:findings state-db)
-            new-findings (merge-with #(->> (into %1 %2)
-                                           (medley/distinct-by (juxt :row :col :end-row :end-col)))
-                                     cur-findings
-                                     kondo-findings)]
-        (if (compare-and-set! db state-db (assoc state-db :findings new-findings))
-          (lint-project-files paths db)
-          (recur @db))))))
+  (let [project-analysis (q/filter-project-analysis new-analysis db)]
+    (shared/logging-time
+      "Linting whole project for unused-public-var took %s"
+      (unused-public-vars-lint! (project-var-definitions project-analysis)
+                                (project-kw-definitions project-analysis)
+                                project-analysis kondo-ctx))))
 
 (defn unused-public-var-lint-for-single-file!
   [filename analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis analysis db)
-        definitions (file-definitions project-analysis filename)]
-    (unused-public-vars-lint! definitions project-analysis kondo-ctx false db)))
+  (let [project-analysis (q/filter-project-analysis analysis db)]
+    (unused-public-vars-lint! (file-var-definitions project-analysis filename)
+                              (file-kw-definitions project-analysis filename)
+                              project-analysis kondo-ctx)))
 
 (defn unused-public-var-lint-for-single-file-merging-findings!
   [filename analysis kondo-ctx db]
@@ -205,3 +195,11 @@
          (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)
          vec)))
+
+(defn lint-project-files! [paths db]
+  (doseq [path paths]
+    (doseq [file (file-seq (io/file path))]
+      (let [filename (.getAbsolutePath ^java.io.File file)
+            uri (shared/filename->uri filename db)]
+        (when (not= :unknown (shared/uri->file-type uri))
+          (sync-lint-file! uri db))))))

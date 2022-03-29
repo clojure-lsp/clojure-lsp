@@ -1,17 +1,17 @@
 (ns clojure-lsp.diff
   (:require
    [clojure-lsp.shared :as shared]
-   [clojure.string :as str])
+   [clojure.string :as string])
   (:import
    [difflib DiffUtils]))
 
 (set! *warn-on-reflection* true)
 
 (defn- lines [s]
-  (str/split s #"\n"))
+  (string/split s #"\n"))
 
 (defn- unlines [ss]
-  (str/join "\n" ss))
+  (string/join "\n" ss))
 
 (defn unified-diff
   ([old-uri new-uri original revised project-root-uri]
@@ -40,22 +40,12 @@
                                 (shared/relativize-filepath project-path)))]
          unlines)))
 
-(def ^:private ansi-colors
-  {:reset "[0m"
-   :red   "[31m"
-   :green "[32m"
-   :yellow "[33m"
-   :cyan  "[36m"})
-
-(defn colorize [s color]
-  (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))
-
 (defn colorize-diff [diff-text]
   (-> diff-text
-      (str/replace #"(?m)^(rename from .*)$"  (colorize "$1" :yellow))
-      (str/replace #"(?m)^(rename to .*)$"  (colorize "$1" :yellow))
-      (str/replace #"(?m)^(\-\-\-\sa.*)$"  (colorize "$1" :yellow))
-      (str/replace #"(?m)^(\+\+\+\sb.*)$"  (colorize "$1" :yellow))
-      (str/replace #"(?m)^(@@.*@@)$"       (colorize "$1" :cyan))
-      (str/replace #"(?m)^(\+(?!\+\+).*)$" (colorize "$1" :green))
-      (str/replace #"(?m)^(-(?!--).*)$"    (colorize "$1" :red))))
+      (string/replace #"(?m)^(rename from .*)$"  (shared/colorize "$1" :yellow))
+      (string/replace #"(?m)^(rename to .*)$"  (shared/colorize "$1" :yellow))
+      (string/replace #"(?m)^(\-\-\-\sa.*)$"  (shared/colorize "$1" :yellow))
+      (string/replace #"(?m)^(\+\+\+\sb.*)$"  (shared/colorize "$1" :yellow))
+      (string/replace #"(?m)^(@@.*@@)$"       (shared/colorize "$1" :cyan))
+      (string/replace #"(?m)^(\+(?!\+\+).*)$" (shared/colorize "$1" :green))
+      (string/replace #"(?m)^(-(?!--).*)$"    (shared/colorize "$1" :red))))

@@ -103,7 +103,8 @@
         [{:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
         (handlers/references {:textDocument (h/file-uri "file:///a.clj")
-                              :position (h/->position bar-def-pos)}))))
+                              :position (h/->position bar-def-pos)}
+                             h/components))))
   (testing "when including declaration"
     (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
           _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" (h/file-uri "file:///b.clj"))]
@@ -114,7 +115,8 @@
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
         (handlers/references {:textDocument (h/file-uri "file:///a.clj")
                               :position (h/->position bar-def-pos)
-                              :context {:includeDeclaration true}})))))
+                              :context {:includeDeclaration true}}
+                             h/components)))))
 
 (deftest test-rename
   (let [[abar-start abar-stop
@@ -202,8 +204,8 @@
                                                 :newName "xx"}))]
         (is (= {(h/file-uri "file:///b.clj")
                 [{:range (h/->range balias-start balias-stop) :new-text "xx"}
-                 {:range (h/->range ba1-start bbar-stop) :new-text "xx/bar"}
-                 {:range (h/->range ba2-kw-start ba2-kw-stop) :new-text "::xx/bar"}]}
+                 {:range (h/->range ba2-kw-start ba2-kw-stop) :new-text "::xx/bar"}
+                 {:range (h/->range ba1-start bbar-stop) :new-text "xx/bar"}]}
                changes))))))
 
 (deftest test-code-actions-handle
@@ -223,7 +225,7 @@
                              "Date.")
                         (h/file-uri "file:///c.clj"))
   (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add require '[some-ns :as sns]'")
+    (is (some #(= (:title %) "Add require '[some-ns :as sns]' × 1")
               (handlers/code-actions
                 {:textDocument (h/file-uri "file:///c.clj")
                  :context {:diagnostics [{:code "unresolved-namespace"

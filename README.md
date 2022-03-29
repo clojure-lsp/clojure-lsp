@@ -40,6 +40,7 @@ You will get:
 - **Code lens**
 - **Semantic tokens (syntax highlighting)**
 - **Call hierarchy**
+- **Java interop**
 
 For all available documentation, check the official [website](https://clojure-lsp.io/).
 

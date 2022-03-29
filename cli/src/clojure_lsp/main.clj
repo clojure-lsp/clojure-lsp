@@ -66,7 +66,7 @@
     :parse-fn symbol
     :multi true
     :update-fn conj]
-   [nil "--filenames FILENAMES" "Optional filenames to apply the action. Fileanems can be either absolute/relatetive files or directories. This flag accepts filenames separated by comma or double colon."
+   [nil "--filenames FILENAMES" "Optional filenames to apply the action. Filenames can be either absolute/relatetive files or directories. This flag accepts filenames separated by comma or double colon."
     :id :filenames
     :validate [#(not (string/includes? (str %) " ")) "Filenames should be separated by comma or double colon."]
     :assoc-fn #(assoc %1 %2 (->> (if (string/includes? %3 ",")

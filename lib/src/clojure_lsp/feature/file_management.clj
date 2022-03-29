@@ -24,14 +24,16 @@
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn did-open [uri text db allow-create-ns]
-  (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
-    (swap! db (fn [state-db]
-                (-> state-db
-                    (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                    (update-analysis uri (:analysis kondo-result))
-                    (update-findings uri (:findings kondo-result))
-                    (assoc :kondo-config (:config kondo-result)))))
-    (f.diagnostic/async-lint-file! uri db))
+  (shared/logging-task
+    :did-open
+    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
+      (swap! db (fn [state-db]
+                  (-> state-db
+                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
+                      (update-analysis uri (:analysis kondo-result))
+                      (update-findings uri (:findings kondo-result))
+                      (assoc :kondo-config (:config kondo-result)))))
+      (f.diagnostic/async-lint-file! uri db)))
   (when-let [new-ns (and allow-create-ns
                          (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
@@ -139,24 +141,26 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]} {:keys [producer db] :as components}]
-  (loop [state-db @db]
-    (when (>= version (get-in state-db [:documents uri :v] -1))
-      (when-let [kondo-result (shared/logging-time
-                                (str "changes analyzed by clj-kondo took %s secs")
-                                (lsp.kondo/run-kondo-on-text! text uri db))]
-        (let [filename (shared/uri->filename uri)
-              old-local-analysis (get-in @db [:analysis filename])]
-          (if (compare-and-set! db state-db (-> state-db
-                                                (update-analysis uri (:analysis kondo-result))
-                                                (update-findings uri (:findings kondo-result))
-                                                (update :processing-changes disj uri)
-                                                (assoc :kondo-config (:config kondo-result))))
-            (do
-              (f.diagnostic/sync-lint-file! uri db)
-              (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
-              (clojure-producer/refresh-test-tree producer [uri]))
-            (recur @db)))))))
+  (shared/logging-task
+    :analyze-file
+    (loop [state-db @db]
+      (when (>= version (get-in state-db [:documents uri :v] -1))
+        (when-let [kondo-result (shared/logging-time
+                                  (str "changes analyzed by clj-kondo took %s")
+                                  (lsp.kondo/run-kondo-on-text! text uri db))]
+          (let [filename (shared/uri->filename uri)
+                old-local-analysis (get-in @db [:analysis filename])]
+            (if (compare-and-set! db state-db (-> state-db
+                                                  (update-analysis uri (:analysis kondo-result))
+                                                  (update-findings uri (:findings kondo-result))
+                                                  (update :processing-changes disj uri)
+                                                  (assoc :kondo-config (:config kondo-result))))
+              (do
+                (f.diagnostic/sync-lint-file! uri db)
+                (when (settings/get db [:notify-references-on-file-change] true)
+                  (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
+                (clojure-producer/refresh-test-tree producer [uri]))
+              (recur @db))))))))
 
 (defn did-change [uri changes version db]
   (let [old-text (get-in @db [:documents uri :text])
@@ -170,19 +174,22 @@
                                         :version version})))
 
 (defn analyze-watched-created-files! [uris {:keys [db producer] :as components}]
-  (let [filenames (map shared/uri->filename uris)
-        result (shared/logging-time
-                 "Created watched files analyzed, took %s secs"
-                 (lsp.kondo/run-kondo-on-paths! filenames false components))
-        analysis (->> (:analysis result)
-                      lsp.kondo/normalize-analysis
-                      (group-by :filename))]
-    (swap! db (fn [state-db]
-                (-> state-db
-                    (update :analysis merge analysis)
-                    (assoc :kondo-config (:config result))
-                    (update :findings merge (group-by :filename (:findings result))))))
-    (clojure-producer/refresh-test-tree producer uris)))
+  (shared/logging-task
+    :analyze-created-files-in-watched-dir
+    (let [filenames (map shared/uri->filename uris)
+          result (shared/logging-time
+                   "Created watched files analyzed, took %s"
+                   (lsp.kondo/run-kondo-on-paths! filenames false components))
+          analysis (->> (:analysis result)
+                        lsp.kondo/normalize-analysis
+                        (group-by :filename))]
+      (swap! db (fn [state-db]
+                  (-> state-db
+                      (update :analysis merge analysis)
+                      (assoc :kondo-config (:config result))
+                      (update :findings merge (group-by :filename (:findings result))))))
+      (f.diagnostic/lint-project-files! filenames db)
+      (clojure-producer/refresh-test-tree producer uris))))
 
 (defn did-change-watched-files [changes db]
   (doseq [{:keys [uri type]} changes]
@@ -193,23 +200,27 @@
                                  [{:text (slurp filename)}]
                                  (inc (get-in @db [:documents uri :v] 0))
                                  db)
-      :deleted (let [filename (shared/uri->filename uri)]
-                 (swap! db (fn [state-db]
-                             (-> state-db
-                                 (shared/dissoc-in [:documents uri])
-                                 (shared/dissoc-in [:analysis filename])
-                                 (shared/dissoc-in [:findings filename]))))))))
-
-(defn did-close [uri db]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get db [:source-paths])]
-    (when (and (not (shared/external-filename? filename source-paths))
-               (not (shared/file-exists? (io/file filename))))
-      (swap! db (fn [state-db] (-> state-db
+      :deleted (shared/logging-task
+                 :delete-watched-file
+                 (let [filename (shared/uri->filename uri)]
+                   (swap! db (fn [state-db]
+                               (-> state-db
                                    (shared/dissoc-in [:documents uri])
                                    (shared/dissoc-in [:analysis filename])
-                                   (shared/dissoc-in [:findings filename]))))
-      (f.diagnostic/clean! uri db))))
+                                   (shared/dissoc-in [:findings filename])))))))))
+
+(defn did-close [uri db]
+  (shared/logging-task
+    :did-close
+    (let [filename (shared/uri->filename uri)
+          source-paths (settings/get db [:source-paths])]
+      (when (and (not (shared/external-filename? filename source-paths))
+                 (not (shared/file-exists? (io/file filename))))
+        (swap! db (fn [state-db] (-> state-db
+                                     (shared/dissoc-in [:documents uri])
+                                     (shared/dissoc-in [:analysis filename])
+                                     (shared/dissoc-in [:findings filename]))))
+        (f.diagnostic/clean! uri db)))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -218,3 +229,8 @@
       (do
         (did-open uri (slurp uri) db false)
         (get-in @db [:documents uri :text]))))
+
+(defn did-save [uri db]
+  (shared/logging-task
+    :did-save
+    (swap! db #(assoc-in % [:documents uri :saved-on-disk] true))))

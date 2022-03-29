@@ -174,7 +174,7 @@
   [new-analysis kondo-ctx db]
   (let [project-analysis (q/filter-project-analysis new-analysis db)]
     (shared/logging-time
-      "Linting whole project for unused-public-var took %s secs"
+      "Linting whole project for unused-public-var took %s"
       (unused-public-vars-lint! (project-var-definitions project-analysis)
                                 (project-kw-definitions project-analysis)
                                 project-analysis kondo-ctx))))

@@ -356,8 +356,8 @@
 (defn clojure-lsp-version []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 
-(defn start-time->end-time-seconds [start-time]
-  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
+(defn start-time->end-time-ms [start-time]
+  (format "%.0fms" (float (/ (- (System/nanoTime) start-time) 1000000))))
 
 (defmacro logging-time
   "Executes `body` logging `message` formatted with the time spent
@@ -367,9 +367,28 @@
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(logger/info (format  ~message (start-time->end-time-seconds ~start-sym)))
+          `(logger/info (format  ~message (start-time->end-time-ms ~start-sym)))
           (meta &form))
        result#)))
+
+(defmacro logging-results
+  "Executes `body`, passing the results to `results-fn`, which should return a
+  results message string. Logs `message` formatted with the time spent from body
+  and the results message."
+  [message results-fn & body]
+  (let [start-sym (gensym "start-time")
+        results-msg (gensym "results-msg")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)
+           ~results-msg (~results-fn result#)]
+       ~(with-meta
+          `(logger/info (format ~message (start-time->end-time-ms ~start-sym) ~results-msg))
+          (meta &form))
+       result#)))
+
+(defmacro logging-task [task-id & body]
+  (let [msg (str task-id " %s")]
+    (with-meta `(logging-time ~msg ~@body) (meta &form))))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element

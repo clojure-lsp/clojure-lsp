@@ -32,4 +32,4 @@
   (linked-editing-ranges [this doc])
   ;; (did-delete-files [this doc])
   (workspace-symbols [this doc])
-  (range-formatting [this doc-id format-pos]))
+  (range-formatting [this doc]))

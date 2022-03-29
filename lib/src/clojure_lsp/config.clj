@@ -113,7 +113,7 @@
 
 (defn resolve-from-classpath-config-paths [classpath settings]
   (shared/logging-time
-    "Finding classpath configs took %s secs"
+    "Finding classpath configs took %s"
     (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
            merge-config nil]
       (if (and (coll? classpath-config-paths)

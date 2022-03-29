@@ -15,7 +15,7 @@ print_help() {
     echo "Installs latest (or specific) version of clojure-lsp. Installation directory defaults to $default_install_dir."
     echo -e
     echo "Usage:"
-    echo "install [--dir <dir>] [--download-dir <download-dir>] [--version <version>] [--checksum <checksum>] [--static]"
+    echo "install [--dir <dir>] [--download-dir <download-dir>] [--version <version> or \"nightly\"] [--checksum <checksum>] [--static]"
     echo -e
     echo "Defaults:"
     echo " * Installation directory: ${default_install_dir}"
@@ -93,7 +93,7 @@ ext="zip"
 util="$(which unzip) -qqo"
 
 case "$platform-$static_binary" in
-    linux-true) filename="clojure-lsp-native-$platform-$arch-static."$ext
+    linux-true) filename="clojure-lsp-native-static-$platform-$arch."$ext
                 ;;
     *-true)     >&2 echo "Static binaries are only available in Linux platform! Using the non-static one..."
                 filename="clojure-lsp-native-$platform-$arch."$ext
@@ -102,7 +102,11 @@ case "$platform-$static_binary" in
                 ;;
 esac
 
-download_url="https://github.com/clojure-lsp/clojure-lsp/releases/download/$version/$filename"
+if [[ "$version" == "nightly" ]]; then
+    download_url="https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/$filename"
+else
+    download_url="https://github.com/clojure-lsp/clojure-lsp/releases/download/$version/$filename"
+fi
 
 # Running this part in a subshell so when it finishes we go back to the previous directory
 mkdir -p "$download_dir" && (
@@ -130,6 +134,10 @@ then
         mv -f "$install_dir/clojure-lsp" "$install_dir/clojure-lsp.old"
     fi
     mv -f "$download_dir/clojure-lsp" "$install_dir/clojure-lsp"
+fi
+
+if [[ "$version" == "nightly" ]]; then
+    chmod +x "$install_dir/clojure-lsp"
 fi
 
 echo "Successfully installed clojure-lsp in $install_dir"

@@ -162,13 +162,10 @@ jobs:
         with:
           file: clojure-lsp
 
-      - name: Zip binary
-        run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
-
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          path: clojure-lsp-native-static-linux-amd64.zip
+          path: clojure-lsp
           name: clojure-lsp-native-static-linux-amd64.zip
 
       - name: Notify Clojurians Slack

@@ -49,8 +49,9 @@
   (let [waiting-start-sym (gensym "waiting-start-time")
         start-sym (gensym "start-time")
         backoff-sym (gensym "backoff")
-        process-msg (str (shared/colorize task-id shared/task-logger-color) " %s")
-        wait-and-process-msg (str task-id " %s - waited %s")]
+        task-id-msg (shared/colorize task-id shared/task-logger-color)
+        process-msg (str task-id-msg " %s")
+        wait-and-process-msg (str task-id-msg " %s - waited %s")]
     `(let [~waiting-start-sym (System/nanoTime)]
        (loop [~backoff-sym backoff-start]
          (if (> (quot (- (System/nanoTime) ~waiting-start-sym) 1000000) 60000) ; one minute timeout

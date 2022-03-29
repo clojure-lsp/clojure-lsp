@@ -38,7 +38,7 @@ jobs:
         run: make cli-jar-for-native
 
       - name: Upload jar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp-standalone.jar
           name: clojure-lsp-standalone.jar
@@ -89,10 +89,10 @@ jobs:
           file: clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: clojure-lsp
-          path: clojure-lsp-native-linux-amd64.zip
+          path: clojure-lsp
+          name: clojure-lsp-native-linux-amd64
 
   linux-amd64-static:
     needs: [build-cli-jar]
@@ -140,10 +140,10 @@ jobs:
           file: clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp
-          name: clojure-lsp-native-static-linux-amd64.zip
+          name: clojure-lsp-native-static-linux-amd64
 
   macos:
     needs: [build-cli-jar]
@@ -185,10 +185,10 @@ jobs:
           make native-cli
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp
-          name: clojure-lsp-native-macos-amd64.zip
+          name: clojure-lsp-native-macos-amd64
 
   windows:
     needs: [build-cli-jar]
@@ -256,10 +256,10 @@ jobs:
           file: clojure-lsp.exe
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp.exe
-          name: clojure-lsp-native-windows-amd64.zip
+          name: clojure-lsp-native-windows-amd64
 
   notify:
     needs: [build-cli-jar, linux-amd64, linux-amd64-static, macos]

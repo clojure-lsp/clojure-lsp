@@ -12,6 +12,26 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:private ansi-colors
+  {:reset "[0m"
+   :red   "[31m"
+   :green "[32m"
+   :yellow "[33m"
+   :cyan  "[36m"
+   :bright-green "[92m"
+   :bright-yellow "[93m"
+   :bright-magenta "[35;1m"
+   :bright-cyan "[36;1m"
+   :bright-white "[37;1m"})
+
+(defn colorize [s color]
+  (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))
+
+(def startup-logger-color :green)
+(def component-logger-color :bright-magenta)
+(def feature-logger-color :bright-yellow)
+(def task-logger-color :bright-cyan)
+
 (defn deep-merge
   "Recursively merges maps together.
   Improved version of medley deep-merge concating colls instead of overwriting."
@@ -367,7 +387,7 @@
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(logger/info (format  ~message (start-time->end-time-ms ~start-sym)))
+          `(logger/info (format ~message (start-time->end-time-ms ~start-sym)))
           (meta &form))
        result#)))
 
@@ -387,7 +407,7 @@
        result#)))
 
 (defmacro logging-task [task-id & body]
-  (let [msg (str task-id " %s")]
+  (let [msg (str (colorize task-id task-logger-color) " %s")]
     (with-meta `(logging-time ~msg ~@body) (meta &form))))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
@@ -402,15 +422,3 @@
 
 (defn full-file-range []
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
-
-(def ^:private ansi-colors
-  {:reset "[0m"
-   :red   "[31m"
-   :green "[32m"
-   :bright-green "[92m"
-   :bright-yellow "[93m"
-   :yellow "[33m"
-   :cyan  "[36m"})
-
-(defn colorize [s color]
-  (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))

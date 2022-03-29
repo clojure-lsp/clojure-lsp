@@ -10,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private clojuredocs-logger-tag (shared/colorize "[Clojuredocs]" :green))
+(def ^:private clojuredocs-logger-tag (shared/colorize "[Clojuredocs]" shared/feature-logger-color))
 
 (def ^:private clojuredocs-edn-file-url
   "https://github.com/clojure-emacs/clojuredocs-export-edn/raw/master/exports/export.compact.edn")

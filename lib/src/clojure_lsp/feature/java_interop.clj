@@ -23,7 +23,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private java-logger-tag (shared/colorize "[Java]" :bright-yellow))
+(def ^:private java-logger-tag (shared/colorize "[Java]" shared/feature-logger-color))
 
 (defn ^:private decompile! [^File class-file dest-path db]
   (let [cache-path (config/cache-file db)

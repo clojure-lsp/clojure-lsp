@@ -1,5 +1,6 @@
 (ns lsp4clj.core
   (:require
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop thread timeout]]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
@@ -64,6 +65,8 @@
      WorkspaceService))
   (:gen-class))
 
+(def server-logger-tag (shared/colorize "[Server]" shared/component-logger-color))
+
 (set! *warn-on-reflection* true)
 
 (defonce formatting (atom false))
@@ -87,7 +90,7 @@
              (catch Throwable ~ex-sym
                (if (instance? ResponseErrorException ~ex-sym)
                  (throw (CompletionException. ~ex-sym))
-                 ~(with-meta `(logger/error ~ex-sym) m)))))))))
+                 ~(with-meta `(logger/error ~server-logger-tag ~ex-sym) m)))))))))
 
 (deftype LSPTextDocumentService
          [^ILSPFeatureHandler handler]
@@ -252,7 +255,7 @@
       (windows-process-alive? pid)
       (unix-process-alive? pid))
     (catch Exception e
-      (logger/warn "Checking if process is alive failed." e)
+      (logger/warn server-logger-tag "Checking if process is alive failed." e)
       ;; Return true since the check failed. Assume the process is alive.
       true)))
 
@@ -263,7 +266,7 @@
     (if (process-alive? ppid)
       (recur)
       (do
-        (logger/info "Parent process" ppid "is not running - exiting server")
+        (logger/info server-logger-tag (str "Parent process " ppid " is not running - exiting server"))
         (.exit ^LanguageServer server)))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -277,7 +280,7 @@
           files]
   LanguageServer
   (^CompletableFuture initialize [this ^InitializeParams params]
-    (logger/info "Initializing...")
+    (logger/info server-logger-tag "Initializing...")
     (feature-handler/initialize feature-handler
                                 (.getRootUri params)
                                 (client-capabilities params)
@@ -293,7 +296,7 @@
         (InitializeResult. (coercer/conform-or-log ::coercer/server-capabilities capabilities)))))
 
   (^void initialized [_ ^InitializedParams _params]
-    (logger/info "Initialized!")
+    (logger/info server-logger-tag "Initialized!")
     (producer/register-capability
       @producer*
       (RegistrationParams.
@@ -302,12 +305,12 @@
                           [(FileSystemWatcher. files)]))])))
 
   (^CompletableFuture shutdown [_]
-    (logger/info "Shutting down")
+    (logger/info server-logger-tag "Shutting down")
     (reset! db initial-db)
     (CompletableFuture/completedFuture
       {:result nil}))
   (exit [_]
-    (logger/info "Exiting...")
+    (logger/info server-logger-tag "Exiting...")
     (shutdown-agents)
     (System/exit 0))
   (getTextDocumentService [_]
@@ -324,11 +327,11 @@
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read system-in buffer 0 buffer-size)]
             (when (pos? chs)
-              (logger/warn "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (logger/warn server-logger-tag (str "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs))))
               (.write os buffer 0 chs)
               (recur (.read system-in buffer 0 buffer-size)))))
         (catch Exception e
-          (logger/warn e "in thread"))))
+          (logger/warn server-logger-tag e "in thread"))))
     is))
 
 (defn tee-system-out [^java.io.OutputStream system-out]
@@ -340,11 +343,11 @@
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read is buffer 0 buffer-size)]
             (when (pos? chs)
-              (logger/warn "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs)))
+              (logger/warn server-logger-tag (str  "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs))))
               (.write system-out buffer)
               (recur (.read is buffer 0 buffer-size)))))
         (catch Exception e
-          (logger/error e "in thread"))))
+          (logger/error server-logger-tag e "in thread"))))
     os))
 
 (defrecord LSPProducer [^LanguageClient client db]
@@ -367,7 +370,7 @@
          (.applyEdit client)))
 
   (show-document-request [_this document-request]
-    (logger/info "Requesting to show on editor the document" document-request)
+    (logger/info server-logger-tag "Requesting to show on editor the document" document-request)
     (when (.getShowDocument ^WindowClientCapabilities (get-in @db [:client-capabilities :window]))
       (->> document-request
            (coercer/conform-or-log ::coercer/show-document-request)

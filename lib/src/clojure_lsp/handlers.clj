@@ -49,7 +49,7 @@
   (let [waiting-start-sym (gensym "waiting-start-time")
         start-sym (gensym "start-time")
         backoff-sym (gensym "backoff")
-        process-msg (str task-id " %s")
+        process-msg (str (shared/colorize task-id shared/task-logger-color) " %s")
         wait-and-process-msg (str task-id " %s - waited %s")]
     `(let [~waiting-start-sym (System/nanoTime)]
        (loop [~backoff-sym backoff-start]
@@ -138,7 +138,7 @@
 
 (defn completion [{:keys [textDocument position]}]
   (shared/logging-results
-    ":completion %s - total items: %s"
+    (str (shared/colorize :completion shared/task-logger-color) " %s - total items: %s")
     count
     (let [row (-> position :line inc)
           col (-> position :character inc)]

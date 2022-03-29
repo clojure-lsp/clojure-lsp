@@ -198,7 +198,7 @@
         db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
-        _ (logger/info "Starting server...")
+        _ (logger/info lsp/server-logger-tag "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         _ (reset! components* (components/->components db timbre-logger nil))

@@ -24,9 +24,6 @@
     nil
     coll))
 
-(defn- find-last [pred coll]
-  (find-first pred (reverse coll)))
-
 (defn filter-project-analysis-xf [db]
   (let [source-paths (settings/get db [:source-paths])]
     (remove #(shared/external-filename? (first %) source-paths))))

@@ -36,17 +36,18 @@
     (filter #(shared/external-filename? (first %) source-paths))))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]
-  ;; TODO probably there is a better/faster way of finding last
-  (or (find-last pred? (into []
-                             (comp
-                               (filter-project-analysis-xf db)
-                               (mapcat val))
-                             analysis))
-      (find-last pred? (into []
-                             (comp
-                               (filter-external-analysis-xf db)
-                               (mapcat val))
-                             analysis))))
+  (or (peek (into []
+                  (comp
+                    (filter-project-analysis-xf db)
+                    (mapcat val)
+                    (filter pred?))
+                  analysis))
+      (peek (into []
+                  (comp
+                    (filter-external-analysis-xf db)
+                    (mapcat val)
+                    (filter pred?))
+                  analysis))))
 
 (defn ^:private match-file-lang
   [check-element match-element]

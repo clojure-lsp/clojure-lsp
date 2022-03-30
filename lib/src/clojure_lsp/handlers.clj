@@ -73,9 +73,11 @@
                result#)))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
-  (let [project-files (keys (into {}
-                                  (q/filter-project-analysis-xf db)
-                                  (:analysis @db)))]
+  (let [project-files (into #{}
+                            (comp
+                              (q/filter-project-analysis-xf db)
+                              (map key))
+                            (:analysis @db))]
     (->> project-files
          (map #(shared/filename->uri % db))
          (clojure-producer/refresh-test-tree producer))))

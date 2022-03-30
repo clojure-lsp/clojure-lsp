@@ -46,13 +46,13 @@
                     (filter pred?))
                   analysis))))
 
+(defn elem-langs [element]
+  (or (some-> element :lang list set)
+      (shared/uri->available-langs (:filename element))))
+
 (defn ^:private match-file-lang
   [check-element match-element]
-  (let [match-file-lang (or (some-> match-element :lang list set)
-                            (shared/uri->available-langs (:filename match-element)))
-        check-file-lang (or (some-> check-element :lang list set)
-                            (shared/uri->available-langs (:filename check-element)))]
-    (seq (set/intersection match-file-lang check-file-lang))))
+  (some (elem-langs match-element) (elem-langs check-element)))
 
 (defn var-definition-names [{:keys [defined-by name]}]
   (case defined-by

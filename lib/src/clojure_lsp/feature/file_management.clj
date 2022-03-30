@@ -86,38 +86,33 @@
 
 (defn reference-filenames [filename old-local-analysis new-local-analysis db]
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
+        ;; TODO: can we easily remove usages of external namespaces (clojure.core, etc.) here?
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
-        usage-signature (juxt :to :name)
-        def-signatures (fn [var-def]
-                         (map (fn [var-name]
-                                [(:ns var-def) var-name])
-                              (q/var-definition-names var-def)))
         project-analysis (into {}
                                (q/filter-project-analysis-xf db)
                                (dissoc (:analysis @db) filename)) ;; don't notify self
         references-filenames (when (seq changed-var-definitions)
-                               (let [def-signs (into #{}
-                                                     (mapcat def-signatures)
-                                                     changed-var-definitions)]
+                               (let [def-signs (->> changed-var-definitions
+                                                    (map q/var-definition-signatures)
+                                                    (apply set/union))]
                                  (into #{}
                                        (comp
                                          (mapcat val)
                                          (filter #(identical? :var-usages (:bucket %)))
-                                         (filter #(contains? def-signs (usage-signature %)))
+                                         (filter #(contains? def-signs (q/var-usage-signature %)))
                                          (map :filename))
                                        project-analysis)))
         definitions-filenames (when (seq changed-var-usages)
                                 (let [usage-signs->langs (->> changed-var-usages
-                                                              ;; TODO: can we easily remove usages of external namespaces (clojure.core, etc.) here?
                                                               ;; TODO: do we really care if lang doesn't match?
                                                               (reduce (fn [result usage]
-                                                                        (assoc result (usage-signature usage) (q/elem-langs usage)))
+                                                                        (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
                                                                       {}))]
                                   (into #{}
                                         (comp
                                           (mapcat val)
                                           (filter #(identical? :var-definitions (:bucket %)))
-                                          (filter #(when-let [usage-langs (some usage-signs->langs (def-signatures %))]
+                                          (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
                                                      (some usage-langs (q/elem-langs %))))
                                           ;; TODO: this excludes "private calls", but they are counted in code lens, so maybe shouldn't exclude
                                           (remove :private)

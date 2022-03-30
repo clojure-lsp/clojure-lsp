@@ -145,25 +145,21 @@
   [var-defs kw-defs project-analysis {:keys [config reg-finding!]}]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
-        var-usage-signature (juxt :to :name)
         var-usages (into #{}
                          (comp
                            (q/xf-all-var-usages-to-namespaces var-nses)
-                           (map var-usage-signature))
+                           (map q/var-usage-signature))
                          project-analysis)
         var-used? (fn [var-def]
-                    (some (fn [var-name]
-                            (contains? var-usages [(:ns var-def) var-name]))
-                          (q/var-definition-names var-def)))
-        kw-signature (juxt :ns :name)
+                    (some var-usages (q/var-definition-signatures var-def)))
         kw-definitions (remove (partial exclude-public-diagnostic-definition? config) kw-defs)
         kw-usages (into #{}
                         (comp
                           q/xf-all-keyword-usages
-                          (map kw-signature))
+                          (map q/kw-signature))
                         project-analysis)
         kw-used? (fn [kw-def]
-                   (contains? kw-usages (kw-signature kw-def)))
+                   (contains? kw-usages (q/kw-signature kw-def)))
         findings (->> (concat (remove var-used? var-definitions)
                               (remove kw-used? kw-definitions))
                       (map (fn [unused-var]

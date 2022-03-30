@@ -62,6 +62,14 @@
     , #{name (symbol (str "->" name))}
     , #{name}))
 
+(def kw-signature (juxt :ns :name))
+(def var-usage-signature (juxt :to :name))
+(defn var-definition-signatures [var-def]
+  (->> (var-definition-names var-def)
+       (map (fn [var-name]
+              [(:ns var-def) var-name]))
+       (into #{})))
+
 (defn ^:private var-usage-from-own-definition? [usage]
   (and (:from-var usage)
        (= (:from-var usage) (:name usage))

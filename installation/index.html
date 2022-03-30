@@ -674,9 +674,14 @@
 brew install clojure-lsp/brew/clojure-lsp-native
 </code></pre></div>
 <h2 id="script">Script<a class="headerlink" href="#script" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>bash &lt;<span class="o">(</span>curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install<span class="o">)</span>
+<p>Stable release:</p>
+<div class="highlight"><pre><span></span><code>sudo bash &lt; &lt;<span class="o">(</span>curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install<span class="o">)</span>
 </code></pre></div>
-<p>Note: for nightly builds pass <code>--version nightly</code> option to install script.</p>
+<p>nightly build:</p>
+<div class="highlight"><pre><span></span><code>curl -O https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install<span class="o">)</span>
+chmod a+x install
+sudo ./install --version nightly
+</code></pre></div>
 <h2 id="nix">Nix<a class="headerlink" href="#nix" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp

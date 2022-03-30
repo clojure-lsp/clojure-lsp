@@ -106,7 +106,7 @@
    ^File dest-jdk-file]
   (io/make-parents dest-jdk-file)
   (shared/logging-time
-    (str java-logger-tag " Downloading JDK source took %s secs.")
+    (str java-logger-tag " Downloading JDK source took %s.")
     (try
       (let [{:keys [body content-type status error]} (http/request! jdk-download-url)]
         (if (or error
@@ -134,7 +134,7 @@
 
 (defn ^:private analyze-jdk-source! [path db]
   (let [result (shared/logging-time
-                 (str java-logger-tag " Analyzing JDK source with clj-kondo took %s secs.")
+                 (str java-logger-tag " Analyzing JDK source with clj-kondo took %s.")
                  (lsp.kondo/run-kondo-on-jdk-source! path))
         kondo-analysis (select-keys (:analysis result) [:java-class-definitions])
         analysis (->> kondo-analysis

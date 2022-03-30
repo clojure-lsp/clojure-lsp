@@ -130,22 +130,22 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-(defn ^:private project-custom-lint!
+(defn ^:private custom-lint-project!
   [db {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [new-analysis (group-by :filename (normalize-analysis analysis))]
-      (f.diagnostic/lint-project-diagnostics! new-analysis kondo-ctx db))))
+      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx db))))
 
-(defn ^:private custom-lint-for-reference-files!
+(defn ^:private custom-lint-files!
   [files db {:keys [analysis] :as kondo-ctx}]
   (shared/logging-task
     :lint-reference-files
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
       (doseq [file files]
-        (f.diagnostic/unused-public-var-lint-for-single-file! file updated-analysis kondo-ctx db)))))
+        (f.diagnostic/custom-lint-file! file updated-analysis kondo-ctx db)))))
 
-(defn ^:private single-file-custom-lint!
+(defn ^:private custom-lint-file!
   [{:keys [analysis config] :as kondo-ctx} uri db]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [filename (-> analysis :var-definitions first :filename)
@@ -159,7 +159,7 @@
                 (Thread/sleep 50)
                 (recur (inc tries)))
               (let [old-findings (get-in @db [:findings filename])
-                    new-findings (f.diagnostic/unused-public-var-lint-for-single-file-merging-findings! filename updated-analysis kondo-ctx db)]
+                    new-findings (f.diagnostic/custom-lint-file-merging-findings! filename updated-analysis kondo-ctx db)]
                 ;; This equality check doesn't seem necessary, but it helps
                 ;; avoid an infinite loop. See
                 ;; https://github.com/clojure-lsp/clojure-lsp/issues/796#issuecomment-1065830737
@@ -174,8 +174,8 @@
                 (when (not= old-findings new-findings)
                   (swap! db assoc-in [:findings filename] new-findings))
                 (when (not= :unknown (shared/uri->file-type uri))
-                  (f.diagnostic/sync-lint-file! uri db))))))
-        (f.diagnostic/unused-public-var-lint-for-single-file! filename updated-analysis kondo-ctx db)))))
+                  (f.diagnostic/sync-publish-diagnostics! uri db))))))
+        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx db)))))
 
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true
@@ -189,7 +189,7 @@
                                     :java-class-definitions true}
                          :canonical-paths true}}}
       (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
-                                                (partial project-custom-lint! db)))
+                                                (partial custom-lint-project! db)))
       (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
       (with-additional-config (settings/all db))))
 
@@ -209,7 +209,7 @@
 
 (defn kondo-for-reference-filenames [filenames db]
   (-> (kondo-for-paths filenames db false)
-      (assoc :custom-lint-fn (partial custom-lint-for-reference-files! filenames db))))
+      (assoc :custom-lint-fn (partial custom-lint-files! filenames db))))
 
 (defn kondo-for-single-file [uri db]
   (-> {:cache true
@@ -218,7 +218,7 @@
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
        :config-dir (project-config-dir (:project-root-uri @db))
-       :custom-lint-fn #(single-file-custom-lint! % uri db)
+       :custom-lint-fn #(custom-lint-file! % uri db)
        :config {:output {:analysis {:arglists true
                                     :locals true
                                     :keywords true

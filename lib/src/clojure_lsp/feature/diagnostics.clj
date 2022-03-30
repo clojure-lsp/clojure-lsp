@@ -108,12 +108,12 @@
            (not (shared/external-filename? filename source-paths)))
       (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 
-(defn sync-lint-file! [uri db]
+(defn sync-publish-diagnostics! [uri db]
   (async/>!! db/diagnostics-chan
              {:uri uri
               :diagnostics (find-diagnostics uri db)}))
 
-(defn async-lint-file! [uri db]
+(defn async-publish-diagnostics! [uri db]
   (if (#{:unit-test :api-test} (:env @db)) ;; Avoid async on test which cause flakeness
     (async/put! db/diagnostics-chan
                 {:uri uri
@@ -123,7 +123,15 @@
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)}))))
 
-(defn clean! [uri db]
+(defn publish-all-diagnostics! [paths db]
+  (doseq [path paths]
+    (doseq [file (file-seq (io/file path))]
+      (let [filename (.getAbsolutePath ^java.io.File file)
+            uri (shared/filename->uri filename db)]
+        (when (not= :unknown (shared/uri->file-type uri))
+          (sync-publish-diagnostics! uri db))))))
+
+(defn publish-empty-diagnostics! [uri db]
   (if (#{:unit-test :api-test} (:env @db))
     (async/put! db/diagnostics-chan
                 {:uri uri
@@ -133,7 +141,7 @@
                 {:uri uri
                  :diagnostics []}))))
 
-(defn ^:private unused-public-vars-lint!
+(defn ^:private lint-defs!
   [var-defs kw-defs project-analysis {:keys [config reg-finding!]}]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
@@ -170,40 +178,32 @@
 (def ^:private project-var-definitions q/find-all-var-definitions)
 (def ^:private project-kw-definitions q/find-all-keyword-definitions)
 
-(defn lint-project-diagnostics!
+(defn custom-lint-project!
   [new-analysis kondo-ctx db]
   (let [project-analysis (into {}
                                (q/filter-project-analysis-xf db)
                                new-analysis)]
     (shared/logging-time
       "Linting whole project for unused-public-var took %s"
-      (unused-public-vars-lint! (project-var-definitions project-analysis)
-                                (project-kw-definitions project-analysis)
-                                project-analysis kondo-ctx))))
+      (lint-defs! (all-var-definitions project-analysis)
+                  (all-kw-definitions project-analysis)
+                  project-analysis kondo-ctx))))
 
-(defn unused-public-var-lint-for-single-file!
+(defn custom-lint-file!
   [filename analysis kondo-ctx db]
   (let [project-analysis (into {}
                                (q/filter-project-analysis-xf db)
                                analysis)]
-    (unused-public-vars-lint! (file-var-definitions project-analysis filename)
-                              (file-kw-definitions project-analysis filename)
-                              project-analysis kondo-ctx)))
+    (lint-defs! (file-var-definitions project-analysis filename)
+                (file-kw-definitions project-analysis filename)
+                project-analysis kondo-ctx)))
 
-(defn unused-public-var-lint-for-single-file-merging-findings!
+(defn custom-lint-file-merging-findings!
   [filename analysis kondo-ctx db]
-  (let [kondo-findings (-> (unused-public-var-lint-for-single-file! filename analysis kondo-ctx db)
+  (let [kondo-findings (-> (custom-lint-file! filename analysis kondo-ctx db)
                            (get filename))
         cur-findings (get-in @db [:findings filename])]
     (->> cur-findings
          (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)
          vec)))
-
-(defn lint-project-files! [paths db]
-  (doseq [path paths]
-    (doseq [file (file-seq (io/file path))]
-      (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename db)]
-        (when (not= :unknown (shared/uri->file-type uri))
-          (sync-lint-file! uri db))))))

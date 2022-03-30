@@ -142,8 +142,7 @@
     :lint-reference-files
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
-      (doseq [file files]
-        (f.diagnostic/custom-lint-file! file updated-analysis kondo-ctx db)))))
+      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx db))))
 
 (defn ^:private custom-lint-file!
   [{:keys [analysis config] :as kondo-ctx} uri db]

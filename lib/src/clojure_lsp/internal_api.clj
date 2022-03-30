@@ -38,18 +38,18 @@
   (setup [this]
     (logger/set-logger! this))
   (set-log-path [_ _])
-  (-info [_ arg1] (log-print "[INFO]" options arg1))
-  (-info [_ arg1 arg2] (log-print "[INFO]" options arg1 arg2))
-  (-info [_ arg1 arg2 arg3] (log-print "[INFO]" options arg1 arg2 arg3))
-  (-warn [_ arg1] (log-print (shared/colorize "[WARN]" :yellow) options arg1))
-  (-warn [_ arg1 arg2] (log-print (shared/colorize "[WARN]" :yellow) options arg1 arg2))
-  (-warn [_ arg1 arg2 arg3] (log-print (shared/colorize "[WARN]" :yellow) options arg1 arg2 arg3))
-  (-error [_ arg1] (log-print (shared/colorize "[ERROR]" :red) options arg1))
-  (-error [_ arg1 arg2] (log-print (shared/colorize "[ERROR]" :red) options arg1 arg2))
-  (-error [_ arg1 arg2 arg3] (log-print (shared/colorize "[ERROR]" :red) options arg1 arg2 arg3))
-  (-debug [_ arg1] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1))
-  (-debug [_ arg1 arg2] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2))
-  (-debug [_ arg1 arg2 arg3] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2 arg3)))
+  (-info [_ _fmeta arg1] (log-print "[INFO]" options arg1))
+  (-info [_ _fmeta arg1 arg2] (log-print "[INFO]" options arg1 arg2))
+  (-info [_ _fmeta arg1 arg2 arg3] (log-print "[INFO]" options arg1 arg2 arg3))
+  (-warn [_ _fmeta arg1] (log-print (shared/colorize "[WARN]" :yellow) options arg1))
+  (-warn [_ _fmeta arg1 arg2] (log-print (shared/colorize "[WARN]" :yellow) options arg1 arg2))
+  (-warn [_ _fmeta arg1 arg2 arg3] (log-print (shared/colorize "[WARN]" :yellow) options arg1 arg2 arg3))
+  (-error [_ _fmeta arg1] (log-print (shared/colorize "[ERROR]" :red) options arg1))
+  (-error [_ _fmeta arg1 arg2] (log-print (shared/colorize "[ERROR]" :red) options arg1 arg2))
+  (-error [_ _fmeta arg1 arg2 arg3] (log-print (shared/colorize "[ERROR]" :red) options arg1 arg2 arg3))
+  (-debug [_ _fmeta arg1] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1))
+  (-debug [_ _fmeta arg1 arg2] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2))
+  (-debug [_ _fmeta arg1 arg2 arg3] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2 arg3)))
 
 (defn ^:private show-message-cli [options {:keys [message extra type]}]
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
@@ -168,7 +168,8 @@
       {:workspace {:workspace-edit {:document-changes true}}}
       (settings/clean-client-settings {})
       (merge (shared/assoc-some
-               {:text-document-sync-kind :full}
+               {:lint-project-files-after-startup? false
+                :text-document-sync-kind :full}
                :log-path log-path)
              settings)
       nil
@@ -254,9 +255,12 @@
            (remove nil?)
            (map symbol)
            seq)
-      (->> (q/filter-project-analysis (:analysis @db) db)
-           q/find-all-ns-definition-names
-           (remove (partial exclude-ns? options)))))
+      (into #{}
+            (comp
+              (q/filter-project-analysis-xf db)
+              (q/find-all-ns-definition-names-xf)
+              (remove (partial exclude-ns? options)))
+            (:analysis @db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)
@@ -371,7 +375,7 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))
-        project-analysis (q/filter-project-analysis (:analysis @db) db)]
+        project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))]
     (if-let [from-element (if ns-only?
                             (q/find-namespace-definition-by-namespace project-analysis from-ns db)
                             (q/find-element-by-full-name project-analysis from-name from-ns db))]

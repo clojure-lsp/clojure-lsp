@@ -24,25 +24,27 @@
     nil
     coll))
 
-(defn- find-last [pred coll]
-  (find-first pred (reverse coll)))
-
-(defn ^:private remove-keys [pred m]
-  (apply dissoc m (filter pred (keys m))))
-
-(defn filter-project-analysis [analysis db]
+(defn filter-project-analysis-xf [db]
   (let [source-paths (settings/get db [:source-paths])]
-    (->> analysis
-         (remove-keys #(shared/external-filename? % source-paths)))))
+    (remove #(shared/external-filename? (first %) source-paths))))
 
-(defn filter-external-analysis [analysis db]
+(defn filter-external-analysis-xf [db]
   (let [source-paths (settings/get db [:source-paths])]
-    (->> analysis
-         (remove-keys (complement #(shared/external-filename? % source-paths))))))
+    (filter #(shared/external-filename? (first %) source-paths))))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]
-  (or (find-last pred? (mapcat val (filter-project-analysis analysis db)))
-      (find-last pred? (mapcat val (filter-external-analysis analysis db)))))
+  (or (peek (into []
+                  (comp
+                    (filter-project-analysis-xf db)
+                    (mapcat val)
+                    (filter pred?))
+                  analysis))
+      (peek (into []
+                  (comp
+                    (filter-external-analysis-xf db)
+                    (mapcat val)
+                    (filter pred?))
+                  analysis))))
 
 (defn ^:private match-file-lang
   [check-element match-element]
@@ -165,6 +167,17 @@
           (match-file-lang % element))
     analysis
     db))
+
+(defmethod find-definition :java-class-usages
+  [analysis element _db]
+  (->> analysis
+       (into []
+             (comp
+               (mapcat val)
+               (filter #(and (identical? :java-class-definitions (:bucket %))
+                             (safe-equal? (:class %) (:class element))))))
+       (sort-by (complement #(string/ends-with? (:filename %) ".java")))
+       first))
 
 (defmethod find-definition :default
   [_analysis element _db]
@@ -348,20 +361,20 @@
 
 (defmethod find-references :keywords
   [analysis {:keys [ns name] :as _element} include-declaration? db]
-  (let [project-analysis (filter-project-analysis analysis db)]
-    (into []
-          (comp
-            (mapcat val)
-            (filter #(identical? :keywords (:bucket %)))
-            (filter #(safe-equal? name (:name %)))
-            (filter (cond
-                      (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
-                      ns #(safe-equal? ns (:ns %))
-                      :else #(not (:ns %))))
-            (filter #(or include-declaration?
-                         (not (:reg %))))
-            (medley/distinct-by (juxt :filename :name :row :col)))
-          project-analysis)))
+  (into []
+        (comp
+          (filter-project-analysis-xf db)
+          (mapcat val)
+          (filter #(identical? :keywords (:bucket %)))
+          (filter #(safe-equal? name (:name %)))
+          (filter (cond
+                    (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
+                    ns #(safe-equal? ns (:ns %))
+                    :else #(not (:ns %))))
+          (filter #(or include-declaration?
+                       (not (:reg %))))
+          (medley/distinct-by (juxt :filename :name :row :col)))
+        analysis))
 
 (defmethod find-references :local
   [analysis {:keys [id name filename] :as element} include-declaration? _db]
@@ -484,12 +497,16 @@
                      (= (:name-end-col %) (:name-end-col keyword-element))))
        first))
 
+(defn find-all-ns-definition-names-xf []
+  (comp
+    (mapcat val)
+    (filter #(identical? :namespace-definitions (:bucket %)))
+    (map :name)))
+
+;; TODO remove it, use only transducer one?
 (defn find-all-ns-definition-names [analysis]
   (into #{}
-        (comp
-          (mapcat val)
-          (filter #(identical? :namespace-definitions (:bucket %)))
-          (map :name))
+        (find-all-ns-definition-names-xf)
         analysis))
 
 (defn find-all-aliases
@@ -497,6 +514,7 @@
   (let [langs (shared/uri->available-langs uri)]
     (into #{}
           (comp
+            (filter-project-analysis-xf db)
             (mapcat val)
             (filter #(identical? :namespace-alias (:bucket %)))
             (filter :alias)
@@ -543,9 +561,12 @@
           (comp
             (filter (comp #(identical? :unused-import %) :type))
             (remove (fn [finding]
-                      (some #(and (identical? :var-usages (:bucket %))
-                                  (safe-equal? (str (:class finding))
-                                               (str (:to %) "." (:name %))))
+                      (some #(or (and (identical? :var-usages (:bucket %))
+                                      (safe-equal? (str (:class finding))
+                                                   (str (:to %) "." (:name %))))
+                                 (and (identical? :java-class-usages (:bucket %))
+                                      (safe-equal? (str (:class finding))
+                                                   (:class %))))
                             local-analysis)))
             (map :class))
           (get findings filename))))

@@ -5,6 +5,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
@@ -248,33 +250,57 @@
        (take 1)))
 
 (defn ^:private resolve-best-namespaces-suggestions
-  [alias-str aliases->namespaces namespaces->aliases]
-  (let [alias-segments (string/split alias-str #"\.")
-        all-definition-segments (map #(string/split % #"\.") (keys namespaces->aliases))]
+  [given-alias aliases->namespaces namespaces->aliases]
+  (let [given-segments (string/split given-alias #"\.")
+        all-definition-segments (mapv #(vec (string/split % #"\.")) (keys namespaces->aliases))]
     (->> all-definition-segments
-         (filter #(sub-segment? alias-segments %))
+         (filter #(sub-segment? given-segments %))
          (filter #(not (string/ends-with? (last %) "-test")))
-         (map #(string/join "." %))
-         (remove aliases->namespaces)
-         (mapcat (fn [suggested-ns]
-                   ;; Does the ns have existing aliases
-                   (if-let [aliases (->> (get namespaces->aliases suggested-ns)
-                                         (map (fn [[alias n]]
-                                                {:alias alias
-                                                 :ns suggested-ns
-                                                 :count n}))
-                                         seq)]
-                     aliases
-                     ;; Can we generate good alias suggestions for the found namespace
-                     (if-let [alias-suggestions (->> (resolve-best-alias-suggestions suggested-ns aliases->namespaces)
-                                                     (map (fn [suggested-alias]
-                                                            {:alias suggested-alias
-                                                             :ns suggested-ns}))
-                                                     seq)]
-                       alias-suggestions
-                       ;; We found it so use the given alias as last resort
-                       [{:alias alias-str
-                         :ns suggested-ns}]))))
+         (sort)
+         (mapcat (fn [suggested-ns-segments]
+                   (let [suggested-ns (string/join "." suggested-ns-segments)]
+                     (when (not (contains? aliases->namespaces suggested-ns))
+                       ;; Does the ns have existing aliases
+                       (if-let [aliases (->> (get namespaces->aliases suggested-ns)
+                                             (map (fn [[alias n]]
+                                                    {:ns suggested-ns
+                                                     :alias alias
+                                                     :count n}))
+                                             seq)]
+                         aliases
+                         (let [single-segment? (= 1 (count given-segments))
+                               matches-last? (= (last suggested-ns-segments) (last given-segments))
+                               ns-like-search? (= (count suggested-ns-segments) (count given-segments))
+                               expand-last? (and (not single-segment?) (not ns-like-search?) (not matches-last?))
+                               best-alias (->> (resolve-best-alias-suggestions suggested-ns aliases->namespaces)
+                                               (map (fn [suggested-alias]
+                                                      {:ns suggested-ns
+                                                       :alias suggested-alias
+                                                       :heuristic-order (if matches-last? 0 1)})))]
+                           (cond
+                             single-segment?
+                             best-alias
+
+                             matches-last?
+                             [{:ns suggested-ns
+                               :alias given-alias
+                               :heuristic-order 2}]
+
+                             ns-like-search?
+                             (concat
+                               best-alias
+                               [{:ns suggested-ns
+                                 :heuristic-order 3}])
+
+                             expand-last?
+                             [{:ns suggested-ns
+                               :alias (string/join "." (concat (butlast given-segments) [(last suggested-ns-segments)]))
+                               :heuristic-order 4}])))))))
+         (remove #(= (:ns %) (:alias %)))
+         (sort-by (juxt :heuristic-order :ns))
+         (map #(dissoc % :heuristic-order))
+         distinct
+         vec
          seq)))
 
 (defn find-namespace-suggestions
@@ -398,15 +424,16 @@
           chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))]
 
       (->> (concat
-             (cond
-               chosen-refer
-               (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
+             (->> (cond
+                    chosen-refer
+                    (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
 
-               chosen-alias
-               (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
+                    chosen-alias
+                    (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
 
-               :else
-               (add-simple-require zloc (symbol chosen-ns) db))
+                    :else
+                    (add-simple-require zloc (symbol chosen-ns) db))
+                  (cleaning-ns-edits uri db))
              (when chosen-alias-or-ns
                (cond
                  cursor-namespace-str
@@ -422,8 +449,7 @@
 
                  (some-> zloc safe-sym)
                  [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
-           seq
-           (cleaning-ns-edits uri db)))))
+           seq))))
 
 (defn add-missing-libspec
   [zloc uri db]

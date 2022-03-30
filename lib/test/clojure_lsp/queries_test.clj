@@ -14,13 +14,17 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 2 (count (q/filter-project-analysis (:analysis @db/db) db/db)))))
+    (is (= 2 (count (into {}
+                          (q/filter-project-analysis-xf db/db)
+                          (:analysis @db/db))))))
   (testing "when dependency-scheme is jar"
     (swap! db/db shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 2 (count (q/filter-project-analysis (:analysis @db/db) db/db))))))
+    (is (= 2 (count (into {}
+                          (q/filter-project-analysis-xf db/db)
+                          (:analysis @db/db)))))))
 
 (deftest external-analysis
   (testing "when dependency-scheme is zip"
@@ -28,13 +32,17 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 1 (count (q/filter-external-analysis (:analysis @db/db) db/db)))))
+    (is (= 1 (count (into {}
+                          (q/filter-external-analysis-xf db/db)
+                          (:analysis @db/db))))))
   (testing "when dependency-scheme is jar"
     (swap! db/db shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 1 (count (q/filter-external-analysis (:analysis @db/db) db/db))))))
+    (is (= 1 (count (into {}
+                          (q/filter-external-analysis-xf db/db)
+                          (:analysis @db/db)))))))
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"
@@ -479,6 +487,18 @@
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
       (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c db/db))))
+
+;; Uncoment after clj-kondo solves https://github.com/clj-kondo/clj-kondo/issues/1632
+#_(deftest find-definition-form-java-class-usage
+    (h/load-code-and-locs (h/code "package project;"
+                                  "class Foo {}") (h/file-uri "file:///project/Foo.java"))
+    (h/load-code-and-locs (h/code "123456") (h/file-uri "file:///project/Foo.class"))
+    (testing "Finding java source even if class exists"
+      (let [[[foo-r foo-c]] (h/load-code-and-locs (h/code "(ns a (:import (project Foo)))"
+                                                          "(|Foo.)") (h/file-uri "file:///a.clj"))]
+        (h/assert-submap
+          {} ;; TODO
+          (q/find-definition-from-cursor (:analysis @db/db) (h/file-path "/a.clj") foo-r foo-c db/db)))))
 
 (deftest find-declaration-from-cursor
   (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))

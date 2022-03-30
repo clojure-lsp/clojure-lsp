@@ -71,8 +71,12 @@
 
 (defn ^:private require-suggestion-actions
   [uri alias-suggestions]
-  (map (fn [{:keys [ns alias refer position]}]
-         {:title      (format "Add require '[%s %s %s]'" ns (if alias ":as" ":refer") (or alias (str "[" refer "]")))
+  (map (fn [{:keys [ns alias refer position count]}]
+         {:title      (format "Add require '[%s%s%s]'%s"
+                              ns
+                              (if alias (str " :as " alias) "")
+                              (if refer (str " :refer [" refer "]") "")
+                              (if count (str " × " count) ""))
           :kind       :quick-fix
           :preferred? true
           :command    {:title     "Add require suggestion"

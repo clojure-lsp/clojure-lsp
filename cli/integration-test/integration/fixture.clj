@@ -12,7 +12,8 @@
      :params params
      :id (lsp/inc-request-id)}))
 
-(def default-init-options {})
+(def default-init-options {:lint-project-files-after-startup? false
+                           :java false})
 
 (defn initialize-request
   ([]
@@ -91,6 +92,10 @@
   (lsp-json-rpc "clojure/cursorInfo/raw"
                 {:textDocument {:uri (h/source-path->uri path)}
                  :position {:line row :character col}}))
+
+(defn clojure-dependency-contents-request [uri]
+  (lsp-json-rpc "clojure/dependencyContents"
+                {:uri uri}))
 
 (defn initialized-notification []
   (lsp-json-rpc :initialized {}))

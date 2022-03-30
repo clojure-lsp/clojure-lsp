@@ -5,6 +5,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.java.io :as io]
    [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
@@ -171,16 +172,20 @@
 
 (defn lint-project-diagnostics!
   [new-analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis new-analysis db)]
+  (let [project-analysis (into {}
+                               (q/filter-project-analysis-xf db)
+                               new-analysis)]
     (shared/logging-time
-      "Linting whole project for unused-public-var took %s secs"
+      "Linting whole project for unused-public-var took %s"
       (unused-public-vars-lint! (project-var-definitions project-analysis)
                                 (project-kw-definitions project-analysis)
                                 project-analysis kondo-ctx))))
 
 (defn unused-public-var-lint-for-single-file!
   [filename analysis kondo-ctx db]
-  (let [project-analysis (q/filter-project-analysis analysis db)]
+  (let [project-analysis (into {}
+                               (q/filter-project-analysis-xf db)
+                               analysis)]
     (unused-public-vars-lint! (file-var-definitions project-analysis filename)
                               (file-kw-definitions project-analysis filename)
                               project-analysis kondo-ctx)))
@@ -194,3 +199,11 @@
          (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)
          vec)))
+
+(defn lint-project-files! [paths db]
+  (doseq [path paths]
+    (doseq [file (file-seq (io/file path))]
+      (let [filename (.getAbsolutePath ^java.io.File file)
+            uri (shared/filename->uri filename db)]
+        (when (not= :unknown (shared/uri->file-type uri))
+          (sync-lint-file! uri db))))))

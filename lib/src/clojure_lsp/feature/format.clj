@@ -53,9 +53,9 @@
         root-loc (parser/zloc-of-file @db doc-id)
         start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
                       (z/leftmost* root-loc))
-        end-loc (or (parser/to-pos root-loc (:end-row format-pos) (:end-col format-pos))
-                    (z/rightmost* root-loc))
         start-top-loc (edit/to-top start-loc)
+        end-loc (or (parser/to-pos start-top-loc (:end-row format-pos) (:end-col format-pos))
+                    (z/rightmost* root-loc))
         end-top-loc (edit/to-top end-loc)
 
         forms (->> start-top-loc

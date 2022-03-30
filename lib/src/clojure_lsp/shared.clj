@@ -12,6 +12,26 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:private ansi-colors
+  {:reset "[0m"
+   :red   "[31m"
+   :green "[32m"
+   :yellow "[33m"
+   :cyan  "[36m"
+   :bright-green "[92m"
+   :bright-yellow "[93m"
+   :bright-magenta "[35;1m"
+   :bright-cyan "[36;1m"
+   :bright-white "[37;1m"})
+
+(defn colorize [s color]
+  (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))
+
+(def startup-logger-color :green)
+(def component-logger-color :bright-magenta)
+(def feature-logger-color :bright-yellow)
+(def task-logger-color :bright-cyan)
+
 (defn deep-merge
   "Recursively merges maps together.
   Improved version of medley deep-merge concating colls instead of overwriting."
@@ -150,6 +170,13 @@
         (str (-> jar-uri-path io/file .getCanonicalPath) ":" nested-file)
         (uri-obj->filepath uri-obj)))))
 
+(defn ensure-jarfile [uri]
+  (if (string/starts-with? uri "jar:")
+    uri
+    (-> uri
+        (string/replace "zipfile:" "jar:file:")
+        (string/replace "::" "!/"))))
+
 (defn ^:private filepath->uri-obj ^URI [filepath]
   (-> filepath io/file .toPath .toUri))
 
@@ -162,6 +189,11 @@
 (defn jar-file? [filename]
   (or (boolean (re-find jar-file-with-filename-regex filename))
       (boolean (re-find jar-file-regex filename))))
+
+(def ^:private class-file-regex #"^(.*\.class)$")
+
+(defn class-file? [uri]
+  (boolean (re-find class-file-regex uri)))
 
 (defn external-filename? [filename source-paths]
   (and filename
@@ -350,8 +382,8 @@
 (defn clojure-lsp-version []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 
-(defn start-time->end-time-seconds [start-time]
-  (format "%.2f" (float (/ (- (System/nanoTime) start-time) 1000000000))))
+(defn start-time->end-time-ms [start-time]
+  (format "%.0fms" (float (/ (- (System/nanoTime) start-time) 1000000))))
 
 (defmacro logging-time
   "Executes `body` logging `message` formatted with the time spent
@@ -361,9 +393,28 @@
     `(let [~start-sym (System/nanoTime)
            result# (do ~@body)]
        ~(with-meta
-          `(logger/info (format  ~message (start-time->end-time-seconds ~start-sym)))
+          `(logger/info (format ~message (start-time->end-time-ms ~start-sym)))
           (meta &form))
        result#)))
+
+(defmacro logging-results
+  "Executes `body`, passing the results to `results-fn`, which should return a
+  results message string. Logs `message` formatted with the time spent from body
+  and the results message."
+  [message results-fn & body]
+  (let [start-sym (gensym "start-time")
+        results-msg (gensym "results-msg")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)
+           ~results-msg (~results-fn result#)]
+       ~(with-meta
+          `(logger/info (format ~message (start-time->end-time-ms ~start-sym) ~results-msg))
+          (meta &form))
+       result#)))
+
+(defmacro logging-task [task-id & body]
+  (let [msg (str (colorize task-id task-logger-color) " %s")]
+    (with-meta `(logging-time ~msg ~@body) (meta &form))))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
@@ -377,13 +428,3 @@
 
 (defn full-file-range []
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
-
-(def ^:private ansi-colors
-  {:reset "[0m"
-   :red   "[31m"
-   :green "[32m"
-   :yellow "[33m"
-   :cyan  "[36m"})
-
-(defn colorize [s color]
-  (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))

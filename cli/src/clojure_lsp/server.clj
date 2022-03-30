@@ -43,6 +43,11 @@
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
 
+(defn log! [level args fmeta]
+  (timbre/log! level :p args {:?line (:line fmeta)
+                              :?file (:file fmeta)
+                              :?ns-str (:ns-str fmeta)}))
+
 (defrecord TimbreLogger [db]
   logger/ILSPLogger
 
@@ -58,18 +63,18 @@
   (set-log-path [_this log-path]
     (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
 
-  (-info [_this arg1] (timbre/info arg1))
-  (-info [_this arg1 arg2] (timbre/info arg1 arg2))
-  (-info [_this arg1 arg2 arg3] (timbre/info arg1 arg2 arg3))
-  (-warn [_this arg1] (timbre/warn arg1))
-  (-warn [_this arg1 arg2] (timbre/warn arg1 arg2))
-  (-warn [_this arg1 arg2 arg3] (timbre/warn arg1 arg2 arg3))
-  (-error [_this arg1] (timbre/error arg1))
-  (-error [_this arg1 arg2] (timbre/error arg1 arg2))
-  (-error [_this arg1 arg2 arg3] (timbre/error arg1 arg2 arg3))
-  (-debug [_this arg1] (timbre/debug arg1))
-  (-debug [_this arg1 arg2] (timbre/debug arg1 arg2))
-  (-debug [_this arg1 arg2 arg3] (timbre/debug arg1 arg2 arg3)))
+  (-info [_this fmeta arg1] (log! :info [arg1] fmeta))
+  (-info [_this fmeta arg1 arg2] (log! :info [arg1 arg2] fmeta))
+  (-info [_this fmeta arg1 arg2 arg3] (log! :info [arg1 arg2 arg3] fmeta))
+  (-warn [_this fmeta arg1] (log! :warn [arg1] fmeta))
+  (-warn [_this fmeta arg1 arg2] (log! :warn [arg1 arg2] fmeta))
+  (-warn [_this fmeta arg1 arg2 arg3] (log! :warn [arg1 arg2 arg3] fmeta))
+  (-error [_this fmeta arg1] (log! :error [arg1] fmeta))
+  (-error [_this fmeta arg1 arg2] (log! :error [arg1 arg2] fmeta))
+  (-error [_this fmeta arg1 arg2 arg3] (log! :error [arg1 arg2 arg3] fmeta))
+  (-debug [_this fmeta arg1] (log! :debug [arg1] fmeta))
+  (-debug [_this fmeta arg1 arg2] (log! :debug [arg1 arg2] fmeta))
+  (-debug [_this fmeta arg1 arg2 arg3] (log! :debug [arg1 arg2 arg3] fmeta)))
 
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
@@ -97,8 +102,8 @@
   (refresh-test-tree [_this uris]
     (go
       (when (some-> @db :client-capabilities :experimental j/from-java :testTree)
-        (shared/logging-time
-          "Refreshing testTree took %s secs"
+        (shared/logging-task
+          :refreshing-test-tree
           (doseq [uri uris]
             (when-let [test-tree (f.test-tree/tree uri db)]
               (->> test-tree
@@ -122,9 +127,8 @@
   (getWorkspaceService [_]
     (.getWorkspaceService lsp-server))
   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
-    (lsp/start :dependencyContents
-               (CompletableFuture/completedFuture
-                 (lsp/sync-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri))))
+    (CompletableFuture/completedFuture
+      (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri)))
 
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
@@ -132,25 +136,21 @@
            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
 
   (^void serverInfoLog [_]
-    (lsp/start :server-info-log
-               (future
-                 (lsp/end
-                   (clojure-feature/server-info-log feature-handler)))))
+    (future
+      (clojure-feature/server-info-log feature-handler))
+    nil)
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
-    (lsp/start :cursorInfoRaw
-               (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
+    (CompletableFuture/completedFuture
+      (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw)))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
-    (lsp/start :cursor-info-log
-               (future
-                 (lsp/sync-notification params clojure-feature/cursor-info-log feature-handler))))
+    (future
+      (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
-    (lsp/start :clojuredocsRaw
-               (CompletableFuture/completedFuture
-                 (lsp/sync-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
+    (CompletableFuture/completedFuture
+      (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw))))
 
 (defn client-settings [params]
   (-> params
@@ -198,7 +198,7 @@
         db db/db
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
-        _ (logger/info "Starting server...")
+        _ (logger/info lsp/server-logger-tag "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
         _ (reset! components* (components/->components db timbre-logger nil))

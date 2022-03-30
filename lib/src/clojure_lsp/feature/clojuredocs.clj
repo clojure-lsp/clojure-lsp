@@ -1,56 +1,37 @@
 (ns clojure-lsp.feature.clojuredocs
   "clojuredocs integration inspired on orchard implementation."
   (:require
+   [clojure-lsp.http :as http]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.edn :as edn]
-   [lsp4clj.protocols.logger :as logger])
-  (:import
-   (java.io IOException)
-   (java.net URL)
-   (javax.net.ssl HttpsURLConnection)))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
+
+(def ^:private clojuredocs-logger-tag (shared/colorize "[Clojuredocs]" shared/feature-logger-color))
 
 (def ^:private clojuredocs-edn-file-url
   "https://github.com/clojure-emacs/clojuredocs-export-edn/raw/master/exports/export.compact.edn")
 
-(def ^:private connect-timeout-ms 1000)
-(def ^:private read-timeout-ms 30000)
-
-(defn ^:private test-remote-url [^String url]
-  (if-not (.startsWith url "http")
-    [true]
-    (let [url (URL. url)
-          conn ^HttpsURLConnection (.openConnection url)]
-      (.setConnectTimeout conn connect-timeout-ms)
-      (.setReadTimeout conn read-timeout-ms)
-      (try
-        (.connect conn)
-        [true]
-        (catch IOException ex
-          [false ex])
-        (finally
-          (.disconnect conn))))))
-
 (defn refresh-cache! [{:keys [db]}]
   (when (and (settings/get db [:hover :clojuredocs] true)
              (not (-> @db :clojuredocs :refreshing?)))
-    (logger/info "Refreshing clojuredocs cache...")
+    (logger/info clojuredocs-logger-tag "Refreshing clojuredocs cache...")
     (swap! db assoc-in [:clojuredocs :refreshing?] true)
     (shared/logging-time
-      "Refreshing clojuredocs cache took %s secs."
+      (str clojuredocs-logger-tag " Refreshing clojuredocs cache took %s.")
       (try
         (let [;; connection check not to wait too long
-              [downloadable? conn-ex] (test-remote-url clojuredocs-edn-file-url)]
+              [downloadable? conn-ex] (http/test-remote-url! clojuredocs-edn-file-url)]
           (if (not downloadable?)
-            (logger/error "Could not refresh clojuredocs." conn-ex)
+            (logger/error clojuredocs-logger-tag "Could not refresh clojuredocs." conn-ex)
             (swap! db assoc :clojuredocs {:cache (-> clojuredocs-edn-file-url
                                                      slurp
                                                      edn/read-string)})))
         (catch Exception e
-          (logger/error "Error refreshing clojuredocs information." e)
+          (logger/error clojuredocs-logger-tag "Error refreshing clojuredocs information." e)
           nil)
         (finally
           (swap! db assoc-in [:clojuredocs :refreshing?] false))))))

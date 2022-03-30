@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Add java class find-definition support, decompiling .class files when available. #762 
+- Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.
+- Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.
+- Avoid high CPU usage and freezes by more efficiently finding referenced files to notify on file change. #844 @mainej
+
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
+## 2022.03.26-18.47.08
+
+- Fix unused-public-var not considering excluding comments, changing `async-custom-lint?` setting to false.
+
+## 2022.03.25-12.02.59
+
 - General
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
   - Fix install script for aarch64. #794
@@ -13,7 +26,6 @@
   - Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829
   - Bump `org.clojure/clojure` to `1.11.0`.
   - Fix move-coll-entry to maintain cursor position instead of a range. #862
-  - Remove `:lint-project-files-after-startup?` setting not needed anymore.
   - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :after-ns-refactor` flag. #558
   - Introduce ALPHA move-form command. #566
 
@@ -40,6 +52,8 @@
 - API/CLI
   - Extract lsp4clj as a seperate library. #807 @Cyrik Supported by [Scarlet](https://www.scarletcomply.com)
   - Fix inconsistency with clean-ns/format not copying kondo configs.
+
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2022.02.23-12.12.12
 

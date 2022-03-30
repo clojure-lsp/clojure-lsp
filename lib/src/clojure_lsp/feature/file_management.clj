@@ -24,14 +24,16 @@
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
 (defn did-open [uri text db allow-create-ns]
-  (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
-    (swap! db (fn [state-db]
-                (-> state-db
-                    (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                    (update-analysis uri (:analysis kondo-result))
-                    (update-findings uri (:findings kondo-result))
-                    (assoc :kondo-config (:config kondo-result)))))
-    (f.diagnostic/async-lint-file! uri db))
+  (shared/logging-task
+    :did-open
+    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
+      (swap! db (fn [state-db]
+                  (-> state-db
+                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
+                      (update-analysis uri (:analysis kondo-result))
+                      (update-findings uri (:findings kondo-result))
+                      (assoc :kondo-config (:config kondo-result)))))
+      (f.diagnostic/async-lint-file! uri db)))
   (when-let [new-ns (and allow-create-ns
                          (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
@@ -44,58 +46,72 @@
                                :new-text new-text}]}]]
         (async/>!! db/edits-chan (shared/client-changes changes db))))))
 
+(defn ^:private find-changed-elems-by
+  "Detect elements that changed number of occurrences."
+  [signature-fn old-elems new-elems]
+  (comment
+    ;; increased
+    (merge-with - {:a 2} {:a 1}) ;; => {:a 1}
+    ;; decreased
+    (merge-with - {:a 1} {:a 2}) ;; => {:a -1}
+    ;; removed
+    (merge-with - {} {:a 1}) ;; => {:a 1} ;; not {:a -1}, as you'd expect with removing, but at least it's not 0
+    ;; added
+    (merge-with - {:a 1} {}) ;; => {:a 1}
+    ;; same
+    (merge-with - {:a 1} {:a 1}) ;; => {:a 0}
+    )
+  (let [signature-with-elem (fn [elem]
+                              (with-meta (signature-fn elem) {:elem elem}))
+        old-counts (->> old-elems (map signature-with-elem) frequencies)
+        new-counts (->> new-elems (map signature-with-elem) frequencies)]
+    (->> (merge-with - new-counts old-counts)
+         (medley/remove-vals zero?)
+         keys
+         (map (comp :elem meta)))))
+
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
         new-var-defs (filter #(identical? :var-definitions (:bucket %)) new-local-analysis)
-        compare-fn (fn [other-var-defs {:keys [name fixed-arities]}]
-                     (if-let [var-def (first (filter #(= name (:name %)) other-var-defs))]
-                       (and (not (= fixed-arities (:fixed-arities var-def)))
-                            (not= 'clojure.core/declare (:defined-by var-def)))
-                       true))]
-    (->> (concat
-           (filter (partial compare-fn new-var-defs) old-var-defs)
-           (filter (partial compare-fn old-var-defs) new-var-defs))
-         (medley/distinct-by (juxt :name)))))
+        definition-signature (juxt :ns :name :fixed-arities :defined-by)]
+    (find-changed-elems-by definition-signature old-var-defs new-var-defs)))
 
 (defn ^:private find-changed-var-usages
   [old-local-analysis new-local-analysis]
   (let [old-var-usages (filter #(identical? :var-usages (:bucket %)) old-local-analysis)
         new-var-usages (filter #(identical? :var-usages (:bucket %)) new-local-analysis)
-        compare-fn (fn [other-var-usages current-var-usages var-usage]
-                     (= (count (filter #(= (:name var-usage) (:name %)) current-var-usages))
-                        (count (filter #(= (:name var-usage) (:name %)) other-var-usages))))]
-    (->> (concat
-           (remove (partial compare-fn new-var-usages old-var-usages) old-var-usages)
-           (remove (partial compare-fn old-var-usages new-var-usages) new-var-usages))
-         (medley/distinct-by (juxt :name)))))
+        usage-signature (juxt :to :name)]
+    (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
   (async/go
-    (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
-          source-paths (settings/get db [:source-paths])
-          changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
-          references-filenames (->> changed-var-definitions
-                                    (map #(q/find-references project-analysis % false db))
-                                    flatten
-                                    (map :filename))
-          changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
-          definitions-filenames (->> changed-var-usages
-                                     (map #(q/find-definition project-analysis % db))
-                                     (remove nil?)
-                                     (filter (fn [d]
-                                               (and (not (:private d))
-                                                    (some #(string/starts-with? (:filename d) %) source-paths))))
-                                     (map :filename))
-          filenames (->> definitions-filenames
-                         (concat references-filenames)
-                         (remove #(= filename %))
-                         set)]
-      (when (seq filenames)
-        (logger/debug "Analyzing references for files:" filenames)
-        (crawler/analyze-reference-filenames! filenames db)
-        (doseq [filename filenames]
-          (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (producer/refresh-code-lens producer)))))
+    (shared/logging-task
+      :notify-references
+      (let [project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))
+            source-paths (settings/get db [:source-paths])
+            changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
+            references-filenames (->> changed-var-definitions
+                                      ;; TODO: switch from nested-loop join to hash join
+                                      (mapcat #(q/find-references project-analysis % false db))
+                                      (map :filename))
+            changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
+            definitions-filenames (->> changed-var-usages
+                                       ;; TODO: remove usages of external namespaces (clojure.core, etc.) here
+                                       ;; TODO: switch from nested-loop join to hash join
+                                       (keep #(q/find-definition project-analysis % db))
+                                       (filter (fn [d]
+                                                 (and (not (:private d))
+                                                      ;; TODO: is this extra work? The definition came from project-analysis, so should be on the source-paths.
+                                                      (some #(string/starts-with? (:filename d) %) source-paths))))
+                                       (map :filename))
+            filenames (disj (set (concat references-filenames definitions-filenames))
+                            filename)]
+        (when (seq filenames)
+          (logger/debug "Analyzing references for files:" filenames)
+          (crawler/analyze-reference-filenames! filenames db)
+          (doseq [filename filenames]
+            (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
+          (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -139,24 +155,26 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]} {:keys [producer db] :as components}]
-  (loop [state-db @db]
-    (when (>= version (get-in state-db [:documents uri :v] -1))
-      (when-let [kondo-result (shared/logging-time
-                                (str "changes analyzed by clj-kondo took %s secs")
-                                (lsp.kondo/run-kondo-on-text! text uri db))]
-        (let [filename (shared/uri->filename uri)
-              old-local-analysis (get-in @db [:analysis filename])]
-          (if (compare-and-set! db state-db (-> state-db
-                                                (update-analysis uri (:analysis kondo-result))
-                                                (update-findings uri (:findings kondo-result))
-                                                (update :processing-changes disj uri)
-                                                (assoc :kondo-config (:config kondo-result))))
-            (do
-              (f.diagnostic/sync-lint-file! uri db)
-              (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
-              (clojure-producer/refresh-test-tree producer [uri]))
-            (recur @db)))))))
+  (shared/logging-task
+    :analyze-file
+    (loop [state-db @db]
+      (when (>= version (get-in state-db [:documents uri :v] -1))
+        (when-let [kondo-result (shared/logging-time
+                                  (str "changes analyzed by clj-kondo took %s")
+                                  (lsp.kondo/run-kondo-on-text! text uri db))]
+          (let [filename (shared/uri->filename uri)
+                old-local-analysis (get-in @db [:analysis filename])]
+            (if (compare-and-set! db state-db (-> state-db
+                                                  (update-analysis uri (:analysis kondo-result))
+                                                  (update-findings uri (:findings kondo-result))
+                                                  (update :processing-changes disj uri)
+                                                  (assoc :kondo-config (:config kondo-result))))
+              (do
+                (f.diagnostic/sync-lint-file! uri db)
+                (when (settings/get db [:notify-references-on-file-change] true)
+                  (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
+                (clojure-producer/refresh-test-tree producer [uri]))
+              (recur @db))))))))
 
 (defn did-change [uri changes version db]
   (let [old-text (get-in @db [:documents uri :text])
@@ -170,19 +188,22 @@
                                         :version version})))
 
 (defn analyze-watched-created-files! [uris {:keys [db producer] :as components}]
-  (let [filenames (map shared/uri->filename uris)
-        result (shared/logging-time
-                 "Created watched files analyzed, took %s secs"
-                 (lsp.kondo/run-kondo-on-paths! filenames false components))
-        analysis (->> (:analysis result)
-                      lsp.kondo/normalize-analysis
-                      (group-by :filename))]
-    (swap! db (fn [state-db]
-                (-> state-db
-                    (update :analysis merge analysis)
-                    (assoc :kondo-config (:config result))
-                    (update :findings merge (group-by :filename (:findings result))))))
-    (clojure-producer/refresh-test-tree producer uris)))
+  (shared/logging-task
+    :analyze-created-files-in-watched-dir
+    (let [filenames (map shared/uri->filename uris)
+          result (shared/logging-time
+                   "Created watched files analyzed, took %s"
+                   (lsp.kondo/run-kondo-on-paths! filenames false components))
+          analysis (->> (:analysis result)
+                        lsp.kondo/normalize-analysis
+                        (group-by :filename))]
+      (swap! db (fn [state-db]
+                  (-> state-db
+                      (update :analysis merge analysis)
+                      (assoc :kondo-config (:config result))
+                      (update :findings merge (group-by :filename (:findings result))))))
+      (f.diagnostic/lint-project-files! filenames db)
+      (clojure-producer/refresh-test-tree producer uris))))
 
 (defn did-change-watched-files [changes db]
   (doseq [{:keys [uri type]} changes]
@@ -193,23 +214,27 @@
                                  [{:text (slurp filename)}]
                                  (inc (get-in @db [:documents uri :v] 0))
                                  db)
-      :deleted (let [filename (shared/uri->filename uri)]
-                 (swap! db (fn [state-db]
-                             (-> state-db
-                                 (shared/dissoc-in [:documents uri])
-                                 (shared/dissoc-in [:analysis filename])
-                                 (shared/dissoc-in [:findings filename]))))))))
-
-(defn did-close [uri db]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get db [:source-paths])]
-    (when (and (not (shared/external-filename? filename source-paths))
-               (not (shared/file-exists? (io/file filename))))
-      (swap! db (fn [state-db] (-> state-db
+      :deleted (shared/logging-task
+                 :delete-watched-file
+                 (let [filename (shared/uri->filename uri)]
+                   (swap! db (fn [state-db]
+                               (-> state-db
                                    (shared/dissoc-in [:documents uri])
                                    (shared/dissoc-in [:analysis filename])
-                                   (shared/dissoc-in [:findings filename]))))
-      (f.diagnostic/clean! uri db))))
+                                   (shared/dissoc-in [:findings filename])))))))))
+
+(defn did-close [uri db]
+  (shared/logging-task
+    :did-close
+    (let [filename (shared/uri->filename uri)
+          source-paths (settings/get db [:source-paths])]
+      (when (and (not (shared/external-filename? filename source-paths))
+                 (not (shared/file-exists? (io/file filename))))
+        (swap! db (fn [state-db] (-> state-db
+                                     (shared/dissoc-in [:documents uri])
+                                     (shared/dissoc-in [:analysis filename])
+                                     (shared/dissoc-in [:findings filename]))))
+        (f.diagnostic/clean! uri db)))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -218,3 +243,8 @@
       (do
         (did-open uri (slurp uri) db false)
         (get-in @db [:documents uri :text]))))
+
+(defn did-save [uri db]
+  (shared/logging-task
+    :did-save
+    (swap! db #(assoc-in % [:documents uri :saved-on-disk] true))))

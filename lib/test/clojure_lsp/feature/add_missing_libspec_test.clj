@@ -62,24 +62,24 @@
            (#'f.add-missing-libspec/find-namespace-suggestions "foo.bar.core" {"foo.bar.core" nil "something.else" "bar"}))))
 
   (testing "when alias segments match namespaces in the order"
-    (is (= [{:alias "zas" :ns "foo.dar.zas"}]
+    (is (= [{:ns "foo.dar.zas", :alias "d.zas"}]
            (#'f.add-missing-libspec/find-namespace-suggestions
             "d.z" {"foo.bar.baz" nil "foo.dar.zas" nil})))
-    (is (= [{:alias "zas" :ns "foo.dar.zas"}]
+    (is (= [{:alias "da.zas", :ns "foo.dar.zas"}]
            (#'f.add-missing-libspec/find-namespace-suggestions
             "da.zas" {"foo.bar.baz" nil "foo.dar.zas" nil})))
     (is (= nil
            (#'f.add-missing-libspec/find-namespace-suggestions
             "dai.zas" {"foo.bar.baz" nil "foo.dar.zas" nil})))
-    (is (= [{:alias "zas" :ns "foo.dar.zas"}
-            {:alias "zsr" :ns "foo.dow.zsr"}]
+    (is (= [{:alias "d.zas", :ns "foo.dar.zas"} {:alias "d.zsr", :ns "foo.dow.zsr"}]
            (#'f.add-missing-libspec/find-namespace-suggestions
             "d.z" {"foo.dar.zas" nil "foo.bar.baz" nil "foo.dow.zsr" nil})))
-    (is (= [{:alias "zas" :ns "foo.dar.zas"}
-            {:alias "zsr" :ns "foo.dow.zsr"}]
+    (is (= [{:alias "zas", :ns "foo.dar.zas"}
+            {:alias "zsr", :ns "foo.dow.zsr"}
+            {:ns "foo.dar.zas"}
+            {:ns "foo.dow.zsr"}]
            (#'f.add-missing-libspec/find-namespace-suggestions
             "f.d.z" {"foo.dar.zas" nil "baz.dar.zas" nil "zaz.dar.zas" nil "foo.bar.baz" nil "foo.dow.zsr" nil}))))
-
   (testing "use cases"
     (is (= nil
            (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {})))
@@ -101,10 +101,44 @@
     (is (= [{:ns "clojure.data.json" :alias "x" :count 1}]
            (#'f.add-missing-libspec/find-namespace-suggestions "c.d.j" {"clojure.data.json" "x"})))
     (is (= [{:ns "clojure.data.json" :alias "x" :count 1}
-            {:ns "clojure.delta.json" :alias "delta.json"}]
+            {:ns "clojure.delta.json" :alias "delta.json"}
+            {:ns "clojure.delta.json"}]
            (#'f.add-missing-libspec/find-namespace-suggestions "c.d.j" {"clojure.data.json" "x"
                                                                         "clojure.delta.json" nil
-                                                                        "cheshire.core" "json"})))))
+                                                                        "cheshire.core" "json"}))))
+  (testing "super fuzzy matching"
+    (is (= (set [{:alias "log", :ns "project.tools.log"}
+                 {:alias "logging", :ns "clojure.tools.logging"}
+                 {:alias "logging", :ns "clojure.tools.internal.logging"}])
+           (set (#'f.add-missing-libspec/find-namespace-suggestions
+                 "l"
+                 {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil}))))
+    (is (= [{:alias "log", :ns "project.tools.log"}
+            {:alias "logging", :ns "clojure.tools.internal.logging"}
+            {:alias "logging", :ns "clojure.tools.logging"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "log"
+            {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))
+    (is (= [{:alias "t.logging", :ns "clojure.tools.logging"}
+            {:alias "t.log", :ns "project.tools.log"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "t.l"
+            {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))
+    (is (= [{:alias "t.log", :ns "project.tools.log"}
+            {:alias "t.logging", :ns "clojure.tools.logging"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "t.log"
+            {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))
+    (is (= [{:alias "log", :ns "project.tools.log"}
+            {:ns "project.tools.log"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "p.t.l"
+            {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))
+    (is (= [{:alias "logging", :ns "clojure.tools.logging"}
+            {:ns "clojure.tools.logging"}]
+           (#'f.add-missing-libspec/find-namespace-suggestions
+            "c.t.l"
+            {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))))
 
 (defn find-require-suggestions [code]
   (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" db/db))
@@ -115,10 +149,8 @@
     (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
     (h/load-code-and-locs "(ns project.some.cool.namespace-test)" "file:///c.clj")
     (h/assert-submaps
-      [{:ns "project.some.cool.namespace"
-        :alias "namespace"}
-       {:ns "other-project.some.coolio.namespace"
-        :alias "namespace"}]
+      [{:ns "other-project.some.coolio.namespace" :alias "s.cool.namespace"}
+       {:ns "project.some.cool.namespace" :alias "s.cool.namespace"}]
       (find-require-suggestions "|s.cool.namespace/foo")))
   (testing "Suggested alias"
     (h/load-code-and-locs "(ns project.some.cool.namespace)")
@@ -134,6 +166,19 @@
       [{:ns "project.some.cool.namespace"
         :refer "blow"}]
       (find-require-suggestions "|blow")))
+  (testing "Suggested core"
+    (h/assert-submaps
+      [{:ns "clojure.set" :alias "set"}
+       {:ns "clojure.set"}]
+      (find-require-suggestions "|set/intersection")))
+  (testing "Suggested common"
+    (h/assert-submaps
+      [{:ns "clojure.core.async" :alias "async"} {:ns "clojure.core.async"}]
+      (find-require-suggestions "|async/go-loop")))
+  (testing "Suggested common refer"
+    (h/assert-submaps
+      [{:ns "clojure.core.async" :refer "go-loop"}]
+      (find-require-suggestions "|go-loop")))
   (testing "Invalid location"
     (h/assert-submaps
       []

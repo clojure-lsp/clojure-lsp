@@ -121,7 +121,7 @@
                        multiple-defs?)]
     (when can-move?
       (let [def-to-move (first defs)
-            refs (q/find-references analysis def-to-move false true)
+            refs (q/find-references analysis def-to-move false)
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
             per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
             dest-uri (shared/filename->uri dest-filename db)

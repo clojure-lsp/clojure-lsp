@@ -376,6 +376,8 @@ Commands that client can request. Most code actions use these commands as action
 
 ## clojure-lsp extra commands
 
+__Note: Most of these are available via code actions and clients or users may choose to use the code action menu to execute them instead of mapping.__
+
 All functions in clojure-lsp have a two-letter mnemonic shortcut. E.g. `tf` for `thread-first-all`. We __strongly__ suggest that client authors and users use these shortcuts keys when choosing to map these commands to key chords or menus; this allows for users to maintain muscle memory and familiarity as they switch between clients and editors. Thank you to [clj-refactor](https://github.com/clojure-emacs/clj-refactor.el#usage) for this system and other tools that adhere to it.
 
 LSP clients will allow you to bind these commands to shortcuts or menu items using LSP's `workspace/executeCommand` and passing a map with `"command"` and `"arguments"` keys.
@@ -416,7 +418,6 @@ Arguments:
 | ua       | unwind-all              | Unwind all                             | `[file-uri,row,col]`                             | ✅                         |                                                                      |
 | uw       | unwind-thread           | Unwind thread                          | `[file-uri,row,col]`                             |                           |                                                                      |
 
-__Note: Most of these are available via code actions and clients or users may choose to use the code action menu to execute them.__
 
 ## Dev
 

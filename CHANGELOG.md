@@ -5,6 +5,7 @@
 - Add java class find-definition support, decompiling .class files when available. #762 
 - Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.
 - Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.
+- Avoid high CPU usage and freezes by more efficiently finding referenced files to notify on file change. #844 @mainej
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

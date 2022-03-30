@@ -46,58 +46,72 @@
                                :new-text new-text}]}]]
         (async/>!! db/edits-chan (shared/client-changes changes db))))))
 
+(defn ^:private find-changed-elems-by
+  "Detect elements that changed number of occurrences."
+  [signature-fn old-elems new-elems]
+  (comment
+    ;; increased
+    (merge-with - {:a 2} {:a 1}) ;; => {:a 1}
+    ;; decreased
+    (merge-with - {:a 1} {:a 2}) ;; => {:a -1}
+    ;; removed
+    (merge-with - {} {:a 1}) ;; => {:a 1} ;; not {:a -1}, as you'd expect with removing, but at least it's not 0
+    ;; added
+    (merge-with - {:a 1} {}) ;; => {:a 1}
+    ;; same
+    (merge-with - {:a 1} {:a 1}) ;; => {:a 0}
+    )
+  (let [signature-with-elem (fn [elem]
+                              (with-meta (signature-fn elem) {:elem elem}))
+        old-counts (->> old-elems (map signature-with-elem) frequencies)
+        new-counts (->> new-elems (map signature-with-elem) frequencies)]
+    (->> (merge-with - new-counts old-counts)
+         (medley/remove-vals zero?)
+         keys
+         (map (comp :elem meta)))))
+
 (defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
         new-var-defs (filter #(identical? :var-definitions (:bucket %)) new-local-analysis)
-        compare-fn (fn [other-var-defs {:keys [name fixed-arities]}]
-                     (if-let [var-def (first (filter #(= name (:name %)) other-var-defs))]
-                       (and (not (= fixed-arities (:fixed-arities var-def)))
-                            (not= 'clojure.core/declare (:defined-by var-def)))
-                       true))]
-    (->> (concat
-           (filter (partial compare-fn new-var-defs) old-var-defs)
-           (filter (partial compare-fn old-var-defs) new-var-defs))
-         (medley/distinct-by (juxt :name)))))
+        definition-signature (juxt :ns :name :fixed-arities :defined-by)]
+    (find-changed-elems-by definition-signature old-var-defs new-var-defs)))
 
 (defn ^:private find-changed-var-usages
   [old-local-analysis new-local-analysis]
   (let [old-var-usages (filter #(identical? :var-usages (:bucket %)) old-local-analysis)
         new-var-usages (filter #(identical? :var-usages (:bucket %)) new-local-analysis)
-        compare-fn (fn [other-var-usages current-var-usages var-usage]
-                     (= (count (filter #(= (:name var-usage) (:name %)) current-var-usages))
-                        (count (filter #(= (:name var-usage) (:name %)) other-var-usages))))]
-    (->> (concat
-           (remove (partial compare-fn new-var-usages old-var-usages) old-var-usages)
-           (remove (partial compare-fn old-var-usages new-var-usages) new-var-usages))
-         (medley/distinct-by (juxt :name)))))
+        usage-signature (juxt :to :name)]
+    (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
   (async/go
-    (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
-          source-paths (settings/get db [:source-paths])
-          changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
-          references-filenames (->> changed-var-definitions
-                                    (map #(q/find-references project-analysis % false db))
-                                    flatten
-                                    (map :filename))
-          changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
-          definitions-filenames (->> changed-var-usages
-                                     (map #(q/find-definition project-analysis % db))
-                                     (remove nil?)
-                                     (filter (fn [d]
-                                               (and (not (:private d))
-                                                    (some #(string/starts-with? (:filename d) %) source-paths))))
-                                     (map :filename))
-          filenames (->> definitions-filenames
-                         (concat references-filenames)
-                         (remove #(= filename %))
-                         set)]
-      (when (seq filenames)
-        (logger/debug "Analyzing references for files:" filenames)
-        (crawler/analyze-reference-filenames! filenames db)
-        (doseq [filename filenames]
-          (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
-        (producer/refresh-code-lens producer)))))
+    (shared/logging-task
+      :notify-references
+      (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
+            source-paths (settings/get db [:source-paths])
+            changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
+            references-filenames (->> changed-var-definitions
+                                      ;; TODO: switch from nested-loop join to hash join
+                                      (mapcat #(q/find-references project-analysis % false db))
+                                      (map :filename))
+            changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
+            definitions-filenames (->> changed-var-usages
+                                       ;; TODO: remove usages of external namespaces (clojure.core, etc.) here
+                                       ;; TODO: switch from nested-loop join to hash join
+                                       (keep #(q/find-definition project-analysis % db))
+                                       (filter (fn [d]
+                                                 (and (not (:private d))
+                                                      ;; TODO: is this extra work? The definition came from project-analysis, so should be on the source-paths.
+                                                      (some #(string/starts-with? (:filename d) %) source-paths))))
+                                       (map :filename))
+            filenames (disj (set (concat references-filenames definitions-filenames))
+                            filename)]
+        (when (seq filenames)
+          (logger/debug "Analyzing references for files:" filenames)
+          (crawler/analyze-reference-filenames! filenames db)
+          (doseq [filename filenames]
+            (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
+          (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)

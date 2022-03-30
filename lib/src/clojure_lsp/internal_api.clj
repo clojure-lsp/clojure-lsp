@@ -255,9 +255,12 @@
            (remove nil?)
            (map symbol)
            seq)
-      (->> (q/filter-project-analysis (:analysis @db) db)
-           q/find-all-ns-definition-names
-           (remove (partial exclude-ns? options)))))
+      (into #{}
+            (comp
+              (q/filter-project-analysis-xf db)
+              (q/find-all-ns-definition-names-xf)
+              (remove (partial exclude-ns? options)))
+            (:analysis @db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)
@@ -372,7 +375,7 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))
-        project-analysis (q/filter-project-analysis (:analysis @db) db)]
+        project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))]
     (if-let [from-element (if ns-only?
                             (q/find-namespace-definition-by-namespace project-analysis from-ns db)
                             (q/find-element-by-full-name project-analysis from-name from-ns db))]

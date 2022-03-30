@@ -45,7 +45,11 @@
        (map :members)))
 
 (defn workspace-symbols [query db]
-  (->> (q/filter-project-analysis (:analysis @db) db)
+  ;; TODO refactor to be a complete transducer
+  (->> (into {}
+             (comp
+               (q/filter-project-analysis-xf db))
+             (:analysis @db))
        vals
        flatten
        (filter f.document-symbol/declaration?)

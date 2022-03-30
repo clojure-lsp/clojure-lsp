@@ -27,22 +27,26 @@
 (defn- find-last [pred coll]
   (find-first pred (reverse coll)))
 
-(defn ^:private remove-keys [pred m]
-  (apply dissoc m (filter pred (keys m))))
-
-(defn filter-project-analysis [analysis db]
+(defn filter-project-analysis-xf [db]
   (let [source-paths (settings/get db [:source-paths])]
-    (->> analysis
-         (remove-keys #(shared/external-filename? % source-paths)))))
+    (remove #(shared/external-filename? (first %) source-paths))))
 
-(defn filter-external-analysis [analysis db]
+(defn filter-external-analysis-xf [db]
   (let [source-paths (settings/get db [:source-paths])]
-    (->> analysis
-         (remove-keys (complement #(shared/external-filename? % source-paths))))))
+    (filter #(shared/external-filename? (first %) source-paths))))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]
-  (or (find-last pred? (mapcat val (filter-project-analysis analysis db)))
-      (find-last pred? (mapcat val (filter-external-analysis analysis db)))))
+  ;; TODO probably there is a better/faster way of finding last
+  (or (find-last pred? (into []
+                             (comp
+                               (filter-project-analysis-xf db)
+                               (mapcat val))
+                             analysis))
+      (find-last pred? (into []
+                             (comp
+                               (filter-external-analysis-xf db)
+                               (mapcat val))
+                             analysis))))
 
 (defn ^:private match-file-lang
   [check-element match-element]
@@ -359,20 +363,20 @@
 
 (defmethod find-references :keywords
   [analysis {:keys [ns name] :as _element} include-declaration? db]
-  (let [project-analysis (filter-project-analysis analysis db)]
-    (into []
-          (comp
-            (mapcat val)
-            (filter #(identical? :keywords (:bucket %)))
-            (filter #(safe-equal? name (:name %)))
-            (filter (cond
-                      (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
-                      ns #(safe-equal? ns (:ns %))
-                      :else #(not (:ns %))))
-            (filter #(or include-declaration?
-                         (not (:reg %))))
-            (medley/distinct-by (juxt :filename :name :row :col)))
-          project-analysis)))
+  (into []
+        (comp
+          (filter-project-analysis-xf db)
+          (mapcat val)
+          (filter #(identical? :keywords (:bucket %)))
+          (filter #(safe-equal? name (:name %)))
+          (filter (cond
+                    (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
+                    ns #(safe-equal? ns (:ns %))
+                    :else #(not (:ns %))))
+          (filter #(or include-declaration?
+                       (not (:reg %))))
+          (medley/distinct-by (juxt :filename :name :row :col)))
+        analysis))
 
 (defmethod find-references :local
   [analysis {:keys [id name filename] :as element} include-declaration? _db]
@@ -495,21 +499,26 @@
                      (= (:name-end-col %) (:name-end-col keyword-element))))
        first))
 
+(defn find-all-ns-definition-names-xf []
+  (comp
+    (mapcat val)
+    (filter #(identical? :namespace-definitions (:bucket %)))
+    (map :name)))
+
+;; TODO remove it, use only transducer one?
 (defn find-all-ns-definition-names [analysis]
   (into #{}
-        (comp
-          (mapcat val)
-          (filter #(identical? :namespace-definitions (:bucket %)))
-          (map :name))
+        (find-all-ns-definition-names-xf)
         analysis))
 
 (defn find-all-aliases [analysis db]
   (into #{}
         (comp
+          (filter-project-analysis-xf db)
           (mapcat val)
           (filter #(identical? :namespace-alias (:bucket %)))
           (filter :alias))
-        (filter-project-analysis analysis db)))
+        analysis))
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]

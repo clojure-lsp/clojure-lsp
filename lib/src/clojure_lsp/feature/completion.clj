@@ -216,9 +216,12 @@
          (map #(element->completion-item % nil :refer)))))
 
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
-  (when-let [aliases (some->> (q/filter-project-analysis (:analysis @db) db)
-                              (mapcat val)
-                              (filter #(identical? :namespace-alias (:bucket %))))]
+  (when-let [aliases (seq (into []
+                                (comp
+                                  (q/filter-project-analysis-xf db)
+                                  (mapcat val)
+                                  (filter #(identical? :namespace-alias (:bucket %))))
+                                (:analysis @db)))]
     (let [alias-namespaces (->> aliases
                                 (filter #(= (-> % :alias str) cursor-alias))
                                 (map :to)
@@ -375,10 +378,16 @@
             analysis (:analysis @db)
             current-ns-elements (get analysis filename)
             support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
-            other-ns-elements (->> (q/filter-project-analysis (dissoc analysis filename) db)
-                                   (mapcat val))
-            external-ns-elements (->> (q/filter-external-analysis (dissoc analysis filename) db)
+            other-ns-elements (into []
+                                    (comp
+                                      (q/filter-project-analysis-xf db)
                                       (mapcat val))
+                                    (dissoc analysis filename))
+            external-ns-elements (into []
+                                       (comp
+                                         (q/filter-external-analysis-xf  db)
+                                         (mapcat val))
+                                       (dissoc analysis filename))
             cursor-element (q/find-element-under-cursor analysis filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""

@@ -87,7 +87,7 @@
   (async/go
     (shared/logging-task
       :notify-references
-      (let [project-analysis (q/filter-project-analysis (:analysis @db) db)
+      (let [project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))
             source-paths (settings/get db [:source-paths])
             changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
             references-filenames (->> changed-var-definitions

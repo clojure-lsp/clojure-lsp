@@ -5,7 +5,7 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.core.async :as async]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [are deftest is testing]]
    [medley.core :as medley]))
 
 (h/reset-db-after-test)
@@ -47,3 +47,96 @@
     (is (get-in @db/db [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
     (is (get-in @db/db [:findings "/some/path/to/jar.jar:/some/file.clj"]))
     (is (get-in @db/db [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))))
+
+(deftest outgoing-reference-filenames
+  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+                                  :project-root-uri (h/file-uri "file:///")})
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(def a)"
+                                "(def b)") (h/file-uri "file:///src/a.clj"))
+  (h/load-code-and-locs (h/code "(ns b (:require [a]))"
+                                "(def x)"
+                                "a/a"
+                                "a/a") (h/file-uri "file:///src/b.clj"))
+  (let [analysis-before (get-in @db/db [:analysis "/src/b.clj"])]
+    (are [expected new-code]
+         (do
+           (h/load-code-and-locs new-code (h/file-uri "file:///src/b.clj"))
+           (let [analysis-after (get-in @db/db [:analysis "/src/b.clj"])]
+             (is (= expected
+                    (f.file-management/reference-filenames "/src/b.clj"
+                                                           analysis-before
+                                                           analysis-after
+                                                           db/db)))))
+      ;; increasing
+      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
+                              "(def x)"
+                              "a/a"
+                              "a/a"
+                              "a/a")
+      ;; decreasing
+      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
+                              "(def x)"
+                              "a/a")
+      ;; removing
+      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
+                              "(def x)")
+      ;; adding
+      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
+                              "(def x)"
+                              "a/a"
+                              "a/a"
+                              "a/b")
+      ;; same
+      #{} (h/code "(ns b (:require [a]))"
+                  "(def x)"
+                  "a/a"
+                  "a/a")
+      ;; external ns
+      #{} (h/code "(ns b (:require [a]))"
+                  "(def x)"
+                  "a/a"
+                  "a/a"
+                  "inc")
+      ;; same ns
+      #{} (h/code "(ns b (:require [a]))"
+                  "(def x)"
+                  "a/a"
+                  "a/a"
+                  "x"))))
+
+(deftest incoming-reference-filenames
+  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+                                  :project-root-uri (h/file-uri "file:///")})
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(def a)"
+                                "(def b)") (h/file-uri "file:///src/a.clj"))
+  (h/load-code-and-locs (h/code "(ns b (:require [a]))"
+                                "a/a"
+                                "a/c") (h/file-uri "file:///src/b.clj"))
+  (let [analysis-before (get-in @db/db [:analysis "/src/a.clj"])]
+    (are [expected new-code]
+         (do
+           (h/load-code-and-locs new-code (h/file-uri "file:///src/a.clj"))
+           (let [analysis-after (get-in @db/db [:analysis "/src/a.clj"])]
+             (is (= expected
+                    (f.file-management/reference-filenames "/src/a.clj"
+                                                           analysis-before
+                                                           analysis-after
+                                                           db/db)))))
+      ;; remove existing
+      #{"/src/b.clj"} (h/code "(ns a)"
+                              "(def b)")
+      ;; create missing
+      #{"/src/b.clj"} (h/code "(ns a)"
+                              "(def a)"
+                              "(def b)"
+                              "(def c)")
+      ;; remove unused
+      #{} (h/code "(ns a)"
+                  "(def a)")
+      ;; add unused
+      #{} (h/code "(ns a)"
+                  "(def a)"
+                  "(def b)"
+                  "(def d)"))))

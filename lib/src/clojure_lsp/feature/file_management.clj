@@ -83,29 +83,33 @@
         usage-signature (juxt :to :name)]
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
+(defn reference-filenames [filename old-local-analysis new-local-analysis db]
+  (let [project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))
+        source-paths (settings/get db [:source-paths])
+        changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
+        references-filenames (->> changed-var-definitions
+                                  ;; TODO: switch from nested-loop join to hash join
+                                  (mapcat #(q/find-references project-analysis % false db))
+                                  (map :filename))
+        changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
+        definitions-filenames (->> changed-var-usages
+                                   ;; TODO: remove usages of external namespaces (clojure.core, etc.) here
+                                   ;; TODO: switch from nested-loop join to hash join
+                                   (keep #(q/find-definition project-analysis % db))
+                                   (filter (fn [d]
+                                             ;; TODO: this excludes "private calls", but they are counted in code lens, so maybe shouldn't exclude
+                                             (and (not (:private d))
+                                                  ;; TODO: is this extra work? The definition came from project-analysis, so should be on the source-paths.
+                                                  (some #(string/starts-with? (:filename d) %) source-paths))))
+                                   (map :filename))]
+    (disj (set (concat references-filenames definitions-filenames))
+          filename)))
+
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
   (async/go
     (shared/logging-task
       :notify-references
-      (let [project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))
-            source-paths (settings/get db [:source-paths])
-            changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
-            references-filenames (->> changed-var-definitions
-                                      ;; TODO: switch from nested-loop join to hash join
-                                      (mapcat #(q/find-references project-analysis % false db))
-                                      (map :filename))
-            changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
-            definitions-filenames (->> changed-var-usages
-                                       ;; TODO: remove usages of external namespaces (clojure.core, etc.) here
-                                       ;; TODO: switch from nested-loop join to hash join
-                                       (keep #(q/find-definition project-analysis % db))
-                                       (filter (fn [d]
-                                                 (and (not (:private d))
-                                                      ;; TODO: is this extra work? The definition came from project-analysis, so should be on the source-paths.
-                                                      (some #(string/starts-with? (:filename d) %) source-paths))))
-                                       (map :filename))
-            filenames (disj (set (concat references-filenames definitions-filenames))
-                            filename)]
+      (let [filenames (reference-filenames filename old-local-analysis new-local-analysis db)]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
           (crawler/analyze-reference-filenames! filenames db)

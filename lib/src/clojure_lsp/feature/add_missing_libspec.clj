@@ -5,8 +5,6 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
-   [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]

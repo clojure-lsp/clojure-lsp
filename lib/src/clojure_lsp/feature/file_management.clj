@@ -115,10 +115,14 @@
   (async/go
     (shared/logging-task
       :notify-references
-      (let [filenames (reference-filenames filename old-local-analysis new-local-analysis db)]
+      (let [filenames (shared/logging-task
+                       :reference-files/find
+                       (reference-filenames filename old-local-analysis new-local-analysis db))]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
-          (crawler/analyze-reference-filenames! filenames db)
+          (shared/logging-task
+            :reference-files/analyze
+            (crawler/analyze-reference-filenames! filenames db))
           (doseq [filename filenames]
             (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db))
           (producer/refresh-code-lens producer))))))

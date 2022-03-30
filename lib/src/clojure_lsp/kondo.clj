@@ -139,7 +139,7 @@
 (defn ^:private custom-lint-files!
   [files db {:keys [analysis] :as kondo-ctx}]
   (shared/logging-task
-    :lint-reference-files
+    :reference-files/lint
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
       (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx db))))

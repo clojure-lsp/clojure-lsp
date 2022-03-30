@@ -48,7 +48,7 @@
 
 (defn ^:private find-changed-elems-by
   "Detect elements that changed number of occurrences."
-  [signature old-elems new-elems]
+  [signature-fn old-elems new-elems]
   (comment
     ;; increased
     (merge-with - {:a 2} {:a 1}) ;; => {:a 1}
@@ -62,7 +62,7 @@
     (merge-with - {:a 1} {:a 1}) ;; => {:a 0}
     )
   (let [signature-with-elem (fn [elem]
-                              (with-meta (signature elem) {:elem elem}))
+                              (with-meta (signature-fn elem) {:elem elem}))
         old-counts (->> old-elems (map signature-with-elem) frequencies)
         new-counts (->> new-elems (map signature-with-elem) frequencies)]
     (->> (merge-with - new-counts old-counts)

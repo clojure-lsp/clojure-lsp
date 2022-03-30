@@ -1836,6 +1836,7 @@
 <li>Add java class find-definition support, decompiling .class files when available. #762 </li>
 <li>Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.</li>
 <li>Add <code>:java :download-jdk-source?</code> setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.</li>
+<li>Avoid high CPU usage and freezes by more efficiently finding referenced files to notify on file change. #844 @mainej</li>
 </ul>
 <p>This release was supported by <a href="https://www.clojuriststogether.org/">Clojurists Together</a></p>
 <h2 id="20220326-184708">2022.03.26-18.47.08<a class="headerlink" href="#20220326-184708" title="Permanent link">#</a></h2>
@@ -2758,7 +2759,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 29, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 30, 2022</span>
     
   </small>
 </div>

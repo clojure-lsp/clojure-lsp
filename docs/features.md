@@ -42,7 +42,7 @@ Also, it's possible to live rename symbols on the same buffer with `linkedEditin
 
 ### Java support
 
-<img src="../images/features/java-find-definition.gif" width=340>
+<img src="../images/features/java-find-definition.gif" width=580>
 
 ### Completion
 

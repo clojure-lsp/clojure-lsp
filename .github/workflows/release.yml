@@ -187,6 +187,9 @@ jobs:
   linux-aarch64:
     name: Build native linux aarch64 binary
     needs: [build-lib-jar, build-cli-jar]
+    continue-on-error: true
+    strategy:
+      fail-fast: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -399,7 +402,7 @@ jobs:
   release:
     name: Create Release
     environment: prod-release
-    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, linux-aarch64, macos, windows]
+    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.2.0
@@ -489,13 +492,13 @@ jobs:
           asset_name: clojure-lsp-native-static-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
 
-      - name: Upload Linux aarch64 native binary
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          file: clojure-lsp-native-linux-aarch64.zip/clojure-lsp-native-linux-aarch64.zip
-          asset_name: clojure-lsp-native-linux-aarch64.zip
-          tag: ${{ steps.latest-tag.outputs.tag }}
+      # - name: Upload Linux aarch64 native binary
+      #   uses: svenstaro/upload-release-action@v2
+      #   with:
+      #     repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+      #     file: clojure-lsp-native-linux-aarch64.zip/clojure-lsp-native-linux-aarch64.zip
+      #     asset_name: clojure-lsp-native-linux-aarch64.zip
+      #     tag: ${{ steps.latest-tag.outputs.tag }}
 
       - name: Upload MacOS native binary
         uses: svenstaro/upload-release-action@v2

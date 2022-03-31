@@ -240,13 +240,13 @@
       parent-zloc)))
 
 (defn ^:private can-swap?
-  "In a few cases, the simple [[valid-strat?]] heuristics return the wrong results.
-  This happens:
+  "In a few cases, the simple [[probable-valid-movement?]] heuristics return the
+  wrong result. This happens:
   A) When on whitespace following the first clause, and `move-up` is invoked.
   B) When on whitespace preceding the last clause, and `move-down` is invoked.
-  `valid-strat?` thought it saw enough elements before or after the zloc to
-  permit movement, but now that we've more carefully allocated the whitespace to
-  a clause, we know that isn't true. The problem manifests as the origin-idx or
+  Though `probable-valid-movement?` thought it saw enough elements before or
+  after the zloc, now that we've more carefully allocated the whitespace to a
+  clause, we know that isn't true. The problem manifests as the origin-idx or
   dest-idx being out of bounds."
   [origin-idx dest-idx {:keys [breadth pulp rind]}]
   (let [[lower-bound _] rind
@@ -254,7 +254,7 @@
     (and (<= lower-bound origin-idx upper-bound)
          (<= lower-bound dest-idx upper-bound))))
 
-(defn ^:private move-clause-by-strategy
+(defn ^:private move-clause
   "Move a clause of `breadth` elements around `zloc` in direction of `dir`
   ignoring elements in `rind`.
 
@@ -264,7 +264,7 @@
   marks the top of the top clause; and a series of locs, which sit between the
   tops of the top and bottom clauses. Their combined extent can be used to
   calculate the top of the bottom clause; see [[final-bottom-cursor]]."
-  [zloc {:keys [breadth dir rind] :as strategy}]
+  [zloc dir {:keys [breadth rind] :as clause-spec}]
   (let [[ignore-left _] rind
         parent-zloc (z-up zloc)
 
@@ -278,7 +278,7 @@
                       (iterate (case dir :up dec, :down inc))
                       (drop breadth)
                       first)]
-    (when (can-swap? origin-idx dest-idx strategy)
+    (when (can-swap? origin-idx dest-idx clause-spec)
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 
@@ -301,26 +301,24 @@
          (first (:locs (first earlier-clause)))
          (mapcat :locs (concat later-clause interstitial))]))))
 
-;;;; Movement strategies
+;;;; Clause specs
 ;;
-;; A movement strategy is a recipe for how to move a clause within an
+;; Given an expression, describe what constitutes a clause within that
 ;; expression.
 ;;
-;; For example, for the expression `(case x :foo 1 :bar |2)` the movement
-;; strategy for move-up would be:
+;; For example, for the expression `(case x :foo 1 :bar 2)` the clause spec
+;; would be:
 ;;
-;; {:dir     :up
-;;  :rind    [2 0]
+;; {:rind    [2 0]
 ;;  :pulp    4
 ;;  :breadth 2}
 ;;
-;; This says that in this expresion when moving `:up`:
+;; This says that in this expresion:
 ;; * `:rind [2 0]` - two elements at the beginning cannot be moved: `case x`
 ;; * `:pulp 4` - four elements in the interior can be moved: `:foo 1 :bar 2`
 ;; * `:breadth 2` - pairs of elements should be moved together as clauses: `:foo 1` and `:bar 2`
 ;;
-;; If a movement strategy is nil, it is not permitted to move the indicated
-;; clause in the requested direction.
+;; If a clause spec is nil, it is not permitted to move within the expression.
 
 (def ^:private no-rind [0 0])
 
@@ -365,8 +363,8 @@
                                (shared/inside? element z-scope)))
                         (get analysis (shared/uri->filename uri)))))))
 
-(defn ^:private vector-strategy
-  "Returns a partial movement strategy for a vector node, `vector-zloc`."
+(defn ^:private vector-clause-spec
+  "Returns a partial clause spec for a vector node, `vector-zloc`."
   [vector-zloc uri db]
   {:breadth (if (establishes-bindings? vector-zloc uri db) 2 1)
    :rind no-rind})
@@ -382,13 +380,13 @@
       (->> node n/children (filter n/sexpr-able?) count)
       0)))
 
-(defn ^:private list-strategy
-  "Returns a partial movement strategy for a list node, `list-zloc`. In the base
-  case, the strategy will be to move elements one by one. Some functions like
-  case and cond have clauses of arguments that should be moved together. If the
-  list node is such a function call, returns the appropriate movement strategy
-  for it. Returns nil in one special case when we know we're in an invalid
-  condp."
+(defn ^:private list-clause-spec
+  "Returns a partial clause spec for a list node, `list-zloc`. In a regular list
+  a clause is just one element. Some lists are function calls, and functions
+  like case and cond have clauses of arguments that should be moved together. If
+  the list node is such a function call, returns the appropriate clause
+  description for it. Returns nil in one special case when we know we're in an
+  invalid condp."
   [list-zloc child-count]
   ;; case and condp permit final default expression, which should not be moved.
   ;; assoc, assoc!, cond->, cond->>, and case sometimes appear inside other threading expressions.
@@ -415,60 +413,52 @@
              {:breadth param-count, :rind [3 0]}))
     {:breadth 1, :rind no-rind}))
 
-(defn ^:private movable-sibling-counts
-  "Returns the number of movable siblings to the left and right of `zloc`."
-  [zloc [ignore-left ignore-right]]
-  [(-> zloc count-siblings-left (- ignore-left))
-   (-> zloc count-siblings-right (- ignore-right))])
+(defn ^:private pulp [[ignore-left ignore-right] child-count]
+  (- child-count ignore-left ignore-right))
 
-(defn ^:private valid-strat?
-  "Checks whether a movement strategy can be applied to `zloc`. This isn't a
-  perfect test; see [[can-swap?]]."
-  [zloc {:keys [dir breadth pulp rind]}]
-  ;; do we have a multiple of the right number of elements?
-  (and (zero? (mod pulp breadth))
+(defn ^:private clause-spec
+  "Returns a clause spec for the `parent-zloc`."
+  [parent-zloc uri db]
+  (when parent-zloc
+    (let [child-count (count-children parent-zloc)
+          spec (case (z/tag parent-zloc)
+                 :map          {:breadth 2, :rind no-rind}
+                 (:set :forms) {:breadth 1, :rind no-rind}
+                 :vector       (vector-clause-spec parent-zloc uri db)
+                 (:list :fn)   (list-clause-spec parent-zloc child-count)
+                 nil)]
+      (some-> spec
+              (assoc :pulp (pulp (:rind spec) child-count))))))
+
+;;;; Public API
+
+;; Move zloc's clause up or down.
+
+(defn ^:private probable-valid-movement?
+  "Checks whether `zloc` can be moved in direction `dir`, assuming it is part of
+  a clause as described by `clause-spec`.
+
+  This isn't a perfect test. May return true even when the zloc cannot actually
+  be moved. See [[can-swap?]]."
+  [zloc dir {:keys [breadth pulp rind] :as clause-spec}]
+  (and clause-spec
+       ;; do we have a multiple of the right number of elements?
+       (zero? (mod pulp breadth))
        ;; are there enough elements before and after this zloc?
-       (let [[left right] (movable-sibling-counts zloc rind)]
+       (let [[ignore-left ignore-right] rind
+             left  (-> zloc count-siblings-left (- ignore-left))
+             right (-> zloc count-siblings-right (- ignore-right))]
          (or
            ;; erroneously true if on whitespace following first clause
            (and (= :up dir)   (>= left breadth) (>= right 0))
            ;; erroneously true if on whitespace preceding last clause
            (and (= :down dir) (>= left 0)       (>= right breadth))))))
 
-(defn ^:private pulp [[ignore-left ignore-right] child-count]
-  (- child-count ignore-left ignore-right))
+(defn ^:private can-move? [zloc dir uri db]
+  (probable-valid-movement? zloc dir (clause-spec (z-up zloc) uri db)))
 
-(defn ^:private movement-strategy
-  "Returns a movement strategy when the `zloc` can be moved in the direction
-  `dir`.
-
-  May return a movement strategy even when the zloc cannot actually be moved.
-  See [[valid-strat?]] and [[can-swap?]]."
-  [dir zloc uri db]
-  (when-let [parent-zloc (z-up zloc)]
-    (let [child-count (count-children parent-zloc)
-          strat (case (z/tag parent-zloc)
-                  :map          {:breadth 2, :rind no-rind}
-                  (:set :forms) {:breadth 1, :rind no-rind}
-                  :vector       (vector-strategy parent-zloc uri db)
-                  (:list :fn)   (list-strategy parent-zloc child-count)
-                  nil)]
-      (when strat
-        (let [strat (assoc strat
-                           :dir dir
-                           :pulp (pulp (:rind strat) child-count))]
-          (when (valid-strat? zloc strat)
-            strat))))))
-
-;;;; Public API
-
-;; Move zloc's clause up or down.
-
-(defn can-move-up? [zloc uri db]
-  (boolean (movement-strategy :up zloc uri db)))
-
-(defn can-move-down? [zloc uri db]
-  (boolean (movement-strategy :down zloc uri db)))
+(defn can-move-up? [zloc uri db]   (can-move? zloc :up uri db))
+(defn can-move-down? [zloc uri db] (can-move? zloc :down uri db))
 
 (defn ^:private final-bottom-cursor
   "Returns the position where the cursor should be placed after the swap in
@@ -506,14 +496,15 @@
                                          (z-cursor-position parent-loc))
                                 :loc   parent-loc}]}})
 
-(defn ^:private movement [dir zloc uri db]
-  (when-let [strategy (movement-strategy dir zloc uri db)]
-    (move-clause-by-strategy zloc strategy)))
+(defn ^:private movement [zloc dir uri db]
+  (let [clause-spec (clause-spec (z-up zloc) uri db)]
+    (when (probable-valid-movement? zloc dir clause-spec)
+      (move-clause zloc dir clause-spec))))
 
 (defn move-up [zloc uri db]
-  (when-let [[parent-zloc top-loc _] (movement :up zloc uri db)]
+  (when-let [[parent-zloc top-loc _] (movement zloc :up uri db)]
     (changes uri parent-zloc (z-cursor-position top-loc))))
 
 (defn move-down [zloc uri db]
-  (when-let [[parent-zloc top-loc intervening-locs] (movement :down zloc uri db)]
+  (when-let [[parent-zloc top-loc intervening-locs] (movement zloc :down uri db)]
     (changes uri parent-zloc (final-bottom-cursor top-loc intervening-locs))))

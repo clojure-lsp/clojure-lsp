@@ -187,17 +187,17 @@
              :command   "sort-map"
              :arguments [uri line character]}})
 
-(defn ^:private move-coll-entry-up-action [uri line character]
-  {:title   "Move coll entry up"
+(defn ^:private move-up-action [uri line character]
+  {:title   "Move clause up"
    :kind    :refactor-rewrite
-   :command {:title     "Move coll entry up"
+   :command {:title     "Move clause up"
              :command   "move-coll-entry-up"
              :arguments [uri line character]}})
 
-(defn ^:private move-coll-entry-down-action [uri line character]
-  {:title   "Move coll entry down"
+(defn ^:private move-down-action [uri line character]
+  {:title   "Move clause down"
    :kind    :refactor-rewrite
-   :command {:title     "Move coll entry down"
+   :command {:title     "Move clause down"
              :command   "move-coll-entry-down"
              :arguments [uri line character]}})
 
@@ -261,8 +261,8 @@
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
-        allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
-        allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
+        allow-move-up?* (future (f.move-coll-entry/can-move-up? zloc uri db))
+        allow-move-down?* (future (f.move-coll-entry/can-move-down? zloc uri db))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
         definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
@@ -313,12 +313,12 @@
       (conj (sort-map-action uri line character))
 
       (and workspace-edit-capability?
-           @allow-move-entry-up?*)
-      (conj (move-coll-entry-up-action uri line character))
+           @allow-move-up?*)
+      (conj (move-up-action uri line character))
 
       (and workspace-edit-capability?
-           @allow-move-entry-down?*)
-      (conj (move-coll-entry-down-action uri line character))
+           @allow-move-down?*)
+      (conj (move-down-action uri line character))
 
       can-add-let?
       (conj (introduce-let-action uri line character))

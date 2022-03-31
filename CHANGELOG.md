@@ -11,7 +11,8 @@
   - Introduce ALPHA move-form command. #566
   - move-coll-entry: clauses move intuitively in `clojure.test/are`
   - move-coll-entry: top-level clauses can be moved #891
-  - Improve completion performance for most cases, recuding time to compute clj/cljs core symbols.
+  - Rename "Move coll entry" to "Move clause" in code actions and docs
+  - Improve completion performance for most cases, reducing time to compute clj/cljs core symbols.
 
 ## 2022.03.31-20.00.20
 

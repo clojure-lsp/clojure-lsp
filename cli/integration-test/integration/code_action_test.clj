@@ -28,16 +28,16 @@
         :kind "refactor.extract"}
        {:title "Sort map"
         :kind "refactor.rewrite"}
-       {:title "Move coll entry up"
+       {:title "Move clause up"
         :kind "refactor.rewrite"
-        :command {:title "Move coll entry up"
+        :command {:title "Move clause up"
                   :command "move-coll-entry-up"
                   :arguments [(h/source-path->uri sample-file-name)
                               5
                               4]}}
-       {:title "Move coll entry down"
+       {:title "Move clause down"
         :kind "refactor.rewrite"
-        :command {:title "Move coll entry down"
+        :command {:title "Move clause down"
                   :command "move-coll-entry-down"
                   :arguments [(h/source-path->uri sample-file-name)
                               5

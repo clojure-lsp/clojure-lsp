@@ -1,4 +1,15 @@
 (ns clojure-lsp.feature.move-coll-entry
+  "Move clauses up or down.
+
+  What constitutes a clause is context dependent. In a map, it will be a
+  key/value pair. In a vector it will be a single element, unless the vector
+  establishes bindings as in `let`, in which case it will be a pair of elements.
+  This code tries to be aware of common functions, data structures and other
+  forms, and their conventions for establishing clauses.
+
+  Though this feature was originally called 'move collection entry', it is now
+  more generally used to move any clause up or down, even if it isn't in an
+  immutable collection."
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
@@ -15,7 +26,7 @@
 ;;;; Redefine core helpers to treat uneval as comment. See
 ;;;; https://github.com/clj-commons/rewrite-clj/issues/70.
 
-;; clj-rewrite calls the #_ reader macro and its contents an "uneval" node. We
+;; rewrite-clj calls the #_ reader macro and its contents an "uneval" node. We
 ;; duplicate several zipper movement operators, changing them to treat uneval
 ;; nodes as comments. This avoids errors related to counting nodes or
 ;; affiliating them with their whitespace.
@@ -36,6 +47,8 @@
 (defn ^:private z-down [zloc] (some-> zloc z/down* skip-whitespace-right))
 (defn ^:private z-up [zloc] (some-> zloc z/up* skip-whitespace-left))
 (defn ^:private z-leftmost? [zloc] (nil? (skip-whitespace-left (z/left* zloc))))
+
+;;;; More helpers
 
 (defn ^:private z-take-while
   "Returns a sequence of locations in the direction of `f` from `zloc` that
@@ -73,12 +86,17 @@
   [(z-take-while zloc z/right* p?)
    (z/skip z/right* p? zloc)])
 
+(defn ^:private z-cursor-position [zloc]
+  (meta (z/node zloc)))
+
+;;;; Main algorithm for moving a clause
+
 (defn ^:private seq-elems
-  "Returns the contents of `seq-zloc` as a a sequence of elements and padding
+  "Returns the contents of `parent-zloc` as a a sequence of elements and padding
   between them.
 
-  What is an element? It's an item of the parent, plus any comments that are
-  associated with that item. For example, in the following vector there are two
+  What is an element? It's a child of the parent, plus any comments that are
+  associated with that child. For example, in the following vector there are two
   elements:
 
   [;; comment before a
@@ -111,10 +129,10 @@
   The first padding's and first element's idx will be 0, increasing in step from
   there.
 
-  The children of the original `seq-zloc` could be reconstructed by
+  The children of the original `parent-zloc` could be reconstructed by
   concatenating all the `:locs` together."
-  [seq-zloc]
-  (loop [zloc (-> seq-zloc
+  [parent-zloc]
+  (loop [zloc (-> parent-zloc
                   (z/edit* (fn [parent-node]
                              (n/replace-children parent-node
                                                  (mapcat (fn [node]
@@ -176,9 +194,6 @@
                           :idx  idx
                           :locs (concat prefix [elem-loc] postfix)}))))))))
 
-(defn ^:private z-cursor-position [zloc]
-  (meta (z/node zloc)))
-
 (defn ^:private elem-index-by-cursor-position
   "Search for an element within `elems` that was at `cursor-position`."
   [cursor-position elems]
@@ -199,8 +214,8 @@
                     (< idx split-idx)))
               elems))
 
-(defn ^:private edit-collection
-  "Put revised entries back into parent."
+(defn ^:private edit-parent
+  "Put revised elements and padding back into parent."
   [parent-zloc swapped]
   (z/replace parent-zloc
              (n/replace-children (z/node parent-zloc)
@@ -209,7 +224,7 @@
                                       (map z/node)))))
 
 (defn ^:private fix-trailing-comment
-  "After reordering, the last component may now be a comment. We need to add a
+  "After reordering, the last child may now be a comment. We need to add a
   newline because otherwise the closing bracket will be commented out. We align
   the closing bracket indented one space from the opening bracket."
   [parent-zloc]
@@ -227,11 +242,11 @@
 (defn ^:private can-swap?
   "In a few cases, the simple [[valid-strat?]] heuristics return the wrong results.
   This happens:
-  A) When on whitespace following the first group, and `move-up` is invoked.
-  B) When on whitespace before the last group, and `move-down` is invoked.
+  A) When on whitespace following the first clause, and `move-up` is invoked.
+  B) When on whitespace preceding the last clause, and `move-down` is invoked.
   `valid-strat?` thought it saw enough elements before or after the zloc to
   permit movement, but now that we've more carefully allocated the whitespace to
-  a group, we know that isn't true. The problem manifests as the origin-idx or
+  a clause, we know that isn't true. The problem manifests as the origin-idx or
   dest-idx being out of bounds."
   [origin-idx dest-idx {:keys [breadth pulp rind]}]
   (let [[lower-bound _] rind
@@ -239,16 +254,16 @@
     (and (<= lower-bound origin-idx upper-bound)
          (<= lower-bound dest-idx upper-bound))))
 
-(defn ^:private move-group-by-strategy
-  "Move a group of `breadth` elements around `zloc` in direction of `dir`
+(defn ^:private move-clause-by-strategy
+  "Move a clause of `breadth` elements around `zloc` in direction of `dir`
   ignoring elements in `rind`.
 
   Returns three pieces of data. The first is the edited parent expression with
-  the groups swapped, whose string representation should be sent to the editor.
+  the clauses swapped, whose string representation should be sent to the editor.
   The second and third are used for positioning the cursor: a loc whose position
-  marks the top of the top group; and a series of locs, which sit between the
-  tops of the top and bottom groups. Their combined extent can be used to
-  calculate the top of the bottom group; see [[final-bottom-cursor]]."
+  marks the top of the top clause; and a series of locs, which sit between the
+  tops of the top and bottom clauses. Their combined extent can be used to
+  calculate the top of the bottom clause; see [[final-bottom-cursor]]."
   [zloc {:keys [breadth dir rind] :as strategy}]
   (let [[ignore-left _] rind
         parent-zloc (z-up zloc)
@@ -256,7 +271,7 @@
         elems (seq-elems parent-zloc)
 
         origin-idx (elem-index-by-cursor-position (z-cursor-position zloc) elems)
-        ;; move back to first element in group
+        ;; move back to first element in clause
         origin-idx (- origin-idx
                       (mod (- origin-idx ignore-left) breadth))
         dest-idx (->> origin-idx
@@ -267,24 +282,45 @@
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 
-            ;; the group is the elements _and_ intervening padding that are
+            ;; the clause is the elements _and_ intervening padding that are
             ;; moving together
-            group-size          (+ breadth (dec breadth))
-            [earlier-group rst] (split-at group-size rst)
-            [interstitial rst]  (split-at 1 rst) ;; padding
-            [later-group rst]   (split-at group-size rst)
+            clause-size          (+ breadth (dec breadth))
+            [earlier-clause rst] (split-at clause-size rst)
+            [interstitial rst]   (split-at 1 rst) ;; padding
+            [later-clause rst]   (split-at clause-size rst)
 
             swapped     (concat before
-                                later-group
+                                later-clause
                                 interstitial
-                                earlier-group
+                                earlier-clause
                                 rst)
             parent-zloc (-> parent-zloc
-                            (edit-collection swapped)
+                            (edit-parent swapped)
                             (fix-trailing-comment))]
         [parent-zloc
-         (first (:locs (first earlier-group)))
-         (mapcat :locs (concat later-group interstitial))]))))
+         (first (:locs (first earlier-clause)))
+         (mapcat :locs (concat later-clause interstitial))]))))
+
+;;;; Movement strategies
+;;
+;; A movement strategy is a recipe for how to move a clause within an
+;; expression.
+;;
+;; For example, for the expression `(case x :foo 1 :bar |2)` the movement
+;; strategy for move-up would be:
+;;
+;; {:dir     :up
+;;  :rind    [2 0]
+;;  :pulp    4
+;;  :breadth 2}
+;;
+;; This says that in this expresion when moving `:up`:
+;; * `:rind [2 0]` - two elements at the beginning cannot be moved: `case x`
+;; * `:pulp 4` - four elements in the interior can be moved: `:foo 1 :bar 2`
+;; * `:breadth 2` - pairs of elements should be moved together as clauses: `:foo 1` and `:bar 2`
+;;
+;; If a movement strategy is nil, it is not permitted to move the indicated
+;; clause in the requested direction.
 
 (def ^:private no-rind [0 0])
 
@@ -295,31 +331,31 @@
   '#{binding doseq for let loop with-local-vars with-open with-redefs})
 
 (defn ^:private establishes-bindings?
-  "Returns whether `zloc` (which should be a vector node) establishes bindings,
-  such as in `clojure.core/let`.
+  "Returns whether a vector node `vector-zloc` establishes bindings, such as in
+  `clojure.core/let`.
 
   This uses a few heurisitics.
 
   First, there are several clojure.core functions and macros which establish
   bindings, such as `for`, `let`, `loop` and `binding`. It returns true if
   `zloc` is in one of these expressions (even if the expression is actually
-  imported from some namespace besides clojure.core (TODO is it reasonable to
+  imported from some namespace besides clojure.core TODO: Is it reasonable to
   assume that any function with one of these names establishes bindings, even if
-  it isn't in clojure.core?)).
+  it isn't in clojure.core?).
 
   Otherwise, if the first child of `zloc` defines a local variable (according to
-  the clj-kondo diagnostics), then this also returns true. This allows library-
-  and user-defined code to declare that it establishes bindings, via `:lint-as`.
+  the clj-kondo analysis), then this also returns true. This allows library- and
+  user-defined code to declare that it establishes bindings, via `:lint-as`.
   Originally this was the only heuristic, since it works for `let` and `for`.
   But it fails for `bindings` and other forms where the clj-kondo analysis
   reports that it merely references existing variables, rather than establishing
   definitions."
-  [zloc uri {:keys [analysis]}]
+  [vector-zloc uri {:keys [analysis]}]
   (boolean
-    (or (when-let [outer-zloc (z-left zloc)]
+    (or (when-let [outer-zloc (z-left vector-zloc)]
           (and (z-leftmost? outer-zloc)
                (contains? common-binding-syms (z/sexpr outer-zloc))))
-        (let [z-pos   (z-cursor-position (z-down zloc))
+        (let [z-pos   (z-cursor-position (z-down vector-zloc))
               z-scope {:name-row     (:row z-pos)
                        :name-col     (:col z-pos)
                        :name-end-row (:end-row z-pos)
@@ -330,10 +366,9 @@
                         (get analysis (shared/uri->filename uri)))))))
 
 (defn ^:private vector-strategy
-  "Returns the movement strategy for `parent-zloc`, which should be a vector
-  node."
-  [parent-zloc uri db]
-  {:breadth (if (establishes-bindings? parent-zloc uri db) 2 1)
+  "Returns a partial movement strategy for a vector node, `vector-zloc`."
+  [vector-zloc uri db]
+  {:breadth (if (establishes-bindings? vector-zloc uri db) 2 1)
    :rind no-rind})
 
 (defn ^:private in-threading? [parent-zloc]
@@ -348,34 +383,34 @@
       0)))
 
 (defn ^:private list-strategy
-  "Returns a movement strategy for `parent-zloc`, which should be a list node.
-  The strategy will include a `:rind` and a `:breadth`. In the base case, the
-  strategy will be to move elements one by one. Some functions like case and
-  cond have groups of arguments that should be moved together. If the list node
-  is such a function call, returns the appropriate movement strategy for it.
-  Returns nil in one special case when we know we're in an invalid condp."
-  [parent-zloc child-count]
+  "Returns a partial movement strategy for a list node, `list-zloc`. In the base
+  case, the strategy will be to move elements one by one. Some functions like
+  case and cond have clauses of arguments that should be moved together. If the
+  list node is such a function call, returns the appropriate movement strategy
+  for it. Returns nil in one special case when we know we're in an invalid
+  condp."
+  [list-zloc child-count]
   ;; case and condp permit final default expression, which should not be moved.
   ;; assoc, assoc!, cond->, cond->>, and case sometimes appear inside other threading expressions.
   ;; condp has a variation with ternary expressions.
-  (case (some-> parent-zloc z-down z/sexpr)
+  (case (some-> list-zloc z-down z/sexpr)
     cond
     #_=> {:breadth 2, :rind [1 0]}
     (cond-> cond->> assoc assoc!)
-    #_=> {:breadth 2, :rind [(if (in-threading? parent-zloc) 1 2) 0]}
+    #_=> {:breadth 2, :rind [(if (in-threading? list-zloc) 1 2) 0]}
     case
-    #_=> {:breadth 2, :rind (if (in-threading? parent-zloc)
+    #_=> {:breadth 2, :rind (if (in-threading? list-zloc)
                               [1 (if (odd? child-count) 0 1)]
                               [2 (if (even? child-count) 0 1)])}
     condp
-    #_=> (let [breadth (if (z/find-next-value (z-down parent-zloc) z-right :>>) 3 2)
+    #_=> (let [breadth (if (z/find-next-value (z-down list-zloc) z-right :>>) 3 2)
                ignore-left 3
                ignore-right (mod (- child-count ignore-left) breadth)
                invalid-ternary? (= 2 ignore-right)]
            (when-not invalid-ternary?
              {:breadth breadth, :rind [ignore-left ignore-right]}))
     are
-    #_=> (let [param-count (-> parent-zloc z-down z-right count-children)]
+    #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
            (when (< 0 param-count)
              {:breadth param-count, :rind [3 0]}))
     {:breadth 1, :rind no-rind}))
@@ -395,9 +430,9 @@
        ;; are there enough elements before and after this zloc?
        (let [[left right] (movable-sibling-counts zloc rind)]
          (or
-           ;; erroneously true if on whitespace following first group
+           ;; erroneously true if on whitespace following first clause
            (and (= :up dir)   (>= left breadth) (>= right 0))
-           ;; erroneously true if on whitespace preceding last group
+           ;; erroneously true if on whitespace preceding last clause
            (and (= :down dir) (>= left 0)       (>= right breadth))))))
 
 (defn ^:private pulp [[ignore-left ignore-right] child-count]
@@ -406,13 +441,6 @@
 (defn ^:private movement-strategy
   "Returns a movement strategy when the `zloc` can be moved in the direction
   `dir`.
-
-  A movement strategy is three pieces of data.
-  - `:breadth`: how many element should be moved together.
-  - `:rind`: how many elements at the beginning and end of the containing
-     expression can be ignored for the purposes of movement.
-  - `:pulp`: how many elements in the interior of the expression can be moved.
-  - `:dir` A copy of the `dir`.
 
   May return a movement strategy even when the zloc cannot actually be moved.
   See [[valid-strat?]] and [[can-swap?]]."
@@ -432,15 +460,19 @@
           (when (valid-strat? zloc strat)
             strat))))))
 
-(defn can-move-entry-up? [zloc uri db]
+;;;; Public API
+
+;; Move zloc's clause up or down.
+
+(defn can-move-up? [zloc uri db]
   (boolean (movement-strategy :up zloc uri db)))
 
-(defn can-move-entry-down? [zloc uri db]
+(defn can-move-down? [zloc uri db]
   (boolean (movement-strategy :down zloc uri db)))
 
 (defn ^:private final-bottom-cursor
   "Returns the position where the cursor should be placed after the swap in
-  order to end up at the top of the (eventual) bottom group.
+  order to end up at the top of the (eventual) bottom clause.
 
   This is calculated by starting at the beginning of the `top-loc`, and
   adjusting that position by adding the extent of the `intervening-locs`. The
@@ -476,7 +508,7 @@
 
 (defn ^:private movement [dir zloc uri db]
   (when-let [strategy (movement-strategy dir zloc uri db)]
-    (move-group-by-strategy zloc strategy)))
+    (move-clause-by-strategy zloc strategy)))
 
 (defn move-up [zloc uri db]
   (when-let [[parent-zloc top-loc _] (movement :up zloc uri db)]

@@ -303,6 +303,18 @@ It should return a completion item that after applied should result in:
 (let [|] (+ 1 2))
 ```
 
+### Java support
+
+At the moment, clojure-lsp supports find definition of java classes only, methods, completion and other features are not supported yet.
+
+When a find-definition of a java class is triggered, clojure-lsp checks the following:
+
+- If the java source(`.java`) is available on classpath, clojure-lsp just return that file location.
+- If the java source is not available, only the `.class`, clojure-lsp decompiles it and save the generated `.java` in a cache folder (`.lsp/.cache/java/`)
+- If the java class is from JDK (e.g. `java.util.UUID`), clojure-lsp tries a few things to be able to sucessfully find the definition, following this waterfall decision:
+  - Most JRE installations contains the java source code in a `src.zip`, clojure-lsp tries to find it via `JAVA_HOME` or `java` command on `PATH`, if found clojure-lsp extracts to its global cache config (XDG_CONFIG or `~/.config/clojure-lsp`) to be used in other projects.
+  - If `src.zip` is not found or user specified a custom `:java :jdk-source-uri`, clojure-lsp tries to download the source from that uri, only if `:java :download-jdk-source?` is enabled, disabled by default, extracting to the global cache dir.
+
 ### Stub generation
 
 It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.

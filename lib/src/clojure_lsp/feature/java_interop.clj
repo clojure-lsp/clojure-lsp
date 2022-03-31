@@ -204,5 +204,6 @@
                  (slurp jdk-result-file)))
       (do
         (analyze-jdk-source! (.getCanonicalPath jdk-dir-file) db)
-        (logger/info java-logger-tag "JDK Source analyzed successfully."))
+        (logger/info java-logger-tag "JDK Source analyzed successfully.")
+        true)
       (logger/warn java-logger-tag "JDK Source not found, skipping java analysis."))))

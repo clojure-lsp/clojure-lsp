@@ -23,7 +23,7 @@
        :tree
        {:name "foo.bar"
         :range {:start {:line 0 :character 0}
-                :end {:line 0 :character 11}}
+                :end {:line 0 :character 50}}
         :name-range {:start {:line 0 :character 4}
                      :end {:line 0 :character 11}}
         :kind :namespace

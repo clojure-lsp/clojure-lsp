@@ -20,7 +20,7 @@
              :kind :namespace
              :location
              {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 0 :character 0} :end {:line 0 :character 17}}}}
+              :range {:start {:line 0 :character 0} :end {:line 0 :character 57}}}}
             {:name "my-alpapapaca"
              :kind :variable
              :location
@@ -37,7 +37,7 @@
              {:uri (h/file-uri "file:///a.clj")
               :range {:start {:line 3 :character 0} :end {:line 3 :character 26}}}}
             {:kind :namespace,
-             :location {:range {:end {:character 15, :line 0}, :start {:character 0, :line 0}},
+             :location {:range {:end {:character 49, :line 0}, :start {:character 0, :line 0}},
                         :uri (h/file-uri "file:///b.clj")},
              :name "foo.goat.ns"}
             {:kind :function,
@@ -50,7 +50,7 @@
              :kind :namespace
              :location
              {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 0 :character 0} :end {:line 0 :character 17}}}}
+              :range {:start {:line 0 :character 0} :end {:line 0 :character 57}}}}
             {:name "alpacas"
              :kind :function
              :location

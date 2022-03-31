@@ -53,8 +53,9 @@
 (defn ^:private uri->translated-file [uri {:keys [db]}]
   ;; TODO consider local class files not from jar
   (if (shared/jar-file? uri)
-    (let [jar-uri (shared/ensure-jarfile uri)]
+    (let [jar-uri (shared/ensure-jarfile uri db)]
       (if (shared/class-file? jar-uri)
+        ;; TODO zipfile doesn't work with URL
         (let [url (URL. jar-uri)
               connection ^JarURLConnection (.openConnection url)
               jar (.getJarFile connection)

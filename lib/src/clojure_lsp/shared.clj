@@ -170,12 +170,14 @@
         (str (-> jar-uri-path io/file .getCanonicalPath) ":" nested-file)
         (uri-obj->filepath uri-obj)))))
 
-(defn ensure-jarfile [uri]
-  (if (string/starts-with? uri "jar:")
-    uri
-    (-> uri
-        (string/replace "zipfile:" "jar:file:")
-        (string/replace "::" "!/"))))
+(defn ensure-jarfile [uri db]
+  (let [jar-scheme? (= "jar" (get @db [:settings :dependency-scheme]))]
+    (if (or (not jar-scheme?)
+            (string/starts-with? uri "jar:"))
+      uri
+      (-> uri
+          (string/replace "zipfile:" "jar:file:")
+          (string/replace "::" "!/")))))
 
 (defn ^:private filepath->uri-obj ^URI [filepath]
   (-> filepath io/file .toPath .toUri))

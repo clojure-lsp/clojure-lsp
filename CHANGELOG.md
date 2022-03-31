@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve settings documentation.
+
 ## 2022.03.31-20.00.20
 
 - Fix URI resolver on java JDK logic.

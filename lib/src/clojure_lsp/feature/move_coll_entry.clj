@@ -116,15 +116,15 @@
 
   The format of a returned elem is:
   {:type :elem
-   :idx  <index of the element within seq-zloc>
+   :idx  <index of the element within the sequence>
    :locs <sequence of zipper locations whose nodes make up the element>}
 
   The format of a returned padding is:
   {:type :padding
-   :idx  <index of the padding within seq-zloc>
+   :idx  <index of the padding within the sequence>
    :locs <sequence of zipper locations whose nodes make up the padding>}
 
-  The returned values will always be interposed with padding, with padding at
+  The returned elems will always be interposed with padding, with padding at
   the beginning and possibly at the end, even if the padding contains no locs.
   The first padding's and first element's idx will be 0, increasing in step from
   there.
@@ -442,17 +442,18 @@
   be moved. See [[can-swap?]]."
   [zloc dir {:keys [breadth pulp rind] :as clause-spec}]
   (and clause-spec
-       ;; do we have a multiple of the right number of elements?
+       ;; Can the expression be split into clauses?
        (zero? (mod pulp breadth))
-       ;; are there enough elements before and after this zloc?
        (let [[ignore-left ignore-right] rind
-             left  (-> zloc count-siblings-left (- ignore-left))
-             right (-> zloc count-siblings-right (- ignore-right))]
-         (or
-           ;; erroneously true if on whitespace following first clause
-           (and (= :up dir)   (>= left breadth) (>= right 0))
-           ;; erroneously true if on whitespace preceding last clause
-           (and (= :down dir) (>= left 0)       (>= right breadth))))))
+             movable-before (-> zloc count-siblings-left (- ignore-left))
+             movable-after (-> zloc count-siblings-right (- ignore-right))]
+         (and
+           ;; Are we in the pulp?
+           (<= 0 (case dir :up movable-after, :down movable-before))
+           ;; Is there another clause to swap with?
+           ;; Erroneously true if we are on a comment or whitespace that will
+           ;; eventually be allocated to padding or another element.
+           (<= breadth (case dir :up movable-before, :down movable-after))))))
 
 (defn ^:private can-move? [zloc dir uri db]
   (probable-valid-movement? zloc dir (clause-spec (z-up zloc) uri db)))

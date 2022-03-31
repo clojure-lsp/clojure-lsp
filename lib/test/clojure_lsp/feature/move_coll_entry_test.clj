@@ -106,7 +106,18 @@
       (is (not (can-move-code-up? (h/code "(condp some [1 2 3 4]"
                                           "  #{0 6 7} :>> inc"
                                           "  |#{4 5 9} :>> dec"
-                                          "  :else :invalid)")))))))
+                                          "  :else :invalid)"))))
+      ;; from rind of are
+      (is (not (can-move-code-up? (h/code "(|are [x] (= x 1) 1)"))))
+      (is (not (can-move-code-up? (h/code "(are |[x] (= x 1) 1)"))))
+      (is (not (can-move-code-up? (h/code "(are [x] |(= x 1) 1)"))))
+      ;; from first group of are
+      (is (not (can-move-code-up? (h/code "(are [expected x] (= expected x) |1 2 3 4)"))))
+      (is (not (can-move-code-up? (h/code "(are [expected x] (= expected x) 1 |2 3 4)"))))
+      ;; from unbalanced are
+      (is (not (can-move-code-up? (h/code "(are [expected x] (= expected x) 1 2 |3 4 5)"))))
+      ;; from invalid are
+      (is (not (can-move-code-up? (h/code "(are [] (= 1 1) 1 |2)")))))))
 
 ;; These are only the negative cases, proving when move-down is NOT offered in
 ;; the actions menu. The positive cases are all tested indirectly via
@@ -183,7 +194,18 @@
       (is (not (can-move-code-down? "(condp = x a 1 b |2)")))
       (is (not (can-move-code-down? (h/code "(condp some [1 2 3 4]"
                                             "  |#{4 5 9} :>> dec"
-                                            "  :else)")))))))
+                                            "  :else)"))))
+      ;; from rind of are
+      (is (not (can-move-code-down? (h/code "(|are [x] (= x 1) 1)"))))
+      (is (not (can-move-code-down? (h/code "(are |[x] (= x 1) 1)"))))
+      (is (not (can-move-code-down? (h/code "(are [x] |(= x 1) 1)"))))
+      ;; from last group of are
+      (is (not (can-move-code-down? (h/code "(are [expected x] (= expected x) 1 2 |3 4)"))))
+      (is (not (can-move-code-down? (h/code "(are [expected x] (= expected x) 1 2 3 |4)"))))
+      ;; from unbalanced are
+      (is (not (can-move-code-down? (h/code "(are [expected x] (= expected x) |1 2 3 4 5)"))))
+      ;; from invalid are
+      (is (not (can-move-code-down? (h/code "(are [] (= 1 1) |1 2)")))))))
 
 (defn move-zloc-up [zloc]
   (f.move-coll-entry/move-up zloc h/default-uri @db/db))
@@ -428,7 +450,13 @@
                     (h/code "(condp some [1 2 3 4]"
                             "  #{0 6 7} :>> inc"
                             "  #{4 5 9} :>> |dec"
-                            "  :else)")))
+                            "  :else)"))
+    (assert-move-up (h/code "(are [x] (= x 1) |2 1)")
+                    (h/code "(are [x] (= x 1) 1 |2)"))
+    (assert-move-up (h/code "(are [expected x] (= expected x) |3 4 1 2)")
+                    (h/code "(are [expected x] (= expected x) 1 2 |3 4)"))
+    (assert-move-up (h/code "(are [expected x] (= expected x) |3 4 1 2)")
+                    (h/code "(are [expected x] (= expected x) 1 2 3 |4)")))
   (testing "with destructuring"
     (assert-move-up (h/code "(let [[a b] [1 2]"
                             "      |e 2"
@@ -801,7 +829,13 @@
                       (h/code "(condp some [1 2 3 4]"
                               "  #{0 6 7} :>> |inc"
                               "  #{4 5 9} :>> dec"
-                              "  :else)")))
+                              "  :else)"))
+    (assert-move-down (h/code "(are [x] (= x 1) 2 |1)")
+                      (h/code "(are [x] (= x 1) |1 2)"))
+    (assert-move-down (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
+                      (h/code "(are [expected x] (= expected x) |1 2 3 4)"))
+    (assert-move-down (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
+                      (h/code "(are [expected x] (= expected x) 1 |2 3 4)")))
   (testing "with destructuring"
     (assert-move-down (h/code "(let [[a b] [1 2]"
                               "      {:keys [c d]} {:c 1 :d 2}"

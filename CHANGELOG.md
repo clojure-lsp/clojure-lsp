@@ -4,6 +4,7 @@
 
 - Improve settings documentation.
 - Introduce ALPHA move-form command. #566
+- move-coll-entry: clauses move intuitively in `clojure.test/are`
 
 ## 2022.03.31-20.00.20
 

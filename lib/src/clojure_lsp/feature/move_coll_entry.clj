@@ -374,6 +374,10 @@
                invalid-ternary? (= 2 ignore-right)]
            (when-not invalid-ternary?
              {:breadth breadth, :rind [ignore-left ignore-right]}))
+    are
+    #_=> (let [param-count (-> parent-zloc z-down z-right count-children)]
+           (when (< 0 param-count)
+             {:breadth param-count, :rind [3 0]}))
     {:breadth 1, :rind no-rind}))
 
 (defn ^:private movable-sibling-counts
@@ -391,9 +395,9 @@
        ;; are there enough elements before and after this zloc?
        (let [[left right] (movable-sibling-counts zloc rind)]
          (or
-          ;; erroneously true if on whitespace following first group
+           ;; erroneously true if on whitespace following first group
            (and (= :up dir)   (>= left breadth) (>= right 0))
-          ;; erroneously true if on whitespace preceding last group
+           ;; erroneously true if on whitespace preceding last group
            (and (= :down dir) (>= left 0)       (>= right breadth))))))
 
 (defn ^:private pulp [[ignore-left ignore-right] child-count]

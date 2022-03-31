@@ -435,5 +435,8 @@
     {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
      :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
 
+(def full-file-position
+  {:row 1 :col 1 :end-row 1000000 :end-col 1000000})
+
 (defn full-file-range []
-  (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
+  (->range full-file-position))

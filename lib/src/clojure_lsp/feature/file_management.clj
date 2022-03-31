@@ -91,35 +91,35 @@
         project-analysis (into {}
                                (q/filter-project-analysis-xf db)
                                (dissoc (:analysis @db) filename)) ;; don't notify self
-        references-filenames (when (seq changed-var-definitions)
-                               (let [def-signs (->> changed-var-definitions
-                                                    (map q/var-definition-signatures)
-                                                    (apply set/union))]
-                                 (into #{}
-                                       (comp
-                                         (mapcat val)
-                                         (filter #(identical? :var-usages (:bucket %)))
-                                         (filter #(contains? def-signs (q/var-usage-signature %)))
-                                         (map :filename))
-                                       project-analysis)))
-        definitions-filenames (when (seq changed-var-usages)
-                                (let [usage-signs->langs (->> changed-var-usages
+        incoming-filenames (when (seq changed-var-definitions)
+                             (let [def-signs (->> changed-var-definitions
+                                                  (map q/var-definition-signatures)
+                                                  (apply set/union))]
+                               (into #{}
+                                     (comp
+                                       (mapcat val)
+                                       (filter #(identical? :var-usages (:bucket %)))
+                                       (filter #(contains? def-signs (q/var-usage-signature %)))
+                                       (map :filename))
+                                     project-analysis)))
+        outgoing-filenames (when (seq changed-var-usages)
+                             (let [usage-signs->langs (->> changed-var-usages
                                                               ;; TODO: do we really care if lang doesn't match?
-                                                              (reduce (fn [result usage]
-                                                                        (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
-                                                                      {}))]
-                                  (into #{}
-                                        (comp
-                                          (mapcat val)
-                                          (filter #(identical? :var-definitions (:bucket %)))
-                                          (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
-                                                     (some usage-langs (q/elem-langs %))))
+                                                           (reduce (fn [result usage]
+                                                                     (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
+                                                                   {}))]
+                               (into #{}
+                                     (comp
+                                       (mapcat val)
+                                       (filter #(identical? :var-definitions (:bucket %)))
+                                       (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
+                                                  (some usage-langs (q/elem-langs %))))
                                           ;; TODO: this excludes "private calls", but they are counted in code lens, so maybe shouldn't exclude
-                                          (remove :private)
-                                          (map :filename))
-                                        project-analysis)))]
-    (set/union (or references-filenames #{})
-               (or definitions-filenames #{}))))
+                                       (remove :private)
+                                       (map :filename))
+                                     project-analysis)))]
+    (set/union (or incoming-filenames #{})
+               (or outgoing-filenames #{}))))
 
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
   (async/go

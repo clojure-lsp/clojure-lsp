@@ -6,6 +6,7 @@
 - Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.
 - Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.
 - Avoid high CPU usage and freezes by more efficiently finding referenced files to notify on file change. #844 @mainej
+- Bump clj-kondo to `2022.03.10-20220330.150303-29` improving java analysis and fixing a critical regression for re-frame. #888
 
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

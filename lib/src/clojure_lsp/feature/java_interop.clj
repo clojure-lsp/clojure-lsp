@@ -51,6 +51,7 @@
     dest-file))
 
 (defn ^:private uri->translated-file [uri {:keys [db]}]
+  ;; TODO consider local class files not from jar
   (if (shared/jar-file? uri)
     (let [jar-uri (shared/ensure-jarfile uri)]
       (if (shared/class-file? jar-uri)

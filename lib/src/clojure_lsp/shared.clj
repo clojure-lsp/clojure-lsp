@@ -195,6 +195,13 @@
 (defn class-file? [uri]
   (boolean (re-find class-file-regex uri)))
 
+(defn valid-uri? [^String value]
+  (try
+    (URL. value)
+    true
+    (catch Exception _
+      false)))
+
 (defn external-filename? [filename source-paths]
   (and filename
        (or (-> filename name jar-file?)

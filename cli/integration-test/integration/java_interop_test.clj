@@ -10,24 +10,26 @@
 (lsp/clean-after-test)
 
 (deftest find-definition-of-java-class-when-source-exists
-    (lsp/start-process!)
-    (lsp/request! (fixture/initialize-request
-                    {:initializationOptions (dissoc fixture/default-init-options :java)}))
-    (lsp/notify! (fixture/initialized-notification))
-    (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request
+                  {:initializationOptions (dissoc fixture/default-init-options :java)}))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 
-    (testing "We find java source class"
-      (h/assert-submap
-        {:uri (h/source-path->uri "java_interop/SampleClass.java")
-         :range {:start {:line 0 :character 0}
-                 :end {:line 0 :character 0}}}
-        (lsp/request! (fixture/definition-request "java_interop/a.clj" 7 5)))))
+  (testing "We find java source class"
+    (h/assert-submap
+      {:uri (h/source-path->uri "java_interop/SampleClass.java")
+       :range {:start {:line 0 :character 0}
+               :end {:line 0 :character 0}}}
+      (lsp/request! (fixture/definition-request "java_interop/a.clj" 7 5)))))
 
 (deftest find-definition-of-java-class-when-source-does-not-exists
   (h/delete-project-file "../../.lsp/.cache/java")
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
-                  {:initializationOptions (dissoc fixture/default-init-options :java)}))
+                  {:initializationOptions (-> fixture/default-init-options
+                                              (dissoc :java)
+                                              (assoc :dependency-scheme "jar"))})) ;; TODO fix when add support for decompile with zipfile
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix URI resolver on java JDK logic.
+- Fix zipfile scheme when finding external deps. 
 
 ## 2022.03.31-14.21.14
 

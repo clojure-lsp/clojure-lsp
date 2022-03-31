@@ -254,16 +254,40 @@
     (and (<= lower-bound origin-idx upper-bound)
          (<= lower-bound dest-idx upper-bound))))
 
+(defn ^:private bottom-position
+  "Returns the position where the cursor should be placed after the swap in
+  order to end up at the top of the (eventual) bottom clause.
+
+  This is calculated by starting at the `top-position`, and adjusting by adding
+  the extent of the `intervening-elems`. The extent is calculated by re-parsing
+  the intervening locs, counting their rows and columns by looking at their
+  string representations. This is probably slow, but it avoids needing to use
+  {:track-position? true} in the parser. If someday this project uses
+  :track-position?, this code probably should be changed to read the revised
+  position of the original zloc."
+  [top-position intervening-elems]
+  (let [[bottom-row bottom-col]
+        (->> intervening-elems
+             (mapcat :locs)
+             (reduce (fn [pos zloc]
+                       (n.protocols/+extent pos (n.protocols/extent (z/node zloc))))
+                     [(:row top-position) (:col top-position)]))]
+    {:row bottom-row
+     :col bottom-col}))
+
+(defn ^:private final-position [dir earlier-clause interstitial later-clause]
+  (let [top-position (z-cursor-position (first (:locs (first earlier-clause))))]
+    (case dir
+      :up top-position
+      :down (bottom-position top-position (concat later-clause interstitial)))))
+
 (defn ^:private move-clause
   "Move a clause of `breadth` elements around `zloc` in direction of `dir`
   ignoring elements in `rind`.
 
-  Returns three pieces of data. The first is the edited parent expression with
+  Returns two pieces of data. The first is the edited parent expression with
   the clauses swapped, whose string representation should be sent to the editor.
-  The second and third are used for positioning the cursor: a loc whose position
-  marks the top of the top clause; and a series of locs, which sit between the
-  tops of the top and bottom clauses. Their combined extent can be used to
-  calculate the top of the bottom clause; see [[final-bottom-cursor]]."
+  The second is the position where the cursor should be placed after the edit."
   [zloc dir {:keys [breadth rind] :as clause-spec}]
   (let [[ignore-left _] rind
         parent-zloc (z-up zloc)
@@ -298,8 +322,7 @@
                             (edit-parent swapped)
                             (fix-trailing-comment))]
         [parent-zloc
-         (first (:locs (first earlier-clause)))
-         (mapcat :locs (concat later-clause interstitial))]))))
+         (final-position dir earlier-clause interstitial later-clause)]))))
 
 ;;;; Clause specs
 ;;
@@ -318,7 +341,7 @@
 ;; * `:pulp 4` - four elements in the interior can be moved: `:foo 1 :bar 2`
 ;; * `:breadth 2` - pairs of elements should be moved together as clauses: `:foo 1` and `:bar 2`
 ;;
-;; If a clause spec is nil, it is not permitted to move within the expression.
+;; If a clause spec is nil, movement within the expression is not permitted.
 
 (def ^:private no-rind [0 0])
 
@@ -461,51 +484,20 @@
 (defn can-move-up? [zloc uri db]   (can-move? zloc :up uri db))
 (defn can-move-down? [zloc uri db] (can-move? zloc :down uri db))
 
-(defn ^:private final-bottom-cursor
-  "Returns the position where the cursor should be placed after the swap in
-  order to end up at the top of the (eventual) bottom clause.
-
-  This is calculated by starting at the beginning of the `top-loc`, and
-  adjusting that position by adding the extent of the `intervening-locs`. The
-  extent is calculated by re-parsing the intervening-locs, counting their rows
-  and columns by looking at their string representations. This is probably slow,
-  but it avoids needing to use {:track-position? true} in the parser. If someday
-  this project uses :track-position?, this code probably should be changed to
-  read the revised position of the original zloc."
-  [top-loc intervening-locs]
-  (let [top-position (z-cursor-position top-loc)
-
-        [bottom-row bottom-col]
-        (reduce (fn [pos zloc]
-                  (n.protocols/+extent pos (n.protocols/extent (z/node zloc))))
-                [(:row top-position) (:col top-position)]
-                intervening-locs)]
-    {:row     bottom-row
-     :col     bottom-col
-     :end-row bottom-row
-     :end-col bottom-col}))
-
-(defn ^:private changes [uri parent-loc cursor-position]
-  {:show-document-after-edit {:uri         uri
-                              :take-focus? true
-                              :range       (assoc cursor-position :end-row (:row cursor-position) :end-col (:col cursor-position))}
-   :changes-by-uri           {uri
-                              [{:range (if (= :forms (z/tag parent-loc))
+(defn ^:private move [zloc dir uri db]
+  (let [clause-spec (clause-spec (z-up zloc) uri db)]
+    (when (probable-valid-movement? zloc dir clause-spec)
+      (when-let [[parent-zloc position] (move-clause zloc dir clause-spec)]
+        {:show-document-after-edit {:uri         uri
+                                    :take-focus? true
+                                    :range       (assoc position :end-row (:row position) :end-col (:col position))}
+         :changes-by-uri           {uri
+                              [{:range (if (= :forms (z/tag parent-zloc))
                                          ;; work around for https://github.com/clj-commons/rewrite-clj/issues/173
                                          ;; when that's fixed, revert to else-clause: (z-cursor-position parent-loc)
                                          shared/full-file-position
-                                         (z-cursor-position parent-loc))
-                                :loc   parent-loc}]}})
+                                         (z-cursor-position parent-zloc))
+                                :loc   parent-zloc}]}}))))
 
-(defn ^:private movement [zloc dir uri db]
-  (let [clause-spec (clause-spec (z-up zloc) uri db)]
-    (when (probable-valid-movement? zloc dir clause-spec)
-      (move-clause zloc dir clause-spec))))
-
-(defn move-up [zloc uri db]
-  (when-let [[parent-zloc top-loc _] (movement zloc :up uri db)]
-    (changes uri parent-zloc (z-cursor-position top-loc))))
-
-(defn move-down [zloc uri db]
-  (when-let [[parent-zloc top-loc intervening-locs] (movement zloc :down uri db)]
-    (changes uri parent-zloc (final-bottom-cursor top-loc intervening-locs))))
+(defn move-up [zloc uri db] (move zloc :up uri db))
+(defn move-down [zloc uri db] (move zloc :down uri db))

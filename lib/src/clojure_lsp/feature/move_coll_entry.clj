@@ -474,8 +474,8 @@
            ;; Are we in the pulp?
            (<= 0 (case dir :up movable-after, :down movable-before))
            ;; Is there another clause to swap with?
-           ;; Erroneously true if we are on a comment or whitespace that will
-           ;; eventually be allocated to padding or another element.
+           ;; Can be erroneously true if we are on a comment or whitespace that
+           ;; will eventually be allocated to padding or another element.
            (<= breadth (case dir :up movable-before, :down movable-after))))))
 
 (defn ^:private can-move? [zloc dir uri db]

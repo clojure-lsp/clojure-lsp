@@ -1047,161 +1047,161 @@
 <tbody>
 <tr>
 <td><code>:clean</code></td>
-<td>Settings related to <code>clean-ns</code> refactoring. Check <code>clean</code> settings below.</td>
+<td>Settings related to <code>clean-ns</code> refactoring. Check <a href="#clean">Clean</a> settings below.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>additional-snippets</code></td>
+<td><code>:additional-snippets</code></td>
 <td>Additional user snippets to be available during completing, check the snippets section below</td>
 <td><code>[]</code></td>
 </tr>
 <tr>
-<td><code>api exit-on-errors?</code></td>
+<td><code>:api :exit-on-errors?</code></td>
 <td>Whether to exit the clojure-lsp process during api/cli call if any error is found, like classpath scan failure</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>auto-add-ns-to-new-files?</code></td>
+<td><code>:auto-add-ns-to-new-files?</code></td>
 <td>Whether to automatically add the <code>ns</code> form in new blank files.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>cache-path</code></td>
+<td><code>:cache-path</code></td>
 <td>Where to store the project's analysis cache, used to speed up next <code>clojure-lsp</code> startup. A path relative to project root or an absolute path.</td>
 <td><code>.lsp/.cache</code></td>
 </tr>
 <tr>
-<td><code>classpath-config-paths</code></td>
+<td><code>:classpath-config-paths</code></td>
 <td>List of extra configurations to load from classpath, for more info, check <a href="#classpath-config-paths">Classpath config paths</a> section.</td>
 <td><code>[]</code></td>
 </tr>
 <tr>
-<td><code>cljfmt-config-path</code></td>
+<td><code>:cljfmt-config-path</code></td>
 <td>Where to find cljfmt configuration for formatting. A path relative to project root or an absolute path. Use <code>#re</code> for regex inside the cljfmt configuration file.</td>
 <td><code>.cljfmt.edn</code></td>
 </tr>
 <tr>
-<td><code>cljfmt</code></td>
+<td><code>:cljfmt</code></td>
 <td>If no <code>:cljfmt-config-path</code> is provided, used this for formatting, json encoded configuration for <a href="https://github.com/weavejester/cljfmt">cljfmt</a></td>
 <td><code>{}</code></td>
 </tr>
 <tr>
-<td><code>code-lens</code> <code>segregate-test-references</code></td>
+<td><code>:code-lens</code> <code>:segregate-test-references</code></td>
 <td>Segregate main references from test references with option to disable</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>copy-kondo-configs?</code></td>
+<td><code>:copy-kondo-configs?</code></td>
 <td>Whether to copy clj-kondo hooks configs exported by libs on classpath during startup lint.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>dependency-scheme</code></td>
+<td><code>:dependency-scheme</code></td>
 <td>How the dependencies should be linked, <code>jar</code> will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents. <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">Similar to java clients</a></td>
 <td><code>zip</code></td>
 </tr>
 <tr>
-<td><code>document-formatting?</code></td>
+<td><code>:document-formatting?</code></td>
 <td>if true or not present, document formatting is provided.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>document-range-formatting?</code></td>
+<td><code>:document-range-formatting?</code></td>
 <td>if true or not present, document range formatting is provided.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>hover</code> <code>arity-on-same-line?</code></td>
+<td><code>:hover</code> <code>:arity-on-same-line?</code></td>
 <td>Whether to keep the arity on the same line of the function on hover, useful for Emacs users.</td>
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>hover</code> <code>clojuredocs</code></td>
+<td><code>:hover</code> <code>:clojuredocs</code></td>
 <td>Whether to get clojuredocs information on hover, the clojuredocs content is cached.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>hover</code> <code>hide-file-location?</code></td>
+<td><code>:hover</code> <code>:hide-file-location?</code></td>
 <td>Whether to show the full filename and path on hover.</td>
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>ignore-classpath-directories</code></td>
+<td><code>:ignore-classpath-directories</code></td>
 <td>will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into <code>resources</code> or <code>target</code> that you want lsp to ignore.</td>
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>java</code> <code>download-jdk-source?</code></td>
+<td><code>:java</code> <code>:download-jdk-source?</code></td>
 <td>Whether to download JDK source from <code>:java :jdk-source-download-uri</code> and cache after startup for JDK classes java support.</td>
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>java</code> <code>jdk-source-uri</code></td>
-<td>URI containing the JDK source to be used. If <code>download-jdk-source?</code> is enabled and URI is <em>NOT</em> <code>file://</code> then download the source. Check <code>https://github.com/clojure-lsp/jdk-source</code>for more sources.</td>
+<td><code>:java</code> <code>:jdk-source-uri</code></td>
+<td>URI containing the JDK source to be used. If <code>:download-jdk-source?</code> is enabled and URI is <em>NOT</em> <code>file://</code> then download the source. Check <code>https://github.com/clojure-lsp/jdk-source</code>for more sources.</td>
 <td><code>https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip</code></td>
 </tr>
 <tr>
-<td><code>keep-parens-when-threading?</code></td>
+<td><code>:keep-parens-when-threading?</code></td>
 <td>Whether to keep parenthesis when threading single arity functions.</td>
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>lint-project-files-after-startup?</code></td>
+<td><code>:lint-project-files-after-startup?</code></td>
 <td>Whether to async lint all project only files after startup to make features like <a href="https://emacs-lsp.github.io/lsp-mode/page/main-features/#project-errors-on-modeline">List project errors</a> work.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>linters</code></td>
+<td><code>:linters</code></td>
 <td>clojure-lsp custom linters, check the diagnostics settings section below</td>
 <td></td>
 </tr>
 <tr>
-<td><code>log-path</code></td>
+<td><code>:log-path</code></td>
 <td>A absolute path to a file where clojure-lsp should log.</td>
 <td>A JVM tmp path, usually <code>/tmp/clojure-lsp.*.out</code></td>
 </tr>
 <tr>
-<td><code>notify-references-on-file-change</code></td>
+<td><code>:notify-references-on-file-change</code></td>
 <td>Whether to update diagnostics of the changed references when editing files, avoiding outdated diagnostics in other files.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>project-specs</code></td>
-<td>A vector of a map with <code>project-path</code> and <code>classpath-cmd</code>, defining how <code>clojure-lsp</code> should find your project classpath. the <code>project-path</code> should be a file and the <code>classpath-cmd</code> the command to run to get the classpath</td>
-<td>Check <code>Classpath scan</code> section below</td>
+<td><code>:project-specs</code></td>
+<td>A vector of a map with <code>:project-path</code> and <code>:classpath-cmd</code>, defining how <code>clojure-lsp</code> should find your project classpath. The <code>:project-path</code> should be a file and the <code>:classpath-cmd</code> the command to run to get the classpath</td>
+<td>Check <a href="#classpath-scan"><code>Classpath scan</code></a> section below</td>
 </tr>
 <tr>
-<td><code>semantic-tokens?</code></td>
+<td><code>:semantic-tokens?</code></td>
 <td>Whether to enable LSP semantic tokens server support for syntax highlighting.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>source-aliases</code></td>
-<td>Used for <code>deps.edn</code> or <code>project.clj</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>. Check the <code>source-aliases discovery</code> section below.</td>
+<td><code>:source-aliases</code></td>
+<td>Used for <code>deps.edn</code> or <code>project.clj</code> projects, the aliases which clojure-lsp should get the source-paths besides the root level <code>:paths</code> and <code>:extra-paths</code>. Check the <a href="#source-paths-discovery">Source paths discovery</a> section below.</td>
 <td><code>#{:dev :test}</code></td>
 </tr>
 <tr>
-<td><code>source-paths</code></td>
+<td><code>:source-paths</code></td>
 <td>project-local directories to look for clj/cljc/cljs files, if using <code>deps.edn</code>, <code>project.clj</code> or <code>bb.edn</code>, use <code>:source-aliases</code> instead.</td>
 <td><code>#{"src" "test"}</code></td>
 </tr>
 <tr>
-<td><code>stubs</code></td>
-<td>Stub generation related settings, check <a href="#stub-generation">stub generation</a> section.</td>
+<td><code>:stubs</code></td>
+<td>Stub generation related settings, check the <a href="#stub-generation">Stub generation</a> section below.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>text-document-sync-kind</code></td>
+<td><code>:text-document-sync-kind</code></td>
 <td>The sync kind during document changes, if client should send whole buffer or just related changes. Should be <code>:full</code> or <code>:incremental</code></td>
 <td><code>:full</code></td>
 </tr>
 <tr>
-<td><code>use-metadata-for-privacy?</code></td>
+<td><code>:use-metadata-for-privacy?</code></td>
 <td>Whether to use <code>^:private</code> metadata for refactorings instead of <code>defn-</code></td>
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>use-source-paths-from-classpath</code></td>
+<td><code>:use-source-paths-from-classpath</code></td>
 <td>Whether to check source-paths from classpath or manually discover</td>
 <td><code>true</code></td>
 </tr>
@@ -1373,7 +1373,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <li><code>:generation</code> for auto stubs generation:<ul>
 <li><code>:namespaces</code> the namespaces to generate and analyze stubs, empty by default disabling stub generation.</li>
 <li><code>:output-dir</code> the output where to generate the stubs, by default <code>.lsp/.cache/stubs</code></li>
-<li><code>java-command</code> the path to java command to spawn the stub process, default use <code>java</code> from <code>$PATH</code>.</li>
+<li><code>:java-command</code> the path to java command to spawn the stub process, default use <code>java</code> from <code>$PATH</code>.</li>
 </ul>
 </li>
 <li><code>:extra-dirs</code>, dirs to analyze to consider as part of manual generated stubs. Empty by default.</li>

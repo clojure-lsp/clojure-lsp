@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix URI resolver on java JDK logic.
+
 ## 2022.03.31-14.21.14
 
 - Add java class find-definition support, decompiling .class files when available. #762 

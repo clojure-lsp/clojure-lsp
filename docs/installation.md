@@ -22,7 +22,7 @@ sudo bash < <(curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/
 nightly build:
 
 ```bash
-curl -O https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install)
+curl -O https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install
 chmod a+x install
 sudo ./install --version nightly
 ```

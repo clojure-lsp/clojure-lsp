@@ -1,3 +1,4 @@
 {:clean {:ns-inner-blocks-indentation :next-line}
  :linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
+ :java {:download-jdk-source? true}
  :use-metadata-for-privacy? true}

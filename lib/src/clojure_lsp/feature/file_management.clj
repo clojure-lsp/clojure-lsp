@@ -126,8 +126,8 @@
     (shared/logging-task
       :notify-references
       (let [filenames (shared/logging-task
-                       :reference-files/find
-                       (reference-filenames filename old-local-analysis new-local-analysis db))]
+                        :reference-files/find
+                        (reference-filenames filename old-local-analysis new-local-analysis db))]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task

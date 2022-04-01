@@ -202,8 +202,7 @@
    :config {:output {:canonical-paths true}}})
 
 (defn kondo-jdk-source [path]
-  {:parallel true
-   :lint [path]
+  {:lint [path]
    :config {:output {:analysis {:java-class-definitions true}
                      :canonical-paths true}}})
 

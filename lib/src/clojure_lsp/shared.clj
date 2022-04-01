@@ -197,7 +197,7 @@
 (defn class-file? [uri]
   (boolean (re-find class-file-regex uri)))
 
-(defn valid-uri? [^String value]
+(defn valid-url? [^String value]
   (try
     (URL. value)
     true

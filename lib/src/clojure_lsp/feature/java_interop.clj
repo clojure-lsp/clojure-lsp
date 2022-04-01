@@ -100,15 +100,11 @@
              (filter #(.canRead ^File %))
              first)))
 
-(def ^:private default-jdk-source-uri
-  "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
-
 (defn ^:private download-jdk!
   [^String jdk-download-url
    ^File dest-jdk-file]
-  (io/make-parents dest-jdk-file)
   (shared/logging-time
-    (str java-logger-tag " Downloading JDK source took %s.")
+    (str java-logger-tag " Downloading JDK source took %s")
     (try
       (let [{:keys [body content-type status error]} (http/request! jdk-download-url)]
         (if (or error
@@ -129,14 +125,15 @@
                         (when-not (.exists parentDir)
                           (.mkdirs parentDir))
                         (clojure.java.io/copy stream saveFile)))
-                    (recur (.getNextEntry stream))))))
+                    (recur (.getNextEntry stream)))))
+              true)
             (logger/error java-logger-tag "Could not download JDK source, unknown content-type" content-type))))
       (catch Exception e
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
 (defn ^:private analyze-jdk-source! [path db]
   (let [result (shared/logging-time
-                 (str java-logger-tag " Analyzing JDK source with clj-kondo took %s.")
+                 (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
                  (lsp.kondo/run-kondo-on-jdk-source! path))
         kondo-analysis (select-keys (:analysis result) [:java-class-definitions])
         analysis (->> kondo-analysis
@@ -151,6 +148,44 @@
         (update :analysis merge analysis)
         (db/upsert-cache! db))))
 
+(def ^:private default-jdk-source-uri
+  "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
+
+(defn ^:private jdk-analysis-decision
+  [installed-jdk-source-uri
+   custom-jdk-source-uri
+   local-jdk-source-file*
+   download-jdk-source?]
+  (cond
+    (and installed-jdk-source-uri
+         (or (not custom-jdk-source-uri)
+             (= installed-jdk-source-uri custom-jdk-source-uri)))
+    {:result :jdk-already-installed}
+
+    (and (not custom-jdk-source-uri)
+         @local-jdk-source-file*)
+    {:result :automatic-local-jdk
+     :jdk-zip-file @local-jdk-source-file*}
+
+    ;; Local custom zip as uri
+    (and custom-jdk-source-uri
+         (shared/plain-uri? custom-jdk-source-uri))
+    {:result :manual-local-jdk
+     :jdk-zip-file (io/file (shared/uri->filename custom-jdk-source-uri))}
+
+    ;; Local custom zip as file path
+    (and custom-jdk-source-uri
+         (not (shared/valid-url? custom-jdk-source-uri)))
+    {:result :manual-local-jdk
+     :jdk-zip-file (io/file custom-jdk-source-uri)}
+
+    download-jdk-source?
+    {:result :download-jdk
+     :download-uri (or custom-jdk-source-uri default-jdk-source-uri)}
+
+    :else
+    {:result :no-source-found}))
+
 (defn retrieve-jdk-source-and-analyze!
   "Find JDK source and analyze it with clj-kondo for java class definitions.
 
@@ -163,47 +198,47 @@
 
   Otherwise, we download default OpenJDK source if setting is enabled."
   [{:keys [db]}]
-  (let [global-cache-dir (config/global-lsp-cache-dir)
-        jdk-dir-file (io/file global-cache-dir "jdk")
+  (let [jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
         jdk-result-file (io/file jdk-dir-file "result")
         installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
                                       (slurp jdk-result-file))
-        user-jdk-source-uri (settings/get db [:java :jdk-source-uri])
-        jdk-source-uri (or user-jdk-source-uri default-jdk-source-uri)]
-    (if (or (not installed-jdk-source-uri)
-            (and user-jdk-source-uri
-                 (= installed-jdk-source-uri user-jdk-source-uri)))
-      (do
-        (io/make-parents jdk-result-file)
-        (if-let [local-jdk-source-zip (and (not user-jdk-source-uri)
-                                           (find-local-jdk-source))]
-          (do
-            (logger/info java-logger-tag (format "Found local JDK source zip at %s, extracting to global LSP cache dir..." local-jdk-source-zip))
-            (fs/unzip local-jdk-source-zip jdk-dir-file {:replace-existing true})
-            (spit jdk-result-file (.getCanonicalPath ^File local-jdk-source-zip)))
-          (do
-            (logger/info java-logger-tag "Local JDK source not found.")
-            (if-let [local-jdk-uri (or (and (shared/plain-uri? jdk-source-uri)
-                                            jdk-source-uri)
-                                       (and (not (shared/valid-uri? jdk-source-uri))
-                                            (shared/filename->uri jdk-source-uri db)))]
-              (do
-                (logger/info java-logger-tag "Using provided JDK source URI, extracting to global LSP cache dir...")
-                (fs/unzip (io/file (shared/uri->filename local-jdk-uri)) jdk-dir-file {:replace-existing true})
-                (spit jdk-result-file local-jdk-uri))
-              (if (settings/get db [:java :download-jdk-source?] false)
-                (do
-                  (logger/info java-logger-tag "Downloading JDK source to global LSP cache dir...")
-                  (download-jdk! jdk-source-uri jdk-dir-file)
-                  (spit jdk-result-file jdk-source-uri))
-                (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled."))))))
-      (logger/info java-logger-tag "JDK source already present on global LSP cache dir."))
+        custom-jdk-source-uri (settings/get db [:java :jdk-source-uri])
+        local-jdk-source-file* (delay (find-local-jdk-source))
+        download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
+        {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
+                                                     installed-jdk-source-uri
+                                                     custom-jdk-source-uri
+                                                     local-jdk-source-file*
+                                                     download-jdk-source?)]
+    (io/make-parents jdk-result-file)
+    (case result
+      :jdk-already-installed
+      (logger/info java-logger-tag "JDK source already present on global LSP cache dir.")
 
-    (if (or installed-jdk-source-uri
-            (and (shared/file-exists? jdk-result-file)
-                 (slurp jdk-result-file)))
+      :automatic-local-jdk
+      (do
+        (logger/info java-logger-tag (format "Automatically found local JDK source zip at %s, extracting to global LSP cache dir..." jdk-zip-file))
+        (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
+        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
+
+      :manual-local-jdk
+      (do
+        (logger/info java-logger-tag (format "Using provided local JDK source URI %s, extracting to global LSP cache dir..." jdk-zip-file))
+        (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
+        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
+
+      :download-jdk
+      (do
+        (logger/info java-logger-tag "Downloading JDK source to global LSP cache dir...")
+        (when (download-jdk! download-uri jdk-dir-file)
+          (spit jdk-result-file download-uri)))
+
+      ;; else
+      (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled."))
+
+    (if (and (shared/file-exists? jdk-result-file)
+             (slurp jdk-result-file))
       (do
         (analyze-jdk-source! (.getCanonicalPath jdk-dir-file) db)
-        (logger/info java-logger-tag "JDK Source analyzed successfully.")
-        true)
+        (logger/info java-logger-tag "JDK Source analyzed successfully."))
       (logger/warn java-logger-tag "JDK Source not found, skipping java analysis."))))

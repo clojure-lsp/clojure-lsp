@@ -374,6 +374,12 @@
   ^java.io.File [^java.io.File file]
   (.toFile (.normalize (.toPath file))))
 
+(defn absolute-path [^String path db]
+  (let [project-root-uri (get @db :project-root-uri)]
+    (if-let [^java.nio.file.Path project-root-path (some-> project-root-uri uri->path)]
+      (str (.resolve project-root-path path))
+      path)))
+
 ;; TODO move to a better place
 (defn client-changes [changes db]
   (if (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes])

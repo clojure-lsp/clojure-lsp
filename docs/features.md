@@ -1,6 +1,12 @@
 # Features
 
-Above you can find all available features that clojure-lsp provides with examples using [Emacs lsp-mode](https://emacs-lsp.github.io/lsp-mode/) as the client.
+Below you can find all available features that clojure-lsp provides with examples using [Emacs lsp-mode](https://emacs-lsp.github.io/lsp-mode/) as the client.
+
+- [Built in LSP features](#lsp-features)
+- [clojure-lsp extra commands](#clojure-lsp-extra-commands)
+
+
+## LSP features
 
 ### Find a function/var definition
 
@@ -304,27 +310,7 @@ User can register additional custom snippets, for more information on how to con
 
 ### Code actions
 
-| Name                               | Example                                                              |
-|------------------------------------|----------------------------------------------------------------------|
-| Clean namespace require/imports    | <img src="../images/features/clean-ns.gif" width=360>                |
-| Add require                        | <img src="../images/features/add-missing-require.gif" width=360>     |
-| Add known common require           | <img src="../images/features/add-common-require.gif" width=360>      |
-| Add known common import            | <img src="../images/features/add-common-import.gif" width=360>       |
-| Add suggested alias require        | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
-| Create private function            | <img src="../images/features/create-private-function.gif" width=360> |
-| Resolve macro as...                | <img src="../images/features/resolve-macro-as.gif" width=720>        |
-| Inline symbol                      | <img src="../images/features/inline-symbol.gif" width=360>           |
-| Change coll to map,vector,set,list | <img src="../images/features/change-coll.gif" width=720>             |
-| Move coll entry up/down            | <img src="../images/features/move-coll-entry.gif" width=720>         |
-| Move to let                        | <img src="../images/features/move-to-let.gif" width=720>             |
-| Cycle privacy                      |                                                                      |
-| Cycle fn literal                   | <img src="../images/features/cycle-fn-literal.gif" width=480>        |
-| Extract function                   | <img src="../images/features/extract-function.gif" width=360>        |
-| Thread first/all last              | <img src="../images/features/thread-first-all.gif" width=360>        |
-| Unwind thread                      |                                                                      |
-| Sort map                           | <img src="../images/features/sort-map.gif" width=720>                |
-| Suppress diagnostic                |                                                                      |
-| Create test for function           |                                                                      |
+See [below](#clojuser-lsp-extra-commands) for screenshots.
 
 ### Code lenses showing symbol references
 
@@ -340,7 +326,7 @@ User can register additional custom snippets, for more information on how to con
 
 ### Semantic tokens
 
-The LSP server is the best to say what is the semantic value of a token on the editor, semantic tokens allows server return to client all tokens of a buffer and how client show apply highlight. 
+The LSP server is the best to say what is the semantic value of a token on the editor, semantic tokens allows server return to client all tokens of a buffer and how client show apply highlight.
 
 Note: server return the semantic token (e.g. `function`) and the client/editor apply the color that matches the user's theme.
 
@@ -392,38 +378,52 @@ For more information check the [stubs settings section](../settings.md#stub-gene
 
 Commands that client can request. Most code actions use these commands as actions.
 
-#### Refactoring
+## clojure-lsp extra commands
 
-Commands that change/refactor the code. See [above](#code-actions) for screenshots.
+__Note: Most of these are available via code actions and clients or users may choose to use the code action menu to execute them instead of mapping.__
 
-__Note: Most of them are available via code actions and most of the time you want to call the code action and not the command manually__
+All functions in clojure-lsp have a two-letter mnemonic shortcut. E.g. `tf` for `thread-first-all`. We __strongly__ suggest that client authors and users use these shortcuts keys when choosing to map these commands to key chords or menus; this allows for users to maintain muscle memory and familiarity as they switch between clients and editors. Thank you to [clj-refactor](https://github.com/clojure-emacs/clj-refactor.el#usage) for this system and other tools that adhere to it.
 
-- Clean namespace *
-- Add import to namespace
-- Add missing require *
-- Cycle privacy of def/defn *
-- Cycle fn literal (fn []), #() *
-- Cycle collection (#{}, {}, [], ())
-- Change collection to {}, (), #{}, [] *
-- Extract Function *
-- Create private function *
-- Inline Symbol *
-- Expand let
-- Introduce let
-- Move expression to let
-- Thread first expression
-- Thread last expression
-- Thread first all *
-- Thread last all *
-- Unwind all *
-- Unwind thread
-- Resolve macro as *
-- Create test *
-- Sort map *
-- Move coll entry up *
-- Move coll entry down *
+LSP clients will allow you to bind these commands to shortcuts or menu items using LSP's `workspace/executeCommand` and passing a map with `"command"` and `"arguments"` keys.
 
-#### Dev
+Arguments:
+- `file-uri`: Absolute file uri. e.x. `file:///home/user/project/src/main.clj`
+- `row`: line-number of the cursor, 0 based.
+- `col`: col-number of the cursor, 0 based.
+- `name`: Used when introducing a name, usually a string for a valid clojure symbol.
+- `filename`: Filename path. e.x. `src/utils.clj`
+
+| Shortcut | Command                 | Name                                   | Arguments                                        | Available via code action | Example                                                              |
+|----------|-------------------------|----------------------------------------|--------------------------------------------------|---------------------------|----------------------------------------------------------------------|
+| ai       | add-import-to-namespace | Add import to namespace                | `[file-uri,row,col[,name]]`                      | ✅                         | <img src="../images/features/add-common-import.gif" width=360>       |
+| am       | add-missing-libspec     | Add missing require                    | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/add-missing-require.gif" width=360>     |
+| as       | add-require-suggestion  | Add require suggestion                 | `[file-uri,row,col,ns,alias,refer]`              | ✅                         | <img src="../images/features/add-alias-suggestion.gif" width=360>    |
+| cc       | cycle-coll              | Cycle collection `(#{}, {}, [], ())`   | `[file-uri,row,col]`                             |      ✅                   |                                                                      |
+| cf       | cycle-fn-literal        | Cycle fn literal `(fn []), #()`        | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/cycle-fn-literal.gif" width=480>        |
+| cn       | clean-ns                | Clean namespace                        | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/clean-ns.gif" width=360>                |
+| cp       | cycle-privacy           | Cycle privacy of def/defn              | `[file-uri,row,col]`                             | ✅                         |                                                                      |
+| ct       | create-test             | Create test                            | `[file-uri,row,col]`                             | ✅                         |                                                                      |
+| ef       | extract-function        | Extract Function                       | `[file-uri,row,col,name]`                        | ✅                         | <img src="../images/features/extract-function.gif" width=360>        |
+| el       | expand-let              | Expand let                             | `[file-uri,row,col]`                             |                           |                                                                      |
+| fe       | create-function         | Create function from example           | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/create-private-function.gif" width=360> |
+| il       | introduce-let           | Introduce let                          | `[file-uri,row,col,name]`                        |                           |                                                                      |
+| is       | inline-symbol           | Inline Symbol                          | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/inline-symbol.gif" width=360>           |
+| ma       | resolve-macro-as        | Resolve macro as                       | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/resolve-macro-as.gif" width=720>        |
+| md       | move-coll-entry-down    | Move coll entry down                   | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/move-coll-entry.gif" width=720>         |
+| mf       | move-form               | Move form                              | `[file-uri,row,col,filename]`                    | ✅                         |                                                                      |
+| ml       | move-to-let             | Move expression to let                 | `[file-uri,row,col,name]`                        | ✅                         | <img src="../images/features/move-to-let.gif" width=720>             |
+| mu       | move-coll-entry-up      | Move coll entry up                     | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/move-coll-entry.gif" width=720>         |
+| sc       | change-collection       | Switch collection to `{}, (), #{}, []` | `[file-uri,row,col,"map"/"list"/"set"/"vector"]` | ✅                         | <img src="../images/features/change-coll.gif" width=720>             |
+| sm       | sort-map                | Sort map                               | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/sort-map.gif" width=720>                |
+| tf       | thread-first-all        | Thread first all                       | `[file-uri,row,col]`                             | ✅                         | <img src="../images/features/thread-first-all.gif" width=360>        |
+| th       | thread-first            | Thread first expression                | `[file-uri,row,col]`                             |                           |                                                                      |
+| tl       | thread-last-all         | Thread last all                        | `[file-uri,row,col]`                             | ✅                         |                                                                      |
+| tt       | thread-last             | Thread last expression                 | `[file-uri,row,col]`                             |                           |                                                                      |
+| ua       | unwind-all              | Unwind all                             | `[file-uri,row,col]`                             | ✅                         |                                                                      |
+| uw       | unwind-thread           | Unwind thread                          | `[file-uri,row,col]`                             |                           |                                                                      |
+
+
+## Dev
 
 ##### Server information
 

@@ -5,11 +5,10 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
-   [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
+   [rewrite-clj.paredit :as paredit]
    [rewrite-clj.zip :as z]
    [rewrite-clj.zip.subedit :as zsub]))
 
@@ -30,7 +29,7 @@
         :same-line
         :next-line)))
 
-(defn ^:private cleaning-ns-edits [uri db edits]
+(defn cleaning-ns-edits [uri db edits]
   (if (settings/get db [:clean :automatically-after-ns-refactor] true)
     (->> edits
          (map (fn [{:keys [loc range] :as edit}]
@@ -46,9 +45,9 @@
          seq)
     edits))
 
-(defn ^:private find-missing-ns-alias-require [zloc db]
+(defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/find-all-aliases (:analysis @db) db)
+        alias->info (->> (q/find-all-aliases (:analysis @db) uri db)
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -70,9 +69,9 @@
 
 (defn find-missing-ns-require
   "Returns map with found ns and alias or refer."
-  [zloc db]
+  [zloc uri db]
   (if (some-> zloc safe-sym namespace)
-    (find-missing-ns-alias-require zloc db)
+    (find-missing-ns-alias-require zloc uri db)
     (find-missing-ns-refer-require zloc)))
 
 (defn ^:private find-class-name [zloc]
@@ -92,67 +91,94 @@
        find-class-name
        (get common-sym/java-util-imports)))
 
-(defn ^:private add-to-namespace
-  [zloc type ns sym db]
-  (let [cursor-sym (safe-sym zloc)]
-    (when (and sym cursor-sym)
-      (let [form-type    (case type
-                           :require-refer :require
-                           :require-alias :require
-                           :import        :import)
-            ns-loc       (edit/find-namespace zloc)
-            ns-zip       (zsub/subzip ns-loc)
-            need-to-add? (and (not (z/find-value ns-zip z/next cursor-sym))
-                              (or ns
-                                  (not (z/find-value ns-zip z/next sym)))
-                              (or (not (z/find-value ns-zip z/next ns))
-                                  (not (z/find-value ns-zip z/next sym))))]
-        (when need-to-add?
-          (let [add-form-type?              (not (z/find-value ns-zip z/next form-type))
-                form-type-loc               (z/find-value (zsub/subzip ns-loc) z/next form-type)
-                ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
-                col                         (if form-type-loc
-                                              (-> form-type-loc z/rightmost z/node meta :col)
-                                              (if (= :same-line ns-inner-blocks-indentation)
-                                                2
-                                                5))
-                form-to-add                 (case type
-                                              :require-refer [ns :refer [sym]]
-                                              :require-alias [ns :as sym]
-                                              :import        sym)
-                existing-refer-ns           (and (= type :require-refer)
-                                                 (z/find-value ns-zip z/next ns))
-                existing-require-refer      (when existing-refer-ns
-                                              (z/find-value existing-refer-ns z/next ':refer))
+(defn add-to-namespace* [zloc {libspec-type :type lib-sym :lib refer-sym :refer alias-sym :alias} db]
+  (let [ns-loc (edit/find-namespace zloc)
+        ns-zip (zsub/subzip ns-loc)
+        need-to-add? (or
+                       ;; missing import or namespace
+                       (and lib-sym (not (z/find-value ns-zip z/next lib-sym)))
 
-                result-loc (if existing-refer-ns
-                             (if existing-require-refer
-                               (z/subedit-> ns-zip
-                                            (z/find-value z/next ns)
-                                            (z/find-value z/next ':refer)
-                                            z/right
-                                            (z/append-child* (n/spaces 1))
-                                            (z/append-child sym))
-                               (z/subedit-> ns-zip
-                                            (z/find-value z/next ns)
-                                            z/up
-                                            (z/append-child* (n/spaces 1))
-                                            (z/append-child :refer)
-                                            (z/append-child [sym])))
-                             (z/subedit-> ns-zip
-                                          (cond->
-                                           add-form-type? (z/append-child (n/newlines 1))
-                                           add-form-type? (z/append-child (n/spaces 2))
-                                           add-form-type? (z/append-child (list form-type)))
-                                          (z/find-value z/next form-type)
-                                          (z/up)
-                                          (cond->
-                                           (or (not add-form-type?)
-                                               (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
-                                          (z/append-child* (n/spaces (dec col)))
-                                          (z/append-child form-to-add)))]
-            [{:range (meta (z/node result-loc))
-              :loc result-loc}]))))))
+                       ;; missing refer
+                       (and refer-sym (not (z/find-value ns-zip z/next refer-sym)))
+
+                       ;; missing alias
+                       (and alias-sym (not (z/find-value ns-zip z/next alias-sym))))]
+    (when need-to-add?
+      (let [form-to-add (cond
+                          (= :import libspec-type)
+                          lib-sym
+
+                          (= :require libspec-type)
+                          (cond-> (with-meta lib-sym nil)
+                            (or alias-sym refer-sym) (vector)
+                            alias-sym (conj :as (with-meta alias-sym nil))
+                            refer-sym (conj :refer [(with-meta refer-sym nil)])))
+            add-form-type? (not (z/find-value ns-zip z/next libspec-type))
+            form-type-loc (z/find-value (zsub/subzip ns-loc) z/next libspec-type)
+            ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
+            col (if form-type-loc
+                  (-> form-type-loc z/rightmost z/node meta :col)
+                  (if (= :same-line ns-inner-blocks-indentation)
+                    2
+                    5))
+            existing-unwrapped-require (when refer-sym (z/find-value ns-zip z/next lib-sym))
+            existing-wrapped-require (when existing-unwrapped-require
+                                       (let [wrapped-require (z/up existing-unwrapped-require)]
+                                         (when (= :vector (z/tag wrapped-require))
+                                           wrapped-require)))
+            existing-refer (when existing-wrapped-require
+                             (z/find-value (zsub/subzip existing-wrapped-require) z/next ':refer))
+            result-loc (cond
+                         existing-refer
+                         (z/subedit-> ns-zip
+                                      (z/find-value z/next lib-sym)
+                                      (z/find-value z/next ':refer)
+                                      z/right
+                                      (z/append-child* (n/spaces 1))
+                                      (z/append-child refer-sym))
+
+                         existing-wrapped-require
+                         (z/subedit-> ns-zip
+                                      (z/find-value z/next lib-sym)
+                                      z/up
+                                      (z/append-child* (n/spaces 1))
+                                      (z/append-child :refer)
+                                      (z/append-child [refer-sym]))
+
+                         existing-unwrapped-require
+                         (z/subedit-> ns-zip
+                                      (z/find-value z/next lib-sym)
+                                      (paredit/wrap-around :vector)
+                                      z/up
+                                      (z/append-child* (n/spaces 1))
+                                      (z/append-child :refer)
+                                      (z/append-child [refer-sym]))
+
+                         :else
+                         (z/subedit-> ns-zip
+                                      (cond->
+                                       add-form-type? (z/append-child (n/newlines 1))
+                                       add-form-type? (z/append-child (n/spaces 2))
+                                       add-form-type? (z/append-child (list libspec-type)))
+                                      (z/find-value z/next libspec-type)
+                                      (z/up)
+                                      (cond->
+                                       (or (not add-form-type?)
+                                           (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                      (z/append-child* (n/spaces (dec col)))
+                                      (z/append-child form-to-add)))]
+        [{:range (meta (z/node result-loc))
+          :loc result-loc}]))))
+
+(defn ^:private add-to-namespace
+  [zloc type ns-sym sym db]
+  (when (or (= :require-simple type) sym)
+    (let [libspec (case type
+                    :require-refer {:type :require :lib ns-sym :refer sym}
+                    :require-alias {:type :require :lib ns-sym :alias sym}
+                    :require-simple {:type :require :lib ns-sym}
+                    :import {:type :import :lib sym})]
+      (add-to-namespace* zloc libspec db))))
 
 (defn add-missing-import [zloc uri import-name db]
   (when-let [import-name (or import-name
@@ -164,6 +190,11 @@
   [zloc alias-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add alias-to-add)
     (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db)))
+
+(defn add-simple-require
+  [zloc qualified-ns-to-add db]
+  (when qualified-ns-to-add
+    (add-to-namespace zloc :require-simple qualified-ns-to-add nil db)))
 
 (defn ^:private add-known-refer
   [zloc refer-to-add qualified-ns-to-add db]
@@ -270,7 +301,7 @@
          vec
          seq)))
 
-(defn ^:private find-namespace-suggestions
+(defn find-namespace-suggestions
   "Given a list of `[[\"ns\" \"alias\"]] pairs suggest possible requires.
    Will only suggest existing namespaces.
    Suggestions should be ordered from most commonly used to least."
@@ -343,26 +374,20 @@
       :else
       (resolve-best-namespaces-suggestions cursor-namespace-str aliases->namespaces namespaces->aliases))))
 
+(defn find-alias-ns-pairs [analysis uri db]
+  (concat (->> (q/find-all-aliases analysis uri db)
+               (map (juxt (comp str :to) (comp str :alias))))
+          (->> (q/find-all-ns-definition-names analysis)
+               (map (juxt str (constantly nil))))))
+
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           cursor-name-str (name cursor-sym)
           analysis (:analysis @db)
-          langs (shared/uri->available-langs uri)
-          all-aliases (->> (q/find-all-aliases analysis db)
-                           (filter (fn [element]
-                                     (seq (set/intersection (-> element
-                                                                :filename
-                                                                (shared/filename->uri db)
-                                                                shared/uri->available-langs)
-                                                            langs))))
-                           (map (juxt (comp str :to) (comp str :alias))))
-          ns-definition-names (->> (q/find-all-ns-definition-names analysis)
-                                   (map (juxt str (constantly nil))))
-          alias-ns-pairs (concat all-aliases ns-definition-names)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
-                                  alias-ns-pairs)
+                                  (find-alias-ns-pairs analysis uri db))
           suggestions (if (namespace cursor-sym)
                         namespace-suggestions
                         (concat
@@ -393,26 +418,35 @@
 
 (defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db]
   (when-let [cursor-sym (safe-sym zloc)]
-    (let [cursor-namespace-str (namespace cursor-sym)]
-      (->> (if chosen-alias
-             (concat (->> (add-known-alias zloc (symbol chosen-alias) (symbol chosen-ns) db)
-                          (cleaning-ns-edits uri db))
-                     (cond
-                       cursor-namespace-str
-                       ;; When we're aliasing clojure.string to string, we want to change
-                       ;; all nodes after the namespace like clojure.string/split to string/split.
-                       (->> (find-forms (z/next (edit/find-namespace zloc))
-                                        #(when-let [sym-ns (some-> % safe-sym namespace)]
-                                           (and (or
-                                                  (= chosen-ns sym-ns)
-                                                  (= cursor-namespace-str sym-ns))
-                                                (not= chosen-alias sym-ns))))
-                            (map #(add-ns-to-loc-change % chosen-alias)))
+    (let [cursor-namespace-str (namespace cursor-sym)
+          chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))]
 
-                       (some-> zloc safe-sym)
-                       [(add-ns-to-loc-change zloc chosen-alias)]))
-             (->> (add-known-refer zloc (some-> chosen-refer symbol) (symbol chosen-ns) db)
-                  (cleaning-ns-edits uri db)))
+      (->> (concat
+             (->> (cond
+                    chosen-refer
+                    (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
+
+                    chosen-alias
+                    (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
+
+                    :else
+                    (add-simple-require zloc (symbol chosen-ns) db))
+                  (cleaning-ns-edits uri db))
+             (when chosen-alias-or-ns
+               (cond
+                 cursor-namespace-str
+                 ;; When we're aliasing clojure.string to string, we want to change
+                 ;; all nodes after the namespace like clojure.string/split to string/split.
+                 (->> (find-forms (z/next (edit/find-namespace zloc))
+                                  #(when-let [sym-ns (some-> % safe-sym namespace)]
+                                     (and (or
+                                            (= chosen-ns sym-ns)
+                                            (= cursor-namespace-str sym-ns))
+                                          (not= chosen-alias-or-ns sym-ns))))
+                      (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
+
+                 (some-> zloc safe-sym)
+                 [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
            seq))))
 
 (defn add-missing-libspec

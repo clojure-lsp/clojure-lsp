@@ -10,7 +10,8 @@
    [clojure.test :refer [is use-fixtures]]
    [lsp4clj.components :as components]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]))
+   [lsp4clj.protocols.producer :as producer]
+   [rewrite-clj.zip :as z]))
 
 (def mock-diagnostics (atom {}))
 
@@ -191,3 +192,54 @@
       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
     (-> (parser/zloc-of-string code)
         (parser/to-pos row col))))
+
+(defn- results->doc
+  "Should mimic an LSP client processing results on a document"
+  [doc doc-results]
+  (let [lines->count (->> doc
+                          string/split-lines
+                          (map-indexed vector)
+                          (map (juxt first (comp inc count second)))
+                          (into {}))
+        char-results (->> doc-results
+                          (reduce
+                            (fn [accum {:keys [loc] {:keys [row col end-row end-col]} :range}]
+                              (let [start-char (apply +
+                                                      (dec col)
+                                                      (map lines->count
+                                                           (range (dec row))))
+                                    end-char (apply +
+                                                    (dec end-col)
+                                                    (map lines->count
+                                                         (range (dec end-row))))]
+                                (conj
+                                  accum
+                                  {:start start-char :end end-char :loc loc})))
+
+                            [])
+                          (sort-by :start)
+                          (reduce
+                            (fn [{:keys [char-delta] :as accum} {:keys [loc start end]}]
+                              (-> accum
+                                  (update :char-delta + (- (count loc) (- end start)))
+                                  (update :doc (fn [d]
+                                                 (str
+                                                   (subs d 0 (+ char-delta start))
+                                                   loc
+                                                   (subs d (+ char-delta end)))))))
+
+                            {:char-delta 0 :doc doc}))]
+    (:doc char-results)))
+
+(defn with-strings [results]
+  (map #(update % :loc z/string) results))
+
+(defn changes->code
+  ([changes db]
+   (changes->code changes "file:///a.clj" db))
+  ([changes uri db]
+   (let [doc (get-in @db [:documents uri :text])]
+     (results->doc doc (vec (with-strings changes))))))
+
+(defn changes-by-uri->code [changes-by-uri uri db]
+  (changes->code (get changes-by-uri uri) uri db))

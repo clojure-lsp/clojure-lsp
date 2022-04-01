@@ -35,6 +35,7 @@
                                             "resolve-macro-as"
                                             "introduce-let"
                                             "add-missing-import"
+                                            "move-form"
                                             "sort-map"
                                             "unwind-thread"
                                             "thread-first-all"

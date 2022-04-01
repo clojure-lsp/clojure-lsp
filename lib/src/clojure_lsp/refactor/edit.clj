@@ -1,5 +1,6 @@
 (ns clojure-lsp.refactor.edit
   (:require
+   [clojure.set :as set]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -111,8 +112,7 @@
     :else
     (z/next loc)))
 
-;; TODO Move the query part to queries.clj ?
-(defn find-var-definition-name-loc [loc filename db]
+(defn find-var-definition [loc filename db]
   (when-let [root-loc (to-top loc)]
     (when-let [fn-name-loc (some-> loc to-top z/next var-name-loc-from-op)]
       (let [fn-name-loc-meta (meta (z/node fn-name-loc))
@@ -128,7 +128,12 @@
                                        (keep #(find-at-pos root-loc (:name-row %) (:name-col %))))
                                      (get-in @db [:analysis filename]))]
         (when (seq var-definition-ops)
-          fn-name-loc)))))
+          {:fn-name-loc fn-name-loc
+           :var-definitions var-definition-ops})))))
+
+;; TODO Move the query part to queries.clj ?
+(defn find-var-definition-name-loc [loc filename db]
+  (:fn-name-loc (find-var-definition loc filename db)))
 
 (defn find-function-usage-name-loc [zloc]
   (some-> zloc
@@ -249,3 +254,42 @@
   (if p?
     (mark-position zloc marker)
     zloc))
+
+(defn range-with-left-whitespace [zloc]
+  (let [this (some-> zloc z/node meta)
+        next-left (some-> zloc z/left z/node meta)]
+    {:row (or (:end-row next-left) (:row this))
+     :col (or (:end-col next-left) (:col this))
+     :end-row (:end-row this)
+     :end-col (:end-col this)}))
+
+(defn range-from-usage-name [usage]
+  (set/rename-keys
+    usage
+    {:name-row :row :name-col :col
+     :name-end-row :end-row :name-end-col :end-col}))
+
+(defn to-top-or-subzip-top
+  "to-top will return nil within a subzip, sometimes that is unwanted"
+  [loc]
+  (if-let [up-loc (when-not (top? loc) (z/up loc))]
+    (recur up-loc)
+    loc))
+
+(defn find-at-usage-name [zloc usage]
+  (some-> zloc
+          to-top-or-subzip-top
+          z/leftmost
+          (find-at-pos (:name-row usage)
+                       (:name-col usage))))
+
+(defn find-at-usage [zloc usage]
+  (some-> zloc
+          to-top-or-subzip-top
+          z/leftmost
+          (find-at-pos (:row usage)
+                       (:col usage))))
+
+(defn loc-encapsulates-usage?
+  [loc usage]
+  (in-range? (meta (z/node loc)) (range-from-usage-name usage)))

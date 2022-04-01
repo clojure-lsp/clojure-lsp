@@ -39,12 +39,12 @@
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
 
-(defn ^:private find-missing-require [db {:keys [position zloc]}]
-  (some-> (f.add-missing-libspec/find-missing-ns-require zloc db)
+(defn ^:private find-missing-require [uri db {:keys [position zloc]}]
+  (some-> (f.add-missing-libspec/find-missing-ns-require zloc uri db)
           (assoc :position position)))
 
-(defn ^:private find-missing-requires [diagnostics db]
-  (keep (partial find-missing-require db) diagnostics))
+(defn ^:private find-missing-requires [diagnostics uri db]
+  (keep (partial find-missing-require uri db) diagnostics))
 
 (defn ^:private find-missing-import [{:keys [position zloc]}]
   (when-let [missing-import (f.add-missing-libspec/find-missing-import zloc)]
@@ -257,7 +257,7 @@
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
-        missing-requires* (future (find-missing-requires resolvable-require-diagnostics db))
+        missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))

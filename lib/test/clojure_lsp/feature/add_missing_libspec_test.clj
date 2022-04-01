@@ -323,70 +323,67 @@
     (is (nil? (-> "(ns foo) |;; comment"
                   add-missing-libspec)))))
 
-(defn add-import-to-namespace [code import-name]
-  (f.add-missing-libspec/add-missing-import (h/zloc-from-code code) "file:///a.clj" import-name db/db))
+(defn add-import-to-namespace [code import-name & [settings]]
+  (h/clean-db!)
+  (swap! db/db shared/deep-merge {:settings (merge
+                                              {:clean {:automatically-after-ns-refactor false}}
+                                              settings)})
+  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name db/db))
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
-    (h/clean-db!)
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "   java.util.Date))")
+                   "    java.util.Date))")
            (-> "(ns foo.bar) |Date."
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
-    (swap! db/db shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
     (is (= (h/code "(ns foo.bar "
                    "  (:import java.util.Date))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date")
+               (add-import-to-namespace "java.util.Date"  {:clean {:ns-inner-blocks-indentation :same-line}})
                as-root-str))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
-    (swap! db/db shared/deep-merge {:settings {:keep-require-at-start? true}})
     (is (= (h/code "(ns foo.bar "
                    "  (:import java.util.Date))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date")
+               (add-import-to-namespace "java.util.Date"  {:keep-require-at-start? true})
                as-root-str))))
   (testing "when there is a :import form already"
-    (h/clean-db!)
     (is (= (h/code "(ns foo.bar "
-                   "  (:import"
-                   "   java.util.Calendar"
-                   "   java.util.Date))")
+                   "  (:import "
+                   "    java.util.Calendar"
+                   "    java.util.Date))")
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    java.util.Calendar)) |Date.")
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when there is already that :import imported"
-    (h/clean-db!)
     (is (= nil
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    java.util.Date)) |Date.")
                (add-import-to-namespace "java.util.Date")))))
   (testing "when there is only a :require form"
-    (h/clean-db!)
     (is (= (h/code "(ns foo.bar"
                    "  (:require"
-                   "   [foo.baz :as baz]) "
+                   "    [foo.baz :as baz]) "
                    "  (:import"
-                   "   java.util.Date))")
+                   "    java.util.Date))")
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])) |Date.")
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when there is a :require form and :import form"
-    (h/clean-db!)
     (is (= (h/code "(ns foo.bar"
                    "  (:require"
-                   "   [foo.baz :as baz])"
+                   "    [foo.baz :as baz])"
                    "  (:import"
-                   "   java.util.Calendar"
-                   "   java.util.Date))")
+                   "    java.util.Calendar"
+                   "    java.util.Date))")
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])"
@@ -395,15 +392,18 @@
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when on an invalid location"
-    (h/clean-db!)
-    (is (nil? (-> (h/code "(ns foo.bar) |;; comment")
-                  (add-import-to-namespace "java.util.Date"))))))
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import"
+                   "    java.util.Date)) ;; comment")
+           (-> (h/code "(ns foo.bar) |;; comment")
+               (add-import-to-namespace "java.util.Date")
+               (h/changes->code db/db))))))
 
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "   java.util.Date))")
+                   "    java.util.Date))")
            (-> "(ns foo.bar) |Date."
                (add-import-to-namespace nil)
                as-root-str))))

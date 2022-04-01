@@ -86,7 +86,6 @@
 
 (defn reference-filenames [filename old-local-analysis new-local-analysis db]
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
-        ;; TODO: can we easily remove usages of external namespaces (clojure.core, etc.) here?
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
         project-analysis (into {}
                                (q/filter-project-analysis-xf db)
@@ -104,7 +103,7 @@
                                      project-analysis)))
         outgoing-filenames (when (seq changed-var-usages)
                              (let [usage-signs->langs (->> changed-var-usages
-                                                              ;; TODO: do we really care if lang doesn't match?
+                                                           ;; If definition is in both a clj and cljs file, and this is a clj usage, only notify the clj file.
                                                            (reduce (fn [result usage]
                                                                      (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
                                                                    {}))]
@@ -114,8 +113,6 @@
                                        (filter #(identical? :var-definitions (:bucket %)))
                                        (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
                                                   (some usage-langs (q/elem-langs %))))
-                                          ;; TODO: this excludes "private calls", but they are counted in code lens, so maybe shouldn't exclude
-                                       (remove :private)
                                        (map :filename))
                                      project-analysis)))]
     (set/union (or incoming-filenames #{})

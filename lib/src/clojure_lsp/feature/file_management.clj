@@ -102,8 +102,12 @@
                                        (map :filename))
                                      project-analysis)))
         outgoing-filenames (when (seq changed-var-usages)
+                             ;; If definition is in both a clj and cljs file, and this is a clj
+                             ;; usage, we are careful to notify only the clj file. But, it wouldn't
+                             ;; really hurt to notify both files. So, if it helps readability,
+                             ;; maintenance, or symmetry with `incoming-filenames`, we could look
+                             ;; at just signature, not signature and lang.
                              (let [usage-signs->langs (->> changed-var-usages
-                                                           ;; If definition is in both a clj and cljs file, and this is a clj usage, only notify the clj file.
                                                            (reduce (fn [result usage]
                                                                      (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
                                                                    {}))]

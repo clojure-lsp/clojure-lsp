@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Improve settings documentation.
+- Introduce ALPHA move-form command. #566
 
 ## 2022.03.31-20.00.20
 
@@ -37,7 +38,6 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Bump `org.clojure/clojure` to `1.11.0`.
   - Fix move-coll-entry to maintain cursor position instead of a range. #862
   - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :after-ns-refactor` flag. #558
-  - Introduce ALPHA move-form command. #566
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

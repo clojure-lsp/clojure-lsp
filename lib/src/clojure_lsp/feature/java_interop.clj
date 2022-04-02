@@ -142,11 +142,7 @@
     (loop [state-db @db]
       (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
         (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
-        (recur @db)))
-    (-> (shared/uri->path (:project-root-uri @db))
-        (db/read-cache db)
-        (update :analysis merge analysis)
-        (db/upsert-cache! db))))
+        (recur @db)))))
 
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")

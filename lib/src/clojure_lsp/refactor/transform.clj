@@ -832,8 +832,9 @@
          :changes-by-uri {test-uri [{:loc test-zloc
                                      :range (-> test-zloc z/node meta)}]}}))))
 
+;; TODO: deref
 (defn can-create-test? [zloc uri db]
-  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) db)]
+  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) @db)]
     (let [source-paths (settings/get @db [:source-paths])]
       (when-let [current-source-path (->> source-paths
                                           (filter #(and (string/starts-with? (shared/uri->filename uri) %)

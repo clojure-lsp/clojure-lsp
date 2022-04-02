@@ -47,7 +47,7 @@
         zloc (some-> (f.file-management/force-get-document-text uri db)
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos name-row name-col))
-        parent-zloc (edit/find-var-definition-name-loc zloc filename db)]
+        parent-zloc (edit/find-var-definition-name-loc zloc filename @db)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
@@ -80,7 +80,7 @@
         zloc (some-> (f.file-management/force-get-document-text uri db)
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos row col))
-        {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename db)
+        {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename @db)
                                                   z/node
                                                   meta)]
     (when (and parent-row parent-col)

@@ -126,7 +126,7 @@
                                                          (= (:row fn-name-loc-meta) (:name-row %))
                                                          (= (:col fn-name-loc-meta) (:name-col %)))))
                                        (keep #(find-at-pos root-loc (:name-row %) (:name-col %))))
-                                     (get-in @db [:analysis filename]))]
+                                     (get-in db [:analysis filename]))]
         (when (seq var-definition-ops)
           {:fn-name-loc fn-name-loc
            :var-definitions var-definition-ops})))))

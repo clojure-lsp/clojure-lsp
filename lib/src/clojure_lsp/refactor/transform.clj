@@ -80,6 +80,7 @@
                         :set    :list
                         :list   :map))))
 
+;; TODO: deref
 (defn ^:private thread-sym
   [zloc sym top-meta db]
   (let [keep-parens-when-threading? (settings/get @db [:keep-parens-when-threading?] false)
@@ -241,6 +242,7 @@
         (recur next-loc (or marked? exists?))
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
+;; TODO: deref
 (defn ^:private widest-scoped-local [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
         analysis (:analysis @db)
@@ -589,6 +591,7 @@
 (defn find-function-form [zloc]
   (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))
 
+;; TODO: deref
 (defn cycle-privacy
   [zloc db]
   (when-let [oploc (find-function-form zloc)]
@@ -610,6 +613,7 @@
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
 
+;; TODO: deref
 (defn inline-symbol?
   [{:keys [filename name-row name-col bucket]} db]
   (when (or (identical? :locals bucket)
@@ -620,6 +624,7 @@
             z/sexpr
             #{'let 'def})))
 
+;; TODO: deref
 (defn inline-symbol
   [uri line column db]
   (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) line column @db)]
@@ -658,6 +663,7 @@
   (and zloc
        (#{:list :token} (z/tag zloc))))
 
+;; TODO: deref
 (defn find-public-function-to-create [zloc uri db]
   (when (and zloc
              (identical? :token (z/tag zloc))

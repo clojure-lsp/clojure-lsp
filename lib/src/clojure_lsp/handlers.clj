@@ -71,6 +71,7 @@
                   (meta &form))
                result#)))))))
 
+;; TODO: deref
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
   (let [project-files (into #{}
                             (comp
@@ -148,6 +149,7 @@
           col (-> position :character inc)]
       (f.completion/completion textDocument row col db/db))))
 
+;; TODO: deref
 (defn references [{:keys [textDocument position context]} {:keys [db] :as components}]
   (shared/logging-task
     :references
@@ -177,6 +179,7 @@
     (let [[row col] (shared/position->line-column position)]
       (f.rename/rename textDocument newName row col db/db))))
 
+;; TODO: deref
 (defn definition [{:keys [textDocument position]} {:keys [db] :as components}]
   (shared/logging-task
     :definition
@@ -187,6 +190,7 @@
                   (f.java-interop/uri->translated-uri components))
          :range (shared/->range definition)}))))
 
+;; TODO: deref
 (defn declaration [{:keys [textDocument position]} {:keys [db] :as components}]
   (shared/logging-task
     :declaration
@@ -197,6 +201,7 @@
                   (f.java-interop/uri->translated-uri components))
          :range (shared/->range declaration)}))))
 
+;; TODO: deref
 (defn implementation [{:keys [textDocument position]} {:keys [db] :as components}]
   (shared/logging-task
     :implementation

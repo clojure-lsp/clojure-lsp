@@ -16,6 +16,7 @@
 
 (set! *warn-on-reflection* true)
 
+;; TODO: deref
 (defn resolve-user-cljfmt-config [db]
   (when-let [project-root (shared/uri->filename (:project-root-uri @db))]
     (let [config-path (settings/get @db [:cljfmt-config-path] ".cljfmt.edn")

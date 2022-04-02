@@ -61,6 +61,7 @@
                              (map #(str %))
                              (string/join "\n---\n"))))))
 
+;; TODO: deref
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} {:keys [db] :as components}]
   (let [content-formats (get-in @db [:client-capabilities :text-document :hover :content-format])
@@ -107,6 +108,7 @@
         sym (cons {:language "clojure"
                    :value (if arity-on-same-line? sym-line sym)})))))
 
+;; TODO: deref
 (defn hover [filename line column {:keys [db] :as components}]
   (let [analysis (:analysis @db)
         element (loop [try-column column]

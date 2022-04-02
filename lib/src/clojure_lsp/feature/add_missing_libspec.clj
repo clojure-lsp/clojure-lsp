@@ -23,6 +23,7 @@
     (when (symbol? s)
       s)))
 
+;; TODO: deref
 (defn ^:private resolve-ns-inner-blocks-identation [db]
   (or (settings/get @db [:clean :ns-inner-blocks-indentation])
       (if (settings/get @db [:keep-require-at-start?])

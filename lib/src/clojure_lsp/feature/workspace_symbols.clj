@@ -44,6 +44,7 @@
                [])
        (map :members)))
 
+;; TODO: deref
 (defn workspace-symbols [query db]
   ;; TODO refactor to be a complete transducer
   (->> (into {}

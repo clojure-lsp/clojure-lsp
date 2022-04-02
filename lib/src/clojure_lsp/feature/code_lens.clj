@@ -46,6 +46,7 @@
        (not (string/starts-with? filename source-path))
        (string/includes? filename "_test.")))
 
+;; TODO: deref
 (defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
         segregate-lens? (settings/get @db [:code-lens :segregate-test-references] true)

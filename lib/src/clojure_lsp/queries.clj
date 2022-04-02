@@ -517,6 +517,7 @@
         (find-all-ns-definition-names-xf)
         analysis))
 
+;; TODO: deref
 (defn find-all-aliases
   [analysis uri db]
   (let [langs (shared/uri->available-langs uri)]

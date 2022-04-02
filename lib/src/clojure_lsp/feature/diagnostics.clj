@@ -174,6 +174,7 @@
 (def ^:private all-var-definitions q/find-all-var-definitions)
 (def ^:private all-kw-definitions q/find-all-keyword-definitions)
 
+;; TODO: deref
 (defn custom-lint-project!
   [new-analysis kondo-ctx db]
   (let [project-analysis (into {}
@@ -185,16 +186,18 @@
                   (all-kw-definitions project-analysis)
                   project-analysis kondo-ctx))))
 
+;; TODO: deref
 (defn custom-lint-files!
   [filenames new-analysis kondo-ctx db]
   (let [project-analysis (into {}
-                               (q/filter-project-analysis-xf db)
+                               (q/filter-project-analysis-xf @db)
                                new-analysis)
         file-analyses (select-keys project-analysis filenames)]
     (lint-defs! (all-var-definitions file-analyses)
                 (all-kw-definitions file-analyses)
                 project-analysis kondo-ctx)))
 
+;; TODO: deref
 (defn custom-lint-file!
   [filename analysis kondo-ctx db]
   (let [project-analysis (into {}

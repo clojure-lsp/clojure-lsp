@@ -75,6 +75,7 @@
         (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
         []))))
 
+;; TODO: deref
 (defn scan-classpath! [{:keys [db] :as components}]
   (let [root-path (shared/uri->path (:project-root-uri @db))]
     (->> (settings/get @db [:project-specs])

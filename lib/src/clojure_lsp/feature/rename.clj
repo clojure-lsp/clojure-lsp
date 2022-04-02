@@ -16,6 +16,7 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
+;; TODO: deref
 (defn ^:private rename-keyword
   [replacement
    replacement-raw
@@ -79,6 +80,7 @@
      :new-text text
      :text-document {:version version :uri ref-doc-uri}}))
 
+;; TODO: deref
 (defn ^:private rename-ns-definition
   [replacement
    db
@@ -92,6 +94,7 @@
      :new-text text
      :text-document {:version version :uri ref-doc-id}}))
 
+;; TODO: deref
 (defn ^:private rename-alias [replacement db reference]
   (let [alias? (= :namespace-alias (:bucket reference))
         keyword? (= :keywords (:bucket reference))
@@ -107,6 +110,7 @@
        :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
        :text-document {:version version :uri ref-doc-uri}})))
 
+;; TODO: deref
 (defn ^:private rename-local
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
@@ -121,6 +125,7 @@
        :new-text replacement
        :text-document {:version version :uri ref-doc-id}})))
 
+;; TODO: deref
 (defn ^:private rename-other
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
@@ -175,6 +180,7 @@
     :else
     {:result :success}))
 
+;; TODO: deref
 (defn prepare-rename
   [uri row col db]
   (let [filename (shared/uri->filename uri)

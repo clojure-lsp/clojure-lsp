@@ -5,6 +5,7 @@
 
 (set! *warn-on-reflection* true)
 
+;; TODO: deref
 (defn ranges [uri row col db]
   (let [filename (shared/uri->filename uri)
         elements (q/find-references-from-cursor (:analysis @db) filename row col true @db)

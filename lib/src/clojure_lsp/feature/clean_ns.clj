@@ -12,12 +12,14 @@
 
 (set! *warn-on-reflection* true)
 
+;; TODO: deref
 (defn ^:private resolve-ns-inner-blocks-identation [db]
   (or (settings/get @db [:clean :ns-inner-blocks-indentation])
       (if (settings/get @db [:keep-require-at-start?])
         :same-line
         :next-line)))
 
+;; TODO: deref
 (defn ^:private sort-by-if-enabled [fn type db coll]
   (if-let [sort-type (settings/get @db [:clean :sort type] true)]
     (if (= :lexicographically sort-type)

@@ -54,6 +54,7 @@
          :usage-element element
          :parent-element (q/find-element-under-cursor (:analysis @db) filename parent-row parent-col)}))))
 
+;; TODO: deref
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
   (when-let [definition (q/find-definition (:analysis @db) element @db)]

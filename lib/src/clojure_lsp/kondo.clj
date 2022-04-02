@@ -192,6 +192,7 @@
       (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
       (with-additional-config (settings/all @db))))
 
+;; TODO: deref
 (defn kondo-copy-configs [paths db]
   {:cache true
    :parallel true

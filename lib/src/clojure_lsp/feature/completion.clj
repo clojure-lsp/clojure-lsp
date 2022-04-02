@@ -453,6 +453,7 @@
                       (merging-snippets cursor-loc next-loc matches-fn settings)))]
         (sorting-and-distincting-items items)))))
 
+;; TODO: deref
 (defn ^:private resolve-item-by-ns
   [{{:keys [name ns filename]} :data :as item} {:keys [db] :as components}]
   (let [analysis (:analysis @db)

@@ -148,6 +148,7 @@
     (apply-workspace-change-edit-summary! change db))
   change)
 
+;; TODO: deref
 (defn ^:private project-root->uri [project-root {:keys [db]}]
   (-> (or ^File project-root (io/file ""))
       .getCanonicalPath
@@ -191,6 +192,7 @@
     (swap! db assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
+;; TODO: deref
 (defn ^:private ns->ns+uri [namespace {:keys [db]}]
   (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db) namespace @db))]
     {:namespace namespace

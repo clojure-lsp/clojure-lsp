@@ -264,6 +264,7 @@
       (str path (System/getProperty "file.separator")))
     path))
 
+;; TODO: deref
 (defn uri->namespace
   ([uri db]
    (uri->namespace uri (uri->filename uri) db))

@@ -35,13 +35,13 @@
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]
   (or (peek (into []
                   (comp
-                    (filter-project-analysis-xf @db)
+                    (filter-project-analysis-xf db)
                     (mapcat val)
                     (filter pred?))
                   analysis))
       (peek (into []
                   (comp
-                    (filter-external-analysis-xf @db)
+                    (filter-external-analysis-xf db)
                     (mapcat val)
                     (filter pred?))
                   analysis))))
@@ -115,7 +115,7 @@
           (= (:name %) (:to element))
           (match-file-lang % element))
     analysis
-    db))
+    @db))
 
 (defmethod find-definition :namespace-usages
   [analysis element db]
@@ -124,7 +124,7 @@
           (= (:name %) (:name element))
           (match-file-lang % element))
     analysis
-    db))
+    @db))
 
 (defmethod find-definition :var-usages
   [analysis element db]
@@ -135,7 +135,7 @@
           (= (:ns %) (:to element))
           (match-file-lang % element))
     analysis
-    db))
+    @db))
 
 (defmethod find-definition :local-usages
   [analysis {:keys [id filename] :as _element} _db]
@@ -151,7 +151,7 @@
                 (:reg %)
                 (= (:ns %) (:ns element)))
           analysis
-          db))
+          @db))
       element))
 
 (defmethod find-definition :var-definitions
@@ -163,7 +163,7 @@
             (not= 'potemkin/import-vars (:defined-by %))
             (match-file-lang % element))
       analysis
-      db)
+      @db)
     element))
 
 (defmethod find-definition :protocol-impls
@@ -174,7 +174,7 @@
           (= (:ns %) (:protocol-ns element))
           (match-file-lang % element))
     analysis
-    db))
+    @db))
 
 (defmethod find-definition :java-class-usages
   [analysis element _db]
@@ -206,7 +206,7 @@
               (= (:filename element) (:filename %))
               (match-file-lang % element))
         analysis
-        db)
+        @db)
       (find-last-order-by-project-analysis
         #(if (:refer %)
            (and (identical? :var-usages (:bucket %))
@@ -218,7 +218,7 @@
                 (= (:filename element) (:filename %))
                 (match-file-lang % element)))
         analysis
-        db))))
+        @db))))
 
 (defmethod find-declaration :default [_ _ _] nil)
 
@@ -600,14 +600,14 @@
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) namespace))
     analysis
-    db))
+    @db))
 
 (defn find-namespace-definition-by-filename [analysis filename db]
   (find-last-order-by-project-analysis
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:filename %) filename))
     analysis
-    db))
+    @db))
 
 (defn find-namespace-usage-by-alias [analysis filename alias]
   (->> (get analysis filename)
@@ -621,7 +621,7 @@
           (= ns (:ns %))
           (= name (:name %)))
     analysis
-    db))
+    @db))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

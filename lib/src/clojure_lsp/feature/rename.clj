@@ -179,7 +179,7 @@
   [uri row col db]
   (let [filename (shared/uri->filename uri)
         element (q/find-element-under-cursor (:analysis @db) filename row col)
-        references (q/find-references (:analysis @db) element true db)
+        references (q/find-references (:analysis @db) element true @db)
         definition (q/find-definition (:analysis @db) element @db)
         source-paths (settings/get @db [:source-paths])
         client-capabilities (:client-capabilities @db)
@@ -192,7 +192,7 @@
   [uri new-name row col db]
   (let [filename (shared/uri->filename uri)
         element (q/find-element-under-cursor (:analysis @db) filename row col)
-        references (q/find-references (:analysis @db) element true db)
+        references (q/find-references (:analysis @db) element true @db)
         definition (q/find-definition (:analysis @db) element @db)
         source-paths (settings/get @db [:source-paths])
         client-capabilities (:client-capabilities @db)

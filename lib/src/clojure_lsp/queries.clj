@@ -206,7 +206,7 @@
               (= (:filename element) (:filename %))
               (match-file-lang % element))
         analysis
-        @db)
+        db)
       (find-last-order-by-project-analysis
         #(if (:refer %)
            (and (identical? :var-usages (:bucket %))
@@ -218,7 +218,7 @@
                 (= (:filename element) (:filename %))
                 (match-file-lang % element)))
         analysis
-        @db))))
+        db))))
 
 (defmethod find-declaration :default [_ _ _] nil)
 
@@ -342,13 +342,13 @@
           (get analysis filename))))
 
 (defmethod find-references :var-usages
-  [analysis element include-declaration? db]
+  [analysis element include-declaration? _db]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     [element]
     (let [var-definition {:ns (:to element)
                           :name (:name element)
                           :bucket :var-definitions}]
-      (find-references analysis var-definition include-declaration? db))))
+      (find-references analysis var-definition include-declaration? _db))))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration? _db]
@@ -371,7 +371,7 @@
   [analysis {:keys [ns name] :as _element} include-declaration? db]
   (into []
         (comp
-          (filter-project-analysis-xf @db)
+          (filter-project-analysis-xf db)
           (mapcat val)
           (filter #(identical? :keywords (:bucket %)))
           (filter #(safe-equal? name (:name %)))
@@ -437,7 +437,7 @@
 (defn find-declaration-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-declaration analysis element db))
+      (find-declaration analysis element @db))
     (catch Throwable e
       (logger/error e "can't find declaration"))))
 
@@ -451,7 +451,7 @@
 (defn find-references-from-cursor [analysis filename line column include-declaration? db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-references analysis element include-declaration? db))
+      (find-references analysis element include-declaration? @db))
     (catch Throwable e
       (logger/error e "can't find references"))))
 

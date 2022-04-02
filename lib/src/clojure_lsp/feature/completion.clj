@@ -385,7 +385,7 @@
                                     (dissoc analysis filename))
             external-ns-elements (into []
                                        (comp
-                                         (q/filter-external-analysis-xf  db)
+                                         (q/filter-external-analysis-xf @db)
                                          (mapcat val))
                                        (dissoc analysis filename))
             cursor-element (q/find-element-under-cursor analysis filename row col)

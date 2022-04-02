@@ -18,12 +18,12 @@
 
 (defn resolve-user-cljfmt-config [db]
   (when-let [project-root (shared/uri->filename (:project-root-uri @db))]
-    (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
+    (let [config-path (settings/get @db [:cljfmt-config-path] ".cljfmt.edn")
           cljfmt-config-file (if (string/starts-with? config-path "/")
                                (io/file config-path)
                                (io/file project-root config-path))]
       (medley/deep-merge
-        (settings/get db [:cljfmt] {})
+        (settings/get @db [:cljfmt] {})
         (when (shared/file-exists? cljfmt-config-file)
           (if (string/ends-with? cljfmt-config-file ".clj")
             (binding [*read-eval* false]

@@ -13,13 +13,13 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]
-  (or (settings/get db [:clean :ns-inner-blocks-indentation])
-      (if (settings/get db [:keep-require-at-start?])
+  (or (settings/get @db [:clean :ns-inner-blocks-indentation])
+      (if (settings/get @db [:keep-require-at-start?])
         :same-line
         :next-line)))
 
 (defn ^:private sort-by-if-enabled [fn type db coll]
-  (if-let [sort-type (settings/get db [:clean :sort type] true)]
+  (if-let [sort-type (settings/get @db [:clean :sort type] true)]
     (if (= :lexicographically sort-type)
       (sort-by str coll)
       (sort-by fn coll))
@@ -146,7 +146,7 @@
                                            (interpose 1)
                                            (reduce + 0)
                                            (+ init-refer-sep (-> refer-node n/sexpr str count)))
-                              max-line-length (settings/get db [:clean :sort :refer :max-line-length] 80)]
+                              max-line-length (settings/get @db [:clean :sort :refer :max-line-length] 80)]
                           (if (and max-line-length
                                    (> max-line-length 0))
                             (let [lines-n (if (> (quot end-col max-line-length) 0)

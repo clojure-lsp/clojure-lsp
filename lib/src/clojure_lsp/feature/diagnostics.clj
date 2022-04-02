@@ -78,7 +78,7 @@
 
 (defn ^:private exclude-ns? [filename linter db]
   (when-let [namespace (shared/filename->namespace filename db)]
-    (when-let [ns-exclude-regex-str (settings/get db [:linters linter :ns-exclude-regex])]
+    (when-let [ns-exclude-regex-str (settings/get @db [:linters linter :ns-exclude-regex])]
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 
 (defn ^:private kondo-findings->diagnostics [filename linter db]
@@ -102,9 +102,9 @@
 
 (defn find-diagnostics [^String uri db]
   (let [filename (shared/uri->filename uri)
-        source-paths (settings/get db [:source-paths])]
+        source-paths (settings/get @db [:source-paths])]
     (cond-> []
-      (and (not= :off (settings/get db [:linters :clj-kondo :level]))
+      (and (not= :off (settings/get @db [:linters :clj-kondo :level]))
            (not (shared/external-filename? filename source-paths)))
       (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 

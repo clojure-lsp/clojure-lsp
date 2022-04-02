@@ -99,7 +99,7 @@
           {}
           work-done-token
           components)
-        (when (settings/get db [:lint-project-files-after-startup?] true)
+        (when (settings/get @db [:lint-project-files-after-startup?] true)
           (async/go
             (f.diagnostic/publish-all-diagnostics! (-> @db :settings :source-paths) db)))
         (async/go
@@ -111,7 +111,7 @@
         (async/go
           (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
           (analyze-test-paths! components))
-        (when (settings/get db [:java] true)
+        (when (settings/get @db [:java] true)
           (async/go
             (f.java-interop/retrieve-jdk-source-and-analyze! components))))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warn nil))))

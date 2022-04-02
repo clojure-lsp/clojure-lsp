@@ -40,7 +40,7 @@
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
                          (not (get (:create-ns-blank-files-denylist @db) uri))
                          (shared/uri->namespace uri db))]
-    (when (settings/get db [:auto-add-ns-to-new-files?] true)
+    (when (settings/get @db [:auto-add-ns-to-new-files?] true)
       (let [new-text (format "(ns %s)" new-ns)
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
@@ -196,7 +196,7 @@
                                                   (assoc :kondo-config (:config kondo-result))))
               (do
                 (f.diagnostic/sync-publish-diagnostics! uri db)
-                (when (settings/get db [:notify-references-on-file-change] true)
+                (when (settings/get @db [:notify-references-on-file-change] true)
                   (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
                 (clojure-producer/refresh-test-tree producer [uri]))
               (recur @db))))))))
@@ -252,7 +252,7 @@
   (shared/logging-task
     :did-close
     (let [filename (shared/uri->filename uri)
-          source-paths (settings/get db [:source-paths])]
+          source-paths (settings/get @db [:source-paths])]
       (when (and (not (shared/external-filename? filename source-paths))
                  (not (shared/file-exists? (io/file filename))))
         (swap! db (fn [state-db] (-> state-db

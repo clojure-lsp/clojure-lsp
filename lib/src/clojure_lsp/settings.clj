@@ -85,4 +85,4 @@
   ([db kws]
    (get db kws nil))
   ([db kws default]
-   (get-in (all @db) kws default)))
+   (get-in (all db) kws default)))

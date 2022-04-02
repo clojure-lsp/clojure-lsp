@@ -149,7 +149,7 @@
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [filename (-> analysis :var-definitions first :filename)
           updated-analysis (assoc (:analysis @db) filename (normalize-analysis analysis))]
-      (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
+      (if (settings/get @db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
           (if (>= tries 200)
             (logger/info "Max tries reached when async custom linting" uri)
@@ -179,7 +179,7 @@
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true
        :parallel true
-       :copy-configs (settings/get db [:copy-kondo-configs?] true)
+       :copy-configs (settings/get @db [:copy-kondo-configs?] true)
        :lint [(string/join (System/getProperty "path.separator") paths)]
        :config {:output {:analysis {:arglists true
                                     :locals false
@@ -196,7 +196,7 @@
   {:cache true
    :parallel true
    :skip-lint true
-   :copy-configs (settings/get db [:copy-kondo-configs?] true)
+   :copy-configs (settings/get @db [:copy-kondo-configs?] true)
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:canonical-paths true}}})
 
@@ -212,7 +212,7 @@
 (defn kondo-for-single-file [uri db]
   (-> {:cache true
        :lint ["-"]
-       :copy-configs (settings/get db [:copy-kondo-configs?] true)
+       :copy-configs (settings/get @db [:copy-kondo-configs?] true)
        :lang (shared/uri->file-type uri)
        :filename (shared/uri->filename uri)
        :config-dir (project-config-dir (:project-root-uri @db))

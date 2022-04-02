@@ -197,9 +197,9 @@
         jdk-result-file (io/file jdk-dir-file "result")
         installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
                                       (slurp jdk-result-file))
-        custom-jdk-source-uri (settings/get db [:java :jdk-source-uri])
+        custom-jdk-source-uri (settings/get @db [:java :jdk-source-uri])
         local-jdk-source-file* (delay (find-local-jdk-source))
-        download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
+        download-jdk-source? (settings/get @db [:java :download-jdk-source?] false)
         {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
                                                      installed-jdk-source-uri
                                                      custom-jdk-source-uri

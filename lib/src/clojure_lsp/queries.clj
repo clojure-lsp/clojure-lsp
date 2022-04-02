@@ -25,11 +25,11 @@
     coll))
 
 (defn filter-project-analysis-xf [db]
-  (let [source-paths (settings/get db [:source-paths])]
+  (let [source-paths (settings/get @db [:source-paths])]
     (remove #(shared/external-filename? (first %) source-paths))))
 
 (defn filter-external-analysis-xf [db]
-  (let [source-paths (settings/get db [:source-paths])]
+  (let [source-paths (settings/get @db [:source-paths])]
     (filter #(shared/external-filename? (first %) source-paths))))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]

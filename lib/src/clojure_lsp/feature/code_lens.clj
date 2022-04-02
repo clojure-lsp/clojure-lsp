@@ -48,10 +48,10 @@
 
 (defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
-        segregate-lens? (settings/get db [:code-lens :segregate-test-references] true)
+        segregate-lens? (settings/get @db [:code-lens :segregate-test-references] true)
         references (q/find-references-from-cursor (:analysis @db) filename row col false db)]
     (if segregate-lens?
-      (let [source-path (->> (settings/get db [:source-paths])
+      (let [source-path (->> (settings/get @db [:source-paths])
                              (filter #(string/starts-with? filename %))
                              first)
             main-references (filter (complement (partial test-reference? source-path)) references)

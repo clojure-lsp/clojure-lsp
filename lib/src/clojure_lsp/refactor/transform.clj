@@ -82,7 +82,7 @@
 
 (defn ^:private thread-sym
   [zloc sym top-meta db]
-  (let [keep-parens-when-threading? (settings/get db [:keep-parens-when-threading?] false)
+  (let [keep-parens-when-threading? (settings/get @db [:keep-parens-when-threading?] false)
         movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
     (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)
@@ -594,7 +594,7 @@
   (when-let [oploc (find-function-form zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
-                             (not (settings/get db [:use-metadata-for-privacy?])))
+                             (not (settings/get @db [:use-metadata-for-privacy?])))
           switch-defn? (= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?
@@ -667,10 +667,10 @@
           z-ns (namespace z-sexpr)]
       (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol z-ns))]
         (if-let [ns-def (q/find-definition (:analysis @db) ns-usage db)]
-          (when-not (shared/external-filename? (:filename ns-def) (settings/get db [:source-paths]))
+          (when-not (shared/external-filename? (:filename ns-def) (settings/get @db [:source-paths]))
             {:ns (:name ns-def)
              :name z-name})
-          (when-not (shared/external-filename? (:filename ns-usage) (settings/get db [:source-paths]))
+          (when-not (shared/external-filename? (:filename ns-usage) (settings/get @db [:source-paths]))
             {:new-ns (:name ns-usage)
              :name z-name}))
         {:new-ns z-ns
@@ -691,7 +691,7 @@
   (let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
                         (q/find-definition (:analysis @db) ns-usage db))
-        source-paths (settings/get db [:source-paths])
+        source-paths (settings/get @db [:source-paths])
         def-uri (cond
                   ns-definition
                   (shared/filename->uri (:filename ns-definition) db)
@@ -745,7 +745,7 @@
                        ns-or-alias
                        (format "(defn %s)" fn-name)
 
-                       (settings/get db [:use-metadata-for-privacy?] false)
+                       (settings/get @db [:use-metadata-for-privacy?] false)
                        (format "(defn ^:private %s)" fn-name)
 
                        :else
@@ -827,7 +827,7 @@
 
 (defn can-create-test? [zloc uri db]
   (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) db)]
-    (let [source-paths (settings/get db [:source-paths])]
+    (let [source-paths (settings/get @db [:source-paths])]
       (when-let [current-source-path (->> source-paths
                                           (filter #(and (string/starts-with? (shared/uri->filename uri) %)
                                                         (not (string/includes? % "test"))))

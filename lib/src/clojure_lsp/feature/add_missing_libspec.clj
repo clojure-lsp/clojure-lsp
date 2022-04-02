@@ -24,13 +24,13 @@
       s)))
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]
-  (or (settings/get db [:clean :ns-inner-blocks-indentation])
-      (if (settings/get db [:keep-require-at-start?])
+  (or (settings/get @db [:clean :ns-inner-blocks-indentation])
+      (if (settings/get @db [:keep-require-at-start?])
         :same-line
         :next-line)))
 
 (defn cleaning-ns-edits [uri db edits]
-  (if (settings/get db [:clean :automatically-after-ns-refactor] true)
+  (if (settings/get @db [:clean :automatically-after-ns-refactor] true)
     (->> edits
          (map (fn [{:keys [loc range] :as edit}]
                 (if (z/find-value loc z/next 'ns)

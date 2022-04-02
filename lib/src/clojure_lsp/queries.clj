@@ -607,7 +607,7 @@
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:filename %) filename))
     analysis
-    @db))
+    db))
 
 (defn find-namespace-usage-by-alias [analysis filename alias]
   (->> (get analysis filename)

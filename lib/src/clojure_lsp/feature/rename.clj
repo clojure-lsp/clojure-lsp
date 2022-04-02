@@ -223,5 +223,5 @@
                                            [{:kind "rename"
                                              :old-uri uri
                                              :new-uri new-uri}])
-                                   db))
-          (shared/client-changes doc-changes db))))))
+                                   @db))
+          (shared/client-changes doc-changes @db))))))

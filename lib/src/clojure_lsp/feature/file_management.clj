@@ -35,6 +35,7 @@
                       (update-findings uri (:findings kondo-result))
                       (assoc :kondo-config (:config kondo-result)))))
       (f.diagnostic/async-publish-diagnostics! uri db)))
+  ;; TODO: deref
   (when-let [new-ns (and allow-create-ns
                          (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
@@ -45,7 +46,7 @@
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                :new-text new-text}]}]]
-        (async/>!! db/edits-chan (shared/client-changes changes db))))))
+        (async/>!! db/edits-chan (shared/client-changes changes @db))))))
 
 (defn ^:private find-changed-elems-by
   "Detect elements that changed number of occurrences."

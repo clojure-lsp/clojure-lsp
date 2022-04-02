@@ -103,7 +103,7 @@
         analysis (:analysis @db)
         source-filename (shared/uri->filename uri)
         source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename @db))
-        dest-filename (shared/absolute-path dest-filename db)
+        dest-filename (shared/absolute-path dest-filename @db)
         dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename @db))
         inner-usages (var-usages-within zloc uri db)
         ;; if source-ns things are used within the form

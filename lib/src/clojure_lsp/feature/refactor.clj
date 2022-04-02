@@ -107,10 +107,11 @@
        (map name)
        vec))
 
+;; TODO: deref
 (defn refactor-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
                   :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
-    (shared/client-changes changes db)))
+    (shared/client-changes changes @db)))
 
 (defn call-refactor [{:keys [loc uri refactoring row col version] :as data} {:keys [db] :as components}]
 
@@ -133,7 +134,7 @@
         (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
           (swap! db assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
         {:show-document-after-edit show-document-after-edit
-         :edit (shared/client-changes changes db)})
+         :edit (shared/client-changes changes @db)})
 
       (seq result)
       {:edit (refactor-client-seq-changes uri version result db)}

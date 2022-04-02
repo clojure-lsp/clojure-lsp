@@ -243,7 +243,7 @@
                           (string/replace "." (System/getProperty "file.separator"))
                           (string/replace "-" "_")
                           (str "." (name file-type))))
-      @db)))
+      db)))
 
 (defn namespace+source-path->filename
   [namespace source-path file-type]

@@ -702,9 +702,9 @@
                   ns-definition
                   (shared/filename->uri (:filename ns-definition) @db)
                   ns-usage
-                  (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) db)
+                  (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) @db)
                   :else
-                  (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) db))
+                  (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) @db))
         min-range {:row 1 :end-row 1 :col 1 :end-col 1}
         max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}]
     {:show-document-after-edit {:uri def-uri

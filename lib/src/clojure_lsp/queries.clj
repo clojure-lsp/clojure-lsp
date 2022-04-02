@@ -451,7 +451,7 @@
 (defn find-references-from-cursor [analysis filename line column include-declaration? db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-references analysis element include-declaration? @db))
+      (find-references analysis element include-declaration? db))
     (catch Throwable e
       (logger/error e "can't find references"))))
 

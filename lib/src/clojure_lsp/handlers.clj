@@ -158,7 +158,7 @@
                         (shared/filename->uri db)
                         (f.java-interop/uri->translated-uri components))
                :range (shared/->range reference)})
-            (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db)))))
+            (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) @db)))))
 
 (defn completion-resolve-item [item components]
   (shared/logging-task
@@ -241,7 +241,7 @@
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
           scoped-analysis (select-keys (:analysis @db/db) [filename])
-          references (q/find-references-from-cursor scoped-analysis filename line column true db/db)]
+          references (q/find-references-from-cursor scoped-analysis filename line column true @db/db)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))

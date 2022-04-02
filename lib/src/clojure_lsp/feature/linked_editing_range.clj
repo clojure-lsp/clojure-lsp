@@ -7,7 +7,7 @@
 
 (defn ranges [uri row col db]
   (let [filename (shared/uri->filename uri)
-        elements (q/find-references-from-cursor (:analysis @db) filename row col true db)
+        elements (q/find-references-from-cursor (:analysis @db) filename row col true @db)
         same-file-references-only? (= 1 (count (keys (group-by :filename elements))))]
     (if same-file-references-only?
       {:ranges (->> elements

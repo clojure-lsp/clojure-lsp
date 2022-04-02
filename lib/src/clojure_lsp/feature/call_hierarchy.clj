@@ -66,7 +66,7 @@
        :parent-element definition})))
 
 (defn incoming [uri row col db]
-  (->> (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false db)
+  (->> (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false @db)
        (map (partial element->incoming-usage-by-uri db))
        (remove nil?)
        (mapv (fn [element-by-uri]

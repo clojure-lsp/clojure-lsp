@@ -46,9 +46,10 @@
          seq)
     edits))
 
+;; TODO: deref
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/find-all-aliases (:analysis @db) uri db)
+        alias->info (->> (q/find-all-aliases (:analysis @db) uri @db)
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -375,8 +376,9 @@
       :else
       (resolve-best-namespaces-suggestions cursor-namespace-str aliases->namespaces namespaces->aliases))))
 
+;; TODO: deref
 (defn find-alias-ns-pairs [analysis uri db]
-  (concat (->> (q/find-all-aliases analysis uri db)
+  (concat (->> (q/find-all-aliases analysis uri @db)
                (map (juxt (comp str :to) (comp str :alias))))
           (->> (q/find-all-ns-definition-names analysis)
                (map (juxt str (constantly nil))))))

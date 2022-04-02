@@ -517,20 +517,19 @@
         (find-all-ns-definition-names-xf)
         analysis))
 
-;; TODO: deref
 (defn find-all-aliases
   [analysis uri db]
   (let [langs (shared/uri->available-langs uri)]
     (into #{}
           (comp
-            (filter-project-analysis-xf @db)
+            (filter-project-analysis-xf db)
             (mapcat val)
             (filter #(identical? :namespace-alias (:bucket %)))
             (filter :alias)
             (filter (fn [element]
                       (seq (set/intersection (-> element
                                                  :filename
-                                                 (shared/filename->uri @db)
+                                                 (shared/filename->uri db)
                                                  shared/uri->available-langs)
                                              langs)))))
           analysis)))

@@ -159,6 +159,7 @@
       shared/keywordize-first-depth
       (settings/clean-client-settings)))
 
+;; TODO: deref
 (defn capabilites [db]
   (let [settings (settings/all @db)]
     {:document-highlight-provider true

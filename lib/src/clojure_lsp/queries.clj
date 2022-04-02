@@ -115,7 +115,7 @@
           (= (:name %) (:to element))
           (match-file-lang % element))
     analysis
-    @db))
+    db))
 
 (defmethod find-definition :namespace-usages
   [analysis element db]
@@ -124,7 +124,7 @@
           (= (:name %) (:name element))
           (match-file-lang % element))
     analysis
-    @db))
+    db))
 
 (defmethod find-definition :var-usages
   [analysis element db]
@@ -135,7 +135,7 @@
           (= (:ns %) (:to element))
           (match-file-lang % element))
     analysis
-    @db))
+    db))
 
 (defmethod find-definition :local-usages
   [analysis {:keys [id filename] :as _element} _db]
@@ -151,7 +151,7 @@
                 (:reg %)
                 (= (:ns %) (:ns element)))
           analysis
-          @db))
+          db))
       element))
 
 (defmethod find-definition :var-definitions
@@ -163,7 +163,7 @@
             (not= 'potemkin/import-vars (:defined-by %))
             (match-file-lang % element))
       analysis
-      @db)
+      db)
     element))
 
 (defmethod find-definition :protocol-impls
@@ -174,7 +174,7 @@
           (= (:ns %) (:protocol-ns element))
           (match-file-lang % element))
     analysis
-    @db))
+    db))
 
 (defmethod find-definition :java-class-usages
   [analysis element _db]
@@ -430,7 +430,7 @@
 (defn find-definition-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-definition analysis element db))
+      (find-definition analysis element @db))
     (catch Throwable e
       (logger/error e "can't find definition"))))
 

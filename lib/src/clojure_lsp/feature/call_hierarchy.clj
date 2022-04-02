@@ -56,7 +56,7 @@
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
-  (when-let [definition (q/find-definition (:analysis @db) element db)]
+  (when-let [definition (q/find-definition (:analysis @db) element @db)]
     (let [def-filename (:filename definition)
           definition-uri (if (shared/plain-uri? def-filename)
                            def-filename

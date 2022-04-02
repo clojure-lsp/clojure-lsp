@@ -459,7 +459,7 @@
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
                                                 :to (symbol ns)
-                                                :bucket :var-usages} db)]
+                                                :bucket :var-usages} @db)]
     (if definition
       (-> item
           (assoc :documentation (f.hover/hover-documentation definition components)))

@@ -251,7 +251,7 @@
                           col
                           end-row
                           end-col)
-                        (map #(q/find-definition analysis % db)))]
+                        (map #(q/find-definition analysis % @db)))]
     (reduce
       (fn [accum d]
         (if (or (not accum)
@@ -666,7 +666,7 @@
           z-name (name z-sexpr)
           z-ns (namespace z-sexpr)]
       (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol z-ns))]
-        (if-let [ns-def (q/find-definition (:analysis @db) ns-usage db)]
+        (if-let [ns-def (q/find-definition (:analysis @db) ns-usage @db)]
           (when-not (shared/external-filename? (:filename ns-def) (settings/get @db [:source-paths]))
             {:ns (:name ns-def)
              :name z-name})
@@ -690,7 +690,7 @@
   [local-zloc ns-or-alias fn-name defn-edit uri db]
   (let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
-                        (q/find-definition (:analysis @db) ns-usage db))
+                        (q/find-definition (:analysis @db) ns-usage @db))
         source-paths (settings/get @db [:source-paths])
         def-uri (cond
                   ns-definition

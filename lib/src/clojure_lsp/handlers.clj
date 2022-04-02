@@ -285,7 +285,7 @@
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}
-                                           :definition (q/find-definition analysis e db/db)
+                                           :definition (q/find-definition analysis e @db/db)
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 

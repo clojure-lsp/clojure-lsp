@@ -2,7 +2,6 @@
   (:require
    [babashka.fs :as fs]
    [clojure-lsp.config :as config]
-   [clojure-lsp.db :as db]
    [clojure-lsp.http :as http]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.settings :as settings]

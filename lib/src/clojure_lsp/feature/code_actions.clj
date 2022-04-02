@@ -264,7 +264,7 @@
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
-        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col db)
+        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col @db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]

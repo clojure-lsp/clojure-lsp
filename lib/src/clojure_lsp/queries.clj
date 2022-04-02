@@ -430,7 +430,7 @@
 (defn find-definition-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-definition analysis element @db))
+      (find-definition analysis element db))
     (catch Throwable e
       (logger/error e "can't find definition"))))
 
@@ -444,7 +444,7 @@
 (defn find-implementations-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-implementations analysis element db))
+      (find-implementations analysis element @db))
     (catch Throwable e
       (logger/error e "can't find implementation"))))
 

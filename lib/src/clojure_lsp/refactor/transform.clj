@@ -622,7 +622,7 @@
 
 (defn inline-symbol
   [uri line column db]
-  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) line column db)]
+  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) line column @db)]
     (when-let [op (inline-symbol? definition db)]
       (let [references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) line column false db)
             def-uri    (shared/filename->uri (:filename definition) db)

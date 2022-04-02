@@ -84,7 +84,7 @@
     (when function-loc
       (let [arglist-nodes (function-loc->arglist-nodes function-loc)
             function-meta (meta (z/node function-loc))
-            definition (q/find-definition-from-cursor (:analysis @db) filename (:row function-meta) (:col function-meta) db)
+            definition (q/find-definition-from-cursor (:analysis @db) filename (:row function-meta) (:col function-meta) @db)
             signatures (definition->signature-informations definition)
             active-signature (get-active-signature-index definition arglist-nodes)]
         (when (seq signatures)

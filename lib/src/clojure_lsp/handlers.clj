@@ -181,7 +181,7 @@
   (shared/logging-task
     :definition
     (let [[line column] (shared/position->line-column position)]
-      (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
+      (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column @db)]
         {:uri (-> (:filename definition)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri components))

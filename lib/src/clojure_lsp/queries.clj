@@ -529,7 +529,7 @@
             (filter (fn [element]
                       (seq (set/intersection (-> element
                                                  :filename
-                                                 (shared/filename->uri db)
+                                                 (shared/filename->uri @db)
                                                  shared/uri->available-langs)
                                              langs)))))
           analysis)))

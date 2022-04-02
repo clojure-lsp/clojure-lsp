@@ -136,7 +136,7 @@
             :reference-files/analyze
             (crawler/analyze-reference-filenames! filenames db))
           (doseq [filename filenames]
-            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db))
+            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename @db) db))
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]

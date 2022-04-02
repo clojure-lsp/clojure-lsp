@@ -57,7 +57,7 @@
        (mapv (fn [element]
                {:name (-> element :name name)
                 :kind (f.document-symbol/element->symbol-kind element)
-                :location {:uri (shared/filename->uri (:filename element) db)
+                :location {:uri (shared/filename->uri (:filename element) @db)
                            :range (shared/->scope-range element)}}))
        (group-by-ord (comp :uri :location))
        flatten

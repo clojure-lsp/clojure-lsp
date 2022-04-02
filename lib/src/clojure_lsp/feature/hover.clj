@@ -95,7 +95,7 @@
                 (str (format "%s*[%s](%s)*"
                              line-break
                              (string/replace filename #"\\" "\\\\")
-                             (shared/filename->uri filename db))))}
+                             (shared/filename->uri filename @db))))}
       ;; Default to plaintext
       (cond->> []
         (and filename (not hide-filename?)) (cons filename)

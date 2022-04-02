@@ -43,7 +43,7 @@
 
 (defn ^:private element->incoming-usage-by-uri
   [db {:keys [name-row name-col filename] :as element}]
-  (let [uri (shared/filename->uri filename db)
+  (let [uri (shared/filename->uri filename @db)
         zloc (some-> (f.file-management/force-get-document-text uri db)
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos name-row name-col))
@@ -60,7 +60,7 @@
     (let [def-filename (:filename definition)
           definition-uri (if (shared/plain-uri? def-filename)
                            def-filename
-                           (shared/filename->uri def-filename db))]
+                           (shared/filename->uri def-filename @db))]
       {:uri definition-uri
        :usage-element element
        :parent-element definition})))

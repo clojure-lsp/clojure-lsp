@@ -614,7 +614,7 @@
   [{:keys [filename name-row name-col bucket]} db]
   (when (or (identical? :locals bucket)
             (identical? :var-definitions bucket))
-    (some-> (parser/safe-zloc-of-file @db (shared/filename->uri filename db))
+    (some-> (parser/safe-zloc-of-file @db (shared/filename->uri filename @db))
             (parser/to-pos name-row name-col)
             edit/find-op
             z/sexpr
@@ -625,7 +625,7 @@
   (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) line column @db)]
     (when-let [op (inline-symbol? definition db)]
       (let [references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) line column false @db)
-            def-uri    (shared/filename->uri (:filename definition) db)
+            def-uri    (shared/filename->uri (:filename definition) @db)
             ;; TODO: use safe-zloc-of-file and handle nils
             def-loc    (some-> (parser/zloc-of-file @db def-uri)
                                (parser/to-pos (:name-row definition) (:name-col definition)))
@@ -648,7 +648,7 @@
          (reduce
            (fn [accum {:keys [filename] :as element}]
              (update accum
-                     (shared/filename->uri filename db)
+                     (shared/filename->uri filename @db)
                      (fnil conj [])
                      {:loc val-loc :range element}))
            {def-uri [{:loc nil :range def-range}]}
@@ -694,7 +694,7 @@
         source-paths (settings/get @db [:source-paths])
         def-uri (cond
                   ns-definition
-                  (shared/filename->uri (:filename ns-definition) db)
+                  (shared/filename->uri (:filename ns-definition) @db)
                   ns-usage
                   (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) db)
                   :else
@@ -797,7 +797,7 @@
         namespace (shared/uri->namespace uri db)
         namespace-test (str namespace "-test")
         test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
-        test-uri (shared/filename->uri test-filename db)
+        test-uri (shared/filename->uri test-filename @db)
         test-namespace-file (io/file test-filename)]
     (if (shared/file-exists? test-namespace-file)
       (let [existing-text (shared/slurp-filename test-uri)

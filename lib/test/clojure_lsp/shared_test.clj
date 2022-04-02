@@ -48,19 +48,19 @@
   (testing "when it is not a jar"
     (h/clean-db!)
     (is (= (if h/windows? "file:///c:/some%20project/foo/bar_baz.clj" "file:///some%20project/foo/bar_baz.clj")
-           (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj") db/db))))
+           (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj") @db/db))))
   (testing "when it is a jar via zipfile"
     (h/clean-db!)
     (is (= (if h/windows? "zipfile:///c:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
-           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") db/db))))
+           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") @db/db))))
   (testing "when it is a jar via jarfile"
     (swap! db/db shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (is (= (if h/windows? "jar:file:///c:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
-           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") db/db))))
+           (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") @db/db))))
   (testing "Windows URIs"
     (h/clean-db!)
     (is (= (when h/windows? "file:///c:/c.clj")
-           (when h/windows? (shared/filename->uri "c:\\c.clj" db/db))))))
+           (when h/windows? (shared/filename->uri "c:\\c.clj" @db/db))))))
 
 (deftest uri->namespace
   (testing "when don't have a project root"

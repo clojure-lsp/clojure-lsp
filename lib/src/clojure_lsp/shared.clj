@@ -211,7 +211,7 @@
   Jar files are given the `jar:file` or `zipfile` scheme depending on the
   `:dependency-scheme` setting."
   [^String filename db]
-  (let [jar-scheme? (= "jar" (get-in @db [:settings :dependency-scheme]))
+  (let [jar-scheme? (= "jar" (get-in db [:settings :dependency-scheme]))
         [_ jar-filepath nested-file] (re-find jar-file-with-filename-regex filename)]
     (conform-uri
       (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
@@ -219,7 +219,7 @@
           (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
         (.toString (filepath->uri-obj filename)))
-      (get-in @db [:settings :uri-format]))))
+      (get-in db [:settings :uri-format]))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
@@ -243,7 +243,7 @@
                           (string/replace "." (System/getProperty "file.separator"))
                           (string/replace "-" "_")
                           (str "." (name file-type))))
-      db)))
+      @db)))
 
 (defn namespace+source-path->filename
   [namespace source-path file-type]
@@ -292,7 +292,7 @@
                                 source-path-a))) nil))))))
 
 (defn filename->namespace [filename db]
-  (uri->namespace (filename->uri filename db) filename db))
+  (uri->namespace (filename->uri filename @db) filename db))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."

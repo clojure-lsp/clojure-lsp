@@ -78,7 +78,7 @@
                               (map key))
                             (:analysis @db))]
     (->> project-files
-         (map #(shared/filename->uri % db))
+         (map #(shared/filename->uri % @db))
          (clojure-producer/refresh-test-tree producer))))
 
 (defn initialize
@@ -155,7 +155,7 @@
           col (-> position :character inc)]
       (mapv (fn [reference]
               {:uri (-> (:filename reference)
-                        (shared/filename->uri db)
+                        (shared/filename->uri @db)
                         (f.java-interop/uri->translated-uri components))
                :range (shared/->range reference)})
             (q/find-references-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col (:includeDeclaration context) @db)))))
@@ -183,7 +183,7 @@
     (let [[line column] (shared/position->line-column position)]
       (when-let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column @db)]
         {:uri (-> (:filename definition)
-                  (shared/filename->uri db)
+                  (shared/filename->uri @db)
                   (f.java-interop/uri->translated-uri components))
          :range (shared/->range definition)}))))
 
@@ -193,7 +193,7 @@
     (let [[line column] (shared/position->line-column position)]
       (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column @db)]
         {:uri (-> (:filename declaration)
-                  (shared/filename->uri db)
+                  (shared/filename->uri @db)
                   (f.java-interop/uri->translated-uri components))
          :range (shared/->range declaration)}))))
 
@@ -203,7 +203,7 @@
     (let [[row col] (shared/position->line-column position)]
       (mapv (fn [implementation]
               {:uri (-> (:filename implementation)
-                        (shared/filename->uri db)
+                        (shared/filename->uri @db)
                         (f.java-interop/uri->translated-uri components))
                :range (shared/->range implementation)})
             (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col @db)))))

@@ -127,7 +127,7 @@
   (doseq [path paths]
     (doseq [file (file-seq (io/file path))]
       (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename db)]
+            uri (shared/filename->uri filename @db)]
         (when (not= :unknown (shared/uri->file-type uri))
           (sync-publish-diagnostics! uri db))))))
 

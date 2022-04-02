@@ -63,7 +63,7 @@
             (let [file (copy-class-file jar-uri entry stream db)
                   dest-file (string/replace (str entry) #".class$" ".java")
                   decompiled-file ^File (decompile! file dest-file db)]
-              (shared/filename->uri (.getCanonicalPath decompiled-file) db))))
+              (shared/filename->uri (.getCanonicalPath decompiled-file) @db))))
         jar-uri))
     uri))
 
@@ -214,13 +214,13 @@
       (do
         (logger/info java-logger-tag (format "Automatically found local JDK source zip at %s, extracting to global LSP cache dir..." jdk-zip-file))
         (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
-        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
+        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) @db)))
 
       :manual-local-jdk
       (do
         (logger/info java-logger-tag (format "Using provided local JDK source URI %s, extracting to global LSP cache dir..." jdk-zip-file))
         (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
-        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
+        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) @db)))
 
       :download-jdk
       (do

@@ -123,8 +123,8 @@
       (let [def-to-move (first defs)
             refs (q/find-references analysis def-to-move false @db)
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
-            per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
-            dest-uri (shared/filename->uri dest-filename db)
+            per-file-usages (group-by (comp #(shared/filename->uri % @db) :filename) refs)
+            dest-uri (shared/filename->uri dest-filename @db)
             insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db)
                                   z/of-string
                                   z/rightmost)

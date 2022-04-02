@@ -24,7 +24,7 @@
            name-col name-end-col
            namespace-from-prefix
            keys-destructuring] :as reference}]
-  (let [ref-doc-uri (shared/filename->uri filename db)
+  (let [ref-doc-uri (shared/filename->uri filename @db)
         version (get-in @db [:documents ref-doc-uri :v] 0)
         ;; Extracts the name of the keyword
         ;; Maybe have the replacement analyzed by clj-kondo instead?
@@ -83,7 +83,7 @@
   [replacement
    db
    reference]
-  (let [ref-doc-id (shared/filename->uri (:filename reference) db)
+  (let [ref-doc-id (shared/filename->uri (:filename reference) @db)
         version (get-in @db [:documents ref-doc-id :v] 0)
         text (if (identical? :keywords (:bucket reference))
                (str ":" replacement "/" (:name reference))
@@ -95,7 +95,7 @@
 (defn ^:private rename-alias [replacement db reference]
   (let [alias? (= :namespace-alias (:bucket reference))
         keyword? (= :keywords (:bucket reference))
-        ref-doc-uri (shared/filename->uri (:filename reference) db)
+        ref-doc-uri (shared/filename->uri (:filename reference) @db)
         [u-prefix _ u-name] (when-not alias?
                               (ident-split (:name reference)))
         version (get-in @db [:documents ref-doc-uri :v] 0)]
@@ -110,7 +110,7 @@
 (defn ^:private rename-local
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
-        ref-doc-id (shared/filename->uri (:filename reference) db)
+        ref-doc-id (shared/filename->uri (:filename reference) @db)
         version (get-in @db [:documents ref-doc-id :v] 0)]
     (if (string/starts-with? replacement ":")
       {:range (shared/->range (assoc reference
@@ -124,7 +124,7 @@
 (defn ^:private rename-other
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
-        ref-doc-id (shared/filename->uri (:filename reference) db)
+        ref-doc-id (shared/filename->uri (:filename reference) @db)
         version (get-in @db [:documents ref-doc-id :v] 0)]
     {:range (shared/->range (assoc reference :name-col name-start))
      :new-text replacement

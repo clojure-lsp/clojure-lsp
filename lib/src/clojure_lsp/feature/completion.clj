@@ -374,7 +374,7 @@
     (if (= :comment (some-> cursor-loc z/tag))
       []
       (let [filename (shared/uri->filename uri)
-            settings (settings/all db)
+            settings (settings/all @db)
             analysis (:analysis @db)
             current-ns-elements (get analysis filename)
             support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)

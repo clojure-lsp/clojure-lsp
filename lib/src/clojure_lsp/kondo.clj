@@ -190,7 +190,7 @@
       (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
                                                 (partial custom-lint-project! db)))
       (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
-      (with-additional-config (settings/all db))))
+      (with-additional-config (settings/all @db))))
 
 (defn kondo-copy-configs [paths db]
   {:cache true
@@ -226,7 +226,7 @@
                                     :context [:clojure.test
                                               :re-frame.core]}
                          :canonical-paths true}}}
-      (with-additional-config (settings/all db))))
+      (with-additional-config (settings/all @db))))
 
 (defn run-kondo-on-paths! [paths external-analysis-only? {:keys [db]}]
   (catch-kondo-errors (str "paths " (string/join ", " paths))

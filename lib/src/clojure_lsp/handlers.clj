@@ -258,7 +258,7 @@
      :classpath-settings (:classpath-settings db-value)
      :classpath (:classpath db-value)
      :client-settings (:client-settings db-value)
-     :final-settings (settings/all db/db)
+     :final-settings (settings/all db-value)
      :cljfmt-raw (binding [*print-meta* true]
                    (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db))))
      :port (or (:port db-value)

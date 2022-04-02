@@ -76,8 +76,9 @@
     (or (and row col)
         (logger/warn "Invalid clj-kondo finding. Cannot find position data for" finding))))
 
+;; TODO: deref
 (defn ^:private exclude-ns? [filename linter db]
-  (when-let [namespace (shared/filename->namespace filename db)]
+  (when-let [namespace (shared/filename->namespace filename @db)]
     (when-let [ns-exclude-regex-str (settings/get @db [:linters linter :ns-exclude-regex])]
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 

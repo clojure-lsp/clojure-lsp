@@ -239,6 +239,7 @@
   (and ns-exclude-regex
        (re-matches ns-exclude-regex (str namespace))))
 
+;; TODO: deref
 (defn ^:private options->namespaces [{:keys [namespace filenames project-root] :as options} {:keys [db]}]
   (or (seq namespace)
       (->> filenames
@@ -251,8 +252,8 @@
                     (->> filename-or-dir
                          file-seq
                          (remove shared/directory?)
-                         (map #(shared/filename->namespace (.getCanonicalPath ^File %) db)))
-                    (shared/filename->namespace (.getCanonicalPath filename-or-dir) db))))
+                         (map #(shared/filename->namespace (.getCanonicalPath ^File %) @db)))
+                    (shared/filename->namespace (.getCanonicalPath filename-or-dir) @db))))
            flatten
            (remove nil?)
            (map symbol)

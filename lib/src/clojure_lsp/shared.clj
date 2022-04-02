@@ -291,9 +291,8 @@
                                 source-path-b
                                 source-path-a))) nil))))))
 
-;; TODO: deref
 (defn filename->namespace [filename db]
-  (uri->namespace (filename->uri filename @db) filename @db))
+  (uri->namespace (filename->uri filename db) filename db))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."

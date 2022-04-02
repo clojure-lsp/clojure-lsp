@@ -264,13 +264,12 @@
       (str path (System/getProperty "file.separator")))
     path))
 
-;; TODO: deref
 (defn uri->namespace
   ([uri db]
    (uri->namespace uri (uri->filename uri) db))
   ([uri filename db]
-   (let [project-root-uri (:project-root-uri @db)
-         source-paths (get-in @db [:settings :source-paths])
+   (let [project-root-uri (:project-root-uri db)
+         source-paths (get-in db [:settings :source-paths])
          in-project? (when project-root-uri
                        (string/starts-with? uri project-root-uri))
          file-type (uri->file-type uri)]
@@ -292,8 +291,9 @@
                                 source-path-b
                                 source-path-a))) nil))))))
 
+;; TODO: deref
 (defn filename->namespace [filename db]
-  (uri->namespace (filename->uri filename @db) filename db))
+  (uri->namespace (filename->uri filename @db) filename @db))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."

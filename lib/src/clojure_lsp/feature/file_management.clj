@@ -39,7 +39,7 @@
                          (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
                          (not (get (:create-ns-blank-files-denylist @db) uri))
-                         (shared/uri->namespace uri db))]
+                         (shared/uri->namespace uri @db))]
     (when (settings/get @db [:auto-add-ns-to-new-files?] true)
       (let [new-text (format "(ns %s)" new-ns)
             changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}

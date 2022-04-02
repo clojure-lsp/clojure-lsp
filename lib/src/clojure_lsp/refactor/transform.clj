@@ -796,11 +796,12 @@
                           :end-row form-row
                           :end-col form-col)}])))))
 
+;; TODO: deref
 (defn ^:private create-test-for-source-path
   [uri function-name-loc source-path db]
   (let [file-type (shared/uri->file-type uri)
         function-name (z/sexpr function-name-loc)
-        namespace (shared/uri->namespace uri db)
+        namespace (shared/uri->namespace uri @db)
         namespace-test (str namespace "-test")
         test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
         test-uri (shared/filename->uri test-filename @db)

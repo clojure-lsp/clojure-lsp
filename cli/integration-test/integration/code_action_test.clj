@@ -28,17 +28,17 @@
         :kind "refactor.extract"}
        {:title "Sort map"
         :kind "refactor.rewrite"}
-       {:title "Move clause up"
+       {:title "Drag backward"
         :kind "refactor.rewrite"
-        :command {:title "Move clause up"
-                  :command "move-coll-entry-up"
+        :command {:title "Drag backward"
+                  :command "drag-backward"
                   :arguments [(h/source-path->uri sample-file-name)
                               5
                               4]}}
-       {:title "Move clause down"
+       {:title "Drag forward"
         :kind "refactor.rewrite"
-        :command {:title "Move clause down"
-                  :command "move-coll-entry-down"
+        :command {:title "Drag forward"
+                  :command "drag-forward"
                   :arguments [(h/source-path->uri sample-file-name)
                               5
                               4]}}
@@ -48,7 +48,7 @@
         :kind "source.organizeImports"}]
       (lsp/request! (fixture/code-action-request sample-file-name 5 4)))
 
-    (lsp/request! (fixture/execute-command-request "move-coll-entry-down"
+    (lsp/request! (fixture/execute-command-request "drag-forward"
                                                    (h/source-path->uri sample-file-name)
                                                    5 4))
 

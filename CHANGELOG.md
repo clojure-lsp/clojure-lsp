@@ -9,9 +9,9 @@
 
 - Editor
   - Introduce ALPHA move-form command. #566
-  - move-coll-entry: clauses move intuitively in `clojure.test/are`
-  - move-coll-entry: top-level clauses can be moved #891
-  - Rename "Move coll entry" to "Move clause" in code actions and docs
+  - Rename "Move coll entry up/down" to "Drag forward/backward", matching Calva/Paredit terminology
+  - drag: clauses move intuitively in `clojure.test/are`
+  - drag: top-level forms can be dragged #891
   - Improve completion performance for most cases, reducing time to compute clj/cljs core symbols.
 
 ## 2022.03.31-20.00.20

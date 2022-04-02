@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.code-actions
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
-   [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
+   [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.parser :as parser]
@@ -187,18 +187,18 @@
              :command   "sort-map"
              :arguments [uri line character]}})
 
-(defn ^:private move-up-action [uri line character]
-  {:title   "Move clause up"
+(defn ^:private drag-backward-action [uri line character]
+  {:title   "Drag backward"
    :kind    :refactor-rewrite
-   :command {:title     "Move clause up"
-             :command   "move-coll-entry-up"
+   :command {:title     "Drag backward"
+             :command   "drag-backward"
              :arguments [uri line character]}})
 
-(defn ^:private move-down-action [uri line character]
-  {:title   "Move clause down"
+(defn ^:private drag-forward-action [uri line character]
+  {:title   "Drag forward"
    :kind    :refactor-rewrite
-   :command {:title     "Move clause down"
-             :command   "move-coll-entry-down"
+   :command {:title     "Drag forward"
+             :command   "drag-forward"
              :arguments [uri line character]}})
 
 (defn ^:private suppress-diagnostic-actions [diagnostics uri]
@@ -261,8 +261,8 @@
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
-        allow-move-up?* (future (f.move-coll-entry/can-move-up? zloc uri db))
-        allow-move-down?* (future (f.move-coll-entry/can-move-down? zloc uri db))
+        allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
+        allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
         definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col db)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
@@ -313,12 +313,12 @@
       (conj (sort-map-action uri line character))
 
       (and workspace-edit-capability?
-           @allow-move-up?*)
-      (conj (move-up-action uri line character))
+           @allow-drag-backward?*)
+      (conj (drag-backward-action uri line character))
 
       (and workspace-edit-capability?
-           @allow-move-down?*)
-      (conj (move-down-action uri line character))
+           @allow-drag-forward?*)
+      (conj (drag-forward-action uri line character))
 
       can-add-let?
       (conj (introduce-let-action uri line character))

@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
-   [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
+   [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
@@ -46,6 +46,12 @@
 (defmethod refactor :expand-let [{:keys [loc uri db]}]
   (r.transform/expand-let loc uri db))
 
+(defmethod refactor :drag-backward [{:keys [loc uri db]}]
+  (f.drag/drag-backward loc uri db))
+
+(defmethod refactor :drag-forward [{:keys [loc uri db]}]
+  (f.drag/drag-forward loc uri db))
+
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))
 
@@ -82,11 +88,13 @@
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))
 
+;; Deprecated. Use drag-backward
 (defmethod refactor :move-coll-entry-up [{:keys [loc uri db]}]
-  (f.move-coll-entry/move-up loc uri db))
+  (f.drag/drag-backward loc uri db))
 
+;; Deprecated. Use drag-forward
 (defmethod refactor :move-coll-entry-down [{:keys [loc uri db]}]
-  (f.move-coll-entry/move-down loc uri db))
+  (f.drag/drag-forward loc uri db))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc args))

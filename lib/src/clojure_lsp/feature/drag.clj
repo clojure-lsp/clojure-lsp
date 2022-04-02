@@ -1,5 +1,7 @@
-(ns clojure-lsp.feature.move-coll-entry
-  "Move clauses up or down.
+(ns clojure-lsp.feature.drag
+  "Drag clauses forward or backward.
+
+  {:a 1, :b 2} -> {:b 2, :a 1}
 
   What constitutes a clause is context dependent. In a map, it will be a
   key/value pair. In a vector it will be a single element, unless the vector
@@ -8,8 +10,8 @@
   forms, and their conventions for establishing clauses.
 
   Though this feature was originally called 'move collection entry', it is now
-  more generally used to move any clause up or down, even if it isn't in an
-  immutable collection."
+  more generally used to drag any clause forward or backward, even if it isn't
+  in an immutable collection."
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
@@ -205,7 +207,7 @@
                        locs)))
        first
        ;; If the cursor is on padding between elements, we assume the intention
-       ;; was to move the next element. This padding will have the correct idx.
+       ;; was to drag the next element. This padding will have the correct idx.
        :idx))
 
 (defn ^:private split-elems-at-idx [elems split-idx]
@@ -239,11 +241,11 @@
             z-up))
       parent-zloc)))
 
-(defn ^:private can-swap?
+(defn ^:private can-swap-clauses?
   "In a few cases, the simple [[probable-valid-movement?]] heuristics return the
   wrong result. This happens:
-  A) When on whitespace following the first clause, and `move-up` is invoked.
-  B) When on whitespace preceding the last clause, and `move-down` is invoked.
+  A) When on whitespace following the first clause, and `drag-backward` is invoked.
+  B) When on whitespace preceding the last clause, and `drag-forward` is invoked.
   Though `probable-valid-movement?` thought it saw enough elements before or
   after the zloc, now that we've more carefully allocated the whitespace to a
   clause, we know that isn't true. The problem manifests as the origin-idx or
@@ -278,11 +280,11 @@
 (defn ^:private final-position [dir earlier-clause interstitial later-clause]
   (let [top-position (z-cursor-position (first (:locs (first earlier-clause))))]
     (case dir
-      :up top-position
-      :down (bottom-position top-position (concat later-clause interstitial)))))
+      :backward top-position
+      :forward (bottom-position top-position (concat later-clause interstitial)))))
 
-(defn ^:private move-clause
-  "Move a clause of `breadth` elements around `zloc` in direction of `dir`
+(defn ^:private drag-clause
+  "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
   ignoring elements in `rind`.
 
   Returns two pieces of data. The first is the edited parent expression with
@@ -299,10 +301,10 @@
         origin-idx (- origin-idx
                       (mod (- origin-idx ignore-left) breadth))
         dest-idx (->> origin-idx
-                      (iterate (case dir :up dec, :down inc))
+                      (iterate (case dir :backward dec, :forward inc))
                       (drop breadth)
                       first)]
-    (when (can-swap? origin-idx dest-idx clause-spec)
+    (when (can-swap-clauses? origin-idx dest-idx clause-spec)
       (let [earlier-idx  (min origin-idx dest-idx)
             [before rst] (split-elems-at-idx elems earlier-idx)
 
@@ -337,9 +339,9 @@
 ;;  :breadth 2}
 ;;
 ;; This says that in this expresion:
-;; * `:rind [2 0]` - two elements at the beginning cannot be moved: `case x`
-;; * `:pulp 4` - four elements in the interior can be moved: `:foo 1 :bar 2`
-;; * `:breadth 2` - pairs of elements should be moved together as clauses: `:foo 1` and `:bar 2`
+;; * `:rind [2 0]` - two elements at the beginning cannot be dragged: `case x`
+;; * `:pulp 4` - four elements in the interior can be dragged: `:foo 1 :bar 2`
+;; * `:breadth 2` - pairs of elements should be dragged together as clauses: `:foo 1` and `:bar 2`
 ;;
 ;; If a clause spec is nil, movement within the expression is not permitted.
 
@@ -406,12 +408,12 @@
 (defn ^:private list-clause-spec
   "Returns a partial clause spec for a list node, `list-zloc`. In a regular list
   a clause is just one element. Some lists are function calls, and functions
-  like case and cond have clauses of arguments that should be moved together. If
+  like case and cond have clauses of arguments that should be dragged together. If
   the list node is such a function call, returns the appropriate clause
   description for it. Returns nil in one special case when we know we're in an
   invalid condp."
   [list-zloc child-count]
-  ;; case and condp permit final default expression, which should not be moved.
+  ;; case and condp permit final default expression, which should not be dragged.
   ;; assoc, assoc!, cond->, cond->>, and case sometimes appear inside other threading expressions.
   ;; condp has a variation with ternary expressions.
   (case (some-> list-zloc z-down z/sexpr)
@@ -455,14 +457,14 @@
 
 ;;;; Public API
 
-;; Move zloc's clause up or down.
+;; Drag zloc's clause up or down.
 
 (defn ^:private probable-valid-movement?
-  "Checks whether `zloc` can be moved in direction `dir`, assuming it is part of
+  "Checks whether `zloc` can be dragged in direction `dir`, assuming it is part of
   a clause as described by `clause-spec`.
 
   This isn't a perfect test. May return true even when the zloc cannot actually
-  be moved. See [[can-swap?]]."
+  be dragged. See [[can-swap-clauses?]]."
   [zloc dir {:keys [breadth pulp rind] :as clause-spec}]
   (and clause-spec
        ;; Can the expression be split into clauses?
@@ -472,22 +474,22 @@
              movable-after (-> zloc count-siblings-right (- ignore-right))]
          (and
            ;; Are we in the pulp?
-           (<= 0 (case dir :up movable-after, :down movable-before))
+           (<= 0 (case dir :backward movable-after, :forward movable-before))
            ;; Is there another clause to swap with?
            ;; Can be erroneously true if we are on a comment or whitespace that
            ;; will eventually be allocated to padding or another element.
-           (<= breadth (case dir :up movable-before, :down movable-after))))))
+           (<= breadth (case dir :backward movable-before, :forward movable-after))))))
 
-(defn ^:private can-move? [zloc dir uri db]
+(defn ^:private can-drag? [zloc dir uri db]
   (probable-valid-movement? zloc dir (clause-spec (z-up zloc) uri db)))
 
-(defn can-move-up? [zloc uri db]   (can-move? zloc :up uri db))
-(defn can-move-down? [zloc uri db] (can-move? zloc :down uri db))
+(defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
+(defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
-(defn ^:private move [zloc dir uri db]
+(defn ^:private drag [zloc dir uri db]
   (let [clause-spec (clause-spec (z-up zloc) uri db)]
     (when (probable-valid-movement? zloc dir clause-spec)
-      (when-let [[parent-zloc position] (move-clause zloc dir clause-spec)]
+      (when-let [[parent-zloc position] (drag-clause zloc dir clause-spec)]
         {:show-document-after-edit {:uri         uri
                                     :take-focus? true
                                     :range       (assoc position :end-row (:row position) :end-col (:col position))}
@@ -499,5 +501,5 @@
                                          (z-cursor-position parent-zloc))
                                 :loc   parent-zloc}]}}))))
 
-(defn move-up [zloc uri db] (move zloc :up uri db))
-(defn move-down [zloc uri db] (move zloc :down uri db))
+(defn drag-backward [zloc uri db] (drag zloc :backward uri db))
+(defn drag-forward [zloc uri db] (drag zloc :forward uri db))

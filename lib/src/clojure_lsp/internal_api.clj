@@ -192,7 +192,7 @@
     (analyze! options components)))
 
 (defn ^:private ns->ns+uri [namespace {:keys [db]}]
-  (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db) namespace db))]
+  (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis @db) namespace @db))]
     {:namespace namespace
      :uri (shared/filename->uri filename db)}
     {:namespace namespace}))
@@ -377,7 +377,7 @@
                   (symbol (namespace from)))
         project-analysis (into {} (q/filter-project-analysis-xf @db) (:analysis @db))]
     (if-let [from-element (if ns-only?
-                            (q/find-namespace-definition-by-namespace project-analysis from-ns db)
+                            (q/find-namespace-definition-by-namespace project-analysis from-ns @db)
                             (q/find-element-by-full-name project-analysis from-name from-ns db))]
       (let [uri (shared/filename->uri (:filename from-element) db)]
         (open-file! {:uri uri :namespace from-ns} components)

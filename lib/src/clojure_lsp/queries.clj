@@ -600,7 +600,7 @@
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) namespace))
     analysis
-    @db))
+    db))
 
 (defn find-namespace-definition-by-filename [analysis filename db]
   (find-last-order-by-project-analysis

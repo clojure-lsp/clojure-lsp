@@ -218,7 +218,7 @@
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
   (when-let [aliases (seq (into []
                                 (comp
-                                  (q/filter-project-analysis-xf db)
+                                  (q/filter-project-analysis-xf @db)
                                   (mapcat val)
                                   (filter #(identical? :namespace-alias (:bucket %))))
                                 (:analysis @db)))]
@@ -380,7 +380,7 @@
             support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
             other-ns-elements (into []
                                     (comp
-                                      (q/filter-project-analysis-xf db)
+                                      (q/filter-project-analysis-xf @db)
                                       (mapcat val))
                                     (dissoc analysis filename))
             external-ns-elements (into []

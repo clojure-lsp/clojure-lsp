@@ -84,11 +84,12 @@
         usage-signature (juxt :to :name)]
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
+;; TODO: deref
 (defn reference-filenames [filename old-local-analysis new-local-analysis db]
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
         project-analysis (into {}
-                               (q/filter-project-analysis-xf db)
+                               (q/filter-project-analysis-xf @db)
                                (dissoc (:analysis @db) filename)) ;; don't notify self
         incoming-filenames (when (seq changed-var-definitions)
                              (let [def-signs (->> changed-var-definitions

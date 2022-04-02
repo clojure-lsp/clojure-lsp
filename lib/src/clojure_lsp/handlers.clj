@@ -74,7 +74,7 @@
 (defn ^:private analyze-test-paths! [{:keys [db producer]}]
   (let [project-files (into #{}
                             (comp
-                              (q/filter-project-analysis-xf db)
+                              (q/filter-project-analysis-xf @db)
                               (map key))
                             (:analysis @db))]
     (->> project-files

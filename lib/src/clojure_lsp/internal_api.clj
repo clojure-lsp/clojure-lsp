@@ -257,7 +257,7 @@
            seq)
       (into #{}
             (comp
-              (q/filter-project-analysis-xf db)
+              (q/filter-project-analysis-xf @db)
               (q/find-all-ns-definition-names-xf)
               (remove (partial exclude-ns? options)))
             (:analysis @db))))
@@ -375,7 +375,7 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))
-        project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))]
+        project-analysis (into {} (q/filter-project-analysis-xf @db) (:analysis @db))]
     (if-let [from-element (if ns-only?
                             (q/find-namespace-definition-by-namespace project-analysis from-ns db)
                             (q/find-element-by-full-name project-analysis from-name from-ns db))]

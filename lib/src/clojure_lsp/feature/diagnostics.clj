@@ -177,7 +177,7 @@
 (defn custom-lint-project!
   [new-analysis kondo-ctx db]
   (let [project-analysis (into {}
-                               (q/filter-project-analysis-xf db)
+                               (q/filter-project-analysis-xf @db)
                                new-analysis)]
     (shared/logging-time
       "Linting whole project for unused-public-var took %s"
@@ -198,7 +198,7 @@
 (defn custom-lint-file!
   [filename analysis kondo-ctx db]
   (let [project-analysis (into {}
-                               (q/filter-project-analysis-xf db)
+                               (q/filter-project-analysis-xf @db)
                                analysis)]
     (lint-defs! (file-var-definitions project-analysis filename)
                 (file-kw-definitions project-analysis filename)

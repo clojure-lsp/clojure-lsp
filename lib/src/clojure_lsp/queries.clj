@@ -25,7 +25,7 @@
     coll))
 
 (defn filter-project-analysis-xf [db]
-  (let [source-paths (settings/get @db [:source-paths])]
+  (let [source-paths (settings/get db [:source-paths])]
     (remove #(shared/external-filename? (first %) source-paths))))
 
 (defn filter-external-analysis-xf [db]
@@ -35,7 +35,7 @@
 (defn ^:private find-last-order-by-project-analysis [pred? analysis db]
   (or (peek (into []
                   (comp
-                    (filter-project-analysis-xf db)
+                    (filter-project-analysis-xf @db)
                     (mapcat val)
                     (filter pred?))
                   analysis))
@@ -371,7 +371,7 @@
   [analysis {:keys [ns name] :as _element} include-declaration? db]
   (into []
         (comp
-          (filter-project-analysis-xf db)
+          (filter-project-analysis-xf @db)
           (mapcat val)
           (filter #(identical? :keywords (:bucket %)))
           (filter #(safe-equal? name (:name %)))
@@ -522,7 +522,7 @@
   (let [langs (shared/uri->available-langs uri)]
     (into #{}
           (comp
-            (filter-project-analysis-xf db)
+            (filter-project-analysis-xf @db)
             (mapcat val)
             (filter #(identical? :namespace-alias (:bucket %)))
             (filter :alias)

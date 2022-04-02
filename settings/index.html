@@ -1008,8 +1008,9 @@
 </code></pre></div></p>
 <hr />
 <h3 id="global">Global<a class="headerlink" href="#global" title="Permanent link">#</a></h3>
-<p>For global settings which should work for all the projects using <code>clojure-lsp</code>, you just need to add the same configs to <code>~/.lsp/config.edn</code> or <code>$XDG_CONFIG_HOME/clojure-lsp/config.edn</code>.</p>
-<p>For an example of a global <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.lsp/config.edn">here</a>.</p>
+<p>For global settings which should work for all the projects using <code>clojure-lsp</code>, you just need to add the same configs to <code>~/.config/clojure-lsp/config.edn</code> or <code>$XDG_CONFIG_HOME/clojure-lsp/config.edn</code>.</p>
+<p>Note: <code>~/.lsp/config.edn</code> is considered too but deprecated.</p>
+<p>For an example of a global <code>config.edn</code>, check <a href="https://github.com/ericdallo/dotfiles/blob/master/.config/clojure-lsp/config.edn">here</a>.</p>
 <hr />
 <h3 id="initializationoptions">InitializationOptions<a class="headerlink" href="#initializationoptions" title="Permanent link">#</a></h3>
 <p>This is specific for a client, which it sends to <code>clojure-lsp</code> on startup, check <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP spec for more information</a>. This is useful if you are changing a default for a client/editor that will affect all users of that editor.</p>

@@ -62,9 +62,7 @@
     analysis))
 
 (defn analyze-reference-filenames! [filenames db]
-  (let [result (shared/logging-task
-                 :analyze-reference-files
-                 (lsp.kondo/run-kondo-on-reference-filenames! filenames db))
+  (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db)
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
                       (group-by :filename))

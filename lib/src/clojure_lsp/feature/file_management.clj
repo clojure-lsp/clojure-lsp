@@ -10,6 +10,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
+   [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer]
@@ -33,7 +34,7 @@
                       (update-analysis uri (:analysis kondo-result))
                       (update-findings uri (:findings kondo-result))
                       (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-lint-file! uri db)))
+      (f.diagnostic/async-publish-diagnostics! uri db)))
   (when-let [new-ns (and allow-create-ns
                          (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
@@ -84,37 +85,57 @@
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
 (defn reference-filenames [filename old-local-analysis new-local-analysis db]
-  (let [project-analysis (into {} (q/filter-project-analysis-xf db) (:analysis @db))
-        source-paths (settings/get db [:source-paths])
-        changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
-        references-filenames (->> changed-var-definitions
-                                  ;; TODO: switch from nested-loop join to hash join
-                                  (mapcat #(q/find-references project-analysis % false db))
-                                  (map :filename))
+  (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
-        definitions-filenames (->> changed-var-usages
-                                   ;; TODO: remove usages of external namespaces (clojure.core, etc.) here
-                                   ;; TODO: switch from nested-loop join to hash join
-                                   (keep #(q/find-definition project-analysis % db))
-                                   (filter (fn [d]
-                                             ;; TODO: this excludes "private calls", but they are counted in code lens, so maybe shouldn't exclude
-                                             (and (not (:private d))
-                                                  ;; TODO: is this extra work? The definition came from project-analysis, so should be on the source-paths.
-                                                  (some #(string/starts-with? (:filename d) %) source-paths))))
-                                   (map :filename))]
-    (disj (set (concat references-filenames definitions-filenames))
-          filename)))
+        project-analysis (into {}
+                               (q/filter-project-analysis-xf db)
+                               (dissoc (:analysis @db) filename)) ;; don't notify self
+        incoming-filenames (when (seq changed-var-definitions)
+                             (let [def-signs (->> changed-var-definitions
+                                                  (map q/var-definition-signatures)
+                                                  (apply set/union))]
+                               (into #{}
+                                     (comp
+                                       (mapcat val)
+                                       (filter #(identical? :var-usages (:bucket %)))
+                                       (filter #(contains? def-signs (q/var-usage-signature %)))
+                                       (map :filename))
+                                     project-analysis)))
+        outgoing-filenames (when (seq changed-var-usages)
+                             ;; If definition is in both a clj and cljs file, and this is a clj
+                             ;; usage, we are careful to notify only the clj file. But, it wouldn't
+                             ;; really hurt to notify both files. So, if it helps readability,
+                             ;; maintenance, or symmetry with `incoming-filenames`, we could look
+                             ;; at just signature, not signature and lang.
+                             (let [usage-signs->langs (->> changed-var-usages
+                                                           (reduce (fn [result usage]
+                                                                     (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
+                                                                   {}))]
+                               (into #{}
+                                     (comp
+                                       (mapcat val)
+                                       (filter #(identical? :var-definitions (:bucket %)))
+                                       (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
+                                                  (some usage-langs (q/elem-langs %))))
+                                       (map :filename))
+                                     project-analysis)))]
+    (set/union (or incoming-filenames #{})
+               (or outgoing-filenames #{}))))
 
 (defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
   (async/go
     (shared/logging-task
       :notify-references
-      (let [filenames (reference-filenames filename old-local-analysis new-local-analysis db)]
+      (let [filenames (shared/logging-task
+                        :reference-files/find
+                        (reference-filenames filename old-local-analysis new-local-analysis db))]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
-          (crawler/analyze-reference-filenames! filenames db)
+          (shared/logging-task
+            :reference-files/analyze
+            (crawler/analyze-reference-filenames! filenames db))
           (doseq [filename filenames]
-            (f.diagnostic/sync-lint-file! (shared/filename->uri filename db) db))
+            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db))
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -174,7 +195,7 @@
                                                   (update :processing-changes disj uri)
                                                   (assoc :kondo-config (:config kondo-result))))
               (do
-                (f.diagnostic/sync-lint-file! uri db)
+                (f.diagnostic/sync-publish-diagnostics! uri db)
                 (when (settings/get db [:notify-references-on-file-change] true)
                   (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
                 (clojure-producer/refresh-test-tree producer [uri]))
@@ -206,7 +227,7 @@
                       (update :analysis merge analysis)
                       (assoc :kondo-config (:config result))
                       (update :findings merge (group-by :filename (:findings result))))))
-      (f.diagnostic/lint-project-files! filenames db)
+      (f.diagnostic/publish-all-diagnostics! filenames db)
       (clojure-producer/refresh-test-tree producer uris))))
 
 (defn did-change-watched-files [changes db]
@@ -238,7 +259,7 @@
                                      (shared/dissoc-in [:documents uri])
                                      (shared/dissoc-in [:analysis filename])
                                      (shared/dissoc-in [:findings filename]))))
-        (f.diagnostic/clean! uri db)))))
+        (f.diagnostic/publish-empty-diagnostics! uri db)))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

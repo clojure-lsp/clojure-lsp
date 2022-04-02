@@ -19,7 +19,7 @@
   (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
   (testing "when linter level is :info"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -37,7 +37,7 @@
       @findings))
   (testing "when linter level is :warning"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -55,7 +55,7 @@
       @findings))
   (testing "when linter level is :error"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -73,7 +73,7 @@
       @findings))
   (testing "when linter level is :off"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -91,7 +91,7 @@
       @findings))
   (testing "linter level by default is :info"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -109,7 +109,7 @@
       @findings))
   (testing "excluding the whole ns"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -120,7 +120,7 @@
       @findings))
   (testing "excluding the simple var from ns"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -131,7 +131,7 @@
       @findings))
   (testing "excluding the specific var"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/a.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -142,7 +142,7 @@
       @findings))
   (testing "excluding specific syms"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/b.clj"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -153,7 +153,7 @@
       @findings))
   (testing "unused keyword definitions"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/c.cljs"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)
@@ -179,7 +179,7 @@
       @findings))
   (testing "var marked ^:export is excluded"
     (reset! findings [])
-    (f.diagnostic/unused-public-var-lint-for-single-file!
+    (f.diagnostic/custom-lint-file!
       "/d.cljs"
       (:analysis @db/db)
       {:reg-finding! #(swap! findings conj %)

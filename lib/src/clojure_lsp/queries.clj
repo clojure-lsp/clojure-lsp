@@ -46,13 +46,13 @@
                     (filter pred?))
                   analysis))))
 
+(defn elem-langs [element]
+  (or (some-> element :lang list set)
+      (shared/uri->available-langs (:filename element))))
+
 (defn ^:private match-file-lang
   [check-element match-element]
-  (let [match-file-lang (or (some-> match-element :lang list set)
-                            (shared/uri->available-langs (:filename match-element)))
-        check-file-lang (or (some-> check-element :lang list set)
-                            (shared/uri->available-langs (:filename check-element)))]
-    (seq (set/intersection match-file-lang check-file-lang))))
+  (some (elem-langs match-element) (elem-langs check-element)))
 
 (defn var-definition-names [{:keys [defined-by name]}]
   (case defined-by
@@ -61,6 +61,14 @@
     clojure.core/deftype
     , #{name (symbol (str "->" name))}
     , #{name}))
+
+(def kw-signature (juxt :ns :name))
+(def var-usage-signature (juxt :to :name))
+(defn var-definition-signatures [var-def]
+  (->> (var-definition-names var-def)
+       (map (fn [var-name]
+              [(:ns var-def) var-name]))
+       (into #{})))
 
 (defn ^:private var-usage-from-own-definition? [usage]
   (and (:from-var usage)

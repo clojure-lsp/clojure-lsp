@@ -378,7 +378,7 @@
         project-analysis (into {} (q/filter-project-analysis-xf @db) (:analysis @db))]
     (if-let [from-element (if ns-only?
                             (q/find-namespace-definition-by-namespace project-analysis from-ns @db)
-                            (q/find-element-by-full-name project-analysis from-name from-ns db))]
+                            (q/find-element-by-full-name project-analysis from-name from-ns @db))]
       (let [uri (shared/filename->uri (:filename from-element) db)]
         (open-file! {:uri uri :namespace from-ns} components)
         (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db)]

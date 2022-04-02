@@ -621,7 +621,7 @@
           (= ns (:ns %))
           (= name (:name %)))
     analysis
-    @db))
+    db))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

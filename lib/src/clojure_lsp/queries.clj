@@ -437,7 +437,7 @@
 (defn find-declaration-from-cursor [analysis filename line column db]
   (try
     (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-declaration analysis element @db))
+      (find-declaration analysis element db))
     (catch Throwable e
       (logger/error e "can't find declaration"))))
 

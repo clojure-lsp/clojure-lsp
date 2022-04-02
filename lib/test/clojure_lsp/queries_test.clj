@@ -518,14 +518,14 @@
          :bucket
          :namespace-alias
          :to 'foo.bar}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c db/db)))
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c @db/db)))
     (testing "from usage with refer all"
       (h/assert-submap
         {:from 'sample
          :bucket
          :namespace-usages
          :name 'foo.baz}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c db/db)))))
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c @db/db)))))
 
 (deftest find-implementations-from-cursor-protocols
   (h/load-code-and-locs (h/code "(ns a)"

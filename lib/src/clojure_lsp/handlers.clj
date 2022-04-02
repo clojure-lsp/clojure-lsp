@@ -191,7 +191,7 @@
   (shared/logging-task
     :declaration
     (let [[line column] (shared/position->line-column position)]
-      (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column db)]
+      (when-let [declaration (q/find-declaration-from-cursor (:analysis @db) (shared/uri->filename textDocument) line column @db)]
         {:uri (-> (:filename declaration)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri components))

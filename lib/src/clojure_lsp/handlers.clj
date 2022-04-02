@@ -206,7 +206,7 @@
                         (shared/filename->uri db)
                         (f.java-interop/uri->translated-uri components))
                :range (shared/->range implementation)})
-            (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col db)))))
+            (q/find-implementations-from-cursor (:analysis @db) (shared/uri->filename textDocument) row col @db)))))
 
 (defn document-symbol [{:keys [textDocument]}]
   (shared/logging-task

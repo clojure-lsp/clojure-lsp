@@ -566,7 +566,7 @@
          :from-var make-foo
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 16 db/db)))
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 16 @db/db)))
   (testing "from protocol method definitions"
     (h/assert-submaps
       [{:impl-ns 'b
@@ -594,7 +594,7 @@
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
-      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 3 4 db/db)))
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 3 4 @db/db)))
   (testing "from implementation usage"
     (h/assert-submaps
       [{:impl-ns 'b
@@ -622,7 +622,7 @@
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
-      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 9 2 db/db))))
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 9 2 @db/db))))
 
 (deftest find-implementations-from-cursor-defmulti
   (h/load-code-and-locs (h/code "(ns a)"
@@ -654,7 +654,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 12 db/db)))
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/a.clj") 2 12 @db/db)))
   (testing "from defmethod declaration"
     (h/assert-submaps
       '[{:name foo
@@ -673,7 +673,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 2 13 db/db)))
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 2 13 @db/db)))
   (testing "from defmethod usage"
     (h/assert-submaps
       '[{:name foo
@@ -692,7 +692,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 8 2 db/db))))
+      (q/find-implementations-from-cursor (:analysis @db/db) (h/file-path "/b.clj") 8 2 @db/db))))
 
 (deftest find-unused-aliases
   (testing "clj"

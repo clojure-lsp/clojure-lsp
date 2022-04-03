@@ -28,8 +28,9 @@
                           :zloc     zloc
                           :position position)))))))
 
+;; TODO: deref
 (defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]
-  (->> (f.add-missing-libspec/find-require-suggestions zloc uri db)
+  (->> (f.add-missing-libspec/find-require-suggestions zloc uri @db)
        (map #(assoc % :position position))))
 
 (defn ^:private find-all-require-suggestions [diagnostics missing-requires uri db]
@@ -39,8 +40,9 @@
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
 
+;; TODO: deref
 (defn ^:private find-missing-require [uri db {:keys [position zloc]}]
-  (some-> (f.add-missing-libspec/find-missing-ns-require zloc uri db)
+  (some-> (f.add-missing-libspec/find-missing-ns-require zloc uri @db)
           (assoc :position position)))
 
 (defn ^:private find-missing-requires [diagnostics uri db]

@@ -686,6 +686,7 @@
         sexpr))
     (symbol (str "arg" (inc index)))))
 
+;; TODO: deref
 (defn ^:private create-function-for-alias
   [local-zloc ns-or-alias fn-name defn-edit uri db]
   (let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol ns-or-alias))
@@ -713,7 +714,7 @@
                               local-zloc
                               (symbol ns-or-alias)
                               (symbol fn-name)
-                              db))
+                              @db))
                       def-uri (->> [(when-not ns-definition
                                       {:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
                                        :range min-range})

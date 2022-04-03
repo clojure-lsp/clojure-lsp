@@ -42,6 +42,7 @@
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
 
+;; TODO: deref
 (defn ^:private determine-ns-edits [local-analysis file-loc def-to-move source-ns source-refer libspec uri db]
   (let [other-source-refers (filter #(and (:refer %)
                                           (= (:to %) source-ns)
@@ -58,7 +59,7 @@
                                       local-analysis))
         remove-source-require? (and source-require (empty? other-source-usages))
         namespace-loc (edit/find-namespace file-loc)]
-    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec db)]
+    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec @db)]
       (cond-> add-to-ns-changes
         remove-source-require?
         (update-in
@@ -81,7 +82,7 @@
               (cond-> (empty? other-source-refers) (-> z/remove z/remove)))))
 
         :always
-        (->> (f.add-missing-libspec/cleaning-ns-edits uri db)))
+        (->> (f.add-missing-libspec/cleaning-ns-edits uri @db)))
       (when (or remove-source-require? source-refer)
         (->> [{:loc (cond-> namespace-loc
                       remove-source-require?
@@ -96,7 +97,7 @@
                         z/remove
                         (cond-> (empty? other-source-refers) (-> z/remove z/remove))))
                :range (meta (z/node namespace-loc))}]
-             (f.add-missing-libspec/cleaning-ns-edits uri db))))))
+             (f.add-missing-libspec/cleaning-ns-edits uri @db))))))
 
 (defn move-form [zloc uri db dest-filename]
   (let [form-loc (edit/to-top zloc)
@@ -160,7 +161,7 @@
                                                                             local-analysis))
                                                 namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
                                                                         (str dest-ns)
-                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri db))
+                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri @db))
                                                 suggestion (if dest-require
                                                              {:alias (str (:alias dest-require))}
                                                              (first namespace-suggestions))

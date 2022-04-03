@@ -23,16 +23,14 @@
     (when (symbol? s)
       s)))
 
-;; TODO: deref
 (defn ^:private resolve-ns-inner-blocks-identation [db]
-  (or (settings/get @db [:clean :ns-inner-blocks-indentation])
-      (if (settings/get @db [:keep-require-at-start?])
+  (or (settings/get db [:clean :ns-inner-blocks-indentation])
+      (if (settings/get db [:keep-require-at-start?])
         :same-line
         :next-line)))
 
-;; TODO: deref
 (defn cleaning-ns-edits [uri db edits]
-  (if (settings/get @db [:clean :automatically-after-ns-refactor] true)
+  (if (settings/get db [:clean :automatically-after-ns-refactor] true)
     (->> edits
          (map (fn [{:keys [loc range] :as edit}]
                 (if (z/find-value loc z/next 'ns)
@@ -40,17 +38,16 @@
                   (some-> loc
                           z/root-string
                           z/of-string
-                          (f.clean-ns/clean-ns-edits uri @db)
+                          (f.clean-ns/clean-ns-edits uri db)
                           first
                           (assoc :range range))
                   edit)))
          seq)
     edits))
 
-;; TODO: deref
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/find-all-aliases (:analysis @db) uri @db)
+        alias->info (->> (q/find-all-aliases (:analysis db) uri db)
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -377,9 +374,8 @@
       :else
       (resolve-best-namespaces-suggestions cursor-namespace-str aliases->namespaces namespaces->aliases))))
 
-;; TODO: deref
 (defn find-alias-ns-pairs [analysis uri db]
-  (concat (->> (q/find-all-aliases analysis uri @db)
+  (concat (->> (q/find-all-aliases analysis uri db)
                (map (juxt (comp str :to) (comp str :alias))))
           (->> (q/find-all-ns-definition-names analysis)
                (map (juxt str (constantly nil))))))
@@ -388,7 +384,7 @@
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           cursor-name-str (name cursor-sym)
-          analysis (:analysis @db)
+          analysis (:analysis db)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
                                   (find-alias-ns-pairs analysis uri db))

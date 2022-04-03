@@ -141,7 +141,7 @@
             {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))))
 
 (defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" db/db))
+  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" @db/db))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
@@ -185,7 +185,7 @@
       (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
-  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" db/db))
+  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" @db/db))
 
 (defn ^:private as-sexp [[{:keys [loc]} :as locs]]
   (assert (= 1 (count locs)))
@@ -328,7 +328,7 @@
   (swap! db/db shared/deep-merge {:settings (merge
                                               {:clean {:automatically-after-ns-refactor false}}
                                               settings)})
-  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name db/db))
+  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name @db/db))
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
@@ -413,7 +413,7 @@
     (is (nil? (add-import-to-namespace "(ns foo.bar) |;; comment" nil)))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer db/db))
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer @db/db))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))

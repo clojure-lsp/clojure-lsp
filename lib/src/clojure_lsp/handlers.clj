@@ -102,7 +102,7 @@
           components)
         (when (settings/get @db [:lint-project-files-after-startup?] true)
           (async/go
-            (f.diagnostic/publish-all-diagnostics! (-> @db :settings :source-paths) db)))
+            (f.diagnostic/publish-all-diagnostics! (-> @db :settings :source-paths) @db)))
         (async/go
           (f.clojuredocs/refresh-cache! components))
         (async/go

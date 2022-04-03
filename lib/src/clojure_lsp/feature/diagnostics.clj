@@ -76,15 +76,14 @@
     (or (and row col)
         (logger/warn "Invalid clj-kondo finding. Cannot find position data for" finding))))
 
-;; TODO: deref
 (defn ^:private exclude-ns? [filename linter db]
-  (when-let [namespace (shared/filename->namespace filename @db)]
-    (when-let [ns-exclude-regex-str (settings/get @db [:linters linter :ns-exclude-regex])]
+  (when-let [namespace (shared/filename->namespace filename db)]
+    (when-let [ns-exclude-regex-str (settings/get db [:linters linter :ns-exclude-regex])]
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 
 (defn ^:private kondo-findings->diagnostics [filename linter db]
   (when-not (exclude-ns? filename linter db)
-    (->> (get (:findings @db) filename)
+    (->> (get (:findings db) filename)
          (filter #(= filename (:filename %)))
          (filter valid-finding?)
          (mapv kondo-finding->diagnostic))))
@@ -103,9 +102,9 @@
 
 (defn find-diagnostics [^String uri db]
   (let [filename (shared/uri->filename uri)
-        source-paths (settings/get @db [:source-paths])]
+        source-paths (settings/get db [:source-paths])]
     (cond-> []
-      (and (not= :off (settings/get @db [:linters :clj-kondo :level]))
+      (and (not= :off (settings/get db [:linters :clj-kondo :level]))
            (not (shared/external-filename? filename source-paths)))
       (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 
@@ -115,7 +114,7 @@
               :diagnostics (find-diagnostics uri db)}))
 
 (defn async-publish-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env @db)) ;; Avoid async on test which cause flakeness
+  (if (#{:unit-test :api-test} (:env db)) ;; Avoid async on test which cause flakeness
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)})
@@ -128,12 +127,12 @@
   (doseq [path paths]
     (doseq [file (file-seq (io/file path))]
       (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename @db)]
+            uri (shared/filename->uri filename db)]
         (when (not= :unknown (shared/uri->file-type uri))
           (sync-publish-diagnostics! uri db))))))
 
 (defn publish-empty-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env @db))
+  (if (#{:unit-test :api-test} (:env db))
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics []})
@@ -175,11 +174,10 @@
 (def ^:private all-var-definitions q/find-all-var-definitions)
 (def ^:private all-kw-definitions q/find-all-keyword-definitions)
 
-;; TODO: deref
 (defn custom-lint-project!
   [new-analysis kondo-ctx db]
   (let [project-analysis (into {}
-                               (q/filter-project-analysis-xf @db)
+                               (q/filter-project-analysis-xf db)
                                new-analysis)]
     (shared/logging-time
       "Linting whole project for unused-public-var took %s"
@@ -187,22 +185,20 @@
                   (all-kw-definitions project-analysis)
                   project-analysis kondo-ctx))))
 
-;; TODO: deref
 (defn custom-lint-files!
   [filenames new-analysis kondo-ctx db]
   (let [project-analysis (into {}
-                               (q/filter-project-analysis-xf @db)
+                               (q/filter-project-analysis-xf db)
                                new-analysis)
         file-analyses (select-keys project-analysis filenames)]
     (lint-defs! (all-var-definitions file-analyses)
                 (all-kw-definitions file-analyses)
                 project-analysis kondo-ctx)))
 
-;; TODO: deref
 (defn custom-lint-file!
   [filename analysis kondo-ctx db]
   (let [project-analysis (into {}
-                               (q/filter-project-analysis-xf @db)
+                               (q/filter-project-analysis-xf db)
                                analysis)]
     (lint-defs! (file-var-definitions project-analysis filename)
                 (file-kw-definitions project-analysis filename)
@@ -212,7 +208,7 @@
   [filename analysis kondo-ctx db]
   (let [kondo-findings (-> (custom-lint-file! filename analysis kondo-ctx db)
                            (get filename))
-        cur-findings (get-in @db [:findings filename])]
+        cur-findings (get-in db [:findings filename])]
     (->> cur-findings
          (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)

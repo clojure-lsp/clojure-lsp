@@ -46,7 +46,7 @@
                        (update-analysis uri (:analysis kondo-result))
                        (update-findings uri (:findings kondo-result))
                        (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-publish-diagnostics! uri db*)))
+      (f.diagnostic/async-publish-diagnostics! uri @db*)))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
       (async/>!! db/edits-chan create-ns-edits))))
@@ -140,7 +140,7 @@
             :reference-files/analyze
             (crawler/analyze-reference-filenames! filenames db))
           (doseq [filename filenames]
-            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename @db) db))
+            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename @db) @db))
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -199,8 +199,9 @@
                                                   (update-findings uri (:findings kondo-result))
                                                   (update :processing-changes disj uri)
                                                   (assoc :kondo-config (:config kondo-result))))
+              ;; TODO: deref
               (do
-                (f.diagnostic/sync-publish-diagnostics! uri db)
+                (f.diagnostic/sync-publish-diagnostics! uri @db)
                 (when (settings/get @db [:notify-references-on-file-change] true)
                   (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
                 (clojure-producer/refresh-test-tree producer [uri]))
@@ -232,7 +233,7 @@
                       (update :analysis merge analysis)
                       (assoc :kondo-config (:config result))
                       (update :findings merge (group-by :filename (:findings result))))))
-      (f.diagnostic/publish-all-diagnostics! filenames db)
+      (f.diagnostic/publish-all-diagnostics! filenames @db)
       (clojure-producer/refresh-test-tree producer uris))))
 
 (defn did-change-watched-files [changes db]
@@ -264,7 +265,7 @@
                                      (shared/dissoc-in [:documents uri])
                                      (shared/dissoc-in [:analysis filename])
                                      (shared/dissoc-in [:findings filename]))))
-        (f.diagnostic/publish-empty-diagnostics! uri db)))))
+        (f.diagnostic/publish-empty-diagnostics! uri @db)))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

@@ -320,6 +320,7 @@
                      diags)))
             diagnostics)))
 
+;; TODO: deref?
 (defn ^:private diagnostics* [options {:keys [db] :as components}]
   (setup-api! components)
   (setup-project-and-deps-analysis! options components)
@@ -330,7 +331,7 @@
                           (assert-ns-exists-or-drop! options)
                           (pmap (fn [{:keys [uri]}]
                                   {:uri uri
-                                   :diagnostics (f.diagnostic/find-diagnostics uri db)}))
+                                   :diagnostics (f.diagnostic/find-diagnostics uri @db)}))
                           (remove (comp empty? :diagnostics))
                           (reduce (fn [a {:keys [uri diagnostics]}]
                                     (assoc a uri diagnostics))

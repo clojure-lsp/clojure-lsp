@@ -130,19 +130,21 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
+;; TODO: deref
 (defn ^:private custom-lint-project!
   [db {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [new-analysis (group-by :filename (normalize-analysis analysis))]
-      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx db))))
+      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx @db))))
 
+;; TODO: deref
 (defn ^:private custom-lint-files!
   [files db {:keys [analysis] :as kondo-ctx}]
   (shared/logging-task
     :reference-files/lint
     (let [new-analysis (group-by :filename (normalize-analysis analysis))
           updated-analysis (merge (:analysis @db) new-analysis)]
-      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx db))))
+      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx @db))))
 
 (defn ^:private custom-lint-file!
   [{:keys [analysis config] :as kondo-ctx} uri db]
@@ -158,7 +160,7 @@
                 (Thread/sleep 50)
                 (recur (inc tries)))
               (let [old-findings (get-in @db [:findings filename])
-                    new-findings (f.diagnostic/custom-lint-file-merging-findings! filename updated-analysis kondo-ctx db)]
+                    new-findings (f.diagnostic/custom-lint-file-merging-findings! filename updated-analysis kondo-ctx @db)]
                 ;; This equality check doesn't seem necessary, but it helps
                 ;; avoid an infinite loop. See
                 ;; https://github.com/clojure-lsp/clojure-lsp/issues/796#issuecomment-1065830737
@@ -173,8 +175,8 @@
                 (when (not= old-findings new-findings)
                   (swap! db assoc-in [:findings filename] new-findings))
                 (when (not= :unknown (shared/uri->file-type uri))
-                  (f.diagnostic/sync-publish-diagnostics! uri db))))))
-        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx db)))))
+                  (f.diagnostic/sync-publish-diagnostics! uri @db))))))
+        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx @db)))))
 
 (defn kondo-for-paths [paths db external-analysis-only?]
   (-> {:cache true

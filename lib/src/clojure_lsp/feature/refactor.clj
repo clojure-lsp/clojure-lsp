@@ -77,7 +77,8 @@
   (r.transform/unwind-thread loc))
 
 (defmethod refactor :resolve-macro-as [{:keys [loc uri components]}]
-  (f.resolve-macro/resolve-macro-as! loc uri components))
+  (let [{:keys [db producer]} components]
+    (f.resolve-macro/resolve-macro-as! loc uri @db producer components)))
 
 (defmethod refactor :sort-map [{:keys [loc]}]
   (f.sort-map/sort-map loc))

@@ -258,7 +258,7 @@
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
-        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db*))
+        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db*))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))

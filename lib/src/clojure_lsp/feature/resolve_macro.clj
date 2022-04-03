@@ -33,7 +33,7 @@
 (defn find-full-macro-symbol-to-resolve [zloc uri db]
   (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position zloc)]
     (let [filename (shared/uri->filename uri)
-          analysis (:analysis @db)
+          analysis (:analysis db)
           element (q/find-element-under-cursor analysis filename macro-name-row macro-name-col)]
       (when (:macro element)
         (let [excluded-vars (get excluded-macros (:to element))]
@@ -67,14 +67,14 @@
    "clj-kondo.lint-as/def-catch-all"])
 
 (defn resolve-macro-as!
-  [zloc uri {:keys [db producer] :as components}]
-  (let [project-root-uri (:project-root-uri @db)
+  [zloc uri db producer components]
+  (let [project-root-uri (:project-root-uri db)
         resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
                                     (lsp.kondo/home-config-path)]
         kondo-config-path (producer/show-message-request producer "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options))]
     (if-let [new-kondo-config (resolve-macro-as zloc uri resolved-full-symbol-str kondo-config-path db)]
-      (let [document (get-in @db [:documents uri])]
+      (let [document (get-in db [:documents uri])]
         (io/make-parents kondo-config-path)
         (spit kondo-config-path new-kondo-config)
         (f.file-management/analyze-changes {:uri uri

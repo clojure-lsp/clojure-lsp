@@ -265,7 +265,7 @@
      :client-settings (:client-settings db-value)
      :final-settings (settings/all db-value)
      :cljfmt-raw (binding [*print-meta* true]
-                   (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db*))))
+                   (with-out-str (pr (f.format/resolve-user-cljfmt-config db-value))))
      :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-cli`)")
      :server-version (shared/clojure-lsp-version)
@@ -368,7 +368,7 @@
 (defn formatting [{:keys [textDocument]}]
   (shared/logging-task
     :formatting
-    (f.format/formatting textDocument db/db*)))
+    (f.format/formatting textDocument @db/db*)))
 
 (defn range-formatting [{:keys [textDocument range]}]
   (process-after-changes
@@ -379,7 +379,7 @@
                       :col (inc (:character start))
                       :end-row (inc (:line end))
                       :end-col (inc (:character end))}]
-      (f.format/range-formatting textDocument format-pos db/db*))))
+      (f.format/range-formatting textDocument format-pos @db/db*))))
 
 (defn dependency-contents [doc-id components]
   (shared/logging-task

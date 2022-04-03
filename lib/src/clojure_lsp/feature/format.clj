@@ -16,15 +16,14 @@
 
 (set! *warn-on-reflection* true)
 
-;; TODO: deref
 (defn resolve-user-cljfmt-config [db]
-  (when-let [project-root (shared/uri->filename (:project-root-uri @db))]
-    (let [config-path (settings/get @db [:cljfmt-config-path] ".cljfmt.edn")
+  (when-let [project-root (shared/uri->filename (:project-root-uri db))]
+    (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
           cljfmt-config-file (if (string/starts-with? config-path "/")
                                (io/file config-path)
                                (io/file project-root config-path))]
       (medley/deep-merge
-        (settings/get @db [:cljfmt] {})
+        (settings/get db [:cljfmt] {})
         (when (shared/file-exists? cljfmt-config-file)
           (if (string/ends-with? cljfmt-config-file ".clj")
             (binding [*read-eval* false]
@@ -40,18 +39,18 @@
 (def cljfmt-config
   (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
 
-(defn formatting [uri db*]
-  (let [{:keys [text]} (get-in @db* [:documents uri])
-        cljfmt-settings (cljfmt-config db*)
+(defn formatting [uri db]
+  (let [{:keys [text]} (get-in db [:documents uri])
+        cljfmt-settings (cljfmt-config db)
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []
       [{:range (shared/full-file-range)
         :new-text new-text}])))
 
-(defn range-formatting [doc-id format-pos db*]
-  (let [cljfmt-settings (cljfmt-config db*)
-        root-loc (parser/zloc-of-file @db* doc-id)
+(defn range-formatting [doc-id format-pos db]
+  (let [cljfmt-settings (cljfmt-config db)
+        root-loc (parser/zloc-of-file db doc-id)
         start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
                       (z/leftmost* root-loc))
         start-top-loc (edit/to-top start-loc)

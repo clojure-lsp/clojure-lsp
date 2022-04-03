@@ -215,14 +215,13 @@
                        (matches-fn (:name %))))
          (map #(element->completion-item % nil :refer)))))
 
-;; TODO: deref
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
   (when-let [aliases (seq (into []
                                 (comp
-                                  (q/filter-project-analysis-xf @db)
+                                  (q/filter-project-analysis-xf db)
                                   (mapcat val)
                                   (filter #(identical? :namespace-alias (:bucket %))))
-                                (:analysis @db)))]
+                                (:analysis db)))]
     (let [alias-namespaces (->> aliases
                                 (filter #(= (-> % :alias str) cursor-alias))
                                 (map :to)
@@ -240,11 +239,11 @@
                    (let [require-edit (some-> cursor-loc
                                               (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
                                                                                      (symbol (str (:to element)))
-                                                                                     @db)
+                                                                                     db)
                                               r.transform/result)]
                      (cond-> (element->completion-item element nil :required-alias)
                        (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))))
-        (->> (:analysis @db)
+        (->> (:analysis db)
              (mapcat val)
              (keep
                #(when (and (identical? :var-definitions (:bucket %))
@@ -256,7 +255,7 @@
              (map
                (fn [[element-ns completion-item]]
                  (let [require-edit (some-> cursor-loc
-                                            (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns @db)
+                                            (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
                                             r.transform/result)]
                    (cond-> completion-item
                      (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))))
@@ -357,7 +356,7 @@
        not-empty))
 
 (defn completion [uri row col db]
-  (let [root-zloc (parser/safe-zloc-of-file @db uri)
+  (let [root-zloc (parser/safe-zloc-of-file db uri)
         ;; (dec col) because we're completing what's behind the cursor
         cursor-loc (when-let [loc (some-> root-zloc (parser/to-pos row (dec col)))]
                      (when (or (not (-> loc z/node meta))
@@ -375,18 +374,18 @@
     (if (= :comment (some-> cursor-loc z/tag))
       []
       (let [filename (shared/uri->filename uri)
-            settings (settings/all @db)
-            analysis (:analysis @db)
+            settings (settings/all db)
+            analysis (:analysis db)
             current-ns-elements (get analysis filename)
-            support-snippets? (get-in @db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
+            support-snippets? (get-in db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
             other-ns-elements (into []
                                     (comp
-                                      (q/filter-project-analysis-xf @db)
+                                      (q/filter-project-analysis-xf db)
                                       (mapcat val))
                                     (dissoc analysis filename))
             external-ns-elements (into []
                                        (comp
-                                         (q/filter-external-analysis-xf @db)
+                                         (q/filter-external-analysis-xf db)
                                          (mapcat val))
                                        (dissoc analysis filename))
             cursor-element (q/find-element-under-cursor analysis filename row col)

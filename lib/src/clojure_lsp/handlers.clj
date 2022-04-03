@@ -147,7 +147,7 @@
     count
     (let [row (-> position :line inc)
           col (-> position :character inc)]
-      (f.completion/completion textDocument row col db/db*))))
+      (f.completion/completion textDocument row col @db/db*))))
 
 ;; TODO: deref
 (defn references [{:keys [textDocument position context]} {:keys [db*] :as components}]

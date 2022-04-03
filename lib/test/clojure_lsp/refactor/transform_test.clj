@@ -50,16 +50,16 @@
     (is (= "((a) (b))" (z/root-string zloc)))))
 
 (defn- thread-first [code]
-  (as-root-string (transform/thread-first (h/zloc-from-code code) db/db)))
+  (as-root-string (transform/thread-first (h/zloc-from-code code) @db/db)))
 
 (defn- thread-first-all [code]
-  (as-root-string (transform/thread-first-all (h/zloc-from-code code) db/db)))
+  (as-root-string (transform/thread-first-all (h/zloc-from-code code) @db/db)))
 
 (defn- thread-last [code]
-  (as-root-string (transform/thread-last (h/zloc-from-code code) db/db)))
+  (as-root-string (transform/thread-last (h/zloc-from-code code) @db/db)))
 
 (defn- thread-last-all [code]
-  (as-root-string (transform/thread-last-all (h/zloc-from-code code) db/db)))
+  (as-root-string (transform/thread-last-all (h/zloc-from-code code) @db/db)))
 
 (deftest thread-test
   (let [code "|(remove nil? (filter :id (map (comp now doit) xs)))"]

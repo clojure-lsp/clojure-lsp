@@ -80,10 +80,9 @@
                         :set    :list
                         :list   :map))))
 
-;; TODO: deref
 (defn ^:private thread-sym
   [zloc sym top-meta db]
-  (let [keep-parens-when-threading? (settings/get @db [:keep-parens-when-threading?] false)
+  (let [keep-parens-when-threading? (settings/get db [:keep-parens-when-threading?] false)
         movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
     (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)

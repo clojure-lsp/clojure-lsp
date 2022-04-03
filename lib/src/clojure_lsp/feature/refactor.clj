@@ -59,16 +59,16 @@
   (apply r.transform/move-to-let loc uri db args))
 
 (defmethod refactor :thread-first [{:keys [loc] {:keys [db]} :components}]
-  (r.transform/thread-first loc db))
+  (r.transform/thread-first loc @db))
 
 (defmethod refactor :thread-first-all [{:keys [loc] {:keys [db]} :components}]
-  (r.transform/thread-first-all loc db))
+  (r.transform/thread-first-all loc @db))
 
 (defmethod refactor :thread-last [{:keys [loc] {:keys [db]} :components}]
-  (r.transform/thread-last loc db))
+  (r.transform/thread-last loc @db))
 
 (defmethod refactor :thread-last-all [{:keys [loc] {:keys [db]} :components}]
-  (r.transform/thread-last-all loc db))
+  (r.transform/thread-last-all loc @db))
 
 (defmethod refactor :unwind-all [{:keys [loc]}]
   (r.transform/unwind-all loc))

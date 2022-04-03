@@ -88,7 +88,6 @@
         usage-signature (juxt :to :name)]
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
-;; TODO: deref
 (defn reference-filenames [filename old-local-analysis new-local-analysis db]
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)

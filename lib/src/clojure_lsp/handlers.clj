@@ -416,7 +416,7 @@
   [{:keys [textDocument]}]
   (process-after-changes
     :semantic-tokens-full textDocument
-    (let [data (f.semantic-tokens/full-tokens textDocument db/db*)]
+    (let [data (f.semantic-tokens/full-tokens textDocument @db/db*)]
       {:data data})))
 
 (defn semantic-tokens-range
@@ -427,7 +427,7 @@
                  :name-col (inc (:character start))
                  :name-end-row (inc (:line end))
                  :name-end-col (inc (:character end))}
-          data (f.semantic-tokens/range-tokens textDocument range db/db*)]
+          data (f.semantic-tokens/range-tokens textDocument range @db/db*)]
       {:data data})))
 
 (defn prepare-call-hierarchy

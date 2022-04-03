@@ -24,29 +24,32 @@
 (defn ^:private update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
 
-(defn did-open [uri text db allow-create-ns]
-  (shared/logging-task
-    :did-open
-    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db)]
-      (swap! db (fn [state-db]
-                  (-> state-db
-                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                      (update-analysis uri (:analysis kondo-result))
-                      (update-findings uri (:findings kondo-result))
-                      (assoc :kondo-config (:config kondo-result)))))
-      (f.diagnostic/async-publish-diagnostics! uri db)))
-  ;; TODO: deref
-  (when-let [new-ns (and allow-create-ns
-                         (string/blank? text)
+(defn create-ns-changes [uri text db]
+  (when-let [new-ns (and (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
-                         (not (get (:create-ns-blank-files-denylist @db) uri))
-                         (shared/uri->namespace uri @db))]
-    (when (settings/get @db [:auto-add-ns-to-new-files?] true)
+                         (not (get (:create-ns-blank-files-denylist db) uri))
+                         (shared/uri->namespace uri db))]
+    (when (settings/get db [:auto-add-ns-to-new-files?] true)
       (let [new-text (format "(ns %s)" new-ns)
-            changes [{:text-document {:version (get-in @db [:documents uri :v] 0) :uri uri}
+            changes [{:text-document {:version (get-in db [:documents uri :v] 0) :uri uri}
                       :edits [{:range (shared/->range {:row 1 :end-row 999999 :col 1 :end-col 999999})
                                :new-text new-text}]}]]
-        (async/>!! db/edits-chan (shared/client-changes changes @db))))))
+        (shared/client-changes changes db)))))
+
+(defn did-open [uri text db* allow-create-ns]
+  (shared/logging-task
+    :did-open
+    (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db*)]
+      (swap! db* (fn [state-db]
+                   (-> state-db
+                       (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
+                       (update-analysis uri (:analysis kondo-result))
+                       (update-findings uri (:findings kondo-result))
+                       (assoc :kondo-config (:config kondo-result)))))
+      (f.diagnostic/async-publish-diagnostics! uri db*)))
+  (when allow-create-ns
+    (when-let [create-ns-edits (create-ns-changes uri text @db*)]
+      (async/>!! db/edits-chan create-ns-edits))))
 
 (defn ^:private find-changed-elems-by
   "Detect elements that changed number of occurrences."

@@ -12,7 +12,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def startup-paths-logger-tag (shared/colorize "[Startup]" shared/startup-logger-color))
+(def startup-paths-logger-tag "[Startup]")
 
 (def default-source-paths #{"src" "test"})
 

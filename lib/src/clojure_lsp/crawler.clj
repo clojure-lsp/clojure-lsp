@@ -16,7 +16,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def startup-logger-tag (shared/colorize "[Startup]" shared/startup-logger-color))
+(def startup-logger-tag "[Startup]")
 
 (defn ^:private get-cp-entry-type [^java.io.File e]
   (cond (.isFile e) :file

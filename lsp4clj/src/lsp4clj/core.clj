@@ -1,6 +1,5 @@
 (ns lsp4clj.core
   (:require
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop thread timeout]]
    [clojure.java.shell :as shell]
    [clojure.string :as string]
@@ -65,7 +64,7 @@
      WorkspaceService))
   (:gen-class))
 
-(def server-logger-tag (shared/colorize "[Server]" shared/component-logger-color))
+(def server-logger-tag "[Server]")
 
 (set! *warn-on-reflection* true)
 

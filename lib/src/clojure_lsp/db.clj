@@ -9,7 +9,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private db-logger-tag (shared/colorize "[DB]" shared/component-logger-color))
+(def ^:private db-logger-tag "[DB]")
 
 (def initial-db {:documents {}
                  :processing-changes #{}})

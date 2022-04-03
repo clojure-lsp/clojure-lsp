@@ -27,11 +27,6 @@
 (defn colorize [s color]
   (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))
 
-(def startup-logger-color :green)
-(def component-logger-color :bright-magenta)
-(def feature-logger-color :bright-yellow)
-(def task-logger-color :bright-cyan)
-
 (defn deep-merge
   "Recursively merges maps together.
   Improved version of medley deep-merge concating colls instead of overwriting."
@@ -422,7 +417,7 @@
        result#)))
 
 (defmacro logging-task [task-id & body]
-  (let [msg (str (colorize task-id task-logger-color) " %s")]
+  (let [msg (str task-id " %s")]
     (with-meta `(logging-time ~msg ~@body) (meta &form))))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]

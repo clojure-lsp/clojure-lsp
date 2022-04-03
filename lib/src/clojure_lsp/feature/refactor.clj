@@ -107,11 +107,10 @@
        (map name)
        vec))
 
-;; TODO: deref
 (defn refactor-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
                   :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
-    (shared/client-changes changes @db)))
+    (shared/client-changes changes db)))
 
 (defn call-refactor [{:keys [loc uri refactoring row col version] :as data} {:keys [db] :as components}]
 
@@ -137,7 +136,7 @@
          :edit (shared/client-changes changes @db)})
 
       (seq result)
-      {:edit (refactor-client-seq-changes uri version result db)}
+      {:edit (refactor-client-seq-changes uri version result @db)}
 
       (empty? result)
       (logger/warn refactoring "made no changes" (z/string loc))

@@ -25,7 +25,7 @@
 
 (defn ^:private generate-stubs! [namespaces settings db]
   (try
-    (if-let [classpath (string/join ":" (:classpath @db))]
+    (if-let [classpath (string/join ":" (:classpath db))]
       (let [java-command (or (-> settings :stubs :generation :java-command)
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]
@@ -64,12 +64,13 @@
 
 (defn generate-and-analyze-stubs!
   [settings {:keys [db*] :as components}]
-  (let [namespaces (->> settings :stubs :generation :namespaces (map str) set)
+  (let [db @db*
+        namespaces (->> settings :stubs :generation :namespaces (map str) set)
         extra-dirs (-> settings :stubs :extra-dirs)]
     (if (and (seq namespaces)
-             (or (:full-scan-analysis-startup @db*)
-                 (not= namespaces (:stubs-generation-namespaces @db*))))
-      (let [{:keys [result-code message]} (generate-stubs! namespaces settings db*)]
+             (or (:full-scan-analysis-startup db)
+                 (not= namespaces (:stubs-generation-namespaces db))))
+      (let [{:keys [result-code message]} (generate-stubs! namespaces settings db)]
         (if (= 0 result-code)
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)

@@ -54,14 +54,13 @@
          :usage-element element
          :parent-element (q/find-element-under-cursor (:analysis @db) filename parent-row parent-col)}))))
 
-;; TODO: deref
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
-  (when-let [definition (q/find-definition (:analysis @db) element @db)]
+  (when-let [definition (q/find-definition (:analysis db) element db)]
     (let [def-filename (:filename definition)
           definition-uri (if (shared/plain-uri? def-filename)
                            def-filename
-                           (shared/filename->uri def-filename @db))]
+                           (shared/filename->uri def-filename db))]
       {:uri definition-uri
        :usage-element element
        :parent-element definition})))
@@ -91,7 +90,7 @@
                                            (:name-col definition)
                                            (:end-row definition)
                                            (:end-col definition))
-             (map (partial element->outgoing-usage-by-uri db))
+             (map (partial element->outgoing-usage-by-uri @db))
              (remove nil?)
              (mapv (fn [element-by-uri]
                      {:from-ranges []

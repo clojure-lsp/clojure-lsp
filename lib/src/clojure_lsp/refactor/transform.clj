@@ -686,20 +686,19 @@
         sexpr))
     (symbol (str "arg" (inc index)))))
 
-;; TODO: deref
 (defn ^:private create-function-for-alias
   [local-zloc ns-or-alias fn-name defn-edit uri db]
-  (let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol ns-or-alias))
+  (let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
-                        (q/find-definition (:analysis @db) ns-usage @db))
-        source-paths (settings/get @db [:source-paths])
+                        (q/find-definition (:analysis db) ns-usage db))
+        source-paths (settings/get db [:source-paths])
         def-uri (cond
                   ns-definition
-                  (shared/filename->uri (:filename ns-definition) @db)
+                  (shared/filename->uri (:filename ns-definition) db)
                   ns-usage
-                  (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) @db)
+                  (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) db)
                   :else
-                  (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) @db))
+                  (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) db))
         min-range {:row 1 :end-row 1 :col 1 :end-col 1}
         max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}]
     {:show-document-after-edit {:uri def-uri
@@ -714,7 +713,7 @@
                               local-zloc
                               (symbol ns-or-alias)
                               (symbol fn-name)
-                              @db))
+                              db))
                       def-uri (->> [(when-not ns-definition
                                       {:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
                                        :range min-range})
@@ -746,7 +745,7 @@
                        ns-or-alias
                        (format "(defn %s)" fn-name)
 
-                       (settings/get @db [:use-metadata-for-privacy?] false)
+                       (settings/get db [:use-metadata-for-privacy?] false)
                        (format "(defn ^:private %s)" fn-name)
 
                        :else
@@ -791,15 +790,14 @@
                           :end-row form-row
                           :end-col form-col)}])))))
 
-;; TODO: deref
 (defn ^:private create-test-for-source-path
   [uri function-name-loc source-path db]
   (let [file-type (shared/uri->file-type uri)
         function-name (z/sexpr function-name-loc)
-        namespace (shared/uri->namespace uri @db)
+        namespace (shared/uri->namespace uri db)
         namespace-test (str namespace "-test")
         test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
-        test-uri (shared/filename->uri test-filename @db)
+        test-uri (shared/filename->uri test-filename db)
         test-namespace-file (io/file test-filename)]
     (if (shared/file-exists? test-namespace-file)
       (let [existing-text (shared/slurp-filename test-uri)
@@ -838,20 +836,19 @@
          :current-source-path current-source-path
          :function-name-loc function-name-loc}))))
 
-;; TODO: deref
-(defn create-test [zloc uri {:keys [db producer]}]
+(defn create-test [zloc uri db producer]
   (when-let [{:keys [source-paths
                      current-source-path
-                     function-name-loc]} (can-create-test? zloc uri @db)]
+                     function-name-loc]} (can-create-test? zloc uri db)]
     (let [test-source-paths (remove #(= current-source-path %) source-paths)]
       (cond
         (= 1 (count test-source-paths))
-        (create-test-for-source-path uri function-name-loc (first test-source-paths) @db)
+        (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
               chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
-          (create-test-for-source-path uri function-name-loc chosen-source-path @db))
+          (create-test-for-source-path uri function-name-loc chosen-source-path db))
 
         ;; No source paths besides current one
         :else nil))))

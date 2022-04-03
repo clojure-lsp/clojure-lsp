@@ -92,10 +92,10 @@
   (apply r.transform/suppress-diagnostic loc args))
 
 (defmethod refactor :create-function [{:keys [loc uri] {:keys [db]} :components}]
-  (r.transform/create-function loc uri db))
+  (r.transform/create-function loc uri @db))
 
-(defmethod refactor :create-test [{:keys [loc uri] components :components}]
-  (r.transform/create-test loc uri components))
+(defmethod refactor :create-test [{:keys [loc uri] {:keys [db producer]} :components}]
+  (r.transform/create-test loc uri @db producer))
 
 (defmethod refactor :move-form [{:keys [loc uri args] {:keys [db]} :components}]
   (apply f.move-form/move-form loc uri db args))

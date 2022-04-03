@@ -28,9 +28,8 @@
                           :zloc     zloc
                           :position position)))))))
 
-;; TODO: deref
 (defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]
-  (->> (f.add-missing-libspec/find-require-suggestions zloc uri @db)
+  (->> (f.add-missing-libspec/find-require-suggestions zloc uri db)
        (map #(assoc % :position position))))
 
 (defn ^:private find-all-require-suggestions [diagnostics missing-requires uri db]
@@ -40,9 +39,8 @@
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
 
-;; TODO: deref
 (defn ^:private find-missing-require [uri db {:keys [position zloc]}]
-  (some-> (f.add-missing-libspec/find-missing-ns-require zloc uri @db)
+  (some-> (f.add-missing-libspec/find-missing-ns-require zloc uri db)
           (assoc :position position)))
 
 (defn ^:private find-missing-requires [diagnostics uri db]
@@ -244,9 +242,8 @@
              :command   "resolve-macro-as"
              :arguments [uri row col]}})
 
-(defn all [root-zloc uri row col diagnostics client-capabilities db*]
-  (let [db @db*
-        zloc (parser/to-pos root-zloc row col)
+(defn all [root-zloc uri row col diagnostics client-capabilities db]
+  (let [zloc (parser/to-pos root-zloc row col)
         line (dec row)
         character (dec col)
         resolvable-diagnostics (resolvable-diagnostics diagnostics root-zloc)
@@ -260,9 +257,9 @@
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
-        missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db*))
+        missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
-        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db*))
+        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))

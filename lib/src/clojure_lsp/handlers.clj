@@ -390,14 +390,15 @@
   [{:keys [range context textDocument]}]
   (process-after-changes
     :code-actions textDocument
-    (let [diagnostics (-> context :diagnostics)
+    (let [db @db/db
+          diagnostics (-> context :diagnostics)
           line (-> range :start :line)
           character (-> range :start :character)
           row (inc line)
           col (inc character)
-          root-zloc (parser/safe-zloc-of-file @db/db textDocument)
-          client-capabilities (get @db/db :client-capabilities)]
-      (f.code-actions/all root-zloc textDocument row col diagnostics client-capabilities db/db))))
+          root-zloc (parser/safe-zloc-of-file db textDocument)
+          client-capabilities (get db :client-capabilities)]
+      (f.code-actions/all root-zloc textDocument row col diagnostics client-capabilities db))))
 
 (defn code-lens
   [{:keys [textDocument]}]

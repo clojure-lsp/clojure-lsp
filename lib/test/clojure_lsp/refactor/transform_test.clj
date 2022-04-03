@@ -300,7 +300,7 @@
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
 
 (defn cycle-privacy [code]
-  (as-string (transform/cycle-privacy (h/zloc-from-code code) db/db)))
+  (as-string (transform/cycle-privacy (h/zloc-from-code code) @db/db)))
 
 (deftest cycle-privacy-test
   (testing "without-setting"
@@ -452,7 +452,7 @@
      (transform/extract-function zloc
                                  file-uri
                                  new-fn-name
-                                 db/db))))
+                                 @db/db))))
 
 (deftest extract-function-test
   (testing "simple extract"
@@ -586,7 +586,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "from end of file"
-    (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" db/db)))
+    (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" @db/db)))
     (h/assert-submaps
       []
       (extract-function "|;; comment"
@@ -862,7 +862,7 @@
   (testing "simple let"
     (h/clean-db!)
     (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db))
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 @db/db))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -877,7 +877,7 @@
   (testing "multiple binding let"
     (h/clean-db!)
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 db/db))
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 @db/db))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -893,7 +893,7 @@
     (h/clean-db!)
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db))
+          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c @db/db))
           a-results (get results (h/file-uri "file:///a.clj"))
           b-results (get results (h/file-uri "file:///b.clj"))]
       (is (map? results))
@@ -902,7 +902,7 @@
       (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results)))))
   (testing "invalid location"
     (let [[[pos-l pos-c]] (h/load-code-and-locs "|;; comment")]
-      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c db/db))))))
+      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c @db/db))))))
 
 (defn suppress-diagnostic [code diagnostic-code]
   (h/with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))

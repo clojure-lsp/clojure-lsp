@@ -397,7 +397,6 @@
           (recur (first (expand-let loc false uri db)) current-edit)
           (some-> previous-edit vector))))))
 
-;; TODO: deref
 (defn extract-function
   [zloc uri fn-name db]
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
@@ -424,7 +423,7 @@
                                     :end-row defn-row
                                     :end-col defn-col}
               fn-sym               (symbol fn-name)
-              clj-analysis         (unify-to-one-language (:analysis @db))
+              clj-analysis         (unify-to-one-language (:analysis db))
               used-syms            (->> (q/find-local-usages-under-form clj-analysis
                                                                         (shared/uri->filename uri)
                                                                         (:row expr-meta)
@@ -590,13 +589,12 @@
 (defn find-function-form [zloc]
   (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))
 
-;; TODO: deref
 (defn cycle-privacy
   [zloc db]
   (when-let [oploc (find-function-form zloc)]
     (let [op (z/sexpr oploc)
           switch-defn-? (and (= 'defn op)
-                             (not (settings/get @db [:use-metadata-for-privacy?])))
+                             (not (settings/get db [:use-metadata-for-privacy?])))
           switch-defn? (= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?
@@ -612,26 +610,24 @@
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
 
-;; TODO: deref
 (defn inline-symbol?
   [{:keys [filename name-row name-col bucket]} db]
   (when (or (identical? :locals bucket)
             (identical? :var-definitions bucket))
-    (some-> (parser/safe-zloc-of-file @db (shared/filename->uri filename @db))
+    (some-> (parser/safe-zloc-of-file db (shared/filename->uri filename db))
             (parser/to-pos name-row name-col)
             edit/find-op
             z/sexpr
             #{'let 'def})))
 
-;; TODO: deref
 (defn inline-symbol
   [uri line column db]
-  (let [definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) line column @db)]
+  (let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) line column db)]
     (when-let [op (inline-symbol? definition db)]
-      (let [references (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) line column false @db)
-            def-uri    (shared/filename->uri (:filename definition) @db)
+      (let [references (q/find-references-from-cursor (:analysis db) (shared/uri->filename uri) line column false db)
+            def-uri    (shared/filename->uri (:filename definition) db)
             ;; TODO: use safe-zloc-of-file and handle nils
-            def-loc    (some-> (parser/zloc-of-file @db def-uri)
+            def-loc    (some-> (parser/zloc-of-file db def-uri)
                                (parser/to-pos (:name-row definition) (:name-col definition)))
             val-loc    (z/right def-loc)
             end-pos    (if (= op 'def)
@@ -652,7 +648,7 @@
          (reduce
            (fn [accum {:keys [filename] :as element}]
              (update accum
-                     (shared/filename->uri filename @db)
+                     (shared/filename->uri filename db)
                      (fnil conj [])
                      {:loc val-loc :range element}))
            {def-uri [{:loc nil :range def-range}]}
@@ -662,7 +658,6 @@
   (and zloc
        (#{:list :token} (z/tag zloc))))
 
-;; TODO: deref
 (defn find-public-function-to-create [zloc uri db]
   (when (and zloc
              (identical? :token (z/tag zloc))
@@ -670,12 +665,12 @@
     (let [z-sexpr (z/sexpr zloc)
           z-name (name z-sexpr)
           z-ns (namespace z-sexpr)]
-      (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis @db) (shared/uri->filename uri) (symbol z-ns))]
-        (if-let [ns-def (q/find-definition (:analysis @db) ns-usage @db)]
-          (when-not (shared/external-filename? (:filename ns-def) (settings/get @db [:source-paths]))
+      (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol z-ns))]
+        (if-let [ns-def (q/find-definition (:analysis db) ns-usage db)]
+          (when-not (shared/external-filename? (:filename ns-def) (settings/get db [:source-paths]))
             {:ns (:name ns-def)
              :name z-name})
-          (when-not (shared/external-filename? (:filename ns-usage) (settings/get @db [:source-paths]))
+          (when-not (shared/external-filename? (:filename ns-usage) (settings/get db [:source-paths]))
             {:new-ns (:name ns-usage)
              :name z-name}))
         {:new-ns z-ns
@@ -842,6 +837,7 @@
          :current-source-path current-source-path
          :function-name-loc function-name-loc}))))
 
+;; TODO: deref
 (defn create-test [zloc uri {:keys [db producer]}]
   (when-let [{:keys [source-paths
                      current-source-path
@@ -849,12 +845,12 @@
     (let [test-source-paths (remove #(= current-source-path %) source-paths)]
       (cond
         (= 1 (count test-source-paths))
-        (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
+        (create-test-for-source-path uri function-name-loc (first test-source-paths) @db)
 
         (< 1 (count test-source-paths))
         (let [actions (mapv #(hash-map :title %) source-paths)
               chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
-          (create-test-for-source-path uri function-name-loc chosen-source-path db))
+          (create-test-for-source-path uri function-name-loc chosen-source-path @db))
 
         ;; No source paths besides current one
         :else nil))))

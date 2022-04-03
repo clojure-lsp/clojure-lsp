@@ -251,7 +251,7 @@
         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
-        public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db*))
+        public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
@@ -265,8 +265,8 @@
         allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db*))
         allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db*))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
-        definition (q/find-definition-from-cursor (:analysis @db*) (shared/uri->filename uri) row col @db*)
-        inline-symbol?* (future (r.transform/inline-symbol? definition db*))
+        definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col db)
+        inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []

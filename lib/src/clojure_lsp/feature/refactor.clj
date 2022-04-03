@@ -38,7 +38,7 @@
   (apply r.transform/change-coll loc args))
 
 (defmethod refactor :cycle-privacy [{:keys [loc] {:keys [db]} :components}]
-  (r.transform/cycle-privacy loc db))
+  (r.transform/cycle-privacy loc @db))
 
 (defmethod refactor :cycle-fn-literal [{:keys [loc]}]
   (r.transform/cycle-fn-literal loc))
@@ -47,10 +47,10 @@
   (r.transform/expand-let loc uri @db))
 
 (defmethod refactor :extract-function [{:keys [loc uri args] {:keys [db]} :components}]
-  (apply r.transform/extract-function loc uri (concat args [db])))
+  (apply r.transform/extract-function loc uri (concat args [@db])))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col] {:keys [db]} :components}]
-  (r.transform/inline-symbol uri row col db))
+  (r.transform/inline-symbol uri row col @db))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc args))

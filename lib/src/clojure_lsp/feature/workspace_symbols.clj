@@ -44,13 +44,12 @@
                [])
        (map :members)))
 
-;; TODO: deref
 (defn workspace-symbols [query db]
   ;; TODO refactor to be a complete transducer
   (->> (into {}
              (comp
-               (q/filter-project-analysis-xf @db))
-             (:analysis @db))
+               (q/filter-project-analysis-xf db))
+             (:analysis db))
        vals
        flatten
        (filter f.document-symbol/declaration?)
@@ -58,7 +57,7 @@
        (mapv (fn [element]
                {:name (-> element :name name)
                 :kind (f.document-symbol/element->symbol-kind element)
-                :location {:uri (shared/filename->uri (:filename element) @db)
+                :location {:uri (shared/filename->uri (:filename element) db)
                            :range (shared/->scope-range element)}}))
        (group-by-ord (comp :uri :location))
        flatten

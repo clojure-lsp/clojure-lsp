@@ -254,7 +254,7 @@
 (defn workspace-symbols [{:keys [query]}]
   (shared/logging-task
     :workspace-symbol
-    (f.workspace-symbols/workspace-symbols query db/db*)))
+    (f.workspace-symbols/workspace-symbols query @db/db*)))
 
 (defn ^:private server-info []
   (let [db-value @db/db*]

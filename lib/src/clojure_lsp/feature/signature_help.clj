@@ -74,17 +74,18 @@
              (assoc-some :documentation (:doc definition))))
        arglist-strs))
 
-(defn signature-help [uri row col db]
+(defn signature-help [uri row col db*]
   (let [filename (shared/uri->filename uri)
-        zloc (some-> (f.file-management/force-get-document-text uri db)
+        zloc (some-> (f.file-management/force-get-document-text uri db*)
                      ;; TODO: use safe-zloc-of-string and handle nils
                      (parser/zloc-of-string)
                      (parser/to-pos row col))
         function-loc (edit/find-function-usage-name-loc zloc)]
     (when function-loc
-      (let [arglist-nodes (function-loc->arglist-nodes function-loc)
+      (let [db @db*
+            arglist-nodes (function-loc->arglist-nodes function-loc)
             function-meta (meta (z/node function-loc))
-            definition (q/find-definition-from-cursor (:analysis @db) filename (:row function-meta) (:col function-meta) @db)
+            definition (q/find-definition-from-cursor (:analysis db) filename (:row function-meta) (:col function-meta) db)
             signatures (definition->signature-informations definition)
             active-signature (get-active-signature-index definition arglist-nodes)]
         (when (seq signatures)

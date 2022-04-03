@@ -44,7 +44,7 @@
        :message (str "Error: " e)})))
 
 (defn ^:private analyze-stubs!
-  [dirs {:keys [db] :as components}]
+  [dirs {:keys [db*] :as components}]
   (let [result (shared/logging-time
                  "Stubs analyzed, took %s."
                  (lsp.kondo/run-kondo-on-paths! dirs true components))
@@ -53,23 +53,23 @@
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (loop [state-db @db]
-      (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
+    (loop [state-db @db*]
+      (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
         (logger/warn "Analyzis divergent from stub analysis, trying again...")
-        (recur @db)))
-    (-> (shared/uri->path (:project-root-uri @db))
-        (db/read-cache db)
+        (recur @db*)))
+    (-> (shared/uri->path (:project-root-uri @db*))
+        (db/read-cache db*)
         (update :analysis merge analysis)
-        (db/upsert-cache! db))))
+        (db/upsert-cache! db*))))
 
 (defn generate-and-analyze-stubs!
-  [settings {:keys [db] :as components}]
+  [settings {:keys [db*] :as components}]
   (let [namespaces (->> settings :stubs :generation :namespaces (map str) set)
         extra-dirs (-> settings :stubs :extra-dirs)]
     (if (and (seq namespaces)
-             (or (:full-scan-analysis-startup @db)
-                 (not= namespaces (:stubs-generation-namespaces @db))))
-      (let [{:keys [result-code message]} (generate-stubs! namespaces settings db)]
+             (or (:full-scan-analysis-startup @db*)
+                 (not= namespaces (:stubs-generation-namespaces @db*))))
+      (let [{:keys [result-code message]} (generate-stubs! namespaces settings db*)]
         (if (= 0 result-code)
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)

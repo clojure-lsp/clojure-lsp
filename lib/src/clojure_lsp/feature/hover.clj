@@ -63,11 +63,11 @@
 
 ;; TODO: deref
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} {:keys [db] :as components}]
-  (let [content-formats (get-in @db [:client-capabilities :text-document :hover :content-format])
-        arity-on-same-line? (or (settings/get @db [:hover :arity-on-same-line?])
-                                (settings/get @db [:show-docs-arity-on-same-line?]))
-        hide-filename? (settings/get @db [:hover :hide-file-location?])
+  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} {:keys [db*] :as components}]
+  (let [content-formats (get-in @db* [:client-capabilities :text-document :hover :content-format])
+        arity-on-same-line? (or (settings/get @db* [:hover :arity-on-same-line?])
+                                (settings/get @db* [:show-docs-arity-on-same-line?]))
+        hide-filename? (settings/get @db* [:hover :hide-file-location?])
         join-char (if arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)
@@ -96,7 +96,7 @@
                 (str (format "%s*[%s](%s)*"
                              line-break
                              (string/replace filename #"\\" "\\\\")
-                             (shared/filename->uri filename @db))))}
+                             (shared/filename->uri filename @db*))))}
       ;; Default to plaintext
       (cond->> []
         (and filename (not hide-filename?)) (cons filename)
@@ -109,14 +109,14 @@
                    :value (if arity-on-same-line? sym-line sym)})))))
 
 ;; TODO: deref
-(defn hover [filename line column {:keys [db] :as components}]
-  (let [analysis (:analysis @db)
+(defn hover [filename line column {:keys [db*] :as components}]
+  (let [analysis (:analysis @db*)
         element (loop [try-column column]
                   (if-let [usage (q/find-element-under-cursor analysis filename line try-column)]
                     usage
                     (when (pos? try-column)
                       (recur (dec try-column)))))
-        definition (when element (q/find-definition analysis element @db))]
+        definition (when element (q/find-definition analysis element @db*))]
     (cond
       definition
       {:range (shared/->range element)

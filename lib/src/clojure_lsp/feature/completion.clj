@@ -456,20 +456,20 @@
 
 ;; TODO: deref
 (defn ^:private resolve-item-by-ns
-  [{{:keys [name ns filename]} :data :as item} {:keys [db] :as components}]
-  (let [analysis (:analysis @db)
+  [{{:keys [name ns filename]} :data :as item} {:keys [db*] :as components}]
+  (let [analysis (:analysis @db*)
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
                                                 :to (symbol ns)
-                                                :bucket :var-usages} @db)]
+                                                :bucket :var-usages} @db*)]
     (if definition
       (-> item
           (assoc :documentation (f.hover/hover-documentation definition components)))
       item)))
 
 (defn ^:private resolve-item-by-definition
-  [{{:keys [name filename name-row name-col]} :data :as item} {:keys [db] :as components}]
-  (let [local-analysis (get-in @db [:analysis filename])
+  [{{:keys [name filename name-row name-col]} :data :as item} {:keys [db*] :as components}]
+  (let [local-analysis (get-in @db* [:analysis filename])
         definition (q/find-first #(and (identical? :var-definitions (:bucket %))
                                        (= name (str (:name %)))
                                        (= name-row (:name-row %))

@@ -76,9 +76,9 @@
         []))))
 
 ;; TODO: deref
-(defn scan-classpath! [{:keys [db] :as components}]
-  (let [root-path (shared/uri->path (:project-root-uri @db))]
-    (->> (settings/get @db [:project-specs])
+(defn scan-classpath! [{:keys [db*] :as components}]
+  (let [root-path (shared/uri->path (:project-root-uri @db*))]
+    (->> (settings/get @db* [:project-specs])
          (filter (partial valid-project-spec? root-path))
          (mapcat #(lookup-classpath root-path % components))
          vec

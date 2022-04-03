@@ -126,20 +126,20 @@
     (set/union (or incoming-filenames #{})
                (or outgoing-filenames #{}))))
 
-(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db producer]}]
+(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db* producer]}]
   (async/go
     (shared/logging-task
       :notify-references
       (let [filenames (shared/logging-task
                         :reference-files/find
-                        (reference-filenames filename old-local-analysis new-local-analysis @db))]
+                        (reference-filenames filename old-local-analysis new-local-analysis @db*))]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task
             :reference-files/analyze
-            (crawler/analyze-reference-filenames! filenames db))
+            (crawler/analyze-reference-filenames! filenames db*))
           (doseq [filename filenames]
-            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename @db) @db))
+            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename @db*) @db*))
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
@@ -183,27 +183,27 @@
       ;; the full content of the document.
       new-text)))
 
-(defn analyze-changes [{:keys [uri text version]} {:keys [producer db] :as components}]
+(defn analyze-changes [{:keys [uri text version]} {:keys [producer db*] :as components}]
   (shared/logging-task
     :analyze-file
-    (loop [state-db @db]
+    (loop [state-db @db*]
       (when (>= version (get-in state-db [:documents uri :v] -1))
         (when-let [kondo-result (shared/logging-time
                                   (str "changes analyzed by clj-kondo took %s")
-                                  (lsp.kondo/run-kondo-on-text! text uri db))]
+                                  (lsp.kondo/run-kondo-on-text! text uri db*))]
           (let [filename (shared/uri->filename uri)
-                old-local-analysis (get-in @db [:analysis filename])]
-            (if (compare-and-set! db state-db (-> state-db
+                old-local-analysis (get-in @db* [:analysis filename])]
+            (if (compare-and-set! db* state-db (-> state-db
                                                   (update-analysis uri (:analysis kondo-result))
                                                   (update-findings uri (:findings kondo-result))
                                                   (update :processing-changes disj uri)
                                                   (assoc :kondo-config (:config kondo-result))))
-              (let [db @db]
+              (let [db @db*]
                 (f.diagnostic/sync-publish-diagnostics! uri db)
                 (when (settings/get db [:notify-references-on-file-change] true)
                   (notify-references filename old-local-analysis (get-in db [:analysis filename]) components))
                 (clojure-producer/refresh-test-tree producer [uri]))
-              (recur @db))))))))
+              (recur @db*))))))))
 
 (defn did-change [uri changes version db]
   (let [old-text (get-in @db [:documents uri :text])
@@ -216,7 +216,7 @@
                                         :text final-text
                                         :version version})))
 
-(defn analyze-watched-created-files! [uris {:keys [db producer] :as components}]
+(defn analyze-watched-created-files! [uris {:keys [db* producer] :as components}]
   (shared/logging-task
     :analyze-created-files-in-watched-dir
     (let [filenames (map shared/uri->filename uris)
@@ -226,12 +226,12 @@
           analysis (->> (:analysis result)
                         lsp.kondo/normalize-analysis
                         (group-by :filename))]
-      (swap! db (fn [state-db]
+      (swap! db* (fn [state-db]
                   (-> state-db
                       (update :analysis merge analysis)
                       (assoc :kondo-config (:config result))
                       (update :findings merge (group-by :filename (:findings result))))))
-      (f.diagnostic/publish-all-diagnostics! filenames @db)
+      (f.diagnostic/publish-all-diagnostics! filenames @db*)
       (clojure-producer/refresh-test-tree producer uris))))
 
 (defn did-change-watched-files [changes db]

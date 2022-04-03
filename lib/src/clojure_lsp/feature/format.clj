@@ -40,18 +40,18 @@
 (def cljfmt-config
   (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
 
-(defn formatting [uri db]
-  (let [{:keys [text]} (get-in @db [:documents uri])
-        cljfmt-settings (cljfmt-config db)
+(defn formatting [uri db*]
+  (let [{:keys [text]} (get-in @db* [:documents uri])
+        cljfmt-settings (cljfmt-config db*)
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []
       [{:range (shared/full-file-range)
         :new-text new-text}])))
 
-(defn range-formatting [doc-id format-pos db]
-  (let [cljfmt-settings (cljfmt-config db)
-        root-loc (parser/zloc-of-file @db doc-id)
+(defn range-formatting [doc-id format-pos db*]
+  (let [cljfmt-settings (cljfmt-config db*)
+        root-loc (parser/zloc-of-file @db* doc-id)
         start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
                       (z/leftmost* root-loc))
         start-top-loc (edit/to-top start-loc)

@@ -24,13 +24,13 @@
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
-(defn ^:private datalevin-db-files [db]
-  (let [cache-dir ^java.io.File (config/cache-file db)]
+(defn ^:private datalevin-db-files [db*]
+  (let [cache-dir ^java.io.File (config/cache-file db*)]
     [(io/file cache-dir "data.mdb")
      (io/file cache-dir "lock.mdb")]))
 
-(defn ^:private transit-db-file [db]
-  (io/file (config/cache-file db) "db.transit.json"))
+(defn ^:private transit-db-file [db*]
+  (io/file (config/cache-file db*) "db.transit.json"))
 
 (defn ^:private remove-old-sqlite-db-file! [project-root-path]
   (let [old-db-file (sqlite-db-file project-root-path)]
@@ -42,19 +42,19 @@
        (filter shared/file-exists?)
        (mapv #(io/delete-file % true))))
 
-(defn db-exists? [db]
-  (shared/file-exists? (transit-db-file db)))
+(defn db-exists? [db*]
+  (shared/file-exists? (transit-db-file db*)))
 
-(defn remove-db! [db]
-  (io/delete-file (transit-db-file db)))
+(defn remove-db! [db*]
+  (io/delete-file (transit-db-file db*)))
 
-(defn upsert-cache! [{:keys [project-root] :as project-cache} db]
+(defn upsert-cache! [{:keys [project-root] :as project-cache} db*]
   (remove-old-sqlite-db-file! project-root)
   (remove-old-datalevin-db-file!)
   (try
     (shared/logging-time
       (str db-logger-tag " Upserting transit analysis cache took %s")
-      (let [cache-file (transit-db-file db)]
+      (let [cache-file (transit-db-file db*)]
         (with-open [;; first we write to a baos as a workaround for transit-clj #43
                     bos (java.io.ByteArrayOutputStream. 1024)
                     os (io/output-stream bos)]
@@ -65,11 +65,11 @@
     (catch Throwable e
       (logger/error db-logger-tag "Could not upsert db cache" e))))
 
-(defn read-cache [project-root db]
+(defn read-cache [project-root db*]
   (try
     (shared/logging-time
       (str db-logger-tag " Reading transit analysis cache from db took %s")
-      (let [db-file (transit-db-file db)]
+      (let [db-file (transit-db-file db*)]
         (if (shared/file-exists? db-file)
           (let [project-analysis (with-open [is (io/input-stream db-file)]
                                    (transit/read (transit/reader is :json)))]

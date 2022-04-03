@@ -404,13 +404,13 @@
   [{:keys [textDocument]}]
   (process-after-changes
     :code-lens textDocument
-    (f.code-lens/reference-code-lens textDocument db/db*)))
+    (f.code-lens/reference-code-lens textDocument @db/db*)))
 
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
   (shared/logging-task
     :resolve-code-lens
-    (f.code-lens/resolve-code-lens text-document row col range db/db*)))
+    (f.code-lens/resolve-code-lens text-document row col range @db/db*)))
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]

@@ -105,7 +105,7 @@
         (shared/logging-task
           :refreshing-test-tree
           (doseq [uri uris]
-            (when-let [test-tree (f.test-tree/tree uri db)]
+            (when-let [test-tree (f.test-tree/tree uri @db)]
               (->> test-tree
                    (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
                    (.publishTestTree client)))))))))

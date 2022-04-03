@@ -32,11 +32,10 @@
      :kind :deftest
      :children (->testings-children local-testings)}))
 
-;; TODO: deref
 (defn tree [uri db]
   (let [filename (shared/uri->filename uri)
-        ns-element (q/find-namespace-definition-by-filename (:analysis @db) filename @db)
-        local-analysis (get-in @db [:analysis filename])
+        ns-element (q/find-namespace-definition-by-filename (:analysis db) filename db)
+        local-analysis (get-in db [:analysis filename])
         deftests (into []
                        (filter #(and (identical? :var-definitions (:bucket %))
                                      (contains? '#{clojure.test/deftest cljs.test/deftest}

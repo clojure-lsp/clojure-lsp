@@ -102,7 +102,7 @@
            (thread-last-all "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let [code new-sym]
-  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) "file:///a.clj" db/db new-sym)))
+  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) "file:///a.clj" @db/db new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
@@ -175,7 +175,7 @@
                         "     |;; comment"
                         "))")
                 (move-to-let 'x))))
-  (is (nil? (transform/move-to-let nil "file:///a.clj" db/db 'x))))
+  (is (nil? (transform/move-to-let nil "file:///a.clj" @db/db 'x))))
 
 (defn- introduce-let [code new-sym]
   (as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
@@ -225,7 +225,7 @@
   (is (nil? (transform/introduce-let nil 'b))))
 
 (defn- expand-let [code]
-  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" db/db)))
+  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" @db/db)))
 
 (deftest expand-let-test
   (testing "simple"

@@ -241,10 +241,9 @@
         (recur next-loc (or marked? exists?))
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
-;; TODO: deref
 (defn ^:private widest-scoped-local [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        analysis (:analysis @db)
+        analysis (:analysis db)
         local-defs (->> (q/find-local-usages-under-form
                           analysis
                           (shared/uri->filename uri)
@@ -252,7 +251,7 @@
                           col
                           end-row
                           end-col)
-                        (map #(q/find-definition analysis % @db)))]
+                        (map #(q/find-definition analysis % db)))]
     (reduce
       (fn [accum d]
         (if (or (not accum)

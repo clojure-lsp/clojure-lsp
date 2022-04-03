@@ -194,10 +194,10 @@
           (let [filename (shared/uri->filename uri)
                 old-local-analysis (get-in @db* [:analysis filename])]
             (if (compare-and-set! db* state-db (-> state-db
-                                                  (update-analysis uri (:analysis kondo-result))
-                                                  (update-findings uri (:findings kondo-result))
-                                                  (update :processing-changes disj uri)
-                                                  (assoc :kondo-config (:config kondo-result))))
+                                                   (update-analysis uri (:analysis kondo-result))
+                                                   (update-findings uri (:findings kondo-result))
+                                                   (update :processing-changes disj uri)
+                                                   (assoc :kondo-config (:config kondo-result))))
               (let [db @db*]
                 (f.diagnostic/sync-publish-diagnostics! uri db)
                 (when (settings/get db [:notify-references-on-file-change] true)
@@ -205,13 +205,13 @@
                 (clojure-producer/refresh-test-tree producer [uri]))
               (recur @db*))))))))
 
-(defn did-change [uri changes version db]
-  (let [old-text (get-in @db [:documents uri :text])
+(defn did-change [uri changes version db*]
+  (let [old-text (get-in @db* [:documents uri :text])
         final-text (reduce handle-change old-text changes)]
-    (swap! db (fn [state-db] (-> state-db
-                                 (assoc-in [:documents uri :v] version)
-                                 (assoc-in [:documents uri :text] final-text)
-                                 (update :processing-changes conj uri))))
+    (swap! db* (fn [state-db] (-> state-db
+                                  (assoc-in [:documents uri :v] version)
+                                  (assoc-in [:documents uri :text] final-text)
+                                  (update :processing-changes conj uri))))
     (async/>!! db/current-changes-chan {:uri uri
                                         :text final-text
                                         :version version})))

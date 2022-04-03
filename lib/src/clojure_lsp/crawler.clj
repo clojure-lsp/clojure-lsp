@@ -105,17 +105,18 @@
       (logger/error "Error when creating '.clj-kondo' dir on project-root" e))))
 
 (defn ^:private ensure-kondo-config-dir-exists!
-  [project-root-uri db]
+  [project-root-uri db*]
   (let [project-root-filename (shared/uri->filename project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
       (create-kondo-folder! clj-kondo-folder)
-      (when (db/db-exists? db)
+      (when (db/db-exists? @db*)
         (logger/info startup-logger-tag "Removing outdated cached lsp db...")
-        (db/remove-db! db)))))
+        (db/remove-db! @db*)))))
 
+;; TODO: deref
 (defn ^:private load-db-cache! [root-path db*]
-  (when-let [db-cache (db/read-cache root-path db*)]
+  (when-let [db-cache (db/read-cache root-path @db*)]
     (when-not (and (= :project-and-deps (:project-analysis-type @db*))
                    (= :project-only (:project-analysis-type db-cache)))
       (swap! db* (fn [state-db]
@@ -136,9 +137,9 @@
 
 (defn ^:private upsert-db-cache! [db*]
   (if (:api? @db*)
-    (db/upsert-cache! (build-db-cache db*) db*)
+    (db/upsert-cache! (build-db-cache db*) @db*)
     (async/go
-      (db/upsert-cache! (build-db-cache db*) db*))))
+      (db/upsert-cache! (build-db-cache db*) @db*))))
 
 (defn initialize-project
   [project-root-uri

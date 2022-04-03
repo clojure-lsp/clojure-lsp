@@ -24,8 +24,8 @@
 
 (def ^:private java-logger-tag "[Java]")
 
-(defn ^:private decompile! [^File class-file dest-path db]
-  (let [cache-path (config/cache-file db)
+(defn ^:private decompile! [^File class-file dest-path db*]
+  (let [cache-path (config/cache-file @db*)
         decompiled-file (io/file cache-path "java" "decompiled")
         class-path (.getCanonicalPath class-file)
         _ (logger/info java-logger-tag (format "Decompiling java class %s" class-path))
@@ -41,8 +41,8 @@
         (logger/warn java-logger-tag "Non-fatal error from CFR:" (str err-sym))))
     (io/file decompiled-file dest-path)))
 
-(defn ^:private copy-class-file [uri entry stream db]
-  (let [cache-path (config/cache-file db)
+(defn ^:private copy-class-file [uri entry stream db*]
+  (let [cache-path (config/cache-file @db*)
         dest-file (io/file cache-path "java" "classes" (str entry))]
     (logger/info java-logger-tag (format "Copying class URI %s to %s" uri dest-file))
     (io/make-parents dest-file)

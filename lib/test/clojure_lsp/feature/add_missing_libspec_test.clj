@@ -397,7 +397,7 @@
                    "    java.util.Date)) ;; comment")
            (-> (h/code "(ns foo.bar) |;; comment")
                (add-import-to-namespace "java.util.Date")
-               (h/changes->code db/db*))))))
+               (h/changes->code @db/db*))))))
 
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"

@@ -20,7 +20,7 @@
 
 (defn var-usages-within [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        analysis (:analysis @db)
+        analysis (:analysis db)
         defs (q/find-var-usages-under-form
                analysis
                (shared/uri->filename uri)
@@ -33,7 +33,7 @@
       defs)))
 
 (defn var-definitions-within [zloc uri db]
-  (let [analysis (:analysis @db)
+  (let [analysis (:analysis db)
         defs (q/find-var-definitions
                analysis
                (shared/uri->filename uri)
@@ -42,7 +42,6 @@
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
 
-;; TODO: deref
 (defn ^:private determine-ns-edits [local-analysis file-loc def-to-move source-ns source-refer libspec uri db]
   (let [other-source-refers (filter #(and (:refer %)
                                           (= (:to %) source-ns)
@@ -59,7 +58,7 @@
                                       local-analysis))
         remove-source-require? (and source-require (empty? other-source-usages))
         namespace-loc (edit/find-namespace file-loc)]
-    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec @db)]
+    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec db)]
       (cond-> add-to-ns-changes
         remove-source-require?
         (update-in
@@ -82,7 +81,7 @@
               (cond-> (empty? other-source-refers) (-> z/remove z/remove)))))
 
         :always
-        (->> (f.add-missing-libspec/cleaning-ns-edits uri @db)))
+        (->> (f.add-missing-libspec/cleaning-ns-edits uri db)))
       (when (or remove-source-require? source-refer)
         (->> [{:loc (cond-> namespace-loc
                       remove-source-require?
@@ -97,15 +96,16 @@
                         z/remove
                         (cond-> (empty? other-source-refers) (-> z/remove z/remove))))
                :range (meta (z/node namespace-loc))}]
-             (f.add-missing-libspec/cleaning-ns-edits uri @db))))))
+             (f.add-missing-libspec/cleaning-ns-edits uri db))))))
 
-(defn move-form [zloc uri db dest-filename]
-  (let [form-loc (edit/to-top zloc)
-        analysis (:analysis @db)
+(defn move-form [zloc uri db* dest-filename]
+  (let [db @db*
+        form-loc (edit/to-top zloc)
+        analysis (:analysis db)
         source-filename (shared/uri->filename uri)
-        source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename @db))
-        dest-filename (shared/absolute-path dest-filename @db)
-        dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename @db))
+        source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename db))
+        dest-filename (shared/absolute-path dest-filename db)
+        dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename db))
         inner-usages (var-usages-within zloc uri db)
         ;; if source-ns things are used within the form
         ;; we can't move it
@@ -122,13 +122,14 @@
                        multiple-defs?)]
     (when can-move?
       (let [def-to-move (first defs)
-            refs (q/find-references analysis def-to-move false @db)
+            refs (q/find-references analysis def-to-move false db)
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
-            per-file-usages (group-by (comp #(shared/filename->uri % @db) :filename) refs)
-            dest-uri (shared/filename->uri dest-filename @db)
-            insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db)
+            per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
+            dest-uri (shared/filename->uri dest-filename db)
+            insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db*)
                                   z/of-string
                                   z/rightmost)
+            _db @db*
             insertion-pos (meta (z/node insertion-loc))
             dest-inner-usages (->> inner-usages
                                    (filterv (comp #(= dest-ns %) :to)))
@@ -148,8 +149,9 @@
                                         (fn [file-uri usages]
                                           (let [usage (first usages)
                                                 filename (:filename usage)
-                                                file-loc (-> (f.file-management/force-get-document-text file-uri db)
+                                                file-loc (-> (f.file-management/force-get-document-text file-uri db*)
                                                              z/of-string)
+                                                db @db*
                                                 local-analysis (vec (get analysis filename))
                                                 source-refer (first (filter #(and (:refer %)
                                                                                   (= (:to %) source-ns)
@@ -161,7 +163,7 @@
                                                                             local-analysis))
                                                 namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
                                                                         (str dest-ns)
-                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri @db))
+                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri db))
                                                 suggestion (if dest-require
                                                              {:alias (str (:alias dest-require))}
                                                              (first namespace-suggestions))

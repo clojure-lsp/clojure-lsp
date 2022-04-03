@@ -57,10 +57,11 @@
       (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
         (logger/warn "Analyzis divergent from stub analysis, trying again...")
         (recur @db*)))
-    (-> (shared/uri->path (:project-root-uri @db*))
-        (db/read-cache db*)
-        (update :analysis merge analysis)
-        (db/upsert-cache! db*))))
+    (let [db @db*]
+      (-> (shared/uri->path (:project-root-uri db))
+          (db/read-cache db)
+          (update :analysis merge analysis)
+          (db/upsert-cache! db)))))
 
 (defn generate-and-analyze-stubs!
   [settings {:keys [db*] :as components}]

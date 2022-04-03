@@ -462,7 +462,7 @@
     :linked-editing-range
     (let [row (-> position :line inc)
           col (-> position :character inc)]
-      (f.linked-editing-range/ranges textDocument row col db/db*))))
+      (f.linked-editing-range/ranges textDocument row col @db/db*))))
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler

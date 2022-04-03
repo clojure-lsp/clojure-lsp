@@ -84,10 +84,10 @@
   (f.sort-map/sort-map loc))
 
 (defmethod refactor :move-coll-entry-up [{:keys [loc uri] {:keys [db]} :components}]
-  (f.move-coll-entry/move-up loc uri db))
+  (f.move-coll-entry/move-up loc uri @db))
 
 (defmethod refactor :move-coll-entry-down [{:keys [loc uri] {:keys [db]} :components}]
-  (f.move-coll-entry/move-down loc uri db))
+  (f.move-coll-entry/move-down loc uri @db))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc args))

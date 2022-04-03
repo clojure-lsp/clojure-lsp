@@ -67,7 +67,7 @@
                     (f.file-management/reference-filenames "/src/b.clj"
                                                            analysis-before
                                                            analysis-after
-                                                           db/db)))))
+                                                           @db/db)))))
       ;; increasing
       #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
                               "(def x)"
@@ -123,7 +123,7 @@
                     (f.file-management/reference-filenames "/src/a.clj"
                                                            analysis-before
                                                            analysis-after
-                                                           db/db)))))
+                                                           @db/db)))))
       ;; remove existing
       #{"/src/b.clj"} (h/code "(ns a)"
                               "(def b)")

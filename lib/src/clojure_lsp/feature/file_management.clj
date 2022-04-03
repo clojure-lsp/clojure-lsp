@@ -93,8 +93,8 @@
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
         project-analysis (into {}
-                               (q/filter-project-analysis-xf @db)
-                               (dissoc (:analysis @db) filename)) ;; don't notify self
+                               (q/filter-project-analysis-xf db)
+                               (dissoc (:analysis db) filename)) ;; don't notify self
         incoming-filenames (when (seq changed-var-definitions)
                              (let [def-signs (->> changed-var-definitions
                                                   (map q/var-definition-signatures)
@@ -133,7 +133,7 @@
       :notify-references
       (let [filenames (shared/logging-task
                         :reference-files/find
-                        (reference-filenames filename old-local-analysis new-local-analysis db))]
+                        (reference-filenames filename old-local-analysis new-local-analysis @db))]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task
@@ -199,11 +199,10 @@
                                                   (update-findings uri (:findings kondo-result))
                                                   (update :processing-changes disj uri)
                                                   (assoc :kondo-config (:config kondo-result))))
-              ;; TODO: deref
-              (do
-                (f.diagnostic/sync-publish-diagnostics! uri @db)
-                (when (settings/get @db [:notify-references-on-file-change] true)
-                  (notify-references filename old-local-analysis (get-in @db [:analysis filename]) components))
+              (let [db @db]
+                (f.diagnostic/sync-publish-diagnostics! uri db)
+                (when (settings/get db [:notify-references-on-file-change] true)
+                  (notify-references filename old-local-analysis (get-in db [:analysis filename]) components))
                 (clojure-producer/refresh-test-tree producer [uri]))
               (recur @db))))))))
 

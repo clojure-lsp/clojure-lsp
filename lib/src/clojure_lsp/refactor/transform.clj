@@ -397,6 +397,7 @@
           (recur (first (expand-let loc false uri db)) current-edit)
           (some-> previous-edit vector))))))
 
+;; TODO: deref
 (defn extract-function
   [zloc uri fn-name db]
   (when-let [zloc (or (z/skip-whitespace z/right zloc)

@@ -30,6 +30,7 @@
         :same-line
         :next-line)))
 
+;; TODO: deref
 (defn cleaning-ns-edits [uri db edits]
   (if (settings/get @db [:clean :automatically-after-ns-refactor] true)
     (->> edits
@@ -39,7 +40,7 @@
                   (some-> loc
                           z/root-string
                           z/of-string
-                          (f.clean-ns/clean-ns-edits uri db)
+                          (f.clean-ns/clean-ns-edits uri @db)
                           first
                           (assoc :range range))
                   edit)))

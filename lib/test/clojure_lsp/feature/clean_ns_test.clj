@@ -20,7 +20,7 @@
    (h/load-code-and-locs input-code (h/file-uri uri))
    (let [zloc (when in-form
                 (-> (z/of-string input-code) z/down z/right z/right))
-         [{:keys [loc range]}] (f.clean-ns/clean-ns-edits zloc (h/file-uri uri) db/db)]
+         [{:keys [loc range]}] (f.clean-ns/clean-ns-edits zloc (h/file-uri uri) @db/db)]
      (is (some? range))
      (is (= expected-code
             (z/root-string loc))))))

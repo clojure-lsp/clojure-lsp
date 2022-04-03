@@ -12,16 +12,14 @@
 
 (set! *warn-on-reflection* true)
 
-;; TODO: deref
 (defn ^:private resolve-ns-inner-blocks-identation [db]
-  (or (settings/get @db [:clean :ns-inner-blocks-indentation])
-      (if (settings/get @db [:keep-require-at-start?])
+  (or (settings/get db [:clean :ns-inner-blocks-indentation])
+      (if (settings/get db [:keep-require-at-start?])
         :same-line
         :next-line)))
 
-;; TODO: deref
 (defn ^:private sort-by-if-enabled [fn type db coll]
-  (if-let [sort-type (settings/get @db [:clean :sort type] true)]
+  (if-let [sort-type (settings/get db [:clean :sort type] true)]
     (if (= :lexicographically sort-type)
       (sort-by str coll)
       (sort-by fn coll))
@@ -148,7 +146,7 @@
                                            (interpose 1)
                                            (reduce + 0)
                                            (+ init-refer-sep (-> refer-node n/sexpr str count)))
-                              max-line-length (settings/get @db [:clean :sort :refer :max-line-length] 80)]
+                              max-line-length (settings/get db [:clean :sort :refer :max-line-length] 80)]
                           (if (and max-line-length
                                    (> max-line-length 0))
                             (let [lines-n (if (> (quot end-col max-line-length) 0)
@@ -200,7 +198,7 @@
                          (z/find-next-value ':as)
                          z/right
                          z/sexpr)]
-    (let [local-analysis (get-in @db [:analysis filename])
+    (let [local-analysis (get-in db [:analysis filename])
           used-alias? (some #(and (= :var-usages (:bucket %))
                                   (= alias (:alias %)))
                             local-analysis)]
@@ -349,12 +347,12 @@
 
 (defn clean-ns-edits
   [zloc uri db]
-  (let [settings (settings/all @db)
+  (let [settings (settings/all db)
         ;; TODO: use parser?
-        safe-loc (or zloc (z/of-string (get-in @db [:documents uri :text])))
+        safe-loc (or zloc (z/of-string (get-in db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)
-        analysis (:analysis @db)
-        findings (:findings @db)]
+        analysis (:analysis db)
+        findings (:findings db)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             filename (shared/uri->filename uri)

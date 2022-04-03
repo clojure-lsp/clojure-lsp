@@ -29,7 +29,7 @@
   (f.add-missing-libspec/add-missing-import loc uri nil db))
 
 (defmethod refactor :clean-ns [{:keys [loc uri] {:keys [db]} :components}]
-  (f.clean-ns/clean-ns-edits loc uri db))
+  (f.clean-ns/clean-ns-edits loc uri @db))
 
 (defmethod refactor :cycle-coll [{:keys [loc]}]
   (r.transform/cycle-coll loc))

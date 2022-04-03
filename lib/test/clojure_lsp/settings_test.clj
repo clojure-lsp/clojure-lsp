@@ -37,12 +37,12 @@
     (is (= #{:foo} (settings/parse-source-aliases [:foo b])))))
 
 (deftest all-test
-  (swap! db/db shared/deep-merge {:settings {:a {:b {:c 2}}}})
-  (is (= {:a {:b {:c 2}}} (settings/all @db/db))))
+  (swap! db/db* shared/deep-merge {:settings {:a {:b {:c 2}}}})
+  (is (= {:a {:b {:c 2}}} (settings/all @db/db*))))
 
 (deftest get-test
-  (swap! db/db shared/deep-merge {:settings {:a {:b {:c 2}}}})
-  (is (= 2 (settings/get @db/db [:a :b :c])))
-  (is (= {:c 2} (settings/get @db/db [:a :b])))
-  (is (= {:b {:c 2}} (settings/get @db/db [:a])))
-  (is (= 10 (settings/get @db/db [:d] 10))))
+  (swap! db/db* shared/deep-merge {:settings {:a {:b {:c 2}}}})
+  (is (= 2 (settings/get @db/db* [:a :b :c])))
+  (is (= {:c 2} (settings/get @db/db* [:a :b])))
+  (is (= {:b {:c 2}} (settings/get @db/db* [:a])))
+  (is (= 10 (settings/get @db/db* [:d] 10))))

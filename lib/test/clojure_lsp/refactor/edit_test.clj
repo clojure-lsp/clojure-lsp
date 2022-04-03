@@ -104,7 +104,7 @@
   (h/load-code-and-locs code)
   (let [zloc (-> code z/of-string (z/find-next-value z/next 'd))]
     (is (= "foo"
-           (z/string (edit/find-var-definition-name-loc zloc "/a.clj" @db/db))))))
+           (z/string (edit/find-var-definition-name-loc zloc "/a.clj" @db/db*))))))
 
 (deftest find-function-definition-name
   (testing "defn"

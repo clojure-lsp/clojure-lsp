@@ -10,10 +10,10 @@
 (h/reset-db-after-test)
 
 (defn can-move-zloc-up? [zloc]
-  (f.move-coll-entry/can-move-entry-up? zloc h/default-uri @db/db))
+  (f.move-coll-entry/can-move-entry-up? zloc h/default-uri @db/db*))
 
 (defn can-move-zloc-down? [zloc]
-  (f.move-coll-entry/can-move-entry-down? zloc h/default-uri @db/db))
+  (f.move-coll-entry/can-move-entry-down? zloc h/default-uri @db/db*))
 
 (defn can-move-code-up? [code]
   (can-move-zloc-up? (h/load-code-and-zloc code)))
@@ -211,10 +211,10 @@
       (is (not (can-move-code-down? (h/code "(are [] (= 1 1) |1 2)")))))))
 
 (defn move-zloc-up [zloc]
-  (f.move-coll-entry/move-up zloc h/default-uri @db/db))
+  (f.move-coll-entry/move-up zloc h/default-uri @db/db*))
 
 (defn move-zloc-down [zloc]
-  (f.move-coll-entry/move-down zloc h/default-uri @db/db))
+  (f.move-coll-entry/move-down zloc h/default-uri @db/db*))
 
 (defn move-code-up [code]
   (move-zloc-up (h/load-code-and-zloc code)))

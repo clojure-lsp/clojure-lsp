@@ -54,7 +54,7 @@
 (defn ^:private show-message-cli [options {:keys [message extra type]}]
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
   (when (and (= :error type)
-             (settings/get @db/db [:api :exit-on-errors?] true))
+             (settings/get @db/db* [:api :exit-on-errors?] true))
     (throw (ex-info message {:result-code 1 :message extra}))))
 
 (defrecord APIProducer [options]
@@ -85,7 +85,7 @@
 
 (defn ^:private build-components [options]
   (components/->components
-    db/db
+    db/db*
     (doto (->CLILogger options)
       (logger/setup))
     (->APIProducer options)))

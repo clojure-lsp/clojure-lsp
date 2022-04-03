@@ -196,7 +196,7 @@
 
 (defn run-server! []
   (let [producer* (atom nil)
-        db db/db
+        db db/db*
         timbre-logger (doto (->TimbreLogger db)
                         (logger/setup))
         _ (logger/info lsp/server-logger-tag "Starting server...")

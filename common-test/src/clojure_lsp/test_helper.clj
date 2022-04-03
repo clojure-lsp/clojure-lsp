@@ -65,7 +65,7 @@
 
 (def components
   (components/->components
-    db/db
+    db/db*
     (->TestLogger)
     (->TestProducer)))
 
@@ -73,7 +73,7 @@
   ([]
    (clean-db! :unit-test))
   ([env]
-   (reset! db/db (assoc db/initial-db
+   (reset! db/db* (assoc db/initial-db
                         :env env
                         :producer (:producer components)))
    (reset! mock-diagnostics {})
@@ -180,7 +180,7 @@
    (let [[[row col] :as positions] (load-code-and-locs code uri)]
      (let [position-count (count positions)]
        (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-     (-> (parser/zloc-of-file @db/db uri)
+     (-> (parser/zloc-of-file @db/db* uri)
          (parser/to-pos row col)))))
 
 (defn zloc-from-code

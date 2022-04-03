@@ -15,28 +15,28 @@
       (handlers/initialize "file:///c%3A/project/root" {} {} nil h/components))
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
-           (get-in @db/db [:settings :uri-format]))))
+           (get-in @db/db* [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
     (h/clean-db!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
       (handlers/initialize "file:///C:/project/root" {} {} nil h/components))
     (is (= {:encode-colons-in-path?   false
             :upper-case-drive-letter? true}
-           (get-in @db/db [:settings :uri-format])))))
+           (get-in @db/db* [:settings :uri-format])))))
 
 (deftest did-open
   (testing "opening a existing file"
     (h/clean-db!)
     (h/with-mock-diagnostics
       (let [_ (h/load-code-and-locs "(ns a) (when)")]
-        (is (some? (get-in @db/db [:analysis (h/file-path "/a.clj")])))
+        (is (some? (get-in @db/db* [:analysis (h/file-path "/a.clj")])))
         (h/assert-submaps
           [{:code "missing-body-in-when"}
            {:code "invalid-arity"}]
           (get @h/mock-diagnostics "file:///a.clj")))))
   (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! db/db* merge {:settings {:auto-add-ns-to-new-files? true
                                    :source-paths #{(h/file-path "/project/src")}}
                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                         :project-root-uri (h/file-uri "file:///project")})
@@ -47,17 +47,17 @@
                             :end {:line 999998, :character 999998}}
                     :new-text "(ns foo.bar)"}]}]
          (:document-changes %)))
-    (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/bar.clj")]))))
+    (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/bar.clj")]))))
   (testing "opening a new edn file not adding the ns"
     (h/clean-db!)
-    (swap! db/db merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! db/db* merge {:settings {:auto-add-ns-to-new-files? true
                                    :source-paths #{(h/file-path "/project/src")}}
                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                         :project-root-uri (h/file-uri "file:///project")})
     (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
     (h/edits
       #(is (= [] (:document-changes %))))
-    (is (some? (get-in @db/db [:analysis (h/file-path "/project/src/foo/baz.edn")])))))
+    (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/baz.edn")])))))
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1)"
@@ -232,14 +232,14 @@
                                           :range {:start {:line 2 :character 10}}}]}
                  :range {:start {:line 2 :character 10}}}))))
   (testing "without workspace edit client capability"
-    (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit false}}})
+    (swap! db/db* merge {:client-capabilities {:workspace {:workspace-edit false}}})
     (is (not-any? #(= (:title %) "Clean namespace")
                   (handlers/code-actions
                     {:textDocument (h/file-uri "file:///b.clj")
                      :context {:diagnostics []}
                      :range {:start {:line 1 :character 1}}}))))
   (testing "with workspace edit client capability"
-    (swap! db/db merge {:client-capabilities {:workspace {:workspace-edit true}}})
+    (swap! db/db* merge {:client-capabilities {:workspace {:workspace-edit true}}})
     (is (some #(= (:title %) "Clean namespace")
               (handlers/code-actions
                 {:textDocument (h/file-uri "file:///b.clj")

@@ -57,7 +57,7 @@
            ~(with-meta
               `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
               (meta &form))
-           (if (contains? (:processing-changes @db/db) ~uri)
+           (if (contains? (:processing-changes @db/db*) ~uri)
              (do
                (Thread/sleep ~backoff-sym)
                (recur (min backoff-max (* backoff-mult ~backoff-sym))))
@@ -125,7 +125,7 @@
   nil)
 
 (defn did-save [{:keys [textDocument]}]
-  (f.file-management/did-save textDocument db/db))
+  (f.file-management/did-save textDocument db/db*))
 
 ;; TODO wait for lsp4j release
 #_(defn did-delete-files [{:keys [textDocument]}]
@@ -133,13 +133,13 @@
       (swap! db/db #(update % :documents dissoc textDocument))))
 
 (defn did-change [{:keys [textDocument contentChanges]}]
-  (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db))
+  (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db*))
 
 (defn did-close [{:keys [textDocument]}]
-  (f.file-management/did-close textDocument db/db))
+  (f.file-management/did-close textDocument db/db*))
 
 (defn did-change-watched-files [{:keys [changes]}]
-  (f.file-management/did-change-watched-files changes db/db))
+  (f.file-management/did-change-watched-files changes db/db*))
 
 (defn completion [{:keys [textDocument position]}]
   (shared/logging-results
@@ -147,7 +147,7 @@
     count
     (let [row (-> position :line inc)
           col (-> position :character inc)]
-      (f.completion/completion textDocument row col db/db))))
+      (f.completion/completion textDocument row col db/db*))))
 
 ;; TODO: deref
 (defn references [{:keys [textDocument position context]} {:keys [db] :as components}]
@@ -171,13 +171,13 @@
   (shared/logging-task
     :prepare-rename
     (let [[row col] (shared/position->line-column position)]
-      (f.rename/prepare-rename textDocument row col db/db))))
+      (f.rename/prepare-rename textDocument row col db/db*))))
 
 (defn rename [{:keys [textDocument position newName]}]
   (shared/logging-task
     :rename
     (let [[row col] (shared/position->line-column position)]
-      (f.rename/rename textDocument newName row col db/db))))
+      (f.rename/rename textDocument newName row col db/db*))))
 
 ;; TODO: deref
 (defn definition [{:keys [textDocument position]} {:keys [db] :as components}]
@@ -217,7 +217,7 @@
   (shared/logging-task
     :document-symbol
     (let [filename (shared/uri->filename textDocument)
-          analysis (:analysis @db/db)
+          analysis (:analysis @db/db*)
           namespace-definition (->> (get analysis filename)
                                     (q/find-first (comp #{:namespace-definitions} :bucket)))]
       [{:name (or (some-> namespace-definition :name name)
@@ -245,8 +245,8 @@
     (let [line (-> position :line inc)
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
-          scoped-analysis (select-keys (:analysis @db/db) [filename])
-          references (q/find-references-from-cursor scoped-analysis filename line column true @db/db)]
+          scoped-analysis (select-keys (:analysis @db/db*) [filename])
+          references (q/find-references-from-cursor scoped-analysis filename line column true @db/db*)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -254,10 +254,10 @@
 (defn workspace-symbols [{:keys [query]}]
   (shared/logging-task
     :workspace-symbol
-    (f.workspace-symbols/workspace-symbols query db/db)))
+    (f.workspace-symbols/workspace-symbols query db/db*)))
 
 (defn ^:private server-info []
-  (let [db-value @db/db]
+  (let [db-value @db/db*]
     {:project-root-uri (:project-root-uri db-value)
      :project-settings (:project-settings db-value)
      :classpath-settings (:classpath-settings db-value)
@@ -265,7 +265,7 @@
      :client-settings (:client-settings db-value)
      :final-settings (settings/all db-value)
      :cljfmt-raw (binding [*print-meta* true]
-                   (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db))))
+                   (with-out-str (pr (f.format/resolve-user-cljfmt-config db/db*))))
      :port (or (:port db-value)
                "NREPL only available on :debug profile (`make debug-cli`)")
      :server-version (shared/clojure-lsp-version)
@@ -284,13 +284,13 @@
 (def server-info-raw #'server-info)
 
 (defn ^:private cursor-info [[doc-id line character]]
-  (let [analysis (:analysis @db/db)
+  (let [analysis (:analysis @db/db*)
         elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))]
     (shared/assoc-some {}
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}
-                                           :definition (q/find-definition analysis e @db/db)
+                                           :definition (q/find-definition analysis e @db/db*)
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
@@ -363,12 +363,12 @@
   (shared/logging-task
     :signature-help
     (let [[line column] (shared/position->line-column position)]
-      (f.signature-help/signature-help textDocument line column db/db))))
+      (f.signature-help/signature-help textDocument line column db/db*))))
 
 (defn formatting [{:keys [textDocument]}]
   (shared/logging-task
     :formatting
-    (f.format/formatting textDocument db/db)))
+    (f.format/formatting textDocument db/db*)))
 
 (defn range-formatting [{:keys [textDocument range]}]
   (process-after-changes
@@ -379,7 +379,7 @@
                       :col (inc (:character start))
                       :end-row (inc (:line end))
                       :end-col (inc (:character end))}]
-      (f.format/range-formatting textDocument format-pos db/db))))
+      (f.format/range-formatting textDocument format-pos db/db*))))
 
 (defn dependency-contents [doc-id components]
   (shared/logging-task
@@ -390,7 +390,7 @@
   [{:keys [range context textDocument]}]
   (process-after-changes
     :code-actions textDocument
-    (let [db @db/db
+    (let [db @db/db*
           diagnostics (-> context :diagnostics)
           line (-> range :start :line)
           character (-> range :start :character)
@@ -404,19 +404,19 @@
   [{:keys [textDocument]}]
   (process-after-changes
     :code-lens textDocument
-    (f.code-lens/reference-code-lens textDocument db/db)))
+    (f.code-lens/reference-code-lens textDocument db/db*)))
 
 (defn code-lens-resolve
   [{[text-document row col] :data range :range}]
   (shared/logging-task
     :resolve-code-lens
-    (f.code-lens/resolve-code-lens text-document row col range db/db)))
+    (f.code-lens/resolve-code-lens text-document row col range db/db*)))
 
 (defn semantic-tokens-full
   [{:keys [textDocument]}]
   (process-after-changes
     :semantic-tokens-full textDocument
-    (let [data (f.semantic-tokens/full-tokens textDocument db/db)]
+    (let [data (f.semantic-tokens/full-tokens textDocument db/db*)]
       {:data data})))
 
 (defn semantic-tokens-range
@@ -427,7 +427,7 @@
                  :name-col (inc (:character start))
                  :name-end-row (inc (:line end))
                  :name-end-col (inc (:character end))}
-          data (f.semantic-tokens/range-tokens textDocument range db/db)]
+          data (f.semantic-tokens/range-tokens textDocument range db/db*)]
       {:data data})))
 
 (defn prepare-call-hierarchy
@@ -436,7 +436,7 @@
     :prepare-call-hierarchy
     (f.call-hierarchy/prepare textDocument
                               (inc (:line position))
-                              (inc (:character position)) db/db)))
+                              (inc (:character position)) db/db*)))
 
 (defn call-hierarchy-incoming
   [{:keys [item]}]
@@ -445,7 +445,7 @@
     (let [uri (:uri item)
           row (inc (-> item :range :start :line))
           col (inc (-> item :range :start :character))]
-      (f.call-hierarchy/incoming uri row col db/db))))
+      (f.call-hierarchy/incoming uri row col db/db*))))
 
 (defn call-hierarchy-outgoing
   [{:keys [item]}]
@@ -454,7 +454,7 @@
     (let [uri (:uri item)
           row (inc (-> item :range :start :line))
           col (inc (-> item :range :start :character))]
-      (f.call-hierarchy/outgoing uri row col db/db))))
+      (f.call-hierarchy/outgoing uri row col db/db*))))
 
 (defn linked-editing-ranges
   [{:keys [textDocument position]}]
@@ -462,7 +462,7 @@
     :linked-editing-range
     (let [row (-> position :line inc)
           col (-> position :character inc)]
-      (f.linked-editing-range/ranges textDocument row col db/db))))
+      (f.linked-editing-range/ranges textDocument row col db/db*))))
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler

@@ -242,30 +242,31 @@
              :command   "resolve-macro-as"
              :arguments [uri row col]}})
 
-(defn all [root-zloc uri row col diagnostics client-capabilities db]
-  (let [zloc (parser/to-pos root-zloc row col)
+(defn all [root-zloc uri row col diagnostics client-capabilities db*]
+  (let [db @db*
+        zloc (parser/to-pos root-zloc row col)
         line (dec row)
         character (dec col)
         resolvable-diagnostics (resolvable-diagnostics diagnostics root-zloc)
         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
         inside-function?* (future (r.transform/find-function-form zloc))
         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
-        public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
+        public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db*))
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
-        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
+        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db*))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
-        missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
+        missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db*))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
-        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
+        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db*))
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
-        allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db))
-        allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db))
+        allow-move-entry-up?* (future (f.move-coll-entry/can-move-entry-up? zloc uri db*))
+        allow-move-entry-down?* (future (f.move-coll-entry/can-move-entry-down? zloc uri db*))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
-        definition (q/find-definition-from-cursor (:analysis @db) (shared/uri->filename uri) row col @db)
-        inline-symbol?* (future (r.transform/inline-symbol? definition db))
+        definition (q/find-definition-from-cursor (:analysis @db*) (shared/uri->filename uri) row col @db*)
+        inline-symbol?* (future (r.transform/inline-symbol? definition db*))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []

@@ -832,10 +832,9 @@
          :changes-by-uri {test-uri [{:loc test-zloc
                                      :range (-> test-zloc z/node meta)}]}}))))
 
-;; TODO: deref
 (defn can-create-test? [zloc uri db]
-  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) @db)]
-    (let [source-paths (settings/get @db [:source-paths])]
+  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) db)]
+    (let [source-paths (settings/get db [:source-paths])]
       (when-let [current-source-path (->> source-paths
                                           (filter #(and (string/starts-with? (shared/uri->filename uri) %)
                                                         (not (string/includes? % "test"))))
@@ -847,7 +846,7 @@
 (defn create-test [zloc uri {:keys [db producer]}]
   (when-let [{:keys [source-paths
                      current-source-path
-                     function-name-loc]} (can-create-test? zloc uri db)]
+                     function-name-loc]} (can-create-test? zloc uri @db)]
     (let [test-source-paths (remove #(= current-source-path %) source-paths)]
       (cond
         (= 1 (count test-source-paths))

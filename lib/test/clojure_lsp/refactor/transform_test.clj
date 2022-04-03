@@ -773,7 +773,7 @@
               :function-name-loc "bar"}
              (update (transform/can-create-test? zloc
                                                  "file:///project/src/foo.clj"
-                                                 db/db)
+                                                 @db/db)
                      :function-name-loc z/string))))))
 
 (deftest create-test-test

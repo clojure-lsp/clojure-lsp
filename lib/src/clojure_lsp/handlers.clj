@@ -86,33 +86,35 @@
    client-capabilities
    client-settings
    work-done-token
-   {:keys [db] :as components}]
+   {:keys [db producer] :as components}]
   (shared/logging-task
     :initialize
     (swap! db assoc :project-analysis-type :project-and-deps)
-    (when project-root-uri
-      (crawler/initialize-project
-        project-root-uri
-        client-capabilities
-        client-settings
-        {}
-        work-done-token
-        components)
-      (when (settings/get db [:lint-project-files-after-startup?] true)
+    (if project-root-uri
+      (do
+        (crawler/initialize-project
+          project-root-uri
+          client-capabilities
+          client-settings
+          {}
+          work-done-token
+          components)
+        (when (settings/get db [:lint-project-files-after-startup?] true)
+          (async/go
+            (f.diagnostic/publish-all-diagnostics! (-> @db :settings :source-paths) db)))
         (async/go
-          (f.diagnostic/publish-all-diagnostics! (-> @db :settings :source-paths) db)))
-      (async/go
-        (f.clojuredocs/refresh-cache! components))
-      (async/go
-        (let [settings (:settings @db)]
-          (when (stubs/check-stubs? settings)
-            (stubs/generate-and-analyze-stubs! settings components))))
-      (async/go
-        (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-        (analyze-test-paths! components))
-      (when (settings/get db [:java] true)
+          (f.clojuredocs/refresh-cache! components))
         (async/go
-          (f.java-interop/retrieve-jdk-source-and-analyze! components))))))
+          (let [settings (:settings @db)]
+            (when (stubs/check-stubs? settings)
+              (stubs/generate-and-analyze-stubs! settings components))))
+        (async/go
+          (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+          (analyze-test-paths! components))
+        (when (settings/get db [:java] true)
+          (async/go
+            (f.java-interop/retrieve-jdk-source-and-analyze! components))))
+      (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warn nil))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db]}]
   (let [uri (:uri textDocument)

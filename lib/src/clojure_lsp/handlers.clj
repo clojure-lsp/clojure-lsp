@@ -146,16 +146,17 @@
   (shared/logging-results
     (str :completion " %s - total items: %s")
     count
-    (let [row (-> position :line inc)
+    (let [db @db/db*
+          row (-> position :line inc)
           col (-> position :character inc)]
-      (f.completion/completion textDocument row col @db/db*))))
+      (f.completion/completion textDocument row col db))))
 
 (defn references [{:keys [textDocument position context]} {:keys [db*]}]
   (shared/logging-task
     :references
-    (let [row (-> position :line inc)
-          col (-> position :character inc)
-          db @db*]
+    (let [db @db*
+          row (-> position :line inc)
+          col (-> position :character inc)]
       (mapv (fn [reference]
               {:uri (-> (:filename reference)
                         (shared/filename->uri db)
@@ -183,8 +184,8 @@
 (defn definition [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :definition
-    (let [[line column] (shared/position->line-column position)
-          db @db*]
+    (let [db @db*
+          [line column] (shared/position->line-column position)]
       (when-let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename textDocument) line column db)]
         {:uri (-> (:filename definition)
                   (shared/filename->uri db)
@@ -194,8 +195,8 @@
 (defn declaration [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :declaration
-    (let [[line column] (shared/position->line-column position)
-          db @db*]
+    (let [db @db*
+          [line column] (shared/position->line-column position)]
       (when-let [declaration (q/find-declaration-from-cursor (:analysis db) (shared/uri->filename textDocument) line column db)]
         {:uri (-> (:filename declaration)
                   (shared/filename->uri db)
@@ -205,8 +206,8 @@
 (defn implementation [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :implementation
-    (let [[row col] (shared/position->line-column position)
-          db @db*]
+    (let [db @db*
+          [row col] (shared/position->line-column position)]
       (mapv (fn [implementation]
               {:uri (-> (:filename implementation)
                         (shared/filename->uri db)

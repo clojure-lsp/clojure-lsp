@@ -836,7 +836,7 @@
          :current-source-path current-source-path
          :function-name-loc function-name-loc}))))
 
-(defn create-test [zloc uri db producer]
+(defn create-test [zloc uri db {:keys [producer]}]
   (when-let [{:keys [source-paths
                      current-source-path
                      function-name-loc]} (can-create-test? zloc uri db)]

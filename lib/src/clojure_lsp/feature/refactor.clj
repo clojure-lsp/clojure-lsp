@@ -94,8 +94,8 @@
 (defmethod refactor :create-function [{:keys [loc uri db]}]
   (r.transform/create-function loc uri db))
 
-(defmethod refactor :create-test [{:keys [loc uri db] {:keys [producer]} :components}]
-  (r.transform/create-test loc uri db producer))
+(defmethod refactor :create-test [{:keys [loc uri db components]}]
+  (r.transform/create-test loc uri db components))
 
 (defmethod refactor :move-form [{:keys [loc uri args db]}]
   (apply f.move-form/move-form loc uri db args))

@@ -780,11 +780,11 @@
   (testing "when only one available source-path besides current"
     (testing "when the test file doesn't exists for clj file"
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                      :project-root-uri (h/file-uri "file:///project")})
+                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" @(:db* h/components) (:producer h/components))
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" @db/db* h/components)
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
@@ -804,11 +804,11 @@
           results-to-assert)))
     (testing "when the test file doesn't exists for cljs file"
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                      :project-root-uri (h/file-uri "file:///project")})
+                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.cljs")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" @(:db* h/components) (:producer h/components))
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" @db/db* h/components)
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
@@ -828,9 +828,9 @@
           results-to-assert)))
     (testing "when the test file exists for clj file"
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                 (h/file-path "/project/test")}}
-                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                      :project-root-uri (h/file-uri "file:///project")})
+                                                                  (h/file-path "/project/test")}}
+                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                       :project-root-uri (h/file-uri "file:///project")})
       (let [test-code (h/code "(ns some.ns-test)"
                               "(deftest some-other-test)")]
         (with-redefs [shared/file-exists? (constantly true)
@@ -838,7 +838,7 @@
           (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")
-                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" @(:db* h/components) (:producer h/components))
+                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" @db/db* h/components)
                 results-to-assert (update-map changes-by-uri h/with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
@@ -850,11 +850,11 @@
               results-to-assert)))))
     (testing "when the current source path is already a test"
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                      :project-root-uri (h/file-uri "file:///project")})
+                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                       :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns-test) (deftest |foo [b] (+ 1 2))"
                                        "file:///project/test/some/ns_test.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" @(:db* h/components) (:producer h/components))]
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" @db/db* h/components)]
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
 

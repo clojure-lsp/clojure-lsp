@@ -216,13 +216,13 @@
                                         :text final-text
                                         :version version})))
 
-(defn analyze-watched-created-files! [uris {:keys [db* producer] :as components}]
+(defn analyze-watched-created-files! [uris {:keys [db* producer]}]
   (shared/logging-task
     :analyze-created-files-in-watched-dir
     (let [filenames (map shared/uri->filename uris)
           result (shared/logging-time
                    "Created watched files analyzed, took %s"
-                   (lsp.kondo/run-kondo-on-paths! filenames false components))
+                   (lsp.kondo/run-kondo-on-paths! filenames false db*))
           analysis (->> (:analysis result)
                         lsp.kondo/normalize-analysis
                         (group-by :filename))]

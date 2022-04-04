@@ -233,25 +233,25 @@
                            :canonical-paths true}}}
         (with-additional-config (settings/all db)))))
 
-(defn run-kondo-on-paths! [paths external-analysis-only? {:keys [db*]}]
+(defn run-kondo-on-paths! [paths external-analysis-only? db*]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
     (kondo/run! (kondo-for-paths paths db* external-analysis-only?))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
-  [paths public-only? update-callback components]
+  [paths public-only? update-callback db*]
   (let [total (count paths)
         batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
     (logger/info (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
     (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths public-only? components)
+      (run-kondo-on-paths! paths public-only? db*)
       (->> paths
            (partition-all clj-kondo-analysis-batch-size)
            (map-indexed (fn [index batch-paths]
                           (logger/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
                           (update-callback (inc index) batch-count)
-                          (run-kondo-on-paths! batch-paths public-only? components)))
+                          (run-kondo-on-paths! batch-paths public-only? db*)))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db*]
@@ -262,9 +262,9 @@
   (catch-kondo-errors (shared/uri->filename uri)
     (with-in-str text (kondo/run! (kondo-for-single-file uri db*)))))
 
-(defn run-kondo-copy-configs! [paths {:keys [db*]}]
+(defn run-kondo-copy-configs! [paths db]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
-    (kondo/run! (kondo-copy-configs paths @db*))))
+    (kondo/run! (kondo-copy-configs paths db))))
 
 (defn run-kondo-on-jdk-source! [path]
   (catch-kondo-errors (str "path " path)

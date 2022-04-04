@@ -23,10 +23,10 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-source-paths! [paths {:keys [db*] :as components}]
+(defn ^:private analyze-source-paths! [paths {:keys [db*]}]
   (let [result (shared/logging-time
                  (str startup-logger-tag " Project only paths analyzed, took %s")
-                 (lsp.kondo/run-kondo-on-paths! paths false components))
+                 (lsp.kondo/run-kondo-on-paths! paths false db*))
         analysis (->> (:analysis result)
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
@@ -47,11 +47,11 @@
       progress-token)))
 
 (defn ^:private analyze-external-classpath!
-  [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db* producer] :as components}]
+  [paths start-progress-percentage fulfill-progress-percentage progress-token {:keys [db* producer]}]
   (let [batch-update-callback (partial report-batch-analysis-percentage start-progress-percentage fulfill-progress-percentage progress-token producer)
         result (shared/logging-time
                  "External classpath paths analyzed, took %s. Caching for next startups..."
-                 (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback components))
+                 (lsp.kondo/run-kondo-on-paths-batch! paths true batch-update-callback db*))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages)
                            (update :var-definitions (fn [usages] (remove :private usages))))
@@ -89,13 +89,13 @@
           (System/gc))
         (swap! db* assoc :full-scan-analysis-startup true)))))
 
-(defn ^:private copy-configs-from-classpath! [classpath settings components]
+(defn ^:private copy-configs-from-classpath! [classpath settings db]
   (when (get settings :copy-kondo-configs? true)
     (logger/info "Copying kondo configs from classpath to project if any...")
     (when classpath
       (shared/logging-time
         "Copied kondo configs, took %s secs."
-        (lsp.kondo/run-kondo-copy-configs! classpath components)))))
+        (lsp.kondo/run-kondo-copy-configs! classpath db)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
@@ -192,7 +192,7 @@
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
             (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
-            (copy-configs-from-classpath! classpath settings components)
+            (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
               (analyze-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components)))
           (upsert-db-cache! @db*))))

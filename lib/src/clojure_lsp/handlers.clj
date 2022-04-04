@@ -217,8 +217,9 @@
 (defn document-symbol [{:keys [textDocument]}]
   (shared/logging-task
     :document-symbol
-    (let [filename (shared/uri->filename textDocument)
-          analysis (:analysis @db/db*)
+    (let [db @db/db*
+          filename (shared/uri->filename textDocument)
+          analysis (:analysis db)
           namespace-definition (->> (get analysis filename)
                                     (q/find-first (comp #{:namespace-definitions} :bucket)))]
       [{:name (or (some-> namespace-definition :name name)
@@ -243,11 +244,12 @@
 (defn document-highlight [{:keys [textDocument position]}]
   (process-after-changes
     :document-highlight textDocument
-    (let [line (-> position :line inc)
+    (let [db @db/db*
+          line (-> position :line inc)
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
-          scoped-analysis (select-keys (:analysis @db/db*) [filename])
-          references (q/find-references-from-cursor scoped-analysis filename line column true @db/db*)]
+          scoped-analysis (select-keys (:analysis db) [filename])
+          references (q/find-references-from-cursor scoped-analysis filename line column true db)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -285,13 +287,14 @@
 (def server-info-raw #'server-info)
 
 (defn ^:private cursor-info [[doc-id line character]]
-  (let [analysis (:analysis @db/db*)
+  (let [db @db/db*
+        analysis (:analysis db)
         elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))]
     (shared/assoc-some {}
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}
-                                           :definition (q/find-definition analysis e @db/db*)
+                                           :definition (q/find-definition analysis e db)
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
@@ -315,9 +318,9 @@
     (f.clojuredocs/find-docs-for symName symNs components)))
 
 (defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db*] :as components}]
-  (let [row (inc (int line))
+  (let [db @db*
+        row (inc (int line))
         col (inc (int character))
-        db @db*
         ;; TODO Instead of v=0 should I send a change AND a document change
         v (get-in db [:documents doc-id :v] 0)
         loc (some-> (parser/zloc-of-file db doc-id)
@@ -375,13 +378,14 @@
 (defn range-formatting [{:keys [textDocument range]}]
   (process-after-changes
     :range-formatting textDocument
-    (let [start (:start range)
+    (let [db @db/db*
+          start (:start range)
           end (:end range)
           format-pos {:row (inc (:line start))
                       :col (inc (:character start))
                       :end-row (inc (:line end))
                       :end-col (inc (:character end))}]
-      (f.format/range-formatting textDocument format-pos @db/db*))))
+      (f.format/range-formatting textDocument format-pos db))))
 
 (defn dependency-contents [doc-id {:keys [db*]}]
   (shared/logging-task
@@ -425,11 +429,12 @@
   [{:keys [textDocument] {:keys [start end]} :range}]
   (process-after-changes
     :semantic-tokens-range textDocument
-    (let [range {:name-row (inc (:line start))
+    (let [db @db/db*
+          range {:name-row (inc (:line start))
                  :name-col (inc (:character start))
                  :name-end-row (inc (:line end))
                  :name-end-col (inc (:character end))}
-          data (f.semantic-tokens/range-tokens textDocument range @db/db*)]
+          data (f.semantic-tokens/range-tokens textDocument range db)]
       {:data data})))
 
 (defn prepare-call-hierarchy
@@ -462,9 +467,10 @@
   [{:keys [textDocument position]}]
   (shared/logging-task
     :linked-editing-range
-    (let [row (-> position :line inc)
+    (let [db @db/db*
+          row (-> position :line inc)
           col (-> position :character inc)]
-      (f.linked-editing-range/ranges textDocument row col @db/db*))))
+      (f.linked-editing-range/ranges textDocument row col db))))
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler

@@ -44,10 +44,10 @@
        :message (str "Error: " e)})))
 
 (defn ^:private analyze-stubs!
-  [dirs {:keys [db*] :as components}]
+  [dirs {:keys [db*]}]
   (let [result (shared/logging-time
                  "Stubs analyzed, took %s."
-                 (lsp.kondo/run-kondo-on-paths! dirs true components))
+                 (lsp.kondo/run-kondo-on-paths! dirs true db*))
         kondo-analysis (-> (:analysis result)
                            (dissoc :namespace-usages :var-usages))
         analysis (->> kondo-analysis

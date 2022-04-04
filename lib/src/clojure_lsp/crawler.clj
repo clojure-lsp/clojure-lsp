@@ -68,9 +68,11 @@
                       (group-by :filename))
         empty-findings (reduce (fn [map filename] (assoc map filename [])) {} filenames)
         new-findings (merge empty-findings (group-by :filename (:findings result)))]
-    (swap! db* update :analysis merge analysis)
-    (swap! db* assoc :kondo-config (:config result))
-    (swap! db* update :findings merge new-findings)
+    (swap! db* (fn [db]
+                 (-> db
+                     (update :analysis merge analysis)
+                     (assoc :kondo-config (:config result))
+                     (update :findings merge new-findings))))
     analysis))
 
 (defn ^:private analyze-classpath! [root-path source-paths classpath settings progress-token {:keys [db*] :as components}]

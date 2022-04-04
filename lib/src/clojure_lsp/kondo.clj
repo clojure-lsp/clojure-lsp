@@ -149,8 +149,8 @@
 (defn ^:private custom-lint-file!
   [{:keys [analysis config] :as kondo-ctx} uri db*]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
-    (let [filename (-> analysis :var-definitions first :filename)
-          db @db*
+    (let [db @db*
+          filename (-> analysis :var-definitions first :filename)
           updated-analysis (assoc (:analysis db) filename (normalize-analysis analysis))]
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
@@ -160,8 +160,9 @@
               (do
                 (Thread/sleep 50)
                 (recur (inc tries)))
-              (let [old-findings (get-in @db* [:findings filename])
-                    new-findings (f.diagnostic/custom-lint-file-merging-findings! filename updated-analysis kondo-ctx @db*)]
+              (let [db @db*
+                    old-findings (get-in db [:findings filename])
+                    new-findings (f.diagnostic/custom-lint-file-merging-findings! filename updated-analysis kondo-ctx db)]
                 ;; This equality check doesn't seem necessary, but it helps
                 ;; avoid an infinite loop. See
                 ;; https://github.com/clojure-lsp/clojure-lsp/issues/796#issuecomment-1065830737
@@ -209,9 +210,9 @@
    :config {:output {:analysis {:java-class-definitions true}
                      :canonical-paths true}}})
 
-(defn kondo-for-reference-filenames [filenames db]
-  (-> (kondo-for-paths filenames db false)
-      (assoc :custom-lint-fn (partial custom-lint-files! filenames db))))
+(defn kondo-for-reference-filenames [filenames db*]
+  (-> (kondo-for-paths filenames db* false)
+      (assoc :custom-lint-fn (partial custom-lint-files! filenames db*))))
 
 (defn kondo-for-single-file [uri db*]
   (let [db @db*]

@@ -326,6 +326,7 @@
         loc (some-> (parser/zloc-of-file db doc-id)
                     (parser/to-pos row col))]
     (f.refactor/call-refactor {:refactoring (keyword refactoring)
+                               :db          db
                                :loc         loc
                                :uri         doc-id
                                :row         row

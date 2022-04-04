@@ -359,7 +359,7 @@
                (producer/show-document-request producer)))
         edit))))
 
-(defn hover [{:keys [textDocument position]} {:keys [db*] :as components}]
+(defn hover [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :hover
     (let [[line column] (shared/position->line-column position)

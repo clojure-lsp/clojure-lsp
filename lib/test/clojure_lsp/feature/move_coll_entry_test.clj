@@ -4,7 +4,8 @@
    [clojure-lsp.feature.move-coll-entry :as f.move-coll-entry]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [clojure-lsp.shared :as shared]))
 
 (h/reset-db-after-test)
 
@@ -46,6 +47,7 @@
     (is (not (can-move-code-up? "{:a |:b :c :d}")))
     (is (not (can-move-code-up? "(let [|a 1 c 2])")))
     (is (not (can-move-code-up? "(let [a |1 c 2])")))
+    (is (not (can-move-code-up? "|(def a) (def b)")))
     (testing "of special functions"
       ;; from rind of cond
       (is (not (can-move-code-up? "(|cond a 1 b 2)")))
@@ -106,7 +108,18 @@
       (is (not (can-move-code-up? (h/code "(condp some [1 2 3 4]"
                                           "  #{0 6 7} :>> inc"
                                           "  |#{4 5 9} :>> dec"
-                                          "  :else :invalid)")))))))
+                                          "  :else :invalid)"))))
+      ;; from rind of are
+      (is (not (can-move-code-up? (h/code "(|are [x] (= x 1) 1)"))))
+      (is (not (can-move-code-up? (h/code "(are |[x] (= x 1) 1)"))))
+      (is (not (can-move-code-up? (h/code "(are [x] |(= x 1) 1)"))))
+      ;; from first group of are
+      (is (not (can-move-code-up? (h/code "(are [expected x] (= expected x) |1 2 3 4)"))))
+      (is (not (can-move-code-up? (h/code "(are [expected x] (= expected x) 1 |2 3 4)"))))
+      ;; from unbalanced are
+      (is (not (can-move-code-up? (h/code "(are [expected x] (= expected x) 1 2 |3 4 5)"))))
+      ;; from invalid are
+      (is (not (can-move-code-up? (h/code "(are [] (= 1 1) 1 |2)")))))))
 
 ;; These are only the negative cases, proving when move-down is NOT offered in
 ;; the actions menu. The positive cases are all tested indirectly via
@@ -133,6 +146,7 @@
     (is (not (can-move-code-down? "{:a :b :c |:d}")))
     (is (not (can-move-code-down? "(let [a 1 |c 2])")))
     (is (not (can-move-code-down? "(let [a 1 c |2])")))
+    (is (not (can-move-code-down? "(def a) |(def b)")))
     (testing "of special functions"
       ;; from rind of cond
       (is (not (can-move-code-down? "(|cond a 1 b 2)")))
@@ -183,7 +197,18 @@
       (is (not (can-move-code-down? "(condp = x a 1 b |2)")))
       (is (not (can-move-code-down? (h/code "(condp some [1 2 3 4]"
                                             "  |#{4 5 9} :>> dec"
-                                            "  :else)")))))))
+                                            "  :else)"))))
+      ;; from rind of are
+      (is (not (can-move-code-down? (h/code "(|are [x] (= x 1) 1)"))))
+      (is (not (can-move-code-down? (h/code "(are |[x] (= x 1) 1)"))))
+      (is (not (can-move-code-down? (h/code "(are [x] |(= x 1) 1)"))))
+      ;; from last group of are
+      (is (not (can-move-code-down? (h/code "(are [expected x] (= expected x) 1 2 |3 4)"))))
+      (is (not (can-move-code-down? (h/code "(are [expected x] (= expected x) 1 2 3 |4)"))))
+      ;; from unbalanced are
+      (is (not (can-move-code-down? (h/code "(are [expected x] (= expected x) |1 2 3 4 5)"))))
+      ;; from invalid are
+      (is (not (can-move-code-down? (h/code "(are [] (= 1 1) |1 2)")))))))
 
 (defn move-zloc-up [zloc]
   (f.move-coll-entry/move-up zloc h/default-uri @db/db))
@@ -204,6 +229,13 @@
           first
           :loc
           z/root-string))
+
+(defn- as-range [change]
+  (some-> change
+          :changes-by-uri
+          (get h/default-uri)
+          first
+          :range))
 
 (defn- as-position [change]
   (when-let [{:keys [row col end-row end-col]} (some-> change
@@ -303,7 +335,18 @@
                             "     ~@form))"
                             "(foo [a 1"
                             "      |b 2]"
-                            "  (inc a))")))
+                            "  (inc a))"))
+    (assert-move-up (h/code "|(def b) (def a)")
+                    (h/code "(def a) |(def b)"))
+    (assert-move-up (h/code "|(def b) (def a) (def c)")
+                    (h/code "(def a) |(def b) (def c)"))
+    (is (= ;; preferrably would be:
+          #_{:row 1 :col 1
+             :end-row 2 :end-col 8}
+          shared/full-file-position
+          (as-range
+            (move-code-up (h/code "(def a)"
+                                  "|(def b)"))))))
   (testing "within special functions"
     (assert-move-up (h/code "(cond |b 2 a 1)")
                     (h/code "(cond a 1 |b 2)"))
@@ -428,7 +471,13 @@
                     (h/code "(condp some [1 2 3 4]"
                             "  #{0 6 7} :>> inc"
                             "  #{4 5 9} :>> |dec"
-                            "  :else)")))
+                            "  :else)"))
+    (assert-move-up (h/code "(are [x] (= x 1) |2 1)")
+                    (h/code "(are [x] (= x 1) 1 |2)"))
+    (assert-move-up (h/code "(are [expected x] (= expected x) |3 4 1 2)")
+                    (h/code "(are [expected x] (= expected x) 1 2 |3 4)"))
+    (assert-move-up (h/code "(are [expected x] (= expected x) |3 4 1 2)")
+                    (h/code "(are [expected x] (= expected x) 1 2 3 |4)")))
   (testing "with destructuring"
     (assert-move-up (h/code "(let [[a b] [1 2]"
                             "      |e 2"
@@ -678,7 +727,18 @@
                               "     ~@form))"
                               "(foo [|a 1"
                               "      b 2]"
-                              "  (inc a))")))
+                              "  (inc a))"))
+    (assert-move-down (h/code "(def b) |(def a)")
+                      (h/code "|(def a) (def b)"))
+    (assert-move-down (h/code "(def a) (def c) |(def b)")
+                      (h/code "(def a) |(def b) (def c)"))
+    (is (= ;; preferrably would be:
+          #_{:row 1 :col 1
+             :end-row 2 :end-col 8}
+          shared/full-file-position
+          (as-range
+            (move-code-down (h/code "|(def a)"
+                                    "(def b)"))))))
   (testing "within special functions"
     (assert-move-down (h/code "(cond b 2 |a 1)")
                       (h/code "(cond |a 1 b 2)"))
@@ -801,7 +861,13 @@
                       (h/code "(condp some [1 2 3 4]"
                               "  #{0 6 7} :>> |inc"
                               "  #{4 5 9} :>> dec"
-                              "  :else)")))
+                              "  :else)"))
+    (assert-move-down (h/code "(are [x] (= x 1) 2 |1)")
+                      (h/code "(are [x] (= x 1) |1 2)"))
+    (assert-move-down (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
+                      (h/code "(are [expected x] (= expected x) |1 2 3 4)"))
+    (assert-move-down (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
+                      (h/code "(are [expected x] (= expected x) 1 |2 3 4)")))
   (testing "with destructuring"
     (assert-move-down (h/code "(let [[a b] [1 2]"
                               "      {:keys [c d]} {:c 1 :d 2}"

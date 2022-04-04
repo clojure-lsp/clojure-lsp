@@ -212,8 +212,8 @@
                  (not (identical? :namespace-alias (:bucket element))))
           (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
             (swap! db* (fn [db] (-> db
-                                   (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
-                                   (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
+                                    (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
+                                    (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
             (shared/client-changes (concat doc-changes
                                            [{:kind "rename"
                                              :old-uri uri

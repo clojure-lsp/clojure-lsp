@@ -453,14 +453,14 @@
                       (merging-snippets cursor-loc next-loc matches-fn settings)))]
         (sorting-and-distincting-items items)))))
 
-;; TODO: deref
 (defn ^:private resolve-item-by-ns
   [{{:keys [name ns filename]} :data :as item} {:keys [db*] :as components}]
-  (let [analysis (:analysis @db*)
+  (let [db @db*
+        analysis (:analysis db)
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
                                                 :to (symbol ns)
-                                                :bucket :var-usages} @db*)]
+                                                :bucket :var-usages} db)]
     (if definition
       (-> item
           (assoc :documentation (f.hover/hover-documentation definition components)))
@@ -468,7 +468,8 @@
 
 (defn ^:private resolve-item-by-definition
   [{{:keys [name filename name-row name-col]} :data :as item} {:keys [db*] :as components}]
-  (let [local-analysis (get-in @db* [:analysis filename])
+  (let [db @db*
+        local-analysis (get-in db [:analysis filename])
         definition (q/find-first #(and (identical? :var-definitions (:bucket %))
                                        (= name (str (:name %)))
                                        (= name-row (:name-row %))

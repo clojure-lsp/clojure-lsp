@@ -48,7 +48,7 @@
        flatten
        (reduce str)))
 
-(defn ^:private lookup-classpath [root-path {:keys [classpath-cmd env]} {:keys [producer]}]
+(defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]} {:keys [producer]}]
   (let [command (string/join " " classpath-cmd)]
     (logger/info (format "Finding classpath via `%s`" command))
     (try
@@ -75,12 +75,12 @@
         (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
         []))))
 
-;; TODO: deref
 (defn scan-classpath! [{:keys [db*] :as components}]
-  (let [root-path (shared/uri->path (:project-root-uri @db*))]
-    (->> (settings/get @db* [:project-specs])
+  (let [db @db*
+        root-path (shared/uri->path (:project-root-uri db))]
+    (->> (settings/get db [:project-specs])
          (filter (partial valid-project-spec? root-path))
-         (mapcat #(lookup-classpath root-path % components))
+         (mapcat #(lookup-classpath! root-path % components))
          vec
          seq)))
 

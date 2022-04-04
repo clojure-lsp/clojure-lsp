@@ -71,15 +71,15 @@
                   (meta &form))
                result#)))))))
 
-;; TODO: deref
 (defn ^:private analyze-test-paths! [{:keys [db* producer]}]
-  (let [project-files (into #{}
+  (let [db @db*
+        project-files (into #{}
                             (comp
-                              (q/filter-project-analysis-xf @db*)
+                              (q/filter-project-analysis-xf db)
                               (map key))
-                            (:analysis @db*))]
+                            (:analysis db))]
     (->> project-files
-         (map #(shared/filename->uri % @db*))
+         (map #(shared/filename->uri % db))
          (clojure-producer/refresh-test-tree producer))))
 
 (defn initialize
@@ -100,21 +100,22 @@
           {}
           work-done-token
           components)
-        (when (settings/get @db* [:lint-project-files-after-startup?] true)
+        (let [db @db*]
+          (when (settings/get db [:lint-project-files-after-startup?] true)
+            (async/go
+              (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db)))
           (async/go
-            (f.diagnostic/publish-all-diagnostics! (-> @db* :settings :source-paths) @db*)))
-        (async/go
-          (f.clojuredocs/refresh-cache! components))
-        (async/go
-          (let [settings (:settings @db*)]
-            (when (stubs/check-stubs? settings)
-              (stubs/generate-and-analyze-stubs! settings components))))
-        (async/go
-          (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-          (analyze-test-paths! components))
-        (when (settings/get @db* [:java] true)
+            (f.clojuredocs/refresh-cache! components))
           (async/go
-            (f.java-interop/retrieve-jdk-source-and-analyze! components))))
+            (let [settings (:settings db)]
+              (when (stubs/check-stubs? settings)
+                (stubs/generate-and-analyze-stubs! settings components))))
+          (async/go
+            (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+            (analyze-test-paths! components))
+          (when (settings/get db [:java] true)
+            (async/go
+              (f.java-interop/retrieve-jdk-source-and-analyze! components)))))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warn nil))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db*]}]
@@ -149,18 +150,18 @@
           col (-> position :character inc)]
       (f.completion/completion textDocument row col @db/db*))))
 
-;; TODO: deref
-(defn references [{:keys [textDocument position context]} {:keys [db*] :as components}]
+(defn references [{:keys [textDocument position context]} {:keys [db*]}]
   (shared/logging-task
     :references
     (let [row (-> position :line inc)
-          col (-> position :character inc)]
+          col (-> position :character inc)
+          db @db*]
       (mapv (fn [reference]
               {:uri (-> (:filename reference)
-                        (shared/filename->uri @db*)
-                        (f.java-interop/uri->translated-uri components))
+                        (shared/filename->uri db)
+                        (f.java-interop/uri->translated-uri db))
                :range (shared/->range reference)})
-            (q/find-references-from-cursor (:analysis @db*) (shared/uri->filename textDocument) row col (:includeDeclaration context) @db*)))))
+            (q/find-references-from-cursor (:analysis db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db)))))
 
 (defn completion-resolve-item [item components]
   (shared/logging-task
@@ -179,39 +180,39 @@
     (let [[row col] (shared/position->line-column position)]
       (f.rename/rename textDocument newName row col db/db*))))
 
-;; TODO: deref
-(defn definition [{:keys [textDocument position]} {:keys [db*] :as components}]
+(defn definition [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :definition
-    (let [[line column] (shared/position->line-column position)]
-      (when-let [definition (q/find-definition-from-cursor (:analysis @db*) (shared/uri->filename textDocument) line column @db*)]
+    (let [[line column] (shared/position->line-column position)
+          db @db*]
+      (when-let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename textDocument) line column db)]
         {:uri (-> (:filename definition)
-                  (shared/filename->uri @db*)
-                  (f.java-interop/uri->translated-uri components))
+                  (shared/filename->uri db)
+                  (f.java-interop/uri->translated-uri db))
          :range (shared/->range definition)}))))
 
-;; TODO: deref
-(defn declaration [{:keys [textDocument position]} {:keys [db*] :as components}]
+(defn declaration [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :declaration
-    (let [[line column] (shared/position->line-column position)]
-      (when-let [declaration (q/find-declaration-from-cursor (:analysis @db*) (shared/uri->filename textDocument) line column @db*)]
+    (let [[line column] (shared/position->line-column position)
+          db @db*]
+      (when-let [declaration (q/find-declaration-from-cursor (:analysis db) (shared/uri->filename textDocument) line column db)]
         {:uri (-> (:filename declaration)
-                  (shared/filename->uri @db*)
-                  (f.java-interop/uri->translated-uri components))
+                  (shared/filename->uri db)
+                  (f.java-interop/uri->translated-uri db))
          :range (shared/->range declaration)}))))
 
-;; TODO: deref
-(defn implementation [{:keys [textDocument position]} {:keys [db*] :as components}]
+(defn implementation [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :implementation
-    (let [[row col] (shared/position->line-column position)]
+    (let [[row col] (shared/position->line-column position)
+          db @db*]
       (mapv (fn [implementation]
               {:uri (-> (:filename implementation)
-                        (shared/filename->uri @db*)
-                        (f.java-interop/uri->translated-uri components))
+                        (shared/filename->uri db)
+                        (f.java-interop/uri->translated-uri db))
                :range (shared/->range implementation)})
-            (q/find-implementations-from-cursor (:analysis @db*) (shared/uri->filename textDocument) row col @db*)))))
+            (q/find-implementations-from-cursor (:analysis db) (shared/uri->filename textDocument) row col db)))))
 
 (defn document-symbol [{:keys [textDocument]}]
   (shared/logging-task
@@ -316,9 +317,10 @@
 (defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db*] :as components}]
   (let [row (inc (int line))
         col (inc (int character))
+        db @db*
         ;; TODO Instead of v=0 should I send a change AND a document change
-        v (get-in @db* [:documents doc-id :v] 0)
-        loc (some-> (parser/zloc-of-file @db* doc-id)
+        v (get-in db [:documents doc-id :v] 0)
+        loc (some-> (parser/zloc-of-file db doc-id)
                     (parser/to-pos row col))]
     (f.refactor/call-refactor {:refactoring (keyword refactoring)
                                :loc         loc
@@ -381,10 +383,10 @@
                       :end-col (inc (:character end))}]
       (f.format/range-formatting textDocument format-pos @db/db*))))
 
-(defn dependency-contents [doc-id components]
+(defn dependency-contents [doc-id {:keys [db*]}]
   (shared/logging-task
     :dependency-contents
-    (f.java-interop/read-content! doc-id components)))
+    (f.java-interop/read-content! doc-id @db*)))
 
 (defn code-actions
   [{:keys [range context textDocument]}]

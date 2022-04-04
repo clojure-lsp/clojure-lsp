@@ -24,8 +24,8 @@
 
 (def ^:private java-logger-tag "[Java]")
 
-(defn ^:private decompile! [^File class-file dest-path db*]
-  (let [cache-path (config/cache-file @db*)
+(defn ^:private decompile! [^File class-file dest-path db]
+  (let [cache-path (config/cache-file db)
         decompiled-file (io/file cache-path "java" "decompiled")
         class-path (.getCanonicalPath class-file)
         _ (logger/info java-logger-tag (format "Decompiling java class %s" class-path))
@@ -41,18 +41,18 @@
         (logger/warn java-logger-tag "Non-fatal error from CFR:" (str err-sym))))
     (io/file decompiled-file dest-path)))
 
-(defn ^:private copy-class-file [uri entry stream db*]
-  (let [cache-path (config/cache-file @db*)
+(defn ^:private copy-class-file [uri entry stream db]
+  (let [cache-path (config/cache-file db)
         dest-file (io/file cache-path "java" "classes" (str entry))]
     (logger/info java-logger-tag (format "Copying class URI %s to %s" uri dest-file))
     (io/make-parents dest-file)
     (io/copy stream dest-file)
     dest-file))
 
-(defn ^:private uri->translated-file [uri {:keys [db*]}]
+(defn ^:private uri->translated-file [uri db]
   ;; TODO consider local class files not from jar
   (if (shared/jar-file? uri)
-    (let [jar-uri (shared/ensure-jarfile uri @db*)]
+    (let [jar-uri (shared/ensure-jarfile uri db)]
       (if (shared/class-file? jar-uri)
         ;; TODO zipfile doesn't work with URL
         (let [url (URL. jar-uri)
@@ -60,18 +60,18 @@
               jar (.getJarFile connection)
               entry (.getJarEntry connection)]
           (with-open [stream (.getInputStream jar entry)]
-            (let [file (copy-class-file jar-uri entry stream db*)
+            (let [file (copy-class-file jar-uri entry stream db)
                   dest-file (string/replace (str entry) #".class$" ".java")
-                  decompiled-file ^File (decompile! file dest-file db*)]
-              (shared/filename->uri (.getCanonicalPath decompiled-file) @db*))))
+                  decompiled-file ^File (decompile! file dest-file db)]
+              (shared/filename->uri (.getCanonicalPath decompiled-file) db))))
         jar-uri))
     uri))
 
-(defn uri->translated-uri [uri components]
-  (uri->translated-file uri components))
+(defn uri->translated-uri [uri db]
+  (uri->translated-file uri db))
 
-(defn read-content! [uri components]
-  (slurp (uri->translated-file uri components)))
+(defn read-content! [uri db]
+  (slurp (uri->translated-file uri db)))
 
 (def ^:private jdk-source-zip-filename "src.zip")
 
@@ -193,13 +193,14 @@
 
   Otherwise, we download default OpenJDK source if setting is enabled."
   [{:keys [db*]}]
-  (let [jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
+  (let [db @db*
+        jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
         jdk-result-file (io/file jdk-dir-file "result")
         installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
                                       (slurp jdk-result-file))
-        custom-jdk-source-uri (settings/get @db* [:java :jdk-source-uri])
+        custom-jdk-source-uri (settings/get db [:java :jdk-source-uri])
         local-jdk-source-file* (delay (find-local-jdk-source))
-        download-jdk-source? (settings/get @db* [:java :download-jdk-source?] false)
+        download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
         {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
                                                      installed-jdk-source-uri
                                                      custom-jdk-source-uri
@@ -214,13 +215,13 @@
       (do
         (logger/info java-logger-tag (format "Automatically found local JDK source zip at %s, extracting to global LSP cache dir..." jdk-zip-file))
         (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
-        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) @db*)))
+        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
 
       :manual-local-jdk
       (do
         (logger/info java-logger-tag (format "Using provided local JDK source URI %s, extracting to global LSP cache dir..." jdk-zip-file))
         (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
-        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) @db*)))
+        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
 
       :download-jdk
       (do

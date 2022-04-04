@@ -130,28 +130,29 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-;; TODO: deref
 (defn ^:private custom-lint-project!
   [db* {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
-    (let [new-analysis (group-by :filename (normalize-analysis analysis))]
-      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx @db*))))
+    (let [db @db*
+          new-analysis (group-by :filename (normalize-analysis analysis))]
+      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx db))))
 
-;; TODO: deref
 (defn ^:private custom-lint-files!
   [files db* {:keys [analysis] :as kondo-ctx}]
   (shared/logging-task
     :reference-files/lint
-    (let [new-analysis (group-by :filename (normalize-analysis analysis))
-          updated-analysis (merge (:analysis @db*) new-analysis)]
-      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx @db*))))
+    (let [db @db*
+          new-analysis (group-by :filename (normalize-analysis analysis))
+          updated-analysis (merge (:analysis db) new-analysis)]
+      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx db))))
 
 (defn ^:private custom-lint-file!
   [{:keys [analysis config] :as kondo-ctx} uri db*]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [filename (-> analysis :var-definitions first :filename)
-          updated-analysis (assoc (:analysis @db*) filename (normalize-analysis analysis))]
-      (if (settings/get @db* [:linters :clj-kondo :async-custom-lint?] false)
+          db @db*
+          updated-analysis (assoc (:analysis db) filename (normalize-analysis analysis))]
+      (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
           (if (>= tries 200)
             (logger/info "Max tries reached when async custom linting" uri)
@@ -176,30 +177,30 @@
                   (swap! db* assoc-in [:findings filename] new-findings))
                 (when (not= :unknown (shared/uri->file-type uri))
                   (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
-        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx @db*)))))
+        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx db)))))
 
 (defn kondo-for-paths [paths db* external-analysis-only?]
-  (-> {:cache true
-       :parallel true
-       :copy-configs (settings/get @db* [:copy-kondo-configs?] true)
-       :lint [(string/join (System/getProperty "path.separator") paths)]
-       :config {:output {:analysis {:arglists true
-                                    :locals false
-                                    :keywords true
-                                    :protocol-impls true
-                                    :java-class-definitions true}
-                         :canonical-paths true}}}
-      (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
-                                                (partial custom-lint-project! db*)))
-      (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
-      (with-additional-config (settings/all @db*))))
+  (let [db @db*]
+    (-> {:cache true
+         :parallel true
+         :copy-configs (settings/get db [:copy-kondo-configs?] true)
+         :lint [(string/join (System/getProperty "path.separator") paths)]
+         :config {:output {:analysis {:arglists true
+                                      :locals false
+                                      :keywords true
+                                      :protocol-impls true
+                                      :java-class-definitions true}
+                           :canonical-paths true}}}
+        (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
+                                                  (partial custom-lint-project! db*)))
+        (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
+        (with-additional-config (settings/all db)))))
 
-;; TODO: deref
-(defn kondo-copy-configs [paths db*]
+(defn kondo-copy-configs [paths db]
   {:cache true
    :parallel true
    :skip-lint true
-   :copy-configs (settings/get @db* [:copy-kondo-configs?] true)
+   :copy-configs (settings/get db [:copy-kondo-configs?] true)
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:canonical-paths true}}})
 
@@ -213,23 +214,24 @@
       (assoc :custom-lint-fn (partial custom-lint-files! filenames db))))
 
 (defn kondo-for-single-file [uri db*]
-  (-> {:cache true
-       :lint ["-"]
-       :copy-configs (settings/get @db* [:copy-kondo-configs?] true)
-       :lang (shared/uri->file-type uri)
-       :filename (shared/uri->filename uri)
-       :config-dir (project-config-dir (:project-root-uri @db*))
-       :custom-lint-fn #(custom-lint-file! % uri db*)
-       :config {:output {:analysis {:arglists true
-                                    :locals true
-                                    :keywords true
-                                    :protocol-impls true
-                                    :java-class-definitions true
-                                    :java-class-usages true
-                                    :context [:clojure.test
-                                              :re-frame.core]}
-                         :canonical-paths true}}}
-      (with-additional-config (settings/all @db*))))
+  (let [db @db*]
+    (-> {:cache true
+         :lint ["-"]
+         :copy-configs (settings/get db [:copy-kondo-configs?] true)
+         :lang (shared/uri->file-type uri)
+         :filename (shared/uri->filename uri)
+         :config-dir (project-config-dir (:project-root-uri db))
+         :custom-lint-fn #(custom-lint-file! % uri db*)
+         :config {:output {:analysis {:arglists true
+                                      :locals true
+                                      :keywords true
+                                      :protocol-impls true
+                                      :java-class-definitions true
+                                      :java-class-usages true
+                                      :context [:clojure.test
+                                                :re-frame.core]}
+                           :canonical-paths true}}}
+        (with-additional-config (settings/all db)))))
 
 (defn run-kondo-on-paths! [paths external-analysis-only? {:keys [db*]}]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
@@ -262,7 +264,7 @@
 
 (defn run-kondo-copy-configs! [paths {:keys [db*]}]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
-    (kondo/run! (kondo-copy-configs paths db*))))
+    (kondo/run! (kondo-copy-configs paths @db*))))
 
 (defn run-kondo-on-jdk-source! [path]
   (catch-kondo-errors (str "path " path)

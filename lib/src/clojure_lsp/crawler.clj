@@ -105,41 +105,40 @@
       (logger/error "Error when creating '.clj-kondo' dir on project-root" e))))
 
 (defn ^:private ensure-kondo-config-dir-exists!
-  [project-root-uri db*]
+  [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
       (create-kondo-folder! clj-kondo-folder)
-      (when (db/db-exists? @db*)
+      (when (db/db-exists? db)
         (logger/info startup-logger-tag "Removing outdated cached lsp db...")
-        (db/remove-db! @db*)))))
+        (db/remove-db! db)))))
 
-;; TODO: deref
 (defn ^:private load-db-cache! [root-path db*]
-  (when-let [db-cache (db/read-cache root-path @db*)]
-    (when-not (and (= :project-and-deps (:project-analysis-type @db*))
-                   (= :project-only (:project-analysis-type db-cache)))
-      (swap! db* (fn [state-db]
-                   (-> state-db
-                       (update :analysis merge (:analysis db-cache))
-                       (assoc :classpath (:classpath db-cache)
-                              :project-hash (:project-hash db-cache)
-                              :kondo-config-hash (:kondo-config-hash db-cache)
-                              :stubs-generation-namespaces (:stubs-generation-namespaces db-cache))))))))
+  (let [db @db*]
+    (when-let [db-cache (db/read-cache root-path db)]
+      (when-not (and (= :project-and-deps (:project-analysis-type db))
+                     (= :project-only (:project-analysis-type db-cache)))
+        (swap! db* (fn [state-db]
+                     (-> state-db
+                         (update :analysis merge (:analysis db-cache))
+                         (assoc :classpath (:classpath db-cache)
+                                :project-hash (:project-hash db-cache)
+                                :kondo-config-hash (:kondo-config-hash db-cache)
+                                :stubs-generation-namespaces (:stubs-generation-namespaces db-cache)))))))))
 
-;; TODO: deref
-(defn ^:private build-db-cache [db*]
-  (-> @db*
+(defn ^:private build-db-cache [db]
+  (-> db
       (select-keys [:project-hash :kondo-config-hash :project-analysis-type :classpath :analysis])
-      (merge {:stubs-generation-namespaces (->> @db* :settings :stubs :generation :namespaces (map str) set)
+      (merge {:stubs-generation-namespaces (->> db :settings :stubs :generation :namespaces (map str) set)
               :version db/version
-              :project-root (str (shared/uri->path (:project-root-uri @db*)))})))
+              :project-root (str (shared/uri->path (:project-root-uri db)))})))
 
-(defn ^:private upsert-db-cache! [db*]
-  (if (:api? @db*)
-    (db/upsert-cache! (build-db-cache db*) @db*)
+(defn ^:private upsert-db-cache! [db]
+  (if (:api? db)
+    (db/upsert-cache! (build-db-cache db) db)
     (async/go
-      (db/upsert-cache! (build-db-cache db*) @db*))))
+      (db/upsert-cache! (build-db-cache db) db))))
 
 (defn initialize-project
   [project-root-uri
@@ -172,7 +171,7 @@
            :settings settings
            :client-capabilities client-capabilities)
     (producer/publish-progress producer 5 "Finding kondo config" progress-token)
-    (ensure-kondo-config-dir-exists! project-root-uri db*)
+    (ensure-kondo-config-dir-exists! project-root-uri @db*)
     (producer/publish-progress producer 10 "Finding cache" progress-token)
     (load-db-cache! root-path db*)
     (let [project-hash (classpath/project-specs->hash root-path settings)
@@ -196,7 +195,7 @@
             (copy-configs-from-classpath! classpath settings components)
             (when (= :project-and-deps (:project-analysis-type @db*))
               (analyze-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components)))
-          (upsert-db-cache! db*))))
+          (upsert-db-cache! @db*))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                        (:classpath @db*)

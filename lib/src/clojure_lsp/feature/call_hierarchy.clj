@@ -34,7 +34,8 @@
      :selection-range (shared/->range usage-element)}))
 
 (defn prepare [uri row col db*]
-  (let [cursor-element (q/find-element-under-cursor (:analysis @db*) (shared/uri->filename uri) row col)]
+  (let [db @db*
+        cursor-element (q/find-element-under-cursor (:analysis db) (shared/uri->filename uri) row col)]
     [(element-by-uri->call-hierarchy-item
        {:uri uri
         :usage-element cursor-element
@@ -47,12 +48,13 @@
         zloc (some-> (f.file-management/force-get-document-text uri db*)
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos name-row name-col))
-        parent-zloc (edit/find-var-definition-name-loc zloc filename @db*)]
+        db @db*
+        parent-zloc (edit/find-var-definition-name-loc zloc filename db)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
          :usage-element element
-         :parent-element (q/find-element-under-cursor (:analysis @db*) filename parent-row parent-col)}))))
+         :parent-element (q/find-element-under-cursor (:analysis db) filename parent-row parent-col)}))))
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]

@@ -23,7 +23,7 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-source-paths! [paths {:keys [db*]}]
+(defn ^:private analyze-source-paths! [paths db*]
   (let [result (shared/logging-time
                  (str startup-logger-tag " Project only paths analyzed, took %s")
                  (lsp.kondo/run-kondo-on-paths! paths false db*))
@@ -208,6 +208,6 @@
              :classpath-settings classpath-settings))
     (producer/publish-progress producer 95 "Analyzing project files" progress-token)
     (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
-    (analyze-source-paths! (-> @db* :settings :source-paths) components)
+    (analyze-source-paths! (-> @db* :settings :source-paths) db*)
     (swap! db* assoc :settings-auto-refresh? true)
     (producer/publish-progress producer 100 "Project analyzed" progress-token)))

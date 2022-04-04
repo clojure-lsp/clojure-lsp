@@ -454,7 +454,7 @@
         (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns
-  [{{:keys [name ns filename]} :data :as item} {:keys [db*] :as components}]
+  [{{:keys [name ns filename]} :data :as item} db*]
   (let [db @db*
         analysis (:analysis db)
         definition (q/find-definition analysis {:filename filename
@@ -463,11 +463,11 @@
                                                 :bucket :var-usages} db)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition components)))
+          (assoc :documentation (f.hover/hover-documentation definition db*)))
       item)))
 
 (defn ^:private resolve-item-by-definition
-  [{{:keys [name filename name-row name-col]} :data :as item} {:keys [db*] :as components}]
+  [{{:keys [name filename name-row name-col]} :data :as item} db*]
   (let [db @db*
         local-analysis (get-in db [:analysis filename])
         definition (q/find-first #(and (identical? :var-definitions (:bucket %))
@@ -476,10 +476,10 @@
                                        (= name-col (:name-col %))) local-analysis)]
     (if definition
       (-> item
-          (assoc :documentation (f.hover/hover-documentation definition components)))
+          (assoc :documentation (f.hover/hover-documentation definition db*)))
       item)))
 
-(defn resolve-item [{{:keys [ns]} :data :as item} components]
+(defn resolve-item [{{:keys [ns]} :data :as item} db*]
   (let [item (shared/assoc-some item
                                 :insert-text-format (:insertTextFormat item)
                                 :text-edit (:textEdit item)
@@ -487,6 +487,6 @@
                                 :insert-text (:insertText item))]
     (if (:data item)
       (if ns
-        (resolve-item-by-ns item components)
-        (resolve-item-by-definition item components))
+        (resolve-item-by-ns item db*)
+        (resolve-item-by-definition item db*))
       item)))

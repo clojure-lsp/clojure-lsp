@@ -105,17 +105,17 @@
             (async/go
               (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db)))
           (async/go
-            (f.clojuredocs/refresh-cache! components))
+            (f.clojuredocs/refresh-cache! db*))
           (async/go
             (let [settings (:settings db)]
               (when (stubs/check-stubs? settings)
-                (stubs/generate-and-analyze-stubs! settings components))))
+                (stubs/generate-and-analyze-stubs! settings db*))))
           (async/go
             (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
             (analyze-test-paths! components))
           (when (settings/get db [:java] true)
             (async/go
-              (f.java-interop/retrieve-jdk-source-and-analyze! components)))))
+              (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warn nil))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db*]}]
@@ -163,10 +163,10 @@
                :range (shared/->range reference)})
             (q/find-references-from-cursor (:analysis db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db)))))
 
-(defn completion-resolve-item [item components]
+(defn completion-resolve-item [item {:keys [db*]}]
   (shared/logging-task
     :resolve-completion-item
-    (f.completion/resolve-item item components)))
+    (f.completion/resolve-item item db*)))
 
 (defn prepare-rename [{:keys [textDocument position]}]
   (shared/logging-task
@@ -312,10 +312,10 @@
     :cursor-info-raw
     (cursor-info [textDocument (:line position) (:character position)])))
 
-(defn clojuredocs-raw [{:keys [symName symNs]} components]
+(defn clojuredocs-raw [{:keys [symName symNs]} {:keys [db*]}]
   (shared/logging-task
     :clojuredocs-raw
-    (f.clojuredocs/find-docs-for symName symNs components)))
+    (f.clojuredocs/find-docs-for symName symNs db*)))
 
 (defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db*] :as components}]
   (let [db @db*
@@ -357,12 +357,12 @@
                (producer/show-document-request producer)))
         edit))))
 
-(defn hover [{:keys [textDocument position]} components]
+(defn hover [{:keys [textDocument position]} {:keys [db*] :as components}]
   (shared/logging-task
     :hover
     (let [[line column] (shared/position->line-column position)
           filename (shared/uri->filename textDocument)]
-      (f.hover/hover filename line column components))))
+      (f.hover/hover filename line column db*))))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (shared/logging-task

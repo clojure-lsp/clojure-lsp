@@ -44,7 +44,7 @@
        :message (str "Error: " e)})))
 
 (defn ^:private analyze-stubs!
-  [dirs {:keys [db*]}]
+  [dirs db*]
   (let [result (shared/logging-time
                  "Stubs analyzed, took %s."
                  (lsp.kondo/run-kondo-on-paths! dirs true db*))
@@ -64,7 +64,7 @@
           (db/upsert-cache! db)))))
 
 (defn generate-and-analyze-stubs!
-  [settings {:keys [db*] :as components}]
+  [settings db*]
   (let [db @db*
         namespaces (->> settings :stubs :generation :namespaces (map str) set)
         extra-dirs (-> settings :stubs :extra-dirs)]
@@ -75,10 +75,10 @@
         (if (= 0 result-code)
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)
-                          components)
+                          db*)
           (logger/error (str "Stub generation failed." message))))
       (when (seq extra-dirs)
-        (analyze-stubs! extra-dirs components)))))
+        (analyze-stubs! extra-dirs db*)))))
 
 (defn check-stubs? [settings]
   (or (-> settings :stubs :generation :namespaces seq)

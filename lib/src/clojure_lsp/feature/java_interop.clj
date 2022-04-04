@@ -192,7 +192,7 @@
   cache dir.
 
   Otherwise, we download default OpenJDK source if setting is enabled."
-  [{:keys [db*]}]
+  [db*]
   (let [db @db*
         jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
         jdk-result-file (io/file jdk-dir-file "result")

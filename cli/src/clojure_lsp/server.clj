@@ -79,7 +79,7 @@
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
             ^ILSPProducer lsp-producer
-            db]
+            db*]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
     (producer/publish-diagnostic lsp-producer diagnostic))
@@ -101,14 +101,15 @@
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
     (go
-      (when (some-> @db :client-capabilities :experimental j/from-java :testTree)
-        (shared/logging-task
-          :refreshing-test-tree
-          (doseq [uri uris]
-            (when-let [test-tree (f.test-tree/tree uri @db)]
-              (->> test-tree
-                   (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
-                   (.publishTestTree client)))))))))
+      (let [db @db*]
+        (when (some-> db :client-capabilities :experimental j/from-java :testTree)
+          (shared/logging-task
+            :refreshing-test-tree
+            (doseq [uri uris]
+              (when-let [test-tree (f.test-tree/tree uri db)]
+                (->> test-tree
+                     (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
+                     (.publishTestTree client))))))))))
 
 (deftype ClojureLspServer
          [^LSPServer lsp-server
@@ -159,9 +160,8 @@
       shared/keywordize-first-depth
       (settings/clean-client-settings)))
 
-;; TODO: deref
-(defn capabilites [db]
-  (let [settings (settings/all @db)]
+(defn capabilites [db*]
+  (let [settings (settings/all @db*)]
     {:document-highlight-provider true
      :hover-provider true
      :declaration-provider true

@@ -130,7 +130,7 @@
       (catch Exception e
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
-(defn ^:private analyze-jdk-source! [path db]
+(defn ^:private analyze-jdk-source! [path db*]
   (let [result (shared/logging-time
                  (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
                  (lsp.kondo/run-kondo-on-jdk-source! path))
@@ -138,10 +138,10 @@
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (loop [state-db @db]
-      (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
+    (loop [state-db @db*]
+      (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
         (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
-        (recur @db)))))
+        (recur @db*)))))
 
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")

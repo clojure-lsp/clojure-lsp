@@ -227,53 +227,53 @@
                         lsp.kondo/normalize-analysis
                         (group-by :filename))]
       (swap! db* (fn [state-db]
-                  (-> state-db
-                      (update :analysis merge analysis)
-                      (assoc :kondo-config (:config result))
-                      (update :findings merge (group-by :filename (:findings result))))))
+                   (-> state-db
+                       (update :analysis merge analysis)
+                       (assoc :kondo-config (:config result))
+                       (update :findings merge (group-by :filename (:findings result))))))
       (f.diagnostic/publish-all-diagnostics! filenames @db*)
       (clojure-producer/refresh-test-tree producer uris))))
 
-(defn did-change-watched-files [changes db]
+(defn did-change-watched-files [changes db*]
   (doseq [{:keys [uri type]} changes]
     (case type
       :created (async/>!! db/created-watched-files-chan uri)
       ;; TODO Fix outdated changes overwriting newer changes.
       :changed nil #_(did-change uri
                                  [{:text (slurp filename)}]
-                                 (inc (get-in @db [:documents uri :v] 0))
+                                 (inc (get-in @db* [:documents uri :v] 0))
                                  db)
       :deleted (shared/logging-task
                  :delete-watched-file
                  (let [filename (shared/uri->filename uri)]
-                   (swap! db (fn [state-db]
-                               (-> state-db
-                                   (shared/dissoc-in [:documents uri])
-                                   (shared/dissoc-in [:analysis filename])
-                                   (shared/dissoc-in [:findings filename])))))))))
+                   (swap! db* (fn [state-db]
+                                (-> state-db
+                                    (shared/dissoc-in [:documents uri])
+                                    (shared/dissoc-in [:analysis filename])
+                                    (shared/dissoc-in [:findings filename])))))))))
 
-(defn did-close [uri db]
+(defn did-close [uri db*]
   (shared/logging-task
     :did-close
     (let [filename (shared/uri->filename uri)
-          source-paths (settings/get @db [:source-paths])]
+          source-paths (settings/get @db* [:source-paths])]
       (when (and (not (shared/external-filename? filename source-paths))
                  (not (shared/file-exists? (io/file filename))))
-        (swap! db (fn [state-db] (-> state-db
-                                     (shared/dissoc-in [:documents uri])
-                                     (shared/dissoc-in [:analysis filename])
-                                     (shared/dissoc-in [:findings filename]))))
-        (f.diagnostic/publish-empty-diagnostics! uri @db)))))
+        (swap! db* (fn [state-db] (-> state-db
+                                      (shared/dissoc-in [:documents uri])
+                                      (shared/dissoc-in [:analysis filename])
+                                      (shared/dissoc-in [:findings filename]))))
+        (f.diagnostic/publish-empty-diagnostics! uri @db*)))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
-  [uri db]
-  (or (get-in @db [:documents uri :text])
+  [uri db*]
+  (or (get-in @db* [:documents uri :text])
       (do
-        (did-open uri (slurp uri) db false)
-        (get-in @db [:documents uri :text]))))
+        (did-open uri (slurp uri) db* false)
+        (get-in @db* [:documents uri :text]))))
 
-(defn did-save [uri db]
+(defn did-save [uri db*]
   (shared/logging-task
     :did-save
-    (swap! db #(assoc-in % [:documents uri :saved-on-disk] true))))
+    (swap! db* #(assoc-in % [:documents uri :saved-on-disk] true))))

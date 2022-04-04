@@ -48,6 +48,8 @@ Also, it's possible to live rename symbols on the same buffer with `linkedEditin
 
 ### Java support
 
+To understand what is supported and how to configure it, check the [settings section](../settings/#java-support).
+
 <img src="../images/features/java-find-definition.gif" width=580>
 
 ### Completion

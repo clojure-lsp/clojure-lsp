@@ -457,7 +457,7 @@
 
 ;;;; Public API
 
-;; Drag zloc's clause up or down.
+;; Drag zloc's clause forward or backward.
 
 (defn ^:private probable-valid-movement?
   "Checks whether `zloc` can be dragged in direction `dir`, assuming it is part of

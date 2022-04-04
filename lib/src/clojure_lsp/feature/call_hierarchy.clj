@@ -14,10 +14,10 @@
 (defn ^:private element-by-uri->call-hierarchy-item
   [{uri :uri
     {:keys [ns filename name-row name-col arglist-strs deprecated] el-name :name :as parent-element} :parent-element
-    usage-element :usage-element} db]
+    usage-element :usage-element} db*]
   (let [project-file? (string/starts-with? uri "file://")
         detail (if project-file?
-                 (some-> (f.file-management/force-get-document-text uri db)
+                 (some-> (f.file-management/force-get-document-text uri db*)
                          (parser/zloc-of-string) ;; throws on invalid Clojure
                          (parser/to-pos name-row name-col)
                          edit/find-namespace-name)
@@ -33,26 +33,26 @@
      :range (shared/->range parent-element)
      :selection-range (shared/->range usage-element)}))
 
-(defn prepare [uri row col db]
-  (let [cursor-element (q/find-element-under-cursor (:analysis @db) (shared/uri->filename uri) row col)]
+(defn prepare [uri row col db*]
+  (let [cursor-element (q/find-element-under-cursor (:analysis @db*) (shared/uri->filename uri) row col)]
     [(element-by-uri->call-hierarchy-item
        {:uri uri
         :usage-element cursor-element
         :parent-element cursor-element}
-       db)]))
+       db*)]))
 
 (defn ^:private element->incoming-usage-by-uri
-  [db {:keys [name-row name-col filename] :as element}]
-  (let [uri (shared/filename->uri filename @db)
-        zloc (some-> (f.file-management/force-get-document-text uri db)
+  [db* {:keys [name-row name-col filename] :as element}]
+  (let [uri (shared/filename->uri filename @db*)
+        zloc (some-> (f.file-management/force-get-document-text uri db*)
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos name-row name-col))
-        parent-zloc (edit/find-var-definition-name-loc zloc filename @db)]
+        parent-zloc (edit/find-var-definition-name-loc zloc filename @db*)]
     (when parent-zloc
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
          :usage-element element
-         :parent-element (q/find-element-under-cursor (:analysis @db) filename parent-row parent-col)}))))
+         :parent-element (q/find-element-under-cursor (:analysis @db*) filename parent-row parent-col)}))))
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
@@ -65,21 +65,22 @@
        :usage-element element
        :parent-element definition})))
 
-(defn incoming [uri row col db]
-  (->> (q/find-references-from-cursor (:analysis @db) (shared/uri->filename uri) row col false @db)
-       (map (partial element->incoming-usage-by-uri db))
+(defn incoming [uri row col db*]
+  (->> (q/find-references-from-cursor (:analysis @db*) (shared/uri->filename uri) row col false @db*)
+       (map (partial element->incoming-usage-by-uri db*))
        (remove nil?)
        (mapv (fn [element-by-uri]
                {:from-ranges []
-                :from (element-by-uri->call-hierarchy-item element-by-uri db)}))))
+                :from (element-by-uri->call-hierarchy-item element-by-uri db*)}))))
 
-(defn outgoing [uri row col db]
-  (let [analysis (:analysis @db)
-        filename (shared/uri->filename uri)
-        zloc (some-> (f.file-management/force-get-document-text uri db)
+(defn outgoing [uri row col db*]
+  (let [filename (shared/uri->filename uri)
+        zloc (some-> (f.file-management/force-get-document-text uri db*)
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos row col))
-        {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename @db)
+        db @db*
+        analysis (:analysis db)
+        {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename db)
                                                   z/node
                                                   meta)]
     (when (and parent-row parent-col)
@@ -90,8 +91,8 @@
                                            (:name-col definition)
                                            (:end-row definition)
                                            (:end-col definition))
-             (map (partial element->outgoing-usage-by-uri @db))
+             (map (partial element->outgoing-usage-by-uri db))
              (remove nil?)
              (mapv (fn [element-by-uri]
                      {:from-ranges []
-                      :to (element-by-uri->call-hierarchy-item element-by-uri db)})))))))
+                      :to (element-by-uri->call-hierarchy-item element-by-uri db*)})))))))

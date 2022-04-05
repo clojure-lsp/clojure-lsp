@@ -173,7 +173,7 @@
   (shared/logging-task
     :prepare-rename
     (let [[row col] (shared/position->line-column position)]
-      (f.rename/prepare-rename textDocument row col db/db*))))
+      (f.rename/prepare-rename textDocument row col @db/db*))))
 
 (defn rename [{:keys [textDocument position newName]}]
   (shared/logging-task

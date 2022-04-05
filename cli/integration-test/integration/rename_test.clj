@@ -74,6 +74,9 @@
 
   (testing "Renaming local keywords"
     (h/assert-submap
+      {:start {:line 12, :character 14}, :end {:line 12, :character 21}}
+      (lsp/request! (fixture/prepare-rename-request "rename/a.cljc" 12 15)))
+    (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/a.cljc"))
         [{:range {:start {:line 12 :character 15} :end {:line 12 :character 21}}

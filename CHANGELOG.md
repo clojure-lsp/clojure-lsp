@@ -2,10 +2,14 @@
 
 ## Unreleased
 
-- Improve settings documentation.
-- Introduce ALPHA move-form command. #566
-- move-coll-entry: clauses move intuitively in `clojure.test/are`
-- move-coll-entry: top-level clauses can be moved #891
+- General
+  - Improve settings documentation.
+  - Fix completion performance regression from previous release.
+
+- Editor
+  - Introduce ALPHA move-form command. #566
+  - move-coll-entry: clauses move intuitively in `clojure.test/are`
+  - move-coll-entry: top-level clauses can be moved #891
 
 ## 2022.03.31-20.00.20
 

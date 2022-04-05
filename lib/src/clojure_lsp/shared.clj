@@ -180,17 +180,11 @@
 (defn ^:private uri-encode [scheme path]
   (.toString (URI. scheme "" path nil)))
 
-(def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
-(def ^:private jar-file-regex #"^(.*\.jar)")
-
 (defn jar-file? [filename]
-  (or (boolean (re-find jar-file-with-filename-regex filename))
-      (boolean (re-find jar-file-regex filename))))
-
-(def ^:private class-file-regex #"^(.*\.class)$")
+  (string/includes? filename ".jar"))
 
 (defn class-file? [uri]
-  (boolean (re-find class-file-regex uri)))
+  (string/ends-with? uri ".class"))
 
 (defn valid-url? [^String value]
   (try
@@ -204,6 +198,8 @@
        (or (-> filename name jar-file?)
            (and (seq source-paths)
                 (not-any? #(string/starts-with? filename %) source-paths)))))
+
+(def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
 
 (defn filename->uri
   "Converts an absolute file path into a file URI string.

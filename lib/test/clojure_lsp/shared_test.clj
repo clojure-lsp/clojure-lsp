@@ -68,32 +68,32 @@
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") @db/db*))))
   (testing "when it has a project root and not a source-path"
     (swap! db/db* shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                               :source-paths #{(h/file-uri "file:///user/project/bla")}}
-                                    :project-root-uri (h/file-uri "file:///user/project")})
+                                                :source-paths #{(h/file-uri "file:///user/project/bla")}}
+                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") @db/db*))))
   (testing "when it has a project root and a source-path"
     (swap! db/db* shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                               :source-paths #{(h/file-path "/user/project/src")}}
-                                    :project-root-uri (h/file-uri "file:///user/project")})
+                                                :source-paths #{(h/file-path "/user/project/src")}}
+                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") @db/db*))))
   (testing "when it has a project root a source-path on mono repos"
     (swap! db/db* medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                               :source-paths #{(h/file-path "/user/project/src/clj")
-                                                               (h/file-path "/user/project/src/cljs")}}
-                                    :project-root-uri (h/file-uri "file:///user/project")})
+                                                :source-paths #{(h/file-path "/user/project/src/clj")
+                                                                (h/file-path "/user/project/src/cljs")}}
+                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") @db/db*))))
   (testing "when it has a project root and nested source-paths"
     (swap! db/db* shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                               :source-paths #{(h/file-path "/user/project/src")
-                                                               (h/file-path "/user/project/src/some")}}
-                                    :project-root-uri (h/file-uri "file:///user/project")})
+                                                :source-paths #{(h/file-path "/user/project/src")
+                                                                (h/file-path "/user/project/src/some")}}
+                                     :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/some/foo/bar.clj") @db/db*))))
   (testing "when an invalid source-path with a valid source-path prefixing it"
     (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
-                                    :project-root-uri (h/file-uri "file:///user/project")})
+                                     :project-root-uri (h/file-uri "file:///user/project")})
     (with-redefs [shared/directory? (constantly true)]
       (is (= nil
              (shared/uri->namespace (h/file-uri "file:///user/project/src/cljs/foo/bar.clj") @db/db*))))))
@@ -180,3 +180,39 @@
          (shared/namespace+source-path->filename "some.cool-ns" "/project/test" :clj)))
   (is (= "/project/test/some/cool_ns.clj"
          (shared/namespace+source-path->filename "some.cool-ns" "/project/test/" :clj))))
+
+(deftest jar-file?-test
+  (is (= false (shared/jar-file? "")))
+  (is (= false (shared/jar-file? "/foo")))
+  (is (= false (shared/jar-file? "/foo")))
+  (is (= false (shared/jar-file? "/foo/bar")))
+  (is (= false (shared/jar-file? "/foo/bar.clj")))
+  (is (= false (shared/jar-file? "/jar/bar.clj")))
+  (is (= true (shared/jar-file? "/foo/bar.jar")))
+  (is (= true (shared/jar-file? "/foo/bar.jar!/some/file.clj")))
+  (is (= true (shared/jar-file? "/foo/bar.jar!/some/file.jar")))
+  (is (= false (shared/jar-file? "file:///foo")))
+  (is (= false (shared/jar-file? "file:///foo")))
+  (is (= false (shared/jar-file? "file:///foo/bar")))
+  (is (= false (shared/jar-file? "file:///foo/bar.clj")))
+  (is (= false (shared/jar-file? "file:///jar/bar.clj")))
+  (is (= true (shared/jar-file? "file:///foo/bar.jar")))
+  (is (= true (shared/jar-file? "jar:file:///foo/bar.jar!/some/file.clj")))
+  (is (= true (shared/jar-file? "jar:file:///foo/bar.jar!/some/file.jar"))))
+
+(deftest class-file?-test
+  (is (= false (shared/class-file? "")))
+  (is (= false (shared/class-file? "/foo")))
+  (is (= false (shared/class-file? "/foo/bar")))
+  (is (= false (shared/class-file? "/foo/bar.clj")))
+  (is (= false (shared/class-file? "/foo/bar.jar")))
+  (is (= true (shared/class-file? "/foo/bar.class")))
+  (is (= false (shared/class-file? "/foo/bar.jar!/some/file.clj")))
+  (is (= true (shared/class-file? "/foo/bar.jar!/some/file.class")))
+  (is (= false (shared/class-file? "file:///foo")))
+  (is (= false (shared/class-file? "file:///foo/bar")))
+  (is (= false (shared/class-file? "file:///foo/bar.clj")))
+  (is (= false (shared/class-file? "file:///foo/bar.jar")))
+  (is (= true (shared/class-file? "file:///foo/bar.class")))
+  (is (= false (shared/class-file? "jar:file:///foo/bar.jar!/some/file.clj")))
+  (is (= true (shared/class-file? "jar:file:///foo/bar.jar!/some/file.class"))))

@@ -6,6 +6,7 @@
   - Improve settings documentation.
   - Fix completion performance regression from previous release.
   - Consider `.bb` and `.cljd` files on watched file changes. #906
+  - Bump to clojure 1.11.0
 
 - Editor
   - Introduce ALPHA move-form command. #566

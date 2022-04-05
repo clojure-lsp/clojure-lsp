@@ -145,6 +145,12 @@
            (f.rename/rename (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 db/db*)))))
 
 (deftest prepare-rename
+  (testing "rename local var"
+    (h/clean-db!)
+    (let [[[row col]] (h/load-code-and-locs "(let [|a 1] a)")
+          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+      (is (= {:start {:line 0, :character 6}, :end {:line 0, :character 7}}
+             result))))
   (testing "should not rename when on unnamed element"
     (h/clean-db!)
     (let [[[row col]] (h/load-code-and-locs "|[]")

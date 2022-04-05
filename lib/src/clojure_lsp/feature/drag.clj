@@ -493,13 +493,13 @@
         {:show-document-after-edit {:uri         uri
                                     :take-focus? true
                                     :range       (assoc position :end-row (:row position) :end-col (:col position))}
-         :changes-by-uri           {uri
-                              [{:range (if (= :forms (z/tag parent-zloc))
-                                         ;; work around for https://github.com/clj-commons/rewrite-clj/issues/173
-                                         ;; when that's fixed, revert to else-clause: (z-cursor-position parent-loc)
-                                         shared/full-file-position
-                                         (z-cursor-position parent-zloc))
-                                :loc   parent-zloc}]}}))))
+         :changes-by-uri {uri
+                          [{:range (if (= :forms (z/tag parent-zloc))
+                                     ;; work around for https://github.com/clj-commons/rewrite-clj/issues/173
+                                     ;; when that's fixed, revert to else-clause: (z-cursor-position parent-loc)
+                                     shared/full-file-position
+                                     (z-cursor-position parent-zloc))
+                            :loc   parent-zloc}]}}))))
 
 (defn drag-backward [zloc uri db] (drag zloc :backward uri db))
 (defn drag-forward [zloc uri db] (drag zloc :forward uri db))

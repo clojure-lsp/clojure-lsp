@@ -224,7 +224,7 @@
     (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false}}}}})
     (h/assert-submaps
       [{:label "comment"
-        :kind :reference
+        :kind :function
         :data {"filename" "/clojure.core.clj"
                "name" "comment"
                "ns" "clojure.core"}
@@ -275,18 +275,18 @@
   (testing "outside before let"
     (h/assert-submaps
       [{:label "bar" :kind :variable}
-       {:label "bases" :kind :reference :detail "clojure.core/bases"}]
+       {:label "bases" :kind :function :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 3 5 @db/db*)))
   (testing "inside let"
     (h/assert-submaps
       [{:label "bar" :kind :variable}
        {:label "baz" :kind :variable}
-       {:label "bases" :kind :reference :detail "clojure.core/bases"}]
+       {:label "bases" :kind :function :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 5 7 @db/db*)))
   (testing "outside before let"
     (h/assert-submaps
       [{:label "bar" :kind :variable}
-       {:label "bases" :kind :reference :detail "clojure.core/bases"}]
+       {:label "bases" :kind :function :detail "clojure.core/bases"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 6 5 @db/db*))))
 
 (deftest completing-normal-keywords
@@ -335,7 +335,7 @@
       [{:label "foo", :kind :module}
        {:label "foo", :kind :variable}
        {:label ":foo", :kind :keyword, :detail ""}
-       {:label "for", :kind :reference, :detail "clojure.core/for"}
-       {:label "force", :kind :reference, :detail "clojure.core/force"}
-       {:label "format", :kind :reference, :detail "clojure.core/format"}]
+       {:label "for", :kind :function, :detail "clojure.core/for"}
+       {:label "force", :kind :function, :detail "clojure.core/force"}
+       {:label "format", :kind :function, :detail "clojure.core/format"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 4 2 @db/db*))))

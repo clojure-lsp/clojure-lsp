@@ -283,7 +283,9 @@
      {:name -> :kind :function}
      {:name ->> :kind :function}
      {:name ->ArrayChunk :kind :reference}
+     {:name ArrayChunk :kind :variable}
      {:name ->Eduction :kind :reference}
+     {:name Eduction :kind :variable}
      {:name ->Vec :kind :reference}
      {:name ->VecNode :kind :reference}
      {:name ->VecSeq :kind :reference}
@@ -301,6 +303,7 @@
      {:name accessor :kind :function}
      {:name aclone :kind :function}
      {:name add-classpath :kind :function}
+     {:name add-tap :kind :function}
      {:name add-watch :kind :function}
      {:name agent :kind :function}
      {:name agent-error :kind :function}
@@ -476,8 +479,10 @@
      {:name even? :kind :function}
      {:name every-pred :kind :function}
      {:name every? :kind :function}
+     {:name ex-cause :kind :function}
      {:name ex-data :kind :function}
      {:name ex-info :kind :function}
+     {:name ex-message :kind :function}
      {:name extend :kind :function}
      {:name extend-protocol :kind :function}
      {:name extend-type :kind :function}
@@ -546,6 +551,7 @@
      {:name inc :kind :function}
      {:name inc' :kind :function}
      {:name indexed? :kind :function}
+     {:name infinite? :kind :function}
      {:name init-proxy :kind :function}
      {:name Inst :kind :variable}
      {:name inst-ms :kind :function}
@@ -702,6 +708,7 @@
      {:name rand-int :kind :function}
      {:name rand-nth :kind :function}
      {:name random-sample :kind :function}
+     {:name random-uuid :kind :function}
      {:name range :kind :function}
      {:name ratio? :kind :function}
      {:name rational? :kind :function}
@@ -739,6 +746,7 @@
      {:name remove-all-methods :kind :function}
      {:name remove-method :kind :function}
      {:name remove-ns :kind :function}
+     {:name remove-tap :kind :function}
      {:name remove-watch :kind :function}
      {:name repeat :kind :function}
      {:name repeatedly :kind :function}
@@ -822,6 +830,7 @@
      {:name take-last :kind :function}
      {:name take-nth :kind :function}
      {:name take-while :kind :function}
+     {:name tap> :kind :function}
      {:name test :kind :function}
      {:name the-ns :kind :function}
      {:name thread-bound? :kind :function}
@@ -1072,7 +1081,6 @@
      {:name -write :kind :function}
      {:name APersistentVector :kind :variable}
      {:name ASeq :kind :variable}
-     {:name ArrayChunk :kind :variable}
      {:name ArrayIter :kind :variable}
      {:name ArrayList :kind :variable}
      {:name ArrayNode :kind :variable}
@@ -1095,7 +1103,6 @@
      {:name ES6Iterator :kind :variable}
      {:name ES6IteratorSeq :kind :variable}
      {:name ES6SetEntriesIterator :kind :variable}
-     {:name Eduction :kind :variable}
      {:name Empty :kind :variable}
      {:name EmptyList :kind :variable}
      {:name ExceptionInfo :kind :function}
@@ -1219,7 +1226,6 @@
      {:name Var :kind :variable}
      {:name VectorNode :kind :variable}
      {:name Volatile :kind :variable}
-     {:name add-tap :kind :function}
      {:name add-to-string-hash-cache :kind :function}
      {:name array :kind :function}
      {:name array-chunk :kind :function}
@@ -1244,8 +1250,6 @@
      {:name es6-iterator :kind :function}
      {:name es6-iterator-seq :kind :function}
      {:name es6-set-entries-iterator :kind :function}
-     {:name ex-cause :kind :function}
-     {:name ex-message :kind :function}
      {:name exists? :kind :function}
      {:name find-macros-ns :kind :function}
      {:name find-ns-obj :kind :function}
@@ -1255,7 +1259,6 @@
      {:name hash-string* :kind :function}
      {:name ifind? :kind :function}
      {:name imul :kind :function}
-     {:name infinite? :kind :function}
      {:name int-rotate-left :kind :function}
      {:name is_proto_ :kind :function}
      {:name iter :kind :function}
@@ -1296,11 +1299,9 @@
      {:name print-meta? :kind :function}
      {:name print-prefix-map :kind :function}
      {:name prn-str-with-opts :kind :function}
-     {:name random-uuid :kind :function}
      {:name ranged-iterator :kind :function}
      {:name reduceable? :kind :function}
      {:name regexp? :kind :function}
-     {:name remove-tap :kind :function}
      {:name seq-iter :kind :function}
      {:name set-from-indexed-seq :kind :function}
      {:name set-print-err-fn! :kind :function}
@@ -1312,7 +1313,6 @@
      {:name string-print :kind :function}
      {:name symbol-identical? :kind :function}
      {:name system-time :kind :function}
-     {:name tap> :kind :function}
      {:name this-as :kind :function}
      {:name transformer-iterator :kind :function}
      {:name truth_ :kind :function}

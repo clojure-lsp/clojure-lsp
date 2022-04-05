@@ -74,9 +74,6 @@
 
   (testing "Renaming local keywords"
     (h/assert-submap
-      {:start {:line 12, :character 14}, :end {:line 12, :character 21}}
-      (lsp/request! (fixture/prepare-rename-request "rename/a.cljc" 12 15)))
-    (h/assert-submap
       {:changes
        {(keyword (h/source-path->uri "rename/a.cljc"))
         [{:range {:start {:line 12 :character 15} :end {:line 12 :character 21}}
@@ -181,3 +178,19 @@
          {:range {:start {:line 8 :character 1} :end {:line 8 :character 8}}
           :newText "your-func"}]}}
       (lsp/request! (fixture/rename-request "rename/b.cljc" "your-func" 1 52)))))
+
+(deftest prepare-rename
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
+  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+
+  (h/assert-submap
+    {:error {:code -32602, :message "Can't rename, no element found."}}
+    (lsp/request! (fixture/prepare-rename-request "rename/a.cljc" 12 6)))
+  (h/assert-submap
+    {:start {:line 12, :character 14}, :end {:line 12, :character 21}}
+    (lsp/request! (fixture/prepare-rename-request "rename/a.cljc" 12 15))))

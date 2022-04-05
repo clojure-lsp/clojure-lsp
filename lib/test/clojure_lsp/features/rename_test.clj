@@ -143,3 +143,47 @@
               :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
               :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
            (f.rename/rename (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 db/db*)))))
+
+(deftest prepare-rename
+  (testing "rename local var"
+    (h/clean-db!)
+    (let [[[row col]] (h/load-code-and-locs "(let [|a 1] a)")
+          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+      (is (= {:start {:line 0, :character 6}, :end {:line 0, :character 7}}
+             result))))
+  (testing "should not rename when on unnamed element"
+    (h/clean-db!)
+    (let [[[row col]] (h/load-code-and-locs "|[]")
+          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+      (is (= {:error {:code :invalid-params
+                      :message "Can't rename, no element found."}}
+             result))))
+  (testing "should not rename plain keywords"
+    (h/clean-db!)
+    (let [[[row col]] (h/load-code-and-locs "|:a")
+          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+      (is (= {:error {:code :invalid-params
+                      :message "Can't rename, only namespaced keywords can be renamed."}}
+             result))))
+  (testing "when client has valid source-paths but no document-changes capability"
+    (h/clean-db!)
+    (swap! db/db* shared/deep-merge
+           {:project-root-uri (h/file-uri "file:///")
+            :settings {:source-paths #{(h/file-path "/")}}
+            :client-capabilities {:workspace {:workspace-edit {:document-changes false}}}})
+    (let [[[row col]] (h/load-code-and-locs "(ns |foo.bar-baz)")]
+      (h/assert-submap
+        {:error {:code :invalid-params
+                 :message "Can't rename namespace, client does not support file renames."}}
+        (f.rename/prepare-rename h/default-uri row col @db/db*))))
+  (testing "when client has document-changes capability but no valid source-paths"
+    (h/clean-db!)
+    (swap! db/db* shared/deep-merge
+           {:project-root-uri (h/file-uri "file:///")
+            :settings {:source-paths #{(h/file-path "/bla")}}
+            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (let [[[row col]] (h/load-code-and-locs "(ns |foo.bar-baz)")]
+      (h/assert-submap
+        {:error {:code :invalid-params
+                 :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
+        (f.rename/prepare-rename h/default-uri row col @db/db*)))))

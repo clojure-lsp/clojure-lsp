@@ -49,6 +49,11 @@
                  :options {:tabSize 2
                            :insertSpaces true}}))
 
+(defn prepare-rename-request [path row col]
+  (lsp-json-rpc :textDocument/prepareRename
+                {:textDocument {:uri (h/source-path->uri path)}
+                 :position {:line row :character col}}))
+
 (defn rename-request [path new-name row col]
   (lsp-json-rpc :textDocument/rename
                 {:textDocument {:uri (h/source-path->uri path)}

@@ -20,7 +20,7 @@
 
 (defn var-usages-within [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        analysis (:analysis @db)
+        analysis (:analysis db)
         defs (q/find-var-usages-under-form
                analysis
                (shared/uri->filename uri)
@@ -33,7 +33,7 @@
       defs)))
 
 (defn var-definitions-within [zloc uri db]
-  (let [analysis (:analysis @db)
+  (let [analysis (:analysis db)
         defs (q/find-var-definitions
                analysis
                (shared/uri->filename uri)
@@ -98,9 +98,10 @@
                :range (meta (z/node namespace-loc))}]
              (f.add-missing-libspec/cleaning-ns-edits uri db))))))
 
-(defn move-form [zloc uri db dest-filename]
-  (let [form-loc (edit/to-top zloc)
-        analysis (:analysis @db)
+(defn move-form [zloc uri db* dest-filename]
+  (let [db @db*
+        form-loc (edit/to-top zloc)
+        analysis (:analysis db)
         source-filename (shared/uri->filename uri)
         source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename db))
         dest-filename (shared/absolute-path dest-filename db)
@@ -125,9 +126,10 @@
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
             per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
             dest-uri (shared/filename->uri dest-filename db)
-            insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db)
+            insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db*)
                                   z/of-string
                                   z/rightmost)
+            _db @db*
             insertion-pos (meta (z/node insertion-loc))
             dest-inner-usages (->> inner-usages
                                    (filterv (comp #(= dest-ns %) :to)))
@@ -147,8 +149,9 @@
                                         (fn [file-uri usages]
                                           (let [usage (first usages)
                                                 filename (:filename usage)
-                                                file-loc (-> (f.file-management/force-get-document-text file-uri db)
+                                                file-loc (-> (f.file-management/force-get-document-text file-uri db*)
                                                              z/of-string)
+                                                db @db*
                                                 local-analysis (vec (get analysis filename))
                                                 source-refer (first (filter #(and (:refer %)
                                                                                   (= (:to %) source-ns)

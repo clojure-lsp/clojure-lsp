@@ -79,7 +79,7 @@
 (defrecord ^:private ClojureLspProducer
            [^ClojureLanguageClient client
             ^ILSPProducer lsp-producer
-            db]
+            db*]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
     (producer/publish-diagnostic lsp-producer diagnostic))
@@ -101,14 +101,15 @@
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
     (go
-      (when (some-> @db :client-capabilities :experimental j/from-java :testTree)
-        (shared/logging-task
-          :refreshing-test-tree
-          (doseq [uri uris]
-            (when-let [test-tree (f.test-tree/tree uri db)]
-              (->> test-tree
-                   (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
-                   (.publishTestTree client)))))))))
+      (let [db @db*]
+        (when (some-> db :client-capabilities :experimental j/from-java :testTree)
+          (shared/logging-task
+            :refreshing-test-tree
+            (doseq [uri uris]
+              (when-let [test-tree (f.test-tree/tree uri db)]
+                (->> test-tree
+                     (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
+                     (.publishTestTree client))))))))))
 
 (deftype ClojureLspServer
          [^LSPServer lsp-server
@@ -159,8 +160,8 @@
       shared/keywordize-first-depth
       (settings/clean-client-settings)))
 
-(defn capabilites [db]
-  (let [settings (settings/all db)]
+(defn capabilites [db*]
+  (let [settings (settings/all @db*)]
     {:document-highlight-provider true
      :hover-provider true
      :declaration-provider true
@@ -195,17 +196,17 @@
 
 (defn run-server! []
   (let [producer* (atom nil)
-        db db/db
-        timbre-logger (doto (->TimbreLogger db)
+        db* db/db*
+        timbre-logger (doto (->TimbreLogger db*)
                         (logger/setup))
         _ (logger/info lsp/server-logger-tag "Starting server...")
         is (or System/in (lsp/tee-system-in System/in))
         os (or System/out (lsp/tee-system-out System/out))
-        _ (reset! components* (components/->components db timbre-logger nil))
+        _ (reset! components* (components/->components db* timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
                                               producer*
-                                              db
+                                              db*
                                               db/initial-db
                                               capabilites
                                               client-settings
@@ -214,15 +215,15 @@
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
-                                       (lsp/->LSPProducer language-client db)
-                                       db)
+                                       (lsp/->LSPProducer language-client db*)
+                                       db*)
         debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
     (reset! producer* producer)
     (swap! components* assoc :producer producer)
-    (nrepl/setup-nrepl db)
+    (nrepl/setup-nrepl db*)
     (go-loop [edit (<! db/edits-chan)]
       (producer/publish-workspace-edit producer edit)
       (recur (<! db/edits-chan)))

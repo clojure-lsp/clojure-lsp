@@ -213,7 +213,7 @@
        token-modifier])))
 
 (defn full-tokens [uri db]
-  (let [elements (get-in @db [:analysis (shared/uri->filename uri)])
+  (let [elements (get-in db [:analysis (shared/uri->filename uri)])
         absolute-tokens (elements->absolute-tokens elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
@@ -221,7 +221,7 @@
 
 (defn range-tokens
   [uri range db]
-  (let [elements (get-in @db [:analysis (shared/uri->filename uri)])
+  (let [elements (get-in db [:analysis (shared/uri->filename uri)])
         range-elements (filter #(element-inside-range? % range) elements)
         absolute-tokens (elements->absolute-tokens range-elements)]
     (->> absolute-tokens

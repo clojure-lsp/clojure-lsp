@@ -49,7 +49,7 @@
   (->> (into {}
              (comp
                (q/filter-project-analysis-xf db))
-             (:analysis @db))
+             (:analysis db))
        vals
        flatten
        (filter f.document-symbol/declaration?)

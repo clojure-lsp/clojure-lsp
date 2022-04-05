@@ -61,9 +61,8 @@
         (update :document-formatting? (fnil identity true))
         (update :document-range-formatting? (fnil identity true)))))
 
-(defn ^:private get-refreshed-settings [db]
-  (let [{:keys [project-root-uri settings force-settings]} @db
-        new-project-settings (config/resolve-for-root project-root-uri)]
+(defn ^:private get-refreshed-settings [project-root-uri settings force-settings]
+  (let [new-project-settings (config/resolve-for-root project-root-uri)]
     (config/deep-merge-fixing-cljfmt settings
                                      new-project-settings
                                      force-settings)))
@@ -76,11 +75,11 @@
 (defn all
   "Get memoized settings from db.
   Refreshes settings if memoize threshold met."
-  [db]
-  (if (or (not (:settings-auto-refresh? @db))
-          (#{:unit-test :api-test} (:env @db)))
-    (get-refreshed-settings db)
-    (memoized-settings db)))
+  [{:keys [settings-auto-refresh? env project-root-uri settings force-settings]}]
+  (if (or (not settings-auto-refresh?)
+          (#{:unit-test :api-test} env))
+    (get-refreshed-settings project-root-uri settings force-settings)
+    (memoized-settings project-root-uri settings force-settings)))
 
 (defn get
   ([db kws]

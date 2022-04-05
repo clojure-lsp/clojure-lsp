@@ -44,7 +44,7 @@
              :location {:range {:end {:character 53, :line 1}, :start {:character 0, :line 1}},
                         :uri (h/file-uri "file:///b.clj")},
              :name "goats-from-alpacas"}]
-           (f.workspace-symbols/workspace-symbols "" db/db))))
+           (f.workspace-symbols/workspace-symbols "" @db/db*))))
   (testing "querying a specific function using fuzzy search"
     (is (= [{:name "foo.alpaca.ns"
              :kind :namespace
@@ -65,4 +65,4 @@
              :location {:range {:end {:character 53, :line 1}, :start {:character 0, :line 1}},
                         :uri (h/file-uri "file:///b.clj")},
              :name "goats-from-alpacas"}]
-           (f.workspace-symbols/workspace-symbols "alpaca" db/db)))))
+           (f.workspace-symbols/workspace-symbols "alpaca" @db/db*)))))

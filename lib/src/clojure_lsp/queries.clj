@@ -342,13 +342,13 @@
           (get analysis filename))))
 
 (defmethod find-references :var-usages
-  [analysis element include-declaration? db]
+  [analysis element include-declaration? _db]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     [element]
     (let [var-definition {:ns (:to element)
                           :name (:name element)
                           :bucket :var-definitions}]
-      (find-references analysis var-definition include-declaration? db))))
+      (find-references analysis var-definition include-declaration? _db))))
 
 (defmethod find-references :var-definitions
   [analysis element include-declaration? _db]

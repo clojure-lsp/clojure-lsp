@@ -13,7 +13,7 @@
 
 (def initial-db {:documents {}
                  :processing-changes #{}})
-(defonce db (atom initial-db))
+(defonce db* (atom initial-db))
 (defonce current-changes-chan (async/chan 1))
 (defonce diagnostics-chan (async/chan 1))
 (defonce created-watched-files-chan (async/chan 1))
@@ -38,7 +38,7 @@
       (io/delete-file old-db-file true))))
 
 (defn ^:private remove-old-datalevin-db-file! []
-  (->> (datalevin-db-files db)
+  (->> (datalevin-db-files @db*)
        (filter shared/file-exists?)
        (mapv #(io/delete-file % true))))
 

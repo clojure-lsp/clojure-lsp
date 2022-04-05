@@ -30,8 +30,8 @@
        (remove (partial q/exclude-public-definition? kondo-config))))
 
 (defn reference-code-lens [uri db]
-  (let [analysis (:analysis @db)
-        kondo-config (:kondo-config @db)
+  (let [analysis (:analysis db)
+        kondo-config (:kondo-config db)
         filename (shared/uri->filename uri)]
     (into []
           (map (fn [element]
@@ -49,7 +49,7 @@
 (defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
         segregate-lens? (settings/get db [:code-lens :segregate-test-references] true)
-        references (q/find-references-from-cursor (:analysis @db) filename row col false db)]
+        references (q/find-references-from-cursor (:analysis db) filename row col false db)]
     (if segregate-lens?
       (let [source-path (->> (settings/get db [:source-paths])
                              (filter #(string/starts-with? filename %))

@@ -60,4 +60,4 @@
               :name-range {:start {:line 6 :character 5}
                            :end {:line 6 :character 12}}
               :kind :testing}]}]}]}}
-      (f.test-tree/tree "file:///a.clj" db/db))))
+      (f.test-tree/tree "file:///a.clj" @db/db*))))

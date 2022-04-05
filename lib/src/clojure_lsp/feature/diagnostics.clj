@@ -83,7 +83,7 @@
 
 (defn ^:private kondo-findings->diagnostics [filename linter db]
   (when-not (exclude-ns? filename linter db)
-    (->> (get (:findings @db) filename)
+    (->> (get (:findings db) filename)
          (filter #(= filename (:filename %)))
          (filter valid-finding?)
          (mapv kondo-finding->diagnostic))))
@@ -114,7 +114,7 @@
               :diagnostics (find-diagnostics uri db)}))
 
 (defn async-publish-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env @db)) ;; Avoid async on test which cause flakeness
+  (if (#{:unit-test :api-test} (:env db)) ;; Avoid async on test which cause flakeness
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)})
@@ -132,7 +132,7 @@
           (sync-publish-diagnostics! uri db))))))
 
 (defn publish-empty-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env @db))
+  (if (#{:unit-test :api-test} (:env db))
     (async/put! db/diagnostics-chan
                 {:uri uri
                  :diagnostics []})
@@ -208,7 +208,7 @@
   [filename analysis kondo-ctx db]
   (let [kondo-findings (-> (custom-lint-file! filename analysis kondo-ctx db)
                            (get filename))
-        cur-findings (get-in @db [:findings filename])]
+        cur-findings (get-in db [:findings filename])]
     (->> cur-findings
          (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
          (concat kondo-findings)

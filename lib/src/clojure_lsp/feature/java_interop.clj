@@ -49,7 +49,7 @@
     (io/copy stream dest-file)
     dest-file))
 
-(defn ^:private uri->translated-file [uri {:keys [db]}]
+(defn ^:private uri->translated-file [uri db]
   ;; TODO consider local class files not from jar
   (if (shared/jar-file? uri)
     (let [jar-uri (shared/ensure-jarfile uri db)]
@@ -67,11 +67,11 @@
         jar-uri))
     uri))
 
-(defn uri->translated-uri [uri components]
-  (uri->translated-file uri components))
+(defn uri->translated-uri [uri db]
+  (uri->translated-file uri db))
 
-(defn read-content! [uri components]
-  (slurp (uri->translated-file uri components)))
+(defn read-content! [uri db]
+  (slurp (uri->translated-file uri db)))
 
 (def ^:private jdk-source-zip-filename "src.zip")
 
@@ -130,7 +130,7 @@
       (catch Exception e
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
-(defn ^:private analyze-jdk-source! [path db]
+(defn ^:private analyze-jdk-source! [path db*]
   (let [result (shared/logging-time
                  (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
                  (lsp.kondo/run-kondo-on-jdk-source! path))
@@ -138,10 +138,10 @@
         analysis (->> kondo-analysis
                       lsp.kondo/normalize-analysis
                       (group-by :filename))]
-    (loop [state-db @db]
-      (when-not (compare-and-set! db state-db (update state-db :analysis merge analysis))
+    (loop [state-db @db*]
+      (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
         (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
-        (recur @db)))))
+        (recur @db*)))))
 
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
@@ -192,8 +192,9 @@
   cache dir.
 
   Otherwise, we download default OpenJDK source if setting is enabled."
-  [{:keys [db]}]
-  (let [jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
+  [db*]
+  (let [db @db*
+        jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
         jdk-result-file (io/file jdk-dir-file "result")
         installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
                                       (slurp jdk-result-file))
@@ -234,6 +235,6 @@
     (if (and (shared/file-exists? jdk-result-file)
              (slurp jdk-result-file))
       (do
-        (analyze-jdk-source! (.getCanonicalPath jdk-dir-file) db)
+        (analyze-jdk-source! (.getCanonicalPath jdk-dir-file) db*)
         (logger/info java-logger-tag "JDK Source analyzed successfully."))
       (logger/warn java-logger-tag "JDK Source not found, skipping java analysis."))))

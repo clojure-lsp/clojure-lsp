@@ -25,7 +25,7 @@
            namespace-from-prefix
            keys-destructuring] :as reference}]
   (let [ref-doc-uri (shared/filename->uri filename db)
-        version (get-in @db [:documents ref-doc-uri :v] 0)
+        version (get-in db [:documents ref-doc-uri :v] 0)
         ;; Extracts the name of the keyword
         ;; Maybe have the replacement analyzed by clj-kondo instead?
         replacement-name (string/replace replacement #":+(.+/)?" "")
@@ -37,7 +37,7 @@
         ;; we find the locals analysis since when destructuring we have both
         ;; keyword and a locals analysis for the same position
         local-element (when keys-destructuring
-                        (q/find-local-by-destructured-keyword (:analysis @db) filename reference))
+                        (q/find-local-by-destructured-keyword (:analysis db) filename reference))
         text (cond
                (and local-element
                     (string/includes? (:str local-element) "/")
@@ -84,7 +84,7 @@
    db
    reference]
   (let [ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in @db [:documents ref-doc-id :v] 0)
+        version (get-in db [:documents ref-doc-id :v] 0)
         text (if (identical? :keywords (:bucket reference))
                (str ":" replacement "/" (:name reference))
                replacement)]
@@ -98,7 +98,7 @@
         ref-doc-uri (shared/filename->uri (:filename reference) db)
         [u-prefix _ u-name] (when-not alias?
                               (ident-split (:name reference)))
-        version (get-in @db [:documents ref-doc-uri :v] 0)]
+        version (get-in db [:documents ref-doc-uri :v] 0)]
     (if keyword?
       {:range (shared/->range reference)
        :new-text (str "::" replacement "/" (:name reference))
@@ -111,7 +111,7 @@
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
         ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in @db [:documents ref-doc-id :v] 0)]
+        version (get-in db [:documents ref-doc-id :v] 0)]
     (if (string/starts-with? replacement ":")
       {:range (shared/->range (assoc reference
                                      :name-col name-start))
@@ -125,7 +125,7 @@
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
         ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in @db [:documents ref-doc-id :v] 0)]
+        version (get-in db [:documents ref-doc-id :v] 0)]
     {:range (shared/->range (assoc reference :name-col name-start))
      :new-text replacement
      :text-document {:version version :uri ref-doc-id}}))
@@ -178,24 +178,25 @@
 (defn prepare-rename
   [uri row col db]
   (let [filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor (:analysis @db) filename row col)
-        references (q/find-references (:analysis @db) element true db)
-        definition (q/find-definition (:analysis @db) element db)
+        element (q/find-element-under-cursor (:analysis db) filename row col)
+        references (q/find-references (:analysis db) element true db)
+        definition (q/find-definition (:analysis db) element db)
         source-paths (settings/get db [:source-paths])
-        client-capabilities (:client-capabilities @db)
+        client-capabilities (:client-capabilities db)
         {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
     (if error
       result
       (shared/->range element))))
 
 (defn rename
-  [uri new-name row col db]
-  (let [filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor (:analysis @db) filename row col)
-        references (q/find-references (:analysis @db) element true db)
-        definition (q/find-definition (:analysis @db) element db)
+  [uri new-name row col db*]
+  (let [db @db*
+        filename (shared/uri->filename uri)
+        element (q/find-element-under-cursor (:analysis db) filename row col)
+        references (q/find-references (:analysis db) element true db)
+        definition (q/find-definition (:analysis db) element db)
         source-paths (settings/get db [:source-paths])
-        client-capabilities (:client-capabilities @db)
+        client-capabilities (:client-capabilities db)
         {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
     (if error
       result
@@ -210,9 +211,9 @@
         (if (and (identical? :namespace-definitions (:bucket definition))
                  (not (identical? :namespace-alias (:bucket element))))
           (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
-            (swap! db (fn [db] (-> db
-                                   (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
-                                   (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
+            (swap! db* (fn [db] (-> db
+                                    (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
+                                    (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
             (shared/client-changes (concat doc-changes
                                            [{:kind "rename"
                                              :old-uri uri

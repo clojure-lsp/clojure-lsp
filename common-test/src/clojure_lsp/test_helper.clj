@@ -65,7 +65,7 @@
 
 (def components
   (components/->components
-    db/db
+    db/db*
     (->TestLogger)
     (->TestProducer)))
 
@@ -73,9 +73,9 @@
   ([]
    (clean-db! :unit-test))
   ([env]
-   (reset! db/db (assoc db/initial-db
-                        :env env
-                        :producer (:producer components)))
+   (reset! db/db* (assoc db/initial-db
+                         :env env
+                         :producer (:producer components)))
    (reset! mock-diagnostics {})
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
@@ -180,7 +180,7 @@
    (let [[[row col] :as positions] (load-code-and-locs code uri)]
      (let [position-count (count positions)]
        (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-     (-> (parser/zloc-of-file @db/db uri)
+     (-> (parser/zloc-of-file @db/db* uri)
          (parser/to-pos row col)))))
 
 (defn zloc-from-code
@@ -238,7 +238,7 @@
   ([changes db]
    (changes->code changes "file:///a.clj" db))
   ([changes uri db]
-   (let [doc (get-in @db [:documents uri :text])]
+   (let [doc (get-in db [:documents uri :text])]
      (results->doc doc (vec (with-strings changes))))))
 
 (defn changes-by-uri->code [changes-by-uri uri db]

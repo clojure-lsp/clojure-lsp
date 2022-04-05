@@ -166,7 +166,7 @@
         (uri-obj->filepath uri-obj)))))
 
 (defn ensure-jarfile [uri db]
-  (let [jar-scheme? (= "jar" (get @db [:settings :dependency-scheme]))]
+  (let [jar-scheme? (= "jar" (get db [:settings :dependency-scheme]))]
     (if (or (not jar-scheme?)
             (string/starts-with? uri "jar:"))
       uri
@@ -211,7 +211,7 @@
   Jar files are given the `jar:file` or `zipfile` scheme depending on the
   `:dependency-scheme` setting."
   [^String filename db]
-  (let [jar-scheme? (= "jar" (get-in @db [:settings :dependency-scheme]))
+  (let [jar-scheme? (= "jar" (get-in db [:settings :dependency-scheme]))
         [_ jar-filepath nested-file] (re-find jar-file-with-filename-regex filename)]
     (conform-uri
       (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
@@ -219,7 +219,7 @@
           (uri-encode "jar:file" (str jar-uri-path "!/" nested-file))
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
         (.toString (filepath->uri-obj filename)))
-      (get-in @db [:settings :uri-format]))))
+      (get-in db [:settings :uri-format]))))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
@@ -268,8 +268,8 @@
   ([uri db]
    (uri->namespace uri (uri->filename uri) db))
   ([uri filename db]
-   (let [project-root-uri (:project-root-uri @db)
-         source-paths (get-in @db [:settings :source-paths])
+   (let [project-root-uri (:project-root-uri db)
+         source-paths (get-in db [:settings :source-paths])
          in-project? (when project-root-uri
                        (string/starts-with? uri project-root-uri))
          file-type (uri->file-type uri)]
@@ -370,14 +370,14 @@
   (.toFile (.normalize (.toPath file))))
 
 (defn absolute-path [^String path db]
-  (let [project-root-uri (get @db :project-root-uri)]
+  (let [project-root-uri (get db :project-root-uri)]
     (if-let [^java.nio.file.Path project-root-path (some-> project-root-uri uri->path)]
       (str (.resolve project-root-path path))
       path)))
 
 ;; TODO move to a better place
 (defn client-changes [changes db]
-  (if (get-in @db [:client-capabilities :workspace :workspace-edit :document-changes])
+  (if (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
     {:document-changes changes}
     {:changes (into {} (map (fn [{:keys [text-document edits]}]
                               [(:uri text-document) edits])

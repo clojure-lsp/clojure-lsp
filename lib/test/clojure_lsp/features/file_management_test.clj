@@ -21,7 +21,7 @@
   (is (= "(+ 1 1)\n\n" (#'f.file-management/replace-text "(+ 1 1)\n" "\n" 1 0 1 0))))
 
 (deftest did-close
-  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
+  (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
                                   :project-root-uri (h/file-uri "file:///user/project")})
   (h/load-code-and-locs "(ns foo) a b c" (h/file-uri "file:///user/project/src/clj/foo.clj"))
   (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///user/project/src/clj/bar.clj"))
@@ -29,27 +29,27 @@
   (testing "when file exists on disk"
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly true)]
-      (f.file-management/did-close "file:///user/project/src/clj/foo.clj" db/db))
-    (is (get-in @db/db [:analysis "/user/project/src/clj/foo.clj"]))
-    (is (get-in @db/db [:findings "/user/project/src/clj/foo.clj"]))
-    (is (get-in @db/db [:documents "file:///user/project/src/clj/foo.clj"])))
+      (f.file-management/did-close "file:///user/project/src/clj/foo.clj" db/db*))
+    (is (get-in @db/db* [:analysis "/user/project/src/clj/foo.clj"]))
+    (is (get-in @db/db* [:findings "/user/project/src/clj/foo.clj"]))
+    (is (get-in @db/db* [:documents "file:///user/project/src/clj/foo.clj"])))
   (testing "when local file not exists on disk"
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly false)]
-      (f.file-management/did-close "file:///user/project/src/clj/bar.clj" db/db))
-    (is (nil? (get-in @db/db [:analysis "/user/project/src/clj/bar.clj"])))
-    (is (nil? (get-in @db/db [:findings "/user/project/src/clj/bar.clj"])))
-    (is (nil? (get-in @db/db [:documents "file:///user/project/src/clj/bar.clj"]))))
+      (f.file-management/did-close "file:///user/project/src/clj/bar.clj" db/db*))
+    (is (nil? (get-in @db/db* [:analysis "/user/project/src/clj/bar.clj"])))
+    (is (nil? (get-in @db/db* [:findings "/user/project/src/clj/bar.clj"])))
+    (is (nil? (get-in @db/db* [:documents "file:///user/project/src/clj/bar.clj"]))))
   (testing "when file is external we do not remove analysis"
     (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly false)]
-      (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" db/db))
-    (is (get-in @db/db [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
-    (is (get-in @db/db [:findings "/some/path/to/jar.jar:/some/file.clj"]))
-    (is (get-in @db/db [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))))
+      (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" db/db*))
+    (is (get-in @db/db* [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
+    (is (get-in @db/db* [:findings "/some/path/to/jar.jar:/some/file.clj"]))
+    (is (get-in @db/db* [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))))
 
 (deftest outgoing-reference-filenames
-  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+  (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
                                   :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(def a)"
@@ -58,16 +58,16 @@
                                 "(def x)"
                                 "a/a"
                                 "a/a") (h/file-uri "file:///src/b.clj"))
-  (let [analysis-before (get-in @db/db [:analysis "/src/b.clj"])]
+  (let [analysis-before (get-in @db/db* [:analysis "/src/b.clj"])]
     (are [expected new-code]
          (do
            (h/load-code-and-locs new-code (h/file-uri "file:///src/b.clj"))
-           (let [analysis-after (get-in @db/db [:analysis "/src/b.clj"])]
+           (let [analysis-after (get-in @db/db* [:analysis "/src/b.clj"])]
              (is (= expected
                     (f.file-management/reference-filenames "/src/b.clj"
                                                            analysis-before
                                                            analysis-after
-                                                           db/db)))))
+                                                           @db/db*)))))
       ;; increasing
       #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
                               "(def x)"
@@ -106,7 +106,7 @@
                   "x"))))
 
 (deftest incoming-reference-filenames
-  (swap! db/db medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+  (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
                                   :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(def a)"
@@ -114,16 +114,16 @@
   (h/load-code-and-locs (h/code "(ns b (:require [a]))"
                                 "a/a"
                                 "a/c") (h/file-uri "file:///src/b.clj"))
-  (let [analysis-before (get-in @db/db [:analysis "/src/a.clj"])]
+  (let [analysis-before (get-in @db/db* [:analysis "/src/a.clj"])]
     (are [expected new-code]
          (do
            (h/load-code-and-locs new-code (h/file-uri "file:///src/a.clj"))
-           (let [analysis-after (get-in @db/db [:analysis "/src/a.clj"])]
+           (let [analysis-after (get-in @db/db* [:analysis "/src/a.clj"])]
              (is (= expected
                     (f.file-management/reference-filenames "/src/a.clj"
                                                            analysis-before
                                                            analysis-after
-                                                           db/db)))))
+                                                           @db/db*)))))
       ;; remove existing
       #{"/src/b.clj"} (h/code "(ns a)"
                               "(def b)")

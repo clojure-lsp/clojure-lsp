@@ -198,7 +198,7 @@
                          (z/find-next-value ':as)
                          z/right
                          z/sexpr)]
-    (let [local-analysis (get-in @db [:analysis filename])
+    (let [local-analysis (get-in db [:analysis filename])
           used-alias? (some #(and (= :var-usages (:bucket %))
                                   (= alias (:alias %)))
                             local-analysis)]
@@ -349,10 +349,10 @@
   [zloc uri db]
   (let [settings (settings/all db)
         ;; TODO: use parser?
-        safe-loc (or zloc (z/of-string (get-in @db [:documents uri :text])))
+        safe-loc (or zloc (z/of-string (get-in db [:documents uri :text])))
         ns-loc (edit/find-namespace safe-loc)
-        analysis (:analysis @db)
-        findings (:findings @db)]
+        analysis (:analysis db)
+        findings (:findings db)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             filename (shared/uri->filename uri)

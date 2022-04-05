@@ -4,9 +4,9 @@
    (lsp4clj.protocols.producer ILSPProducer)))
 
 (defn ->components
-  [db
+  [db*
    ^ILSPLogger logger
    ^ILSPProducer producer]
-  {:db db
+  {:db* db*
    :logger logger
    :producer producer})

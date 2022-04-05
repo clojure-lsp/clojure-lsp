@@ -47,7 +47,7 @@
 
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/find-all-aliases (:analysis @db) uri db)
+        alias->info (->> (q/find-all-aliases (:analysis db) uri db)
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -384,7 +384,7 @@
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           cursor-name-str (name cursor-sym)
-          analysis (:analysis @db)
+          analysis (:analysis db)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
                                   (find-alias-ns-pairs analysis uri db))

@@ -21,9 +21,9 @@
     (h/load-code-and-locs b-code (h/file-uri "file:///b.clj"))
     (testing "inside a macro usage"
       (is (= 'some-ns/foo
-             (f.resolve-macro/find-full-macro-symbol-to-resolve (h/zloc-from-code a-code) (h/file-uri "file:///a.clj") db/db))))
+             (f.resolve-macro/find-full-macro-symbol-to-resolve (h/zloc-from-code a-code) (h/file-uri "file:///a.clj") @db/db*))))
     (testing "not inside a macro usage"
-      (is (not (f.resolve-macro/find-full-macro-symbol-to-resolve (h/zloc-from-code b-code) (h/file-uri "file:///a.clj") db/db))))))
+      (is (not (f.resolve-macro/find-full-macro-symbol-to-resolve (h/zloc-from-code b-code) (h/file-uri "file:///a.clj") @db/db*))))))
 
 (deftest resolve-macro-as
   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
@@ -34,4 +34,4 @@
     (h/load-code-and-locs code)
     (testing "resolving macro as def"
       (is (= "{:lint-as {some-ns/foo clojure.core/def}}\n"
-             (#'f.resolve-macro/resolve-macro-as (h/zloc-from-code code) (h/file-uri "file:///a.clj") "clojure.core/def" ".any-clj-kondo/config.edn" db/db))))))
+             (#'f.resolve-macro/resolve-macro-as (h/zloc-from-code code) (h/file-uri "file:///a.clj") "clojure.core/def" ".any-clj-kondo/config.edn" @db/db*))))))

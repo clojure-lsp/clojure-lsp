@@ -226,10 +226,10 @@
       [{:name (or (some-> namespace-definition :name name)
                   filename)
         :kind (f.document-symbol/element->symbol-kind namespace-definition)
-        :range (shared/full-file-range)
+        :range shared/full-file-range
         :selection-range (if namespace-definition
                            (shared/->scope-range namespace-definition)
-                           (shared/full-file-range))
+                           shared/full-file-range)
         :children (->> (q/find-var-definitions analysis filename true)
                        (mapv (fn [e]
                                (shared/assoc-some
@@ -355,7 +355,7 @@
         (producer/publish-workspace-edit producer edit)
         (when show-document-after-edit
           (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
-                                                            (shared/full-file-range)))
+                                                            shared/full-file-range))
                (producer/show-document-request producer)))
         edit))))
 

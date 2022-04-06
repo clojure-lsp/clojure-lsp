@@ -45,7 +45,7 @@
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []
-      [{:range (shared/full-file-range)
+      [{:range shared/full-file-range
         :new-text new-text}])))
 
 (defn range-formatting [doc-id format-pos db]

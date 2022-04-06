@@ -800,7 +800,7 @@
                           "(deftest foo-test"
                           "  (is (= true"
                           "         (subject/foo))))"),
-             :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
+             :range {:row 1 :col 1 :end-row 8 :end-col 26}}]}
           results-to-assert)))
     (testing "when the test file doesn't exists for cljs file"
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
@@ -824,7 +824,7 @@
                           "(deftest foo-test"
                           "  (is (= true"
                           "         (subject/foo))))"),
-             :range {:row 1 :col 1 :end-row 4 :end-col 27}}]}
+             :range {:row 1 :col 1 :end-row 8 :end-col 26}}]}
           results-to-assert)))
     (testing "when the test file exists for clj file"
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")

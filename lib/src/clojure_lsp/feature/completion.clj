@@ -241,7 +241,7 @@
                               (contains? alias-namespaces (:ns %))
                               (or (simple-ident? cursor-value) (matches-fn (:name %))))
                      [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
-                distinct
+                (distinct)
                 (map
                   (fn [[element-ns completion-item]]
                     (let [require-edit (some-> cursor-loc

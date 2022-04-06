@@ -251,7 +251,7 @@
                           col
                           end-row
                           end-col)
-                        (map #(q/find-definition analysis % db)))]
+                        (map #(q/find-definition analysis %)))]
     (reduce
       (fn [accum d]
         (if (or (not accum)
@@ -622,9 +622,9 @@
 
 (defn inline-symbol
   [uri line column db]
-  (let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) line column db)]
+  (let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) line column)]
     (when-let [op (inline-symbol? definition db)]
-      (let [references (q/find-references-from-cursor (:analysis db) (shared/uri->filename uri) line column false db)
+      (let [references (q/find-references-from-cursor (:analysis db) (shared/uri->filename uri) line column false)
             def-uri    (shared/filename->uri (:filename definition) db)
             ;; TODO: use safe-zloc-of-file and handle nils
             def-loc    (some-> (parser/zloc-of-file db def-uri)
@@ -666,11 +666,11 @@
           z-name (name z-sexpr)
           z-ns (namespace z-sexpr)]
       (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol z-ns))]
-        (if-let [ns-def (q/find-definition (:analysis db) ns-usage db)]
-          (when-not (shared/external-filename? (:filename ns-def) (settings/get db [:source-paths]))
+        (if-let [ns-def (q/find-definition (:analysis db) ns-usage)]
+          (when-not (:external? ns-def)
             {:ns (:name ns-def)
              :name z-name})
-          (when-not (shared/external-filename? (:filename ns-usage) (settings/get db [:source-paths]))
+          (when-not (:external? ns-usage)
             {:new-ns (:name ns-usage)
              :name z-name}))
         {:new-ns z-ns
@@ -690,7 +690,7 @@
   [local-zloc ns-or-alias fn-name defn-edit uri db]
   (let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
-                        (q/find-definition (:analysis db) ns-usage db))
+                        (q/find-definition (:analysis db) ns-usage))
         source-paths (settings/get db [:source-paths])
         def-uri (cond
                   ns-definition

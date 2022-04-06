@@ -28,7 +28,7 @@
                  (str startup-logger-tag " Project only paths analyzed, took %s")
                  (lsp.kondo/run-kondo-on-paths! paths false db*))
         analysis (->> (:analysis result)
-                      lsp.kondo/normalize-analysis
+                      (lsp.kondo/normalize-analysis false)
                       (group-by :filename))]
     (swap! db* (fn [state-db]
                  (-> state-db
@@ -56,7 +56,7 @@
                            (dissoc :namespace-usages :var-usages)
                            (update :var-definitions (fn [usages] (remove :private usages))))
         analysis (->> kondo-analysis
-                      lsp.kondo/normalize-analysis
+                      (lsp.kondo/normalize-analysis true)
                       (group-by :filename))]
     (swap! db* assoc :kondo-config (:config result))
     analysis))
@@ -64,7 +64,7 @@
 (defn analyze-reference-filenames! [filenames db*]
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)
         analysis (->> (:analysis result)
-                      lsp.kondo/normalize-analysis
+                      (lsp.kondo/normalize-analysis false)
                       (group-by :filename))
         empty-findings (reduce (fn [map filename] (assoc map filename [])) {} filenames)
         new-findings (merge empty-findings (group-by :filename (:findings result)))]

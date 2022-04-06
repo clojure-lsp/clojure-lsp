@@ -114,10 +114,10 @@
        name-end-row
        name-end-col))
 
-(defn normalize-analysis [analysis]
+(defn normalize-analysis [external? analysis]
   (for [[bucket vs] analysis
         v vs
-        element (entry->normalized-entries (assoc v :bucket bucket))
+        element (entry->normalized-entries (assoc v :bucket bucket :external? external?))
         :when (valid-element? element)]
     element))
 
@@ -131,27 +131,28 @@
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn ^:private custom-lint-project!
-  [db* {:keys [analysis config] :as kondo-ctx}]
+  [external-analysis-only? {:keys [analysis config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
-    (let [db @db*
-          new-analysis (group-by :filename (normalize-analysis analysis))]
-      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx db))))
+    (let [new-analysis (group-by :filename (normalize-analysis external-analysis-only? analysis))]
+      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx))))
 
 (defn ^:private custom-lint-files!
   [files db* {:keys [analysis] :as kondo-ctx}]
   (shared/logging-task
     :reference-files/lint
     (let [db @db*
-          new-analysis (group-by :filename (normalize-analysis analysis))
+          new-analysis (group-by :filename (normalize-analysis false analysis))
           updated-analysis (merge (:analysis db) new-analysis)]
-      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx db))))
+      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx))))
 
 (defn ^:private custom-lint-file!
   [{:keys [analysis config] :as kondo-ctx} uri db*]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [db @db*
           filename (-> analysis :var-definitions first :filename)
-          updated-analysis (assoc (:analysis db) filename (normalize-analysis analysis))]
+          source-paths (settings/get db [:source-paths])
+          external-filename? (shared/external-filename? filename source-paths)
+          updated-analysis (assoc (:analysis db) filename (normalize-analysis external-filename? analysis))]
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
           (if (>= tries 200)
@@ -178,7 +179,7 @@
                   (swap! db* assoc-in [:findings filename] new-findings))
                 (when (not= :unknown (shared/uri->file-type uri))
                   (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
-        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx db)))))
+        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx)))))
 
 (defn kondo-for-paths [paths db* external-analysis-only?]
   (let [db @db*]
@@ -193,7 +194,7 @@
                                       :java-class-definitions true}
                            :canonical-paths true}}}
         (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
-                                                  (partial custom-lint-project! db*)))
+                                                  (partial custom-lint-project! external-analysis-only?)))
         (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
         (with-additional-config (settings/all db)))))
 

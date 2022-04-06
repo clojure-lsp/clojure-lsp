@@ -73,22 +73,22 @@
                      "(def bar foo)")
              b-results))
       (is (= (h/code "(ns crumb (:require"
-                     "           [bread :as b :refer [bar]]))"
+                     "           [bread :as br :refer [bar]]))"
                      "(bar 1)"
-                     "(b/bar 2)"
-                     "(b/bar 3)")
+                     "(br/bar 2)"
+                     "(br/bar 3)")
              c-results))
       (is (= (h/code "(ns diner (:require"
                      "           [apple :as a]"
-                     "           [bread :as b :refer [bar]]))"
+                     "           [bread :as br :refer [bar]]))"
                      "(a/qux 1)"
                      "(apple/foo 1)"
                      "(bar 2)")
              d-results))
       (is (= (h/code "(ns eater (:require"
-                     "           [bread :as b]"
+                     "           [bread :as br]"
                      "           [crumb :as c]))"
-                     "(b/bar 2)"
+                     "(br/bar 2)"
                      "(c/c 3)")
              e-results))
       (is (= (h/code "(ns fruit (:require"

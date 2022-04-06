@@ -206,7 +206,7 @@
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
   (when-let [aliases (seq (into []
                                 (comp
-                                  (q/filter-project-analysis-xf db)
+                                  (q/filter-project-analysis-xf)
                                   (mapcat val)
                                   (filter #(identical? :namespace-alias (:bucket %))))
                                 (:analysis db)))]
@@ -217,36 +217,38 @@
                                 set)]
       (concat
         (when (simple-ident? cursor-value)
-          (->> aliases
-               (filterv (fn [element]
-                          (or
-                            (matches-fn (:alias element))
-                            (matches-fn (:to element)))))
-               (mapv
-                 (fn [element]
-                   (let [require-edit (some-> cursor-loc
-                                              (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
-                                                                                     (symbol (str (:to element)))
-                                                                                     db)
-                                              r.transform/result)]
-                     (cond-> (element->completion-item element nil :required-alias)
-                       (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit))))))))
-        (->> (:analysis db)
-             (mapcat val)
-             (keep
-               #(when (and (identical? :var-definitions (:bucket %))
-                           (not (:private %))
-                           (contains? alias-namespaces (:ns %))
-                           (or (simple-ident? cursor-value) (matches-fn (:name %))))
-                  [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
-             set
-             (map
-               (fn [[element-ns completion-item]]
-                 (let [require-edit (some-> cursor-loc
-                                            (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
-                                            r.transform/result)]
-                   (cond-> completion-item
-                     (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))))
+          (into []
+                (comp
+                  (filter (fn [element]
+                            (or
+                              (matches-fn (:alias element))
+                              (matches-fn (:to element)))))
+                  (map (fn [element]
+                         (let [require-edit (some-> cursor-loc
+                                                    (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
+                                                                                           (symbol (str (:to element)))
+                                                                                           db)
+                                                    r.transform/result)]
+                           (cond-> (element->completion-item element nil :required-alias)
+                             (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
+                aliases))
+        (into #{}
+              (comp
+                (mapcat val)
+                (keep
+                  #(when (and (identical? :var-definitions (:bucket %))
+                              (not (:private %))
+                              (contains? alias-namespaces (:ns %))
+                              (or (simple-ident? cursor-value) (matches-fn (:name %))))
+                     [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
+                (map
+                  (fn [[element-ns completion-item]]
+                    (let [require-edit (some-> cursor-loc
+                                               (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
+                                               r.transform/result)]
+                      (cond-> completion-item
+                        (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
+              (:analysis db))))))
 
 (defn ^:private with-elements-from-full-ns [full-ns analysis]
   (->> (mapcat val analysis)
@@ -439,7 +441,7 @@
         definition (q/find-definition analysis {:filename filename
                                                 :name (symbol name)
                                                 :to (symbol ns)
-                                                :bucket :var-usages} db)]
+                                                :bucket :var-usages})]
     (if definition
       (-> item
           (assoc :documentation (f.hover/hover-documentation definition db*)))

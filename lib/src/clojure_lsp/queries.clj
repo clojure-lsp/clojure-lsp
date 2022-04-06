@@ -23,22 +23,28 @@
     nil
     coll))
 
-(defn filter-project-analysis-xf []
-  (remove (comp :external? first second)))
+(def filter-project-analysis-xf
+  "Filter only project elements from analysis.
+  Checking if the first value is `external?`, we infer all elements
+  for that filename are too."
+  (remove (comp :external? first val)))
 
-(defn filter-external-analysis-xf []
-  (filter (comp :external? first second)))
+(def filter-external-analysis-xf
+  "Filter only external elements from analysis.
+  Checking if the first value is not `external?`, we infer all elements
+  for that filename are not too."
+  (filter (comp :external? first val)))
 
 (defn ^:private find-last-order-by-project-analysis [pred? analysis]
   (or (peek (into []
                   (comp
-                    (filter-project-analysis-xf)
+                    filter-project-analysis-xf
                     (mapcat val)
                     (filter pred?))
                   analysis))
       (peek (into []
                   (comp
-                    (filter-external-analysis-xf)
+                    filter-external-analysis-xf
                     (mapcat val)
                     (filter pred?))
                   analysis))))
@@ -360,7 +366,7 @@
   [analysis {:keys [ns name] :as _element} include-declaration?]
   (into []
         (comp
-          (filter-project-analysis-xf)
+          filter-project-analysis-xf
           (mapcat val)
           (filter #(identical? :keywords (:bucket %)))
           (filter #(safe-equal? name (:name %)))
@@ -511,7 +517,7 @@
   (let [langs (shared/uri->available-langs uri)]
     (into #{}
           (comp
-            (filter-project-analysis-xf)
+            filter-project-analysis-xf
             (mapcat val)
             (filter #(identical? :namespace-alias (:bucket %)))
             (filter :alias)

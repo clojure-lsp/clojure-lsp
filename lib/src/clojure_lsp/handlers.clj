@@ -75,7 +75,7 @@
   (let [db @db*
         project-files (into #{}
                             (comp
-                              (q/filter-project-analysis-xf)
+                              q/filter-project-analysis-xf
                               (map key))
                             (:analysis db))]
     (->> project-files

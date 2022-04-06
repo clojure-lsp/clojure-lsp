@@ -15,7 +15,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 2 (count (into {}
-                          (q/filter-project-analysis-xf)
+                          q/filter-project-analysis-xf
                           (:analysis @db/db*))))))
   (testing "when dependency-scheme is jar"
     (swap! db/db* shared/deep-merge {:settings {:dependency-scheme "jar"}})
@@ -23,7 +23,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 2 (count (into {}
-                          (q/filter-project-analysis-xf)
+                          q/filter-project-analysis-xf
                           (:analysis @db/db*)))))))
 
 (deftest external-analysis
@@ -33,7 +33,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 1 (count (into {}
-                          (q/filter-external-analysis-xf)
+                          q/filter-external-analysis-xf
                           (:analysis @db/db*))))))
   (testing "when dependency-scheme is jar"
     (swap! db/db* shared/deep-merge {:settings {:dependency-scheme "jar"}})
@@ -41,7 +41,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 1 (count (into {}
-                          (q/filter-external-analysis-xf)
+                          q/filter-external-analysis-xf
                           (:analysis @db/db*)))))))
 
 (deftest find-last-order-by-project-analysis

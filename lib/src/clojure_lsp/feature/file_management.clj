@@ -95,7 +95,7 @@
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
         project-analysis (into {}
-                               (q/filter-project-analysis-xf)
+                               q/filter-project-analysis-xf
                                (dissoc (:analysis db) filename)) ;; don't notify self
         incoming-filenames (when (seq changed-var-definitions)
                              (let [def-signs (->> changed-var-definitions

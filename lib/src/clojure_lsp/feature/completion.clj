@@ -206,7 +206,7 @@
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
   (when-let [aliases (seq (into []
                                 (comp
-                                  (q/filter-project-analysis-xf)
+                                  q/filter-project-analysis-xf
                                   (mapcat val)
                                   (filter #(identical? :namespace-alias (:bucket %))))
                                 (:analysis db)))]

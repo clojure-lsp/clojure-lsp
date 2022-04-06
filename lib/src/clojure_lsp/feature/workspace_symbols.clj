@@ -48,7 +48,7 @@
   ;; TODO refactor to be a complete transducer
   (->> (into {}
              (comp
-               (q/filter-project-analysis-xf))
+               q/filter-project-analysis-xf)
              (:analysis db))
        vals
        flatten

@@ -232,7 +232,7 @@
                            (cond-> (element->completion-item element nil :required-alias)
                              (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
                 aliases))
-        (into #{}
+        (into []
               (comp
                 (mapcat val)
                 (keep
@@ -241,6 +241,7 @@
                               (contains? alias-namespaces (:ns %))
                               (or (simple-ident? cursor-value) (matches-fn (:name %))))
                      [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
+                distinct
                 (map
                   (fn [[element-ns completion-item]]
                     (let [require-edit (some-> cursor-loc

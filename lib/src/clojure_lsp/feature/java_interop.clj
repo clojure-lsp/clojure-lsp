@@ -136,7 +136,7 @@
                  (lsp.kondo/run-kondo-on-jdk-source! path))
         kondo-analysis (select-keys (:analysis result) [:java-class-definitions])
         analysis (->> kondo-analysis
-                      lsp.kondo/normalize-analysis
+                      (lsp.kondo/normalize-analysis true)
                       (group-by :filename))]
     (loop [state-db @db*]
       (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))

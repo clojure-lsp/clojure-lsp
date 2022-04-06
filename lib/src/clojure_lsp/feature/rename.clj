@@ -185,8 +185,8 @@
         element (q/find-element-under-cursor (:analysis db) filename row col)]
     (if-not element
       error-no-element
-      (let [references (q/find-references (:analysis db) element true db)
-            definition (q/find-definition (:analysis db) element db)
+      (let [references (q/find-references (:analysis db) element true)
+            definition (q/find-definition (:analysis db) element)
             source-paths (settings/get db [:source-paths])
             client-capabilities (:client-capabilities db)
             {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
@@ -201,8 +201,8 @@
         element (q/find-element-under-cursor (:analysis db) filename row col)]
     (if-not element
       error-no-element
-      (let [references (q/find-references (:analysis db) element true db)
-            definition (q/find-definition (:analysis db) element db)
+      (let [references (q/find-references (:analysis db) element true)
+            definition (q/find-definition (:analysis db) element)
             source-paths (settings/get db [:source-paths])
             client-capabilities (:client-capabilities db)
             {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]

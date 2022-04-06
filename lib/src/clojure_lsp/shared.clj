@@ -194,10 +194,11 @@
       false)))
 
 (defn external-filename? [filename source-paths]
-  (and filename
-       (or (-> filename name jar-file?)
-           (and (seq source-paths)
-                (not-any? #(string/starts-with? filename %) source-paths)))))
+  (boolean
+    (and filename
+         (or (-> filename name jar-file?)
+             (and (seq source-paths)
+                  (not-any? #(string/starts-with? filename %) source-paths))))))
 
 (def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
 

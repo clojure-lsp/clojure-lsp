@@ -264,7 +264,7 @@
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
-        definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col db)
+        definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]

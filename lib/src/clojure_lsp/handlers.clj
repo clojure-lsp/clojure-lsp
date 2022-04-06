@@ -75,7 +75,7 @@
   (let [db @db*
         project-files (into #{}
                             (comp
-                              (q/filter-project-analysis-xf db)
+                              q/filter-project-analysis-xf
                               (map key))
                             (:analysis db))]
     (->> project-files
@@ -162,7 +162,7 @@
                         (shared/filename->uri db)
                         (f.java-interop/uri->translated-uri db))
                :range (shared/->range reference)})
-            (q/find-references-from-cursor (:analysis db) (shared/uri->filename textDocument) row col (:includeDeclaration context) db)))))
+            (q/find-references-from-cursor (:analysis db) (shared/uri->filename textDocument) row col (:includeDeclaration context))))))
 
 (defn completion-resolve-item [item {:keys [db*]}]
   (shared/logging-task
@@ -186,7 +186,7 @@
     :definition
     (let [db @db*
           [line column] (shared/position->line-column position)]
-      (when-let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename textDocument) line column db)]
+      (when-let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename textDocument) line column)]
         {:uri (-> (:filename definition)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri db))
@@ -197,7 +197,7 @@
     :declaration
     (let [db @db*
           [line column] (shared/position->line-column position)]
-      (when-let [declaration (q/find-declaration-from-cursor (:analysis db) (shared/uri->filename textDocument) line column db)]
+      (when-let [declaration (q/find-declaration-from-cursor (:analysis db) (shared/uri->filename textDocument) line column)]
         {:uri (-> (:filename declaration)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri db))
@@ -213,7 +213,7 @@
                         (shared/filename->uri db)
                         (f.java-interop/uri->translated-uri db))
                :range (shared/->range implementation)})
-            (q/find-implementations-from-cursor (:analysis db) (shared/uri->filename textDocument) row col db)))))
+            (q/find-implementations-from-cursor (:analysis db) (shared/uri->filename textDocument) row col)))))
 
 (defn document-symbol [{:keys [textDocument]}]
   (shared/logging-task
@@ -250,7 +250,7 @@
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
           scoped-analysis (select-keys (:analysis db) [filename])
-          references (q/find-references-from-cursor scoped-analysis filename line column true db)]
+          references (q/find-references-from-cursor scoped-analysis filename line column true)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -295,7 +295,7 @@
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}
-                                           :definition (q/find-definition analysis e db)
+                                           :definition (q/find-definition analysis e)
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 

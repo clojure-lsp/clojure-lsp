@@ -103,9 +103,9 @@
         form-loc (edit/to-top zloc)
         analysis (:analysis db)
         source-filename (shared/uri->filename uri)
-        source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename db))
+        source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename))
         dest-filename (shared/absolute-path dest-filename db)
-        dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename db))
+        dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename))
         inner-usages (var-usages-within zloc uri db)
         ;; if source-ns things are used within the form
         ;; we can't move it
@@ -122,7 +122,7 @@
                        multiple-defs?)]
     (when can-move?
       (let [def-to-move (first defs)
-            refs (q/find-references analysis def-to-move false db)
+            refs (q/find-references analysis def-to-move false)
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
             per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
             dest-uri (shared/filename->uri dest-filename db)

@@ -51,9 +51,9 @@
           _ (h/load-code-and-locs (h/code "(ns eater (:require [apple :as a] [crumb :as c]))"
                                           "(a/bar 2)"
                                           "(c/c 3)") e-uri)
-          _ (h/load-code-and-locs (h/code "(ns fruit (:require [apple :as a] [bread :as br]))"
+          _ (h/load-code-and-locs (h/code "(ns fruit (:require [apple :as a] [bread :as b]))"
                                           "(a/bar 2)"
-                                          "(br/foo 3)") f-uri)
+                                          "(b/foo 3)") f-uri)
           results (:changes-by-uri (move-form/move-form zloc a-uri db/db* "/b.clj"))
           a-results (h/changes-by-uri->code results a-uri @db/db*)
           b-results (h/changes-by-uri->code results b-uri @db/db*)
@@ -92,7 +92,7 @@
                      "(c/c 3)")
              e-results))
       (is (= (h/code "(ns fruit (:require"
-                     "           [bread :as br]))"
-                     "(br/bar 2)"
-                     "(br/foo 3)")
+                     "           [bread :as b]))"
+                     "(b/bar 2)"
+                     "(b/foo 3)")
              f-results)))))

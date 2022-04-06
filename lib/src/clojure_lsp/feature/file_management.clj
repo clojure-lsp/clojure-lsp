@@ -19,7 +19,10 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private update-analysis [db uri new-analysis]
-  (assoc-in db [:analysis (shared/uri->filename uri)] (lsp.kondo/normalize-analysis new-analysis)))
+  (let [filename (shared/uri->filename uri)
+        source-paths (settings/get db [:source-paths])
+        external-filename? (shared/external-filename? filename source-paths)]
+    (assoc-in db [:analysis filename] (lsp.kondo/normalize-analysis external-filename? new-analysis))))
 
 (defn ^:private update-findings [db uri new-findings]
   (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
@@ -92,7 +95,7 @@
   (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
         project-analysis (into {}
-                               (q/filter-project-analysis-xf db)
+                               q/filter-project-analysis-xf
                                (dissoc (:analysis db) filename)) ;; don't notify self
         incoming-filenames (when (seq changed-var-definitions)
                              (let [def-signs (->> changed-var-definitions
@@ -225,7 +228,7 @@
                    "Created watched files analyzed, took %s"
                    (lsp.kondo/run-kondo-on-paths! filenames false db*))
           analysis (->> (:analysis result)
-                        lsp.kondo/normalize-analysis
+                        (lsp.kondo/normalize-analysis false)
                         (group-by :filename))]
       (swap! db* (fn [state-db]
                    (-> state-db

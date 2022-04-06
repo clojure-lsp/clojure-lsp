@@ -312,8 +312,8 @@
                                                     (->> vs
                                                          (map first)
                                                          frequencies
-                                                         (sort-by val)
-                                                         reverse
+                                                         (sort-by (fn [[ns freq]]
+                                                                    [(- freq) ns]))
                                                          (into (array-map))))))
         namespaces->aliases (->> ns-alias-pairs
                                  (group-by first)
@@ -322,8 +322,8 @@
                                                          (map second)
                                                          (remove nil?)
                                                          frequencies
-                                                         (sort-by val)
-                                                         reverse
+                                                         (sort-by (fn [[alias freq]]
+                                                                    [(- freq) alias]))
                                                          (into (array-map))))))
         alias-namespaces (get aliases->namespaces cursor-namespace-str)
         namespace-aliases (get namespaces->aliases cursor-namespace-str)

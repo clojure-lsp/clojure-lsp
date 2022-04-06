@@ -340,13 +340,11 @@
                           (h/code "(def a) |(def b)"))
     (assert-drag-backward (h/code "|(def b) (def a) (def c)")
                           (h/code "(def a) |(def b) (def c)"))
-    (is (= ;; preferrably would be:
-          #_{:row 1 :col 1
-             :end-row 2 :end-col 8}
-          shared/full-file-position
-          (as-range
-            (drag-code-backward (h/code "(def a)"
-                                        "|(def b)"))))))
+    (is (= {:row 1 :col 1
+            :end-row 2 :end-col 8}
+           (as-range
+             (drag-code-backward (h/code "(def a)"
+                                         "|(def b)"))))))
   (testing "within special functions"
     (assert-drag-backward (h/code "(cond |b 2 a 1)")
                           (h/code "(cond a 1 |b 2)"))
@@ -732,13 +730,11 @@
                          (h/code "|(def a) (def b)"))
     (assert-drag-forward (h/code "(def a) (def c) |(def b)")
                          (h/code "(def a) |(def b) (def c)"))
-    (is (= ;; preferrably would be:
-          #_{:row 1 :col 1
-             :end-row 2 :end-col 8}
-          shared/full-file-position
-          (as-range
-            (drag-code-forward (h/code "|(def a)"
-                                       "(def b)"))))))
+    (is (= {:row 1 :col 1
+            :end-row 2 :end-col 8}
+           (as-range
+             (drag-code-forward (h/code "|(def a)"
+                                        "(def b)"))))))
   (testing "within special functions"
     (assert-drag-forward (h/code "(cond b 2 |a 1)")
                          (h/code "(cond |a 1 b 2)"))

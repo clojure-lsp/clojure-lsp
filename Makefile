@@ -4,7 +4,7 @@ all: debug-cli
 #
 # Older versions of the clojure launcher script may not work with this Makefile
 #
-# If you see errors (e.g. file not found errors) please download and install 
+# If you see errors (e.g. file not found errors) please download and install
 # the latest version of the clojure launcher script for your platform from
 #
 # https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools
@@ -44,9 +44,6 @@ cli-jar-for-native:
 
 debug-cli:
 	cd cli && clojure -T:build debug-cli
-	mv cli/clojure-lsp .
-debug-perf-cli:
-	cd cli && clojure -T:build debug-perf-cli
 	mv cli/clojure-lsp .
 prod-cli:
 	cd cli && clojure -T:build prod-cli

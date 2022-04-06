@@ -86,30 +86,10 @@ nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/ser
 
 TBD. PR welcome.
 
-## Profiling
+## Debugging & Profiling
 
-To make a build with profiling and benchmarking tools available, in addition to an nREPL, add the following requires to the namespace you want to profile.
+The nREPL includes tools for debugging and profiling clojure-lsp. See `cli/dev/clojure_lsp/debug.clj`.
 
-```clojure
-(:require
-  ,,,
-  [clj-async-profiler.core :as profiler]
-  [criterium.core :as bench])
-```
+If you're interested in using the profiling tools in that file, you'll need to be familiar with [criterium](https://github.com/hugoduncan/criterium) and [clj-async-profiler](http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/).
 
-Also add an (unused) function
-
-```clojure
-(defn stub []
-  (bench/quick-bench (* 2 3))
-  (profiler/profile
-    {:min-width 5}
-    (dotimes [_ 500]
-      (* 2 3))))
-```
-
-Then run `make debug-perf-cli`. When the build has completed, follow the above steps to connect to an nREPL.
-
-Execute profiling code within a rich comment block, using the code from the stub function as a guideline. You'll need to be familiar with [criterium](https://github.com/hugoduncan/criterium) and [clj-async-profiler](http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/) to interpret the results.
-
-Note that it is often important to do profiling with this kind of nREPL, because in a regular REPL the analysis database starts off nearly empty. With a fuller database, profiling is more accurate. That said, if you do want to profile in a regular REPL, you can—start it with the `:performance` alias.
+Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with `-A:build`, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.

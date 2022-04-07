@@ -34,9 +34,9 @@
        result#)))
 
 (defmacro profile-by-runtime
-  "A tool to get a flamegraph of `body`. Uses the `:est-runtime-in-ms` in the
-  `opts` to calculates how many times it needs to execute `body` to run for
-  about 10 seconds. This should get a reasonable number of samples. See
+  "Generate a flamegraph of `body`. Uses the `:est-runtime-in-ms` in the `opts`
+  to calculate how many times it needs to execute `body` for the profiling to
+  run for about 10 seconds. This should get a reasonable number of samples. See
   http://clojure-goes-fast.com/blog/clj-async-profiler-tips/#make-sure-you-have-enough-samples
 
   If opts includes `:open? true`, will [open][open-fg] the generated flamegraph."
@@ -73,7 +73,7 @@
   To estimate the runtime of the body by running it once, choose
   `:estimate-strategy :naive` (default).
 
-  For a more rigorous estimate delegate to criterium by choosing
+  For a more rigorous estimate, delegate to criterium by choosing
   `:estimate-strategy :quick-bench`.
 
   To [[open-file]] the generated flamegraph, add `:open? true`.

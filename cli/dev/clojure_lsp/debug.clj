@@ -5,11 +5,12 @@
 
   It's on the classpath when building with `make` (or `make debug-cli`) so don't
   leave any clutter that would break the build."
-  (:require [clojure-lsp.feature.completion :as f.completion]
-            [clojure-lsp.db :as db]
-            [clojure.java.io :as io]
-            [clj-async-profiler.core :as profiler]
-            [criterium.core :as bench]))
+  (:require
+   [clj-async-profiler.core :as profiler]
+   [clojure-lsp.db :as db]
+   [clojure-lsp.feature.completion :as f.completion]
+   [clojure.java.shell :as sh]
+   [criterium.core :as bench]))
 
 (defn uri-in-project [filepath]
   (str (:project-root-uri @db/db*) "/" filepath))
@@ -17,7 +18,7 @@
 (defn open-file
   "Opens a `file` by shelling out to `open`."
   [file]
-  (clojure.java.shell/sh "open" (str file)))
+  (sh/sh "open" (str file)))
 
 (defmacro profile-times
   "Profiles the `body` by running it in a loop `n` times, returning the

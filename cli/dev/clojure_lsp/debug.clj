@@ -10,14 +10,19 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure.java.shell :as sh]
-   [criterium.core :as bench]))
+   [criterium.core :as bench]
+   [clojure-lsp.shared :as shared]))
 
 (defn uri-in-project [filepath]
-  (str (:project-root-uri @db/db*) "/" filepath))
+  (let [db @db/db*]
+    (-> filepath
+        (shared/absolute-path db)
+        (shared/filename->uri db))))
 
 (defn open-file
   "Opens a `file` by shelling out to `open`."
   [file]
+  ;; TODO: xdg-open for Linux; start for Windows
   (sh/sh "open" (str file)))
 
 (defmacro profile-times

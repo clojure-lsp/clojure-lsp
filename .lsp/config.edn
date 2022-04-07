@@ -1,3 +1,4 @@
 {:clean {:ns-inner-blocks-indentation :next-line}
  :linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
+ :source-aliases #{:dev :test :debug}
  :use-metadata-for-privacy? true}

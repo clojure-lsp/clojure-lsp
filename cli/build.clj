@@ -75,10 +75,6 @@
 
 (defn debug-cli [opts]
   (uber-aot (merge opts {:extra-aliases [:debug]}))
-  (bin {}))
-
-(defn debug-perf-cli [opts]
-  (uber-aot (merge opts {:extra-aliases [:debug :performance]}))
   (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"]}))
 
 (defn prod-cli [opts]

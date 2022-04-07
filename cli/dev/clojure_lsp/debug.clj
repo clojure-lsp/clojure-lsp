@@ -10,20 +10,18 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure.java.shell :as sh]
+   [clojure.java.io :as io]
    [criterium.core :as bench]
    [clojure-lsp.shared :as shared]))
 
 (defn uri-in-project [filepath]
   (let [db @db/db*]
-    (-> filepath
-        (shared/absolute-path db)
-        (shared/filename->uri db))))
+    (shared/filename->uri (shared/absolute-path filepath db) db)))
 
 (defn open-file
-  "Opens a `file` by shelling out to `open`."
+  "Opens a `file` with its default application."
   [file]
-  ;; TODO: xdg-open for Linux; start for Windows
-  (sh/sh "open" (str file)))
+  (.open (java.awt.Desktop/getDesktop) file))
 
 (defmacro profile-times
   "Profiles the `body` by running it in a loop `n` times, returning the
@@ -109,5 +107,6 @@
        ;; :estimate-strategy :quick-bench
        }
       (f.completion/completion (uri-in-project "lib/src/clojure_lsp/queries.clj") 24 8 @db/db*)))
+
 
   #_())

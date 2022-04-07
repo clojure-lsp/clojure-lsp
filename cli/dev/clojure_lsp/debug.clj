@@ -9,10 +9,8 @@
    [clj-async-profiler.core :as profiler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.completion :as f.completion]
-   [clojure.java.shell :as sh]
-   [clojure.java.io :as io]
-   [criterium.core :as bench]
-   [clojure-lsp.shared :as shared]))
+   [clojure-lsp.shared :as shared]
+   [criterium.core :as bench]))
 
 (defn uri-in-project [filepath]
   (let [db @db/db*]

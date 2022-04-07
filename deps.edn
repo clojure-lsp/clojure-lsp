@@ -16,4 +16,5 @@
                                 "common-test/src"
                                 "lib/test"
                                 "cli/test"]
-                  :main-opts ["-m" "kaocha.runner"]}}}
+                  :main-opts ["-m" "kaocha.runner"]}
+           :debug {:extra-paths ["cli/dev"]}}}

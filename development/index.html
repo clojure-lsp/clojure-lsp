@@ -442,8 +442,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#profiling" class="md-nav__link">
-    Profiling
+  <a href="#debugging-profiling" class="md-nav__link">
+    Debugging &amp; Profiling
   </a>
   
 </li>
@@ -617,8 +617,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#profiling" class="md-nav__link">
-    Profiling
+  <a href="#debugging-profiling" class="md-nav__link">
+    Debugging &amp; Profiling
   </a>
   
 </li>
@@ -714,24 +714,10 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 </code></pre></div>
 <h3 id="your-favorite-editor">Your Favorite Editor<a class="headerlink" href="#your-favorite-editor" title="Permanent link">#</a></h3>
 <p>TBD. PR welcome.</p>
-<h2 id="profiling">Profiling<a class="headerlink" href="#profiling" title="Permanent link">#</a></h2>
-<p>To make a build with profiling and benchmarking tools available, in addition to an nREPL, add the following requires to the namespace you want to profile.</p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:require</span>
-  ,,,
-  <span class="p">[</span><span class="nv">clj-async-profiler.core</span> <span class="ss">:as</span> <span class="nv">profiler</span><span class="p">]</span>
-  <span class="p">[</span><span class="nv">criterium.core</span> <span class="ss">:as</span> <span class="nv">bench</span><span class="p">])</span>
-</code></pre></div>
-<p>Also add an (unused) function</p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">defn </span><span class="nv">stub</span> <span class="p">[]</span>
-  <span class="p">(</span><span class="nf">bench/quick-bench</span> <span class="p">(</span><span class="nb">* </span><span class="mi">2</span> <span class="mi">3</span><span class="p">))</span>
-  <span class="p">(</span><span class="nf">profiler/profile</span>
-    <span class="p">{</span><span class="ss">:min-width</span> <span class="mi">5</span><span class="p">}</span>
-    <span class="p">(</span><span class="nb">dotimes </span><span class="p">[</span><span class="nv">_</span> <span class="mi">500</span><span class="p">]</span>
-      <span class="p">(</span><span class="nb">* </span><span class="mi">2</span> <span class="mi">3</span><span class="p">))))</span>
-</code></pre></div>
-<p>Then run <code>make debug-perf-cli</code>. When the build has completed, follow the above steps to connect to an nREPL.</p>
-<p>Execute profiling code within a rich comment block, using the code from the stub function as a guideline. You'll need to be familiar with <a href="https://github.com/hugoduncan/criterium">criterium</a> and <a href="http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/">clj-async-profiler</a> to interpret the results.</p>
-<p>Note that it is often important to do profiling with this kind of nREPL, because in a regular REPL the analysis database starts off nearly empty. With a fuller database, profiling is more accurate. That said, if you do want to profile in a regular REPL, you can—start it with the <code>:performance</code> alias.</p>
+<h2 id="debugging-profiling">Debugging &amp; Profiling<a class="headerlink" href="#debugging-profiling" title="Permanent link">#</a></h2>
+<p>The nREPL includes tools for debugging and profiling clojure-lsp. See <code>cli/dev/clojure_lsp/debug.clj</code>.</p>
+<p>If you're interested in using the profiling tools in that file, you'll need to be familiar with <a href="https://github.com/hugoduncan/criterium">criterium</a> and <a href="http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/">clj-async-profiler</a>.</p>
+<p>Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with <code>-A:build</code>, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.</p>
                 
                   
                     
@@ -740,7 +726,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 6, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 7, 2022</span>
     
   </small>
 </div>

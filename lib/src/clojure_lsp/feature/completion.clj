@@ -203,53 +203,58 @@
                        (matches-fn (:name %))))
          (map #(element->completion-item % nil :refer)))))
 
-(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value matches-fn db]
-  (when-let [aliases (seq (into []
-                                (comp
-                                  q/filter-project-analysis-xf
-                                  (mapcat val)
-                                  (filter #(identical? :namespace-alias (:bucket %))))
-                                (:analysis db)))]
-    (let [alias-namespaces (->> aliases
-                                (filter #(= (-> % :alias str) cursor-alias))
-                                (map :to)
-                                seq
-                                set)]
-      (concat
-        (when (simple-ident? cursor-value)
+(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value current-ns-elements matches-fn db]
+  (let [current-ns-alias (->> current-ns-elements
+                              (filter #(and (identical? :namespace-alias (:bucket %))
+                                            (= (-> % :alias str) cursor-alias)))
+                              seq)]
+    (when-let [aliases (or current-ns-alias
+                           (seq (into []
+                                      (comp
+                                        q/filter-project-analysis-xf
+                                        (mapcat val)
+                                        (filter #(identical? :namespace-alias (:bucket %))))
+                                      (:analysis db))))]
+      (let [alias-namespaces (->> aliases
+                                  (filter #(= (-> % :alias str) cursor-alias))
+                                  (map :to)
+                                  seq
+                                  set)]
+        (concat
+          (when (simple-ident? cursor-value)
+            (into []
+                  (comp
+                    (filter (fn [element]
+                              (or
+                                (matches-fn (:alias element))
+                                (matches-fn (:to element)))))
+                    (map (fn [element]
+                           (let [require-edit (some-> cursor-loc
+                                                      (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
+                                                                                             (symbol (str (:to element)))
+                                                                                             db)
+                                                      r.transform/result)]
+                             (cond-> (element->completion-item element nil :required-alias)
+                               (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
+                  aliases))
           (into []
                 (comp
-                  (filter (fn [element]
-                            (or
-                              (matches-fn (:alias element))
-                              (matches-fn (:to element)))))
-                  (map (fn [element]
-                         (let [require-edit (some-> cursor-loc
-                                                    (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
-                                                                                           (symbol (str (:to element)))
-                                                                                           db)
-                                                    r.transform/result)]
-                           (cond-> (element->completion-item element nil :required-alias)
-                             (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
-                aliases))
-        (into []
-              (comp
-                (mapcat val)
-                (keep
-                  #(when (and (identical? :var-definitions (:bucket %))
-                              (not (:private %))
-                              (contains? alias-namespaces (:ns %))
-                              (or (simple-ident? cursor-value) (matches-fn (:name %))))
-                     [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
-                (distinct)
-                (map
-                  (fn [[element-ns completion-item]]
-                    (let [require-edit (some-> cursor-loc
-                                               (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
-                                               r.transform/result)]
-                      (cond-> completion-item
-                        (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
-              (:analysis db))))))
+                  (mapcat val)
+                  (keep
+                    #(when (and (identical? :var-definitions (:bucket %))
+                                (not (:private %))
+                                (contains? alias-namespaces (:ns %))
+                                (or (simple-ident? cursor-value) (matches-fn (:name %))))
+                       [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
+                  (distinct)
+                  (map
+                    (fn [[element-ns completion-item]]
+                      (let [require-edit (some-> cursor-loc
+                                                 (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
+                                                 r.transform/result)]
+                        (cond-> completion-item
+                          (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
+                (:analysis db)))))))
 
 (defn ^:private with-elements-from-full-ns [full-ns analysis]
   (->> (mapcat val analysis)
@@ -415,7 +420,7 @@
 
                       (and cursor-value-or-ns
                            (not keyword-value?))
-                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value matches-fn db))
+                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value current-ns-elements matches-fn db))
 
                       (or simple-cursor?
                           keyword-value?)

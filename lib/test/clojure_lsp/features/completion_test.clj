@@ -69,10 +69,7 @@
         (f.completion/completion (h/file-uri "file:///e.clj") 4 10 @db/db*))))
   (testing "complete cljc files"
     (h/assert-submaps
-      [{:label "alpaca/alpha" :kind :variable}
-       {:label "alpaca/baff" :kind :variable}
-       {:label "alpaca/barr" :kind :variable}
-       {:label "alpaca/bazz" :kind :variable}]
+      [{:label "alpaca/alpha" :kind :variable}]
       (f.completion/completion (h/file-uri "file:///a.cljc") 2 8 @db/db*)))
   (testing "complete-core-stuff"
     (h/assert-submaps

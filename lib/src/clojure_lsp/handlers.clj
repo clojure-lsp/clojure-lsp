@@ -67,7 +67,9 @@
                   `(logger/info
                      (if (= backoff-start ~backoff-sym)
                        (format ~process-msg (shared/start-time->end-time-ms ~waiting-start-sym))
-                       (format ~wait-and-process-msg (shared/start-time->end-time-ms ~start-sym) (shared/start-time->end-time-ms ~waiting-start-sym))))
+                       (format ~wait-and-process-msg
+                               (shared/start-time->end-time-ms ~start-sym)
+                               (shared/format-time-delta-ms ~waiting-start-sym ~start-sym))))
                   (meta &form))
                result#)))))))
 

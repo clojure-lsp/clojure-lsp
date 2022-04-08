@@ -401,6 +401,38 @@
     ;; multi-arity fn
     "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
 
+(defn promote-fn [code]
+  (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db*)))
+
+(defmacro is-promote-fn [expected-defn expected-replacement fn-literal]
+  `(let [[actual-defn# actual-replacement#] (promote-fn ~fn-literal)]
+     (is (= ~expected-defn actual-defn#))
+     (is (= ~expected-replacement actual-replacement#))))
+
+(deftest promote-fn-test
+  (testing "fn to defn"
+    ;; basic params
+    (is-promote-fn "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])")
+    (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))")
+    (is-promote-fn "\n(defn- new-function [element] (+ 1 element))\n"             "new-function" "|(fn [element] (+ 1 element))")
+      ;; vararg
+    (is-promote-fn "\n(defn- new-function [element & args] (+ 1 element args))\n" "new-function" "|(fn [element & args] (+ 1 element args))")
+      ;; named function
+    (is-promote-fn "\n(defn- named [] (+ 1 2))\n"                                 "named"        "|(fn named [] (+ 1 2))")
+      ;; from inside
+    (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
+  (testing "fn to defn with locals"
+    ;; basic params
+    (is-promote-fn "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"         "(let [a 1] |(fn [] a))")
+    (is-promote-fn "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"         "(let [a 1] |(fn [] (+ 1 2 a)))")
+    (is-promote-fn "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"      "(let [a 1] |(fn [element] (+ 1 element a)))")
+    ;; complicated params
+    (is-promote-fn "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)" "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))")
+      ;; vararg
+    (is-promote-fn "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))")
+      ;; within fn literal
+    (is-promote-fn "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
+
 (defn change-coll [code coll-type]
   (as-string (transform/change-coll (z/of-string code) coll-type)))
 
@@ -599,84 +631,94 @@
   (testing "function on same file"
     (testing "creating with no args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func []"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func []"
+                     "  )"
+                     "")
              (-> "(defn a [b] (|my-func))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating with 1 known arg"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (|my-func b))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating with 1 known arg and a unknown arg"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b arg2]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b arg2]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (|my-func b (+ 1 2)))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a fn call of other function"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (remove |my-func [1 2 3 4]))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a fn call of other function nested"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1 arg2]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1 arg2]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (remove (partial |my-func 2) [1 2 3 4]))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from an anonymous function"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1 element]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1 element]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (remove #(|my-func 2 %) [1 2 3 4]))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from an anonymous function with many args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1 b element3 element2]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1 b element3 element2]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (#(|my-func 2 b %3 %2) 1 2 3 4))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a thread first macro with single arg"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b]"
+                     "  )"
+                     "")
              (-> "(-> b |my-func (+ 1 2) (+ 2 3))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a thread first macro with multiple args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b a arg3]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b a arg3]"
+                     "  )"
+                     "")
              (-> "(-> b (|my-func a 3) (+ 1 2))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a thread last macro with multiple args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [a arg2 b]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [a arg2 b]"
+                     "  )"
+                     "")
              (-> "(->> b (|my-func a 3))"
                  create-function
-                 as-strings)))))
+                 as-string)))))
   (testing "on other files"
     (testing "when namespace is already required and exists"
       (h/clean-db!)
@@ -698,7 +740,7 @@
     (testing "when namespace is not required and not exists"
       (h/clean-db!)
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                 (h/file-path "/project/test")}}})
+                                                                  (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" @db/db*)
@@ -728,7 +770,7 @@
     (testing "when namespace is not required and not exists not calling it as function"
       (h/clean-db!)
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                 (h/file-path "/project/test")}}})
+                                                                  (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" @db/db*)

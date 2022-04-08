@@ -590,7 +590,7 @@
         :name-row 10 :name-col 33 :name-end-row 10 :name-end-col 42
         :protocol-ns 'a
         :method-name 'something
-        :defined-by "extend-type"
+        :defined-by 'clojure.core/reify
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
@@ -618,7 +618,7 @@
         :name-row 10 :name-col 33 :name-end-row 10 :name-end-col 42
         :protocol-ns 'a
         :method-name 'something
-        :defined-by "extend-type"
+        :defined-by 'clojure.core/reify
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]

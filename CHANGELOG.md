@@ -8,6 +8,7 @@
   - Consider `.bb` and `.cljd` files on watched file changes. #906
   - Bump to clojure 1.11.0
   - Improve analysis query performance as a whole for lots of features. #916
+  - Bump clj-kondo to `2022.04.08` fixing semantic tokens for `:require`, `:refer` and `:as`. [#1609](https://github.com/clj-kondo/clj-kondo/issues/1609)
 
 - Editor
   - Introduce ALPHA move-form command. #566

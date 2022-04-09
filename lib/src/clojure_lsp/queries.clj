@@ -79,7 +79,7 @@
        (= (:from usage) (:to usage))))
 
 (defn find-local-usages-under-form
-  [analysis filename row col end-row end-col]
+  [analysis filename {:keys [row col end-row end-col]}]
   (let [local-analysis (get analysis filename)
         form-scope {:name-row row
                     :name-col col

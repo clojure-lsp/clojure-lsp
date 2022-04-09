@@ -242,15 +242,11 @@
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
 (defn ^:private widest-scoped-local [zloc uri db]
-  (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
+  (let [z-meta (meta (z/node zloc))
         analysis (:analysis db)
-        local-defs (->> (q/find-local-usages-under-form
-                          analysis
-                          (shared/uri->filename uri)
-                          row
-                          col
-                          end-row
-                          end-col)
+        local-defs (->> (q/find-local-usages-under-form analysis
+                                                        (shared/uri->filename uri)
+                                                        z-meta)
                         (map #(q/find-definition analysis %)))]
     (reduce
       (fn [accum d]
@@ -448,21 +444,17 @@
           ;; the top-level form it will be extracted from
           form-loc (edit/to-top expr-loc)]
       (when (and expr-loc form-loc)
-        (let [expr-node            (z/node expr-loc)
-              expr-meta            (meta expr-node)
-              {defn-col :col}      (meta (z/node form-loc))
+        (let [expr-node (z/node expr-loc)
+              expr-meta (meta expr-node)
+              {defn-col :col} (meta (z/node form-loc))
 
-              fn-sym               (symbol fn-name)
-              clj-analysis         (unify-to-one-language (:analysis db))
-              used-syms            (->> (q/find-local-usages-under-form clj-analysis
-                                                                        (shared/uri->filename uri)
-                                                                        (:row expr-meta)
-                                                                        (:col expr-meta)
-                                                                        (:end-row expr-meta)
-                                                                        (:end-col expr-meta))
-                                        (mapv (comp symbol name :name)))
-              expr-edit            (-> (z/of-string "")
-                                       (z/replace `(~fn-sym ~@used-syms)))
+              fn-sym (symbol fn-name)
+              clj-analysis (unify-to-one-language (:analysis db))
+              used-syms (->> (q/find-local-usages-under-form clj-analysis
+                                                             (shared/uri->filename uri)
+                                                             expr-meta)
+                             (mapv :name))
+              expr-edit (z/edn (list* fn-sym used-syms))
               private? false ;; TODO: shouldn't this be true?
               defn-loc (new-defn-zloc fn-sym private? used-syms
                                       [(n/newlines 1)
@@ -626,25 +618,20 @@
         defn-name (or (some->> before (filter n/symbol-node?) first n/sexpr)
                       'new-function)
         fn-form-meta (meta (z/node zloc))
+        space (n/spaces 1)
         used-locals (->> (q/find-local-usages-under-form (:analysis db)
                                                          (shared/uri->filename uri)
-                                                         (:row fn-form-meta)
-                                                         (:col fn-form-meta)
-                                                         (:end-row fn-form-meta)
-                                                         (:end-col fn-form-meta))
+                                                         fn-form-meta)
                          (mapv (comp n/token-node :name))
-                         (interpose (n/spaces 1)))
+                         (interpose space))
         clean-orig-params (filter n/sexpr-able? (n/children orig-params))
         params (cond
                  (and (seq used-locals) (seq clean-orig-params))
-                 (n/vector-node (concat used-locals
-                                        [(n/spaces 1)]
-                                        (n/children orig-params)))
+                 , (n/vector-node (concat used-locals [space] (n/children orig-params)))
                  (seq used-locals)
-                 (n/vector-node used-locals)
-
+                 , (n/vector-node used-locals)
                  :else
-                 orig-params)
+                 , orig-params)
         defn-loc (new-defn-zloc defn-name true params body db)
         replacement-zloc (z/edn*
                            (cond
@@ -654,26 +641,26 @@
                              ;; (partial new-function a b)
                              (z/find-tag zloc z/up :fn) ;; don't nest fn literals
                              (n/list-node
-                               (into ['partial (n/spaces 1) defn-name (n/spaces 1)]
-                                     used-locals))
+                               (list* 'partial space defn-name space used-locals))
                              ;; #(new-function a b)
                              (not (seq clean-orig-params))
                              (n/fn-node
-                               (concat [(n/token-node defn-name) (n/spaces 1)] used-locals))
+                               (list* defn-name space used-locals))
                              ;; #(new-function a b %1 %2 %&)
                              :else
-                             (let [[before-amp amp-and-after] (split-with #(not= '& (n/sexpr %)) clean-orig-params)
-                                   anon-parms (concat
-                                                (map-indexed (fn [idx _]
-                                                               (n/token-node (symbol (str "%" (inc idx)))))
-                                                             before-amp)
-                                                (when (seq amp-and-after)
-                                                  ['%&]))]
+                             (let [[before-amp amp-and-after] (split-with #(not= '& (n/sexpr %))
+                                                                          clean-orig-params)
+                                   literal-args (concat
+                                                  (map-indexed (fn [idx _]
+                                                                 (n/token-node (symbol (str "%" (inc idx)))))
+                                                               before-amp)
+                                                  (when (seq amp-and-after)
+                                                    ['%&]))
+                                   args (concat used-locals
+                                                [space]
+                                                (interpose space literal-args))]
                                (n/fn-node
-                                 (concat [(n/token-node defn-name) (n/spaces 1)]
-                                         used-locals
-                                         [(n/spaces 1)]
-                                         (interpose (n/spaces 1) anon-parms))))))]
+                                 (list* defn-name space args)))))]
     [(prepend-preserving-comment (edit/to-top zloc) defn-loc)
      {:loc replacement-zloc
       :range (meta (z/node zloc))}]))

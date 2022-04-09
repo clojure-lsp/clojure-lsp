@@ -4,7 +4,7 @@
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.clojure-lsp/clojure-lsp.svg)](https://clojars.org/com.github.clojure-lsp/clojure-lsp)
 [![cljdoc](https://cljdoc.org/badge/com.github.clojure-lsp/clojure-lsp)](https://cljdoc.org/d/com.github.clojure-lsp/clojure-lsp)
 [![Slack community](https://img.shields.io/badge/Slack-chat-blue?style=flat-square)](https://clojurians.slack.com/archives/CPABC1H61)
-[![Github starts](https://img.shields.io/github/stars/clojure-lsp/clojure-lsp?style=social)](https://github.com/clojure-lsp/clojure-lsp)
+[![Github stars](https://img.shields.io/github/stars/clojure-lsp/clojure-lsp?style=social)](https://github.com/clojure-lsp/clojure-lsp)
 
 # clojure-lsp
 

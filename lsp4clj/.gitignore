@@ -1,5 +1,0 @@
-*.jar
-*.class
-/.cpcache
-/.clj-kondo/.cache
-/.lsp/.cache

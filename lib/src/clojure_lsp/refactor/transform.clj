@@ -568,8 +568,9 @@
                             , interior
                               ;; remove explicit do
                             (= 'do (n/sexpr first-form))
-                            , (let [[before-do [_do & after-do]] (split-with #(or (not (n/sexpr-able? %))
-                                                                                  (not= 'do (n/sexpr %)))
+                            , (let [[before-do [_do & after-do]] (split-with (complement
+                                                                               #(and (n/sexpr-able? %)
+                                                                                     (= 'do (n/sexpr %))))
                                                                              interior)]
                                 (concat before-do after-do))
                               ;; add implicit sexpr wrapper
@@ -663,7 +664,7 @@
                                  (list* defn-name space args)))))]
     [(prepend-preserving-comment (edit/to-top zloc) defn-loc)
      {:loc replacement-zloc
-      :range (meta (z/node zloc))}]))
+      :range fn-form-meta}]))
 
 (defn cycle-fn-literal [zloc]
   (if-let [[zloc] (convert-literal-to-fn-params zloc)]

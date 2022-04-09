@@ -674,7 +674,7 @@
                                            used-locals
                                            [(n/spaces 1)]
                                            (interpose (n/spaces 1) anon-parms))))))]
-    [(prepend-preserving-comment zloc defn-loc)
+    [(prepend-preserving-comment (edit/to-top zloc) defn-loc)
      {:loc replacement-zloc
       :range (meta (z/node zloc))}]))
 

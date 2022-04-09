@@ -43,6 +43,9 @@
 (defmethod refactor :cycle-fn-literal [{:keys [loc]}]
   (r.transform/cycle-fn-literal loc))
 
+(defmethod refactor :promote-fn [{:keys [loc uri db]}]
+  (r.transform/promote-fn loc uri db))
+
 (defmethod refactor :expand-let [{:keys [loc uri db]}]
   (r.transform/expand-let loc uri db))
 

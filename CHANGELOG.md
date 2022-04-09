@@ -22,6 +22,7 @@
   - Improve completion performance for most cases, reducing time to compute clj/cljs core symbols.
   - completion: suggest functions defined in Clojure 1.10 and 1.11
   - completion: Fix to no require extra ns when alias is already required. #920
+  - promote-fn: *new feature* Promote a literal to a fn, or fn to a top-level defn. #783 @mainej
 
 ## 2022.03.31-20.00.20
 

@@ -25,6 +25,7 @@
                                             "cycle-privacy"
                                             "create-test"
                                             "drag-backward"
+                                            "promote-fn"
                                             "change-coll"
                                             "thread-last-all"
                                             "drag-forward"

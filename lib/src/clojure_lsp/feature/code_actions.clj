@@ -138,6 +138,13 @@
              :command   "cycle-fn-literal"
              :arguments [uri line character]}})
 
+(defn ^:private promote-fn-action [uri line character]
+  {:title   "Promote function"
+   :kind    :refactor-rewrite
+   :command {:title     "Promote function"
+             :command   "promote-fn"
+             :arguments [uri line character]}})
+
 (defn ^:private extract-function-action [uri line character]
   {:title   "Extract function"
    :kind    :refactor-extract
@@ -264,6 +271,7 @@
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
         can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
+        can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
         definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
@@ -299,6 +307,9 @@
 
       @can-cycle-fn-literal?*
       (conj (cycle-fn-literal-action uri line character))
+
+      @can-promote-fn?*
+      (conj (promote-fn-action uri line character))
 
       @can-thread?*
       (conj (thread-first-all-action uri line character)

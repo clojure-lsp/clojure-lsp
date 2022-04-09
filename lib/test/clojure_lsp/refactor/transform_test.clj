@@ -410,6 +410,9 @@
      (is (= ~expected-replacement actual-replacement#))))
 
 (deftest promote-fn-test
+  (testing "literal to fn"
+    ;; more throughly tested by cycle-fn-literal-test
+    (is-promote-fn "(fn [] (+ 1 2))" nil "|#(+ 1 2)"))
   (testing "fn to defn"
     ;; basic params
     (is-promote-fn "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])")
@@ -432,6 +435,12 @@
     (is-promote-fn "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))")
       ;; within fn literal
     (is-promote-fn "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
+
+(deftest can-promote-fn-test
+  (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))
+    ;; non fn or literal
+    "(+ |1 2)"
+    "|(+ 1 2)"))
 
 (defn change-coll [code coll-type]
   (as-string (transform/change-coll (z/of-string code) coll-type)))

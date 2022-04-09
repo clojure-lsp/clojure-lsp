@@ -648,32 +648,32 @@
         defn-loc (new-defn-zloc fn-name true params body db)
         replacement-zloc (z/edn*
                            (cond
+                             ;; new-function
                              (not (seq used-locals))
-                                 ;; new-function
-                             , fn-name
+                             fn-name
+                             ;; (partial new-function a b)
                              (z/find-tag zloc z/up :fn) ;; don't nest fn literals
-                                 ;; (partial new-function a b)
-                             , (n/list-node
-                                 (into ['partial (n/spaces 1) fn-name (n/spaces 1)]
-                                       used-locals))
+                             (n/list-node
+                               (into ['partial (n/spaces 1) fn-name (n/spaces 1)]
+                                     used-locals))
+                             ;; #(new-function a b)
                              (not (seq clean-orig-params))
-                                 ;; #(new-function a b)
-                             , (n/fn-node
-                                 (concat [(n/token-node fn-name) (n/spaces 1)] used-locals))
+                             (n/fn-node
+                               (concat [(n/token-node fn-name) (n/spaces 1)] used-locals))
+                             ;; #(new-function a b %1 %2 %&)
                              :else
-                                 ;; #(new-function a b %1 %2 %&)
-                             , (let [[before-amp amp-and-after] (split-with #(not= '& (n/sexpr %)) clean-orig-params)
-                                     anon-parms (concat
-                                                  (map-indexed (fn [idx _]
-                                                                 (n/token-node (symbol (str "%" (inc idx)))))
-                                                               before-amp)
-                                                  (when (seq amp-and-after)
-                                                    ['%&]))]
-                                 (n/fn-node
-                                   (concat [(n/token-node fn-name) (n/spaces 1)]
-                                           used-locals
-                                           [(n/spaces 1)]
-                                           (interpose (n/spaces 1) anon-parms))))))]
+                             (let [[before-amp amp-and-after] (split-with #(not= '& (n/sexpr %)) clean-orig-params)
+                                   anon-parms (concat
+                                                (map-indexed (fn [idx _]
+                                                               (n/token-node (symbol (str "%" (inc idx)))))
+                                                             before-amp)
+                                                (when (seq amp-and-after)
+                                                  ['%&]))]
+                               (n/fn-node
+                                 (concat [(n/token-node fn-name) (n/spaces 1)]
+                                         used-locals
+                                         [(n/spaces 1)]
+                                         (interpose (n/spaces 1) anon-parms))))))]
     [(prepend-preserving-comment (edit/to-top zloc) defn-loc)
      {:loc replacement-zloc
       :range (meta (z/node zloc))}]))

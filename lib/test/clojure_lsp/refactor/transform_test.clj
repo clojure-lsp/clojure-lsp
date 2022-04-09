@@ -418,22 +418,22 @@
     (is-promote-fn "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])")
     (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))")
     (is-promote-fn "\n(defn- new-function [element] (+ 1 element))\n"             "new-function" "|(fn [element] (+ 1 element))")
-      ;; vararg
+    ;; vararg
     (is-promote-fn "\n(defn- new-function [element & args] (+ 1 element args))\n" "new-function" "|(fn [element & args] (+ 1 element args))")
-      ;; named function
+    ;; named function
     (is-promote-fn "\n(defn- named [] (+ 1 2))\n"                                 "named"        "|(fn named [] (+ 1 2))")
-      ;; from inside
+    ;; from inside
     (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
   (testing "fn to defn with locals"
     ;; basic params
     (is-promote-fn "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"         "(let [a 1] |(fn [] a))")
     (is-promote-fn "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"         "(let [a 1] |(fn [] (+ 1 2 a)))")
     (is-promote-fn "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"      "(let [a 1] |(fn [element] (+ 1 element a)))")
-    ;; complicated params
+    ;; multiple, and repeated locals
     (is-promote-fn "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)" "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))")
-      ;; vararg
+    ;; vararg
     (is-promote-fn "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))")
-      ;; within fn literal
+    ;; within fn literal
     (is-promote-fn "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
 
 (deftest can-promote-fn-test

@@ -623,8 +623,8 @@
 (defn ^:private convert-fn-to-defn [zloc uri db]
   (let [[_fn & children] (some->> zloc z/node n/children (drop-while (complement n/sexpr-able?)))
         [before [orig-params & body]] (split-with #(not= :vector (n/tag %)) children)
-        fn-name (or (some->> before (filter n/symbol-node?) first n/sexpr)
-                    'new-function)
+        defn-name (or (some->> before (filter n/symbol-node?) first n/sexpr)
+                      'new-function)
         fn-form-meta (meta (z/node zloc))
         used-locals (->> (q/find-local-usages-under-form (:analysis db)
                                                          (shared/uri->filename uri)
@@ -645,21 +645,21 @@
 
                  :else
                  orig-params)
-        defn-loc (new-defn-zloc fn-name true params body db)
+        defn-loc (new-defn-zloc defn-name true params body db)
         replacement-zloc (z/edn*
                            (cond
                              ;; new-function
                              (not (seq used-locals))
-                             fn-name
+                             defn-name
                              ;; (partial new-function a b)
                              (z/find-tag zloc z/up :fn) ;; don't nest fn literals
                              (n/list-node
-                               (into ['partial (n/spaces 1) fn-name (n/spaces 1)]
+                               (into ['partial (n/spaces 1) defn-name (n/spaces 1)]
                                      used-locals))
                              ;; #(new-function a b)
                              (not (seq clean-orig-params))
                              (n/fn-node
-                               (concat [(n/token-node fn-name) (n/spaces 1)] used-locals))
+                               (concat [(n/token-node defn-name) (n/spaces 1)] used-locals))
                              ;; #(new-function a b %1 %2 %&)
                              :else
                              (let [[before-amp amp-and-after] (split-with #(not= '& (n/sexpr %)) clean-orig-params)
@@ -670,7 +670,7 @@
                                                 (when (seq amp-and-after)
                                                   ['%&]))]
                                (n/fn-node
-                                 (concat [(n/token-node fn-name) (n/spaces 1)]
+                                 (concat [(n/token-node defn-name) (n/spaces 1)]
                                          used-locals
                                          [(n/spaces 1)]
                                          (interpose (n/spaces 1) anon-parms))))))]

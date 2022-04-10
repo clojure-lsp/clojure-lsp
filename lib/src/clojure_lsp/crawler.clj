@@ -75,17 +75,38 @@
                      (update :findings merge new-findings))))
     analysis))
 
+(defn ^:private paths->checksums
+  "Return a map with file's last modified timestamp by filename."
+  [paths]
+  (reduce
+    (fn [cks path]
+      (let [file (io/file path)]
+        (if-let [checksum (and (shared/file-exists? file)
+                               (.lastModified ^java.io.File file))]
+          (assoc cks path checksum)
+          cks)))
+    {}
+    paths))
+
 (defn ^:private analyze-classpath! [root-path source-paths classpath settings progress-token {:keys [db*] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
     (logger/info "Analyzing classpath for project root" root-path)
     (when classpath
       (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
-            external-classpath (cond->> (->> classpath
-                                             (remove (set source-paths-abs))
-                                             (remove (set source-paths)))
-                                 ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-            analysis (analyze-external-classpath! external-classpath 20 80 progress-token components)]
-        (swap! db* update :analysis merge analysis)
+            external-paths (cond->> (->> classpath
+                                         (remove (set source-paths-abs))
+                                         (remove (set source-paths)))
+                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
+            old-checksums (:analysis-checksums @db*)
+            new-checksums (paths->checksums external-paths)
+            external-paths-not-on-checksum (remove #(= (get old-checksums %)
+                                                       (get new-checksums %))
+                                                   external-paths)
+            analysis (analyze-external-classpath! external-paths-not-on-checksum 20 80 progress-token components)]
+        (swap! db* (fn [db]
+                     (-> db
+                         (update :analysis merge analysis)
+                         (assoc :analysis-checksums new-checksums))))
         (shared/logging-time
           "Manual GC after classpath scan took %s"
           (System/gc))
@@ -123,15 +144,13 @@
                      (= :project-only (:project-analysis-type db-cache)))
         (swap! db* (fn [state-db]
                      (-> state-db
-                         (update :analysis merge (:analysis db-cache))
-                         (assoc :classpath (:classpath db-cache)
-                                :project-hash (:project-hash db-cache)
-                                :kondo-config-hash (:kondo-config-hash db-cache)
-                                :stubs-generation-namespaces (:stubs-generation-namespaces db-cache)))))))))
+                         (merge (select-keys db-cache [:classpath :analysis-checksums :project-hash
+                                                       :kondo-config-hash :stubs-generation-namespaces]))
+                         (update :analysis merge (:analysis db-cache)))))))))
 
 (defn ^:private build-db-cache [db]
   (-> db
-      (select-keys [:project-hash :kondo-config-hash :project-analysis-type :classpath :analysis])
+      (select-keys [:project-hash :kondo-config-hash :project-analysis-type :classpath :analysis :analysis-checksums])
       (merge {:stubs-generation-namespaces (->> db :settings :stubs :generation :namespaces (map str) set)
               :version db/version
               :project-root (str (shared/uri->path (:project-root-uri db)))})))

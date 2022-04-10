@@ -333,7 +333,7 @@
                 (recur (.read system-in buffer 0 buffer-size)))
               (.close os))))
         (catch Exception e
-          (logger/warn server-logger-tag e "in thread"))))
+          (logger/warn e server-logger-tag "in thread"))))
     is))
 
 (defn tee-system-out [^java.io.OutputStream system-out]
@@ -351,7 +351,7 @@
                 (recur (.read is buffer 0 buffer-size)))
               (.close is))))
         (catch Exception e
-          (logger/error server-logger-tag e "in thread"))))
+          (logger/error e server-logger-tag "in thread"))))
     os))
 
 (defrecord LSPProducer [^LanguageClient client db]

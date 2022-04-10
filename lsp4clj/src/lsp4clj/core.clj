@@ -326,10 +326,12 @@
       (try
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read system-in buffer 0 buffer-size)]
-            (when (pos? chs)
-              (logger/warn server-logger-tag (str "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs))))
-              (.write os buffer 0 chs)
-              (recur (.read system-in buffer 0 buffer-size)))))
+            (if (pos? chs)
+              (do
+                (logger/warn server-logger-tag (str "FROM STDIN" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs))))
+                (.write os buffer 0 chs)
+                (recur (.read system-in buffer 0 buffer-size)))
+              (.close os))))
         (catch Exception e
           (logger/warn server-logger-tag e "in thread"))))
     is))
@@ -342,10 +344,12 @@
       (try
         (let [buffer (byte-array buffer-size)]
           (loop [chs (.read is buffer 0 buffer-size)]
-            (when (pos? chs)
-              (logger/warn server-logger-tag (str  "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs))))
-              (.write system-out buffer)
-              (recur (.read is buffer 0 buffer-size)))))
+            (if (pos? chs)
+              (do
+                (logger/warn server-logger-tag (str  "FROM STDOUT" chs (String. (java.util.Arrays/copyOfRange buffer 0 chs))))
+                (.write system-out buffer)
+                (recur (.read is buffer 0 buffer-size)))
+              (.close is))))
         (catch Exception e
           (logger/error server-logger-tag e "in thread"))))
     os))

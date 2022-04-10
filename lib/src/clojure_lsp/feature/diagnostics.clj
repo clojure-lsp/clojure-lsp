@@ -101,11 +101,10 @@
     3 :cyan))
 
 (defn find-diagnostics [^String uri db]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get db [:source-paths])]
+  (let [filename (shared/uri->filename uri)]
     (cond-> []
       (and (not= :off (settings/get db [:linters :clj-kondo :level]))
-           (not (shared/external-filename? filename source-paths)))
+           (not (shared/jar-file? filename)))
       (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
 
 (defn sync-publish-diagnostics! [uri db]

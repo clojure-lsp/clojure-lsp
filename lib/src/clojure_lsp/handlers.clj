@@ -118,7 +118,7 @@
           (when (settings/get db [:java] true)
             (async/go
               (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
-      (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warn nil))))
+      (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db*]}]
   (let [uri (:uri textDocument)

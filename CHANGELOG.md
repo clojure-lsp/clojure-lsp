@@ -10,6 +10,7 @@
   - Improve analysis query performance as a whole for lots of features. #916
   - Bump clj-kondo to `2022.04.08` fixing semantic tokens for `:require`, `:refer` and `:as`. [#1609](https://github.com/clj-kondo/clj-kondo/issues/1609)
   - Move `lsp4clj` to outside clojure-lsp to its own repo/jar release.
+  - Fix local files outside source-paths not being linted even if opened/changed.
 
 - Editor
   - Introduce ALPHA move-form command. #566

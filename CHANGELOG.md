@@ -12,6 +12,7 @@
   - Move `lsp4clj` to outside clojure-lsp to its own repo/jar release.
   - Fix local files outside source-paths not being linted even if opened/changed.
   - Consider filename + lastModified as checksum for external files, avoiding analyzing it if analysis is already present.
+  - graalvm: Compile static linux with --musl for better compatibility. #868
 
 - Editor
   - Introduce ALPHA move-form command. #566

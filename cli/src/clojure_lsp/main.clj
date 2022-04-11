@@ -161,6 +161,30 @@
        :message exit-message}
       (handle-action! action options))))
 
-(defn -main [& args]
+(defn main [& args]
   (let [{:keys [result-code message]} (apply run! args)]
     (exit result-code message)))
+
+(def musl?
+  "Captured at compile time, to know if we are running inside a
+  statically compiled executable with musl."
+  (and (= "true" (System/getenv "CLOJURE_LSP_STATIC"))
+       (= "true" (System/getenv "CLOJURE_LSP_MUSL"))))
+
+(defmacro run [args]
+  (if musl?
+    ;; When running in musl-compiled static executable we lift execution of clojure-lsp
+    ;; inside a thread, so we have a larger than default stack size, set by an
+    ;; argument to the linker. See https://github.com/oracle/graal/issues/3398
+    `(let [v# (volatile! nil)
+           f# (fn []
+                (vreset! v# (apply main ~args)))]
+       (doto (Thread. nil f# "main")
+         (.start)
+         (.join))
+       @v#)
+    `(apply main ~args)))
+
+(defn -main
+  [& args]
+  (run args))

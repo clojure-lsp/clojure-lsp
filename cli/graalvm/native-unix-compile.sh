@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Deprecaed script, use make native-cli
+
 set -e
 
 if [ -z "$GRAALVM_HOME" ]; then
@@ -24,9 +26,18 @@ args=("-jar" "$CLOJURE_LSP_JAR"
       "$CLOJURE_LSP_XMX")
 
 CLOJURE_LSP_STATIC=${CLOJURE_LSP_STATIC:-}
+CLOJURE_LSP_MUSL=${CLOJURE_LSP_MUSL:-}
 
 if [ "$CLOJURE_LSP_STATIC" = "true" ]; then
-    args+=("--static" "-H:+StaticExecutableWithDynamicLibC")
+    args+=("--static")
+    if [ "$CLOJURE_LSP_MUSL" = "true" ]; then
+        args+=("--libc=musl"
+               # see https://github.com/oracle/graal/issues/3398
+               "-H:CCompilerOption=-Wl,-z,stack-size=2097152")
+    else
+        # see https://github.com/oracle/graal/issues/3737
+        args+=("-H:+StaticExecutableWithDynamicLibC")
+    fi
 fi
 
 "$GRAALVM_HOME/bin/native-image" "${args[@]}"

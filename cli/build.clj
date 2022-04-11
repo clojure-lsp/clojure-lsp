@@ -89,6 +89,7 @@
                       uber-file))
           command (->> [(str (io/file graal-home "bin" "native-image"))
                         "-jar" jar
+                        "clojure-lsp"
                         "-H:+ReportExceptionStackTraces"
                         "--verbose"
                         "--no-fallback"
@@ -96,8 +97,10 @@
                         (or (System/getenv "CLOJURE_LSP_XMX")
                             "-J-Xmx8g")
                         (when (= "true" (System/getenv "CLOJURE_LSP_STATIC"))
-                          ["--static" "-H:+StaticExecutableWithDynamicLibC"])
-                        "clojure-lsp"]
+                          ["--static"
+                           (if (= "true" (System/getenv "CLOJURE_LSP_MUSL"))
+                             ["--libc=musl" "-H:CCompilerOption=-Wl,-z,stack-size=2097152"]
+                             ["-H:+StaticExecutableWithDynamicLibC"])])]
                        (flatten)
                        (remove nil?))
           {:keys [exit]} (b/process {:command-args command})]

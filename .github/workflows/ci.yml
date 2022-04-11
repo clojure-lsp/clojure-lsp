@@ -133,6 +133,7 @@ jobs:
         env:
           CLOJURE_LSP_XMX: "-J-Xmx6g"
           CLOJURE_LSP_STATIC: true
+          CLOJURE_LSP_MUSL: true
         run: |
           make native-cli
 

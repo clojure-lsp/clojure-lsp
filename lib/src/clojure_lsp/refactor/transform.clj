@@ -513,7 +513,7 @@
     (can-convert-literal-to-fn? zloc) :literal-to-fn
     :else                             nil))
 
-(defn ^:private convert-literal-to-fn [zloc]
+(defn ^:private convert-literal-to-fn [zloc provided-name]
   (let [literal-params (->> (z/down (z/subzip zloc))
                             (iterate z/next)
                             (take-while (complement z/end?))
@@ -561,25 +561,28 @@
                              (vals positioned-params))
         interior (n/children (z/node (replace-sexprs zloc replacements)))
         fn-node (n/list-node
-                  (into ['fn (n/spaces 1) fn-params]
-                        (let [first-form (first (filter n/sexpr-able? interior))]
-                          (cond
-                            (not first-form)
-                            , interior
+                  (concat ['fn (n/spaces 1)]
+                          (when provided-name
+                            [(symbol provided-name) (n/spaces 1)])
+                          [fn-params]
+                          (let [first-form (first (filter n/sexpr-able? interior))]
+                            (cond
+                              (not first-form)
+                              , interior
                               ;; remove explicit do
-                            (= 'do (n/sexpr first-form))
-                            , (let [[before-do [_do & after-do]] (split-with (complement
-                                                                               #(and (n/sexpr-able? %)
-                                                                                     (= 'do (n/sexpr %))))
-                                                                             interior)]
-                                (concat before-do after-do))
+                              (= 'do (n/sexpr first-form))
+                              , (let [[before-do [_do & after-do]] (split-with (complement
+                                                                                 #(and (n/sexpr-able? %)
+                                                                                       (= 'do (n/sexpr %))))
+                                                                               interior)]
+                                  (concat before-do after-do))
                               ;; add implicit sexpr wrapper
-                            :else
-                            , (let [[before-sexpr sexpr-and-more] (split-with (complement n/sexpr-able?)
-                                                                              interior)]
-                                (concat [(n/spaces 1)]
-                                        before-sexpr
-                                        [(n/list-node sexpr-and-more)]))))))]
+                              :else
+                              , (let [[before-sexpr sexpr-and-more] (split-with (complement n/sexpr-able?)
+                                                                                interior)]
+                                  (concat [(n/spaces 1)]
+                                          before-sexpr
+                                          [(n/list-node sexpr-and-more)]))))))]
     [{:loc (z/replace zloc fn-node)
       :range (meta (z/node zloc))}]))
 
@@ -613,10 +616,11 @@
     [{:loc   (z/replace zloc literal-node)
       :range (meta (z/node zloc))}]))
 
-(defn ^:private convert-fn-to-defn [zloc uri db]
+(defn ^:private convert-fn-to-defn [zloc uri db provided-name]
   (let [[_fn & children] (some->> zloc z/node n/children (drop-while (complement n/sexpr-able?)))
         [before [orig-params & body]] (split-with #(not= :vector (n/tag %)) children)
-        defn-name (or (some->> before (filter n/symbol-node?) first n/sexpr)
+        defn-name (or (some-> provided-name symbol)
+                      (some->> before (filter n/symbol-node?) first n/sexpr)
                       'new-function)
         fn-form-meta (meta (z/node zloc))
         space (n/spaces 1)
@@ -671,11 +675,11 @@
   (when-let [[zloc params] (convert-fn-to-literal-params zloc)]
     (convert-fn-to-literal zloc params)))
 
-(defn promote-fn [zloc uri db]
+(defn promote-fn [zloc uri db fn-name]
   (if-let [[zloc] (convert-fn-to-defn-params zloc)]
-    (convert-fn-to-defn zloc uri db)
+    (convert-fn-to-defn zloc uri db fn-name)
     (when-let [[zloc] (convert-literal-to-fn-params zloc)]
-      (convert-literal-to-fn zloc))))
+      (convert-literal-to-fn zloc fn-name))))
 
 (defn find-function-form [zloc]
   (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))

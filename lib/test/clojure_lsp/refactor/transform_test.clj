@@ -362,11 +362,15 @@
     ;; multi-arity fn
     "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
 
-(defn promote-fn-to-defn [code]
-  (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db*)))
+(defn promote-fn-to-defn
+  ([code] (promote-fn-to-defn code nil))
+  ([code provided-name]
+   (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db* provided-name))))
 
-(defn promote-literal-to-fn [code]
-  (as-string (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db*)))
+(defn promote-literal-to-fn
+  ([code] (promote-literal-to-fn code nil))
+  ([code provided-name]
+   (as-string (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db* provided-name))))
 
 (defmacro is-promote-fn [expected-defn expected-replacement fn-literal]
   `(let [[actual-defn# actual-replacement#] (promote-fn-to-defn ~fn-literal)]
@@ -430,7 +434,10 @@
     ;; vararg
     (is-promote-fn "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))")
     ;; within fn literal
-    (is-promote-fn "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
+    (is-promote-fn "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"))
+  (testing "with provided name"
+    (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn-to-defn "|(fn [])" "my-name")))
+    (is (= "(fn my-name [])" (promote-literal-to-fn "|#()" "my-name")))))
 
 (deftest can-promote-fn-test
   (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))

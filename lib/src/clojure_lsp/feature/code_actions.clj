@@ -146,7 +146,7 @@
    :kind    :refactor-rewrite
    :command {:title     title
              :command   "promote-fn"
-             :arguments [uri line character]}}))
+             :arguments [uri line character nil]}}))
 
 (defn ^:private extract-function-action [uri line character]
   {:title   "Extract function"

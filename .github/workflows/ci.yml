@@ -132,7 +132,7 @@ jobs:
       - name: Setup musl
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y musl
+          sudo apt-get install -y musl musl-tools
 
       - name: Build Linux native image
         env:

@@ -115,20 +115,13 @@ jobs:
         with:
           babashka-version: 0.7.8
 
-      - name: Setup musl
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y musl musl-tools
-
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.0.0.2
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu install native-image
+          version: '22.0.0.2'
+          java-version: '11'
+          components: 'native-image'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build static Linux native image
         env:

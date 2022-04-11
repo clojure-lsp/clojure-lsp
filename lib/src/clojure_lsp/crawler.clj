@@ -102,7 +102,7 @@
             external-paths-not-on-checksum (remove #(= (get old-checksums %)
                                                        (get new-checksums %))
                                                    external-paths)
-            analysis (analyze-external-classpath! external-paths-not-on-checksum 20 80 progress-token components)]
+            analysis (analyze-external-classpath! external-paths-not-on-checksum 25 80 progress-token components)]
         (swap! db* (fn [db]
                      (-> db
                          (update :analysis merge analysis)
@@ -215,6 +215,7 @@
             (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
+              (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
               (analyze-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components)))
           (upsert-db-cache! @db*))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)

@@ -78,7 +78,6 @@ jobs:
 
       - name: Build Linux native image
         env:
-          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
           make native-cli
@@ -115,6 +114,11 @@ jobs:
         uses: turtlequeue/setup-babashka@v1.3.0
         with:
           babashka-version: 0.7.8
+
+      - name: Setup musl
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y musl
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master

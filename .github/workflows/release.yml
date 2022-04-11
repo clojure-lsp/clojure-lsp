@@ -163,6 +163,11 @@ jobs:
         run: |
           gu install native-image
 
+      - name: Setup musl
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y musl
+
       - name: Build static Linux native image
         env:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"

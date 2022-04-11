@@ -129,6 +129,11 @@ jobs:
         run: |
           gu install native-image
 
+      - name: Setup musl
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y musl
+
       - name: Build Linux native image
         env:
           CLOJURE_LSP_XMX: "-J-Xmx6g"

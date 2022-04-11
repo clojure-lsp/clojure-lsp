@@ -14,12 +14,10 @@ then
 fi
 
 CLOJURE_LSP_XMX=${CLOJURE_LSP_XMX:-"-J-Xmx8g"}
-DTLV_LIB_EXTRACT_DIR=$(mktemp -d)
-export DTLV_LIB_EXTRACT_DIR=$DTLV_LIB_EXTRACT_DIR
 
 args=("-jar" "$CLOJURE_LSP_JAR"
+      "clojure-lsp"
       "-H:+ReportExceptionStackTraces"
-      "-H:CLibraryPath=${DTLV_LIB_EXTRACT_DIR}"
       "--verbose"
       "--no-fallback"
       "--native-image-info"

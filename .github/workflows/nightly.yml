@@ -193,7 +193,7 @@ jobs:
   windows:
     needs: [build-cli-jar]
     continue-on-error: true
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
       fail-fast: false
     steps:

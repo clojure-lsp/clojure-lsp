@@ -1870,8 +1870,9 @@
 <li>Bump clj-kondo to <code>2022.04.08</code> fixing semantic tokens for <code>:require</code>, <code>:refer</code> and <code>:as</code>. <a href="https://github.com/clj-kondo/clj-kondo/issues/1609">#1609</a></li>
 <li>Move <code>lsp4clj</code> to outside clojure-lsp to its own repo/jar release.</li>
 <li>Fix local files outside source-paths not being linted even if opened/changed.</li>
+<li>Consider filename + lastModified as checksum for external files, avoiding analyzing it if analysis is already present.</li>
 <li>
-<p>Consider filename + lastModified as checksum for external files, avoiding analyzing it if analysis is already present.</p>
+<p>graalvm: Compile static linux with --musl for better compatibility. #868</p>
 </li>
 <li>
 <p>Editor</p>

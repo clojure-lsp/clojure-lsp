@@ -132,18 +132,21 @@
              :arguments [uri line character]}})
 
 (defn ^:private demote-fn-action [uri line character]
-  {:title   "Demote function"
+  {:title   "Demote fn to #()"
    :kind    :refactor-rewrite
-   :command {:title     "Demote function"
+   :command {:title     "Demote fn to #()"
              :command   "demote-fn"
              :arguments [uri line character]}})
 
-(defn ^:private promote-fn-action [uri line character]
-  {:title   "Promote function"
+(defn ^:private promote-fn-action [uri line character type]
+  (let [title (str "Promote " (case type
+                                          :fn-to-defn "fn to defn"
+                                          :literal-to-fn "#() to fn"))]
+   {:title   title
    :kind    :refactor-rewrite
-   :command {:title     "Promote function"
+   :command {:title     title
              :command   "promote-fn"
-             :arguments [uri line character]}})
+             :arguments [uri line character]}}))
 
 (defn ^:private extract-function-action [uri line character]
   {:title   "Extract function"
@@ -306,7 +309,7 @@
             (extract-function-action uri line character))
 
       @can-promote-fn?*
-      (conj (promote-fn-action uri line character))
+      (conj (promote-fn-action uri line character @can-promote-fn?*))
 
       @can-demote-fn?*
       (conj (demote-fn-action uri line character))

@@ -589,3 +589,40 @@
                           []
                           {:workspace {:workspace-edit true}}
                           @db/db*))))
+
+(deftest promote-fn-actions
+  (let [[[row col]] (h/load-code-and-locs (h/code "|(fn [] (+ 1 2))"))]
+    (h/assert-contains-submaps
+      [{:title "Promote fn to defn"
+        :command {:command "promote-fn"}}]
+      (f.code-actions/all (zloc-of h/default-uri)
+                          h/default-uri
+                          row
+                          col
+                          []
+                          {:workspace {:workspace-edit true}}
+                          @db/db*)))
+  (let [[[row col]] (h/load-code-and-locs (h/code "|#(+ 1 2)"))]
+    (h/assert-contains-submaps
+      [{:title "Promote #() to fn"
+        :command {:command "promote-fn"}}]
+      (f.code-actions/all (zloc-of h/default-uri)
+                          h/default-uri
+                          row
+                          col
+                          []
+                          {:workspace {:workspace-edit true}}
+                          @db/db*))))
+
+(deftest demote-fn-actions
+  (let [[[row col]] (h/load-code-and-locs (h/code "|(fn [] (+ 1 2))"))]
+    (h/assert-contains-submaps
+      [{:title "Demote fn to #()"
+        :command {:command "demote-fn"}}]
+      (f.code-actions/all (zloc-of h/default-uri)
+                          h/default-uri
+                          row
+                          col
+                          []
+                          {:workspace {:workspace-edit true}}
+                          @db/db*))))

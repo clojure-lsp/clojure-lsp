@@ -508,8 +508,10 @@
 (def can-demote-fn? can-convert-fn-to-literal?)
 
 (defn can-promote-fn? [zloc]
-  (or (can-convert-fn-to-defn? zloc)
-      (can-convert-literal-to-fn? zloc)))
+  (cond
+    (can-convert-fn-to-defn? zloc)    :fn-to-defn
+    (can-convert-literal-to-fn? zloc) :literal-to-fn
+    :else                             nil))
 
 (defn ^:private convert-literal-to-fn [zloc]
   (let [literal-params (->> (z/down (z/subzip zloc))

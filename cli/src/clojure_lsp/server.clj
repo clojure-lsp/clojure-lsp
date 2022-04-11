@@ -202,6 +202,7 @@
         _ (logger/info lsp/server-logger-tag "Starting server...")
         is (lsp/tee-system-in System/in)
         os (lsp/tee-system-out System/out)
+
         _ (reset! components* (components/->components db* timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler

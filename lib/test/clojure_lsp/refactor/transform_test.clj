@@ -314,12 +314,68 @@
     (is (= "^:private a" (cycle-privacy "(defn |a [])")))
     (is (= "a" (cycle-privacy "(defn ^:private |a [])")))))
 
-(defn cycle-fn-literal [code]
-  (as-string (transform/cycle-fn-literal (h/zloc-from-code code))))
+(defn demote-fn [code]
+  (as-string (transform/demote-fn (h/zloc-from-code code))))
 
-(deftest cycle-fn-literal-test
+(deftest demote-fn-test
+  (testing "fn to literal"
+    (are [expected fn-literal] (= expected (demote-fn fn-literal))
+      ;; basic params
+      "#()"                    "|(fn [])"
+      "#(+ 1 2)"               "|(fn [] (+ 1 2))"
+      "#(+ 1 %)"               "|(fn [element] (+ 1 element))"
+      "#(+ 1 %1 %2)"           "|(fn [element1 element2] (+ 1 element1 element2))"
+      ;; vararg
+      "#(+ 1 %&)"              "|(fn [& args] (+ 1 args))"
+      "#(+ 1 % %&)"            "|(fn [element & args] (+ 1 element args))"
+      "#(+ 1 %1 %2 %&)"        "|(fn [element1 element2 & args] (+ 1 element1 element2 args))"
+      ;; implicit do
+      "#(do (prn {}) (+ 3 4))" "|(fn [] (prn {}) (+ 3 4))"
+      ;; with comment
+      (h/code "#(;; comment"
+              "   + 3 4)")
+      (h/code "|(fn []"
+              "   ;; comment"
+              "   (+ 3 4))")
+      ;; unused param
+      "#(+ 1 %1 %3)"           "|(fn [element1 _ element3] (+ 1 element1 element3))"
+      ;; reordered params
+      "#(+ 1 %2 %1)"           "|(fn [element1 element2] (+ 1 element2 element1))"
+      ;; duplicate param
+      "#(+ 1 % %)"             "|(fn [element1] (+ 1 element1 element1))"
+      ;; subsequent fn
+      "#(+ 1 %)"               "|(fn [element1] (+ 1 element1)) (fn [element1 element2] (+ 1 element1 element2))"
+      ;; named function
+      "#(+ 1 2)"               "|(fn named [] (+ 1 2))"
+      ;; from inside
+      "#(+ 1 2)"               "(|fn [] (+ 1 2))"
+      "#(+ 1 2)"               "(fn |[] (+ 1 2))"
+      "#(+ 1 2)"               "(fn [] (+ 1| 2))")))
+
+(deftest can-demote-fn-test
+  (are [code] (not (transform/can-demote-fn? (h/zloc-from-code code)))
+    ;; non fns
+    "(+ |1 2)"
+    "|(+ 1 2)"
+    ;; destructured param
+    "|(fn [{:keys [element1 element2]}] (+ 1 element1 element1))"
+    ;; multi-arity fn
+    "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
+
+(defn promote-fn-to-defn [code]
+  (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db*)))
+
+(defn promote-literal-to-fn [code]
+  (as-string (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db*)))
+
+(defmacro is-promote-fn [expected-defn expected-replacement fn-literal]
+  `(let [[actual-defn# actual-replacement#] (promote-fn-to-defn ~fn-literal)]
+     (is (= ~expected-defn actual-defn#))
+     (is (= ~expected-replacement actual-replacement#))))
+
+(deftest promote-fn-test
   (testing "literal to fn"
-    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
+    (are [expected fn-literal] (= expected (promote-literal-to-fn fn-literal))
       ;; basic params
       "(fn [])"                                                      "|#()"
       "(fn [] (+ 1 2))"                                              "|#(+ 1 2)"
@@ -351,73 +407,13 @@
       ;; from inside
       "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
-  (testing "fn to literal"
-    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
-      ;; basic params
-      "#()"                    "|(fn [])"
-      "#(+ 1 2)"               "|(fn [] (+ 1 2))"
-      "#(+ 1 %)"               "|(fn [element] (+ 1 element))"
-      "#(+ 1 %1 %2)"           "|(fn [element1 element2] (+ 1 element1 element2))"
-      ;; vararg
-      "#(+ 1 %&)"              "|(fn [& args] (+ 1 args))"
-      "#(+ 1 % %&)"            "|(fn [element & args] (+ 1 element args))"
-      "#(+ 1 %1 %2 %&)"        "|(fn [element1 element2 & args] (+ 1 element1 element2 args))"
-      ;; implicit do
-      "#(do (prn {}) (+ 3 4))" "|(fn [] (prn {}) (+ 3 4))"
-      ;; with comment
-      (h/code "#(;; comment"
-              "   + 3 4)")
-      (h/code "|(fn []"
-              "   ;; comment"
-              "   (+ 3 4))")
-      ;; unused param
-      "#(+ 1 %1 %3)"           "|(fn [element1 _ element3] (+ 1 element1 element3))"
-      ;; reordered params
-      "#(+ 1 %2 %1)"           "|(fn [element1 element2] (+ 1 element2 element1))"
-      ;; duplicate param
-      "#(+ 1 % %)"             "|(fn [element1] (+ 1 element1 element1))"
-      ;; subsequent fn
-      "#(+ 1 %)"               "|(fn [element1] (+ 1 element1)) (fn [element1 element2] (+ 1 element1 element2))"
-      ;; named function
-      "#(+ 1 2)"               "|(fn named [] (+ 1 2))"
-      ;; from inside
-      "#(+ 1 2)"               "(|fn [] (+ 1 2))"
-      "#(+ 1 2)"               "(fn |[] (+ 1 2))"
-      "#(+ 1 2)"               "(fn [] (+ 1| 2))"))
-  (testing "when nested prefers literal to fn, because literals can't be nested"
-    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
-      ;; on literal in fn
-      "(fn [element] (+ a element))"                  "(fn [a coll] (map |#(+ a %) coll))"
-      ;; on fn in literal
-      "(fn [element] (map (fn [a] (+ a 1)) element))" "#(map |(fn [a] (+ a 1)) %)")))
-
-(deftest can-cycle-fn-literal-test
-  (are [code] (not (transform/can-cycle-fn-literal? (h/zloc-from-code code)))
-    ;; non fn-literals
-    "(+ |1 2)"
-    "|(+ 1 2)"
-    ;; destructured param
-    "|(fn [{:keys [element1 element2]}] (+ 1 element1 element1))"
-    ;; multi-arity fn
-    "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
-
-(defn promote-fn [code]
-  (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db*)))
-
-(defmacro is-promote-fn [expected-defn expected-replacement fn-literal]
-  `(let [[actual-defn# actual-replacement#] (promote-fn ~fn-literal)]
-     (is (= ~expected-defn actual-defn#))
-     (is (= ~expected-replacement actual-replacement#))))
-
-(deftest promote-fn-test
-  (testing "literal to fn"
-    ;; more throughly tested by cycle-fn-literal-test
-    (is-promote-fn "(fn [] (+ 1 2))" nil "|#(+ 1 2)"))
   (testing "fn to defn"
     ;; basic params
     (is-promote-fn "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])")
     (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))")
     (is-promote-fn "\n(defn- new-function [element] (+ 1 element))\n"             "new-function" "|(fn [element] (+ 1 element))")
+    ;; destructured param
+    (is-promote-fn "\n(defn- new-function [{:keys [element]}] (+ 1 element))\n"   "new-function" "|(fn [{:keys [element]}] (+ 1 element))")
     ;; vararg
     (is-promote-fn "\n(defn- new-function [element & args] (+ 1 element args))\n" "new-function" "|(fn [element & args] (+ 1 element args))")
     ;; named function
@@ -439,6 +435,7 @@
 (deftest can-promote-fn-test
   (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))
     ;; non fn or literal
+    "|a"
     "(+ |1 2)"
     "|(+ 1 2)"))
 

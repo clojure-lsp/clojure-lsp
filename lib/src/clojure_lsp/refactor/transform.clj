@@ -505,9 +505,7 @@
 (defn ^:private can-convert-fn-to-defn? [zloc]
   (boolean (convert-fn-to-defn-params zloc)))
 
-(defn can-cycle-fn-literal? [zloc]
-  (or (can-convert-literal-to-fn? zloc)
-      (can-convert-fn-to-literal? zloc)))
+(def can-demote-fn? can-convert-fn-to-literal?)
 
 (defn can-promote-fn? [zloc]
   (or (can-convert-fn-to-defn? zloc)
@@ -666,11 +664,10 @@
      {:loc replacement-zloc
       :range fn-form-meta}]))
 
-(defn cycle-fn-literal [zloc]
-  (if-let [[zloc] (convert-literal-to-fn-params zloc)]
-    (convert-literal-to-fn zloc)
-    (when-let [[zloc params] (convert-fn-to-literal-params zloc)]
-      (convert-fn-to-literal zloc params))))
+(defn demote-fn [zloc]
+  ;; TODO: someday, this could inline a defn, so defn -> fn.
+  (when-let [[zloc params] (convert-fn-to-literal-params zloc)]
+    (convert-fn-to-literal zloc params)))
 
 (defn promote-fn [zloc uri db]
   (if-let [[zloc] (convert-fn-to-defn-params zloc)]

@@ -45,7 +45,7 @@
                                             "thread-first"
                                             "inline-symbol"
                                             "extract-function"
-                                            "cycle-fn-literal"
+                                            "demote-fn"
                                             "cycle-coll"
                                             "expand-let"
                                             "create-function"

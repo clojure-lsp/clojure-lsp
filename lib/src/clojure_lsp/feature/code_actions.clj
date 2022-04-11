@@ -131,11 +131,11 @@
              :command   "cycle-privacy"
              :arguments [uri line character]}})
 
-(defn ^:private cycle-fn-literal-action [uri line character]
-  {:title   "Cycle function literal"
+(defn ^:private demote-fn-action [uri line character]
+  {:title   "Demote function"
    :kind    :refactor-rewrite
-   :command {:title     "Cycle function literal"
-             :command   "cycle-fn-literal"
+   :command {:title     "Demote function"
+             :command   "demote-fn"
              :arguments [uri line character]}})
 
 (defn ^:private promote-fn-action [uri line character]
@@ -270,7 +270,7 @@
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
-        can-cycle-fn-literal?* (future (r.transform/can-cycle-fn-literal? zloc))
+        can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
         definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
@@ -305,11 +305,11 @@
       (conj (cycle-privacy-action uri line character)
             (extract-function-action uri line character))
 
-      @can-cycle-fn-literal?*
-      (conj (cycle-fn-literal-action uri line character))
-
       @can-promote-fn?*
       (conj (promote-fn-action uri line character))
+
+      @can-demote-fn?*
+      (conj (demote-fn-action uri line character))
 
       @can-thread?*
       (conj (thread-first-all-action uri line character)

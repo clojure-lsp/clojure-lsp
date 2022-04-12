@@ -140,13 +140,13 @@
 
 (defn ^:private promote-fn-action [uri line character type]
   (let [title (str "Promote " (case type
-                                          :fn-to-defn "fn to defn"
-                                          :literal-to-fn "#() to fn"))]
-   {:title   title
-   :kind    :refactor-rewrite
-   :command {:title     title
-             :command   "promote-fn"
-             :arguments [uri line character nil]}}))
+                                :fn-to-defn "fn to defn"
+                                :literal-to-fn "#() to fn"))]
+    {:title   title
+     :kind    :refactor-rewrite
+     :command {:title     title
+               :command   "promote-fn"
+               :arguments [uri line character nil]}}))
 
 (defn ^:private extract-function-action [uri line character]
   {:title   "Extract function"

@@ -630,6 +630,7 @@
                            (z/insert-right defn-name-with-meta)
                            (z/right)))
         ;; prepend locals to param lists
+        ;; we prepend because it works when replacing with either `partial` or `#()`
         used-locals (->> (q/find-local-usages-under-form (:analysis db)
                                                          (shared/uri->filename uri)
                                                          fn-form-meta)

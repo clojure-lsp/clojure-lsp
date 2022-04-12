@@ -610,10 +610,16 @@
 (defn ^:private convert-fn-to-defn [zloc uri db provided-name]
   (let [fn-form-meta (meta (z/node zloc))
         space (n/spaces 1)
-        ;; replace `fn` node
+        ;; We'll walk over the `fn`, converting it to a `defn`. Make the `fn` a
+        ;; `defn`, ensure it's private, give it a name, and ensure any locals
+        ;; defined outside the `fn` are passed in as args.
+        ;; First isolate the `fn` from its context, so it can be inserted at the
+        ;; top level later.
+        isolated-zloc (z/edn (z/node zloc))
+        ;; Replace `fn` node with `defn` or `defn-`
         metadata-for-privacy? (settings/get db [:use-metadata-for-privacy?] false)
-        zloc-on-defn (-> zloc z/down (z/replace (if metadata-for-privacy? 'defn 'defn-)))
-        ;; add or replace name
+        zloc-on-defn (-> isolated-zloc z/down (z/replace (if metadata-for-privacy? 'defn 'defn-)))
+        ;; Add or replace name, possibly adding metadata privacy.
         fn-name-zloc (->> (z/right zloc-on-defn)
                           (iterate z/right)
                           (take-while (complement #(contains? #{:list :vector} (z/tag %))))
@@ -629,14 +635,14 @@
                        (-> zloc-on-defn
                            (z/insert-right defn-name-with-meta)
                            (z/right)))
-        ;; prepend locals to param lists
-        ;; we prepend because it works when replacing with either `partial` or `#()`
+        ;; Prepend locals to param lists.
+        ;; We prepend because it works whether replacing with `partial` or `#()`.
         used-locals (->> (q/find-local-usages-under-form (:analysis db)
                                                          (shared/uri->filename uri)
                                                          fn-form-meta)
                          (map :name))
         add-locals (fn [zloc]
-                     ;; navigate to the params node and prepend all the locals
+                     ;; Navigate to the params node and prepend all the locals.
                      (reduce (fn [params-zloc used-local]
                                (z/insert-child params-zloc used-local))
                              (z/find-tag zloc z/right :vector)
@@ -649,38 +655,37 @@
                         (if-let [next-arity (z/find-next-tag zloc z/right :list)]
                           (recur (-> next-arity z/down add-locals z/up))
                           zloc))))
-        ;; decide how to replace fn
-        replacement-zloc (z/edn*
-                           (cond
+        ;; The `defn` is ready. Now construct a node that will replace the `fn`.
+        replacement-node (cond
                              ;; new-function
-                             (not (seq used-locals))
-                             defn-name
+                           (not (seq used-locals))
+                           defn-name
                              ;; (partial new-function a b)
-                             (or (not single-arity?)
+                           (or (not single-arity?)
                                  ;; don't nest fn literals
-                                 (z/find-tag zloc z/up :fn))
-                             (n/list-node
-                               (list* 'partial space defn-name space (interpose space used-locals)))
+                               (z/find-tag zloc z/up :fn))
+                           (n/list-node
+                             (list* 'partial space defn-name space (interpose space used-locals)))
                              ;; depending on whether function originally had params:
                              ;; #(new-function a b)
                              ;; #(new-function a b %1 %2 %&)
-                             :else
-                             (n/fn-node
-                               (list* defn-name space
-                                      (let [orig-params (z/node (z/find-tag (z/down zloc) z/right :vector))
-                                            [before-amp amp-and-after] (->> (n/children orig-params)
-                                                                            (filter n/sexpr-able?)
-                                                                            (split-with #(not= '& (n/sexpr %))))
-                                            literal-args (concat
-                                                           (map-indexed (fn [idx _]
-                                                                          (n/token-node (symbol (str "%" (inc idx)))))
-                                                                        before-amp)
-                                                           (when (seq amp-and-after)
-                                                             ['%&]))]
-                                        (->> (concat used-locals literal-args)
-                                             (interpose space)))))))]
-    [(prepend-preserving-comment (edit/to-top zloc) (z/edn (z/node defn-zloc)))
-     {:loc replacement-zloc
+                           :else
+                           (n/fn-node
+                             (list* defn-name space
+                                    (let [orig-params (z/node (z/find-tag (z/down zloc) z/right :vector))
+                                          [before-amp amp-and-after] (->> (n/children orig-params)
+                                                                          (filter n/sexpr-able?)
+                                                                          (split-with #(not= '& (n/sexpr %))))
+                                          literal-args (concat
+                                                         (map-indexed (fn [idx _]
+                                                                        (n/token-node (symbol (str "%" (inc idx)))))
+                                                                      before-amp)
+                                                         (when (seq amp-and-after)
+                                                           ['%&]))]
+                                      (->> (concat used-locals literal-args)
+                                           (interpose space))))))]
+    [(prepend-preserving-comment (edit/to-top zloc) defn-zloc)
+     {:loc (z/edn* replacement-node)
       :range fn-form-meta}]))
 
 (defn demote-fn [zloc]

@@ -611,18 +611,13 @@
   (let [fn-form-meta (meta (z/node zloc))
         space (n/spaces 1)
         ;; replace `fn` with `defn-` or `defn ^:private`
-        zloc-on-privacy (if (settings/get db [:use-metadata-for-privacy?] false)
-                          (-> zloc
-                              z/down
-                              (z/replace 'defn)
-                              (z/insert-right (n/meta-node (n/keyword-node :private)))
-                              z/right)
-                          (-> zloc
-                              (z/down)
-                              (z/replace 'defn-)))
+        metadata-for-privacy? (settings/get db [:use-metadata-for-privacy?] false)
+        zloc-on-defn (-> zloc
+                         z/down
+                         (z/replace (if metadata-for-privacy? 'defn 'defn-)))
         ;; replace or insert var name
         z-symbol-node? #(n/symbol-node? (z/node %))
-        fn-name-zloc (->> (z/right zloc-on-privacy)
+        fn-name-zloc (->> (z/right zloc-on-defn)
                           (iterate z/right)
                           (take-while (complement #(contains? #{:list :vector} (z/tag %))))
                           (filter z-symbol-node?)
@@ -630,10 +625,12 @@
         defn-name (or (some-> provided-name symbol)
                       (some-> fn-name-zloc z/sexpr)
                       'new-function)
+        defn-name-with-meta (cond->> defn-name
+                              metadata-for-privacy? (n/meta-node (n/keyword-node :private)))
         zloc-on-name (if fn-name-zloc
-                       (z/replace fn-name-zloc defn-name)
-                       (-> zloc-on-privacy
-                           (z/insert-right defn-name)
+                       (z/replace fn-name-zloc defn-name-with-meta)
+                       (-> zloc-on-defn
+                           (z/insert-right defn-name-with-meta)
                            (z/right)))
         ;; prepend locals to param lists
         used-locals (->> (q/find-local-usages-under-form (:analysis db)

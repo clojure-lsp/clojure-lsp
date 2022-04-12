@@ -369,6 +369,7 @@
 
 (deftest promote-fn-test
   (testing "literal to fn"
+    (h/clean-db!)
     (are [expected fn-literal] (= [expected] (promote-fn fn-literal))
       ;; basic params
       "(fn [])"                                                      "|#()"
@@ -402,6 +403,7 @@
       "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
   (testing "fn to defn"
+    (h/clean-db!)
     (are [expect-defn expected-replacement code]
          (= [expect-defn expected-replacement] (promote-fn code))
       ;; basic params
@@ -415,9 +417,9 @@
       ;; multi-arity
       "\n(defn- new-function ([x] (+ 1 x)) ([x y] (+ 1 x y)))\n"     "new-function" "|(fn ([x] (+ 1 x)) ([x y] (+ 1 x y)))"
       ;; from inside
-      "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"
-      ))
+      "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
   (testing "fn to defn with locals"
+    (h/clean-db!)
     (are [expect-defn expected-replacement code]
          (= [expect-defn expected-replacement] (promote-fn code))
       ;; basic params
@@ -432,17 +434,22 @@
       ;; multi-arity
       "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"  "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"
       ;; within fn literal
-      "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"
-      ))
+      "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"))
   (testing "naming"
+    (h/clean-db!)
     ;; previously named fn
     (is (= ["\n(defn- previously-named [])\n" "previously-named"] (promote-fn "|(fn previously-named [])")))
     ;; provided name
     (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn "|(fn [])" "my-name")))
     (is (= ["(fn my-name [])"] (promote-fn "|#()" "my-name"))))
   (testing "when nested"
+    (h/clean-db!)
     (is (= ["(fn [element1] (+ element1))"] (promote-fn "(fn [a] (+ a #(+ |%1)))")))
-    (is (= ["\n(defn- new-function [a] a)\n" "new-function"] (promote-fn "#(+ %1 (fn [a] |a))")))))
+    (is (= ["\n(defn- new-function [a] a)\n" "new-function"] (promote-fn "#(+ %1 (fn [a] |a))"))))
+  (testing "with metadata privacy"
+    (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+    (is (= ["\n(defn ^:private new-function [])\n" "new-function"] (promote-fn "|(fn [])")))
+    (is (= ["\n(defn ^:private new-function [a] a)\n" "#(new-function a)"] (promote-fn "(let [a 1] |(fn [] a))")))))
 
 (deftest can-promote-fn-test
   (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))

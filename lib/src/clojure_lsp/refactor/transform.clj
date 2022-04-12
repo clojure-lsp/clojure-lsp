@@ -491,11 +491,11 @@
           [fn-zloc params])))))
 
 (defn ^:private promote-fn-params [zloc]
-  (when-let [zloc (z/find zloc z/up (some-fn outer-fn-form? outer-literal-form?))]
+  (when-let [zloc (z/find zloc z/up (some-fn outer-literal-form? outer-fn-form?))]
     (cond
-      (outer-fn-form? zloc)      {:promotion :fn-to-defn
-                                  :zloc      zloc}
       (outer-literal-form? zloc) {:promotion :literal-to-fn
+                                  :zloc      zloc}
+      (outer-fn-form? zloc)      {:promotion :fn-to-defn
                                   :zloc      zloc})))
 
 (defn can-demote-fn? [zloc]
@@ -612,15 +612,13 @@
         space (n/spaces 1)
         ;; replace `fn` node
         metadata-for-privacy? (settings/get db [:use-metadata-for-privacy?] false)
-        zloc-on-defn (-> zloc
-                         z/down
-                         (z/replace (if metadata-for-privacy? 'defn 'defn-)))
+        zloc-on-defn (-> zloc z/down (z/replace (if metadata-for-privacy? 'defn 'defn-)))
+        ;; add or replace name
         fn-name-zloc (->> (z/right zloc-on-defn)
                           (iterate z/right)
                           (take-while (complement #(contains? #{:list :vector} (z/tag %))))
                           (filter #(n/symbol-node? (z/node %)))
                           first)
-        ;; add or replace name
         defn-name (or (some-> provided-name symbol)
                       (some-> fn-name-zloc z/sexpr)
                       'new-function)
@@ -635,20 +633,21 @@
         used-locals (->> (q/find-local-usages-under-form (:analysis db)
                                                          (shared/uri->filename uri)
                                                          fn-form-meta)
-                         (mapv (comp n/token-node :name)))
+                         (map :name))
         add-locals (fn [zloc]
                      ;; navigate to the params node and prepend all the locals
                      (reduce (fn [params-zloc used-local]
                                (z/insert-child params-zloc used-local))
                              (z/find-tag zloc z/right :vector)
                              (reverse used-locals)))
-        single-arity? (z/find-tag zloc-on-name z/right :vector)
-        defn-zloc (if single-arity?
-                    (add-locals zloc-on-name)
-                    (loop [zloc zloc-on-name]
-                      (if-let [next-arity (z/find-next-tag zloc z/right :list)]
-                        (recur (-> next-arity z/down add-locals z/up))
-                        zloc)))
+        single-arity? (z/find-next-tag zloc-on-name z/right :vector)
+        defn-zloc (z/up
+                    (if single-arity?
+                      (add-locals zloc-on-name)
+                      (loop [zloc zloc-on-name]
+                        (if-let [next-arity (z/find-next-tag zloc z/right :list)]
+                          (recur (-> next-arity z/down add-locals z/up))
+                          zloc))))
         ;; decide how to replace fn
         replacement-zloc (z/edn*
                            (cond
@@ -679,7 +678,7 @@
                                                              ['%&]))]
                                         (->> (concat used-locals literal-args)
                                              (interpose space)))))))]
-    [(prepend-preserving-comment (edit/to-top zloc) (z/edn (z/node (z/up defn-zloc))))
+    [(prepend-preserving-comment (edit/to-top zloc) (z/edn (z/node defn-zloc)))
      {:loc replacement-zloc
       :range fn-form-meta}]))
 

@@ -140,8 +140,8 @@
 
 (defn ^:private promote-fn-action [uri line character type]
   (let [title (str "Promote " (case type
-                                :fn-to-defn "fn to defn"
-                                :literal-to-fn "#() to fn"))]
+                                :literal-to-fn "#() to fn"
+                                :fn-to-defn "fn to defn"))]
     {:title   title
      :kind    :refactor-rewrite
      :command {:title     title
@@ -273,8 +273,8 @@
         allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
-        can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
+        can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)

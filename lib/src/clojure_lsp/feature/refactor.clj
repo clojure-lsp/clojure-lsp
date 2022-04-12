@@ -40,11 +40,11 @@
 (defmethod refactor :cycle-privacy [{:keys [loc db]}]
   (r.transform/cycle-privacy loc db))
 
-(defmethod refactor :demote-fn [{:keys [loc]}]
-  (r.transform/demote-fn loc))
-
 (defmethod refactor :promote-fn [{:keys [loc uri db args]}]
   (apply r.transform/promote-fn loc uri db args))
+
+(defmethod refactor :demote-fn [{:keys [loc]}]
+  (r.transform/demote-fn loc))
 
 (defmethod refactor :expand-let [{:keys [loc uri db]}]
   (r.transform/expand-let loc uri db))

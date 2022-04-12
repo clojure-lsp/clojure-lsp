@@ -319,7 +319,7 @@
 
 (deftest demote-fn-test
   (testing "fn to literal"
-    (are [expected fn-literal] (= expected (demote-fn fn-literal))
+    (are [expected code] (= expected (demote-fn code))
       ;; basic params
       "#()"                    "|(fn [])"
       "#(+ 1 2)"               "|(fn [] (+ 1 2))"
@@ -404,8 +404,8 @@
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
   (testing "fn to defn"
     (h/clean-db!)
-    (are [expect-defn expected-replacement code]
-         (= [expect-defn expected-replacement] (promote-fn code))
+    (are [expected-defn expected-replacement code]
+         (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
       "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])"
       "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))"
@@ -420,23 +420,21 @@
       "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
   (testing "fn to defn with locals"
     (h/clean-db!)
-    (are [expect-defn expected-replacement code]
-         (= [expect-defn expected-replacement] (promote-fn code))
+    (are [expected-defn expected-replacement code]
+         (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
       "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"          "(let [a 1] |(fn [] a))"
       "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"          "(let [a 1] |(fn [] (+ 1 2 a)))"
       "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"       "(let [a 1] |(fn [element] (+ 1 element a)))"
+      ;; destructured param
+      "\n(defn- new-function [a {:keys [element]}] (+ 1 element a))\n"   "#(new-function a %1)"       "(let [a 1] |(fn [{:keys [element]}] (+ 1 element a)))"
       ;; multiple, and repeated locals
       "\n(defn- new-function [a b] (+ 1 a b b))\n"                       "#(new-function a b)"        "(let [a 1 b 2] |(fn [] (+ 1 a b b)))"
       "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)"  "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))"
       ;; vararg
       "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"    "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
       ;; multi-arity
-      "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"
-      ;; within fn literal
-      "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"   "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"
-      "\n(defn- new-function [a b x] (+ x a b))\n"                       "(partial new-function a b)" "(let [a 1 b 2] #(map |(fn [x] (+ x a b)) [1 2 3]))"
-      ))
+      "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"))
   (testing "naming"
     (h/clean-db!)
     ;; previously named fn
@@ -446,8 +444,13 @@
     (is (= ["(fn my-name [])"] (promote-fn "|#()" "my-name"))))
   (testing "when nested"
     (h/clean-db!)
+    ;; literal within fn
     (is (= ["(fn [element1] (+ element1))"] (promote-fn "(fn [a] (+ a #(+ |%1)))")))
-    (is (= ["\n(defn- new-function [a] a)\n" "new-function"] (promote-fn "#(+ %1 (fn [a] |a))"))))
+    ;; fn within literal
+    (is (= ["\n(defn- new-function [a] a)\n" "new-function"] (promote-fn "#(+ %1 (fn [a] |a))")))
+    ;; fn within literal and with locals, replaced with partial
+    (is (= ["\n(defn- new-function [a x] (+ x a))\n" "(partial new-function a)"] (promote-fn "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
+    (is (= ["\n(defn- new-function [a b x] (+ x a b))\n" "(partial new-function a b)"] (promote-fn "(let [a 1 b 2] #(map |(fn [x] (+ x a b)) [1 2 3]))"))))
   (testing "with metadata privacy"
     (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= ["\n(defn ^:private new-function [])\n" "new-function"] (promote-fn "|(fn [])")))
@@ -828,7 +831,7 @@
 (deftest can-create-test?
   (testing "when on multiples functions"
     (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                               (h/file-path "/project/test")}}})
+                                                                (h/file-path "/project/test")}}})
     (let [zloc (h/load-code-and-zloc (h/code "(ns foo)"
                                              "(defn bar []"
                                              "  |2)"

@@ -610,17 +610,15 @@
 (defn ^:private convert-fn-to-defn [zloc uri db provided-name]
   (let [fn-form-meta (meta (z/node zloc))
         space (n/spaces 1)
-        ;; replace `fn` with `defn-` or `defn ^:private`
+        ;; replace `fn` node
         metadata-for-privacy? (settings/get db [:use-metadata-for-privacy?] false)
         zloc-on-defn (-> zloc
                          z/down
                          (z/replace (if metadata-for-privacy? 'defn 'defn-)))
-        ;; replace or insert var name
-        z-symbol-node? #(n/symbol-node? (z/node %))
         fn-name-zloc (->> (z/right zloc-on-defn)
                           (iterate z/right)
                           (take-while (complement #(contains? #{:list :vector} (z/tag %))))
-                          (filter z-symbol-node?)
+                          (filter #(n/symbol-node? (z/node %)))
                           first)
         defn-name (or (some-> provided-name symbol)
                       (some-> fn-name-zloc z/sexpr)
@@ -661,25 +659,25 @@
                                  ;; don't nest fn literals
                                  (z/find-tag zloc z/up :fn))
                              (n/list-node
-                               (list* 'partial space defn-name space used-locals))
+                               (list* 'partial space defn-name space (interpose space used-locals)))
                              ;; depending on whether function originally had params:
                              ;; #(new-function a b)
                              ;; #(new-function a b %1 %2 %&)
                              :else
                              (n/fn-node
                                (list* defn-name space
-                                      (interpose space
-                                                 (let [orig-params (z/node (z/find-tag (z/down zloc) z/right :vector))
-                                                       clean-orig-params (filter n/sexpr-able? (n/children orig-params))
-                                                       [before-amp amp-and-after] (split-with #(not= '& (n/sexpr %))
-                                                                                              clean-orig-params)
-                                                       literal-args (concat
-                                                                      (map-indexed (fn [idx _]
-                                                                                     (n/token-node (symbol (str "%" (inc idx)))))
-                                                                                   before-amp)
-                                                                      (when (seq amp-and-after)
-                                                                        ['%&]))]
-                                                   (concat used-locals literal-args)))))))]
+                                      (let [orig-params (z/node (z/find-tag (z/down zloc) z/right :vector))
+                                            clean-orig-params (filter n/sexpr-able? (n/children orig-params))
+                                            [before-amp amp-and-after] (split-with #(not= '& (n/sexpr %))
+                                                                                   clean-orig-params)
+                                            literal-args (concat
+                                                           (map-indexed (fn [idx _]
+                                                                          (n/token-node (symbol (str "%" (inc idx)))))
+                                                                        before-amp)
+                                                           (when (seq amp-and-after)
+                                                             ['%&]))]
+                                        (->> (concat used-locals literal-args)
+                                             (interpose space)))))))]
     [(prepend-preserving-comment (edit/to-top zloc) (z/edn (z/node (z/up defn-zloc))))
      {:loc replacement-zloc
       :range fn-form-meta}]))

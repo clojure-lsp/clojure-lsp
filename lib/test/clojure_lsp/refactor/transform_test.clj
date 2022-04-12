@@ -423,18 +423,20 @@
     (are [expect-defn expected-replacement code]
          (= [expect-defn expected-replacement] (promote-fn code))
       ;; basic params
-      "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"         "(let [a 1] |(fn [] a))"
-      "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"         "(let [a 1] |(fn [] (+ 1 2 a)))"
-      "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"      "(let [a 1] |(fn [element] (+ 1 element a)))"
+      "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"          "(let [a 1] |(fn [] a))"
+      "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"          "(let [a 1] |(fn [] (+ 1 2 a)))"
+      "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"       "(let [a 1] |(fn [element] (+ 1 element a)))"
       ;; multiple, and repeated locals
-      "\n(defn- new-function [a b] (+ 1 a b b))\n"                       "#(new-function a b)"       "(let [a 1 b 2] |(fn [] (+ 1 a b b)))"
-      "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)" "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))"
+      "\n(defn- new-function [a b] (+ 1 a b b))\n"                       "#(new-function a b)"        "(let [a 1 b 2] |(fn [] (+ 1 a b b)))"
+      "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)"  "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))"
       ;; vararg
-      "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
+      "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"    "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
       ;; multi-arity
-      "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"  "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"
+      "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"
       ;; within fn literal
-      "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"))
+      "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"   "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"
+      "\n(defn- new-function [a b x] (+ x a b))\n"                       "(partial new-function a b)" "(let [a 1 b 2] #(map |(fn [x] (+ x a b)) [1 2 3]))"
+      ))
   (testing "naming"
     (h/clean-db!)
     ;; previously named fn

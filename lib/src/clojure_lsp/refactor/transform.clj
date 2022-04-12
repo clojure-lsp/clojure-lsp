@@ -620,6 +620,7 @@
                           (take-while (complement #(contains? #{:list :vector} (z/tag %))))
                           (filter #(n/symbol-node? (z/node %)))
                           first)
+        ;; add or replace name
         defn-name (or (some-> provided-name symbol)
                       (some-> fn-name-zloc z/sexpr)
                       'new-function)
@@ -667,9 +668,9 @@
                              (n/fn-node
                                (list* defn-name space
                                       (let [orig-params (z/node (z/find-tag (z/down zloc) z/right :vector))
-                                            clean-orig-params (filter n/sexpr-able? (n/children orig-params))
-                                            [before-amp amp-and-after] (split-with #(not= '& (n/sexpr %))
-                                                                                   clean-orig-params)
+                                            [before-amp amp-and-after] (->> (n/children orig-params)
+                                                                            (filter n/sexpr-able?)
+                                                                            (split-with #(not= '& (n/sexpr %))))
                                             literal-args (concat
                                                            (map-indexed (fn [idx _]
                                                                           (n/token-node (symbol (str "%" (inc idx)))))

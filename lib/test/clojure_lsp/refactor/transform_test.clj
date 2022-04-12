@@ -362,24 +362,14 @@
     ;; multi-arity fn
     "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
 
-(defn promote-fn-to-defn
-  ([code] (promote-fn-to-defn code nil))
+(defn promote-fn
+  ([code] (promote-fn code nil))
   ([code provided-name]
    (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db* provided-name))))
 
-(defn promote-literal-to-fn
-  ([code] (promote-literal-to-fn code nil))
-  ([code provided-name]
-   (as-string (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db* provided-name))))
-
-(defmacro is-promote-fn [expected-defn expected-replacement fn-literal]
-  `(let [[actual-defn# actual-replacement#] (promote-fn-to-defn ~fn-literal)]
-     (is (= ~expected-defn actual-defn#))
-     (is (= ~expected-replacement actual-replacement#))))
-
 (deftest promote-fn-test
   (testing "literal to fn"
-    (are [expected fn-literal] (= expected (promote-literal-to-fn fn-literal))
+    (are [expected fn-literal] (= [expected] (promote-fn fn-literal))
       ;; basic params
       "(fn [])"                                                      "|#()"
       "(fn [] (+ 1 2))"                                              "|#(+ 1 2)"
@@ -412,32 +402,47 @@
       "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
   (testing "fn to defn"
-    ;; basic params
-    (is-promote-fn "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])")
-    (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))")
-    (is-promote-fn "\n(defn- new-function [element] (+ 1 element))\n"             "new-function" "|(fn [element] (+ 1 element))")
-    ;; destructured param
-    (is-promote-fn "\n(defn- new-function [{:keys [element]}] (+ 1 element))\n"   "new-function" "|(fn [{:keys [element]}] (+ 1 element))")
-    ;; vararg
-    (is-promote-fn "\n(defn- new-function [element & args] (+ 1 element args))\n" "new-function" "|(fn [element & args] (+ 1 element args))")
-    ;; named function
-    (is-promote-fn "\n(defn- named [] (+ 1 2))\n"                                 "named"        "|(fn named [] (+ 1 2))")
-    ;; from inside
-    (is-promote-fn "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
+    (are [expect-defn expected-replacement code]
+         (= [expect-defn expected-replacement] (promote-fn code))
+      ;; basic params
+      "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])"
+      "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))"
+      "\n(defn- new-function [element] (+ 1 element))\n"             "new-function" "|(fn [element] (+ 1 element))"
+      ;; destructured param
+      "\n(defn- new-function [{:keys [element]}] (+ 1 element))\n"   "new-function" "|(fn [{:keys [element]}] (+ 1 element))"
+      ;; vararg
+      "\n(defn- new-function [element & args] (+ 1 element args))\n" "new-function" "|(fn [element & args] (+ 1 element args))"
+      ;; multi-arity
+      "\n(defn- new-function ([x] (+ 1 x)) ([x y] (+ 1 x y)))\n"     "new-function" "|(fn ([x] (+ 1 x)) ([x y] (+ 1 x y)))"
+      ;; from inside
+      "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"
+      ))
   (testing "fn to defn with locals"
-    ;; basic params
-    (is-promote-fn "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"         "(let [a 1] |(fn [] a))")
-    (is-promote-fn "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"         "(let [a 1] |(fn [] (+ 1 2 a)))")
-    (is-promote-fn "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"      "(let [a 1] |(fn [element] (+ 1 element a)))")
-    ;; multiple, and repeated locals
-    (is-promote-fn "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)" "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))")
-    ;; vararg
-    (is-promote-fn "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))")
-    ;; within fn literal
-    (is-promote-fn "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"))
-  (testing "with provided name"
-    (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn-to-defn "|(fn [])" "my-name")))
-    (is (= "(fn my-name [])" (promote-literal-to-fn "|#()" "my-name")))))
+    (are [expect-defn expected-replacement code]
+         (= [expect-defn expected-replacement] (promote-fn code))
+      ;; basic params
+      "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"         "(let [a 1] |(fn [] a))"
+      "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"         "(let [a 1] |(fn [] (+ 1 2 a)))"
+      "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"      "(let [a 1] |(fn [element] (+ 1 element a)))"
+      ;; multiple, and repeated locals
+      "\n(defn- new-function [a b] (+ 1 a b b))\n"                       "#(new-function a b)"       "(let [a 1 b 2] |(fn [] (+ 1 a b b)))"
+      "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)" "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))"
+      ;; vararg
+      "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"   "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
+      ;; multi-arity
+      "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"  "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"
+      ;; within fn literal
+      "\n(defn- new-function [a x] (+ x a))\n"                           "(partial new-function a)"  "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))"
+      ))
+  (testing "naming"
+    ;; previously named fn
+    (is (= ["\n(defn- previously-named [])\n" "previously-named"] (promote-fn "|(fn previously-named [])")))
+    ;; provided name
+    (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn "|(fn [])" "my-name")))
+    (is (= ["(fn my-name [])"] (promote-fn "|#()" "my-name"))))
+  (testing "when nested"
+    (is (= ["(fn [element1] (+ element1))"] (promote-fn "(fn [a] (+ a #(+ |%1)))")))
+    (is (= ["\n(defn- new-function [a] a)\n" "new-function"] (promote-fn "#(+ %1 (fn [a] |a))")))))
 
 (deftest can-promote-fn-test
   (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))

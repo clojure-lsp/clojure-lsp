@@ -242,15 +242,11 @@
         (edit/back-to-mark-or-nil bind' :first-occurrence)))))
 
 (defn ^:private widest-scoped-local [zloc uri db]
-  (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
+  (let [z-meta (meta (z/node zloc))
         analysis (:analysis db)
-        local-defs (->> (q/find-local-usages-under-form
-                          analysis
-                          (shared/uri->filename uri)
-                          row
-                          col
-                          end-row
-                          end-col)
+        local-defs (->> (q/find-local-usages-under-form analysis
+                                                        (shared/uri->filename uri)
+                                                        z-meta)
                         (map #(q/find-definition analysis %)))]
     (reduce
       (fn [accum d]
@@ -397,6 +393,46 @@
           (recur (first (expand-let loc false uri db)) current-edit)
           (some-> previous-edit vector))))))
 
+(defn new-defn-zloc [fn-name private? params body db]
+  (let [root (z/of-string
+               (cond
+                 (not private?)
+                 (format "(defn %s)" fn-name)
+
+                 (settings/get db [:use-metadata-for-privacy?] false)
+                 (format "(defn ^:private %s)" fn-name)
+
+                 :else
+                 (format "(defn- %s)" fn-name)))]
+    (reduce z/append-child*
+            (-> root
+                (z/append-child* (n/spaces 1))
+                (z/append-child* params))
+            body)))
+
+(defn prepend-preserving-comment
+  "Returns an edit that places `new-loc` before `existing-loc`, keeping any
+  comments or whitespace that preceed `existing-loc` close to it."
+  [existing-loc new-loc]
+  (let [{existing-row :row
+         new-col :col} (meta (z/node existing-loc))
+        prev-end-row-w-space (some-> (z/find-next existing-loc z/left z/sexpr-able?)
+                                     z/node
+                                     meta
+                                     :end-row
+                                     inc)
+        new-row (or prev-end-row-w-space existing-row)
+        new-range {:row     new-row
+                   :col     new-col
+                   :end-row new-row
+                   :end-col new-col}
+        new-edit (-> new-loc
+                     z/insert-newline-left
+                     z/insert-newline-right
+                     z/up)]
+    {:loc   new-edit
+     :range new-range}))
+
 (defn extract-function
   [zloc uri fn-name db]
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
@@ -408,40 +444,24 @@
           ;; the top-level form it will be extracted from
           form-loc (edit/to-top expr-loc)]
       (when (and expr-loc form-loc)
-        (let [expr-node            (z/node expr-loc)
-              expr-meta            (meta expr-node)
-              {form-row :row
-               defn-col :col}      (meta (z/node form-loc))
-              prev-end-row-w-space (some-> (z/find-next form-loc z/left z/sexpr-able?)
-                                           z/node
-                                           meta
-                                           :end-row
-                                           inc)
-              defn-row             (or prev-end-row-w-space form-row)
-              defn-range           {:row     defn-row
-                                    :col     defn-col
-                                    :end-row defn-row
-                                    :end-col defn-col}
-              fn-sym               (symbol fn-name)
-              clj-analysis         (unify-to-one-language (:analysis db))
-              used-syms            (->> (q/find-local-usages-under-form clj-analysis
-                                                                        (shared/uri->filename uri)
-                                                                        (:row expr-meta)
-                                                                        (:col expr-meta)
-                                                                        (:end-row expr-meta)
-                                                                        (:end-col expr-meta))
-                                        (mapv (comp symbol name :name)))
-              expr-edit            (-> (z/of-string "")
-                                       (z/replace `(~fn-sym ~@used-syms)))
-              defn-edit            (-> (z/of-string "\n(defn)\n")
-                                       (z/append-child fn-sym)
-                                       (z/append-child used-syms)
-                                       (z/append-child* (n/newlines 1))
-                                       (z/append-child* (n/spaces (+ defn-col 1)))
-                                       (z/append-child expr-node)
-                                       z/up)]
-          [{:loc   defn-edit
-            :range defn-range}
+        (let [expr-node (z/node expr-loc)
+              expr-meta (meta expr-node)
+              {defn-col :col} (meta (z/node form-loc))
+
+              fn-sym (symbol fn-name)
+              clj-analysis (unify-to-one-language (:analysis db))
+              used-syms (->> (q/find-local-usages-under-form clj-analysis
+                                                             (shared/uri->filename uri)
+                                                             expr-meta)
+                             (mapv :name))
+              expr-edit (z/edn (list* fn-sym used-syms))
+              private? false ;; TODO: shouldn't this be true?
+              defn-loc (new-defn-zloc fn-sym private? used-syms
+                                      [(n/newlines 1)
+                                       (n/spaces (+ defn-col 1))
+                                       expr-node]
+                                      db)]
+          [(prepend-preserving-comment form-loc defn-loc)
            {:loc   expr-edit
             :range expr-meta}])))))
 
@@ -451,15 +471,16 @@
                (when-let [replacement (get replacements (z/sexpr zloc))]
                  (z/replace zloc replacement)))))
 
-(defn ^:private convert-literal-to-fn-params [zloc]
-  ;; only function literals #(,,,)
-  (when-let [literal-node (z/find-tag zloc z/up :fn)]
-    [literal-node]))
+(defn ^:private outer-fn-form? [zloc]
+  (and (= :list (z/tag zloc))
+       (some-> zloc z/down z/sexpr (= 'fn))))
+
+(defn ^:private outer-literal-form? [zloc]
+  (= :fn (z/tag zloc)))
 
 (defn ^:private convert-fn-to-literal-params [zloc]
   ;; skip non-fns
-  (when-let [fn-zloc (if (and (= :list (z/tag zloc))
-                              (some-> zloc z/down z/sexpr (= 'fn)))
+  (when-let [fn-zloc (if (outer-fn-form? zloc)
                        zloc
                        (some-> zloc (edit/find-ops-up "fn") z/up))]
     ;; skip multi-arity fns
@@ -469,74 +490,79 @@
         (when (every? symbol? params)
           [fn-zloc params])))))
 
-(defn ^:private can-convert-literal-to-fn? [zloc]
-  (boolean (convert-literal-to-fn-params zloc)))
+(defn ^:private promote-fn-params [zloc]
+  (when-let [zloc (z/find zloc z/up (some-fn outer-literal-form? outer-fn-form?))]
+    {:promotion (cond (outer-literal-form? zloc) :literal-to-fn
+                      (outer-fn-form? zloc)      :fn-to-defn)
+     :zloc      zloc}))
 
-(defn ^:private can-convert-fn-to-literal? [zloc]
+(defn can-demote-fn? [zloc]
   (boolean (convert-fn-to-literal-params zloc)))
 
-(defn can-cycle-fn-literal? [zloc]
-  (or (can-convert-literal-to-fn? zloc)
-      (can-convert-fn-to-literal? zloc)))
+(defn can-promote-fn? [zloc]
+  (:promotion (promote-fn-params zloc)))
 
-(defn ^:private convert-literal-to-fn [zloc]
-  (when-let [[zloc] (convert-literal-to-fn-params zloc)]
-    (let [literal-params (->> (z/down (z/subzip zloc))
-                              (iterate z/next)
-                              (take-while (complement z/end?))
-                              (keep (fn [zloc]
-                                      (when (= :token (z/tag zloc))
-                                        (when-let [[_ trailing] (re-find #"^%([1-9][0-9]*|&)?$" (z/string zloc))]
-                                          (cond
-                                            (= "&" trailing) {:key     :varargs
+(defn ^:private convert-literal-to-fn [zloc provided-name]
+  (let [literal-params (->> (z/down (z/subzip zloc))
+                            (iterate z/next)
+                            (take-while (complement z/end?))
+                            (keep (fn [zloc]
+                                    (when (= :token (z/tag zloc))
+                                      (when-let [[_ trailing] (re-find #"^%([1-9][0-9]*|&)?$" (z/string zloc))]
+                                        (cond
+                                          (= "&" trailing) {:key     :varargs
+                                                            :unnamed #{(z/sexpr zloc)}
+                                                            :named   'args}
+                                          (nil? trailing)  {:key     0
+                                                            :unnamed #{(z/sexpr zloc)}
+                                                            :named   'element}
+                                          :else            (let [n (parse-long trailing)]
+                                                             {:key     n
                                                               :unnamed #{(z/sexpr zloc)}
-                                                              :named   'args}
-                                            (nil? trailing)  {:key     0
-                                                              :unnamed #{(z/sexpr zloc)}
-                                                              :named   'element}
-                                            :else            (let [n (parse-long trailing)]
-                                                               {:key     n
-                                                                :unnamed #{(z/sexpr zloc)}
-                                                                :named   (symbol (str "element" n))}))))))
-                              (medley/index-by :key))
-          param-0 (get literal-params 0)
-          param-1 (get literal-params 1)
-          vararg (get literal-params :varargs)
-          positioned-params (cond-> (dissoc literal-params 0 :varargs)
-                              param-0 (assoc 1
-                                             (cond-> (assoc param-0 :key 1)
-                                               param-1 (update :unnamed set/union (:unnamed param-1)))))
-          fn-params (if (seq positioned-params)
-                      (->> (range 1 (inc (apply max (keys positioned-params))))
-                           (mapv (fn [pos]
-                                   (if-let [param (get positioned-params pos)]
-                                     (:named param)
-                                     '_))))
-                      [])
-          fn-params (cond-> fn-params
-                      vararg (conj '& (:named vararg)))
-          replacement (fn [param]
-                        (reduce (fn [result sym]
-                                  (assoc result sym (:named param)))
-                                {}
-                                (:unnamed param)))
-          replacements (reduce (fn [result param]
-                                 (merge result (replacement param)))
-                               (if vararg
-                                 (replacement vararg)
-                                 {})
-                               (vals positioned-params))
-          interior (n/children (z/node (replace-sexprs zloc replacements)))
-          fn-node (n/list-node
-                    (into ['fn (n/spaces 1) fn-params]
+                                                              :named   (symbol (str "element" n))}))))))
+                            (medley/index-by :key))
+        param-0 (get literal-params 0)
+        param-1 (get literal-params 1)
+        vararg (get literal-params :varargs)
+        positioned-params (cond-> (dissoc literal-params 0 :varargs)
+                            param-0 (assoc 1
+                                           (cond-> (assoc param-0 :key 1)
+                                             param-1 (update :unnamed set/union (:unnamed param-1)))))
+        fn-params (if (seq positioned-params)
+                    (->> (range 1 (inc (apply max (keys positioned-params))))
+                         (mapv (fn [pos]
+                                 (if-let [param (get positioned-params pos)]
+                                   (:named param)
+                                   '_))))
+                    [])
+        fn-params (cond-> fn-params
+                    vararg (conj '& (:named vararg)))
+        replacement (fn [param]
+                      (reduce (fn [result sym]
+                                (assoc result sym (:named param)))
+                              {}
+                              (:unnamed param)))
+        replacements (reduce (fn [result param]
+                               (merge result (replacement param)))
+                             (if vararg
+                               (replacement vararg)
+                               {})
+                             (vals positioned-params))
+        interior (n/children (z/node (replace-sexprs zloc replacements)))
+        fn-node (n/list-node
+                  (concat ['fn (n/spaces 1)]
+                          (when provided-name
+                            [(symbol provided-name) (n/spaces 1)])
+                          [fn-params]
                           (let [first-form (first (filter n/sexpr-able? interior))]
                             (cond
                               (not first-form)
                               , interior
                               ;; remove explicit do
                               (= 'do (n/sexpr first-form))
-                              , (let [[before-do [_do & after-do]] (split-with #(or (not (n/sexpr-able? %))
-                                                                                    (not= 'do (n/sexpr %)))
+                              , (let [[before-do [_do & after-do]] (split-with (complement
+                                                                                 #(and (n/sexpr-able? %)
+                                                                                       (= 'do (n/sexpr %))))
                                                                                interior)]
                                   (concat before-do after-do))
                               ;; add implicit sexpr wrapper
@@ -546,45 +572,130 @@
                                   (concat [(n/spaces 1)]
                                           before-sexpr
                                           [(n/list-node sexpr-and-more)]))))))]
-      [{:loc (z/replace zloc fn-node)
-        :range (meta (z/node zloc))}])))
+    [{:loc (z/replace zloc fn-node)
+      :range (meta (z/node zloc))}]))
 
-(defn ^:private convert-fn-to-literal [zloc]
-  (when-let [[zloc params] (convert-fn-to-literal-params zloc)]
-    (let [[positioned-params [_ vararg]] (split-with #(not= '& %) params)
-          replacements (if (= 1 (count positioned-params))
-                         {(first positioned-params) '%}
-                         (->> positioned-params
-                              (map-indexed (fn [idx param]
-                                             [param (symbol (str "%" (inc idx)))]))
-                              (into {})))
-          replacements (cond-> replacements
-                         vararg (assoc vararg '%&))
-          interior (-> zloc
-                       (replace-sexprs replacements)
-                       z/down
-                       (z/find-tag z/right :vector)
-                       z/right*
-                       (->> (iterate z/right*)
-                            (take-while (complement z/end?))
-                            (drop-while z/whitespace?)
-                            (map z/node)))
-          literal-node (n/fn-node
-                         (if (< 1 (count (filter n/sexpr-able? interior)))
+(defn ^:private convert-fn-to-literal [zloc params]
+  (let [[positioned-params [_ vararg]] (split-with #(not= '& %) params)
+        replacements (if (= 1 (count positioned-params))
+                       {(first positioned-params) '%}
+                       (->> positioned-params
+                            (map-indexed (fn [idx param]
+                                           [param (symbol (str "%" (inc idx)))]))
+                            (into {})))
+        replacements (cond-> replacements
+                       vararg (assoc vararg '%&))
+        interior (-> zloc
+                     (replace-sexprs replacements)
+                     z/down
+                     (z/find-tag z/right :vector)
+                     z/right*
+                     (->> (iterate z/right*)
+                          (take-while (complement z/end?))
+                          (drop-while z/whitespace?)
+                          (map z/node)))
+        literal-node (n/fn-node
+                       (if (< 1 (count (filter n/sexpr-able? interior)))
                            ;; add implicit do
-                           (into ['do (n/spaces 1)] interior)
+                         (into ['do (n/spaces 1)] interior)
                            ;; remove explicit sexpr wrapper
-                           (mapcat (fn [node]
-                                     (if (n/inner? node) (n/children node) [node]))
-                                   interior)))]
-      [{:loc   (z/replace zloc literal-node)
-        :range (meta (z/node zloc))}])))
+                         (mapcat (fn [node]
+                                   (if (n/inner? node) (n/children node) [node]))
+                                 interior)))]
+    [{:loc   (z/replace zloc literal-node)
+      :range (meta (z/node zloc))}]))
 
-(defn cycle-fn-literal [zloc]
-  (if-let [[zloc] (convert-literal-to-fn-params zloc)]
-    (convert-literal-to-fn zloc)
-    (when-let [[zloc _] (convert-fn-to-literal-params zloc)]
-      (convert-fn-to-literal zloc))))
+(defn ^:private convert-fn-to-defn [zloc uri db provided-name]
+  (let [fn-form-meta (meta (z/node zloc))
+        space (n/spaces 1)
+        ;; We'll walk over the `fn`, converting it to a `defn`. Make the `fn` a
+        ;; `defn`, ensure it's private, give it a name, and ensure any locals
+        ;; defined outside the `fn` are passed in as args.
+        ;; First isolate the `fn` from its context, so it can be inserted at the
+        ;; top level later.
+        isolated-zloc (z/edn (z/node zloc))
+        ;; Replace `fn` node with `defn` or `defn-`
+        metadata-for-privacy? (settings/get db [:use-metadata-for-privacy?] false)
+        zloc-on-defn (-> isolated-zloc z/down (z/replace (if metadata-for-privacy? 'defn 'defn-)))
+        ;; Add or replace name, possibly adding metadata privacy.
+        fn-name-zloc (->> (z/right zloc-on-defn)
+                          (iterate z/right)
+                          (take-while (complement #(contains? #{:list :vector} (z/tag %))))
+                          (filter #(n/symbol-node? (z/node %)))
+                          first)
+        defn-name (or (some-> provided-name symbol)
+                      (some-> fn-name-zloc z/sexpr)
+                      'new-function)
+        defn-name-with-meta (cond->> defn-name
+                              metadata-for-privacy? (n/meta-node (n/keyword-node :private)))
+        zloc-on-name (if fn-name-zloc
+                       (z/replace fn-name-zloc defn-name-with-meta)
+                       (-> zloc-on-defn
+                           (z/insert-right defn-name-with-meta)
+                           (z/right)))
+        ;; Prepend locals to param lists.
+        ;; We prepend because it works whether replacing with `partial` or `#()`.
+        used-locals (->> (q/find-local-usages-under-form (:analysis db)
+                                                         (shared/uri->filename uri)
+                                                         fn-form-meta)
+                         (map :name))
+        add-locals (fn [zloc]
+                     ;; Navigate to the params node and prepend all the locals.
+                     (reduce (fn [params-zloc used-local]
+                               (z/insert-child params-zloc used-local))
+                             (z/find-tag zloc z/right :vector)
+                             (reverse used-locals)))
+        single-arity? (z/find-next-tag zloc-on-name z/right :vector)
+        defn-zloc (z/up
+                    (if single-arity?
+                      (add-locals zloc-on-name)
+                      (loop [zloc zloc-on-name]
+                        (if-let [next-arity (z/find-next-tag zloc z/right :list)]
+                          (recur (-> next-arity z/down add-locals z/up))
+                          zloc))))
+        ;; The `defn` is ready. Now construct a node that will replace the `fn`.
+        replacement-node (cond
+                             ;; new-function
+                           (not (seq used-locals))
+                           defn-name
+                             ;; (partial new-function a b)
+                           (or (not single-arity?)
+                                 ;; don't nest fn literals
+                               (z/find-tag zloc z/up :fn))
+                           (n/list-node
+                             (list* 'partial space defn-name space (interpose space used-locals)))
+                             ;; depending on whether function originally had params:
+                             ;; #(new-function a b)
+                             ;; #(new-function a b %1 %2 %&)
+                           :else
+                           (n/fn-node
+                             (list* defn-name space
+                                    (let [orig-params (z/node (z/find-tag (z/down zloc) z/right :vector))
+                                          [before-amp amp-and-after] (->> (n/children orig-params)
+                                                                          (filter n/sexpr-able?)
+                                                                          (split-with #(not= '& (n/sexpr %))))
+                                          literal-args (concat
+                                                         (map-indexed (fn [idx _]
+                                                                        (n/token-node (symbol (str "%" (inc idx)))))
+                                                                      before-amp)
+                                                         (when (seq amp-and-after)
+                                                           ['%&]))]
+                                      (->> (concat used-locals literal-args)
+                                           (interpose space))))))]
+    [(prepend-preserving-comment (edit/to-top zloc) defn-zloc)
+     {:loc (z/edn* replacement-node)
+      :range fn-form-meta}]))
+
+(defn demote-fn [zloc]
+  ;; TODO: someday, this could inline a defn, so defn -> fn.
+  (when-let [[zloc params] (convert-fn-to-literal-params zloc)]
+    (convert-fn-to-literal zloc params)))
+
+(defn promote-fn [zloc uri db fn-name]
+  (when-let [{:keys [promotion zloc]} (promote-fn-params zloc)]
+    (case promotion
+      :literal-to-fn (convert-literal-to-fn zloc fn-name)
+      :fn-to-defn    (convert-fn-to-defn zloc uri db fn-name))))
 
 (defn find-function-form [zloc]
   (apply edit/find-ops-up zloc (mapv str common-var-definition-symbols)))
@@ -741,15 +852,6 @@
           ns-or-alias (when (qualified-symbol? local-sexpr) (namespace local-sexpr))
           fn-name local-sexpr
           fn-name (if ns-or-alias (name fn-name) fn-name)
-          new-fn-str (cond
-                       ns-or-alias
-                       (format "(defn %s)" fn-name)
-
-                       (settings/get db [:use-metadata-for-privacy?] false)
-                       (format "(defn ^:private %s)" fn-name)
-
-                       :else
-                       (format "(defn- %s)" fn-name))
           args (->> (z/up local-zloc)
                     z/node
                     n/children
@@ -772,23 +874,15 @@
                       (map-indexed (fn [index arg]
                                      (create-function-param arg index)))
                       vec)
-          defn-edit (-> (z/of-string new-fn-str)
-                        (z/append-child* (n/spaces 1))
-                        (z/append-child params)
-                        (z/append-child* (n/newlines 1))
-                        (z/append-child* (n/spaces 2)))]
+          defn-loc (new-defn-zloc fn-name
+                                  (not ns-or-alias)
+                                  params
+                                   ;; empty body
+                                  [(n/newlines 1) (n/spaces 2)]
+                                  db)]
       (if ns-or-alias
-        (create-function-for-alias local-zloc ns-or-alias fn-name defn-edit uri db)
-        (let [form-loc (edit/to-top local-zloc)
-              {form-row :row form-col :col :as form-pos} (meta (z/node form-loc))]
-          [{:loc defn-edit
-            :range (assoc form-pos
-                          :end-row form-row
-                          :end-col form-col)}
-           {:loc (z/of-string "\n\n")
-            :range (assoc form-pos
-                          :end-row form-row
-                          :end-col form-col)}])))))
+        (create-function-for-alias local-zloc ns-or-alias fn-name defn-loc uri db)
+        [(prepend-preserving-comment (edit/to-top local-zloc) defn-loc)]))))
 
 (defn ^:private create-test-for-source-path
   [uri function-name-loc source-path db]

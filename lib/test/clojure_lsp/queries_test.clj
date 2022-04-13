@@ -845,11 +845,15 @@
           (h/load-code-and-locs "(ns a) (let [a 2 b 1] |(+ 2 b)| (- 2 a))")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form (:analysis @db/db*) (h/file-path "/a.clj") sum-pos-r sum-pos-c sum-end-pos-r sum-end-pos-c))))
+        (q/find-local-usages-under-form (:analysis @db/db*) (h/file-path "/a.clj")
+                                        {:row sum-pos-r, :col sum-pos-c
+                                         :end-row sum-end-pos-r, :end-col sum-end-pos-c}))))
   (testing "inside defn"
     (let [[[let-pos-r let-pos-c]
            [let-end-pos-r let-end-pos-c]]
           (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))|) (defn other [c] c)")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form (:analysis @db/db*) (h/file-path "/a.clj") let-pos-r let-pos-c let-end-pos-r let-end-pos-c)))))
+        (q/find-local-usages-under-form (:analysis @db/db*) (h/file-path "/a.clj")
+                                        {:row let-pos-r, :col let-pos-c
+                                         :end-row let-end-pos-r, :end-col let-end-pos-c})))))

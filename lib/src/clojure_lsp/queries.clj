@@ -79,20 +79,26 @@
        (= (:from usage) (:to usage))))
 
 (defn find-local-usages-under-form
-  [analysis filename line column end-line end-column]
-  (let [local-analysis (get analysis filename)]
+  [analysis filename {:keys [row col end-row end-col]}]
+  (let [local-analysis (get analysis filename)
+        form-scope {:name-row row
+                    :name-col col
+                    :name-end-row end-row
+                    :name-end-col end-col}]
     (->> local-analysis
-         (filter (fn [{:keys [bucket] :as element}]
+         ;; 1. find locals defined above form
+         (filter (fn [{:keys [bucket] :as local-def}]
                    (and (= :locals bucket)
-                        (shared/inside? {:name-row line :name-col column} element))))
-         (keep (fn [local]
-                 (find-first #(and (= :local-usages (:bucket %))
-                                   (= (:id local) (:id %))
-                                   (shared/inside? %
-                                                   {:name-row line
-                                                    :name-col column
-                                                    :name-end-row end-line
-                                                    :name-end-col end-column}))
+                        (shared/inside? form-scope local-def))))
+         ;; 2. find first usage inside of form
+         (keep (fn [local-def]
+                 ;; This is a nested-loop over local analysis. If it becomes a
+                 ;; performance bottleneck, replace nested-loop with hashjoin on
+                 ;; id.
+                 (find-first (fn [local-usage]
+                               (and (= :local-usages (:bucket local-usage))
+                                    (= (:id local-def) (:id local-usage))
+                                    (shared/inside? local-usage form-scope)))
                              local-analysis))))))
 
 (defn find-var-usages-under-form

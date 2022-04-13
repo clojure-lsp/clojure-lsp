@@ -314,12 +314,63 @@
     (is (= "^:private a" (cycle-privacy "(defn |a [])")))
     (is (= "a" (cycle-privacy "(defn ^:private |a [])")))))
 
-(defn cycle-fn-literal [code]
-  (as-string (transform/cycle-fn-literal (h/zloc-from-code code))))
+(defn demote-fn [code]
+  (as-string (transform/demote-fn (h/zloc-from-code code))))
 
-(deftest cycle-fn-literal-test
+(deftest demote-fn-test
+  (testing "fn to literal"
+    (are [expected code] (= expected (demote-fn code))
+      ;; basic params
+      "#()"                    "|(fn [])"
+      "#(+ 1 2)"               "|(fn [] (+ 1 2))"
+      "#(+ 1 %)"               "|(fn [element] (+ 1 element))"
+      "#(+ 1 %1 %2)"           "|(fn [element1 element2] (+ 1 element1 element2))"
+      ;; vararg
+      "#(+ 1 %&)"              "|(fn [& args] (+ 1 args))"
+      "#(+ 1 % %&)"            "|(fn [element & args] (+ 1 element args))"
+      "#(+ 1 %1 %2 %&)"        "|(fn [element1 element2 & args] (+ 1 element1 element2 args))"
+      ;; implicit do
+      "#(do (prn {}) (+ 3 4))" "|(fn [] (prn {}) (+ 3 4))"
+      ;; with comment
+      (h/code "#(;; comment"
+              "   + 3 4)")
+      (h/code "|(fn []"
+              "   ;; comment"
+              "   (+ 3 4))")
+      ;; unused param
+      "#(+ 1 %1 %3)"           "|(fn [element1 _ element3] (+ 1 element1 element3))"
+      ;; reordered params
+      "#(+ 1 %2 %1)"           "|(fn [element1 element2] (+ 1 element2 element1))"
+      ;; duplicate param
+      "#(+ 1 % %)"             "|(fn [element1] (+ 1 element1 element1))"
+      ;; subsequent fn
+      "#(+ 1 %)"               "|(fn [element1] (+ 1 element1)) (fn [element1 element2] (+ 1 element1 element2))"
+      ;; named function
+      "#(+ 1 2)"               "|(fn named [] (+ 1 2))"
+      ;; from inside
+      "#(+ 1 2)"               "(|fn [] (+ 1 2))"
+      "#(+ 1 2)"               "(fn |[] (+ 1 2))"
+      "#(+ 1 2)"               "(fn [] (+ 1| 2))")))
+
+(deftest can-demote-fn-test
+  (are [code] (not (transform/can-demote-fn? (h/zloc-from-code code)))
+    ;; non fns
+    "(+ |1 2)"
+    "|(+ 1 2)"
+    ;; destructured param
+    "|(fn [{:keys [element1 element2]}] (+ 1 element1 element1))"
+    ;; multi-arity fn
+    "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
+
+(defn promote-fn
+  ([code] (promote-fn code nil))
+  ([code provided-name]
+   (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db* provided-name))))
+
+(deftest promote-fn-test
   (testing "literal to fn"
-    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
+    (h/clean-db!)
+    (are [expected fn-literal] (= [expected] (promote-fn fn-literal))
       ;; basic params
       "(fn [])"                                                      "|#()"
       "(fn [] (+ 1 2))"                                              "|#(+ 1 2)"
@@ -351,55 +402,66 @@
       ;; from inside
       "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
-  (testing "fn to literal"
-    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
+  (testing "fn to defn"
+    (h/clean-db!)
+    (are [expected-defn expected-replacement code]
+         (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
-      "#()"                    "|(fn [])"
-      "#(+ 1 2)"               "|(fn [] (+ 1 2))"
-      "#(+ 1 %)"               "|(fn [element] (+ 1 element))"
-      "#(+ 1 %1 %2)"           "|(fn [element1 element2] (+ 1 element1 element2))"
+      "\n(defn- new-function [])\n"                                  "new-function" "|(fn [])"
+      "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "|(fn [] (+ 1 2))"
+      "\n(defn- new-function [element] (+ 1 element))\n"             "new-function" "|(fn [element] (+ 1 element))"
+      ;; destructured param
+      "\n(defn- new-function [{:keys [element]}] (+ 1 element))\n"   "new-function" "|(fn [{:keys [element]}] (+ 1 element))"
       ;; vararg
-      "#(+ 1 %&)"              "|(fn [& args] (+ 1 args))"
-      "#(+ 1 % %&)"            "|(fn [element & args] (+ 1 element args))"
-      "#(+ 1 %1 %2 %&)"        "|(fn [element1 element2 & args] (+ 1 element1 element2 args))"
-      ;; implicit do
-      "#(do (prn {}) (+ 3 4))" "|(fn [] (prn {}) (+ 3 4))"
-      ;; with comment
-      (h/code "#(;; comment"
-              "   + 3 4)")
-      (h/code "|(fn []"
-              "   ;; comment"
-              "   (+ 3 4))")
-      ;; unused param
-      "#(+ 1 %1 %3)"           "|(fn [element1 _ element3] (+ 1 element1 element3))"
-      ;; reordered params
-      "#(+ 1 %2 %1)"           "|(fn [element1 element2] (+ 1 element2 element1))"
-      ;; duplicate param
-      "#(+ 1 % %)"             "|(fn [element1] (+ 1 element1 element1))"
-      ;; subsequent fn
-      "#(+ 1 %)"               "|(fn [element1] (+ 1 element1)) (fn [element1 element2] (+ 1 element1 element2))"
-      ;; named function
-      "#(+ 1 2)"               "|(fn named [] (+ 1 2))"
+      "\n(defn- new-function [element & args] (+ 1 element args))\n" "new-function" "|(fn [element & args] (+ 1 element args))"
+      ;; multi-arity
+      "\n(defn- new-function ([x] (+ 1 x)) ([x y] (+ 1 x y)))\n"     "new-function" "|(fn ([x] (+ 1 x)) ([x y] (+ 1 x y)))"
       ;; from inside
-      "#(+ 1 2)"               "(|fn [] (+ 1 2))"
-      "#(+ 1 2)"               "(fn |[] (+ 1 2))"
-      "#(+ 1 2)"               "(fn [] (+ 1| 2))"))
-  (testing "when nested prefers literal to fn, because literals can't be nested"
-    (are [expected fn-literal] (= expected (cycle-fn-literal fn-literal))
-      ;; on literal in fn
-      "(fn [element] (+ a element))"                  "(fn [a coll] (map |#(+ a %) coll))"
-      ;; on fn in literal
-      "(fn [element] (map (fn [a] (+ a 1)) element))" "#(map |(fn [a] (+ a 1)) %)")))
+      "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
+  (testing "fn to defn with locals"
+    (h/clean-db!)
+    (are [expected-defn expected-replacement code]
+         (= [expected-defn expected-replacement] (promote-fn code))
+      ;; basic params
+      "\n(defn- new-function [a] a)\n"                                   "#(new-function a)"          "(let [a 1] |(fn [] a))"
+      "\n(defn- new-function [a] (+ 1 2 a))\n"                           "#(new-function a)"          "(let [a 1] |(fn [] (+ 1 2 a)))"
+      "\n(defn- new-function [a element] (+ 1 element a))\n"             "#(new-function a %1)"       "(let [a 1] |(fn [element] (+ 1 element a)))"
+      ;; destructured param
+      "\n(defn- new-function [a {:keys [element]}] (+ 1 element a))\n"   "#(new-function a %1)"       "(let [a 1] |(fn [{:keys [element]}] (+ 1 element a)))"
+      ;; multiple, and repeated locals
+      "\n(defn- new-function [a b] (+ 1 a b b))\n"                       "#(new-function a b)"        "(let [a 1 b 2] |(fn [] (+ 1 a b b)))"
+      "\n(defn- new-function [a b x y] (+ 1 x y a b b))\n"               "#(new-function a b %1 %2)"  "(let [a 1 b 2] |(fn [x y] (+ 1 x y a b b)))"
+      ;; vararg
+      "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"    "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
+      ;; multi-arity
+      "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"))
+  (testing "naming"
+    (h/clean-db!)
+    ;; previously named fn
+    (is (= ["\n(defn- previously-named [])\n" "previously-named"] (promote-fn "|(fn previously-named [])")))
+    ;; provided name
+    (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn "|(fn [])" "my-name")))
+    (is (= ["(fn my-name [])"] (promote-fn "|#()" "my-name"))))
+  (testing "when nested"
+    (h/clean-db!)
+    ;; literal within fn
+    (is (= ["(fn [element1] (+ element1))"] (promote-fn "(fn [a] (+ a #(+ |%1)))")))
+    ;; fn within literal
+    (is (= ["\n(defn- new-function [a] a)\n" "new-function"] (promote-fn "#(+ %1 (fn [a] |a))")))
+    ;; fn within literal and with locals, replaced with partial
+    (is (= ["\n(defn- new-function [a x] (+ x a))\n" "(partial new-function a)"] (promote-fn "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
+    (is (= ["\n(defn- new-function [a b x] (+ x a b))\n" "(partial new-function a b)"] (promote-fn "(let [a 1 b 2] #(map |(fn [x] (+ x a b)) [1 2 3]))"))))
+  (testing "with metadata privacy"
+    (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+    (is (= ["\n(defn ^:private new-function [])\n" "new-function"] (promote-fn "|(fn [])")))
+    (is (= ["\n(defn ^:private new-function [a] a)\n" "#(new-function a)"] (promote-fn "(let [a 1] |(fn [] a))")))))
 
-(deftest can-cycle-fn-literal-test
-  (are [code] (not (transform/can-cycle-fn-literal? (h/zloc-from-code code)))
-    ;; non fn-literals
+(deftest can-promote-fn-test
+  (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))
+    ;; non fn or literal
+    "|a"
     "(+ |1 2)"
-    "|(+ 1 2)"
-    ;; destructured param
-    "|(fn [{:keys [element1 element2]}] (+ 1 element1 element1))"
-    ;; multi-arity fn
-    "|(fn ([a] (inc a)) ([a b] (+ a b)))"))
+    "|(+ 1 2)"))
 
 (defn change-coll [code coll-type]
   (as-string (transform/change-coll (z/of-string code) coll-type)))
@@ -599,84 +661,94 @@
   (testing "function on same file"
     (testing "creating with no args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func []"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func []"
+                     "  )"
+                     "")
              (-> "(defn a [b] (|my-func))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating with 1 known arg"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (|my-func b))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating with 1 known arg and a unknown arg"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b arg2]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b arg2]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (|my-func b (+ 1 2)))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a fn call of other function"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (remove |my-func [1 2 3 4]))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a fn call of other function nested"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1 arg2]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1 arg2]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (remove (partial |my-func 2) [1 2 3 4]))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from an anonymous function"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1 element]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1 element]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (remove #(|my-func 2 %) [1 2 3 4]))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from an anonymous function with many args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [arg1 b element3 element2]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [arg1 b element3 element2]"
+                     "  )"
+                     "")
              (-> "(defn a [b] (#(|my-func 2 b %3 %2) 1 2 3 4))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a thread first macro with single arg"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b]"
+                     "  )"
+                     "")
              (-> "(-> b |my-func (+ 1 2) (+ 2 3))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a thread first macro with multiple args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [b a arg3]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [b a arg3]"
+                     "  )"
+                     "")
              (-> "(-> b (|my-func a 3) (+ 1 2))"
                  create-function
-                 as-strings))))
+                 as-string))))
     (testing "creating from a thread last macro with multiple args"
       (h/clean-db!)
-      (is (= [(h/code "(defn- my-func [a arg2 b]"
-                      "  )")
-              (h/code "" "" "")]
+      (is (= (h/code ""
+                     "(defn- my-func [a arg2 b]"
+                     "  )"
+                     "")
              (-> "(->> b (|my-func a 3))"
                  create-function
-                 as-strings)))))
+                 as-string)))))
   (testing "on other files"
     (testing "when namespace is already required and exists"
       (h/clean-db!)
@@ -698,7 +770,7 @@
     (testing "when namespace is not required and not exists"
       (h/clean-db!)
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                 (h/file-path "/project/test")}}})
+                                                                  (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" @db/db*)
@@ -728,7 +800,7 @@
     (testing "when namespace is not required and not exists not calling it as function"
       (h/clean-db!)
       (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                 (h/file-path "/project/test")}}})
+                                                                  (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
                                        "file:///project/src/foo.clj")
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" @db/db*)
@@ -759,7 +831,7 @@
 (deftest can-create-test?
   (testing "when on multiples functions"
     (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                               (h/file-path "/project/test")}}})
+                                                                (h/file-path "/project/test")}}})
     (let [zloc (h/load-code-and-zloc (h/code "(ns foo)"
                                              "(defn bar []"
                                              "  |2)"

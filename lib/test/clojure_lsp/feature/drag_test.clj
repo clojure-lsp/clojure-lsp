@@ -476,6 +476,8 @@
     (assert-drag-backward (h/code "(are [expected x] (= expected x) |3 4 1 2)")
                           (h/code "(are [expected x] (= expected x) 1 2 3 |4)")))
   (testing "with destructuring"
+    (assert-drag-backward (h/code "(let [{:keys [a |c b d]} x])")
+                          (h/code "(let [{:keys [a b |c d]} x])"))
     (assert-drag-backward (h/code "(let [[a b] [1 2]"
                                   "      |e 2"
                                   "      {:keys [c d]} {:c 1 :d 2}])")
@@ -864,6 +866,8 @@
     (assert-drag-forward (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
                          (h/code "(are [expected x] (= expected x) 1 |2 3 4)")))
   (testing "with destructuring"
+    (assert-drag-forward (h/code "(let [{:keys [a c |b d]} x])")
+                         (h/code "(let [{:keys [a |b c d]} x])"))
     (assert-drag-forward (h/code "(let [[a b] [1 2]"
                                  "      {:keys [c d]} {:c 1 :d 2}"
                                  "      |e 2])")

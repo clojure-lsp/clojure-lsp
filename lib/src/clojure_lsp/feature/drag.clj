@@ -13,7 +13,6 @@
   more generally used to drag any clause forward or backward, even if it isn't
   in an immutable collection."
   (:require
-   [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -366,27 +365,37 @@
   assume that any function with one of these names establishes bindings, even if
   it isn't in clojure.core?).
 
-  Otherwise, if the first child of `zloc` defines a local variable (according to
-  the clj-kondo analysis), then this also returns true. This allows library- and
-  user-defined code to declare that it establishes bindings, via `:lint-as`.
-  Originally this was the only heuristic, since it works for `let` and `for`.
-  But it fails for `bindings` and other forms where the clj-kondo analysis
-  reports that it merely references existing variables, rather than establishing
-  definitions."
+  Otherwise, if the `zloc`'s children are pairs of local variable definitions
+  and values (according to the clj-kondo analysis), then this also returns true.
+  This allows library- and user-defined code to declare that it establishes
+  bindings, via `:lint-as`. Originally this was the only heuristic, since it
+  works for `let` and `for`. But it fails for `bindings` and other forms that
+  don't establish new variables, but merely reference existing variables,
+  according to the clj-kondo analysis."
   [vector-zloc uri {:keys [analysis]}]
   (boolean
-    (or (when-let [outer-zloc (z-left vector-zloc)]
-          (and (z-leftmost? outer-zloc)
-               (contains? common-binding-syms (z/sexpr outer-zloc))))
-        (let [z-pos   (z-cursor-position (z-down vector-zloc))
-              z-scope {:name-row     (:row z-pos)
-                       :name-col     (:col z-pos)
-                       :name-end-row (:end-row z-pos)
-                       :name-end-col (:end-col z-pos)}]
-          (q/find-first (fn [element]
-                          (and (= :locals (:bucket element))
-                               (shared/inside? element z-scope)))
-                        (get analysis (shared/uri->filename uri)))))))
+    (or (when-let [op-zloc (z-left vector-zloc)]
+          (and (z-leftmost? op-zloc)
+               (contains? common-binding-syms (z/sexpr op-zloc))))
+        (let [child-nodes (filter n/sexpr-able? (n/children (z/node vector-zloc)))]
+          (when (even? (count child-nodes))
+            (let [enclosed-by? (fn [node]
+                                 (let [{:keys [row col end-row end-col]} (meta node)
+                                       scope {:name-row     row
+                                              :name-col     col
+                                              :name-end-row end-row
+                                              :name-end-col end-col}]
+                                   #(shared/inside? % scope)))
+                  analysis (filter (enclosed-by? (z/node vector-zloc))
+                                   (get analysis (shared/uri->filename uri)))]
+              (->> child-nodes
+                   (partition 2)
+                   (every? (fn [[lvar rvar]]
+                             (let [lelems (filter (enclosed-by? lvar) analysis)
+                                   relems (filter (enclosed-by? rvar) analysis)
+                                   local? #(identical? :locals (:bucket %))]
+                               (and (some local? lelems)
+                                    (not-any? local? relems))))))))))))
 
 (defn ^:private vector-clause-spec
   "Returns a partial clause spec for a vector node, `vector-zloc`."

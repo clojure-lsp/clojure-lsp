@@ -421,8 +421,9 @@
        result#)))
 
 (defmacro logging-task [task-id & body]
-  (let [msg (str task-id " %s")]
-    (with-meta `(logging-time ~msg ~@body) (meta &form))))
+  (with-meta `(let [msg# (str ~task-id " %s")]
+                (logging-time msg# ~@body))
+             (meta &form)))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element

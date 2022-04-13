@@ -492,11 +492,9 @@
 
 (defn ^:private promote-fn-params [zloc]
   (when-let [zloc (z/find zloc z/up (some-fn outer-literal-form? outer-fn-form?))]
-    (cond
-      (outer-literal-form? zloc) {:promotion :literal-to-fn
-                                  :zloc      zloc}
-      (outer-fn-form? zloc)      {:promotion :fn-to-defn
-                                  :zloc      zloc})))
+    {:promotion (cond (outer-literal-form? zloc) :literal-to-fn
+                      (outer-fn-form? zloc)      :fn-to-defn)
+     :zloc      zloc}))
 
 (defn can-demote-fn? [zloc]
   (boolean (convert-fn-to-literal-params zloc)))

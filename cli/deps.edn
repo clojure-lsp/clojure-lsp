@@ -13,7 +13,7 @@
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources" "target/lsp-classes"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.64.1010"}}
+                               lambdaisland/kaocha {:mvn/version "1.65.1029"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test

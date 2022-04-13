@@ -1871,8 +1871,9 @@
 <li>Move <code>lsp4clj</code> to outside clojure-lsp to its own repo/jar release.</li>
 <li>Fix local files outside source-paths not being linted even if opened/changed.</li>
 <li>Consider filename + lastModified as checksum for external files, avoiding analyzing it if analysis is already present.</li>
+<li>graalvm: Compile static linux with --musl for better compatibility. #868</li>
 <li>
-<p>graalvm: Compile static linux with --musl for better compatibility. #868</p>
+<p>java: Use <code>XDG_CACHE_HOME</code> or <code>.cache/clojure-lsp</code> instead of config files for JDK cache.</p>
 </li>
 <li>
 <p>Editor</p>

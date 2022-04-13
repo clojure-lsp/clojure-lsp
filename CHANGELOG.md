@@ -26,6 +26,7 @@
     - promote-fn can also promote a literal #() to a fn
   - demote-fn: Demote a fn to a literal #()
   - *breaking* remove cycle-fn-literal, since the same refactorings can be performed with the more clearly named promote-fn and demote-fn
+  - drag: Fix to drag element-wise in destructured keys, not pair-wise. #927
 
 ## 2022.03.31-20.00.20
 

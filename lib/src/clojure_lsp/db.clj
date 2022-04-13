@@ -25,12 +25,12 @@
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
 
 (defn ^:private datalevin-db-files [db]
-  (let [cache-dir ^java.io.File (config/cache-file db)]
+  (let [cache-dir ^java.io.File (config/local-cache-dir db)]
     [(io/file cache-dir "data.mdb")
      (io/file cache-dir "lock.mdb")]))
 
 (defn ^:private transit-db-file [db]
-  (io/file (config/cache-file db) "db.transit.json"))
+  (io/file (config/local-cache-dir db) "db.transit.json"))
 
 (defn ^:private remove-old-sqlite-db-file! [project-root-path]
   (let [old-db-file (sqlite-db-file project-root-path)]

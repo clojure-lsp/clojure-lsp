@@ -25,7 +25,7 @@
 (def ^:private java-logger-tag "[Java]")
 
 (defn ^:private decompile! [^File class-file dest-path db]
-  (let [cache-path (config/cache-file db)
+  (let [cache-path (config/local-cache-dir db)
         decompiled-file (io/file cache-path "java" "decompiled")
         class-path (.getCanonicalPath class-file)
         _ (logger/info java-logger-tag (format "Decompiling java class %s" class-path))
@@ -42,7 +42,7 @@
     (io/file decompiled-file dest-path)))
 
 (defn ^:private copy-class-file [uri entry stream db]
-  (let [cache-path (config/cache-file db)
+  (let [cache-path (config/local-cache-dir db)
         dest-file (io/file cache-path "java" "classes" (str entry))]
     (logger/info java-logger-tag (format "Copying class URI %s to %s" uri dest-file))
     (io/make-parents dest-file)
@@ -194,7 +194,7 @@
   Otherwise, we download default OpenJDK source if setting is enabled."
   [db*]
   (let [db @db*
-        jdk-dir-file (io/file (config/global-lsp-cache-dir) "jdk")
+        jdk-dir-file (io/file (config/global-cache-dir) "jdk")
         jdk-result-file (io/file jdk-dir-file "result")
         installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
                                       (slurp jdk-result-file))

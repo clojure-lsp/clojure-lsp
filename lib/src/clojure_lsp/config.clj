@@ -24,20 +24,27 @@
 (defn get-env [p]
   (System/getenv p))
 
-(defn ^:private global-lsp-dir []
+(defn global-config-file []
   (let [xdg-config-home (or (get-env "XDG_CONFIG_HOME")
                             (io/file (get-property "user.home") ".config"))
         xdg-config (io/file xdg-config-home "clojure-lsp")
-        home-config (io/file (get-property "user.home") ".lsp")]
-    (if (shared/file-exists? xdg-config)
-      xdg-config
-      home-config)))
+        home-config (io/file (get-property "user.home") ".lsp")
+        path (if (shared/file-exists? xdg-config)
+               xdg-config
+               home-config)]
+    (io/file path  "config.edn")))
 
-(defn ^:private global-lsp-config-file []
-  (io/file (global-lsp-dir) "config.edn"))
+(defn global-cache-dir []
+  (let [cache-home (or (get-env "XDG_CACHE_HOME")
+                       (io/file (get-property "user.home") ".cache"))]
+    (io/file cache-home "clojure-lsp")))
 
-(defn global-lsp-cache-dir []
-  (io/file (global-lsp-dir) ".cache"))
+(defn local-cache-dir [db]
+  (let [project-root (shared/uri->path (:project-root-uri db))
+        overwritten-path (some-> (get db [:settings :cache-path])
+                                 io/file)
+        default (io/file (str project-root) ".lsp" ".cache")]
+    ^java.io.File (or overwritten-path default)))
 
 (defn ^:private resolve-global-config [^java.io.File global-lsp-config-file]
   (when (shared/file-exists? global-lsp-config-file)
@@ -57,7 +64,7 @@
 
 (defn resolve-for-root [project-root-uri]
   (when project-root-uri
-    (let [global-lsp-config-file (global-lsp-config-file)
+    (let [global-lsp-config-file (global-config-file)
           project-configs (resolve-project-configs project-root-uri global-lsp-config-file)]
       (reduce shared/deep-merge
               (merge {}
@@ -121,10 +128,3 @@
         (recur (resolve-from-classpath-config-paths-impl classpath cp-settings)
                cp-settings)
         (shared/deep-merge merge-config cp-settings)))))
-
-(defn cache-file [db]
-  (let [project-root (shared/uri->path (:project-root-uri db))
-        overwritten-path (some-> (get db [:settings :cache-path])
-                                 io/file)
-        default (io/file (str project-root) ".lsp" ".cache")]
-    ^java.io.File (or overwritten-path default)))

@@ -101,6 +101,8 @@
     (string/ends-with? uri ".cljc") :cljc
     (string/ends-with? uri ".clj") :clj
     (string/ends-with? uri ".edn") :edn
+    (string/ends-with? uri ".bb") :clj
+    (string/ends-with? uri ".cljd") :clj
     :else :unknown))
 
 (defn uri->available-langs [uri]
@@ -109,6 +111,8 @@
     (string/ends-with? uri ".cljc") #{:clj :cljs}
     (string/ends-with? uri ".clj") #{:clj}
     (string/ends-with? uri ".edn") #{:edn}
+    (string/ends-with? uri ".bb") #{:clj}
+    (string/ends-with? uri ".cljd") #{:clj}
     :else #{}))
 
 (defn ^:private conform-uri

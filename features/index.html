@@ -1420,14 +1420,6 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td></td>
 </tr>
 <tr>
-<td>cf</td>
-<td>cycle-fn-literal</td>
-<td>Cycle fn literal <code>(fn []), #()</code></td>
-<td><code>[file-uri,row,col]</code></td>
-<td>✅</td>
-<td><a href="../images/features/cycle-fn-literal.gif"><img src="../images/features/cycle-fn-literal.gif" width=480 alt="Screen recording of Cycle function literal"></a></td>
-</tr>
-<tr>
 <td>cn</td>
 <td>clean-ns</td>
 <td>Clean namespace</td>
@@ -1450,6 +1442,14 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
 <td></td>
+</tr>
+<tr>
+<td>df</td>
+<td>demote-fn</td>
+<td>Demote fn to #()</td>
+<td><code>[file-uri,row,col]</code></td>
+<td>✅</td>
+<td><a href="../images/features/demote-fn.gif"><img src="../images/features/demote-fn.gif" width=280 alt="Screen recording of Promote fn to defn"></a></td>
 </tr>
 <tr>
 <td>db</td>
@@ -1532,6 +1532,14 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td><a href="../images/features/move-to-let.gif"><img src="../images/features/move-to-let.gif" width=720 alt="Screen recording of Move expression to let"></a></td>
 </tr>
 <tr>
+<td>pf</td>
+<td>promote-fn</td>
+<td>Promote #() to fn, or fn to defn</td>
+<td><code>[file-uri,row,col,fn-name]</code></td>
+<td>✅</td>
+<td><a href="../images/features/promote-fn.gif"><img src="../images/features/promote-fn.gif" width=520 alt="Screen recording of Promote fn to defn"></a></td>
+</tr>
+<tr>
 <td>sc</td>
 <td>change-collection</td>
 <td>Switch collection to <code>{}, (), #{}, []</code></td>
@@ -1610,7 +1618,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 11, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 13, 2022</span>
     
   </small>
 </div>

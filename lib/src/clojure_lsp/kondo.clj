@@ -206,8 +206,8 @@
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:canonical-paths true}}})
 
-(defn kondo-jdk-source [path]
-  {:lint [path]
+(defn kondo-jdk-source [paths]
+  {:lint paths
    :config {:output {:analysis {:java-class-definitions true}
                      :canonical-paths true}}})
 
@@ -268,6 +268,6 @@
   (catch-kondo-errors (str "paths " (string/join ", " paths))
     (kondo/run! (kondo-copy-configs paths db))))
 
-(defn run-kondo-on-jdk-source! [path]
-  (catch-kondo-errors (str "path " path)
-    (kondo/run! (kondo-jdk-source path))))
+(defn run-kondo-on-jdk-source! [paths]
+  (catch-kondo-errors (str "paths " paths)
+    (kondo/run! (kondo-jdk-source paths))))

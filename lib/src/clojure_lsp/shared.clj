@@ -436,3 +436,26 @@
 
 (def full-file-range
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
+
+(defn ^:private paths->checksums
+  "Return a map with file's last modified timestamp by filename."
+  [paths]
+  (reduce
+    (fn [cks path]
+      (let [file (io/file path)]
+        (if-let [checksum (and (file-exists? file)
+                               (.lastModified ^java.io.File file))]
+          (assoc cks path checksum)
+          cks)))
+    {}
+    paths))
+
+(defn generate-and-update-analysis-checksums [paths global-db db]
+  (let [old-checksums (merge (:analysis-checksums global-db)
+                             (:analysis-checksums db))
+        new-checksums (paths->checksums paths)
+        paths-not-on-checksum (remove #(= (get old-checksums %)
+                                          (get new-checksums %))
+                                      paths)]
+    {:new-checksums new-checksums
+     :paths-not-on-checksum paths-not-on-checksum}))

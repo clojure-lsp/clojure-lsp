@@ -2,6 +2,7 @@
   (:require
    [babashka.fs :as fs]
    [clojure-lsp.config :as config]
+   [clojure-lsp.db :as db]
    [clojure-lsp.http :as http]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.settings :as settings]
@@ -130,10 +131,10 @@
       (catch Exception e
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
-(defn ^:private analyze-jdk-source! [path db*]
+(defn ^:private analyze-jdk-source! [paths db*]
   (let [result (shared/logging-time
                  (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
-                 (lsp.kondo/run-kondo-on-jdk-source! path))
+                 (lsp.kondo/run-kondo-on-jdk-source! paths))
         kondo-analysis (select-keys (:analysis result) [:java-class-definitions])
         analysis (->> kondo-analysis
                       (lsp.kondo/normalize-analysis true)
@@ -141,7 +142,22 @@
     (loop [state-db @db*]
       (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
         (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
-        (recur @db*)))))
+        (recur @db*)))
+    analysis))
+
+(defn ^:private cache-jdk-source-analysis! [analysis new-checksums db*]
+  (loop [state-db @db*]
+    (when-not (compare-and-set! db* state-db (-> state-db
+                                                 (update :analysis merge analysis)
+                                                 (update :analysis-checksums merge new-checksums)))
+      (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
+      (recur @db*)))
+  (db/read-and-update-global-cache!
+    (fn [db]
+      (-> db
+          (update :analysis-checksums merge new-checksums)
+          (update :analysis merge analysis)
+          (assoc :version db/version)))))
 
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
@@ -180,6 +196,14 @@
 
     :else
     {:result :no-source-found}))
+
+(defn ^:private jdk-dir->java-filenames [^File jdk-dir]
+  (keep (fn [^File file]
+          (let [path (.getCanonicalPath file)]
+            (when (and (.isFile file)
+                       (string/ends-with? path ".java"))
+              path)))
+        (file-seq jdk-dir)))
 
 (defn retrieve-jdk-source-and-analyze!
   "Find JDK source and analyze it with clj-kondo for java class definitions.
@@ -234,7 +258,14 @@
 
     (if (and (shared/file-exists? jdk-result-file)
              (slurp jdk-result-file))
-      (do
-        (analyze-jdk-source! (.getCanonicalPath jdk-dir-file) db*)
-        (logger/info java-logger-tag "JDK Source analyzed successfully."))
-      (logger/warn java-logger-tag "JDK Source not found, skipping java analysis."))))
+      (let [java-filenames (jdk-dir->java-filenames jdk-dir-file)
+            global-db (db/read-global-cache)
+            {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums java-filenames global-db @db*)]
+        (if (seq paths-not-on-checksum)
+          (do
+            (-> paths-not-on-checksum
+                (analyze-jdk-source! db*)
+                (cache-jdk-source-analysis! new-checksums db*))
+            (logger/info java-logger-tag "JDK source analyzed and cached successfully."))
+          (logger/info java-logger-tag "JDK source cached loaded successfully.")))
+      (logger/warn java-logger-tag "JDK source not found, skipping java analysis."))))

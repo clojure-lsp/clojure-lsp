@@ -75,19 +75,6 @@
                      (update :findings merge new-findings))))
     analysis))
 
-(defn ^:private paths->checksums
-  "Return a map with file's last modified timestamp by filename."
-  [paths]
-  (reduce
-    (fn [cks path]
-      (let [file (io/file path)]
-        (if-let [checksum (and (shared/file-exists? file)
-                               (.lastModified ^java.io.File file))]
-          (assoc cks path checksum)
-          cks)))
-    {}
-    paths))
-
 (defn ^:private analyze-classpath! [root-path source-paths classpath settings progress-token {:keys [db*] :as components}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
     (logger/info "Analyzing classpath for project root" root-path)
@@ -97,16 +84,10 @@
                                          (remove (set source-paths-abs))
                                          (remove (set source-paths)))
                              ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-            old-checksums (:analysis-checksums @db*)
-            new-checksums (paths->checksums external-paths)
-            external-paths-not-on-checksum (remove #(= (get old-checksums %)
-                                                       (get new-checksums %))
-                                                   external-paths)
-            analysis (analyze-external-classpath! external-paths-not-on-checksum 25 80 progress-token components)]
-        (swap! db* (fn [db]
-                     (-> db
-                         (update :analysis merge analysis)
-                         (assoc :analysis-checksums new-checksums))))
+            {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
+            analysis (analyze-external-classpath! paths-not-on-checksum 25 80 progress-token components)]
+        (swap! db* update :analysis-checksums merge new-checksums)
+        (swap! db* update :analysis merge analysis)
         (shared/logging-time
           "Manual GC after classpath scan took %s"
           (System/gc))
@@ -139,7 +120,7 @@
 
 (defn ^:private load-db-cache! [root-path db*]
   (let [db @db*]
-    (when-let [db-cache (db/read-cache root-path db)]
+    (when-let [db-cache (db/read-local-cache root-path db)]
       (when-not (and (= :project-and-deps (:project-analysis-type db))
                      (= :project-only (:project-analysis-type db-cache)))
         (swap! db* (fn [state-db]
@@ -157,9 +138,9 @@
 
 (defn ^:private upsert-db-cache! [db]
   (if (:api? db)
-    (db/upsert-cache! (build-db-cache db) db)
+    (db/upsert-local-cache! (build-db-cache db) db)
     (async/go
-      (db/upsert-cache! (build-db-cache db) db))))
+      (db/upsert-local-cache! (build-db-cache db) db))))
 
 (defn initialize-project
   [project-root-uri

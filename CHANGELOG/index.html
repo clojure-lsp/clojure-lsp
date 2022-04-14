@@ -1872,8 +1872,9 @@
 <li>Fix local files outside source-paths not being linted even if opened/changed.</li>
 <li>Consider filename + lastModified as checksum for external files, avoiding analyzing it if analysis is already present.</li>
 <li>graalvm: Compile static linux with --musl for better compatibility. #868</li>
+<li>java: Use <code>XDG_CACHE_HOME</code> or <code>.cache/clojure-lsp</code> instead of config files for JDK cache.</li>
 <li>
-<p>java: Use <code>XDG_CACHE_HOME</code> or <code>.cache/clojure-lsp</code> instead of config files for JDK cache.</p>
+<p>java: Cache JDK analysis globally avoiding high CPU usages after startup.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2827,7 +2828,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 13, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 14, 2022</span>
     
   </small>
 </div>

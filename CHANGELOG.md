@@ -29,6 +29,7 @@
   - demote-fn: Demote a fn to a literal #()
   - *breaking* remove cycle-fn-literal, since the same refactorings can be performed with the more clearly named promote-fn and demote-fn
   - drag: Fix to drag element-wise in destructured keys, not pair-wise. #927
+  - test-tree: reduce CPU usage, especially during startup
 
 ## 2022.03.31-20.00.20
 

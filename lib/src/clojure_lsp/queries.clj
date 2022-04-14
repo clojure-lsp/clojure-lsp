@@ -590,11 +590,8 @@
 
 (defn find-namespace-definitions [analysis filename]
   (into []
-        (comp
-          (mapcat val)
-          (filter #(safe-equal? (:filename %) filename))
-          (filter #(identical? :namespace-definitions (:bucket %))))
-        analysis))
+        (filter #(identical? :namespace-definitions (:bucket %)))
+        (get analysis filename)))
 
 (defn find-namespace-definition-by-namespace [analysis namespace]
   (find-last-order-by-project-analysis
@@ -603,10 +600,7 @@
     analysis))
 
 (defn find-namespace-definition-by-filename [analysis filename]
-  (find-last-order-by-project-analysis
-    #(and (identical? :namespace-definitions (:bucket %))
-          (= (:filename %) filename))
-    analysis))
+  (peek (find-namespace-definitions analysis filename)))
 
 (defn find-namespace-usage-by-alias [analysis filename alias]
   (->> (get analysis filename)

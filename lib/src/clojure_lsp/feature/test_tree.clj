@@ -16,8 +16,9 @@
                                                  (not= testing root-testing)))
                                           testings)]
               (shared/assoc-some
-                {:name (or (-> root-testing :context :clojure.test :testing-str)
-                           "")
+                {:name (str
+                         (or (-> root-testing :context :clojure.test :testing-str) ;; not always a string
+                             ""))
                  :range (shared/->scope-range root-testing)
                  :name-range (shared/->range root-testing)
                  :kind :testing}

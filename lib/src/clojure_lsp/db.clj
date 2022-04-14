@@ -71,7 +71,7 @@
       (str db-logger-tag " Reading transit analysis cache from " cache-file " db took %s")
       (if (shared/file-exists? cache-file)
         (let [cache (with-open [is (io/input-stream cache-file)]
-                                 (transit/read (transit/reader is :json)))]
+                      (transit/read (transit/reader is :json)))]
           (when (= version (:version cache))
             cache))
         (logger/error db-logger-tag "No cache DB file found")))

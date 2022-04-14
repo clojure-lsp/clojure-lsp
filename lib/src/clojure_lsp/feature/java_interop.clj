@@ -84,8 +84,9 @@
        (io/file parent jdk-source-zip-filename)
        (io/file parent "lib" jdk-source-zip-filename)])))
 
-(defn ^:private find-local-jdk-source []
-  (let [java-home (some-> (or (config/get-property "java.home")
+(defn ^:private find-local-jdk-source [java-home]
+  (let [java-home (some-> (or java-home
+                              (config/get-property "java.home")
                               (config/get-env "JAVA_HOME")) io/file)
         paths (concat []
                       (jdk-path->jdk-source-paths java-home)
@@ -222,8 +223,8 @@
         jdk-result-file (io/file jdk-dir-file "result")
         installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
                                       (slurp jdk-result-file))
-        custom-jdk-source-uri (settings/get db [:java :jdk-source-uri])
-        local-jdk-source-file* (delay (find-local-jdk-source))
+        {custom-jdk-source-uri :jdk-source-uri java-home :home-path} (settings/get db [:java])
+        local-jdk-source-file* (delay (find-local-jdk-source java-home))
         download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
         {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
                                                      installed-jdk-source-uri

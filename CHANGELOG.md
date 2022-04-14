@@ -15,6 +15,7 @@
   - graalvm: Compile static linux with --musl for better compatibility. #868
   - java: Use `XDG_CACHE_HOME` or `.cache/clojure-lsp` instead of config files for JDK cache.
   - java: Cache JDK analysis globally avoiding high CPU usages after startup.
+  - java: Add `:java :home-path` setting for easier way to specify java location for JDK source analysis. #907
 
 - Editor
   - Introduce ALPHA move-form command. #566

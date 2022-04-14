@@ -1137,6 +1137,11 @@
 <td><code>false</code></td>
 </tr>
 <tr>
+<td><code>:java</code> <code>:home-path</code></td>
+<td>Whether to use this path to find JDK source and cache after startup for JDK classes java support.</td>
+<td>nil</td>
+</tr>
+<tr>
 <td><code>:java</code> <code>:jdk-source-uri</code></td>
 <td>URI containing the JDK source to be used. If <code>:download-jdk-source?</code> is enabled and URI is <em>NOT</em> <code>file://</code> then download the source. Check <code>https://github.com/clojure-lsp/jdk-source</code>for more sources.</td>
 <td><code>https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip</code></td>
@@ -1362,7 +1367,7 @@ Check <code>;; good</code> on <a href="https://github.com/bbatsov/clojure-style-
 <li>If the java source(<code>.java</code>) is available on classpath, clojure-lsp just return that file location.</li>
 <li>If the java source is not available, only the <code>.class</code>, clojure-lsp decompiles it and save the generated <code>.java</code> in a cache folder (<code>.lsp/.cache/java/</code>)</li>
 <li>If the java class is from JDK (e.g. <code>java.util.UUID</code>), clojure-lsp tries a few things to be able to sucessfully find the definition, following this waterfall decision:<ul>
-<li>Most JRE installations contains the java source code in a <code>src.zip</code>, clojure-lsp tries to find it via <code>JAVA_HOME</code> or <code>java</code> command on <code>PATH</code>, if found clojure-lsp extracts to its global cache config (XDG_CONFIG or <code>~/.config/clojure-lsp</code>) to be used in other projects.</li>
+<li>Most JRE installations contains the java source code in a <code>src.zip</code>, clojure-lsp tries to find it via <code>:java :home-path</code> setting if provided, <code>JAVA_HOME</code> env var or <code>java</code> command on <code>PATH</code>, if found clojure-lsp extracts to its global cache config (XDG_CONFIG or <code>~/.config/clojure-lsp</code>) to be used in other projects.</li>
 <li>If <code>src.zip</code> is not found or user specified a custom <code>:java :jdk-source-uri</code>, clojure-lsp tries to download the source from that uri, only if <code>:java :download-jdk-source?</code> is enabled, disabled by default, extracting to the global cache dir later.</li>
 </ul>
 </li>

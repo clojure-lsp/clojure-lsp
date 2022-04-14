@@ -1873,8 +1873,9 @@
 <li>Consider filename + lastModified as checksum for external files, avoiding analyzing it if analysis is already present.</li>
 <li>graalvm: Compile static linux with --musl for better compatibility. #868</li>
 <li>java: Use <code>XDG_CACHE_HOME</code> or <code>.cache/clojure-lsp</code> instead of config files for JDK cache.</li>
+<li>java: Cache JDK analysis globally avoiding high CPU usages after startup.</li>
 <li>
-<p>java: Cache JDK analysis globally avoiding high CPU usages after startup.</p>
+<p>java: Add <code>:java :home-path</code> setting for easier way to specify java location for JDK source analysis. #907</p>
 </li>
 <li>
 <p>Editor</p>

@@ -1,5 +1,4 @@
 {:clean {:ns-inner-blocks-indentation :next-line}
  :linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
  :source-aliases #{:dev :test :debug}
- :java {:home-path "/nix/store/g770ir0q20i0dfhyzfnnpk49acijhfir-openjdk-11.0.12+7/bin/java"}
  :use-metadata-for-privacy? true}

@@ -7,14 +7,29 @@ clojure-lsp logs most of what is doing to a file which location could be found:
 - on `:log-path` if specified in your clojure-lsp config, for example: `{:log-path "/tmp/clojure-lsp.out"}`
 - Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out`
 
+<details>
+<summary><b>Emacs users</b></summary>
+You can open server logs in a buffer with `M-x` `lsp-clojure-server-log`.
+
+</details>
+
 ## Client<->Server log
 
 All LSP clients should provide a way to get the jsonrpc logs between client and server, this helps debug the requests and responses content and time.
 
 Check below how to get the logs for most used clients:
 
-- [Emacs/lsp-mode](https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json)
-- [VSCode/Calva](https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server)
+<details>
+<summary><b>Emacs/lsp-mode</b></summary>
+<a href="https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json">https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json</a>
+
+</details>
+
+<details>
+<summary><b>VSCode/Calva</b></summary>
+<a href="https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server">https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server</a>
+
+</details>
 
 ## Server is not initializing
 

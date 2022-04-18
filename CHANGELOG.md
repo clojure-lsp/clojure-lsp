@@ -36,6 +36,9 @@
 
 - CLI
   - Reduce CPU and wall-clock time in cli commands clean-ns and diagnostics
+  
+  
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2022.03.31-20.00.20
 

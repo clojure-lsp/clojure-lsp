@@ -689,13 +689,27 @@
 <li>on <code>:log-path</code> if specified in your clojure-lsp config, for example: <code>{:log-path "/tmp/clojure-lsp.out"}</code></li>
 <li>Auto generated every server start on <code>/tmp/clojure-lsp.&lt;TIMESTAMP&gt;.out</code></li>
 </ul>
+<details>
+<summary><b>Emacs users</b></summary>
+You can open server logs in a buffer with `M-x` `lsp-clojure-server-log`.
+
+</details>
+
 <h2 id="client-server-log">Client&lt;-&gt;Server log<a class="headerlink" href="#client-server-log" title="Permanent link">#</a></h2>
 <p>All LSP clients should provide a way to get the jsonrpc logs between client and server, this helps debug the requests and responses content and time.</p>
 <p>Check below how to get the logs for most used clients:</p>
-<ul>
-<li><a href="https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json">Emacs/lsp-mode</a></li>
-<li><a href="https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server">VSCode/Calva</a></li>
-</ul>
+<details>
+<summary><b>Emacs/lsp-mode</b></summary>
+<a href="https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json">https://emacs-lsp.github.io/lsp-mode/page/troubleshooting/#log-client-server-json</a>
+
+</details>
+
+<details>
+<summary><b>VSCode/Calva</b></summary>
+<a href="https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server">https://calva.io/clojure-lsp/#viewing-the-logs-between-the-client-and-server</a>
+
+</details>
+
 <h2 id="server-is-not-initializing">Server is not initializing<a class="headerlink" href="#server-is-not-initializing" title="Permanent link">#</a></h2>
 <p>Make sure you have the <a href="../installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>
 <p>Check if the executable is working running it from the command line, it should start up and start reading from stdin.

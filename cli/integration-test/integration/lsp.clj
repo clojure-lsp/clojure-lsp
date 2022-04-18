@@ -59,23 +59,25 @@
             ;; the server output stream is closed, also close the client by
             ;; exiting this loop.
             (if-let [_content-length (read-line)]
-              (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-                (cond
-                  (and id method)
-                  (do
-                    (client-log client-id :magenta "received request:" json)
-                    (swap! server-requests conj json))
+              (do
+                (println "client preparing to parse server content" _content-length)
+                (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+                  (cond
+                    (and id method)
+                    (do
+                      (client-log client-id :magenta "received request:" json)
+                      (swap! server-requests conj json))
 
-                  id
-                  (do
-                    (client-log client-id :green "received reponse:" json)
-                    (swap! server-responses assoc id json))
+                    id
+                    (do
+                      (client-log client-id :green "received reponse:" json)
+                      (swap! server-responses assoc id json))
 
-                  :else
-                  (do
-                    (client-log client-id :blue "received notification:" json)
-                    (swap! server-notifications conj json)))
-                (recur))
+                    :else
+                    (do
+                      (client-log client-id :blue "received notification:" json)
+                      (swap! server-notifications conj json)))
+                  (recur)))
               (do
                 (client-log client-id :red "closed:" "server closed")
                 (flush)))))

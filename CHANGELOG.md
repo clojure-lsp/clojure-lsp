@@ -32,6 +32,9 @@
   - drag: Fix to drag element-wise in destructured keys, not pair-wise. #927
   - test-tree: reduce CPU usage, especially during startup
 
+- CLI
+  - Reduce CPU and wall-clock time in cli commands clean-ns and diagnostics
+
 ## 2022.03.31-20.00.20
 
 - Fix URI resolver on java JDK logic.

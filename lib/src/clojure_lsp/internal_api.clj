@@ -192,11 +192,34 @@
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
-(defn ^:private ns->ns+uri [namespace db]
-  (if-let [filename (:filename (q/find-namespace-definition-by-namespace (:analysis db) namespace))]
-    {:namespace namespace
-     :uri (shared/filename->uri filename db)}
-    {:namespace namespace}))
+(defn ^:private nses->ns+uri [namespaces db]
+  (let [ns->filename-xf (comp
+                          (mapcat val)
+                          (filter #(and (identical? :namespace-definitions (:bucket %))
+                                        (contains? (set namespaces) (:name %))))
+                          (map (juxt :name :filename)))
+        ;; Performance sensitive: Gather filenames in two passes, instead of
+        ;; (count namespaces) passes, as would be required by
+        ;; q/find-namespace-definition-by-namespace. Simulates
+        ;; q/find-last-order-by-project-analysis, preferring internal
+        ;; definitions.
+        found-external (into {}
+                             (comp
+                               q/filter-external-analysis-xf
+                               ns->filename-xf)
+                             (:analysis db))
+        found-internal (into {}
+                             (comp
+                               q/filter-project-analysis-xf
+                               ns->filename-xf)
+                             (:analysis db))
+        found (merge found-external found-internal)]
+    (map (fn [namespace]
+           (if-let [filename (get found namespace)]
+             {:namespace namespace
+              :uri (shared/filename->uri filename db)}
+             {:namespace namespace}))
+         namespaces)))
 
 (defn ^:private uri->ns
   [uri ns+uris]
@@ -277,7 +300,7 @@
   (cli-println options "Checking namespaces...")
   (let [db @db*
         namespaces (options->namespaces options db)
-        ns+uris (pmap #(ns->ns+uri % db) namespaces)
+        ns+uris (nses->ns+uri namespaces db)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))
@@ -325,8 +348,7 @@
   (cli-println options "Finding diagnostics...")
   (let [db @db*
         namespaces (options->namespaces options db)
-        diags-by-uri (->> namespaces
-                          (pmap #(ns->ns+uri % db))
+        diags-by-uri (->> (nses->ns+uri namespaces db)
                           (assert-ns-exists-or-drop! options)
                           (pmap (fn [{:keys [uri]}]
                                   {:uri uri
@@ -350,7 +372,7 @@
   (cli-println options "Formatting namespaces...")
   (let [db @db*
         namespaces (options->namespaces options db)
-        ns+uris (pmap #(ns->ns+uri % db) namespaces)
+        ns+uris (nses->ns+uri namespaces db)
         edits (->> ns+uris
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))

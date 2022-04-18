@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-standalone</artifactId>
-  <version>2022.03.31-20.00.20</version>
+  <version>2022.04.18-00.59.32</version>
   <name>clojure-lsp-standalone</name>
   <dependencies>
     <dependency>
@@ -41,6 +41,11 @@
       <groupId>org.eclipse.xtend</groupId>
       <artifactId>org.eclipse.xtend.lib</artifactId>
       <version>2.25.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.clojure-lsp</groupId>
+      <artifactId>lsp4clj-server</artifactId>
+      <version>0.0.1</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -86,6 +91,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2022.03.31-20.00.20</tag>
+    <tag>2022.04.18-00.59.32</tag>
   </scm>
 </project>

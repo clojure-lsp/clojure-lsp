@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.04.18-00.59.32
+
 - General
   - Improve settings documentation.
   - Fix completion performance regression from previous release.

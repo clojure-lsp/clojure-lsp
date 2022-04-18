@@ -9,7 +9,7 @@ clojure-lsp logs most of what is doing to a file which location could be found:
 
 <details>
 <summary><b>Emacs users</b></summary>
-You can open server logs in a buffer with `M-x` `lsp-clojure-server-log`.
+You can open server logs in a buffer with <code>M-x</code> <code>lsp-clojure-server-log</code>.
 
 </details>
 
@@ -55,12 +55,15 @@ If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.*.out`, so watch that file 
 
 LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.
 
-For example, if you are using [neovim](https://neovim.io/) with
-[CoC](https://github.com/neoclide/coc.nvim), first ensure that
-`trace.server` is set to `verbose` in your `coc-settings.json` file,
+<details>
+<summary><b>Vim users</b></summary>
+For example, if you are using <a href="https://neovim.io/">neovim</a> with
+<a href="https://github.com/neoclide/coc.nvim">CoC</a>, first ensure that
+<code>trace.server</code> is set to <code>verbose</code> in your <code>coc-settings.json</code> file,
 e.g.,
 
-```json
+<pre>
+<code>
   "languageserver": {
     "clojure-lsp": {
       "command": "clojure-lsp",
@@ -79,12 +82,13 @@ e.g.,
       }
     }
   }
-```
+</code>
+<pre/>
 
 Then, once vim has loaded (and clojure-lsp has initialised), you can
 issue this command:
 
-`:CocCommand workspace.showOutput`
+<code>:CocCommand workspace.showOutput</code>
 
 This will show the JSON request/response bodies that go between vim
 and clojure-lsp. Please capture that information if you need help in
@@ -92,11 +96,13 @@ tracking down the problem you are experiencing (either by reporting
 github issues, or talking with someone in Slack/Discord or
 whatever...)
 
+</details>
+
 ---
 
 ## Some features are not working
 
-clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to scan the classpath
+clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to analyze the classpath
 during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.
 
 Please note that `clojure-lsp` comes bundled with `clj-kondo`, so you do not have to install it separately.
@@ -112,13 +118,13 @@ By default clojure-lsp knows how to scan most common clojure projects using the 
 - If the project root has a `build.boot` file, it'll run `boot show --fake-classpath` to get the classpath.
 - If the project root has a `shadow-cljs.edn` file, it'll run `npx shadow-cljs classpath` to get the classpath.
 
-If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the[settings section](./settings.md).
+If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the [settings section](./settings.md).
 
-### Folders not being analyzed
+### Folders not being analyzed/linted
 
-By default clojure-lsp searches `src` and `test` for clj* files to read into an index.
+By default clojure-lsp get source-paths from classpath, for more details check [settings section](./settings.md#source-paths-discovery).
 
-* If the definition lives under a different source dir, you can define the `source-paths` setting, for more details check the [settings section](./settings.md).
+* If the definition lives under a different source dir, you can define `source-aliases` or `source-paths` setting as mentioned on [settings section](./settings.md#source-paths-discovery).
 
 * It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
 
@@ -129,7 +135,7 @@ By default clojure-lsp searches `src` and `test` for clj* files to read into an 
 ```
 
 * and you are finding that `gotoDefinition` isn't working when attempting to jump to the namespace in the referenced project, then
-it could be that your `~/.lsp/config.edn` (or `~/.config/clojure-lsp/config.edn`) has a source paths entry, i.e., `:source-paths
+it could be that your `~/.config/clojure-lsp/config.edn` (or legacy `~/.lsp/config.edn`) has a source paths entry, i.e., `:source-paths
 ["src" "test"]`. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
 current project for sources, and not the other project referenced via the `:local/root` deps entry. It can be fixed by removing
 the `:source-paths` from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
@@ -137,9 +143,9 @@ then those can be added at the project level.
 
 ### Wrong diagnostics/lint
 
-- clojure-lsp persist the external jars analysis in a `.lsp/sqlite.db` file, if you have issues with some specific feature,
-try to remove that file and restart the server.
-- clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that file as well if you think it's not linting correctly
+- clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that folder if you think it's not linting correctly
+- clojure-lsp persist the external jars analysis in a `.lsp/.cache/` folder, if you have issues with some specific feature,
+try to remove that dir and restart the server.
 - If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
 
 ### Missing `Add require...` on code actions when using CoC and (neo)vim

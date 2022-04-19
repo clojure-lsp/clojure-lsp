@@ -11,6 +11,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure.core.async :refer [<! go-loop]]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [lsp4clj.components :as components]
@@ -157,7 +158,10 @@
   ;; TODO do not add components to db after all usages relies on components from outside db.
   (swap! db* assoc
          :api? true
-         :producer producer))
+         :producer producer)
+  (go-loop []
+    (producer/publish-diagnostic producer (<! db/diagnostics-chan))
+    (recur)))
 
 (defn ^:private analyze!
   [{:keys [project-root settings log-path]}

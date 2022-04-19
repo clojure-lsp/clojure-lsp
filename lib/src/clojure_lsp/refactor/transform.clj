@@ -516,7 +516,7 @@
                                           (nil? trailing)  {:key     0
                                                             :unnamed #{(z/sexpr zloc)}
                                                             :named   'element}
-                                          :else            (let [n (Long/valueOf trailing)]
+                                          :else            (let [n (Long/valueOf ^String trailing)]
                                                              {:key     n
                                                               :unnamed #{(z/sexpr zloc)}
                                                               :named   (symbol (str "element" n))}))))))

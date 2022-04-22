@@ -107,14 +107,14 @@
   (reset! server-responses {})
   (reset! server-notifications [])
   (reset! client-request-id 0)
-  (when *clojure-lsp-listener*
-    (client-log :red "closing:" "test cleanup")
-    (flush)
-    (future-cancel *clojure-lsp-listener*)
-    (alter-var-root #'*clojure-lsp-listener* (constantly nil)))
+  (flush)
   (when *clojure-lsp-process*
-    (p/destroy *clojure-lsp-process*)
-    (alter-var-root #'*clojure-lsp-process* (constantly nil))))
+    (.close *server-in*) ;; simulate client closing
+    (deref *clojure-lsp-process*) ;; wait for close of client to shutdown server
+    (alter-var-root #'*clojure-lsp-process* (constantly nil)))
+  (when *clojure-lsp-listener*
+    (deref *clojure-lsp-listener*) ;; wait for shutdown of server to propagate to listener
+    (alter-var-root #'*clojure-lsp-listener* (constantly nil))))
 
 (defn clean-after-test []
   (use-fixtures :each (fn [f] (clean!) (f)))

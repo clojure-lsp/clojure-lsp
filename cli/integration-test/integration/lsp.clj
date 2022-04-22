@@ -146,7 +146,7 @@
         (Thread/sleep 500)
         (recur)))))
 
-(defn await-first-and-remove! [coll* pred]
+(defn await-first-and-remove! [pred coll*]
   (loop []
     (if-let [elem (first (filter pred @coll*))]
       (do
@@ -160,19 +160,19 @@
   (let [file (h/source-path->file path)
         uri (h/file->uri file)
         method-str (keyname :textDocument/publishDiagnostics)
-        notification (await-first-and-remove! server-notifications
-                                              #(and (= method-str (:method %))
-                                                    (= uri (-> % :params :uri))))]
+        notification (await-first-and-remove! #(and (= method-str (:method %))
+                                                    (= uri (-> % :params :uri)))
+                                              server-notifications)]
     (-> notification :params :diagnostics)))
 
 (defn await-notification [method]
   (let [method-str (keyname method)
-        notification (await-first-and-remove! server-notifications
-                                              #(= method-str (:method %)))]
+        notification (await-first-and-remove! #(= method-str (:method %))
+                                              server-notifications)]
     (:params notification)))
 
 (defn await-client-request [method]
   (let [method-str (keyname method)
-        msg (await-first-and-remove! server-requests
-                                     #(= method-str (:method %)))]
+        msg (await-first-and-remove! #(= method-str (:method %))
+                                     server-requests)]
     (:params msg)))

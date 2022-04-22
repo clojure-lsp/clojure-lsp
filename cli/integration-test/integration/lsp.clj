@@ -5,9 +5,9 @@
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
    [integration.helper :as h])
- (:import
-    [java.time.format DateTimeFormatter]
-    [java.time LocalDateTime]))
+  (:import
+   [java.time.format DateTimeFormatter]
+   [java.time LocalDateTime]))
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *clojure-lsp-listener* nil)
@@ -146,54 +146,33 @@
         (Thread/sleep 500)
         (recur)))))
 
+(defn await-first-and-remove! [coll* pred]
+  (loop []
+    (if-let [elem (first (filter pred @coll*))]
+      (do
+        (swap! coll* #(->> % (remove #{elem}) vec))
+        elem)
+      (do
+        (Thread/sleep 500)
+        (recur)))))
+
 (defn await-diagnostics [path]
   (let [file (h/source-path->file path)
         uri (h/file->uri file)
-        method-str (keyname :textDocument/publishDiagnostics)]
-    (loop []
-      (let [notification (first (filter #(and (= method-str (:method %))
-                                              (= uri (-> % :params :uri)))
-                                        @server-notifications))]
-        (if notification
-          (do
-            (swap! server-notifications
-                   (fn [n]
-                     (->> n
-                          (remove #(= method-str (:method %)))
-                          vec)))
-            (-> notification :params :diagnostics))
-          (do
-            (Thread/sleep 500)
-            (recur)))))))
+        method-str (keyname :textDocument/publishDiagnostics)
+        notification (await-first-and-remove! server-notifications
+                                              #(and (= method-str (:method %))
+                                                    (= uri (-> % :params :uri))))]
+    (-> notification :params :diagnostics)))
 
 (defn await-notification [method]
-  (loop []
-    (let [method-str (keyname method)
-          notification (first (filter #(= method-str (:method %)) @server-notifications))]
-      (if notification
-        (do
-          (swap! server-notifications
-                 (fn [n]
-                   (->> n
-                        (remove #(= method-str (:method %)))
-                        vec)))
-          (:params notification))
-        (do
-          (Thread/sleep 500)
-          (recur))))))
+  (let [method-str (keyname method)
+        notification (await-first-and-remove! server-notifications
+                                              #(= method-str (:method %)))]
+    (:params notification)))
 
 (defn await-client-request [method]
-  (loop []
-    (let [method-str (keyname method)
-          msg        (first (filter #(= method-str (:method %)) @server-requests))]
-      (if msg
-        (do
-          (swap! server-requests
-                 (fn [n]
-                   (->> n
-                        (remove #(= method-str (:method %)))
-                        vec)))
-          (:params msg))
-        (do
-          (Thread/sleep 500)
-          (recur))))))
+  (let [method-str (keyname method)
+        msg (await-first-and-remove! server-requests
+                                     #(= method-str (:method %)))]
+    (:params msg)))

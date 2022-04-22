@@ -84,6 +84,9 @@
         :declarationProvider true
         :implementationProvider true
         :documentHighlightProvider true
+        :workspace {:fileOperations {:willRename {:filters [{:pattern {:glob "**/*.{clj,cljs,cljc,cljd,edn,bb}"
+                                                                       :matches "file"}
+                                                             :scheme "file"}]}}}
         :experimental {:testTree true
                        :cursorInfo true
                        :serverInfo true

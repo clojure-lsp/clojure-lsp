@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Editor
+  - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.
+  
+This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
+
 ## 2022.04.18-00.59.32
 
 - General
@@ -36,7 +41,6 @@
 
 - CLI
   - Reduce CPU and wall-clock time in cli commands clean-ns and diagnostics
-  
   
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

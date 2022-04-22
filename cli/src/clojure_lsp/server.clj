@@ -43,6 +43,8 @@
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
 
+(def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb}")
+
 (defn log! [level args fmeta]
   (timbre/log! level :p args {:?line (:line fmeta)
                               :?file (:file fmeta)
@@ -178,6 +180,9 @@
      :document-range-formatting-provider ^Boolean (:document-range-formatting? settings)
      :document-symbol-provider true
      :workspace-symbol-provider true
+     :workspace {:file-operations {:will-rename {:filters [{:scheme "file"
+                                                            :pattern {:glob known-files-pattern
+                                                                      :matches "file"}}]}}}
      :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
                                          (:semantic-tokens? settings))
                                  {:token-types semantic-tokens/token-types-str
@@ -210,7 +215,7 @@
                                               db/initial-db
                                               capabilites
                                               client-settings
-                                              "**/*.{clj,cljs,cljc,cljd,edn,bb}")
+                                              known-files-pattern)
                                   clojure-feature-handler)
         launcher (Launcher/createLauncher server ClojureLanguageClient is os)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
@@ -232,13 +237,17 @@
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-changes (<! debounced-changes) @components*)
+        (shared/logging-task
+          :analyze-file
+          (f.file-management/analyze-changes (<! debounced-changes) @components*))
         (catch Exception e
           (logger/error e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
-        (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components*)
+        (shared/logging-task
+          :analyze-created-files-in-watched-dir
+          (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components*))
         (catch Exception e
           (logger/error e "Error during analyzing created watched files")))
       (recur))

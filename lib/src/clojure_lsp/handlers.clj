@@ -121,16 +121,20 @@
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db*]}]
-  (let [uri (:uri textDocument)
-        text (:text textDocument)]
-    (f.file-management/did-open uri text db* true)
-    (clojure-producer/refresh-test-tree producer [uri]))
+  (shared/logging-task
+    :did-open
+    (let [uri (:uri textDocument)
+          text (:text textDocument)]
+      (f.file-management/did-open uri text db* true)
+      (clojure-producer/refresh-test-tree producer [uri])))
   nil)
 
 (defn did-save [{:keys [textDocument]}]
-  (f.file-management/did-save textDocument db/db*))
+  (shared/logging-task
+    :did-save
+    (f.file-management/did-save textDocument db/db*)))
 
-;; TODO wait for lsp4j release
+;; TODO implement it, do we need to do anything?
 #_(defn did-delete-files [{:keys [textDocument]}]
     (when (get-in @db/db [:documents textDocument :saved-on-disk])
       (swap! db/db #(update % :documents dissoc textDocument))))
@@ -139,7 +143,9 @@
   (f.file-management/did-change (:uri textDocument) contentChanges (:version textDocument) db/db*))
 
 (defn did-close [{:keys [textDocument]}]
-  (f.file-management/did-close textDocument db/db*))
+  (shared/logging-task
+    :did-close
+    (f.file-management/did-close textDocument db/db*)))
 
 (defn did-change-watched-files [{:keys [changes]}]
   (f.file-management/did-change-watched-files changes db/db*))
@@ -181,7 +187,7 @@
   (shared/logging-task
     :rename
     (let [[row col] (shared/position->line-column position)]
-      (f.rename/rename textDocument newName row col db/db*))))
+      (f.rename/rename-from-position textDocument newName row col db/db*))))
 
 (defn definition [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
@@ -476,6 +482,11 @@
           col (-> position :character inc)]
       (f.linked-editing-range/ranges textDocument row col db))))
 
+(defn will-rename-files [{:keys [files]} {:keys [db*]}]
+  (shared/logging-task
+    :will-rename-files
+    (f.file-management/will-rename-files files db*)))
+
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
@@ -538,6 +549,8 @@
     (linked-editing-ranges doc))
   (workspace-symbols [_ doc]
     (workspace-symbols doc))
+  (will-rename-files [_ rename-files]
+    (will-rename-files rename-files @components*))
   (range-formatting [_ doc]
     (range-formatting doc))
   ;; (did-delete-files [_ doc]

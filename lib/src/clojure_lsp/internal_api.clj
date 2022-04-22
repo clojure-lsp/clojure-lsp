@@ -412,7 +412,7 @@
                             (q/find-element-by-full-name project-analysis from-name from-ns))]
       (let [uri (shared/filename->uri (:filename from-element) db)]
         (open-file! {:uri uri :namespace from-ns} components)
-        (let [{:keys [error document-changes]} (f.rename/rename uri (str to) (:name-row from-element) (:name-col from-element) db*)]
+        (let [{:keys [error document-changes]} (f.rename/rename-from-position uri (str to) (:name-row from-element) (:name-col from-element) db*)]
           (if document-changes
             (let [db @db*]
               (if-let [edits (->> document-changes

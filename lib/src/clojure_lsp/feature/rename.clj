@@ -194,37 +194,42 @@
           result
           (shared/->range element))))))
 
-(defn rename
+(defn rename-element [uri new-name db* filename element source]
+  (let [db @db*
+        references (q/find-references (:analysis db) element true)
+        definition (q/find-definition (:analysis db) element)
+        source-paths (settings/get db [:source-paths])
+        client-capabilities (:client-capabilities db)
+        {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
+    (if error
+      result
+      (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
+            changes (rename-changes element definition references replacement new-name db)
+            doc-changes (->> changes
+                             (group-by :text-document)
+                             (remove (comp empty? val))
+                             (map (fn [[text-document edits]]
+                                    {:text-document text-document
+                                     :edits (mapv #(dissoc % :text-document) edits)})))]
+        (if (and (identical? :namespace-definitions (:bucket definition))
+                 (not (identical? :namespace-alias (:bucket element)))
+                 (not= :rename-file source))
+          (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
+            (swap! db* (fn [db] (-> db
+                                    (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
+                                    (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
+            (shared/client-changes (concat doc-changes
+                                           [{:kind "rename"
+                                             :old-uri uri
+                                             :new-uri new-uri}])
+                                   db))
+          (shared/client-changes doc-changes db))))))
+
+(defn rename-from-position
   [uri new-name row col db*]
   (let [db @db*
         filename (shared/uri->filename uri)
         element (q/find-element-under-cursor (:analysis db) filename row col)]
     (if-not element
       error-no-element
-      (let [references (q/find-references (:analysis db) element true)
-            definition (q/find-definition (:analysis db) element)
-            source-paths (settings/get db [:source-paths])
-            client-capabilities (:client-capabilities db)
-            {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
-        (if error
-          result
-          (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
-                changes (rename-changes element definition references replacement new-name db)
-                doc-changes (->> changes
-                                 (group-by :text-document)
-                                 (remove (comp empty? val))
-                                 (map (fn [[text-document edits]]
-                                        {:text-document text-document
-                                         :edits (mapv #(dissoc % :text-document) edits)})))]
-            (if (and (identical? :namespace-definitions (:bucket definition))
-                     (not (identical? :namespace-alias (:bucket element))))
-              (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
-                (swap! db* (fn [db] (-> db
-                                        (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
-                                        (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
-                (shared/client-changes (concat doc-changes
-                                               [{:kind "rename"
-                                                 :old-uri uri
-                                                 :new-uri new-uri}])
-                                       db))
-              (shared/client-changes doc-changes db))))))))
+      (rename-element uri new-name db* filename element :rename))))

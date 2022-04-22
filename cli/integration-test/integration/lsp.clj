@@ -4,7 +4,10 @@
    [cheshire.core :as json]
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
-   [integration.helper :as h]))
+   [integration.helper :as h])
+ (:import
+    [java.time.format DateTimeFormatter]
+    [java.time LocalDateTime]))
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *clojure-lsp-listener* nil)
@@ -43,11 +46,14 @@
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
+(def ^:private ld-formatter DateTimeFormatter/ISO_LOCAL_DATE_TIME)
+(defn ld-str [] (.format ld-formatter (LocalDateTime/now)))
+
 (defn client-log
   ([color msg params]
    (client-log @client-id color msg params))
   ([client-id color msg params]
-   (println (colored color (str "Client " client-id " " msg)) (colored :yellow params))))
+   (println (ld-str) (colored color (str "Client " client-id " " msg)) (colored :yellow params))))
 
 (defn ^:private listen-output! []
   (let [client-id (swap! client-id inc)]

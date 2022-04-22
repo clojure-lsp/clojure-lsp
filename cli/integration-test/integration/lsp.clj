@@ -121,11 +121,12 @@
   (use-fixtures :once (fn [f] (f) (clean!))))
 
 (defn client-send [params]
-  (binding [*out* *server-in*]
-    (println (str "Content-Length: " (content-length params)))
-    (println "")
-    (println params)
-    (flush)))
+  (let [content (json/generate-string params)]
+    (binding [*out* *server-in*]
+      (println (str "Content-Length: " (content-length content)))
+      (println "")
+      (println content)
+      (flush))))
 
 (defn notify! [params]
   (client-log :blue "sending notification:" params)
@@ -134,16 +135,16 @@
 (defn request! [params]
   (client-log :cyan "sending request:" params)
   (client-send params)
-  (loop [response (get @server-responses @client-request-id)]
-    (if response
+  (loop []
+    (if-let [response (get @server-responses (:id params))]
       (do
-        (swap! server-responses dissoc @client-request-id)
+        (swap! server-responses dissoc (:id params))
         (if (:error response)
           response
           (:result response)))
       (do
         (Thread/sleep 500)
-        (recur (get @server-responses @client-request-id))))))
+        (recur)))))
 
 (defn await-diagnostics [path]
   (let [file (h/source-path->file path)

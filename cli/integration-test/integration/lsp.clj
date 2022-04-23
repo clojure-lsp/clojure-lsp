@@ -4,7 +4,10 @@
    [cheshire.core :as json]
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
-   [integration.helper :as h]))
+   [integration.helper :as h])
+  (:import
+   [java.time.format DateTimeFormatter]
+   [java.time LocalDateTime]))
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *clojure-lsp-listener* nil)
@@ -43,11 +46,14 @@
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
+(def ^:private ld-formatter DateTimeFormatter/ISO_LOCAL_DATE_TIME)
+(defn ld-str [] (.format ld-formatter (LocalDateTime/now)))
+
 (defn client-log
   ([color msg params]
    (client-log @client-id color msg params))
   ([client-id color msg params]
-   (println (colored color (str "Client " client-id " " msg)) (colored :yellow params))))
+   (println (ld-str) (colored color (str "Client " client-id " " msg)) (colored :yellow params))))
 
 (defn ^:private listen-output! []
   (let [client-id (swap! client-id inc)]
@@ -101,25 +107,26 @@
   (reset! server-responses {})
   (reset! server-notifications [])
   (reset! client-request-id 0)
-  (when *clojure-lsp-listener*
-    (client-log :red "closing:" "test cleanup")
-    (flush)
-    (future-cancel *clojure-lsp-listener*)
-    (alter-var-root #'*clojure-lsp-listener* (constantly nil)))
+  (flush)
   (when *clojure-lsp-process*
-    (p/destroy *clojure-lsp-process*)
-    (alter-var-root #'*clojure-lsp-process* (constantly nil))))
+    (.close *server-in*) ;; simulate client closing
+    (deref *clojure-lsp-process*) ;; wait for close of client to shutdown server
+    (alter-var-root #'*clojure-lsp-process* (constantly nil)))
+  (when *clojure-lsp-listener*
+    (deref *clojure-lsp-listener*) ;; wait for shutdown of server to propagate to listener
+    (alter-var-root #'*clojure-lsp-listener* (constantly nil))))
 
 (defn clean-after-test []
   (use-fixtures :each (fn [f] (clean!) (f)))
   (use-fixtures :once (fn [f] (f) (clean!))))
 
 (defn client-send [params]
-  (binding [*out* *server-in*]
-    (println (str "Content-Length: " (content-length params)))
-    (println "")
-    (println params)
-    (flush)))
+  (let [content (json/generate-string params)]
+    (binding [*out* *server-in*]
+      (println (str "Content-Length: " (content-length content)))
+      (println "")
+      (println content)
+      (flush))))
 
 (defn notify! [params]
   (client-log :blue "sending notification:" params)
@@ -128,65 +135,44 @@
 (defn request! [params]
   (client-log :cyan "sending request:" params)
   (client-send params)
-  (loop [response (get @server-responses @client-request-id)]
-    (if response
+  (loop []
+    (if-let [response (get @server-responses (:id params))]
       (do
-        (swap! server-responses dissoc @client-request-id)
+        (swap! server-responses dissoc (:id params))
         (if (:error response)
           response
           (:result response)))
       (do
         (Thread/sleep 500)
-        (recur (get @server-responses @client-request-id))))))
+        (recur)))))
+
+(defn await-first-and-remove! [pred coll*]
+  (loop []
+    (if-let [elem (first (filter pred @coll*))]
+      (do
+        (swap! coll* #(->> % (remove #{elem}) vec))
+        elem)
+      (do
+        (Thread/sleep 500)
+        (recur)))))
 
 (defn await-diagnostics [path]
   (let [file (h/source-path->file path)
         uri (h/file->uri file)
-        method-str (keyname :textDocument/publishDiagnostics)]
-    (loop []
-      (let [notification (first (filter #(and (= method-str (:method %))
-                                              (= uri (-> % :params :uri)))
-                                        @server-notifications))]
-        (if notification
-          (do
-            (swap! server-notifications
-                   (fn [n]
-                     (->> n
-                          (remove #(= method-str (:method %)))
-                          vec)))
-            (-> notification :params :diagnostics))
-          (do
-            (Thread/sleep 500)
-            (recur)))))))
+        method-str (keyname :textDocument/publishDiagnostics)
+        notification (await-first-and-remove! #(and (= method-str (:method %))
+                                                    (= uri (-> % :params :uri)))
+                                              server-notifications)]
+    (-> notification :params :diagnostics)))
 
 (defn await-notification [method]
-  (loop []
-    (let [method-str (keyname method)
-          notification (first (filter #(= method-str (:method %)) @server-notifications))]
-      (if notification
-        (do
-          (swap! server-notifications
-                 (fn [n]
-                   (->> n
-                        (remove #(= method-str (:method %)))
-                        vec)))
-          (:params notification))
-        (do
-          (Thread/sleep 500)
-          (recur))))))
+  (let [method-str (keyname method)
+        notification (await-first-and-remove! #(= method-str (:method %))
+                                              server-notifications)]
+    (:params notification)))
 
 (defn await-client-request [method]
-  (loop []
-    (let [method-str (keyname method)
-          msg        (first (filter #(= method-str (:method %)) @server-requests))]
-      (if msg
-        (do
-          (swap! server-requests
-                 (fn [n]
-                   (->> n
-                        (remove #(= method-str (:method %)))
-                        vec)))
-          (:params msg))
-        (do
-          (Thread/sleep 500)
-          (recur))))))
+  (let [method-str (keyname method)
+        msg (await-first-and-remove! #(= method-str (:method %))
+                                     server-requests)]
+    (:params msg)))

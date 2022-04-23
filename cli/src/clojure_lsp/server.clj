@@ -140,7 +140,11 @@
 
   (^void serverInfoLog [_]
     (future
-      (clojure-feature/server-info-log feature-handler))
+      (try
+        (clojure-feature/server-info-log feature-handler)
+        (catch Throwable e
+          (logger/error e)
+          (throw e))))
     nil)
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
@@ -149,7 +153,11 @@
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (future
-      (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)))
+      (try
+        (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)
+        (catch Throwable e
+          (logger/error e)
+          (throw e)))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (CompletableFuture/completedFuture
@@ -205,8 +213,6 @@
         timbre-logger (doto (->TimbreLogger db*)
                         (logger/setup))
         _ (logger/info "[SERVER]" "Starting server...")
-        is (or System/in (lsp/tee-system-in System/in))
-        os (or System/out (lsp/tee-system-out System/out))
         _ (reset! components* (components/->components db* timbre-logger nil))
         clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
         server (ClojureLspServer. (LSPServer. clojure-feature-handler
@@ -217,7 +223,10 @@
                                               client-settings
                                               known-files-pattern)
                                   clojure-feature-handler)
-        launcher (Launcher/createLauncher server ClojureLanguageClient is os)
+        ;; For debugging, it's possible to trace all I/O through lsp4j.
+        ;; tracer (java.io.PrintWriter. (io/writer (io/file "path/to/some/log/file")))
+        ;; launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out false tracer)
+        launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db*)

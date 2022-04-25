@@ -128,7 +128,7 @@
                   (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
         (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx)))))
 
-(defn kondo-for-paths [paths db* external-analysis-only?]
+(defn ^:private config-for-paths [paths db* external-analysis-only?]
   (let [db @db*]
     (-> {:cache true
          :parallel true
@@ -145,7 +145,7 @@
         (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
         (with-additional-config (settings/all db)))))
 
-(defn kondo-copy-configs [paths db]
+(defn ^:private config-for-copy-configs [paths db]
   {:cache true
    :parallel true
    :skip-lint true
@@ -153,16 +153,16 @@
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:canonical-paths true}}})
 
-(defn kondo-jdk-source [paths]
+(defn ^:private config-for-jdk-source [paths]
   {:lint paths
    :config {:output {:analysis {:java-class-definitions true}
                      :canonical-paths true}}})
 
-(defn kondo-for-reference-filenames [filenames db*]
-  (-> (kondo-for-paths filenames db* false)
+(defn ^:private config-for-reference-filenames [filenames db*]
+  (-> (config-for-paths filenames db* false)
       (assoc :custom-lint-fn (partial custom-lint-files! filenames db*))))
 
-(defn kondo-for-single-file [uri db*]
+(defn ^:private config-for-single-file [uri db*]
   (let [db @db*]
     (-> {:cache true
          :lint ["-"]
@@ -184,7 +184,7 @@
 
 (defn run-kondo-on-paths! [paths external-analysis-only? db*]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
-    (kondo/run! (kondo-for-paths paths db* external-analysis-only?))))
+    (kondo/run! (config-for-paths paths db* external-analysis-only?))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
@@ -205,16 +205,16 @@
 
 (defn run-kondo-on-reference-filenames! [filenames db*]
   (catch-kondo-errors (str "files " (string/join ", " filenames))
-    (kondo/run! (kondo-for-reference-filenames filenames db*))))
+    (kondo/run! (config-for-reference-filenames filenames db*))))
 
 (defn run-kondo-on-text! [text uri db*]
   (catch-kondo-errors (shared/uri->filename uri)
-    (with-in-str text (kondo/run! (kondo-for-single-file uri db*)))))
+    (with-in-str text (kondo/run! (config-for-single-file uri db*)))))
 
 (defn run-kondo-copy-configs! [paths db]
   (catch-kondo-errors (str "paths " (string/join ", " paths))
-    (kondo/run! (kondo-copy-configs paths db))))
+    (kondo/run! (config-for-copy-configs paths db))))
 
 (defn run-kondo-on-jdk-source! [paths]
   (catch-kondo-errors (str "paths " paths)
-    (kondo/run! (kondo-jdk-source paths))))
+    (kondo/run! (config-for-jdk-source paths))))

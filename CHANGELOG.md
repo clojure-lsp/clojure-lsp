@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2022.04.23`.
+
 - Editor
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.
   - Don't save cache when classpath lookup failed.

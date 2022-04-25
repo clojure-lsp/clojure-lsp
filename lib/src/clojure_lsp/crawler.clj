@@ -29,18 +29,11 @@
                  (lsp.kondo/run-kondo-on-paths! paths false db*))]
     (swap! db* db/with-kondo-results result {:external? false})))
 
-(defn ^:private report-batch-analysis-percentage
-  [start-progress-percentage fulfill-progress-percentage progress-token producer index count]
-  (let [real-percentage (- fulfill-progress-percentage start-progress-percentage)]
-    (producer/publish-progress
-      producer
-      (+ start-progress-percentage (/ (* index real-percentage) count))
-      "Analyzing external classpath"
-      progress-token)))
-
 (defn analyze-reference-filenames! [filenames db*]
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
     (swap! db* db/with-kondo-results result {:external? false})))
+
+(defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
 (defn ^:private analyze-classpath! [root-path source-paths classpath settings progress-token {:keys [db* producer]}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]
@@ -52,7 +45,9 @@
                                          (remove (set source-paths)))
                              ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
             {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
-            batch-update-callback (partial report-batch-analysis-percentage 25 80 progress-token producer)
+            batch-update-callback (fn [batch-index batch-count]
+                                    (let [percentage (lerp 25 80 (/ batch-index batch-count))]
+                                     (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
             kondo-result (shared/logging-time
                            "External classpath paths analyzed, took %s. Caching for next startups..."
                            (lsp.kondo/run-kondo-on-paths-batch! paths-not-on-checksum true batch-update-callback db*))

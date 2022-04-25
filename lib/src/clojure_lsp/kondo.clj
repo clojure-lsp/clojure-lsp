@@ -2,12 +2,12 @@
   (:require
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
+   [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]))
 
@@ -71,56 +71,6 @@
          (catch Exception ~e-sym
            ~(with-meta `(logger/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
 
-(defn entry->normalized-entries [{:keys [bucket] :as element}]
-  (cond
-    ;; We create two entries here (and maybe more for refer)
-    (identical? :namespace-usages bucket)
-    (cond-> [(set/rename-keys element {:to :name})]
-      (:alias element)
-      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
-                                                                       :alias-col :name-col
-                                                                       :alias-end-row :name-end-row
-                                                                       :alias-end-col :name-end-col})))
-
-    (contains? #{:locals :local-usages :keywords} bucket)
-    [(-> element
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
-
-    (identical? :java-class-definitions bucket)
-    [(-> element
-         (dissoc :uri)
-         (assoc :name-row 0
-                :name-col 0
-                :name-end-row 0
-                :name-end-col 0))]
-
-    (identical? :java-class-usages bucket)
-    [(-> element
-         (dissoc :uri)
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
-
-    :else
-    [element]))
-
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
-  (and name-row
-       name-col
-       name-end-row
-       name-end-col))
-
-(defn normalize-analysis [external? analysis]
-  (for [[bucket vs] analysis
-        v vs
-        element (entry->normalized-entries (assoc v :bucket bucket :external? external?))
-        :when (valid-element? element)]
-    element))
-
 (defn ^:private with-additional-config
   [config settings]
   (cond-> config
@@ -131,18 +81,17 @@
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn ^:private custom-lint-project!
-  [external-analysis-only? {:keys [analysis config] :as kondo-ctx}]
+  [external-analysis-only? {:keys [config] :as kondo-ctx}]
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
-    (let [new-analysis (group-by :filename (normalize-analysis external-analysis-only? analysis))]
+    (let [new-analysis (:analysis (db/normalize-kondo kondo-ctx {:external? external-analysis-only?}))]
       (f.diagnostic/custom-lint-project! new-analysis kondo-ctx))))
 
 (defn ^:private custom-lint-files!
-  [files db* {:keys [analysis] :as kondo-ctx}]
+  [files db* kondo-ctx]
   (shared/logging-task
     :reference-files/lint
     (let [db @db*
-          new-analysis (group-by :filename (normalize-analysis false analysis))
-          updated-analysis (merge (:analysis db) new-analysis)]
+          updated-analysis (:analysis (db/with-kondo-results db kondo-ctx {:external? false}))]
       (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx))))
 
 (defn ^:private custom-lint-file!
@@ -150,9 +99,7 @@
   (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
     (let [db @db*
           filename (-> analysis :var-definitions first :filename)
-          source-paths (settings/get db [:source-paths])
-          external-filename? (shared/external-filename? filename source-paths)
-          updated-analysis (assoc (:analysis db) filename (normalize-analysis external-filename? analysis))]
+          updated-analysis (:analysis (db/with-kondo-for-filename db kondo-ctx filename))]
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
           (if (>= tries 200)

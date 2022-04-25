@@ -1,9 +1,11 @@
 (ns clojure-lsp.db
   (:require
    [clojure-lsp.config :as config]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
+   [clojure.set :as set]
    [cognitect.transit :as transit]
    [lsp4clj.protocols.logger :as logger]))
 
@@ -104,3 +106,98 @@
   (-> (read-global-cache)
       (db-change-fn)
       (upsert-global-cache!)))
+
+;; DATA
+
+(defn entry->normalized-entries [{:keys [bucket] :as element}]
+  (cond
+    ;; We create two entries here (and maybe more for refer)
+    (identical? :namespace-usages bucket)
+    (cond-> [(set/rename-keys element {:to :name})]
+      (:alias element)
+      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
+                                                                       :alias-col :name-col
+                                                                       :alias-end-row :name-end-row
+                                                                       :alias-end-col :name-end-col})))
+
+    (contains? #{:locals :local-usages :keywords} bucket)
+    [(-> element
+         (assoc :name-row (or (:name-row element) (:row element))
+                :name-col (or (:name-col element) (:col element))
+                :name-end-row (or (:name-end-row element) (:end-row element))
+                :name-end-col (or (:name-end-col element) (:end-col element))))]
+
+    (identical? :java-class-definitions bucket)
+    [(-> element
+         (dissoc :uri)
+         (assoc :name-row 0
+                :name-col 0
+                :name-end-row 0
+                :name-end-col 0))]
+
+    (identical? :java-class-usages bucket)
+    [(-> element
+         (dissoc :uri)
+         (assoc :name-row (or (:name-row element) (:row element))
+                :name-col (or (:name-col element) (:col element))
+                :name-end-row (or (:name-end-row element) (:end-row element))
+                :name-end-col (or (:name-end-col element) (:end-col element))))]
+
+    :else
+    [element]))
+
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
+  (and name-row
+       name-col
+       name-end-row
+       name-end-col))
+
+(defn ^:private normalize-analysis [external? analysis]
+  (for [[bucket vs] analysis
+        v vs
+        element (entry->normalized-entries (assoc v :bucket bucket :external? external?))
+        :when (valid-element? element)]
+    element))
+
+(defn normalize-kondo
+  "Put kondo result in a standard format, with `analysis` normalized and
+  `analysis` and `findings` indexed by filename."
+  [{:keys [analysis findings config]} {:keys [external? ensure-filenames]}]
+  (let [analysis (->> analysis
+                      (normalize-analysis external?)
+                      (group-by :filename))
+        analysis (reduce (fn [analysis filename]
+                           (update analysis filename #(or % [])))
+                         analysis
+                         ensure-filenames)
+        filenames (keys analysis)
+        empty-findings (zipmap filenames (repeat []))
+        findings (merge empty-findings (group-by :filename findings))]
+    {:analysis analysis
+     :findings findings
+     :config config}))
+
+(defn merge-kondo-results
+  "Update `db` with normalized kondo result."
+  [db {:keys [analysis findings config]}]
+  (-> db
+      (update :analysis merge analysis)
+      (update :findings merge findings)
+      (assoc :kondo-config config)))
+
+(defn with-kondo-results
+  "Update `db` with raw kondo results, which has not yet been normalized."
+  [db kondo-results results-config]
+  (merge-kondo-results db (normalize-kondo kondo-results results-config)))
+
+(defn with-kondo-for-filename
+  "Update `db` with raw kondo result for a single file."
+  [db kondo-results filename]
+  (let [external? (shared/external-filename? filename (settings/get db [:source-paths]))]
+    (with-kondo-results db kondo-results {:external? external?
+                                          :ensure-filenames [filename]})))
+
+(defn with-kondo-for-uri
+  "Update `db` with raw kondo result for a single uri."
+  [db kondo-results uri]
+  (with-kondo-for-filename db kondo-results (shared/uri->filename uri)))

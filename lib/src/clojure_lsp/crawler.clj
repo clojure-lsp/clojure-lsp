@@ -187,7 +187,7 @@
                  :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db*) settings))))
         (do
           (producer/publish-progress producer 15 "Discovering classpath" progress-token)
-          (let [classpath (classpath/scan-classpath! components)]
+          (when-let [classpath (classpath/scan-classpath! components)]
             (swap! db* assoc
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
@@ -197,8 +197,8 @@
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
               (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
-              (analyze-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components)))
-          (upsert-db-cache! @db*))))
+              (analyze-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components))
+            (upsert-db-cache! @db*)))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                        (:classpath @db*)

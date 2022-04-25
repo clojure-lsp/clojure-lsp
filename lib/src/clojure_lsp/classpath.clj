@@ -5,6 +5,7 @@
    [clojure-lsp.source-paths :as source-paths]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
+   [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer])
@@ -63,26 +64,24 @@
                           string/trim-newline
                           (string/split sep))]
             (logger/debug "Classpath found, paths: " paths)
-            paths)
+            (set paths))
           (do
             (logger/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
             (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
-            [])))
-      (catch clojure.lang.ExceptionInfo e
-        (throw e))
+            nil)))
       (catch Exception e
         (logger/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
         (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
-        []))))
+        nil))))
 
 (defn scan-classpath! [{:keys [db*] :as components}]
   (let [db @db*
-        root-path (shared/uri->path (:project-root-uri db))]
-    (->> (settings/get db [:project-specs])
-         (filter (partial valid-project-spec? root-path))
-         (mapcat #(lookup-classpath! root-path % components))
-         vec
-         seq)))
+        root-path (shared/uri->path (:project-root-uri db))
+        results (->> (settings/get db [:project-specs])
+                     (filter (partial valid-project-spec? root-path))
+                     (map #(lookup-classpath! root-path % components)))]
+    (when (not-any? nil? results)
+      (reduce set/union #{} results))))
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]

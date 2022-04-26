@@ -36,7 +36,7 @@
     (swap! db* (fn [state-db]
                  (-> state-db
                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                     (db/merge-kondo-results kondo-result))))
+                     (lsp.kondo/db-with-results kondo-result))))
     (f.diagnostic/async-publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -185,7 +185,7 @@
               old-local-analysis (get-in @db* [:analysis filename])]
           (if (compare-and-set! db* state-db
                                 (-> state-db
-                                    (db/merge-kondo-results kondo-result)
+                                    (lsp.kondo/db-with-results kondo-result)
                                     (update :processing-changes disj uri)))
             (let [db @db*]
               (f.diagnostic/sync-publish-diagnostics! uri db)
@@ -210,7 +210,7 @@
         result (shared/logging-time
                  "Created watched files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false}))]
-    (swap! db* db/merge-kondo-results result)
+    (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! filenames @db*)
     (clojure-producer/refresh-test-tree producer uris)))
 

@@ -27,11 +27,11 @@
   (let [result (shared/logging-time
                  (str startup-logger-tag " Project only paths analyzed, took %s")
                  (lsp.kondo/run-kondo-on-paths! paths db* {:external? false}))]
-    (swap! db* db/merge-kondo-results result)))
+    (swap! db* lsp.kondo/db-with-results result)))
 
 (defn analyze-reference-filenames! [filenames db*]
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
-    (swap! db* db/merge-kondo-results result)))
+    (swap! db* lsp.kondo/db-with-results result)))
 
 (defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
@@ -58,7 +58,7 @@
                            (lsp.kondo/run-kondo-on-paths-batch! paths-not-on-checksum normalization-config batch-update-callback db*))]
         (swap! db* #(-> %
                         (update :analysis-checksums merge new-checksums)
-                        (db/merge-kondo-results kondo-result)))
+                        (lsp.kondo/db-with-results kondo-result)))
         (shared/logging-time
           "Manual GC after classpath scan took %s"
           (System/gc))

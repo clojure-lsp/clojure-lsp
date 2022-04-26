@@ -137,7 +137,7 @@
                   (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
                   (lsp.kondo/run-kondo-on-jdk-source! paths))]
     (swap! db* #(-> %
-                    (db/merge-kondo-results results)
+                    (lsp.kondo/db-with-results results)
                     (update :analysis-checksums merge new-checksums)))
     (db/read-and-update-global-cache!
       (fn [db]

@@ -50,7 +50,7 @@
         result (shared/logging-time
                  "Stubs analyzed, took %s."
                  (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config))]
-    (swap! db* db/merge-kondo-results result)
+    (swap! db* lsp.kondo/db-with-results result)
     (db/read-and-update-cache!
       @db*
       (fn [db]

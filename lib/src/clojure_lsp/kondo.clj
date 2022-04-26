@@ -316,3 +316,11 @@
       (run-kondo! (str "paths " paths))
       (normalize {:external? true
                   :filter-analysis #(select-keys % [:java-class-definitions])})))
+
+(defn db-with-results
+  "Update `db` with normalized kondo result."
+  [db {:keys [analysis findings config]}]
+  (-> db
+      (update :analysis merge analysis)
+      (update :findings merge findings)
+      (assoc :kondo-config config)))

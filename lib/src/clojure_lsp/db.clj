@@ -104,11 +104,3 @@
   (-> (read-global-cache)
       (db-change-fn)
       (upsert-global-cache!)))
-
-(defn merge-kondo-results
-  "Update `db` with normalized kondo result."
-  [db {:keys [analysis findings config]}]
-  (-> db
-      (update :analysis merge analysis)
-      (update :findings merge findings)
-      (assoc :kondo-config config)))

@@ -138,7 +138,7 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-(defn run-custom-lint? [config]
+(defn ^:private run-custom-lint? [config]
   (not= :off (get-in config [:linters :clojure-lsp/unused-public-var :level])))
 
 (defn ^:private custom-lint-project!

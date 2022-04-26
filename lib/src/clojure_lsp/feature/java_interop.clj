@@ -133,12 +133,11 @@
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
 (defn ^:private analyze-and-cache-jdk-source! [paths new-checksums db*]
-  (let [results (shared/logging-time
+  (let [normalization-config {:external? true
+                              :filter-analysis #(select-keys % [:java-class-definitions])}
+        results (shared/logging-time
                   (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
-                  (lsp.kondo/run-kondo-on-jdk-source! paths))
-        results (-> results
-                    (update :analysis select-keys [:java-class-definitions])
-                    (db/normalize-kondo {:external? true}))]
+                  (lsp.kondo/run-kondo-on-jdk-source! paths normalization-config))]
     (swap! db* #(-> %
                     (db/merge-kondo-results results)
                     (update :analysis-checksums merge new-checksums)))

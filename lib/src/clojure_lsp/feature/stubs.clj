@@ -45,12 +45,11 @@
 
 (defn ^:private analyze-stubs!
   [dirs db*]
-  (let [result (shared/logging-time
+  (let [normalization-config {:external? true
+                              :filter-analysis #(dissoc % :namespace-usages :var-usages)}
+        result (shared/logging-time
                  "Stubs analyzed, took %s."
-                 (lsp.kondo/run-kondo-on-paths! dirs true db*))
-        result (-> result
-                   (update :analysis dissoc :namespace-usages :var-usages)
-                   (db/normalize-kondo {:external? true}))]
+                 (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config))]
     (swap! db* db/merge-kondo-results result)
     (db/read-and-update-cache!
       @db*

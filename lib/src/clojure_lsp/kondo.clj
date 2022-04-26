@@ -2,12 +2,12 @@
   (:require
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
+   [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]))
 
@@ -52,24 +52,82 @@
           (logger/error (str err)))
         result))))
 
-(defmacro catch-kondo-errors [err-hint & body]
-  (let [m (meta &form)
-        err-sym (gensym "err")
-        out-sym (gensym "out")
-        e-sym (gensym "e")]
-    `(let [~err-sym (java.io.StringWriter.)
-           ~out-sym (java.io.StringWriter.)]
-       (try
-         (binding [*err* ~err-sym
-                   *out* ~out-sym]
-           (let [result# (do ~@body)]
-             (when-not (string/blank? (str ~err-sym))
-               ~(with-meta `(logger/warn "Non-fatal error from clj-kondo:" (str ~err-sym)) m))
-             (when-not (string/blank? (str ~out-sym))
-               ~(with-meta `(logger/warn "Output from clj-kondo:" (str ~out-sym)) m))
-             result#))
-         (catch Exception ~e-sym
-           ~(with-meta `(logger/error ~e-sym "Error running clj-kondo on" ~err-hint) m))))))
+(defn entry->normalized-entries [{:keys [bucket] :as element}]
+  (cond
+    ;; We create two entries here (and maybe more for refer)
+    (identical? :namespace-usages bucket)
+    (cond-> [(set/rename-keys element {:to :name})]
+      (:alias element)
+      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
+                                                                       :alias-col :name-col
+                                                                       :alias-end-row :name-end-row
+                                                                       :alias-end-col :name-end-col})))
+
+    (contains? #{:locals :local-usages :keywords} bucket)
+    [(-> element
+         (assoc :name-row (or (:name-row element) (:row element))
+                :name-col (or (:name-col element) (:col element))
+                :name-end-row (or (:name-end-row element) (:end-row element))
+                :name-end-col (or (:name-end-col element) (:end-col element))))]
+
+    (identical? :java-class-definitions bucket)
+    [(-> element
+         (dissoc :uri)
+         (assoc :name-row 0
+                :name-col 0
+                :name-end-row 0
+                :name-end-col 0))]
+
+    (identical? :java-class-usages bucket)
+    [(-> element
+         (dissoc :uri)
+         (assoc :name-row (or (:name-row element) (:row element))
+                :name-col (or (:name-col element) (:col element))
+                :name-end-row (or (:name-end-row element) (:end-row element))
+                :name-end-col (or (:name-end-col element) (:end-col element))))]
+
+    :else
+    [element]))
+
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
+  (and name-row
+       name-col
+       name-end-row
+       name-end-col))
+
+(defn ^:private normalize-analysis [external? analysis]
+  (for [[bucket vs] analysis
+        v vs
+        element (entry->normalized-entries (assoc v :bucket bucket :external? external?))
+        :when (valid-element? element)]
+    element))
+
+(defn ^:private normalize
+  "Put kondo result in a standard format, with `analysis` normalized and
+  `analysis` and `findings` indexed by filename."
+  [{:keys [analysis findings] :as kondo-results}
+   {:keys [external? ensure-filenames filter-analysis] :or {filter-analysis identity}}]
+  (let [analysis (->> analysis
+                      filter-analysis
+                      (normalize-analysis external?)
+                      (group-by :filename))
+        analysis (reduce (fn [analysis filename]
+                           (update analysis filename #(or % [])))
+                         analysis
+                         ensure-filenames)
+        filenames (keys analysis)
+        empty-findings (zipmap filenames (repeat []))
+        findings (merge empty-findings (group-by :filename findings))]
+    (assoc kondo-results
+           :analysis analysis
+           :findings findings)))
+
+(defn ^:private normalize-for-filename
+  "Normalize kondo result for a single file."
+  [kondo-results db filename]
+  (let [external? (shared/external-filename? filename (settings/get db [:source-paths]))]
+    (normalize kondo-results {:external? external?
+                              :ensure-filenames [filename]})))
 
 (defn ^:private with-additional-config
   [config settings]
@@ -80,26 +138,29 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
+(defn run-custom-lint? [config]
+  (not= :off (get-in config [:linters :clojure-lsp/unused-public-var :level])))
+
 (defn ^:private custom-lint-project!
-  [external-analysis-only? {:keys [config] :as kondo-ctx}]
-  (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
-    (let [new-analysis (:analysis (db/normalize-kondo kondo-ctx {:external? external-analysis-only?}))]
-      (f.diagnostic/custom-lint-project! new-analysis kondo-ctx))))
+  [{:keys [config analysis] :as kondo-ctx}]
+  (when (run-custom-lint? config)
+    (shared/logging-time
+      "Linting whole project for unused-public-var took %s"
+      (f.diagnostic/custom-lint-project! analysis kondo-ctx))))
 
 (defn ^:private custom-lint-files!
-  [files db* kondo-ctx]
-  (shared/logging-task
-    :reference-files/lint
-    (let [db @db*
-          updated-analysis (:analysis (db/with-kondo-results db kondo-ctx {:external? false}))]
-      (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx))))
+  [files db {:keys [config analysis] :as kondo-ctx}]
+  (when (run-custom-lint? config)
+    (shared/logging-task
+      :reference-files/lint
+      (let [updated-analysis (merge (:analysis db) analysis)]
+        (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx)))))
 
 (defn ^:private custom-lint-file!
-  [{:keys [analysis config] :as kondo-ctx} uri db*]
-  (when-not (= :off (get-in config [:linters :clojure-lsp/unused-public-var :level]))
+  [{:keys [analysis config] :as kondo-ctx} filename uri db*]
+  (when (run-custom-lint? config)
     (let [db @db*
-          filename (-> analysis :var-definitions first :filename)
-          updated-analysis (:analysis (db/with-kondo-for-filename db kondo-ctx filename))]
+          updated-analysis (merge (:analysis db) analysis)]
       (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
         (async/go-loop [tries 1]
           (if (>= tries 200)
@@ -128,22 +189,18 @@
                   (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
         (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx)))))
 
-(defn ^:private config-for-paths [paths db* external-analysis-only?]
-  (let [db @db*]
-    (-> {:cache true
-         :parallel true
-         :copy-configs (settings/get db [:copy-kondo-configs?] true)
-         :lint [(string/join (System/getProperty "path.separator") paths)]
-         :config {:output {:analysis {:arglists true
-                                      :locals false
-                                      :keywords true
-                                      :protocol-impls true
-                                      :java-class-definitions true}
-                           :canonical-paths true}}}
-        (shared/assoc-in-some [:custom-lint-fn] (when-not external-analysis-only?
-                                                  (partial custom-lint-project! external-analysis-only?)))
-        (shared/assoc-in-some [:config :output :analysis :java-class-usages] (not external-analysis-only?))
-        (with-additional-config (settings/all db)))))
+(defn ^:private config-for-paths [paths db]
+  (-> {:cache true
+       :parallel true
+       :copy-configs (settings/get db [:copy-kondo-configs?] true)
+       :lint [(string/join (System/getProperty "path.separator") paths)]
+       :config {:output {:analysis {:arglists true
+                                    :locals false
+                                    :keywords true
+                                    :protocol-impls true
+                                    :java-class-definitions true}
+                         :canonical-paths true}}}
+      (with-additional-config (settings/all db))))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true
@@ -158,19 +215,17 @@
    :config {:output {:analysis {:java-class-definitions true}
                      :canonical-paths true}}})
 
-(defn ^:private config-for-reference-filenames [filenames db*]
-  (-> (config-for-paths filenames db* false)
-      (assoc :custom-lint-fn (partial custom-lint-files! filenames db*))))
-
 (defn ^:private config-for-single-file [uri db*]
-  (let [db @db*]
+  (let [db @db*
+        filename (shared/uri->filename uri)
+        custom-lint-fn #(custom-lint-file! (normalize-for-filename % @db* filename) filename uri db*)]
     (-> {:cache true
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)
          :lang (shared/uri->file-type uri)
-         :filename (shared/uri->filename uri)
+         :filename filename
          :config-dir (project-config-dir (:project-root-uri db))
-         :custom-lint-fn #(custom-lint-file! % uri db*)
+         :custom-lint-fn custom-lint-fn
          :config {:output {:analysis {:arglists true
                                       :locals true
                                       :keywords true
@@ -182,39 +237,81 @@
                            :canonical-paths true}}}
         (with-additional-config (settings/all db)))))
 
-(defn run-kondo-on-paths! [paths external-analysis-only? db*]
-  (catch-kondo-errors (str "paths " (string/join ", " paths))
-    (kondo/run! (config-for-paths paths db* external-analysis-only?))))
+(defn ^:private run-kondo! [config err-hint]
+  (let [err-writer (java.io.StringWriter.)
+        out-writer (java.io.StringWriter.)]
+    (try
+      (let [result (binding [*err* err-writer
+                             *out* out-writer]
+                     (kondo/run! config))]
+        (when-not (string/blank? (str err-writer))
+          (logger/warn "Non-fatal error from clj-kondo:" (str err-writer)))
+        (when-not (string/blank? (str out-writer))
+          (logger/warn "Output from clj-kondo:" (str out-writer)))
+        result)
+      (catch Exception e
+        (logger/error e "Error running clj-kondo on" err-hint)))))
+
+(defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config}]
+  (let [db @db*
+        internal? (not external?)
+        custom-lint-fn (when internal?
+                         #(custom-lint-project! (normalize % normalization-config)))]
+    (-> (config-for-paths paths db)
+        (assoc-in [:config :output :analysis :java-class-usages] internal?)
+        (shared/assoc-in-some [:custom-lint-fn] custom-lint-fn)
+        (run-kondo! (str "paths " (string/join ", " paths)))
+        (normalize normalization-config))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
-  [paths public-only? update-callback db*]
+  [paths normalization-config update-callback db*]
   (let [total (count paths)
-        batch-count (int (Math/ceil (float (/ total clj-kondo-analysis-batch-size))))]
-    (logger/info (str "Analyzing " total " paths with clj-kondo with batch size of " batch-count " ..."))
-    (if (<= total clj-kondo-analysis-batch-size)
-      (run-kondo-on-paths! paths public-only? db*)
-      (->> paths
-           (partition-all clj-kondo-analysis-batch-size)
-           (map-indexed (fn [index batch-paths]
-                          (logger/info "Analyzing" (str (inc index) "/" batch-count) "batch paths with clj-kondo...")
-                          (update-callback (inc index) batch-count)
-                          (run-kondo-on-paths! batch-paths public-only? db*)))
+        batches (->> paths
+                     (partition-all clj-kondo-analysis-batch-size)
+                     (map-indexed (fn [index batch-paths]
+                                    {:index (inc index)
+                                     :paths batch-paths})))
+        batch-count (count batches)]
+    (logger/info
+      (case batch-count
+        0 "No new paths to analyze"
+        1 (str "Analyzing " total " paths with clj-kondo")
+        (str "Analyzing " total " paths with clj-kondo in " batch-count " batches...")))
+    (case batch-count
+      0 {}
+      1 (run-kondo-on-paths! (:paths (first batches)) db* normalization-config)
+      (->> batches
+           (map (fn [{:keys [index paths]}]
+                  (logger/info "Analyzing" (str index "/" batch-count) "batch paths with clj-kondo...")
+                  (update-callback index batch-count)
+                  (run-kondo-on-paths! paths db* normalization-config)))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db*]
-  (catch-kondo-errors (str "files " (string/join ", " filenames))
-    (kondo/run! (config-for-reference-filenames filenames db*))))
+  (let [db @db*
+        normalization-config {:external? false
+                              :ensure-filenames filenames}
+        custom-lint-fn #(custom-lint-files! filenames @db* (normalize % normalization-config))]
+    (-> (config-for-paths filenames db)
+        (assoc-in [:config :output :analysis :java-class-usages] true)
+        (assoc :custom-lint-fn custom-lint-fn)
+        (run-kondo! (str "files " (string/join ", " filenames)))
+        (normalize normalization-config))))
 
 (defn run-kondo-on-text! [text uri db*]
-  (catch-kondo-errors (shared/uri->filename uri)
-    (with-in-str text (kondo/run! (config-for-single-file uri db*)))))
+  (let [filename (shared/uri->filename uri)]
+    (with-in-str text
+                 (-> (config-for-single-file uri db*)
+                     (run-kondo! filename)
+                     (normalize-for-filename @db* filename)))))
 
 (defn run-kondo-copy-configs! [paths db]
-  (catch-kondo-errors (str "paths " (string/join ", " paths))
-    (kondo/run! (config-for-copy-configs paths db))))
+  (-> (config-for-copy-configs paths db)
+      (run-kondo! (str "paths " (string/join ", " paths)))))
 
-(defn run-kondo-on-jdk-source! [paths]
-  (catch-kondo-errors (str "paths " paths)
-    (kondo/run! (config-for-jdk-source paths))))
+(defn run-kondo-on-jdk-source! [paths normalization-config]
+  (-> (config-for-jdk-source paths)
+      (run-kondo! (str "paths " paths))
+      (normalize normalization-config)))

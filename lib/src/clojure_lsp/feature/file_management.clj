@@ -19,15 +19,6 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private update-analysis [db uri new-analysis]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get db [:source-paths])
-        external-filename? (shared/external-filename? filename source-paths)]
-    (assoc-in db [:analysis filename] (lsp.kondo/normalize-analysis external-filename? new-analysis))))
-
-(defn ^:private update-findings [db uri new-findings]
-  (assoc-in db [:findings (shared/uri->filename uri)] new-findings))
-
 (defn create-ns-changes [uri text db]
   (when-let [new-ns (and (string/blank? text)
                          (contains? #{:clj :cljs :cljc} (shared/uri->file-type uri))
@@ -45,9 +36,7 @@
     (swap! db* (fn [state-db]
                  (-> state-db
                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                     (update-analysis uri (:analysis kondo-result))
-                     (update-findings uri (:findings kondo-result))
-                     (assoc :kondo-config (:config kondo-result)))))
+                     (lsp.kondo/db-with-results kondo-result))))
     (f.diagnostic/async-publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -194,11 +183,10 @@
                                 (lsp.kondo/run-kondo-on-text! text uri db*))]
         (let [filename (shared/uri->filename uri)
               old-local-analysis (get-in @db* [:analysis filename])]
-          (if (compare-and-set! db* state-db (-> state-db
-                                                 (update-analysis uri (:analysis kondo-result))
-                                                 (update-findings uri (:findings kondo-result))
-                                                 (update :processing-changes disj uri)
-                                                 (assoc :kondo-config (:config kondo-result))))
+          (if (compare-and-set! db* state-db
+                                (-> state-db
+                                    (lsp.kondo/db-with-results kondo-result)
+                                    (update :processing-changes disj uri)))
             (let [db @db*]
               (f.diagnostic/sync-publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
@@ -221,15 +209,8 @@
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  "Created watched files analyzed, took %s"
-                 (lsp.kondo/run-kondo-on-paths! filenames false db*))
-        analysis (->> (:analysis result)
-                      (lsp.kondo/normalize-analysis false)
-                      (group-by :filename))]
-    (swap! db* (fn [state-db]
-                 (-> state-db
-                     (update :analysis merge analysis)
-                     (assoc :kondo-config (:config result))
-                     (update :findings merge (group-by :filename (:findings result))))))
+                 (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false}))]
+    (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! filenames @db*)
     (clojure-producer/refresh-test-tree producer uris)))
 

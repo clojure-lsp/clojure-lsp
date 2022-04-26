@@ -132,33 +132,19 @@
       (catch Exception e
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
-(defn ^:private analyze-jdk-source! [paths db*]
-  (let [result (shared/logging-time
-                 (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
-                 (lsp.kondo/run-kondo-on-jdk-source! paths))
-        kondo-analysis (select-keys (:analysis result) [:java-class-definitions])
-        analysis (->> kondo-analysis
-                      (lsp.kondo/normalize-analysis true)
-                      (group-by :filename))]
-    (loop [state-db @db*]
-      (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
-        (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
-        (recur @db*)))
-    analysis))
-
-(defn ^:private cache-jdk-source-analysis! [analysis new-checksums db*]
-  (loop [state-db @db*]
-    (when-not (compare-and-set! db* state-db (-> state-db
-                                                 (update :analysis merge analysis)
-                                                 (update :analysis-checksums merge new-checksums)))
-      (logger/warn java-logger-tag "Analyzis outdated from java analysis, trying again...")
-      (recur @db*)))
-  (db/read-and-update-global-cache!
-    (fn [db]
-      (-> db
-          (update :analysis-checksums merge new-checksums)
-          (update :analysis merge analysis)
-          (assoc :version db/version)))))
+(defn ^:private analyze-and-cache-jdk-source! [paths new-checksums db*]
+  (let [results (shared/logging-time
+                  (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
+                  (lsp.kondo/run-kondo-on-jdk-source! paths))]
+    (swap! db* #(-> %
+                    (lsp.kondo/db-with-results results)
+                    (update :analysis-checksums merge new-checksums)))
+    (db/read-and-update-global-cache!
+      (fn [db]
+        (-> db
+            (update :analysis-checksums merge new-checksums)
+            (update :analysis merge (:analysis results))
+            (assoc :version db/version))))))
 
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
@@ -264,9 +250,7 @@
             {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums java-filenames global-db @db*)]
         (if (seq paths-not-on-checksum)
           (do
-            (-> paths-not-on-checksum
-                (analyze-jdk-source! db*)
-                (cache-jdk-source-analysis! new-checksums db*))
+            (analyze-and-cache-jdk-source! paths-not-on-checksum new-checksums db*)
             (logger/info java-logger-tag "JDK source analyzed and cached successfully."))
           (logger/info java-logger-tag "JDK source cached loaded successfully.")))
       (logger/warn java-logger-tag "JDK source not found, skipping java analysis."))))

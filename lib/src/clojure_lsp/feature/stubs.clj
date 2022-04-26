@@ -45,22 +45,16 @@
 
 (defn ^:private analyze-stubs!
   [dirs db*]
-  (let [result (shared/logging-time
+  (let [normalization-config {:external? true
+                              :filter-analysis #(dissoc % :namespace-usages :var-usages)}
+        result (shared/logging-time
                  "Stubs analyzed, took %s."
-                 (lsp.kondo/run-kondo-on-paths! dirs true db*))
-        kondo-analysis (-> (:analysis result)
-                           (dissoc :namespace-usages :var-usages))
-        analysis (->> kondo-analysis
-                      (lsp.kondo/normalize-analysis true)
-                      (group-by :filename))]
-    (loop [state-db @db*]
-      (when-not (compare-and-set! db* state-db (update state-db :analysis merge analysis))
-        (logger/warn "Analyzis divergent from stub analysis, trying again...")
-        (recur @db*)))
+                 (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config))]
+    (swap! db* lsp.kondo/db-with-results result)
     (db/read-and-update-cache!
       @db*
       (fn [db]
-        (update db :analysis merge analysis)))))
+        (update db :analysis merge (:analysis result))))))
 
 (defn generate-and-analyze-stubs!
   [settings db*]

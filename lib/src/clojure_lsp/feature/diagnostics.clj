@@ -178,11 +178,9 @@
   (let [project-analysis (into {}
                                q/filter-project-analysis-xf
                                new-analysis)]
-    (shared/logging-time
-      "Linting whole project for unused-public-var took %s"
-      (lint-defs! (all-var-definitions project-analysis)
-                  (all-kw-definitions project-analysis)
-                  project-analysis kondo-ctx))))
+    (lint-defs! (all-var-definitions project-analysis)
+                (all-kw-definitions project-analysis)
+                project-analysis kondo-ctx)))
 
 (defn custom-lint-files!
   [filenames new-analysis kondo-ctx]

@@ -246,17 +246,19 @@
       (recur))
     (go-loop []
       (try
-        (shared/logging-task
-          :analyze-file
-          (f.file-management/analyze-changes (<! debounced-changes) @components*))
+        (let [changes (<! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
+          (shared/logging-task
+            :analyze-file
+            (f.file-management/analyze-changes changes @components*)))
         (catch Exception e
           (logger/error e "Error during analyzing buffer file changes")))
       (recur))
     (go-loop []
       (try
-        (shared/logging-task
-          :analyze-created-files-in-watched-dir
-          (f.file-management/analyze-watched-created-files! (<! debounced-created-watched-files) @components*))
+        (let [created-watched-files (<! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+          (shared/logging-task
+            :analyze-created-files-in-watched-dir
+            (f.file-management/analyze-watched-created-files! created-watched-files @components*)))
         (catch Exception e
           (logger/error e "Error during analyzing created watched files")))
       (recur))

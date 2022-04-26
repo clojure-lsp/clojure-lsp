@@ -836,6 +836,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.RenameFilesParams",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.RenameFileOptions",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

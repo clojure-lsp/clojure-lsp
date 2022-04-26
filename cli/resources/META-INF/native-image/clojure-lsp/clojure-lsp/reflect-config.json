@@ -616,6 +616,11 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"org.eclipse.lsp4j.FileRename",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"org.eclipse.lsp4j.FileSystemWatcher",
   "allDeclaredFields":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]

@@ -311,7 +311,8 @@
   (-> (config-for-copy-configs paths db)
       (run-kondo! (str "paths " (string/join ", " paths)))))
 
-(defn run-kondo-on-jdk-source! [paths normalization-config]
+(defn run-kondo-on-jdk-source! [paths]
   (-> (config-for-jdk-source paths)
       (run-kondo! (str "paths " paths))
-      (normalize normalization-config)))
+      (normalize {:external? true
+                  :filter-analysis #(select-keys % [:java-class-definitions])})))

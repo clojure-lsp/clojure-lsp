@@ -281,7 +281,7 @@
         (str "Analyzing " total " paths with clj-kondo in " batch-count " batches...")))
     (case batch-count
       0 {}
-      1 (run-kondo-on-paths! (:paths (first batches)) db* normalization-config)
+      1 (run-kondo-on-paths! paths db* normalization-config)
       (->> batches
            (map (fn [{:keys [index paths]}]
                   (logger/info "Analyzing" (str index "/" batch-count) "batch paths with clj-kondo...")

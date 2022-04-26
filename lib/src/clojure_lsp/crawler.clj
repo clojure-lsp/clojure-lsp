@@ -169,7 +169,7 @@
             (when (= :project-and-deps (:project-analysis-type @db*))
               (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components))
-            (logger/info "Caching db for next startup..")
+            (logger/info "Caching db for next startup...")
             (upsert-db-cache! @db*)))))
     (producer/publish-progress producer 90 "Resolving config paths" progress-token)
     (when-let [classpath-settings (and (config/classpath-config-paths? settings)

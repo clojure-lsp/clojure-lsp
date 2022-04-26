@@ -618,6 +618,7 @@
 {
   "name":"org.eclipse.lsp4j.FileRename",
   "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
@@ -843,6 +844,7 @@
 {
   "name":"org.eclipse.lsp4j.RenameFilesParams",
   "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

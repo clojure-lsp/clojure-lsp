@@ -229,12 +229,26 @@
                                 (matches-fn (:alias element))
                                 (matches-fn (:to element)))))
                     (map (fn [element]
-                           (let [require-edit (some-> cursor-loc
-                                                      (f.add-missing-libspec/add-known-alias (symbol (str (:alias element)))
-                                                                                             (symbol (str (:to element)))
+                           [(some-> element :alias name)
+                            (some-> element :to name)]))
+                    (distinct)
+                    (map (fn [[element-alias element-to]]
+                           (let [match-alias? (matches-fn element-alias)
+                                 label (if match-alias?
+                                         element-alias
+                                         element-to)
+                                 detail (if match-alias?
+                                          (str "alias to: " element-to)
+                                          (str ":as " element-alias))
+                                 require-edit (some-> cursor-loc
+                                                      (f.add-missing-libspec/add-known-alias (symbol (str element-alias))
+                                                                                             (symbol (str element-to))
                                                                                              db)
                                                       r.transform/result)]
-                             (cond-> (element->completion-item element nil :required-alias)
+                             (cond-> {:label label
+                                      :priority :required-alias
+                                      :kind :property
+                                      :detail detail}
                                (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
                   aliases))
           (into []

@@ -48,11 +48,12 @@
   (clean opts)
   (javac opts)
   (println "Building uberjar...")
-  (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))]
-    (b/copy-dir {:src-dirs ["src" "resources"]
+  (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
+        src-dirs (into ["src" "resources"] (:extra-dirs opts))]
+    (b/copy-dir {:src-dirs src-dirs
                  :target-dir class-dir})
     (b/compile-clj {:basis basis
-                    :src-dirs ["src" "resources"]
+                    :src-dirs src-dirs
                     :java-opts ["-Xmx2g" "-server"]
                     :class-dir class-dir})
     (b/uber {:class-dir class-dir
@@ -74,7 +75,8 @@
   (uber-aot (merge opts {:extra-aliases [:native]})))
 
 (defn debug-cli [opts]
-  (uber-aot (merge opts {:extra-aliases [:debug]}))
+  (uber-aot (merge opts {:extra-aliases [:debug]
+                         :extra-dirs ["dev"]}))
   (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"]}))
 
 (defn prod-cli [opts]

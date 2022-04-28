@@ -45,9 +45,9 @@
   (testing "complete-alp"
     (h/assert-submaps
       [{:label "alpha" :kind :variable}
-       {:label "alpaca" :kind :property :detail "alpaca.ns"}
-       {:label "alpaca" :kind :property :detail "user"}
-       {:label "ba" :detail "alpaca.ns"}]
+       {:label "alpaca" :kind :property :detail "alias to: alpaca.ns"}
+       {:label "alpaca" :kind :property :detail "alias to: user"}
+       {:label "alpaca.ns" :detail ":as ba"}]
       (f.completion/completion (h/file-uri "file:///b.clj") 3 3 @db/db*)))
   (testing "complete-ba"
     (h/assert-submaps

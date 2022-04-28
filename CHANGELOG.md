@@ -4,6 +4,8 @@
 
 - General
   - Bump clj-kondo to `2022.04.25`.
+  - Improve speed of alias/ns completions.
+  - Change alias/ns completions to return a label that matches the input.
 
 - Editor
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.

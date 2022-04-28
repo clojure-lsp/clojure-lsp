@@ -49,7 +49,7 @@
        flatten
        (reduce str)))
 
-(defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]} {:keys [producer]}]
+(defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]}]
   (let [command (string/join " " classpath-cmd)]
     (logger/info (format "Finding classpath via `%s`" command))
     (try
@@ -64,24 +64,26 @@
                           string/trim-newline
                           (string/split sep))]
             (logger/debug "Classpath found, paths: " paths)
-            (set paths))
-          (do
-            (logger/error (format "Error while looking up classpath info in %s. Exit status %s. Error: %s" (str root-path) exit err))
-            (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command err) :error err)
-            nil)))
+            {:command command
+             :paths (set paths)})
+          {:command command
+           :error err}))
       (catch Exception e
-        (logger/error e (format "Error while looking up classpath info in %s" (str root-path)) (.getMessage e))
-        (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command (.getMessage e)) :error (.getMessage e))
-        nil))))
+        {:command command
+         :error (.getMessage e)}))))
 
-(defn scan-classpath! [{:keys [db*] :as components}]
+(defn scan-classpath! [{:keys [db* producer]}]
   (let [db @db*
-        root-path (shared/uri->path (:project-root-uri db))
-        results (->> (settings/get db [:project-specs])
-                     (filter (partial valid-project-spec? root-path))
-                     (map #(lookup-classpath! root-path % components)))]
-    (when (not-any? nil? results)
-      (reduce set/union #{} results))))
+        root-path (shared/uri->path (:project-root-uri db))]
+    (->> (settings/get db [:project-specs])
+         (filter (partial valid-project-spec? root-path))
+         (map #(lookup-classpath! root-path %))
+         (map (fn [{:keys [command error paths]}]
+                (when error
+                  (logger/error (format "Error while looking up classpath info in %s. Error: %s" (str root-path) error))
+                  (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command error) :error error))
+                paths))
+         (reduce set/union))))
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]

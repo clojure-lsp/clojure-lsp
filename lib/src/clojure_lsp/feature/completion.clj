@@ -166,7 +166,7 @@
         detail (when (not definition?)
                  (cond
                    (identical? :namespace-alias bucket)
-                   (some-> element :to name)
+                   (some->> element :to name (str "alias to: "))
 
                    :else
                    (string/join

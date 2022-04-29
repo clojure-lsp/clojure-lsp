@@ -3,7 +3,8 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2022.04.25`.
+  - Bump clj-kondo to `2022.04.26-20220429.192438-2`.
+  - Decrease uncached startup time by 60-70%, by instructing clj-kondo to skip var definition bodies when analyzing deps. [#1674](https://github.com/clj-kondo/clj-kondo/pull/1674)
   - Improve speed of alias/ns completions.
   - Change alias/ns completions to return a label that matches the input.
 

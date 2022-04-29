@@ -10,6 +10,9 @@
 - Editor
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.
   - Don't save cache when classpath lookup failed.
+
+- CLI/API
+  - Bump lsp4clj to `0.3.0`.
   
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 

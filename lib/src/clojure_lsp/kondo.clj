@@ -189,6 +189,16 @@
                   (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
         (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx)))))
 
+(def ^:private config-for-internal-analysis
+  {:arglists true
+   :locals true
+   :keywords true
+   :protocol-impls true
+   :java-class-definitions true
+   :java-class-usages true
+   :context [:clojure.test
+             :re-frame.core]})
+
 (defn ^:private config-for-paths [paths db]
   (-> {:cache true
        :parallel true
@@ -200,13 +210,7 @@
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn]
   (-> (config-for-paths paths db)
       (assoc :custom-lint-fn custom-lint-fn)
-      (assoc-in [:config :analysis]
-                {:arglists true
-                 :locals false
-                 :keywords true
-                 :protocol-impls true
-                 :java-class-usages true
-                 :java-class-definitions true})))
+      (assoc-in [:config :analysis] config-for-internal-analysis)))
 
 (defn ^:private config-for-external-paths [paths db]
   (-> (config-for-paths paths db)
@@ -244,14 +248,7 @@
          :config-dir (project-config-dir (:project-root-uri db))
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
-                  :analysis {:arglists true
-                             :locals true
-                             :keywords true
-                             :protocol-impls true
-                             :java-class-definitions true
-                             :java-class-usages true
-                             :context [:clojure.test
-                                       :re-frame.core]}}}
+                  :analysis config-for-internal-analysis}}
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint]

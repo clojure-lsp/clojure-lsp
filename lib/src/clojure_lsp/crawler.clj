@@ -51,7 +51,7 @@
             normalization-config {:external? true
                                   :filter-analysis (fn [analysis]
                                                      (-> analysis
-                                                         (dissoc :namespace-usages :var-usages)
+                                                         (dissoc :namespace-usages)
                                                          (update :var-definitions #(remove :private %))))}
             kondo-result (shared/logging-time
                            "External classpath paths analyzed, took %s"

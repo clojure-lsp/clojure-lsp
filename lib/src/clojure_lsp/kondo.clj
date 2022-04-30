@@ -16,7 +16,7 @@
 (defn clj-kondo-version []
   (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
-(def clj-kondo-analysis-batch-size 50)
+(def clj-kondo-analysis-batch-size 150)
 
 (defn ^:private project-config-dir [project-root-uri]
   (when project-root-uri
@@ -189,18 +189,39 @@
                   (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
         (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx)))))
 
+(def ^:private config-for-internal-analysis
+  {:arglists true
+   :locals true
+   :keywords true
+   :protocol-impls true
+   :java-class-definitions true
+   :java-class-usages true
+   :context [:clojure.test
+             :re-frame.core]})
+
 (defn ^:private config-for-paths [paths db]
   (-> {:cache true
        :parallel true
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(string/join (System/getProperty "path.separator") paths)]
-       :config {:output {:analysis {:arglists true
-                                    :locals false
-                                    :keywords true
-                                    :protocol-impls true
-                                    :java-class-definitions true}
-                         :canonical-paths true}}}
+       :config {:output {:canonical-paths true}}}
       (with-additional-config (settings/all db))))
+
+(defn ^:private config-for-internal-paths [paths db custom-lint-fn]
+  (-> (config-for-paths paths db)
+      (assoc :custom-lint-fn custom-lint-fn)
+      (assoc-in [:config :analysis] config-for-internal-analysis)))
+
+(defn ^:private config-for-external-paths [paths db]
+  (-> (config-for-paths paths db)
+      (assoc :skip-lint true)
+      (assoc-in [:config :analysis]
+                {:arglists true
+                 :keywords true
+                 :protocol-impls true
+                 :java-class-definitions true
+                 :var-usages false
+                 :var-definitions {:shallow true}})))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true
@@ -212,8 +233,8 @@
 
 (defn ^:private config-for-jdk-source [paths]
   {:lint paths
-   :config {:output {:analysis {:java-class-definitions true}
-                     :canonical-paths true}}})
+   :config {:output {:canonical-paths true}
+            :analysis {:java-class-definitions true}}})
 
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
@@ -226,15 +247,8 @@
          :filename filename
          :config-dir (project-config-dir (:project-root-uri db))
          :custom-lint-fn custom-lint-fn
-         :config {:output {:analysis {:arglists true
-                                      :locals true
-                                      :keywords true
-                                      :protocol-impls true
-                                      :java-class-definitions true
-                                      :java-class-usages true
-                                      :context [:clojure.test
-                                                :re-frame.core]}
-                           :canonical-paths true}}}
+         :config {:output {:canonical-paths true}
+                  :analysis config-for-internal-analysis}}
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint]
@@ -254,12 +268,11 @@
 
 (defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config}]
   (let [db @db*
-        internal? (not external?)
-        custom-lint-fn (when internal?
-                         #(custom-lint-project! (normalize % normalization-config)))]
-    (-> (config-for-paths paths db)
-        (assoc-in [:config :output :analysis :java-class-usages] internal?)
-        (shared/assoc-in-some [:custom-lint-fn] custom-lint-fn)
+        config (if external?
+                 (config-for-external-paths paths db)
+                 (config-for-internal-paths paths db
+                                            #(custom-lint-project! (normalize % normalization-config))))]
+    (-> config
         (run-kondo! (str "paths " (string/join ", " paths)))
         (normalize normalization-config))))
 
@@ -294,9 +307,7 @@
         normalization-config {:external? false
                               :ensure-filenames filenames}
         custom-lint-fn #(custom-lint-files! filenames @db* (normalize % normalization-config))]
-    (-> (config-for-paths filenames db)
-        (assoc-in [:config :output :analysis :java-class-usages] true)
-        (assoc :custom-lint-fn custom-lint-fn)
+    (-> (config-for-internal-paths filenames db custom-lint-fn)
         (run-kondo! (str "files " (string/join ", " filenames)))
         (normalize normalization-config))))
 

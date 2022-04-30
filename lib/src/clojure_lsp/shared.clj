@@ -6,7 +6,11 @@
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger])
   (:import
-   [java.net URI URL JarURLConnection URLDecoder]
+   [java.net
+    JarURLConnection
+    URI
+    URL
+    URLDecoder]
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]))
 

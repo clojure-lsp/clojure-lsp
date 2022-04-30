@@ -13,8 +13,8 @@
   (:import
    (java.io File)
    (java.net
-     URL
-     JarURLConnection)
+     JarURLConnection
+     URL)
    (java.nio.file Path)
    (java.util.zip ZipInputStream)
    (org.benf.cfr.reader.api

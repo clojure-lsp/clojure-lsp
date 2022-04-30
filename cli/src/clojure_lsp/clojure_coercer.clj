@@ -4,9 +4,9 @@
    [lsp4clj.coercer :as coercer])
   (:import
    (clojure_lsp.feature.test_tree
-     TestTreeParams
+     TestTreeKind
      TestTreeNode
-     TestTreeKind)))
+     TestTreeParams)))
 
 (set! *warn-on-reflection* true)
 

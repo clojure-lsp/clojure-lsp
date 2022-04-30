@@ -7,6 +7,7 @@
   - Decrease uncached startup time by 60-70%, by instructing clj-kondo to skip var definition bodies when analyzing deps. [#1674](https://github.com/clj-kondo/clj-kondo/pull/1674)
   - Improve speed of alias/ns completions.
   - Change alias/ns completions to return a label that matches the input.
+  - Support sorting classes inside package imports during `clean-ns`. #932
 
 - Editor
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.

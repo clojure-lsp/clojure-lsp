@@ -6,7 +6,9 @@
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger])
   (:import
-   [java.util.jar JarFile JarFile$JarFileEntry]))
+   (java.util.jar
+     JarFile
+     JarFile$JarFileEntry)))
 
 (set! *warn-on-reflection* true)
 

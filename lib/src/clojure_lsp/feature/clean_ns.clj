@@ -255,15 +255,18 @@
       (z/remove first-node)
       (edit/map-children nodes #(remove-unused-require % clean-ctx initial-sep-spaces)))))
 
+(defn ^:private ns-inner-blocks-indentation-parent-col [parent-loc clean-ctx]
+  (or (case (:ns-inner-blocks-indentation clean-ctx)
+        :same-line (some-> parent-loc z/node meta :end-col)
+        :next-line (some-> parent-loc z/node meta :col dec)
+        :keep (some-> parent-loc z/right z/node meta :col dec)
+        :else nil)
+      2))
+
 (defn ^:private clean-requires
   [ns-loc clean-ctx]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
-    (let [col (or (case (:ns-inner-blocks-indentation clean-ctx)
-                    :same-line (some-> require-loc z/node meta :end-col)
-                    :next-line (some-> require-loc z/node meta :col dec)
-                    :keep (some-> require-loc z/right z/node meta :col dec)
-                    :else nil)
-                  2)
+    (let [col (ns-inner-blocks-indentation-parent-col require-loc clean-ctx)
           removed-nodes (-> require-loc
                             z/remove
                             (remove-unused-requires clean-ctx col))]
@@ -290,16 +293,56 @@
     :else
     node))
 
+(defn ^:private sorting-package-import-classes
+  [parent-node clean-ctx import-loc base-package classes node]
+  (let [parent-node-col (ns-inner-blocks-indentation-parent-col import-loc clean-ctx)
+        coll-node-fn (if (= :list (z/tag parent-node))
+                       n/list-node
+                       n/vector-node)
+        sorted-classes (sort-by-if-enabled identity :import-classes (:db clean-ctx) classes)
+        nodes (if (= :next-line (:ns-import-classes-indentation clean-ctx))
+                (->> sorted-classes
+                     (mapv (fn [n]
+                             [(n/newlines 1)
+                              (n/spaces (if (= :list (z/tag parent-node))
+                                          (+ 2 parent-node-col)
+                                          (+ 1 parent-node-col)))
+                              (n/token-node n)]))
+                     (concat [(n/token-node (symbol base-package))])
+                     flatten)
+                (->> (rest sorted-classes)
+                     (mapv (fn [n]
+                             [(n/newlines 1)
+                              (n/spaces (-> parent-node z/down z/leftmost z/node meta :end-col))
+                              (n/token-node n)]))
+                     (concat [(n/token-node (symbol base-package))
+                              (n/spaces 1)
+                              (n/token-node (first sorted-classes))])
+                     flatten))]
+    (z/replace node (coll-node-fn nodes))))
+
 (defn ^:private remove-unused-import
-  [parent-node unused-imports]
+  [parent-node import-loc unused-imports clean-ctx settings]
   (cond
     (package-import? parent-node)
     (let [base-package (-> parent-node z/down z/leftmost z/string)
           removed (edit/map-children parent-node
-                                     #(remove-unused-package-import % base-package unused-imports))]
-      (if (= 1 (count (z/child-sexprs removed)))
-        (z/remove removed)
-        removed))
+                                     #(remove-unused-package-import % base-package unused-imports))
+          child-exprs (z/child-sexprs removed)
+          classes (rest child-exprs)
+          remove-whole-package-import (= 1 (count child-exprs))
+          node (if remove-whole-package-import
+                 (z/remove removed)
+                 removed)]
+      (if (and (get-in settings [:clean :sort :import] true)
+               (get-in settings [:clean :sort :import-classes] true)
+               (not remove-whole-package-import)
+               (not (some-> parent-node z/down z/sexpr #{:clj :cljs})) ;; reader conditionals node
+               (not (some-> parent-node z/up z/next z/sexpr #{:clj :cljs})) ;; inside reader conditionals
+               (not (some-> parent-node z/up z/up z/next z/sexpr #{:clj :cljs})) ;; list of imports inside reader macros
+               (> (count classes) 1))
+        (sorting-package-import-classes parent-node clean-ctx import-loc base-package classes node)
+        node))
 
     (contains? unused-imports (z/sexpr parent-node))
     (z/remove parent-node)
@@ -308,7 +351,7 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc {:keys [ns-inner-blocks-indentation unused-imports] :as clean-ctx}]
+  [ns-loc {:keys [ns-inner-blocks-indentation unused-imports] :as clean-ctx} settings]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (if import-loc
                 (if (= :same-line ns-inner-blocks-indentation)
@@ -317,7 +360,7 @@
                 2)
           removed-nodes (-> import-loc
                             z/remove
-                            (edit/map-children #(remove-unused-import % unused-imports)))]
+                            (edit/map-children #(remove-unused-import % import-loc unused-imports clean-ctx settings)))]
       (process-clean-ns ns-loc removed-nodes col :import clean-ctx))
     ns-loc))
 
@@ -366,10 +409,11 @@
                        :unused-refers @unused-refers*
                        :unused-imports @unused-imports*
                        :duplicate-requires @duplicate-requires*
-                       :ns-inner-blocks-indentation ns-inner-blocks-indentation}
+                       :ns-inner-blocks-indentation ns-inner-blocks-indentation
+                       :ns-import-classes-indentation (settings/get db [:clean :ns-import-classes-indentation] :next-line)}
             result-loc (-> ns-loc
                            (clean-requires clean-ctx)
-                           (clean-imports clean-ctx)
+                           (clean-imports clean-ctx settings)
                            (sort-ns-children settings))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))

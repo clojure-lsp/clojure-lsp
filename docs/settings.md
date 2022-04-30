@@ -256,6 +256,32 @@ Check `;; good` on [Clojure Style Guide](https://github.com/bbatsov/clojure-styl
 
 Don't change indentation at all, keeping the one user selected first.
 
+#### ns-import-classes-indentation
+
+How to indent classes inside package imports from :import form.
+Note: package imports with only one class will keep indentation: Ex: `[java.io File]`
+
+##### `next-line`
+
+Keep the first class inside a package import on the next line and next children following the same indentation. Ex: 
+
+```clojure
+(:import 
+  [java.io
+    File
+    Foo])
+```
+
+##### `same-line`
+
+Keep the first class inside a package import on the same line and next children following the same indentation. Ex: 
+
+```clojure
+(:import 
+  [java.io File
+           Foo])
+```
+
 #### sort
 
 ##### `ns`

@@ -13,15 +13,17 @@
                        :async-custom-lint? false}}
  :clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :next-line
+         :ns-import-classes-indentation :next-line
          :sort {:ns true
                 :require true
                 :import true
+                :import-classes true
                 :refer {:max-line-length 80}}}
  :hover {:hide-file-location? false
          :arity-on-same-line? false
          :clojuredocs true}
  :java {:jdk-source-uri "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip" ; "file:///usr/lib/jvm/java-17-openjdk/lib/src.zip"
-        :home-path nil ; jdk-source-uri takes precedence
+        :home-path nil ;; jdk-source-uri takes precedence
         :download-jdk-source? false}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true

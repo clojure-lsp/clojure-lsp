@@ -514,6 +514,33 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#ns-import-classes-indentation" class="md-nav__link">
+    ns-import-classes-indentation
+  </a>
+  
+    <nav class="md-nav" aria-label="ns-import-classes-indentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#next-line_1" class="md-nav__link">
+    next-line
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#same-line_1" class="md-nav__link">
+    same-line
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#sort" class="md-nav__link">
     sort
   </a>
@@ -894,6 +921,33 @@
           <li class="md-nav__item">
   <a href="#keep" class="md-nav__link">
     keep
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ns-import-classes-indentation" class="md-nav__link">
+    ns-import-classes-indentation
+  </a>
+  
+    <nav class="md-nav" aria-label="ns-import-classes-indentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#next-line_1" class="md-nav__link">
+    next-line
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#same-line_1" class="md-nav__link">
+    same-line
   </a>
   
 </li>
@@ -1325,6 +1379,22 @@ Check <code>;; better</code> on <a href="https://github.com/bbatsov/clojure-styl
 Check <code>;; good</code> on <a href="https://github.com/bbatsov/clojure-style-guide#line-break-ns-declaration">Clojure Style Guide</a>.</p>
 <h5 id="keep"><code>keep</code><a class="headerlink" href="#keep" title="Permanent link">#</a></h5>
 <p>Don't change indentation at all, keeping the one user selected first.</p>
+<h4 id="ns-import-classes-indentation">ns-import-classes-indentation<a class="headerlink" href="#ns-import-classes-indentation" title="Permanent link">#</a></h4>
+<p>How to indent classes inside package imports from :import form.
+Note: package imports with only one class will keep indentation: Ex: <code>[java.io File]</code></p>
+<h5 id="next-line_1"><code>next-line</code><a class="headerlink" href="#next-line_1" title="Permanent link">#</a></h5>
+<p>Keep the first class inside a package import on the next line and next children following the same indentation. Ex: </p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:import</span> 
+  <span class="p">[</span><span class="nv">java.io</span>
+    <span class="nv">File</span>
+    <span class="nv">Foo</span><span class="p">])</span>
+</code></pre></div>
+<h5 id="same-line_1"><code>same-line</code><a class="headerlink" href="#same-line_1" title="Permanent link">#</a></h5>
+<p>Keep the first class inside a package import on the same line and next children following the same indentation. Ex: </p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:import</span> 
+  <span class="p">[</span><span class="nv">java.io</span> <span class="nv">File</span>
+           <span class="nv">Foo</span><span class="p">])</span>
+</code></pre></div>
 <h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>
 <h5 id="ns"><code>ns</code><a class="headerlink" href="#ns" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>ns</code> children like require, import forms following <a href="https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration">Clojure Style Guide</a>.</p>

@@ -49,13 +49,16 @@
             (colored color (str "Client " client-id " " msg))
             (colored :yellow params))))
 
+(def ^:private wire-lock (Object.))
+
 (defn wire-send [server-in params]
   (let [content (json/generate-string params)]
     (binding [*out* server-in]
-      (println (str "Content-Length: " (content-length content)))
-      (println "")
-      (println content)
-      (flush))))
+      (locking wire-lock
+        (println (str "Content-Length: " (content-length content)))
+        (println "")
+        (println content)
+        (flush)))))
 
 (defn ^:private lsp-rpc [{:keys [request-id]} method params]
   {:jsonrpc "2.0"

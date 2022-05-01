@@ -624,8 +624,8 @@
                                " (:refer-clojure :exclude [next])"
                                " (:import"
                                "  [foo"
-                               "    Bar"
-                               "    Qux]))"
+                               "   Bar"
+                               "   Qux]))"
                                "str/join"
                                "Bar Qux")))
       (testing "don't sort when :ns sort config is disabled"
@@ -676,8 +676,8 @@
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util"
-                           "    Calendar"
-                           "    Map]))"
+                           "   Calendar"
+                           "   Map]))"
                            "Calendar."
                            "Map.")))
   (testing "unused package imports with ns-inner-blocks-indentation :same-line"
@@ -688,8 +688,8 @@
                            "Map.")
                    (h/code "(ns foo.bar"
                            " (:import [java.util"
-                           "            Calendar"
-                           "            Map]))"
+                           "           Calendar"
+                           "           Map]))"
                            "Calendar."
                            "Map.")))
   (testing "unused package imports with :ns-inner-blocks-indentation on same line"
@@ -700,8 +700,8 @@
                            "Map.")
                    (h/code "(ns foo.bar"
                            " (:import [java.util"
-                           "            Calendar"
-                           "            Map]))"
+                           "           Calendar"
+                           "           Map]))"
                            "Calendar."
                            "Map.")))
   (testing "unused package imports with single import"
@@ -730,8 +730,8 @@
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util"
-                           "    Date"
-                           "    List]))"
+                           "   Date"
+                           "   List]))"
                            "Date."
                            "List."))
     (test-clean-ns {}
@@ -744,8 +744,8 @@
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util"
-                           "    Date"
-                           "    List]))"
+                           "   Date"
+                           "   List]))"
                            "Date."
                            "List.")))
   (testing "cljc conditional readers"
@@ -808,8 +808,8 @@
                              "  #?(:cljs [other.foof F])"
                              "  [some.bar B]"
                              "  [some.baz"
-                             "    C"
-                             "    D]))"
+                             "   C"
+                             "   D]))"
                              "F B C D")
                      true
                      "file:///a.cljc"))

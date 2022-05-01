@@ -88,7 +88,8 @@
   (refresh-code-lens [_this]
     (producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
-    (producer/publish-workspace-edit lsp-producer edit))
+    (some-> (producer/publish-workspace-edit lsp-producer edit)
+            deref))
   (show-document-request [_this document-request]
     (producer/show-document-request lsp-producer document-request))
   (publish-progress [_this percentage message progress-token]

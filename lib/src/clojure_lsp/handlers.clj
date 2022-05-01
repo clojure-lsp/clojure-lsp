@@ -360,9 +360,8 @@
       :execute-command
       ;; TODO move components upper to a common place
       (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
-        (some-> (producer/publish-workspace-edit producer edit)
-                ;; wait for client to apply edit before showing doc/moving cursor
-                deref)
+        ;; waits for client to apply edit before showing doc/moving cursor
+        (producer/publish-workspace-edit producer edit)
         (when show-document-after-edit
           (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
                                                             shared/full-file-range))

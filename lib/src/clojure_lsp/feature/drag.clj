@@ -122,20 +122,20 @@
   The format of a returned elem is:
   {:type :elem
    :idx  <index of the element within the sequence>
-   :locs <sequence of zipper locations whose nodes make up the element>}
+   :nodes <sequence of nodes that make up the element>}
 
   The format of a returned padding is:
   {:type :padding
    :idx  <index of the padding within the sequence>
-   :locs <sequence of zipper locations whose nodes make up the padding>}
+   :nodes <sequence of nodes that make up the padding>}
 
   The returned elems will always be interposed with padding, with padding at
-  the beginning and possibly at the end, even if the padding contains no locs.
+  the beginning and possibly at the end, even if the padding contains no nodes.
   The first padding's and first element's idx will be 0, increasing in step from
   there.
 
   The children of the original `parent-zloc` could be reconstructed by
-  concatenating all the `:locs` together."
+  concatenating all the `:nodes` together."
   [parent-zloc]
   (loop [zloc (-> parent-zloc
                   (z/edit* (fn [parent-node]
@@ -172,7 +172,7 @@
                idx
                (conj result {:type :padding
                              :idx  idx
-                             :locs padding})))
+                             :nodes (map z/node padding)})))
 
       (= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc whitespace-or-comment?)]
@@ -180,7 +180,7 @@
           ;; We've processed all the elements and this is trailing whitespace.
           (conj result {:type :padding
                         :idx  idx
-                        :locs prefix})
+                        :nodes (map z/node prefix)})
           (let [;; affiliate elem with (optional) comment following it
                 postfix-start (z/right* elem-loc)
                 padding-start (->> postfix-start
@@ -206,14 +206,14 @@
                    (conj result
                          {:type :elem
                           :idx  idx
-                          :locs (concat prefix [elem-loc] postfix)}))))))))
+                          :nodes (map z/node (concat prefix [elem-loc] postfix))}))))))))
 
 (defn ^:private marked-elem-index
   "Search for an element within `elems` that was previously marked."
   [elems]
   (->> elems
-       (filter (fn [{:keys [locs]}]
-                 (some #(edit/marked? % ::orig) locs)))
+       (filter (fn [{:keys [nodes]}]
+                 (some #(edit/node-marked? % ::orig) nodes)))
        first
        ;; If the cursor is on padding between elements, we assume the intention
        ;; was to drag the next element. This padding will have the correct idx.
@@ -230,9 +230,7 @@
   [parent-zloc swapped]
   (z/replace parent-zloc
              (n/replace-children (z/node parent-zloc)
-                                 (->> swapped
-                                      (mapcat :locs)
-                                      (map z/node)))))
+                                 (mapcat :nodes swapped))))
 
 (defn ^:private fix-trailing-comment
   "After reordering, the last child may now be a comment. We need to add a
@@ -271,7 +269,7 @@
 
   This is calculated by starting at the `top-position`, and adjusting by adding
   the extent of the `intervening-elems`. The extent is calculated by re-parsing
-  the intervening locs, counting their rows and columns by looking at their
+  the intervening nodes, counting their rows and columns by looking at their
   string representations. This is probably slow, but it avoids needing to use
   {:track-position? true} in the parser. If someday this project uses
   :track-position?, this code probably should be changed to read the revised
@@ -279,15 +277,15 @@
   [top-position intervening-elems]
   (let [[bottom-row bottom-col]
         (->> intervening-elems
-             (mapcat :locs)
-             (reduce (fn [pos zloc]
-                       (n.protocols/+extent pos (n.protocols/extent (z/node zloc))))
+             (mapcat :nodes)
+             (reduce (fn [pos node]
+                       (n.protocols/+extent pos (n.protocols/extent node)))
                      [(:row top-position) (:col top-position)]))]
     {:row bottom-row
      :col bottom-col}))
 
 (defn ^:private final-position [dir earlier-clause interstitial later-clause]
-  (let [top-position (z-cursor-position (first (:locs (first earlier-clause))))]
+  (let [top-position (meta (first (:nodes (first earlier-clause))))]
     (case dir
       :backward top-position
       :forward (bottom-position top-position (concat later-clause interstitial)))))

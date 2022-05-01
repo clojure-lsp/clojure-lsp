@@ -241,8 +241,11 @@
           z/sexpr
           str))
 
+(defn node-marked? [node marker]
+  (contains? (get node ::markers) marker))
+
 (defn marked? [loc marker]
-  (contains? (get (z/node loc) ::markers) marker))
+  (node-marked? (z/node loc) marker))
 
 (defn back-to-mark-or-nil
   [zloc marker]

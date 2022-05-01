@@ -91,9 +91,6 @@
       (recur (z/right* zloc) (conj satisfies zloc))
       [satisfies zloc])))
 
-(defn ^:private z-cursor-position [zloc]
-  (meta (z/node zloc)))
-
 ;;;; Main algorithm for moving a clause
 
 (defn ^:private seq-elems

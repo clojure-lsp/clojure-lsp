@@ -283,7 +283,8 @@
      :col bottom-col}))
 
 (defn ^:private final-position [dir earlier-clause interstitial later-clause]
-  (let [top-position (meta (first (:nodes (first earlier-clause))))]
+  (let [top-position (select-keys (meta (first (:nodes (first earlier-clause))))
+                                  [:row :col])]
     (case dir
       :backward top-position
       :forward (bottom-position top-position (concat later-clause interstitial)))))

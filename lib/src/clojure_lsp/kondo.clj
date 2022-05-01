@@ -200,12 +200,15 @@
              :re-frame.core]})
 
 (defn ^:private config-for-paths [paths db]
-  (-> {:cache true
-       :parallel true
-       :copy-configs (settings/get db [:copy-kondo-configs?] true)
-       :lint [(string/join (System/getProperty "path.separator") paths)]
-       :config {:output {:canonical-paths true}}}
-      (with-additional-config (settings/all db))))
+  (let [size (count paths)]
+    (-> {:cache true
+         :parallel true
+         :copy-configs (settings/get db [:copy-kondo-configs?] true)
+         :lint [(string/join (System/getProperty "path.separator") paths)]
+         :config {:output {:canonical-paths true}}
+         :on-progress-update-fn (fn [{:keys [entry]}]
+                                  (logger/info "--------->" entry size))}
+        (with-additional-config (settings/all db)))))
 
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn]
   (-> (config-for-paths paths db)

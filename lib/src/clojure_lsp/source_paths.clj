@@ -214,4 +214,4 @@
     (when (contains? origins :empty-leiningen) (logger/info startup-paths-logger-tag "Empty project.clj source-paths, using default source-paths:" default-source-paths))
     (when (contains? origins :empty-bb) (logger/info startup-paths-logger-tag "Empty bb.edn paths, using default source-paths:" default-source-paths))
     (when (contains? origins :default) (logger/info startup-paths-logger-tag "Using default source-paths:" default-source-paths))
-    (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) source-paths)))
+    (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) (set source-paths))))

@@ -67,9 +67,9 @@
   (try
     (binding [*in* server-out]
       (loop []
-          ;; Block, waiting for next Content-Length line, then discard it. If
-          ;; the server output stream is closed, also close the client by
-          ;; exiting this loop.
+        ;; Block, waiting for next Content-Length line, then discard it. If
+        ;; the server output stream is closed, also close the client by
+        ;; exiting this loop.
         (if-let [_content-length (read-line)]
           (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
             (cond

@@ -225,9 +225,7 @@
   (some-> change
           :changes-by-uri
           (get h/default-uri)
-          first
-          :loc
-          z/root-string))
+          (h/changes->code @db/db*)))
 
 (defn- as-range [change]
   (some-> change
@@ -1047,7 +1045,7 @@
   (testing "from comment after first element"
     (assert-no-erroneous-backwards (h/code "[:a |;; a comment"
                                            "]"))
-    (assert-no-erroneous-backwards (h/code "{:a 1 |;; one comment"
+    (assert-no-erroneous-backwards (h/code "{ka 1 |;; one comment"
                                            "}"))
     (assert-no-erroneous-backwards (h/code "(case a"
                                            "   1 :first |;; one comment"

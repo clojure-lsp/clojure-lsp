@@ -225,29 +225,6 @@
                     (< idx split-idx)))
               elems))
 
-(defn ^:private edit-parent
-  "Put revised elements and padding back into parent."
-  [parent-zloc swapped]
-  (z/replace parent-zloc
-             (n/replace-children (z/node parent-zloc)
-                                 (mapcat :nodes swapped))))
-
-(defn ^:private fix-trailing-comment
-  "After reordering, the last child may now be a comment. We need to add a
-  newline because otherwise the closing bracket will be commented out. We align
-  the closing bracket indented one space from the opening bracket."
-  [parent-zloc]
-  (let [last-zloc (-> parent-zloc z-down z/rightmost*)]
-    (if (-> last-zloc z/node n/comment?)
-      (let [col (-> parent-zloc
-                    z-cursor-position
-                    :col)]
-        (-> last-zloc
-            (z/insert-space-right col) ;; uses z/insert-right, so automatically adds one extra space
-            z/insert-newline-right
-            z-up))
-      parent-zloc)))
-
 (defn ^:private can-swap-clauses?
   "In a few cases, the simple [[probable-valid-movement?]] heuristics return the
   wrong result. This happens:
@@ -262,6 +239,27 @@
         upper-bound (- (+ lower-bound pulp) breadth)]
     (and (<= lower-bound origin-idx upper-bound)
          (<= lower-bound dest-idx upper-bound))))
+
+(defn ^:private edited-nodes [before earlier-clause interstitial later-clause rst]
+  (let [swapped (concat later-clause
+                        interstitial
+                        earlier-clause)
+        trailing (mapcat :nodes (concat earlier-clause rst))
+        trailing-comment-fix (when (some-> trailing last n/comment?)
+                               (let [leading (->> (concat before earlier-clause)
+                                                  (mapcat :nodes))
+                                     col (:col (meta (first leading)))]
+                                 [(n/newline-node "\n") (n/spaces (dec col))]))]
+    (z/up (z/edn (n/forms-node
+                   (concat
+                     (mapcat :nodes swapped)
+                     trailing-comment-fix))))))
+
+(defn ^:private editing-range [earlier-clause later-clause]
+  (let [{:keys [row col]} (meta (first (:nodes (first earlier-clause))))
+        {:keys [end-row end-col]} (meta (last (:nodes (last later-clause))))]
+    {:row row :col col
+     :end-row end-row :end-col end-col}))
 
 (defn ^:private bottom-position
   "Returns the position where the cursor should be placed after the swap in
@@ -294,9 +292,10 @@
   "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
   ignoring elements in `rind`.
 
-  Returns two pieces of data. The first is the edited parent expression with
-  the clauses swapped, whose string representation should be sent to the editor.
-  The second is the position where the cursor should be placed after the edit."
+  Returns three pieces of data:
+  - A zloc with the swapped clauses, whose string representation should be sent to the editor.
+  - The range of the original doc that should be edited.
+  - The position where the cursor should be placed after the edit."
   [zloc dir {:keys [breadth rind] :as clause-spec}]
   (let [zloc (edit/mark-position zloc ::orig)
         parent-zloc (z-up zloc)
@@ -321,17 +320,10 @@
             clause-size          (+ breadth (dec breadth))
             [earlier-clause rst] (split-at clause-size rst)
             [interstitial rst]   (split-at 1 rst) ;; padding
-            [later-clause rst]   (split-at clause-size rst)
+            [later-clause rst]   (split-at clause-size rst)]
 
-            swapped     (concat before
-                                later-clause
-                                interstitial
-                                earlier-clause
-                                rst)
-            parent-zloc (-> parent-zloc
-                            (edit-parent swapped)
-                            (fix-trailing-comment))]
-        [parent-zloc
+        [(edited-nodes before earlier-clause interstitial later-clause rst)
+         (editing-range earlier-clause later-clause)
          (final-position dir earlier-clause interstitial later-clause)]))))
 
 ;;;; Clause specs
@@ -507,13 +499,13 @@
 (defn ^:private drag [zloc dir uri db]
   (let [clause-spec (clause-spec (z-up zloc) uri db)]
     (when (probable-valid-movement? zloc dir clause-spec)
-      (when-let [[parent-zloc position] (drag-clause zloc dir clause-spec)]
+      (when-let [[zloc range cursor-position] (drag-clause zloc dir clause-spec)]
         {:show-document-after-edit {:uri         uri
                                     :take-focus? true
-                                    :range       (assoc position :end-row (:row position) :end-col (:col position))}
+                                    :range       (assoc cursor-position :end-row (:row cursor-position) :end-col (:col cursor-position))}
          :changes-by-uri {uri
-                          [{:range (z-cursor-position parent-zloc)
-                            :loc   parent-zloc}]}}))))
+                          [{:range range
+                            :loc   zloc}]}}))))
 
 (defn drag-backward [zloc uri db] (drag zloc :backward uri db))
 (defn drag-forward [zloc uri db] (drag zloc :forward uri db))

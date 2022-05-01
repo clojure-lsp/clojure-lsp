@@ -99,12 +99,14 @@
   (exit [_this] ;; wait for shutdown of server to propagate to listener
     @@listener)
   (send-request [this method body]
-    (let [req (lsp-rpc this method body)]
+    (let [req (lsp-rpc this method body)
+          p (promise)]
       (log this :cyan "sending request:" req)
+      ;; Important: record request before sending it, so it is sure to be
+      ;; available during receive-response.
+      (swap! sent-requests assoc (:id req) p)
       (wire-send server-in req)
-      (let [p (promise)]
-        (swap! sent-requests assoc (:id req) p)
-        p)))
+      p))
   (send-notification [this method body]
     (let [notif (lsp-rpc this method body)]
       (log this :blue "sending notification:" notif)

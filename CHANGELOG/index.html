@@ -1880,8 +1880,9 @@
 <li>Decrease uncached startup time by 60-70%, by instructing clj-kondo to skip var definition bodies when analyzing deps. <a href="https://github.com/clj-kondo/clj-kondo/pull/1674">#1674</a></li>
 <li>Improve speed of alias/ns completions.</li>
 <li>Change alias/ns completions to return a label that matches the input.</li>
+<li>Support sorting classes inside package imports during <code>clean-ns</code>. #932</li>
 <li>
-<p>Support sorting classes inside package imports during <code>clean-ns</code>. #932</p>
+<p>Avoid saving duplicate source-paths, not calling clj-kondo to analyze same filenames multiple times, improving startup speed.</p>
 </li>
 <li>
 <p>Editor</p>

@@ -241,9 +241,12 @@
           z/sexpr
           str))
 
+(defn marked? [loc marker]
+  (contains? (get (z/node loc) ::markers) marker))
+
 (defn back-to-mark-or-nil
   [zloc marker]
-  (z/find zloc z/prev (fn [loc] (contains? (get (z/node loc) ::markers) marker))))
+  (z/find zloc z/prev (fn [loc] (marked? loc marker))))
 
 (defn mark-position
   [zloc marker]

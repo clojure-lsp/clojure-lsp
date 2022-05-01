@@ -13,6 +13,7 @@
   more generally used to drag any clause forward or backward, even if it isn't
   in an immutable collection."
   (:require
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -84,8 +85,11 @@
   items, a sequence of locations to the z/right* of `zloc` that satisfy `p?`,
   and the first location that doesn't."
   [zloc p?]
-  [(z-take-while zloc z/right* p?)
-   (z/skip z/right* p? zloc)])
+  (loop [zloc zloc
+         satisfies []]
+    (if (p? zloc)
+      (recur (z/right* zloc) (conj satisfies zloc))
+      [satisfies zloc])))
 
 (defn ^:private z-cursor-position [zloc]
   (meta (z/node zloc)))
@@ -138,8 +142,17 @@
                              (n/replace-children parent-node
                                                  (mapcat (fn [node]
                                                            (if (newline-comment? node)
-                                                             [(update node :s subs 0 (dec (count (:s node))))
-                                                              (n/newline-node "\n")]
+                                                             (let [{:keys [row col end-row end-col]} (meta node)
+                                                                   len (count (:s node))]
+                                                               (assert (= (inc row) end-row) "unexpected multiline comment")
+                                                               [(with-meta
+                                                                  (update node :s subs 0 (dec len))
+                                                                  {:row row :col col
+                                                                   :end-row row :end-col (+ col len)})
+                                                                (with-meta
+                                                                  (n/newline-node "\n")
+                                                                  {:row row, :col (+ col len),
+                                                                   :end-row end-row, :end-col end-col})])
                                                              [node]))
                                                          (n/children parent-node)))))
                   z/down*)
@@ -195,15 +208,12 @@
                           :idx  idx
                           :locs (concat prefix [elem-loc] postfix)}))))))))
 
-(defn ^:private elem-index-by-cursor-position
-  "Search for an element within `elems` that was at `cursor-position`."
-  [cursor-position elems]
+(defn ^:private marked-elem-index
+  "Search for an element within `elems` that was previously marked."
+  [elems]
   (->> elems
        (filter (fn [{:keys [locs]}]
-                 ;; We compare cursor position, not full loc, because comments
-                 ;; have been separated from their newlines by `seq-elems`.
-                 (some (comp #{cursor-position} z-cursor-position)
-                       locs)))
+                 (some #(edit/marked? % ::orig) locs)))
        first
        ;; If the cursor is on padding between elements, we assume the intention
        ;; was to drag the next element. This padding will have the correct idx.
@@ -290,12 +300,13 @@
   the clauses swapped, whose string representation should be sent to the editor.
   The second is the position where the cursor should be placed after the edit."
   [zloc dir {:keys [breadth rind] :as clause-spec}]
-  (let [[ignore-left _] rind
+  (let [zloc (edit/mark-position zloc ::orig)
         parent-zloc (z-up zloc)
 
         elems (seq-elems parent-zloc)
 
-        origin-idx (elem-index-by-cursor-position (z-cursor-position zloc) elems)
+        [ignore-left _] rind
+        origin-idx (marked-elem-index elems)
         ;; move back to first element in clause
         origin-idx (- origin-idx
                       (mod (- origin-idx ignore-left) breadth))

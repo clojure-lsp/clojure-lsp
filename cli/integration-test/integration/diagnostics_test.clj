@@ -29,7 +29,7 @@
         :source "clojure-lsp"
         :message "Unused public var 'sample-test.diagnostics.unused-public-var/bar'"
         :tags [1]}]
-      (lsp/await-diagnostics "diagnostics/unused_public_var.clj"))))
+      (lsp/client-awaits-server-diagnostics "diagnostics/unused_public_var.clj"))))
 
 (deftest report-duplicates-enabled
   (lsp/start-process!)
@@ -57,7 +57,7 @@
         :source "clj-kondo"
         :message "Unresolved symbol: bar"
         :tags []}]
-      (lsp/await-diagnostics "diagnostics/kondo.clj"))))
+      (lsp/client-awaits-server-diagnostics "diagnostics/kondo.clj"))))
 
 (deftest report-duplicates-disabled
   (lsp/start-process!)
@@ -82,4 +82,4 @@
         :source "clj-kondo"
         :message "Unresolved symbol: bar"
         :tags []}]
-      (lsp/await-diagnostics "diagnostics/kondo.clj"))))
+      (lsp/client-awaits-server-diagnostics "diagnostics/kondo.clj"))))

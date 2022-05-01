@@ -26,6 +26,6 @@
         :source "clj-kondo"
         :message "datomic.api/create-database is called with 0 args but expects 1"
         :tags []}]
-      (lsp/await-diagnostics "stubs/a.clj"))
+      (lsp/client-awaits-server-diagnostics "stubs/a.clj"))
 
     (h/delete-project-file "../../.lsp/.cache/stubs")))

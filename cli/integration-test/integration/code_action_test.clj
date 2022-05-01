@@ -48,6 +48,9 @@
         :kind "source.organizeImports"}]
       (lsp/request! (fixture/code-action-request sample-file-name 5 4)))
 
+    (lsp/mock-response :workspace/applyEdit {:applied true})
+    (lsp/mock-response :window/showDocument {:success true})
+
     (lsp/request! (fixture/execute-command-request "drag-forward"
                                                    (h/source-path->uri sample-file-name)
                                                    5 4))
@@ -61,7 +64,7 @@
                                     "   ;; b comment"
                                     "   :b 2 ;; 2 comment"
                                     "   :d 4}")}]}]
-        (:documentChanges (:edit (lsp/await-client-request :workspace/applyEdit)))))
+        (:documentChanges (:edit (lsp/client-awaits-server-request :workspace/applyEdit)))))
     (testing "the cursor is repositioned"
       (h/assert-submap
         {:takeFocus true
@@ -70,4 +73,4 @@
                              :character 3}
                      :end   {:line      5
                              :character 3}}}
-        (lsp/await-client-request :window/showDocument)))))
+        (lsp/client-awaits-server-request :window/showDocument)))))

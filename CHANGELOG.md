@@ -14,6 +14,8 @@
 - Editor
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.
   - Don't save cache when classpath lookup failed.
+  - Wait for editor to apply edits before requesting cursor re-positioning. Fixes cursor positioning after drag in Calva.
+  - drag: Request edit only of changed clauses, not entire parent, reducing flicker.
 
 - CLI/API
   - Bump lsp4clj to `0.3.0`.

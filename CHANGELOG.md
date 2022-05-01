@@ -8,6 +8,7 @@
   - Improve speed of alias/ns completions.
   - Change alias/ns completions to return a label that matches the input.
   - Support sorting classes inside package imports during `clean-ns`. #932
+  - Avoid saving duplicate source-paths, not calling clj-kondo to analyze same filenames multiple times, improving startup speed.
 
 - Editor
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.

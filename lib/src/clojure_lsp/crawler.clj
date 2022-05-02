@@ -23,10 +23,10 @@
         (.isDirectory e) :directory
         :else :unkown))
 
-(defn ^:private analyze-source-paths! [paths db*]
+(defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [result (shared/logging-time
                  (str startup-logger-tag " Project only paths analyzed, took %s")
-                 (lsp.kondo/run-kondo-on-paths! paths db* {:external? false}))]
+                 (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn))]
     (swap! db* lsp.kondo/db-with-results result)))
 
 (defn analyze-reference-filenames! [filenames db*]
@@ -45,8 +45,10 @@
                                          (remove (set source-paths)))
                              ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
             {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
-            batch-update-callback (fn [batch-index batch-count]
-                                    (let [percentage (lerp 25 80 (/ batch-index batch-count))]
+            batch-update-callback (fn [batch-index batch-count {:keys [total-files files-done]}]
+                                    (let [percentage (lerp (lerp 25 70 (/ (dec batch-index) batch-count))
+                                                           (lerp 25 70 (/ batch-index batch-count))
+                                                           (/ files-done total-files))]
                                       (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
             normalization-config {:external? true
                                   :filter-analysis (fn [analysis]
@@ -150,12 +152,16 @@
     (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           use-db-analysis? (and (= (:project-hash @db*) project-hash)
-                                (= (:kondo-config-hash @db*) kondo-config-hash))]
+                                (= (:kondo-config-hash @db*) kondo-config-hash))
+          fast-startup? (or use-db-analysis?
+                            (not= :project-and-deps (:project-analysis-type @db*)))]
       (if use-db-analysis?
-        (do
+        (let [classpath (:classpath @db*)]
           (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db* assoc
-                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path (:classpath @db*) settings))))
+                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
+          (producer/publish-progress producer 15 "Copying kondo configs" progress-token)
+          (copy-configs-from-classpath! classpath settings @db*))
         (do
           (producer/publish-progress producer 15 "Discovering classpath" progress-token)
           (when-let [classpath (classpath/scan-classpath! components)]
@@ -170,19 +176,23 @@
               (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components))
             (logger/info "Caching db for next startup...")
-            (upsert-db-cache! @db*)))))
-    (producer/publish-progress producer 90 "Resolving config paths" progress-token)
-    (when-let [classpath-settings (and (config/classpath-config-paths? settings)
-                                       (:classpath @db*)
-                                       (config/resolve-from-classpath-config-paths (:classpath @db*) settings))]
-      (swap! db* assoc
-             :settings (shared/deep-merge (:settings @db*)
-                                          classpath-settings
-                                          project-settings
-                                          force-settings)
-             :classpath-settings classpath-settings))
-    (producer/publish-progress producer 95 "Analyzing project files" progress-token)
-    (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
-    (analyze-source-paths! (-> @db* :settings :source-paths) db*)
-    (swap! db* assoc :settings-auto-refresh? true)
-    (producer/publish-progress producer 100 "Project analyzed" progress-token)))
+            (upsert-db-cache! @db*))))
+      (producer/publish-progress producer (if fast-startup? 15 75) "Resolving config paths" progress-token)
+      (when-let [classpath-settings (and (config/classpath-config-paths? settings)
+                                         (:classpath @db*)
+                                         (config/resolve-from-classpath-config-paths (:classpath @db*) settings))]
+        (swap! db* assoc
+               :settings (shared/deep-merge (:settings @db*)
+                                            classpath-settings
+                                            project-settings
+                                            force-settings)
+               :classpath-settings classpath-settings))
+      (producer/publish-progress producer (if fast-startup? 20 80) "Analyzing project files" progress-token)
+      (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
+      (analyze-source-paths! (-> @db* :settings :source-paths)
+                             db*
+                             (fn [{:keys [total-files files-done]}]
+                               (let [percentage (lerp (if fast-startup? 20 80) 99 (/ files-done total-files))]
+                                 (producer/publish-progress producer percentage "Analyzing project files" progress-token))))
+      (swap! db* assoc :settings-auto-refresh? true)
+      (producer/publish-progress producer 100 "Project analyzed" progress-token))))

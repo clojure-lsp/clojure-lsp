@@ -1,9 +1,9 @@
 (ns clojure-lsp.server-test
   (:require
-   [lsp4clj.coercer :as coercer]
+   [clojure-lsp.server :as server]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
-   [clojure-lsp.server :as server])
+   [lsp4clj.coercer :as coercer])
   (:import
    (org.eclipse.lsp4j
      InitializeParams)))

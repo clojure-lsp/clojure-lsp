@@ -1,8 +1,8 @@
 (ns clojure-lsp.coercer-test
   (:require
-   [lsp4clj.coercer :as coercer]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is]])
+   [clojure.test :refer [deftest is]]
+   [lsp4clj.coercer :as coercer])
   (:import
    (org.eclipse.lsp4j TextDocumentIdentifier)))
 

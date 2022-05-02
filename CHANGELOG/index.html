@@ -1881,8 +1881,9 @@
 <li>Improve speed of alias/ns completions.</li>
 <li>Change alias/ns completions to return a label that matches the input.</li>
 <li>Support sorting classes inside package imports during <code>clean-ns</code>. #932</li>
+<li>Avoid saving duplicate source-paths, not calling clj-kondo to analyze same filenames multiple times, improving startup speed.</li>
 <li>
-<p>Avoid saving duplicate source-paths, not calling clj-kondo to analyze same filenames multiple times, improving startup speed.</p>
+<p>Improve progress report both on editor and CLI using new clj-kondo callback feature.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2875,7 +2876,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 1, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 2, 2022</span>
     
   </small>
 </div>

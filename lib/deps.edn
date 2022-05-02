@@ -14,7 +14,7 @@
         com.cognitect/transit-clj {:mvn/version "1.0.329"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
-        babashka/fs {:mvn/version "0.1.4"}
+        babashka/fs {:mvn/version "0.1.5"}
         com.github.clojure-lsp/lsp4clj-protocols {:mvn/version "0.2.0"}
          ;; com.github.clojure-lsp/lsp4clj-protocols {:local/root "../../lsp4clj/protocols"}
         }

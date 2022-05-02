@@ -238,23 +238,18 @@
          (<= lower-bound dest-idx upper-bound))))
 
 (defn ^:private edited-nodes [before earlier-clause interstitial later-clause rst]
-  (let [swapped (concat later-clause
-                        interstitial
-                        earlier-clause)
-        trailing (mapcat :nodes (concat earlier-clause rst))
+  (let [swapped (concat later-clause interstitial earlier-clause) ;; <-- the actual drag
+        trailing (concat earlier-clause rst)
         trailing-comment-fix (when (some-> trailing last n/comment?)
-                               (let [leading (->> (concat before earlier-clause)
-                                                  (mapcat :nodes))
+                               (let [leading (concat before earlier-clause)
                                      col (:col (meta (first leading)))]
                                  [(n/newline-node "\n") (n/spaces (dec col))]))]
     (z/up (z/edn (n/forms-node
-                   (concat
-                     (mapcat :nodes swapped)
-                     trailing-comment-fix))))))
+                   (concat swapped trailing-comment-fix))))))
 
 (defn ^:private editing-range [earlier-clause later-clause]
-  (let [{:keys [row col]} (meta (first (:nodes (first earlier-clause))))
-        {:keys [end-row end-col]} (meta (last (:nodes (last later-clause))))]
+  (let [{:keys [row col]} (meta (first earlier-clause))
+        {:keys [end-row end-col]} (meta (last later-clause))]
     {:row row :col col
      :end-row end-row :end-col end-col}))
 
@@ -263,24 +258,23 @@
   order to end up at the top of the (eventual) bottom clause.
 
   This is calculated by starting at the `top-position`, and adjusting by adding
-  the extent of the `intervening-elems`. The extent is calculated by re-parsing
+  the extent of the `intervening-nodes`. The extent is calculated by re-parsing
   the intervening nodes, counting their rows and columns by looking at their
   string representations. This is probably slow, but it avoids needing to use
   {:track-position? true} in the parser. If someday this project uses
   :track-position?, this code probably should be changed to read the revised
   position of the original zloc."
-  [top-position intervening-elems]
+  [top-position intervening-nodes]
   (let [[bottom-row bottom-col]
-        (->> intervening-elems
-             (mapcat :nodes)
-             (reduce (fn [pos node]
-                       (n.protocols/+extent pos (n.protocols/extent node)))
-                     [(:row top-position) (:col top-position)]))]
+        (reduce (fn [pos node]
+                  (n.protocols/+extent pos (n.protocols/extent node)))
+                [(:row top-position) (:col top-position)]
+                intervening-nodes)]
     {:row bottom-row
      :col bottom-col}))
 
 (defn ^:private final-position [dir earlier-clause interstitial later-clause]
-  (let [top-position (select-keys (meta (first (:nodes (first earlier-clause))))
+  (let [top-position (select-keys (meta (first earlier-clause))
                                   [:row :col])]
     (case dir
       :backward top-position
@@ -318,8 +312,13 @@
             clause-size          (+ breadth (dec breadth))
             [earlier-clause rst] (split-at clause-size rst)
             [interstitial rst]   (split-at 1 rst) ;; padding
-            [later-clause rst]   (split-at clause-size rst)]
+            [later-clause rst]   (split-at clause-size rst)
 
+            ;; drop type and idx from seq-elems; no longer needed
+            [before earlier-clause interstitial later-clause rst]
+            (map (fn [clause]
+                   (mapcat :nodes clause))
+                 [before earlier-clause interstitial later-clause rst])]
         [(edited-nodes before earlier-clause interstitial later-clause rst)
          (editing-range earlier-clause later-clause)
          (final-position dir earlier-clause interstitial later-clause)]))))

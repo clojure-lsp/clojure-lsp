@@ -93,65 +93,74 @@
 
 ;;;; Main algorithm for moving a clause
 
-(defn ^:private seq-elems
+;; 1. Start with a sequence of nodes, the children of the parent expression.
+;; 2. Split them up into elements (regular nodes plus affiliated comments) and padding (whitespace) between elements.
+;; 3. Based on the breadth of a clause, group elements and padding into clauses, leaving interstitial padding between them.
+;; 4. Figure out which element the cursor is on, or if it was on padding, which element is next.
+;; 5. Calculate which clause that corresponds to.
+;; 6. Swap that clause with the previous or next clause, depending on the direction of movement, maintaining interstitial padding.
+
+;; A map with two map-entries might be broken down like this:
+;;  nodes:            ws ws ws  co ws co n co  ws      n co    ws ws ws  co ws co n co  ws      n co    ws
+;;  padding+elems:    padding   element        padding element padding   element        padding element padding
+;;  p+e-idx:          0 ------- 1 ------------ 2 ----- 3 ----- 4 ------- 5 ------------ 6 ----- 7 ----- 8 ----
+;;  e-idx:            0 ---------------------- 1 ------------- 2 ---------------------- 3 -------------
+;;  clause-idx:                 0 ----------------------------           1 ----------------------------
+
+(defn ^:private padding+elems
   "Returns the contents of `parent-zloc` as a a sequence of elements and padding
   between them.
 
-  What is an element? It's a child of the parent, plus any comments that are
-  associated with that child. For example, in the following vector there are two
-  elements:
+  What's an element? It's a sequence of nodes—a regular child of the parent,
+  plus any comments that are attached to it, either before or after.
+
+  What's padding? It's the whitespace between elements.
+
+  For example, the following vector is broken up into two elements and three
+  pieces of padding:
 
   [;; comment before a
+
+   ;; another comment before a
    :a ;; comment after a
 
    ;; comment before b
    :b ;; comment after b
-  ]
+   ]
 
-  :a and its comments are one element, as are :b and its comments. The
-  whitespace between them is considered padding. To be precise, the padding
-  includes all whitespace, including newlines, between the :a and :b elements.
-  That is, the padding starts at the newline character following ';; comment
-  after a' and continues to the space character preceding ';; comment before b'.
-  In this case, there is also padding after the :b element: a newline and some
-  more whitespace.
+  [<><;; comment before a
 
-  The format of a returned elem is:
-  {:type :elem
-   :idx  <index of the element within the sequence>
-   :nodes <sequence of nodes that make up the element>}
+   ;; another comment before a
+   :a ;; comment after a><
 
-  The format of a returned padding is:
-  {:type :padding
-   :idx  <index of the padding within the sequence>
-   :nodes <sequence of nodes that make up the padding>}
+   ><;; comment before b
+   :b ;; comment after b><
+   >]
 
-  The returned elems will always be interposed with padding, with padding at
-  the beginning and possibly at the end, even if the padding contains no nodes.
-  The first padding's and first element's idx will be 0, increasing in step from
-  there.
-
-  The children of the original `parent-zloc` could be reconstructed by
-  concatenating all the `:nodes` together."
+  The first returned element will always be padding (a possibly empty sequence
+  of whitespace nodes). That is, padding will be at the even indices and
+  elements at the odd indices. There may or may not be a final chunk of
+  padding."
   [parent-zloc]
   (loop [zloc (-> parent-zloc
                   (z/edit* (fn [parent-node]
-                             (n/replace-children parent-node
-                                                 (mapcat (fn [node]
-                                                           (if (newline-comment? node)
-                                                             (let [{:keys [row col end-row end-col]} (meta node)
-                                                                   len (count (:s node))]
-                                                               (assert (= (inc row) end-row) "unexpected multiline comment")
-                                                               [(with-meta
-                                                                  (update node :s subs 0 (dec len))
-                                                                  {:row row :col col
-                                                                   :end-row row :end-col (+ col len)})
-                                                                (with-meta
-                                                                  (n/newline-node "\n")
-                                                                  {:row row, :col (+ col len),
-                                                                   :end-row end-row, :end-col end-col})])
-                                                             [node]))
-                                                         (n/children parent-node)))))
+                             (n/replace-children
+                               parent-node
+                               (mapcat (fn [node]
+                                         (if (newline-comment? node)
+                                           (let [{:keys [row col end-row end-col]} (meta node)
+                                                 len (count (:s node))]
+                                             (assert (= (inc row) end-row) "unexpected multiline comment")
+                                             [(with-meta
+                                                (update node :s subs 0 (dec len))
+                                                {:row row :col col
+                                                 :end-row row :end-col (+ col len)})
+                                              (with-meta
+                                                (n/newline-node "\n")
+                                                {:row row, :col (+ col len),
+                                                 :end-row end-row, :end-col end-col})])
+                                           [node]))
+                                       (n/children parent-node)))))
                   z/down*)
 
          state  :in-padding
@@ -167,17 +176,13 @@
         (recur zloc
                :on-elem
                idx
-               (conj result {:type :padding
-                             :idx  idx
-                             :nodes (map z/node padding)})))
+               (conj result (map z/node padding))))
 
       (= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc whitespace-or-comment?)]
         (if-not elem-loc
           ;; We've processed all the elements and this is trailing whitespace.
-          (conj result {:type :padding
-                        :idx  idx
-                        :nodes (map z/node prefix)})
+          (conj result (map z/node prefix))
           (let [;; affiliate elem with (optional) comment following it
                 postfix-start (z/right* elem-loc)
                 padding-start (->> postfix-start
@@ -201,26 +206,23 @@
                    :in-padding
                    (inc idx)
                    (conj result
-                         {:type :elem
-                          :idx  idx
-                          :nodes (map z/node (concat prefix [elem-loc] postfix))}))))))))
+                         (map z/node (concat prefix [elem-loc] postfix))))))))))
 
 (defn ^:private marked-elem-index
-  "Search for an element within `elems` that was previously marked."
+  "Search for index of an element within `elems` that was previously marked.
+
+  Note that this returns the 'elem index', not the seq index. If the cursor is
+  on padding between elements, we assume the intention was to drag the next
+  element.
+  seq:      padding elem padding elem
+  seq-idx:  0 ----- 1 -- 2 ----- 3 --
+  elem-idx: 0 ---------- 1 ----------"
   [elems]
   (->> elems
-       (filter (fn [{:keys [nodes]}]
-                 (some #(edit/node-marked? % ::orig) nodes)))
-       first
-       ;; If the cursor is on padding between elements, we assume the intention
-       ;; was to drag the next element. This padding will have the correct idx.
-       :idx))
-
-(defn ^:private split-elems-at-idx [elems split-idx]
-  (split-with (fn [{:keys [type idx]}]
-                (or (= :padding type)
-                    (< idx split-idx)))
-              elems))
+       (keep-indexed (fn [idx nodes]
+                       (when (some #(edit/node-marked? % ::orig) nodes)
+                         (quot idx 2))))
+       first))
 
 (defn ^:private can-swap-clauses?
   "In a few cases, the simple [[probable-valid-movement?]] heuristics return the
@@ -231,18 +233,18 @@
   after the zloc, now that we've more carefully allocated the whitespace to a
   clause, we know that isn't true. The problem manifests as the origin-idx or
   dest-idx being out of bounds."
-  [origin-idx dest-idx {:keys [breadth pulp rind]}]
+  [origin-elem-idx dest-elem-idx {:keys [breadth pulp rind]}]
   (let [[lower-bound _] rind
         upper-bound (- (+ lower-bound pulp) breadth)]
-    (and (<= lower-bound origin-idx upper-bound)
-         (<= lower-bound dest-idx upper-bound))))
+    (and (<= lower-bound origin-elem-idx upper-bound)
+         (<= lower-bound dest-elem-idx upper-bound))))
 
-(defn ^:private edited-nodes [before earlier-clause interstitial later-clause rst]
+(defn ^:private edited-nodes [before earlier-clause interstitial later-clause after]
   (let [swapped (concat later-clause interstitial earlier-clause) ;; <-- the actual drag
-        trailing (concat earlier-clause rst)
-        trailing-comment-fix (when (some-> trailing last n/comment?)
-                               (let [leading (concat before earlier-clause)
-                                     col (:col (meta (first leading)))]
+        final-trailing (concat earlier-clause after)
+        trailing-comment-fix (when (some-> final-trailing last n/comment?)
+                               (let [orig-leading (concat before earlier-clause)
+                                     col (:col (meta (first orig-leading)))]
                                  [(n/newline-node "\n") (n/spaces (dec col))]))]
     (z/up (z/edn (n/forms-node
                    (concat swapped trailing-comment-fix))))))
@@ -292,34 +294,30 @@
   (let [zloc (edit/mark-position zloc ::orig)
         parent-zloc (z-up zloc)
 
-        elems (seq-elems parent-zloc)
+        elems (padding+elems parent-zloc)
 
         [ignore-left _] rind
-        origin-idx (marked-elem-index elems)
+        origin-elem-idx (marked-elem-index elems)
         ;; move back to first element in clause
-        origin-idx (- origin-idx
-                      (mod (- origin-idx ignore-left) breadth))
-        dest-idx (->> origin-idx
-                      (iterate (case dir :backward dec, :forward inc))
-                      (drop breadth)
-                      first)]
-    (when (can-swap-clauses? origin-idx dest-idx clause-spec)
-      (let [earlier-idx  (min origin-idx dest-idx)
-            [before rst] (split-elems-at-idx elems earlier-idx)
+        origin-elem-idx (- origin-elem-idx
+                           (mod (- origin-elem-idx ignore-left) breadth))
+        dest-elem-idx ((case dir :backward -, :forward +) origin-elem-idx breadth)]
+    (when (can-swap-clauses? origin-elem-idx dest-elem-idx clause-spec)
+      (let [earlier-elem-idx  (min origin-elem-idx dest-elem-idx)
+            ;; skip padding and elems, including first padding, to get to first element of first clause
+            clause-offset (+ 1 (* 2 earlier-elem-idx))
+            ;; a clause made up of two elements includes one piece of padding between them
+            clause-size (+ breadth (dec breadth))
 
-            ;; the clause is the elements _and_ intervening padding that are
-            ;; moving together
-            clause-size          (+ breadth (dec breadth))
+            [before rst]         (split-at clause-offset elems)
             [earlier-clause rst] (split-at clause-size rst)
             [interstitial rst]   (split-at 1 rst) ;; padding
-            [later-clause rst]   (split-at clause-size rst)
+            [later-clause after] (split-at clause-size rst)
 
-            ;; drop type and idx from seq-elems; no longer needed
-            [before earlier-clause interstitial later-clause rst]
-            (map (fn [clause]
-                   (mapcat :nodes clause))
-                 [before earlier-clause interstitial later-clause rst])]
-        [(edited-nodes before earlier-clause interstitial later-clause rst)
+            ;; squash padding and elems into clauses (keeping interstitial padding)
+            [before earlier-clause interstitial later-clause after]
+            (map flatten [before earlier-clause interstitial later-clause after])]
+        [(edited-nodes before earlier-clause interstitial later-clause after)
          (editing-range earlier-clause later-clause)
          (final-position dir earlier-clause interstitial later-clause)]))))
 

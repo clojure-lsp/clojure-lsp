@@ -3,8 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 

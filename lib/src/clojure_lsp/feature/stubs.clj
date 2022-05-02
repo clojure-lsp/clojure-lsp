@@ -49,7 +49,7 @@
                               :filter-analysis #(dissoc % :namespace-usages)}
         result (shared/logging-time
                  "Stubs analyzed, took %s."
-                 (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config))]
+                 (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config nil))]
     (swap! db* lsp.kondo/db-with-results result)
     (db/read-and-update-cache!
       @db*

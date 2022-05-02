@@ -199,24 +199,22 @@
    :context [:clojure.test
              :re-frame.core]})
 
-(defn ^:private config-for-paths [paths db]
-  (let [size (count paths)]
-    (-> {:cache true
-         :parallel true
-         :copy-configs (settings/get db [:copy-kondo-configs?] true)
-         :lint [(string/join (System/getProperty "path.separator") paths)]
-         :config {:output {:canonical-paths true}}
-         :on-progress-update-fn (fn [{:keys [entry]}]
-                                  (logger/info "--------->" entry size))}
-        (with-additional-config (settings/all db)))))
+(defn ^:private config-for-paths [paths file-analyzed-fn db]
+  (-> {:cache true
+       :parallel true
+       :copy-configs (settings/get db [:copy-kondo-configs?] true)
+       :lint [(string/join (System/getProperty "path.separator") paths)]
+       :config {:output {:canonical-paths true}}
+       :file-analyzed-fn file-analyzed-fn}
+      (with-additional-config (settings/all db))))
 
-(defn ^:private config-for-internal-paths [paths db custom-lint-fn]
-  (-> (config-for-paths paths db)
+(defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
+  (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :custom-lint-fn custom-lint-fn)
       (assoc-in [:config :analysis] config-for-internal-analysis)))
 
-(defn ^:private config-for-external-paths [paths db]
-  (-> (config-for-paths paths db)
+(defn ^:private config-for-external-paths [paths db file-analyzed-fn]
+  (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :skip-lint true)
       (assoc-in [:config :analysis]
                 {:arglists true
@@ -254,13 +252,15 @@
                   :analysis config-for-internal-analysis}}
         (with-additional-config (settings/all db)))))
 
-(defn ^:private run-kondo! [config err-hint]
+(defn ^:private run-kondo! [config err-hint db]
   (let [err-writer (java.io.StringWriter.)
         out-writer (java.io.StringWriter.)]
     (try
-      (let [result (binding [*err* err-writer
-                             *out* out-writer]
-                     (kondo/run! config))]
+      (let [result (if (:api? db)
+                     (kondo/run! config)
+                     (binding [*err* err-writer
+                               *out* out-writer]
+                       (kondo/run! config)))]
         (when-not (string/blank? (str err-writer))
           (logger/warn "Non-fatal error from clj-kondo:" (str err-writer)))
         (when-not (string/blank? (str out-writer))
@@ -269,20 +269,21 @@
       (catch Exception e
         (logger/error e "Error running clj-kondo on" err-hint)))))
 
-(defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config}]
+(defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config} file-analyzed-fn]
   (let [db @db*
         config (if external?
-                 (config-for-external-paths paths db)
+                 (config-for-external-paths paths db file-analyzed-fn)
                  (config-for-internal-paths paths db
-                                            #(custom-lint-project! (normalize % normalization-config))))]
+                                            #(custom-lint-project! (normalize % normalization-config))
+                                            file-analyzed-fn))]
     (-> config
-        (run-kondo! (str "paths " (string/join ", " paths)))
+        (run-kondo! (str "paths " (string/join ", " paths)) db)
         (normalize normalization-config))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
-  [paths normalization-config update-callback db*]
+  [paths normalization-config file-analyzed-fn db*]
   (let [total (count paths)
         batches (->> paths
                      (partition-all clj-kondo-analysis-batch-size)
@@ -297,12 +298,11 @@
         (str "Analyzing " total " paths with clj-kondo in " batch-count " batches...")))
     (case batch-count
       0 {}
-      1 (run-kondo-on-paths! paths db* normalization-config)
+      1 (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn 1 1))
       (->> batches
            (map (fn [{:keys [index paths]}]
                   (logger/info "Analyzing" (str index "/" batch-count) "batch paths with clj-kondo...")
-                  (update-callback index batch-count)
-                  (run-kondo-on-paths! paths db* normalization-config)))
+                  (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db*]
@@ -310,24 +310,24 @@
         normalization-config {:external? false
                               :ensure-filenames filenames}
         custom-lint-fn #(custom-lint-files! filenames @db* (normalize % normalization-config))]
-    (-> (config-for-internal-paths filenames db custom-lint-fn)
-        (run-kondo! (str "files " (string/join ", " filenames)))
+    (-> (config-for-internal-paths filenames db custom-lint-fn nil)
+        (run-kondo! (str "files " (string/join ", " filenames)) db)
         (normalize normalization-config))))
 
 (defn run-kondo-on-text! [text uri db*]
   (let [filename (shared/uri->filename uri)]
     (with-in-str text
                  (-> (config-for-single-file uri db*)
-                     (run-kondo! filename)
+                     (run-kondo! filename @db*)
                      (normalize-for-filename @db* filename)))))
 
 (defn run-kondo-copy-configs! [paths db]
   (-> (config-for-copy-configs paths db)
-      (run-kondo! (str "paths " (string/join ", " paths)))))
+      (run-kondo! (str "paths " (string/join ", " paths)) db)))
 
-(defn run-kondo-on-jdk-source! [paths]
+(defn run-kondo-on-jdk-source! [paths db]
   (-> (config-for-jdk-source paths)
-      (run-kondo! (str "paths " paths))
+      (run-kondo! (str "paths " paths) db)
       (normalize {:external? true
                   :filter-analysis #(select-keys % [:java-class-definitions])})))
 

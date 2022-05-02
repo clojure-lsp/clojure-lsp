@@ -135,7 +135,7 @@
 (defn ^:private analyze-and-cache-jdk-source! [paths new-checksums db*]
   (let [results (shared/logging-time
                   (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
-                  (lsp.kondo/run-kondo-on-jdk-source! paths))]
+                  (lsp.kondo/run-kondo-on-jdk-source! paths @db*))]
     (swap! db* #(-> %
                     (lsp.kondo/db-with-results results)
                     (update :analysis-checksums merge new-checksums)))

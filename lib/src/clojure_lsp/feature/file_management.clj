@@ -209,7 +209,7 @@
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  "Created watched files analyzed, took %s"
-                 (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false}))]
+                 (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
     (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! filenames @db*)
     (clojure-producer/refresh-test-tree producer uris)))

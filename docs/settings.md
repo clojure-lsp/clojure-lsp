@@ -284,6 +284,12 @@ Keep the first class inside a package import on the same line and next children 
 
 #### sort
 
+to disable a specific import you can set it to nil, example:
+
+```clojure
+{:clean {:sort {:import-classes nil}}}
+```
+
 ##### `ns`
 
 Whether to enable sort of `ns` children like require, import forms following [Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration).
@@ -295,6 +301,10 @@ Whether to enable sort of `:require` form. `true` to sort according to the Cloju
 ##### `import`
 
 Whether to enable sort of `:import` form.
+
+##### `import-classes`
+
+Whether to enable sort of package classes inside `:import` form.
 
 ##### `refer`
 

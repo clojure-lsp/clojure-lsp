@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.05.03-12.35.40
+
 - General
   - Bump clj-kondo to `2022.04.26-20220429.192438-2`.
   - Decrease uncached startup time by 60-70%, by instructing clj-kondo to skip var definition bodies when analyzing deps. [#1674](https://github.com/clj-kondo/clj-kondo/pull/1674)

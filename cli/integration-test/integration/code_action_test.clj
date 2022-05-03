@@ -48,20 +48,21 @@
         :kind "source.organizeImports"}]
       (lsp/request! (fixture/code-action-request sample-file-name 5 4)))
 
+    (lsp/mock-response :workspace/applyEdit {:applied true})
+    (lsp/mock-response :window/showDocument {:success true})
+
     (lsp/request! (fixture/execute-command-request "drag-forward"
                                                    (h/source-path->uri sample-file-name)
                                                    5 4))
 
     (testing "the code action edit is applied asynchronously"
       (h/assert-submaps
-        [{:edits [{:range   {:start {:line 3, :character 2},
-                             :end   {:line 7, :character 8}},
-                   :newText (h/code "{:a 1"
-                                    "   :c 3"
+        [{:edits [{:range {:start {:line 4, :character 3},
+                           :end {:line 6, :character 7}},
+                   :newText (h/code ":c 3"
                                     "   ;; b comment"
-                                    "   :b 2 ;; 2 comment"
-                                    "   :d 4}")}]}]
-        (:documentChanges (:edit (lsp/await-client-request :workspace/applyEdit)))))
+                                    "   :b 2 ;; 2 comment")}]}]
+        (:documentChanges (:edit (lsp/client-awaits-server-request :workspace/applyEdit)))))
     (testing "the cursor is repositioned"
       (h/assert-submap
         {:takeFocus true
@@ -70,4 +71,4 @@
                              :character 3}
                      :end   {:line      5
                              :character 3}}}
-        (lsp/await-client-request :window/showDocument)))))
+        (lsp/client-awaits-server-request :window/showDocument)))))

@@ -3,8 +3,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [rewrite-clj.zip :as z]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
 
@@ -225,9 +224,7 @@
   (some-> change
           :changes-by-uri
           (get h/default-uri)
-          first
-          :loc
-          z/root-string))
+          (h/changes->code @db/db*)))
 
 (defn- as-range [change]
   (some-> change

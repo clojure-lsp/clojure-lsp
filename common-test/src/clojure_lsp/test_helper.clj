@@ -236,7 +236,7 @@
 
 (defn changes->code
   ([changes db]
-   (changes->code changes "file:///a.clj" db))
+   (changes->code changes default-uri db))
   ([changes uri db]
    (let [doc (get-in db [:documents uri :text])]
      (results->doc doc (vec (with-strings changes))))))

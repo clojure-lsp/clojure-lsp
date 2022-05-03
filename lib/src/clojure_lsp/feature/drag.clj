@@ -13,6 +13,7 @@
   more generally used to drag any clause forward or backward, even if it isn't
   in an immutable collection."
   (:require
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -84,64 +85,82 @@
   items, a sequence of locations to the z/right* of `zloc` that satisfy `p?`,
   and the first location that doesn't."
   [zloc p?]
-  [(z-take-while zloc z/right* p?)
-   (z/skip z/right* p? zloc)])
-
-(defn ^:private z-cursor-position [zloc]
-  (meta (z/node zloc)))
+  (loop [zloc zloc
+         satisfies []]
+    (if (p? zloc)
+      (recur (z/right* zloc) (conj satisfies zloc))
+      [satisfies zloc])))
 
 ;;;; Main algorithm for moving a clause
 
-(defn ^:private seq-elems
+;; 1. Start with a sequence of nodes, the children of the parent expression.
+;; 2. Split them up into elements (regular nodes plus affiliated comments) and padding (whitespace) between elements.
+;; 3. Based on the breadth of a clause, group elements and padding into clauses, leaving interstitial padding between them.
+;; 4. Figure out which element the cursor is on, or if it was on padding, which element is next.
+;; 5. Calculate which clause that corresponds to.
+;; 6. Swap that clause with the previous or next clause, depending on the direction of movement, maintaining interstitial padding.
+
+;; A map with two map-entries might be broken down like this:
+;;  nodes:            ws ws ws  co ws co n co  ws      n co    ws ws ws  co ws co n co  ws      n co    ws
+;;  padding+elems:    padding   element        padding element padding   element        padding element padding
+;;  p+e-idx:          0 ------- 1 ------------ 2 ----- 3 ----- 4 ------- 5 ------------ 6 ----- 7 ----- 8 ----
+;;  e-idx:            0 ---------------------- 1 ------------- 2 ---------------------- 3 -------------
+;;  clause-idx:                 0 ----------------------------           1 ----------------------------
+
+(defn ^:private padding+elems
   "Returns the contents of `parent-zloc` as a a sequence of elements and padding
   between them.
 
-  What is an element? It's a child of the parent, plus any comments that are
-  associated with that child. For example, in the following vector there are two
-  elements:
+  What's an element? It's a sequence of nodes—a regular child of the parent,
+  plus any comments that are attached to it, either before or after.
+
+  What's padding? It's the whitespace between elements.
+
+  For example, the following vector is broken up into two elements and three
+  pieces of padding:
 
   [;; comment before a
+
+   ;; another comment before a
    :a ;; comment after a
 
    ;; comment before b
    :b ;; comment after b
-  ]
+   ]
 
-  :a and its comments are one element, as are :b and its comments. The
-  whitespace between them is considered padding. To be precise, the padding
-  includes all whitespace, including newlines, between the :a and :b elements.
-  That is, the padding starts at the newline character following ';; comment
-  after a' and continues to the space character preceding ';; comment before b'.
-  In this case, there is also padding after the :b element: a newline and some
-  more whitespace.
+  [<><;; comment before a
 
-  The format of a returned elem is:
-  {:type :elem
-   :idx  <index of the element within the sequence>
-   :locs <sequence of zipper locations whose nodes make up the element>}
+   ;; another comment before a
+   :a ;; comment after a><
 
-  The format of a returned padding is:
-  {:type :padding
-   :idx  <index of the padding within the sequence>
-   :locs <sequence of zipper locations whose nodes make up the padding>}
+   ><;; comment before b
+   :b ;; comment after b><
+   >]
 
-  The returned elems will always be interposed with padding, with padding at
-  the beginning and possibly at the end, even if the padding contains no locs.
-  The first padding's and first element's idx will be 0, increasing in step from
-  there.
-
-  The children of the original `parent-zloc` could be reconstructed by
-  concatenating all the `:locs` together."
+  The first returned element will always be padding (a possibly empty sequence
+  of whitespace nodes). That is, padding will be at the even indices and
+  elements at the odd indices. There may or may not be a final chunk of
+  padding."
   [parent-zloc]
   (loop [zloc (-> parent-zloc
                   (z/edit* (fn [parent-node]
-                             (n/replace-children parent-node
-                                                 (mapcat (fn [node]
-                                                           (if (newline-comment? node)
-                                                             [(update node :s subs 0 (dec (count (:s node))))
-                                                              (n/newline-node "\n")]
-                                                             [node]))
-                                                         (n/children parent-node)))))
+                             (n/replace-children
+                               parent-node
+                               (mapcat (fn [node]
+                                         (if (newline-comment? node)
+                                           (let [{:keys [row col end-row end-col]} (meta node)
+                                                 len (count (:s node))]
+                                             (assert (= (inc row) end-row) "unexpected multiline comment")
+                                             [(with-meta
+                                                (update node :s subs 0 (dec len))
+                                                {:row row :col col
+                                                 :end-row row :end-col (+ col len)})
+                                              (with-meta
+                                                (n/newline-node "\n")
+                                                {:row row, :col (+ col len),
+                                                 :end-row end-row, :end-col end-col})])
+                                           [node]))
+                                       (n/children parent-node)))))
                   z/down*)
 
          state  :in-padding
@@ -157,17 +176,13 @@
         (recur zloc
                :on-elem
                idx
-               (conj result {:type :padding
-                             :idx  idx
-                             :locs padding})))
+               (conj result (map z/node padding))))
 
       (= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc whitespace-or-comment?)]
         (if-not elem-loc
           ;; We've processed all the elements and this is trailing whitespace.
-          (conj result {:type :padding
-                        :idx  idx
-                        :locs prefix})
+          (conj result (map z/node prefix))
           (let [;; affiliate elem with (optional) comment following it
                 postfix-start (z/right* elem-loc)
                 padding-start (->> postfix-start
@@ -191,54 +206,23 @@
                    :in-padding
                    (inc idx)
                    (conj result
-                         {:type :elem
-                          :idx  idx
-                          :locs (concat prefix [elem-loc] postfix)}))))))))
+                         (map z/node (concat prefix [elem-loc] postfix))))))))))
 
-(defn ^:private elem-index-by-cursor-position
-  "Search for an element within `elems` that was at `cursor-position`."
-  [cursor-position elems]
+(defn ^:private marked-elem-index
+  "Search for index of an element within `elems` that was previously marked.
+
+  Note that this returns the 'elem index', not the seq index. If the cursor is
+  on padding between elements, we assume the intention was to drag the next
+  element.
+  seq:      padding elem padding elem
+  seq-idx:  0 ----- 1 -- 2 ----- 3 --
+  elem-idx: 0 ---------- 1 ----------"
+  [elems]
   (->> elems
-       (filter (fn [{:keys [locs]}]
-                 ;; We compare cursor position, not full loc, because comments
-                 ;; have been separated from their newlines by `seq-elems`.
-                 (some (comp #{cursor-position} z-cursor-position)
-                       locs)))
-       first
-       ;; If the cursor is on padding between elements, we assume the intention
-       ;; was to drag the next element. This padding will have the correct idx.
-       :idx))
-
-(defn ^:private split-elems-at-idx [elems split-idx]
-  (split-with (fn [{:keys [type idx]}]
-                (or (= :padding type)
-                    (< idx split-idx)))
-              elems))
-
-(defn ^:private edit-parent
-  "Put revised elements and padding back into parent."
-  [parent-zloc swapped]
-  (z/replace parent-zloc
-             (n/replace-children (z/node parent-zloc)
-                                 (->> swapped
-                                      (mapcat :locs)
-                                      (map z/node)))))
-
-(defn ^:private fix-trailing-comment
-  "After reordering, the last child may now be a comment. We need to add a
-  newline because otherwise the closing bracket will be commented out. We align
-  the closing bracket indented one space from the opening bracket."
-  [parent-zloc]
-  (let [last-zloc (-> parent-zloc z-down z/rightmost*)]
-    (if (-> last-zloc z/node n/comment?)
-      (let [col (-> parent-zloc
-                    z-cursor-position
-                    :col)]
-        (-> last-zloc
-            (z/insert-space-right col) ;; uses z/insert-right, so automatically adds one extra space
-            z/insert-newline-right
-            z-up))
-      parent-zloc)))
+       (keep-indexed (fn [idx nodes]
+                       (when (some #(edit/node-marked? % ::orig) nodes)
+                         (quot idx 2))))
+       first))
 
 (defn ^:private can-swap-clauses?
   "In a few cases, the simple [[probable-valid-movement?]] heuristics return the
@@ -249,35 +233,51 @@
   after the zloc, now that we've more carefully allocated the whitespace to a
   clause, we know that isn't true. The problem manifests as the origin-idx or
   dest-idx being out of bounds."
-  [origin-idx dest-idx {:keys [breadth pulp rind]}]
+  [origin-elem-idx dest-elem-idx {:keys [breadth pulp rind]}]
   (let [[lower-bound _] rind
         upper-bound (- (+ lower-bound pulp) breadth)]
-    (and (<= lower-bound origin-idx upper-bound)
-         (<= lower-bound dest-idx upper-bound))))
+    (and (<= lower-bound origin-elem-idx upper-bound)
+         (<= lower-bound dest-elem-idx upper-bound))))
+
+(defn ^:private edited-nodes [before earlier-clause interstitial later-clause after]
+  (let [swapped (concat later-clause interstitial earlier-clause) ;; <-- the actual drag
+        final-trailing (concat earlier-clause after)
+        trailing-comment-fix (when (some-> final-trailing last n/comment?)
+                               (let [orig-leading (concat before earlier-clause)
+                                     col (:col (meta (first orig-leading)))]
+                                 [(n/newline-node "\n") (n/spaces (dec col))]))]
+    (z/up (z/edn (n/forms-node
+                   (concat swapped trailing-comment-fix))))))
+
+(defn ^:private editing-range [earlier-clause later-clause]
+  (let [{:keys [row col]} (meta (first earlier-clause))
+        {:keys [end-row end-col]} (meta (last later-clause))]
+    {:row row :col col
+     :end-row end-row :end-col end-col}))
 
 (defn ^:private bottom-position
   "Returns the position where the cursor should be placed after the swap in
   order to end up at the top of the (eventual) bottom clause.
 
   This is calculated by starting at the `top-position`, and adjusting by adding
-  the extent of the `intervening-elems`. The extent is calculated by re-parsing
-  the intervening locs, counting their rows and columns by looking at their
+  the extent of the `intervening-nodes`. The extent is calculated by re-parsing
+  the intervening nodes, counting their rows and columns by looking at their
   string representations. This is probably slow, but it avoids needing to use
   {:track-position? true} in the parser. If someday this project uses
   :track-position?, this code probably should be changed to read the revised
   position of the original zloc."
-  [top-position intervening-elems]
+  [top-position intervening-nodes]
   (let [[bottom-row bottom-col]
-        (->> intervening-elems
-             (mapcat :locs)
-             (reduce (fn [pos zloc]
-                       (n.protocols/+extent pos (n.protocols/extent (z/node zloc))))
-                     [(:row top-position) (:col top-position)]))]
+        (reduce (fn [pos node]
+                  (n.protocols/+extent pos (n.protocols/extent node)))
+                [(:row top-position) (:col top-position)]
+                intervening-nodes)]
     {:row bottom-row
      :col bottom-col}))
 
 (defn ^:private final-position [dir earlier-clause interstitial later-clause]
-  (let [top-position (z-cursor-position (first (:locs (first earlier-clause))))]
+  (let [top-position (select-keys (meta (first earlier-clause))
+                                  [:row :col])]
     (case dir
       :backward top-position
       :forward (bottom-position top-position (concat later-clause interstitial)))))
@@ -286,43 +286,39 @@
   "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
   ignoring elements in `rind`.
 
-  Returns two pieces of data. The first is the edited parent expression with
-  the clauses swapped, whose string representation should be sent to the editor.
-  The second is the position where the cursor should be placed after the edit."
+  Returns three pieces of data:
+  - A zloc with the swapped clauses, whose string representation should be sent to the editor.
+  - The range of the original doc that should be edited.
+  - The position where the cursor should be placed after the edit."
   [zloc dir {:keys [breadth rind] :as clause-spec}]
-  (let [[ignore-left _] rind
+  (let [zloc (edit/mark-position zloc ::orig)
         parent-zloc (z-up zloc)
 
-        elems (seq-elems parent-zloc)
+        elems (padding+elems parent-zloc)
 
-        origin-idx (elem-index-by-cursor-position (z-cursor-position zloc) elems)
+        [ignore-left _] rind
+        origin-elem-idx (marked-elem-index elems)
         ;; move back to first element in clause
-        origin-idx (- origin-idx
-                      (mod (- origin-idx ignore-left) breadth))
-        dest-idx (->> origin-idx
-                      (iterate (case dir :backward dec, :forward inc))
-                      (drop breadth)
-                      first)]
-    (when (can-swap-clauses? origin-idx dest-idx clause-spec)
-      (let [earlier-idx  (min origin-idx dest-idx)
-            [before rst] (split-elems-at-idx elems earlier-idx)
+        origin-elem-idx (- origin-elem-idx
+                           (mod (- origin-elem-idx ignore-left) breadth))
+        dest-elem-idx ((case dir :backward -, :forward +) origin-elem-idx breadth)]
+    (when (can-swap-clauses? origin-elem-idx dest-elem-idx clause-spec)
+      (let [earlier-elem-idx  (min origin-elem-idx dest-elem-idx)
+            ;; skip padding and elems, including first padding, to get to first element of first clause
+            clause-offset (+ 1 (* 2 earlier-elem-idx))
+            ;; a clause made up of two elements includes one piece of padding between them
+            clause-size (+ breadth (dec breadth))
 
-            ;; the clause is the elements _and_ intervening padding that are
-            ;; moving together
-            clause-size          (+ breadth (dec breadth))
+            [before rst]         (split-at clause-offset elems)
             [earlier-clause rst] (split-at clause-size rst)
             [interstitial rst]   (split-at 1 rst) ;; padding
-            [later-clause rst]   (split-at clause-size rst)
+            [later-clause after] (split-at clause-size rst)
 
-            swapped     (concat before
-                                later-clause
-                                interstitial
-                                earlier-clause
-                                rst)
-            parent-zloc (-> parent-zloc
-                            (edit-parent swapped)
-                            (fix-trailing-comment))]
-        [parent-zloc
+            ;; squash padding and elems into clauses (keeping interstitial padding)
+            [before earlier-clause interstitial later-clause after]
+            (map flatten [before earlier-clause interstitial later-clause after])]
+        [(edited-nodes before earlier-clause interstitial later-clause after)
+         (editing-range earlier-clause later-clause)
          (final-position dir earlier-clause interstitial later-clause)]))))
 
 ;;;; Clause specs
@@ -498,13 +494,13 @@
 (defn ^:private drag [zloc dir uri db]
   (let [clause-spec (clause-spec (z-up zloc) uri db)]
     (when (probable-valid-movement? zloc dir clause-spec)
-      (when-let [[parent-zloc position] (drag-clause zloc dir clause-spec)]
+      (when-let [[zloc range cursor-position] (drag-clause zloc dir clause-spec)]
         {:show-document-after-edit {:uri         uri
                                     :take-focus? true
-                                    :range       (assoc position :end-row (:row position) :end-col (:col position))}
+                                    :range       (assoc cursor-position :end-row (:row cursor-position) :end-col (:col cursor-position))}
          :changes-by-uri {uri
-                          [{:range (z-cursor-position parent-zloc)
-                            :loc   parent-zloc}]}}))))
+                          [{:range range
+                            :loc   zloc}]}}))))
 
 (defn drag-backward [zloc uri db] (drag zloc :backward uri db))
 (defn drag-forward [zloc uri db] (drag zloc :forward uri db))

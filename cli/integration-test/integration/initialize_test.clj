@@ -99,10 +99,10 @@
      :value {:kind "begin"
              :title "clojure-lsp"
              :percentage 0}}
-    (lsp/await-notification :$/progress))
+    (lsp/client-awaits-server-notification :$/progress))
 
   (testing "initialized notification"
     (lsp/notify! (fixture/initialized-notification))
     (h/assert-submaps
       [{:registerOptions {:watchers [{:globPattern "**/*.{clj,cljs,cljc,cljd,edn,bb}"}]}}]
-      (:registrations (lsp/await-client-request :client/registerCapability)))))
+      (:registrations (lsp/client-awaits-server-request :client/registerCapability)))))

@@ -45,7 +45,7 @@
         :source "clojure-lsp"
         :message "Unused public var 'sample-test.diagnostics.unused-public-var/bar'"
         :tags [1]}]
-      (lsp/await-diagnostics "diagnostics/unused_public_var.clj")))
+      (lsp/client-awaits-server-diagnostics "diagnostics/unused_public_var.clj")))
 
   (with-revised-lsp-config-content
     new-lsp-config-content
@@ -57,4 +57,4 @@
       (testing "Config has changed"
         (h/assert-submaps
           []
-          (lsp/await-diagnostics "diagnostics/unused_public_var.clj"))))))
+          (lsp/client-awaits-server-diagnostics "diagnostics/unused_public_var.clj"))))))

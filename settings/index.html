@@ -570,6 +570,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#import-classes" class="md-nav__link">
+    import-classes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#refer" class="md-nav__link">
     refer
   </a>
@@ -987,6 +994,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#import-classes" class="md-nav__link">
+    import-classes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#refer" class="md-nav__link">
     refer
   </a>
@@ -1396,12 +1410,17 @@ Note: package imports with only one class will keep indentation: Ex: <code>[java
            <span class="nv">Foo</span><span class="p">])</span>
 </code></pre></div>
 <h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>
+<p>to disable a specific import you can set it to nil, example:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:clean</span> <span class="p">{</span><span class="ss">:sort</span> <span class="p">{</span><span class="ss">:import-classes</span> <span class="nv">nil</span><span class="p">}}}</span>
+</code></pre></div>
 <h5 id="ns"><code>ns</code><a class="headerlink" href="#ns" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>ns</code> children like require, import forms following <a href="https://github.com/bbatsov/clojure-style-guide#comprehensive-ns-declaration">Clojure Style Guide</a>.</p>
 <h5 id="require"><code>require</code><a class="headerlink" href="#require" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:require</code> form. <code>true</code> to sort according to the Clojure Style Guide, <code>:lexicographically</code> to do a lexicographic sort that places unwrapped namespaces last.</p>
 <h5 id="import"><code>import</code><a class="headerlink" href="#import" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:import</code> form.</p>
+<h5 id="import-classes"><code>import-classes</code><a class="headerlink" href="#import-classes" title="Permanent link">#</a></h5>
+<p>Whether to enable sort of package classes inside <code>:import</code> form.</p>
 <h5 id="refer"><code>refer</code><a class="headerlink" href="#refer" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:refer</code> form.</p>
 <ul>

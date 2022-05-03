@@ -1889,8 +1889,10 @@
 <p>Editor</p>
 </li>
 <li>Support <code>workspace/willRenameFiles</code>, renaming namespaces and all its references when a file is renamed.</li>
+<li>Don't save cache when classpath lookup failed.</li>
+<li>Wait for editor to apply edits before requesting cursor re-positioning. Fixes cursor positioning after drag in Calva.</li>
 <li>
-<p>Don't save cache when classpath lookup failed.</p>
+<p>drag: Request edit only of changed clauses, not entire parent, reducing flicker.</p>
 </li>
 <li>
 <p>CLI/API</p>
@@ -2876,7 +2878,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 2, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 3, 2022</span>
     
   </small>
 </div>

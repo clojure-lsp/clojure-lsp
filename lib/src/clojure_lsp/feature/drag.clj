@@ -52,6 +52,11 @@
 
 ;;;; More helpers
 
+(defn ^:private z-safe-simple-sym [zloc]
+  (and zloc
+       (n/symbol-node? (z/node zloc))
+       (symbol (name (z/sexpr zloc)))))
+
 (defn ^:private z-take-while
   "Returns a sequence of locations in the direction of `f` from `zloc` that
   satisfy `p?`."
@@ -372,7 +377,7 @@
   (boolean
     (or (when-let [op-zloc (z-left vector-zloc)]
           (and (z-leftmost? op-zloc)
-               (contains? common-binding-syms (z/sexpr op-zloc))))
+               (contains? common-binding-syms (z-safe-simple-sym op-zloc))))
         (let [child-nodes (filter n/sexpr-able? (n/children (z/node vector-zloc)))]
           (when (even? (count child-nodes))
             (let [enclosed-by? (fn [node]
@@ -401,8 +406,7 @@
 
 (defn ^:private in-threading? [parent-zloc]
   (when-let [up-op-loc (some-> parent-zloc z-up z-down)]
-    (when (z/sexpr-able? up-op-loc)
-      (contains? '#{-> cond-> some->} (z/sexpr up-op-loc)))))
+    (contains? '#{-> cond-> some->} (z-safe-simple-sym up-op-loc))))
 
 (defn ^:private count-children [zloc]
   (let [node (z/node zloc)]
@@ -421,7 +425,7 @@
   ;; case and condp permit final default expression, which should not be dragged.
   ;; assoc, assoc!, cond->, cond->>, and case sometimes appear inside other threading expressions.
   ;; condp has a variation with ternary expressions.
-  (case (some-> list-zloc z-down z/sexpr)
+  (case (some-> list-zloc z-down z-safe-simple-sym)
     cond
     #_=> {:breadth 2, :rind [1 0]}
     (cond-> cond->> assoc assoc!)

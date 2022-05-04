@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix drag in `are` when `clojure.test` is aliased. #967
+
 ## 2022.05.03-12.35.40
 
 - General

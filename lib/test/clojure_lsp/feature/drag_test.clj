@@ -471,7 +471,23 @@
     (assert-drag-backward (h/code "(are [expected x] (= expected x) |3 4 1 2)")
                           (h/code "(are [expected x] (= expected x) 1 2 |3 4)"))
     (assert-drag-backward (h/code "(are [expected x] (= expected x) |3 4 1 2)")
-                          (h/code "(are [expected x] (= expected x) 1 2 3 |4)")))
+                          (h/code "(are [expected x] (= expected x) 1 2 3 |4)"))
+    (assert-drag-backward (h/code
+                            "(ns my-test-ns"
+                            "  (:require [clojure.test :as test]))"
+                            ""
+                            "(deftest my-test"
+                            "  (test/are [x y z] (= x y z)"
+                            "    |4 4 4"
+                            "    1 2 3))")
+                          (h/code
+                            "(ns my-test-ns"
+                            "  (:require [clojure.test :as test]))"
+                            ""
+                            "(deftest my-test"
+                            "  (test/are [x y z] (= x y z)"
+                            "    1 2 3"
+                            "    |4 4 4))")))
   (testing "with destructuring"
     (assert-drag-backward (h/code "(let [{:keys [a |c b d]} x])")
                           (h/code "(let [{:keys [a b |c d]} x])"))

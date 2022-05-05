@@ -217,7 +217,8 @@
         absolute-tokens (elements->absolute-tokens elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
-         flatten)))
+         flatten
+         doall)))
 
 (defn range-tokens
   [uri range db]
@@ -226,7 +227,8 @@
         absolute-tokens (elements->absolute-tokens range-elements)]
     (->> absolute-tokens
          (map-indexed (partial absolute-token->relative-token absolute-tokens))
-         flatten)))
+         flatten
+         doall)))
 
 (defn element->token-type [element]
   (->> [element]

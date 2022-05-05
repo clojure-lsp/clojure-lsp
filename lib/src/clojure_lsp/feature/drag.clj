@@ -495,8 +495,22 @@
 (defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
 (defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
+(defn ^:private target-locs [zloc]
+  ;; [v 'q :kw] is parsed as
+  ;; [:vector [:token v] [:quote [:token q]] [:keyword :kw]]
+  ;; If the cursor is between the quote and `q`, we end up on the :token node
+  ;; inside the :quote. As the sole child it isn't draggable. In this and
+  ;; similar cases, we move up one node, to the :quote, and drag it within the
+  ;; :vector.
+  (let [parent-zloc (z/up zloc)]
+    (if (and (n/inner? (z/node parent-zloc))
+             (not (contains? #{:map :set :vector :forms :list :fn} (z/tag parent-zloc))))
+      [parent-zloc (z-up parent-zloc)]
+      [zloc parent-zloc])))
+
 (defn ^:private drag [zloc dir uri db]
-  (let [clause-spec (clause-spec (z-up zloc) uri db)]
+  (let [[zloc parent-zloc] (target-locs zloc)
+        clause-spec (clause-spec parent-zloc uri db)]
     (when (probable-valid-movement? zloc dir clause-spec)
       (when-let [[zloc range cursor-position] (drag-clause zloc dir clause-spec)]
         {:show-document-after-edit {:uri         uri

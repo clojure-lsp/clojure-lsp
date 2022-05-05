@@ -658,7 +658,33 @@
                                   " :c 3}")
                           (h/code "{:c 3"
                                   " |:a {:a/a 1"
-                                  "     :a/b 2}}"))))
+                                  "     :a/b 2}}")))
+  (testing "special nodes"
+    (assert-drag-backward (h/code "[|'b 1]")
+                          (h/code "[1 '|b]"))
+    (assert-drag-backward (h/code "[|@b 1]")
+                          (h/code "[1 @|b]"))
+    (assert-drag-backward (h/code "[|#=b 1]")
+                          (h/code "[1 #=|b]"))
+    (assert-drag-backward (h/code "[|^:foo 2 1]")
+                          (h/code "[1 ^|:foo 2]"))
+    (assert-drag-backward (h/code "[|#^:foo 2 1]")
+                          (h/code "[1 #^|:foo 2]"))
+    (assert-drag-backward (h/code "[|#my-macro 2 1]")
+                          (h/code "[1 #|my-macro 2]"))
+    (assert-drag-backward (h/code "[|`map 1]")
+                          (h/code "[1 `|map]"))
+    (assert-drag-backward (h/code "[|~two 1]")
+                          (h/code "[1 ~|two]"))
+    (assert-drag-backward (h/code "[|~@two 1]")
+                          (h/code "[1 ~@|two]"))
+    (assert-drag-backward (h/code "[|#'two 1]")
+                          (h/code "[1 #'|two]"))
+    (assert-drag-backward (h/code "[|#::foo {:b 2} 1]")
+                          (h/code "[1 #:|:foo {:b 2}]"))
+    ;; doesn't work, because uneval is treated as whitespace by rest of drag code
+    #_(assert-drag-backward (h/code "[|#_two 1]")
+                            (h/code "[1 #_|two]"))))
 
 (deftest drag-forward
   (testing "common cases"
@@ -1030,7 +1056,33 @@
                                  " |:c 3}")
                          (h/code "{|:c 3"
                                  " :a {:a/a 1"
-                                 "     :a/b 2}}"))))
+                                 "     :a/b 2}}")))
+  (testing "special nodes"
+    (assert-drag-forward (h/code "[2 |'b]")
+                         (h/code "['|b 2]"))
+    (assert-drag-forward (h/code "[2 |@b]")
+                         (h/code "[@|b 2]"))
+    (assert-drag-forward (h/code "[2 |#=b]")
+                         (h/code "[#=|b 2]"))
+    (assert-drag-forward (h/code "[2 |^:foo 1]")
+                         (h/code "[^|:foo 1 2]"))
+    (assert-drag-forward (h/code "[2 |#^:foo 1]")
+                         (h/code "[#^|:foo 1 2]"))
+    (assert-drag-forward (h/code "[2 |#my-macro 1]")
+                         (h/code "[#|my-macro 1 2]"))
+    (assert-drag-forward (h/code "[2 |`map]")
+                         (h/code "[`|map 2]"))
+    (assert-drag-forward (h/code "[2 |~one]")
+                         (h/code "[~|one 2]"))
+    (assert-drag-forward (h/code "[2 |~@one]")
+                         (h/code "[~@|one 2]"))
+    (assert-drag-forward (h/code "[2 |#'one]")
+                         (h/code "[#'|one 2]"))
+    (assert-drag-forward (h/code "[2 |#::foo {:a 1}]")
+                         (h/code "[#:|:foo {:a 1} 2]"))
+    ;; doesn't work, because uneval is treated as whitespace by rest of drag code
+    #_(assert-drag-forward (h/code "[2 |#_one]")
+                           (h/code "[#_|one 2]"))))
 
 ;; These are macros so test failures have the right line numbers
 (defmacro assert-no-erroneous-backwards [code]

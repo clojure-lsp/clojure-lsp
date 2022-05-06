@@ -33,14 +33,6 @@
    :name-end-col 6
    :bucket :locals})
 
-(def refered-usages
-  [refered-usage-a
-   refered-usage-b
-   refered-usage-c])
-
-(def refered-tokens
-  (map #(->token % :function) refered-usages))
-
 (defn code [& strings] (string/join "\n" strings))
 
 (deftest usage->absolute-token
@@ -51,20 +43,17 @@
 (deftest absolute-token->relative-token
   (testing "without previous token"
     (is (= [6 3 3 2 0]
-           (#'semantic-tokens/absolute-token->relative-token refered-tokens
-                                                             0
-                                                             (->token refered-usage-a :function)))))
+           (#'semantic-tokens/absolute-token->relative-token [nil
+                                                              (->token refered-usage-a :function)]))))
   (testing "same line token"
     (is (= [0 7 3 2 0]
-           (#'semantic-tokens/absolute-token->relative-token refered-tokens
-                                                             1
-                                                             (->token refered-usage-b :function)))))
+           (#'semantic-tokens/absolute-token->relative-token [(->token refered-usage-a :function)
+                                                              (->token refered-usage-b :function)]))))
 
   (testing "other line token"
     (is (= [2 2 3 2 0]
-           (#'semantic-tokens/absolute-token->relative-token refered-tokens
-                                                             2
-                                                             (->token refered-usage-c :function))))))
+           (#'semantic-tokens/absolute-token->relative-token [(->token refered-usage-b :function)
+                                                              (->token refered-usage-c :function)])))))
 
 (deftest full-tokens
   (testing "tokens order"

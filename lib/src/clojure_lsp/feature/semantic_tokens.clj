@@ -160,7 +160,7 @@
   [elements]
   (->> elements
        (sort-by (juxt :name-row :name-col))
-       (map
+       (keep
          (fn [{:keys [bucket] :as element}]
            (cond
              (contains? #{:java-class-definitions
@@ -186,49 +186,49 @@
 
              (= bucket :protocol-impls)
              [(element->absolute-token element :method [:implementation])])))
-       (remove nil?)
        (mapcat identity)))
 
 (defn ^:private absolute-token->relative-token
-  [tokens
-   index
-   [row col length token-type token-modifier :as token]]
-  (let [[previous-row previous-col _ _ _] (nth tokens (dec index) nil)]
-    (cond
-      (nil? previous-row)
-      token
+  [[[previous-row previous-col _ _ _]
+    [row col length token-type token-modifier :as token]]]
+  (cond
+    (nil? previous-row)
+    token
 
-      (= ^Long previous-row ^Long row)
-      [0
-       (- ^Long col ^Long previous-col)
-       length
-       token-type
-       token-modifier]
+    (= ^Long previous-row ^Long row)
+    [0
+     (- ^Long col ^Long previous-col)
+     length
+     token-type
+     token-modifier]
 
-      :else
-      [(- ^Long row ^Long previous-row)
-       col
-       length
-       token-type
-       token-modifier])))
+    :else
+    [(- ^Long row ^Long previous-row)
+     col
+     length
+     token-type
+     token-modifier]))
+
+(defn ^:private absolute-tokens->relative-tokens [absolute-tokens]
+  (->> absolute-tokens
+       (cons nil)
+       (partition 2 1)
+       (mapcat absolute-token->relative-token)
+       doall))
 
 (defn full-tokens [uri db]
-  (let [elements (get-in db [:analysis (shared/uri->filename uri)])
-        absolute-tokens (elements->absolute-tokens elements)]
-    (->> absolute-tokens
-         (map-indexed (partial absolute-token->relative-token absolute-tokens))
-         flatten
-         doall)))
+  (let [elements (get-in db [:analysis (shared/uri->filename uri)])]
+    (->> elements
+         elements->absolute-tokens
+         absolute-tokens->relative-tokens)))
 
 (defn range-tokens
   [uri range db]
-  (let [elements (get-in db [:analysis (shared/uri->filename uri)])
-        range-elements (filter #(element-inside-range? % range) elements)
-        absolute-tokens (elements->absolute-tokens range-elements)]
-    (->> absolute-tokens
-         (map-indexed (partial absolute-token->relative-token absolute-tokens))
-         flatten
-         doall)))
+  (let [elements (get-in db [:analysis (shared/uri->filename uri)])]
+    (->> elements
+         (filter #(element-inside-range? % range))
+         elements->absolute-tokens
+         absolute-tokens->relative-tokens)))
 
 (defn element->token-type [element]
   (->> [element]

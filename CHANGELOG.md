@@ -4,6 +4,7 @@
 
 - Editor
   - Fix drag in `are` when `clojure.test` is aliased. #967
+  - Reduce time to calculate semantic tokens, reducing CPU usage in large files. #970
 
 ## 2022.05.03-12.35.40
 

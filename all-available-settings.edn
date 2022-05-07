@@ -17,7 +17,7 @@
          :sort {:ns true
                 :require true
                 :import true
-                :import-classes true
+                :import-classes {:classes-per-line 3} ;; -1 for all in single line
                 :refer {:max-line-length 80}}}
  :hover {:hide-file-location? false
          :arity-on-same-line? false

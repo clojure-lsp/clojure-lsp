@@ -294,13 +294,24 @@
     node))
 
 (defn ^:private sorting-package-import-classes
-  [parent-node clean-ctx import-loc base-package classes node]
+  [parent-node clean-ctx import-loc base-package classes settings node]
   (let [parent-node-col (ns-inner-blocks-indentation-parent-col import-loc clean-ctx)
         coll-node-fn (if (= :list (z/tag parent-node))
                        n/list-node
                        n/vector-node)
         sorted-classes (sort-by-if-enabled identity :import-classes (:db clean-ctx) classes)
-        nodes (if (= :next-line (:ns-import-classes-indentation clean-ctx))
+        classes-per-line (get-in settings [:clean :sort :import-classes :classes-per-line] 3)
+        move-classes? (and (not= -1 classes-per-line)
+                           (> (count sorted-classes) classes-per-line))
+        nodes (cond
+                (not move-classes?)
+                (->> sorted-classes
+                     (mapv (fn [n]
+                             [(n/spaces 1) (n/token-node n)]))
+                     (concat [(n/token-node (symbol base-package))])
+                     flatten)
+
+                (= :next-line (:ns-import-classes-indentation clean-ctx))
                 (->> sorted-classes
                      (mapv (fn [n]
                              [(n/newlines 1)
@@ -310,6 +321,8 @@
                               (n/token-node n)]))
                      (concat [(n/token-node (symbol base-package))])
                      flatten)
+
+                :else
                 (->> (rest sorted-classes)
                      (mapv (fn [n]
                              [(n/newlines 1)
@@ -341,7 +354,7 @@
                (not (some-> parent-node z/up z/next z/sexpr #{:clj :cljs})) ;; inside reader conditionals
                (not (some-> parent-node z/up z/up z/next z/sexpr #{:clj :cljs})) ;; list of imports inside reader macros
                (> (count classes) 1))
-        (sorting-package-import-classes parent-node clean-ctx import-loc base-package classes node)
+        (sorting-package-import-classes parent-node clean-ctx import-loc base-package classes settings node)
         node))
 
     (contains? unused-imports (z/sexpr parent-node))

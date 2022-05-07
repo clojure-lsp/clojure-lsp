@@ -464,10 +464,7 @@
                              "  A C Eu Ei D C F Foo")
                      (h/code "(ns foo.bar"
                              " (:import"
-                             "  (a.b"
-                             "    C"
-                             "    D"
-                             "    F)"
+                             "  (a.b C D F)"
                              "  (a.b.b Foo)"
                              "  a.b.c.D.Ei"
                              "  a.b.c.d.Eu"
@@ -479,18 +476,54 @@
                      (h/code "(ns foo.bar"
                              " (:import"
                              "  a.c.d.e.A"
+                             "  (a.a "
+                             "    D C E)"
                              "  (a.b "
-                             "    D C F)"
+                             "    F H I G)"
                              "  a.b.c.Z.C))"
-                             "  A C Eu Ei D C F")
+                             "  A C E Eu Ei D C F G H I")
                      (h/code "(ns foo.bar"
                              " (:import"
-                             "  (a.b C"
-                             "       D"
-                             "       F)"
+                             "  (a.a C D E)"
+                             "  (a.b F"
+                             "       G"
+                             "       H"
+                             "       I)"
                              "  a.b.c.Z.C"
                              "  a.c.d.e.A))"
-                             "  A C Eu Ei D C F")))
+                             "  A C E Eu Ei D C F G H I")))
+    (testing "unsorted used imports classes with custom classes-per-line"
+      (test-clean-ns {:settings {:clean {:sort {:import-classes {:classes-per-line 4}}}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  (a.b "
+                             "    A B C D)"
+                             "  (a.c "
+                             "    E F G H I)))"
+                             "  A B C D E F G H I")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  (a.b A B C D)"
+                             "  (a.c"
+                             "    E"
+                             "    F"
+                             "    G"
+                             "    H"
+                             "    I)))"
+                             "  A B C D E F G H I"))
+      (test-clean-ns {:settings {:clean {:sort {:import-classes {:classes-per-line -1}}}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  (a.b "
+                             "    A B C D)"
+                             "  (a.c "
+                             "    E F G H I)))"
+                             "  A B C D E F G H I")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  (a.b A B C D)"
+                             "  (a.c E F G H I)))"
+                             "  A B C D E F G H I")))
     (testing "unsorted used refer"
       (test-clean-ns {}
                      (h/code "(ns foo.bar"
@@ -623,9 +656,7 @@
                                "  [clojure.string :as str])"
                                " (:refer-clojure :exclude [next])"
                                " (:import"
-                               "  [foo"
-                               "   Bar"
-                               "   Qux]))"
+                               "  [foo Bar Qux]))"
                                "str/join"
                                "Bar Qux")))
       (testing "don't sort when :ns sort config is disabled"
@@ -675,35 +706,25 @@
                            "Map.")
                    (h/code "(ns foo.bar"
                            " (:import"
-                           "  [java.util"
-                           "   Calendar"
-                           "   Map]))"
+                           "  [java.util Calendar Map]))"
                            "Calendar."
                            "Map.")))
   (testing "unused package imports with ns-inner-blocks-indentation :same-line"
     (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :same-line}}}
                    (h/code "(ns foo.bar"
-                           " (:import [java.util Date Calendar List Map]))"
+                           " (:import [java.util Date Calendar List Map Foo Bar]))"
                            "Calendar."
-                           "Map.")
+                           "Map."
+                           "Foo. Bar.")
                    (h/code "(ns foo.bar"
                            " (:import [java.util"
+                           "           Bar"
                            "           Calendar"
+                           "           Foo"
                            "           Map]))"
                            "Calendar."
-                           "Map.")))
-  (testing "unused package imports with :ns-inner-blocks-indentation on same line"
-    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :same-line}}}
-                   (h/code "(ns foo.bar"
-                           " (:import [java.util Date Calendar List Map]))"
-                           "Calendar."
-                           "Map.")
-                   (h/code "(ns foo.bar"
-                           " (:import [java.util"
-                           "           Calendar"
-                           "           Map]))"
-                           "Calendar."
-                           "Map.")))
+                           "Map."
+                           "Foo. Bar.")))
   (testing "unused package imports with single import"
     (test-clean-ns {}
                    (h/code "(ns foo.bar"
@@ -729,9 +750,7 @@
                            "List.")
                    (h/code "(ns foo.bar"
                            " (:import"
-                           "  [java.util"
-                           "   Date"
-                           "   List]))"
+                           "  [java.util Date List]))"
                            "Date."
                            "List."))
     (test-clean-ns {}
@@ -743,9 +762,7 @@
                            "List.")
                    (h/code "(ns foo.bar"
                            " (:import"
-                           "  [java.util"
-                           "   Date"
-                           "   List]))"
+                           "  [java.util Date List]))"
                            "Date."
                            "List.")))
   (testing "cljc conditional readers"
@@ -807,9 +824,7 @@
                              " (:import"
                              "  #?(:cljs [other.foof F])"
                              "  [some.bar B]"
-                             "  [some.baz"
-                             "   C"
-                             "   D]))"
+                             "  [some.baz C D]))"
                              "F B C D")
                      true
                      "file:///a.cljc"))

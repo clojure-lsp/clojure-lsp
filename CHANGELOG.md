@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966
+
 - Editor
   - Fix drag in `are` when `clojure.test` is aliased. #967
   - Reduce time to calculate semantic tokens, reducing CPU usage in large files. #970

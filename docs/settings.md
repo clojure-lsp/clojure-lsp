@@ -66,7 +66,7 @@ This is useful if you have some rule to apply to clojure-lsp for multiple projec
 
 ## All settings
 
-You can find all settings and its default values [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn) and below the docs for each one:
+__You can find all settings and its default values [here](https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn)__ and below the docs for each one:
 
 | name                                      | description                                                                                                                                                                                                                                                                                                                                                                                                          | default                                                                                       |
 |-------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
@@ -305,6 +305,8 @@ Whether to enable sort of `:import` form.
 ##### `import-classes`
 
 Whether to enable sort of package classes inside `:import` form.
+
+- `:classes-per-line`: the max classes allowed to keep in a single line, if more than this value, clojure-lsp will move all classes to `:next-line` or `:same-line` following `:ns-import-classes-indentation`.
 
 ##### `refer`
 

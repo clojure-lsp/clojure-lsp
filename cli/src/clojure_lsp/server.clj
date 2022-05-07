@@ -21,19 +21,14 @@
    [lsp4clj.protocols.producer :as producer]
    [taoensso.timbre :as timbre])
   (:import
-   (clojure_lsp
-     ClojureLanguageClient
-     ClojureLanguageServer)
+   (clojure_lsp ClojureLanguageClient ClojureLanguageServer)
    (clojure_lsp.feature.clojuredocs ClojuredocsParams)
    (clojure_lsp.feature.cursor_info CursorInfoParams)
    (java.util.concurrent CompletableFuture)
    (lsp4clj.core LSPServer)
    (lsp4clj.protocols.feature_handler ILSPFeatureHandler)
    (lsp4clj.protocols.producer ILSPProducer)
-   (org.eclipse.lsp4j
-     InitializeParams
-     InitializedParams
-     TextDocumentIdentifier)
+   (org.eclipse.lsp4j InitializeParams InitializedParams TextDocumentIdentifier)
    (org.eclipse.lsp4j.jsonrpc Launcher))
   (:gen-class))
 

@@ -3,10 +3,7 @@
    [clojure.spec.alpha :as s]
    [lsp4clj.coercer :as coercer])
   (:import
-   (clojure_lsp.feature.test_tree
-     TestTreeKind
-     TestTreeNode
-     TestTreeParams)))
+   (clojure_lsp.feature.test_tree TestTreeKind TestTreeNode TestTreeParams)))
 
 (set! *warn-on-reflection* true)
 

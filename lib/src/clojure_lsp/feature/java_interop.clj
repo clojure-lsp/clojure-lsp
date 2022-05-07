@@ -12,14 +12,10 @@
    [lsp4clj.protocols.logger :as logger])
   (:import
    (java.io File)
-   (java.net
-     JarURLConnection
-     URL)
+   (java.net JarURLConnection URL)
    (java.nio.file Path)
    (java.util.zip ZipInputStream)
-   (org.benf.cfr.reader.api
-     CfrDriver
-     CfrDriver$Builder)))
+   (org.benf.cfr.reader.api CfrDriver CfrDriver$Builder)))
 
 (set! *warn-on-reflection* true)
 

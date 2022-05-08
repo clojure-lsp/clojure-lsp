@@ -4,6 +4,7 @@
 
 - General
   - Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966
+  - Allow `:linters` to be configured by LSP clients passing string keys/values. #977
 
 - Editor
   - Fix drag in `are` when `clojure.test` is aliased. #967

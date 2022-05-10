@@ -188,6 +188,10 @@
               path)))
         (file-seq jdk-dir)))
 
+(defn ^:private read-installed-jdk-source-uri [jdk-result-file]
+  (and (shared/file-exists? jdk-result-file)
+       (slurp jdk-result-file)))
+
 (defn retrieve-jdk-source-and-analyze!
   "Find JDK source and analyze it with clj-kondo for java class definitions.
 
@@ -203,8 +207,7 @@
   (let [db @db*
         jdk-dir-file (io/file (config/global-cache-dir) "jdk")
         jdk-result-file (io/file jdk-dir-file "result")
-        installed-jdk-source-uri (and (shared/file-exists? jdk-result-file)
-                                      (slurp jdk-result-file))
+        installed-jdk-source-uri (read-installed-jdk-source-uri jdk-result-file)
         {custom-jdk-source-uri :jdk-source-uri java-home :home-path} (settings/get db [:java])
         local-jdk-source-file* (delay (find-local-jdk-source java-home))
         download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
@@ -239,8 +242,19 @@
       ;; else
       (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled."))
 
-    (if (and (shared/file-exists? jdk-result-file)
-             (slurp jdk-result-file))
+    (cond
+      ;; recheck uri is still valid and present
+      (not (read-installed-jdk-source-uri jdk-result-file))
+      (logger/warn java-logger-tag "JDK source not found, skipping java analysis.")
+
+      (= :jdk-already-installed result)
+      (let [global-db (db/read-global-cache)]
+        (swap! db* #(-> %
+                        (update :analysis merge (:analysis global-db))
+                        (update :analysis-checksums merge (:analysis-checksums global-db))))
+        (logger/info java-logger-tag "JDK source cached loaded successfully."))
+
+      :else
       (let [java-filenames (jdk-dir->java-filenames jdk-dir-file)
             global-db (db/read-global-cache)
             {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums java-filenames global-db @db*)]
@@ -248,5 +262,4 @@
           (do
             (analyze-and-cache-jdk-source! paths-not-on-checksum new-checksums db*)
             (logger/info java-logger-tag "JDK source analyzed and cached successfully."))
-          (logger/info java-logger-tag "JDK source cached loaded successfully.")))
-      (logger/warn java-logger-tag "JDK source not found, skipping java analysis."))))
+          (logger/info java-logger-tag "JDK source cached loaded successfully."))))))

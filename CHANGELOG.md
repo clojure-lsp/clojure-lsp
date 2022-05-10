@@ -9,6 +9,7 @@
 - Editor
   - Fix drag in `are` when `clojure.test` is aliased. #967
   - Reduce time to calculate semantic tokens, reducing CPU usage in large files. #970
+  - Fix JDK global cache load when jdk source were already analyzed on previous sessions, fixing finding definition of jdk classes not working sometimes.
 
 ## 2022.05.03-12.35.40
 

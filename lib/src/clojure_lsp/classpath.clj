@@ -88,7 +88,7 @@
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd
   [classpath]
   (if shared/windows-os?
-    (into ["powershell.exe" "-NoProfile" "-Command"] classpath)
+    (into ["cmd.exe" "/d" "/c"] classpath)
     classpath))
 
 (defn ^:private lein-source-aliases [source-aliases]

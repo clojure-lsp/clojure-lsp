@@ -7,6 +7,7 @@
   - Allow `:linters` to be configured by LSP clients passing string keys/values. #977
 
 - Editor
+  - Fix powershell.exe command execution error on Windows
   - Fix drag in `are` when `clojure.test` is aliased. #967
   - Reduce time to calculate semantic tokens, reducing CPU usage in large files. #970
   - Fix JDK global cache load when jdk source were already analyzed on previous sessions, fixing finding definition of jdk classes not working sometimes.

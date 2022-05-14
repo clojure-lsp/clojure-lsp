@@ -115,11 +115,11 @@
         on-top-level-form? (= form-loc zloc)
         ;; You could have multiple in a top form (let [x 1] (def y x) (def z y))
         ;; we don't support that
-        multiple-defs? (= 1 (count defs))
+        single-def? (= 1 (count defs))
         can-move? (and dest-ns
                        (empty? local-inner-usages)
                        on-top-level-form?
-                       multiple-defs?)]
+                       single-def?)]
     (when can-move?
       (let [def-to-move (first defs)
             refs (q/find-references analysis def-to-move false)
@@ -129,7 +129,6 @@
             insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db*)
                                   z/of-string
                                   z/rightmost)
-            _db @db*
             insertion-pos (meta (z/node insertion-loc))
             dest-inner-usages (->> inner-usages
                                    (filterv (comp #(= dest-ns %) :to)))

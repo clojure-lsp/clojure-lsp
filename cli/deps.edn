@@ -23,7 +23,7 @@
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
                                                   :sha "cc75980b43011773162b485f46f939dc5fba91e4"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
-                                                   :sha "e075b13bfe3666a73f82c12817bdf5f1d6c692e3"}}
+                                                   :sha "b9f3a28555eab810aa6ea55a36b656f6c8618078"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.8.1" :sha "7d40500"}

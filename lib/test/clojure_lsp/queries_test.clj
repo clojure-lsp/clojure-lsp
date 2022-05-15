@@ -455,7 +455,16 @@
         (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-clj bar-c-clj))
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-cljs bar-c-cljs)))))
+        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-cljs bar-c-cljs))))
+  (testing "when a macro is require-macros on cljs, being the var-definition on a clj/cljc file."
+    (h/clean-db!)
+    (h/load-code-and-locs (h/code "(ns some.foo) (defmacro bar [& body] @body)") (h/file-uri "file:///some/foo.clj"))
+    (h/load-code-and-locs (h/code "(ns some.foo (:require-macros [some.foo])) (def baz)") (h/file-uri "file:///some/foo.cljs"))
+    (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns a (:require [some.foo :as f])) (f/|bar 1)") (h/file-uri "file:///a.cljs"))
+          ana (:analysis @db/db*)]
+      (h/assert-submap
+        {:name 'bar :filename (h/file-path "/some/foo.clj")}
+        (q/find-definition-from-cursor ana (h/file-path "/a.cljs") bar-r bar-c)))))
 
 (deftest find-definition-from-cursor-when-declared
   (let [[[bar-r bar-c]] (h/load-code-and-locs

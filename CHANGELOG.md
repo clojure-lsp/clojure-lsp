@@ -12,6 +12,7 @@
   - Reduce time to calculate semantic tokens, reducing CPU usage in large files. #970
   - Fix JDK global cache load when jdk source were already analyzed on previous sessions, fixing finding definition of jdk classes not working sometimes.
   - Fix command move-form not working.
+  - Fix find definition of macros required by :require-macros on cljs files. #980
 
 ## 2022.05.03-12.35.40
 

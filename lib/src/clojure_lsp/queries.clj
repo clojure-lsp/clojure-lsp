@@ -140,7 +140,8 @@
           (= (:name %) (:name element))
           (not (= (:defined-by %) 'clojure.core/declare))
           (= (:ns %) (:to element))
-          (match-file-lang % element))
+          (or (contains? (elem-langs element) :cljs)
+              (match-file-lang % element)))
     analysis))
 
 (defmethod find-definition :local-usages

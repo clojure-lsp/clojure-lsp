@@ -6,6 +6,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -52,8 +53,17 @@
           (logger/error (str err)))
         result))))
 
-(defn entry->normalized-entries [{:keys [bucket] :as element}]
+(defn entry->normalized-entries [{:keys [bucket arglist-strs] :as element}]
   (cond
+    (identical? :var-definitions bucket)
+    [(-> element
+         (shared/assoc-some :arglist-kws (->> arglist-strs
+                                              (keep (fn [arglist-str]
+                                                      (try
+                                                        (:keys (first (edn/read-string arglist-str)))
+                                                        (catch Exception _ nil))))
+                                              seq)))]
+
     ;; We create two entries here (and maybe more for refer)
     (identical? :namespace-usages bucket)
     (cond-> [(set/rename-keys element {:to :name})]

@@ -23,17 +23,18 @@
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
 (def priority-kw->number
-  {:simple-cursor 1
-   :alias-keyword 2
-   :keyword 3
-   :refer 4
-   :required-alias 5
-   :unrequired-alias 6
-   :ns-definition 7
-   :clojure-core 8
-   :clojurescript-core 9
-   :java 10
-   :snippet 11})
+  {:kw-arg 1
+   :simple-cursor 2
+   :alias-keyword 3
+   :keyword 4
+   :refer 5
+   :required-alias 6
+   :unrequired-alias 7
+   :ns-definition 8
+   :clojure-core 9
+   :clojurescript-core 10
+   :java 11
+   :snippet 12})
 
 (defn ^:private keyword-element->str [{:keys [alias ns] :as element} cursor-alias priority]
   (let [alias (or alias
@@ -188,6 +189,18 @@
   (->> elements
        (filter (partial valid-element-completion-item? matches-fn cursor-uri cursor-element row col))
        (map #(element->completion-item % nil :simple-cursor))))
+
+(defn ^:private with-definition-kws-args-element-items
+  [matches-fn {:keys [arglist-kws name-row name-col filename]}]
+  (->> (flatten arglist-kws)
+       (map (fn [kw]
+              {:name (str kw)
+               :name-row name-row
+               :name-col name-col
+               :filename filename
+               :bucket :keywords}))
+       (filter #(matches-fn (keyword-element->str % nil nil)))
+       (mapv #(element->completion-item % nil :kw-arg))))
 
 (defn ^:private with-ns-definition-elements [matches-fn other-ns-elements]
   (->> other-ns-elements
@@ -402,6 +415,9 @@
                                          (and (string/starts-with? (namespace cursor-value) "??_")
                                               (string/ends-with? (namespace cursor-value) "_??"))))
             matches-fn (partial matches-cursor? cursor-value)
+            {caller-usage-row :row caller-usage-col :col} (some-> cursor-loc edit/find-op z/node meta)
+            caller-var-definition (when (and caller-usage-row caller-usage-col)
+                                    (q/find-definition-from-cursor analysis filename caller-usage-row caller-usage-col))
             inside-require? (edit/inside-require? cursor-loc)
             inside-refer? (edit/inside-refer? cursor-loc)
             simple-cursor? (or (simple-ident? cursor-value)
@@ -440,6 +456,9 @@
                           keyword-value?)
                       (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements row col))
                           (into (with-clojure-core-items matches-fn)))
+
+                      (:arglist-kws caller-var-definition)
+                      (into (with-definition-kws-args-element-items matches-fn caller-var-definition))
 
                       (and simple-cursor?
                            (supports-cljs? uri))

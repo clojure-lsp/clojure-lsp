@@ -31,9 +31,14 @@
   "\u200b")
 
 (defn ^:private replace-incomplete-token [s invalid-str valid-str]
-  (let [token-pattern (re-pattern (str invalid-str "(\\s|\\n|\\))"))]
-    (when-let [[_ divider] (re-find token-pattern s)]
-      (string/replace-first s token-pattern (str valid-str divider)))))
+  (let [token-pattern (re-pattern (str invalid-str "(\\s|\\n|\\)|\\]|\\})"))
+        matcher (re-matcher token-pattern s)]
+    (loop [[_ divider] (re-find matcher)
+           new-s s]
+      (if divider
+        (recur (re-find matcher)
+               (string/replace-first new-s token-pattern (str valid-str divider)))
+        new-s))))
 
 (defn ^:private z-replace-preserving-meta [zloc replacement]
   (z/replace zloc (with-meta replacement (meta (z/node zloc)))))

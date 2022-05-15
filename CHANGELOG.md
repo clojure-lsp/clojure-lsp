@@ -13,6 +13,7 @@
   - Fix JDK global cache load when jdk source were already analyzed on previous sessions, fixing finding definition of jdk classes not working sometimes.
   - Fix command move-form not working.
   - Fix find definition of macros required by :require-macros on cljs files. #980
+  - Add support to completion keywords found on function definition `:keys` destructuring, improving completion on api calls.
 
 ## 2022.05.03-12.35.40
 

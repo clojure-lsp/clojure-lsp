@@ -321,6 +321,28 @@
        {:label "::alp/foob" :kind :keyword}]
       (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 @db/db*))))
 
+(deftest completing-arg-keywords-from-function-definition
+  (h/load-code-and-locs (h/code "(ns some.a) (defn my-api [{:keys [foo bar baz] :as bla}] 1)")
+                        "file:///some/a.clj")
+  (h/load-code-and-locs (h/code "(ns some.b (:require [some.a :as a]))"
+                                "(a/my-api {:})")
+                        "file:///some/b.clj")
+  (h/load-code-and-locs (h/code "(ns some.c (:require [some.a :as a]))"
+                                "(a/my-api {:foo 1"
+                                "           :b})")
+                        "file:///some/c.clj")
+  (h/assert-submaps
+    [{:label ":bar" :kind :keyword}
+     {:label ":baz" :kind :keyword}
+     {:label ":foo" :kind :keyword}
+     {:label ":as" :kind :keyword}
+     {:label ":require" :kind :keyword}]
+    (f.completion/completion (h/file-uri "file:///some/b.clj") 2 13 @db/db*))
+  (h/assert-submaps
+    [{:label ":bar" :kind :keyword}
+     {:label ":baz" :kind :keyword}]
+    (f.completion/completion (h/file-uri "file:///some/c.clj") 3 13 @db/db*)))
+
 (deftest completing-sorting
   (h/load-code-and-locs
     (h/code "(ns foo)"

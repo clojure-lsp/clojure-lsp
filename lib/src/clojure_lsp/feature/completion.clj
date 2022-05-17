@@ -349,9 +349,18 @@
                          :detail (str "java.util." sym)
                          :priority :java})))))
 
-(defn ^:private merging-snippets [items cursor-loc next-loc matches-fn settings]
-  (let [snippet-items-by-label (->> (concat
-                                      (f.completion-snippet/known-snippets settings)
+(defn ^:private remove-first-and-last-char [s]
+  (-> (string/join "" (drop-last s))
+      (subs 1)))
+
+(defn ^:private merging-snippets [items cursor-loc next-loc function-call? matches-fn settings]
+  (let [snippet-items (map (fn [snippet]
+                             (if (:function-call? snippet)
+                               (update snippet :insert-text remove-first-and-last-char)
+                               snippet))
+                           (f.completion-snippet/known-snippets function-call? settings))
+        snippet-items-by-label (->> (concat
+                                      snippet-items
                                       (f.completion-snippet/build-additional-snippets cursor-loc next-loc settings))
                                     (map #(assoc %
                                                  :kind :snippet
@@ -408,6 +417,8 @@
                            (if (z/sexpr-able? cursor-loc)
                              (z/sexpr cursor-loc)
                              ""))
+            cursor-op (some-> cursor-loc edit/find-op)
+            function-call? (= (str cursor-value) (some-> cursor-op z/string))
             keyword-value? (keyword? cursor-value)
             aliased-keyword-value? (when (and keyword-value?
                                               (qualified-keyword? cursor-value))
@@ -415,7 +426,7 @@
                                          (and (string/starts-with? (namespace cursor-value) "??_")
                                               (string/ends-with? (namespace cursor-value) "_??"))))
             matches-fn (partial matches-cursor? cursor-value)
-            {caller-usage-row :row caller-usage-col :col} (some-> cursor-loc edit/find-op z/node meta)
+            {caller-usage-row :row caller-usage-col :col} (some-> cursor-op z/node meta)
             caller-var-definition (when (and caller-usage-row caller-usage-col)
                                     (q/find-definition-from-cursor analysis filename caller-usage-row caller-usage-col))
             inside-require? (edit/inside-require? cursor-loc)
@@ -438,7 +449,7 @@
                     (cond-> (with-ns-definition-elements matches-fn all-other-ns-elements)
                       (and support-snippets?
                            simple-cursor?)
-                      (merging-snippets cursor-loc next-loc matches-fn settings))
+                      (merging-snippets cursor-loc next-loc function-call? matches-fn settings))
 
                     aliased-keyword-value?
                     (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename all-other-ns-elements)
@@ -470,7 +481,7 @@
 
                       (and support-snippets?
                            simple-cursor?)
-                      (merging-snippets cursor-loc next-loc matches-fn settings)))]
+                      (merging-snippets cursor-loc next-loc function-call? matches-fn settings)))]
         (sorting-and-distincting-items items)))))
 
 (defn ^:private resolve-item-by-ns

@@ -15,6 +15,7 @@
   - Fix command move-form not working.
   - Fix find definition of macros required by :require-macros on cljs files. #980
   - Add support to completion keywords found on function definition `:keys` destructuring, improving completion on api calls.
+  - Avoid duplicate parens when inserting snippets during completion. #982
 
 ## 2022.05.03-12.35.40
 

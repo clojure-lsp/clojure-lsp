@@ -215,7 +215,8 @@
 (deftest completing-known-snippets
   (h/load-code-and-locs
     (h/code "(ns foo)"
-            "comment"))
+            "comment"
+            "(comm)"))
 
   (testing "completing comment snippet when client does not support snippets"
     (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false}}}}})
@@ -236,7 +237,16 @@
         :insert-text "(comment\n  $0\n  )"
         :kind :snippet
         :insert-text-format :snippet}]
-      (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 @db/db*)))))
+      (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 2 8 @db/db*))))
+  (testing "completing from a function call should not create duplicate parens"
+    (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
+    (h/assert-submaps
+      [{:label "comment"
+        :detail "Insert comment block"
+        :insert-text "comment\n  $0\n  "
+        :kind :snippet
+        :insert-text-format :snippet}]
+      (filter (comp #(= "comment" %) :label) (f.completion/completion (h/file-uri "file:///a.clj") 3 6 @db/db*)))))
 
 (deftest completing-user-snippets
   (h/load-code-and-locs

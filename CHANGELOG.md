@@ -6,6 +6,7 @@
   - Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966
   - Allow `:linters` to be configured by LSP clients passing string keys/values. #977
   - Support clj-kondo `:config-in-ns` and `:ns-groups` for `clojure-lsp/unused-public-var` linter. #981
+  - Improve clean-ns correct positioning of multiple refers.
 
 - Editor
   - Fix powershell.exe command execution error on Windows

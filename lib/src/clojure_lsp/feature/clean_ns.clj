@@ -125,19 +125,22 @@
                                          (-> removed-nodes z/node meta)))))))
 
 (defn ^:private sort-refers-checking-new-lines
-  [root-node initial-sep-spaces db nodes]
+  [root-node initial-sep-spaces {:keys [db]} nodes]
   (let [sorted-refers (->> nodes
                            (sort-by-if-enabled (comp string/lower-case n/sexpr) :refer db))
-        as-alias-before-refer-node (-> root-node z/down (z/find-value z/right ':refer) (z/find-value z/left ':as))
-        extra-alias-before-refer-spaces (if as-alias-before-refer-node
-                                          (+ (-> as-alias-before-refer-node z/next z/sexpr str count)
-                                             2 ;; :as
-                                             3 ;; spaces between
-                                             )
-                                          0)
-        init-refer-sep (+ initial-sep-spaces
-                          (-> root-node z/down z/sexpr str count)
-                          (+ 12 extra-alias-before-refer-spaces))]
+        {old-ns-row :row old-ns-col :col} (-> root-node z/next z/node meta)
+        new-initial-ns-pos (+ 2 initial-sep-spaces)
+        {refers-start-row :row
+         refers-start-col :col} (-> root-node
+                                    z/down
+                                    (z/find-value z/right ':refer)
+                                    z/next
+                                    z/node
+                                    meta)
+        difference-changed-indentation (if (= old-ns-row refers-start-row)
+                                         (- new-initial-ns-pos old-ns-col)
+                                         0)
+        init-refer-sep (+ 2 refers-start-col difference-changed-indentation)]
     (->> sorted-refers
          (map-indexed (fn [idx refer-node]
                         (let [end-col (->> sorted-refers
@@ -166,7 +169,7 @@
          rest)))
 
 (defn ^:private remove-unused-refers
-  [node unused-refers initial-sep-spaces db]
+  [node unused-refers initial-sep-spaces clean-ctx]
   (let [node-refers (-> node z/down (z/find-next-value ':refer) z/right z/node n/children)
         unused-refers-symbol (->> unused-refers (map (comp symbol name)) set)
         removed-refers (->> node-refers
@@ -187,7 +190,7 @@
           (z/find-next-value ':refer)
           z/right
           (z/replace (->> removed-refers
-                          (sort-refers-checking-new-lines node initial-sep-spaces db)
+                          (sort-refers-checking-new-lines node initial-sep-spaces clean-ctx)
                           n/vector-node))
           z/up))))
 
@@ -208,7 +211,7 @@
     node))
 
 (defn ^:private remove-unused-require
-  [node {:keys [unused-aliases unused-refers duplicate-requires db] :as clean-ctx} initial-sep-spaces]
+  [node initial-sep-spaces {:keys [unused-aliases unused-refers duplicate-requires] :as clean-ctx}]
   (let [namespace-expr (some-> node z/down z/leftmost z/sexpr)]
     (cond
       (not (z/vector? node))
@@ -218,7 +221,7 @@
       (z/remove node)
 
       (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
-      (remove-unused-refers node unused-refers initial-sep-spaces db)
+      (remove-unused-refers node unused-refers initial-sep-spaces clean-ctx)
 
       (contains? duplicate-requires namespace-expr)
       (remove-unused-duplicate-requires node clean-ctx)
@@ -253,7 +256,7 @@
                                    (set/subset? first-node-refers unused-refers))))]
     (if single-unused?
       (z/remove first-node)
-      (edit/map-children nodes #(remove-unused-require % clean-ctx initial-sep-spaces)))))
+      (edit/map-children nodes #(remove-unused-require % initial-sep-spaces clean-ctx)))))
 
 (defn ^:private ns-inner-blocks-indentation-parent-col [parent-loc clean-ctx]
   (or (case (:ns-inner-blocks-indentation clean-ctx)
@@ -417,6 +420,7 @@
             unused-imports* (future (q/find-unused-imports analysis findings filename))
             duplicate-requires* (future (q/find-duplicate-requires findings filename))
             clean-ctx {:db db
+                       :old-ns-loc ns-loc
                        :filename filename
                        :unused-aliases @unused-aliases*
                        :unused-refers @unused-refers*

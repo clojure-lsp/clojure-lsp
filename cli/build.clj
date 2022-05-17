@@ -75,7 +75,7 @@
   (uber-aot (merge opts {:extra-aliases [:native]})))
 
 (defn debug-cli [opts]
-  (uber-aot (merge opts {:extra-aliases [:debug]
+  (uber-aot (merge opts {:extra-aliases [:debug :test]
                          :extra-dirs ["dev"]}))
   (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"]}))
 

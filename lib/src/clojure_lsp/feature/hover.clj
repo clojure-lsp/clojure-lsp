@@ -104,9 +104,9 @@
         (and signatures
              (not arity-on-same-line?))
         (cons {:language "clojure"
-               :value signatures})
+               :value (str signatures)})
         sym (cons {:language "clojure"
-                   :value (if arity-on-same-line? sym-line sym)})))))
+                   :value (str (if arity-on-same-line? sym-line sym))})))))
 
 (defn hover [filename line column db*]
   (let [db @db*

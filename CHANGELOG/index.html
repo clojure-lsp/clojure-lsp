@@ -1891,8 +1891,9 @@
 <ul>
 <li>General</li>
 <li>Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966</li>
+<li>Allow <code>:linters</code> to be configured by LSP clients passing string keys/values. #977</li>
 <li>
-<p>Allow <code>:linters</code> to be configured by LSP clients passing string keys/values. #977</p>
+<p>Support clj-kondo <code>:config-in-ns</code> and <code>:ns-groups</code> for <code>clojure-lsp/unused-public-var</code> linter. #981</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2910,7 +2911,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 15, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 17, 2022</span>
     
   </small>
 </div>

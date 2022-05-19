@@ -1056,29 +1056,29 @@
 </ul>
 <h2 id="lsp-features">LSP features<a class="headerlink" href="#lsp-features" title="Permanent link">#</a></h2>
 <h3 id="find-a-functionvar-definition">Find a function/var definition<a class="headerlink" href="#find-a-functionvar-definition" title="Permanent link">#</a></h3>
-<p><img src="../images/features/find-definition.gif" width=340></p>
+<p><img alt="" src="../images/features/find-definition.gif" /></p>
 <h3 id="find-defprotocoldefmulti-implementations">Find defprotocol/defmulti implementations<a class="headerlink" href="#find-defprotocoldefmulti-implementations" title="Permanent link">#</a></h3>
-<p><img src="../images/features/find-implementation.gif" width=340></p>
+<p><img alt="" src="../images/features/find-implementation.gif" /></p>
 <h3 id="find-a-functionvar-declaration-in-the-ns">Find a function/var declaration in the ns<a class="headerlink" href="#find-a-functionvar-declaration-in-the-ns" title="Permanent link">#</a></h3>
-<p><img src="../images/features/find-declaration.gif" width=340></p>
+<p><img alt="" src="../images/features/find-declaration.gif" /></p>
 <h3 id="find-all-references-of-a-function-var-keyword-or-namespace-alias">Find all references of a function, var, keyword or namespace alias<a class="headerlink" href="#find-all-references-of-a-function-var-keyword-or-namespace-alias" title="Permanent link">#</a></h3>
-<p><img src="../images/features/find-references.gif" width=340></p>
+<p><img alt="" src="../images/features/find-references.gif" /></p>
 <h3 id="show-all-workspaceproject-symbols">Show all workspace/project symbols<a class="headerlink" href="#show-all-workspaceproject-symbols" title="Permanent link">#</a></h3>
-<p><img src="../images/features/workspace-symbols.gif" width=580></p>
+<p><img alt="" src="../images/features/workspace-symbols.gif" /></p>
 <h3 id="show-all-symbols-on-current-file">Show all symbols on current file<a class="headerlink" href="#show-all-symbols-on-current-file" title="Permanent link">#</a></h3>
-<p><img src="../images/features/document-symbols.gif" width=580></p>
+<p><img alt="" src="../images/features/document-symbols.gif" /></p>
 <h3 id="rename-symbols">Rename symbols<a class="headerlink" href="#rename-symbols" title="Permanent link">#</a></h3>
-<p><img src="../images/features/rename.gif" width=340></p>
+<p><img alt="" src="../images/features/rename.gif" /></p>
 <p>Also, it's possible to live rename symbols on the same buffer with <code>linkedEditingRange</code> feature.</p>
 <h3 id="document-highlight-on-hover-showing-symbol-usages">Document highlight on hover showing symbol usages<a class="headerlink" href="#document-highlight-on-hover-showing-symbol-usages" title="Permanent link">#</a></h3>
-<p><img src="../images/features/document-highlight.gif" width=340></p>
+<p><img alt="" src="../images/features/document-highlight.gif" /></p>
 <h3 id="documentation-and-clojuredocs-integration">Documentation and clojuredocs integration<a class="headerlink" href="#documentation-and-clojuredocs-integration" title="Permanent link">#</a></h3>
-<p><img src="../images/features/hover-clojuredocs.png"></p>
+<p><img alt="" src="../images/features/hover-clojuredocs.png" /></p>
 <h3 id="java-support">Java support<a class="headerlink" href="#java-support" title="Permanent link">#</a></h3>
 <p>To understand what is supported and how to configure it, check the <a href="../settings/#java-support">settings section</a>.</p>
-<p><img src="../images/features/java-find-definition.gif" width=580></p>
+<p><img alt="" src="../images/features/java-find-definition.gif" /></p>
 <h3 id="completion">Completion<a class="headerlink" href="#completion" title="Permanent link">#</a></h3>
-<p><img src="../images/features/completion.gif" width=340></p>
+<p><img alt="" src="../images/features/completion.gif" /></p>
 <h4 id="snippets">Snippets<a class="headerlink" href="#snippets" title="Permanent link">#</a></h4>
 <p><a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax">Snippets</a> are templates that make it easier to enter repeating code patterns, such as common functions/forms, they are available during completion. Tabstops are defined as <code>$number</code> with <code>$0</code> as last tabstop.</p>
 <details>
@@ -1328,9 +1328,9 @@
 </details>
 
 <h5 id="custom-snippets">Custom snippets<a class="headerlink" href="#custom-snippets" title="Permanent link">#</a></h5>
-<p>User can register additional custom snippets, for more information on how to configure it, check the <a href="https://clojure-lsp.io/settings/#snippets">snippets settings section</a>.</p>
+<p>User can register additional custom snippets. For more information, check the <a href="../settings/#snippets">snippets config documentation</a>.</p>
 <h3 id="code-actions">Code actions<a class="headerlink" href="#code-actions" title="Permanent link">#</a></h3>
-<p>See <a href="#clojuser-lsp-extra-commands">below</a> for screenshots.</p>
+<p>See <a href="#clojure-lsp-extra-commands">below</a> for screenshots.</p>
 <h3 id="code-lenses-showing-symbol-references">Code lenses showing symbol references<a class="headerlink" href="#code-lenses-showing-symbol-references" title="Permanent link">#</a></h3>
 <p><img alt="" src="../images/features/code-lens.png" /></p>
 <h3 id="format-a-whole-file-or-range">Format a whole file or range<a class="headerlink" href="#format-a-whole-file-or-range" title="Permanent link">#</a></h3>
@@ -1359,10 +1359,10 @@ make most of features work.</p>
 <p>Below you can find the custom linters implemented on clojure-lsp side that uses the <code>:custom-lint-fn</code> from clj-kondo:</p>
 <h4 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h4>
 <p><img alt="" src="../images/features/unused-public-var.png" /></p>
-<p>For more information on how to configure it, check the <a href="https://clojure-lsp.io/settings/#diagnostics-linter">diagnostics settings section</a>.</p>
+<p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
 <h3 id="stub-generation">Stub generation<a class="headerlink" href="#stub-generation" title="Permanent link">#</a></h3>
 <p>It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like <code>datomic.api</code>, with that clojure-lsp will be able to make most features work with those dependencies.
-For more information check the <a href="../settings.md#stub-generation">stubs settings section</a>.</p>
+For more information check the <a href="../settings/#stub-generation">stubs settings section</a>.</p>
 <h3 id="execute-command">Execute command<a class="headerlink" href="#execute-command" title="Permanent link">#</a></h3>
 <p>Commands that client can request. Most code actions use these commands as actions.</p>
 <h2 id="clojure-lsp-extra-commands">clojure-lsp extra commands<a class="headerlink" href="#clojure-lsp-extra-commands" title="Permanent link">#</a></h2>
@@ -1393,7 +1393,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Add import to namespace</td>
 <td><code>[file-uri,row,col[,name]]</code></td>
 <td>✅</td>
-<td><a href="../images/features/add-common-import.gif"><img src="../images/features/add-common-import.gif" width=360 alt="Screen recording of Add import to namespace"></a></td>
+<td><a href="../images/features/add-common-import.gif"><img alt="Screen recording of Add import to namespace" src="../images/features/add-common-import.gif" /></a></td>
 </tr>
 <tr>
 <td>am</td>
@@ -1401,7 +1401,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Add missing require</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/add-missing-require.gif"><img src="../images/features/add-missing-require.gif" width=360 alt="Screen recording of Add missing require"></a></td>
+<td><a href="../images/features/add-missing-require.gif"><img alt="Screen recording of Add missing require" src="../images/features/add-missing-require.gif" /></a></td>
 </tr>
 <tr>
 <td>as</td>
@@ -1409,7 +1409,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Add require suggestion</td>
 <td><code>[file-uri,row,col,ns,alias,refer]</code></td>
 <td>✅</td>
-<td><a href="../images/features/add-alias-suggestion.gif"><img src="../images/features/add-alias-suggestion.gif" width=360 alt="Screen recording of Add require suggestion"></a></td>
+<td><a href="../images/features/add-alias-suggestion.gif"><img alt="Screen recording of Add require suggestion" src="../images/features/add-alias-suggestion.gif" /></a></td>
 </tr>
 <tr>
 <td>cc</td>
@@ -1425,7 +1425,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Clean namespace</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/clean-ns.gif"><img src="../images/features/clean-ns.gif" width=360 alt="Screen recording of Clean namespace"></a></td>
+<td><a href="../images/features/clean-ns.gif"><img alt="Screen recording of Clean namespace" src="../images/features/clean-ns.gif" /></a></td>
 </tr>
 <tr>
 <td>cp</td>
@@ -1449,7 +1449,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Demote fn to #()</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/demote-fn.gif"><img src="../images/features/demote-fn.gif" width=280 alt="Screen recording of Promote fn to defn"></a></td>
+<td><a href="../images/features/demote-fn.gif"><img alt="Screen recording of Promote fn to defn" src="../images/features/demote-fn.gif" /></a></td>
 </tr>
 <tr>
 <td>db</td>
@@ -1457,7 +1457,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Drag backward</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/drag.gif"><img src="../images/features/drag.gif" width=520 alt="Screen recording of Drag forward and backward"></a></td>
+<td><a href="../images/features/drag.gif"><img alt="Screen recording of Drag forward and backward" src="../images/features/drag.gif" /></a></td>
 </tr>
 <tr>
 <td>df</td>
@@ -1465,7 +1465,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Drag forward</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/drag.gif"><img src="../images/features/drag.gif" width=520 alt="Screen recording of Drag forward and backward"></a></td>
+<td><a href="../images/features/drag.gif"><img alt="Screen recording of Drag forward and backward" src="../images/features/drag.gif" /></a></td>
 </tr>
 <tr>
 <td>ef</td>
@@ -1473,7 +1473,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Extract Function</td>
 <td><code>[file-uri,row,col,name]</code></td>
 <td>✅</td>
-<td><a href="../images/features/extract-function.gif"><img src="../images/features/extract-function.gif" width=360 alt="Screen recording of Extract function"></a></td>
+<td><a href="../images/features/extract-function.gif"><img alt="Screen recording of Extract function" src="../images/features/extract-function.gif" /></a></td>
 </tr>
 <tr>
 <td>el</td>
@@ -1489,7 +1489,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Create function from example</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/create-private-function.gif"><img src="../images/features/create-private-function.gif" width=360 alt="Screen recording of Create function from example"></a></td>
+<td><a href="../images/features/create-private-function.gif"><img alt="Screen recording of Create function from example" src="../images/features/create-private-function.gif" /></a></td>
 </tr>
 <tr>
 <td>il</td>
@@ -1505,7 +1505,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Inline Symbol</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/inline-symbol.gif"><img src="../images/features/inline-symbol.gif" width=360 alt="Screen recording of Inline symbol"></a></td>
+<td><a href="../images/features/inline-symbol.gif"><img alt="Screen recording of Inline symbol" src="../images/features/inline-symbol.gif" /></a></td>
 </tr>
 <tr>
 <td>ma</td>
@@ -1513,7 +1513,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Resolve macro as</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/resolve-macro-as.gif"><img src="../images/features/resolve-macro-as.gif" width=720 alt="Screen recording of Resolve macro as"></a></td>
+<td><a href="../images/features/resolve-macro-as.gif"><img alt="Screen recording of Resolve macro as" src="../images/features/resolve-macro-as.gif" /></a></td>
 </tr>
 <tr>
 <td>mf</td>
@@ -1529,7 +1529,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Move expression to let</td>
 <td><code>[file-uri,row,col,name]</code></td>
 <td>✅</td>
-<td><a href="../images/features/move-to-let.gif"><img src="../images/features/move-to-let.gif" width=720 alt="Screen recording of Move expression to let"></a></td>
+<td><a href="../images/features/move-to-let.gif"><img alt="Screen recording of Move expression to let" src="../images/features/move-to-let.gif" /></a></td>
 </tr>
 <tr>
 <td>pf</td>
@@ -1537,7 +1537,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Promote #() to fn, or fn to defn</td>
 <td><code>[file-uri,row,col,fn-name]</code></td>
 <td>✅</td>
-<td><a href="../images/features/promote-fn.gif"><img src="../images/features/promote-fn.gif" width=520 alt="Screen recording of Promote fn to defn"></a></td>
+<td><a href="../images/features/promote-fn.gif"><img alt="Screen recording of Promote fn to defn" src="../images/features/promote-fn.gif" /></a></td>
 </tr>
 <tr>
 <td>sc</td>
@@ -1545,7 +1545,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Switch collection to <code>{}, (), #{}, []</code></td>
 <td><code>[file-uri,row,col,"map"/"list"/"set"/"vector"]</code></td>
 <td>✅</td>
-<td><a href="../images/features/change-coll.gif"><img src="../images/features/change-coll.gif" width=720 alt="Screen recording of Switch collection"></a></td>
+<td><a href="../images/features/change-coll.gif"><img alt="Screen recording of Switch collection" src="../images/features/change-coll.gif" /></a></td>
 </tr>
 <tr>
 <td>sm</td>
@@ -1553,7 +1553,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Sort map</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/sort-map.gif"><img src="../images/features/sort-map.gif" width=720 alt="Screen recording of Sort map"></a></td>
+<td><a href="../images/features/sort-map.gif"><img alt="Screen recording of Sort map" src="../images/features/sort-map.gif" /></a></td>
 </tr>
 <tr>
 <td>tf</td>
@@ -1561,7 +1561,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <td>Thread first all</td>
 <td><code>[file-uri,row,col]</code></td>
 <td>✅</td>
-<td><a href="../images/features/thread-first-all.gif"><img src="../images/features/thread-first-all.gif" width=360 alt="Screen recording of Thread first all"></a></td>
+<td><a href="../images/features/thread-first-all.gif"><img alt="Screen recording of Thread first all" src="../images/features/thread-first-all.gif" /></a></td>
 </tr>
 <tr>
 <td>th</td>
@@ -1618,7 +1618,7 @@ For more information check the <a href="../settings.md#stub-generation">stubs se
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 17, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 19, 2022</span>
     
   </small>
 </div>

@@ -10,51 +10,51 @@ Below you can find all available features that clojure-lsp provides with example
 
 ### Find a function/var definition
 
-<img src="../images/features/find-definition.gif" width=340>
+![](images/features/find-definition.gif)
 
 ### Find defprotocol/defmulti implementations
 
-<img src="../images/features/find-implementation.gif" width=340>
+![](images/features/find-implementation.gif)
 
 ### Find a function/var declaration in the ns
 
-<img src="../images/features/find-declaration.gif" width=340>
+![](images/features/find-declaration.gif)
 
 ### Find all references of a function, var, keyword or namespace alias
 
-<img src="../images/features/find-references.gif" width=340>
+![](images/features/find-references.gif)
 
 ### Show all workspace/project symbols
 
-<img src="../images/features/workspace-symbols.gif" width=580>
+![](images/features/workspace-symbols.gif)
 
 ### Show all symbols on current file
 
-<img src="../images/features/document-symbols.gif" width=580>
+![](images/features/document-symbols.gif)
 
 ### Rename symbols
 
-<img src="../images/features/rename.gif" width=340>
+![](images/features/rename.gif)
 
 Also, it's possible to live rename symbols on the same buffer with `linkedEditingRange` feature.
 
 ### Document highlight on hover showing symbol usages
 
-<img src="../images/features/document-highlight.gif" width=340>
+![](images/features/document-highlight.gif)
 
 ### Documentation and clojuredocs integration
 
-<img src="../images/features/hover-clojuredocs.png">
+![](images/features/hover-clojuredocs.png)
 
 ### Java support
 
-To understand what is supported and how to configure it, check the [settings section](../settings/#java-support).
+To understand what is supported and how to configure it, check the [settings section](settings.md#java-support).
 
-<img src="../images/features/java-find-definition.gif" width=580>
+![](images/features/java-find-definition.gif)
 
 ### Completion
 
-<img src="../images/features/completion.gif" width=340>
+![](images/features/completion.gif)
 
 #### Snippets
 
@@ -308,11 +308,11 @@ To understand what is supported and how to configure it, check the [settings sec
 
 ##### Custom snippets
 
-User can register additional custom snippets, for more information on how to configure it, check the [snippets settings section](https://clojure-lsp.io/settings/#snippets).
+User can register additional custom snippets. For more information, check the [snippets config documentation](settings.md#snippets).
 
 ### Code actions
 
-See [below](#clojuser-lsp-extra-commands) for screenshots.
+See [below](#clojure-lsp-extra-commands) for screenshots.
 
 ### Code lenses showing symbol references
 
@@ -369,12 +369,12 @@ Below you can find the custom linters implemented on clojure-lsp side that uses 
 
 ![](images/features/unused-public-var.png)
 
-For more information on how to configure it, check the [diagnostics settings section](https://clojure-lsp.io/settings/#diagnostics-linter).
+For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
 ### Stub generation
 
 It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.
-For more information check the [stubs settings section](../settings.md#stub-generation).
+For more information check the [stubs settings section](settings.md#stub-generation).
 
 ### Execute command
 
@@ -395,35 +395,35 @@ Arguments:
 - `name`: Used when introducing a name, usually a string for a valid clojure symbol.
 - `filename`: Filename path. e.x. `src/utils.clj`
 
-| Shortcut | Command                 | Name                                   | Arguments                                        | Available via code action | Example                                                                                                                                                                                  |
-|----------|-------------------------|----------------------------------------|--------------------------------------------------|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ai       | add-import-to-namespace | Add import to namespace                | `[file-uri,row,col[,name]]`                      | ✅                        | <a href="../images/features/add-common-import.gif"><img src="../images/features/add-common-import.gif" width=360 alt="Screen recording of Add import to namespace"></a>                  |
-| am       | add-missing-libspec     | Add missing require                    | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/add-missing-require.gif"><img src="../images/features/add-missing-require.gif" width=360 alt="Screen recording of Add missing require"></a>                  |
-| as       | add-require-suggestion  | Add require suggestion                 | `[file-uri,row,col,ns,alias,refer]`              | ✅                        | <a href="../images/features/add-alias-suggestion.gif"><img src="../images/features/add-alias-suggestion.gif" width=360 alt="Screen recording of Add require suggestion"></a>             |
-| cc       | cycle-coll              | Cycle collection `(#{}, {}, [], ())`   | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                                                          |
-| cn       | clean-ns                | Clean namespace                        | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/clean-ns.gif"><img src="../images/features/clean-ns.gif" width=360 alt="Screen recording of Clean namespace"></a>                                            |
-| cp       | cycle-privacy           | Cycle privacy of def/defn              | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                                                          |
-| ct       | create-test             | Create test                            | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                                                          |
-| df       | demote-fn               | Demote fn to #()                       | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/demote-fn.gif"><img src="../images/features/demote-fn.gif" width=280 alt="Screen recording of Promote fn to defn"></a>                                     |
-| db       | drag-backward           | Drag backward                          | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/drag.gif"><img src="../images/features/drag.gif" width=520 alt="Screen recording of Drag forward and backward"></a>                                          |
-| df       | drag-forward            | Drag forward                           | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/drag.gif"><img src="../images/features/drag.gif" width=520 alt="Screen recording of Drag forward and backward"></a>                                          |
-| ef       | extract-function        | Extract Function                       | `[file-uri,row,col,name]`                        | ✅                        | <a href="../images/features/extract-function.gif"><img src="../images/features/extract-function.gif" width=360 alt="Screen recording of Extract function"></a>                           |
-| el       | expand-let              | Expand let                             | `[file-uri,row,col]`                             |                           |                                                                                                                                                                                          |
-| fe       | create-function         | Create function from example           | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/create-private-function.gif"><img src="../images/features/create-private-function.gif" width=360 alt="Screen recording of Create function from example"></a> |
-| il       | introduce-let           | Introduce let                          | `[file-uri,row,col,name]`                        |                           |                                                                                                                                                                                          |
-| is       | inline-symbol           | Inline Symbol                          | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/inline-symbol.gif"><img src="../images/features/inline-symbol.gif" width=360 alt="Screen recording of Inline symbol"></a>                                    |
-| ma       | resolve-macro-as        | Resolve macro as                       | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/resolve-macro-as.gif"><img src="../images/features/resolve-macro-as.gif" width=720 alt="Screen recording of Resolve macro as"></a>                           |
-| mf       | move-form               | Move form                              | `[file-uri,row,col,filename]`                    | ✅                        |                                                                                                                                                                                          |
-| ml       | move-to-let             | Move expression to let                 | `[file-uri,row,col,name]`                        | ✅                        | <a href="../images/features/move-to-let.gif"><img src="../images/features/move-to-let.gif" width=720 alt="Screen recording of Move expression to let"></a>                               |
-| pf       | promote-fn              | Promote #() to fn, or fn to defn       | `[file-uri,row,col,fn-name]`                     | ✅                        | <a href="../images/features/promote-fn.gif"><img src="../images/features/promote-fn.gif" width=520 alt="Screen recording of Promote fn to defn"></a>                                     |
-| sc       | change-collection       | Switch collection to `{}, (), #{}, []` | `[file-uri,row,col,"map"/"list"/"set"/"vector"]` | ✅                        | <a href="../images/features/change-coll.gif"><img src="../images/features/change-coll.gif" width=720 alt="Screen recording of Switch collection"></a>                                    |
-| sm       | sort-map                | Sort map                               | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/sort-map.gif"><img src="../images/features/sort-map.gif" width=720 alt="Screen recording of Sort map"></a>                                                   |
-| tf       | thread-first-all        | Thread first all                       | `[file-uri,row,col]`                             | ✅                        | <a href="../images/features/thread-first-all.gif"><img src="../images/features/thread-first-all.gif" width=360 alt="Screen recording of Thread first all"></a>                           |
-| th       | thread-first            | Thread first expression                | `[file-uri,row,col]`                             |                           |                                                                                                                                                                                          |
-| tl       | thread-last-all         | Thread last all                        | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                                                          |
-| tt       | thread-last             | Thread last expression                 | `[file-uri,row,col]`                             |                           |                                                                                                                                                                                          |
-| ua       | unwind-all              | Unwind all                             | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                                                          |
-| uw       | unwind-thread           | Unwind thread                          | `[file-uri,row,col]`                             |                           |                                                                                                                                                                                          |
+| Shortcut | Command                 | Name                                   | Arguments                                        | Available via code action | Example                                                                                                                                         |
+|----------|-------------------------|----------------------------------------|--------------------------------------------------|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| ai       | add-import-to-namespace | Add import to namespace                | `[file-uri,row,col[,name]]`                      | ✅                        | [![Screen recording of Add import to namespace](images/features/add-common-import.gif)](images/features/add-common-import.gif)                  |
+| am       | add-missing-libspec     | Add missing require                    | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Add missing require](images/features/add-missing-require.gif)](images/features/add-missing-require.gif)                  |
+| as       | add-require-suggestion  | Add require suggestion                 | `[file-uri,row,col,ns,alias,refer]`              | ✅                        | [![Screen recording of Add require suggestion](images/features/add-alias-suggestion.gif)](images/features/add-alias-suggestion.gif)             |
+| cc       | cycle-coll              | Cycle collection `(#{}, {}, [], ())`   | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                 |
+| cn       | clean-ns                | Clean namespace                        | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Clean namespace](images/features/clean-ns.gif)](images/features/clean-ns.gif)                                            |
+| cp       | cycle-privacy           | Cycle privacy of def/defn              | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                 |
+| ct       | create-test             | Create test                            | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                 |
+| df       | demote-fn               | Demote fn to #()                       | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Promote fn to defn](images/features/demote-fn.gif)](images/features/demote-fn.gif)                                       |
+| db       | drag-backward           | Drag backward                          | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Drag forward and backward](images/features/drag.gif)](images/features/drag.gif)                                          |
+| df       | drag-forward            | Drag forward                           | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Drag forward and backward](images/features/drag.gif)](images/features/drag.gif)                                          |
+| ef       | extract-function        | Extract Function                       | `[file-uri,row,col,name]`                        | ✅                        | [![Screen recording of Extract function](images/features/extract-function.gif)](images/features/extract-function.gif)                           |
+| el       | expand-let              | Expand let                             | `[file-uri,row,col]`                             |                           |                                                                                                                                                 |
+| fe       | create-function         | Create function from example           | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Create function from example](images/features/create-private-function.gif)](images/features/create-private-function.gif) |
+| il       | introduce-let           | Introduce let                          | `[file-uri,row,col,name]`                        |                           |                                                                                                                                                 |
+| is       | inline-symbol           | Inline Symbol                          | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Inline symbol](images/features/inline-symbol.gif)](images/features/inline-symbol.gif)                                    |
+| ma       | resolve-macro-as        | Resolve macro as                       | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Resolve macro as](images/features/resolve-macro-as.gif)](images/features/resolve-macro-as.gif)                           |
+| mf       | move-form               | Move form                              | `[file-uri,row,col,filename]`                    | ✅                        |                                                                                                                                                 |
+| ml       | move-to-let             | Move expression to let                 | `[file-uri,row,col,name]`                        | ✅                        | [![Screen recording of Move expression to let](images/features/move-to-let.gif)](images/features/move-to-let.gif)                               |
+| pf       | promote-fn              | Promote #() to fn, or fn to defn       | `[file-uri,row,col,fn-name]`                     | ✅                        | [![Screen recording of Promote fn to defn](images/features/promote-fn.gif)](images/features/promote-fn.gif)                                     |
+| sc       | change-collection       | Switch collection to `{}, (), #{}, []` | `[file-uri,row,col,"map"/"list"/"set"/"vector"]` | ✅                        | [![Screen recording of Switch collection](images/features/change-coll.gif)](images/features/change-coll.gif)                                    |
+| sm       | sort-map                | Sort map                               | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Sort map](images/features/sort-map.gif)](images/features/sort-map.gif)                                                   |
+| tf       | thread-first-all        | Thread first all                       | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Thread first all](images/features/thread-first-all.gif)](images/features/thread-first-all.gif)                           |
+| th       | thread-first            | Thread first expression                | `[file-uri,row,col]`                             |                           |                                                                                                                                                 |
+| tl       | thread-last-all         | Thread last all                        | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                 |
+| tt       | thread-last             | Thread last expression                 | `[file-uri,row,col]`                             |                           |                                                                                                                                                 |
+| ua       | unwind-all              | Unwind all                             | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                 |
+| uw       | unwind-thread           | Unwind thread                          | `[file-uri,row,col]`                             |                           |                                                                                                                                                 |
 
 
 ## Dev

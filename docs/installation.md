@@ -1,6 +1,6 @@
 # Installation
 
-Below are all available `clojure-lsp` installation methods, after installed, follow the documentation for your editor's language client. See [Clients](//clojure-lsp.io/clients).
+Below are all available `clojure-lsp` installation methods, after installed, follow the documentation for your editor's language client. See [Clients](clients.md).
 
 ## Homebrew (MacOS and Linux)
 

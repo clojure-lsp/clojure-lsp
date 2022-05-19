@@ -42,4 +42,4 @@ It's possible to load clojure-lsp as a babashka pod giving access to the `clojur
 
 clojure-lsp will check for `.lsp/config.edn` in the project or home dir, but it's possible to force override the settings via the `:settings` option of the API or `--settings` option of the CLI.
 
-For all available settings, check the [settings section documentation](https://clojure-lsp.io/settings/).
+For all available settings, check the [settings documentation](settings.md).

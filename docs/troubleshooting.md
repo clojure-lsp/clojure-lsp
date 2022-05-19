@@ -33,7 +33,7 @@ Check below how to get the logs for most used clients:
 
 ## Server is not initializing
 
-Make sure you have the [most recent version of `clojure-lsp`](./installation.md#native-binary-recommended)
+Make sure you have the [most recent version of `clojure-lsp`](installation.md#native-binary-recommended)
 
 Check if the executable is working running it from the command line, it should start up and start reading from stdin.
 Type `{}\n\n` and you should get something like:
@@ -107,7 +107,7 @@ during server initialize for most features work, so make sure you don't see any 
 
 Please note that `clojure-lsp` comes bundled with `clj-kondo`, so you do not have to install it separately.
 
-For more information, check the [Classpath scan](./settings.md#classpath-scan) settings section.
+For more information, check the [Classpath scan](settings.md#classpath-scan) settings section.
 
 ### Classpath scan error
 
@@ -118,13 +118,13 @@ By default clojure-lsp knows how to scan most common clojure projects using the 
 - If the project root has a `build.boot` file, it'll run `boot show --fake-classpath` to get the classpath.
 - If the project root has a `shadow-cljs.edn` file, it'll run `npx shadow-cljs classpath` to get the classpath.
 
-If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the [settings section](./settings.md).
+If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the [settings section](settings.md).
 
 ### Folders not being analyzed/linted
 
-By default clojure-lsp get source-paths from classpath, for more details check [settings section](./settings.md#source-paths-discovery).
+By default clojure-lsp get source-paths from classpath, for more details check [settings section](settings.md#source-paths-discovery).
 
-* If the definition lives under a different source dir, you can define `source-aliases` or `source-paths` setting as mentioned on [settings section](./settings.md#source-paths-discovery).
+* If the definition lives under a different source dir, you can define `source-aliases` or `source-paths` setting as mentioned on [settings section](settings.md#source-paths-discovery).
 
 * It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
 

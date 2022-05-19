@@ -217,7 +217,7 @@ It's not recommended to disable the linter as it provides helpful smart checks/s
 {:linters {:clj-kondo {:level :off}}}
 ```
 
-For information on how to troubleshoot the linter, check the [troubleshooting section](https://clojure-lsp.io/troubleshooting/)
+For information on how to troubleshoot the linter, check the [troubleshooting section](troubleshooting.md)
 
 ### Source paths discovery
 

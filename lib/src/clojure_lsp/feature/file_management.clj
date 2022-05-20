@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.file-management
   (:require
+   [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
@@ -32,11 +33,13 @@
         (shared/client-changes changes db)))))
 
 (defn did-open [uri text db* allow-create-ns]
-  (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db*)]
+  (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
+        depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))]
     (swap! db* (fn [state-db]
                  (-> state-db
                      (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                     (lsp.kondo/db-with-results kondo-result))))
+                     (lsp.kondo/db-with-results @kondo-result*)
+                     (lsp.depend/db-with-results @depend-result*))))
     (f.diagnostic/async-publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -176,18 +179,24 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]} {:keys [producer db*] :as components}]
-  (loop [state-db @db*]
-    (when (>= version (get-in state-db [:documents uri :v] -1))
-      (when-let [kondo-result (shared/logging-time
-                                (str "changes analyzed by clj-kondo took %s")
-                                (lsp.kondo/run-kondo-on-text! text uri db*))]
-        (let [filename (shared/uri->filename uri)
-              old-local-analysis (get-in @db* [:analysis filename])]
+  (let [filename (shared/uri->filename uri)]
+    (loop [state-db @db*]
+      (when (>= version (get-in state-db [:documents uri :v] -1))
+        (let [kondo-result (future
+                             (shared/logging-time
+                               (str "changes analyzed by clj-kondo took %s")
+                               (lsp.kondo/run-kondo-on-text! text uri db*)))
+              depend-result (future
+                              (shared/logging-time
+                                (str "changes analyzed by clj-depend took %s")
+                                (lsp.depend/analyze-filename! filename state-db)))]
           (if (compare-and-set! db* state-db
                                 (-> state-db
-                                    (lsp.kondo/db-with-results kondo-result)
+                                    (lsp.kondo/db-with-results @kondo-result)
+                                    (lsp.depend/db-with-results @depend-result)
                                     (update :processing-changes disj uri)))
-            (let [db @db*]
+            (let [db @db*
+                  old-local-analysis (get-in @db* [:analysis filename])]
               (f.diagnostic/sync-publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-local-analysis (get-in db [:analysis filename]) components))

@@ -113,12 +113,24 @@
     2 :yellow
     3 :cyan))
 
+(defn ^:private clj-depend-violations->diagnostics [filename db]
+  (mapv (fn [{:keys [message namespace]}]
+          (let [ns-definition (q/find-namespace-definition-by-namespace (:analysis db) namespace)]
+            {:range (shared/->range ns-definition)
+             :tags []
+             :message message
+             :code "clj-depend"
+             :severity 3
+             :source "clj-depend"}))
+        (get-in db [:clj-depend-violations (symbol (shared/filename->namespace filename db))])))
+
 (defn find-diagnostics [^String uri db]
   (let [filename (shared/uri->filename uri)]
     (cond-> []
       (and (not= :off (settings/get db [:linters :clj-kondo :level]))
            (not (shared/jar-file? filename)))
-      (concat (kondo-findings->diagnostics filename :clj-kondo db)))))
+      (concat (kondo-findings->diagnostics filename :clj-kondo db)
+              (clj-depend-violations->diagnostics filename db)))))
 
 (defn sync-publish-diagnostics! [uri db]
   (async/>!! db/diagnostics-chan

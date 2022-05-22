@@ -384,7 +384,7 @@
 (defn formatting [{:keys [textDocument]}]
   (shared/logging-task
     :formatting
-    (f.format/formatting textDocument @db/db*)))
+    (f.format/formatting textDocument db/db*)))
 
 (defn range-formatting [{:keys [textDocument range]}]
   (process-after-changes

@@ -14,18 +14,18 @@
   (testing "when custom config file doesn't exists"
     (with-redefs [shared/file-exists? (constantly false)]
       (is (= "(a)\n(b c d)"
-             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") @db/db*)))))))
+             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") db/db*)))))))
   (testing "when custom config file exists"
     (with-redefs [shared/file-exists? (constantly true)
                   slurp (constantly "{}")]
       (is (= "(a)\n(b c d)"
-             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") @db/db*))))))))
+             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") db/db*))))))))
 
 (deftest test-formatting-noop
   (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs "(a)\n(b c d)")
   (with-redefs [shared/file-exists? (constantly false)]
-    (let [r (f.format/formatting (h/file-uri "file:///a.clj") @db/db*)]
+    (let [r (f.format/formatting (h/file-uri "file:///a.clj") db/db*)]
       (is (empty? r))
       (is (vector? r)))))
 

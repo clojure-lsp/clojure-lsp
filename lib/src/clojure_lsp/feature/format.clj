@@ -2,6 +2,7 @@
   (:require
    [cljfmt.core :as cljfmt]
    [cljfmt.main :as cljfmt.main]
+   [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -39,9 +40,9 @@
 (def cljfmt-config
   (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
 
-(defn formatting [uri db]
-  (let [{:keys [text]} (get-in db [:documents uri])
-        cljfmt-settings (cljfmt-config db)
+(defn formatting [uri db*]
+  (let [text (f.file-management/force-get-document-text uri db*)
+        cljfmt-settings (cljfmt-config @db*)
         new-text (cljfmt/reformat-string text cljfmt-settings)]
     (if (= new-text text)
       []

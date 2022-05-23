@@ -31,12 +31,13 @@
                                :new-text new-text}]}]]
         (shared/client-changes changes db)))))
 
+(defn load-document! [uri text db*]
+  (swap! db* #(assoc-in % [:documents uri] {:v 0 :text text :saved-on-disk false})))
+
 (defn did-open [uri text db* allow-create-ns]
   (when-let [kondo-result (lsp.kondo/run-kondo-on-text! text uri db*)]
-    (swap! db* (fn [state-db]
-                 (-> state-db
-                     (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
-                     (lsp.kondo/db-with-results kondo-result))))
+    (load-document! uri text db*)
+    (swap! db* #(lsp.kondo/db-with-results % kondo-result))
     (f.diagnostic/async-publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]

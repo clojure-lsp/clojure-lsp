@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.05.23-13.18.11
+
 - General
   - Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966
   - Allow `:linters` to be configured by LSP clients passing string keys/values. #977

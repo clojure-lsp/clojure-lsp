@@ -205,6 +205,7 @@
    :keywords true
    :protocol-impls true
    :java-class-definitions true
+   :instance-invocations true
    :java-class-usages true
    :context [:clojure.test
              :re-frame.core]})

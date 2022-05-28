@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to 2022.05.28
+
 ## 2022.05.23-13.18.11
 
 - General

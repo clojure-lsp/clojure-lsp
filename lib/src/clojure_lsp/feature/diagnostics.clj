@@ -114,15 +114,16 @@
     3 :cyan))
 
 (defn ^:private clj-depend-violations->diagnostics [filename db]
-  (mapv (fn [{:keys [message namespace]}]
-          (let [ns-definition (q/find-namespace-definition-by-namespace (:analysis db) namespace)]
-            {:range (shared/->range ns-definition)
-             :tags []
-             :message message
-             :code "clj-depend"
-             :severity 3
-             :source "clj-depend"}))
-        (get-in db [:clj-depend-violations (symbol (shared/filename->namespace filename db))])))
+  (when-let [namespace (shared/filename->namespace filename db)]
+    (mapv (fn [{:keys [message namespace]}]
+            (let [ns-definition (q/find-namespace-definition-by-namespace (:analysis db) namespace)]
+              {:range (shared/->range ns-definition)
+               :tags []
+               :message message
+               :code "clj-depend"
+               :severity 3
+               :source "clj-depend"}))
+          (get-in db [:clj-depend-violations (symbol namespace)]))))
 
 (defn find-diagnostics [^String uri db]
   (let [filename (shared/uri->filename uri)]

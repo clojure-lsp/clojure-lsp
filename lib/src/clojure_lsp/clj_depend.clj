@@ -7,6 +7,8 @@
    [clojure.java.io :as io]
    [medley.core :as medley]))
 
+(set! *warn-on-reflection* true)
+
 (defn resolve-user-clj-depend-config [project-root db]
   (let [clj-depend-config-file (io/file project-root ".clj-depend" "config.edn")]
     (medley/deep-merge
@@ -15,18 +17,17 @@
         (edn/read-string {} (slurp clj-depend-config-file))))))
 
 (defn analyze-filename! [filename db]
-  (let [project-root (shared/uri->filename (:project-root-uri db))
-        config (resolve-user-clj-depend-config project-root db)
-        source-paths (settings/get db [:source-paths])]
-    (when (seq (seq config))
-      (when-let [namespace (some-> filename (shared/filename->namespace db) symbol)]
-        (-> {:violations {namespace []}}
-            (medley/deep-merge
-              (-> (clj-depend/analyze {:project-root (io/file project-root)
-                                       :config (assoc config :source-paths (map #(shared/relativize-filepath % project-root)
-                                                                                source-paths))
-                                       :namespaces #{namespace}})
-                  (update :violations #(group-by :namespace %)))))))))
+  (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
+    (let [config (resolve-user-clj-depend-config project-root db)]
+      (when (seq (seq config))
+        (when-let [namespace (some-> filename (shared/filename->namespace db) symbol)]
+          (-> {:violations {namespace []}}
+              (medley/deep-merge
+                (-> (clj-depend/analyze {:project-root (io/file project-root)
+                                         :config (assoc config :source-paths (map #(shared/relativize-filepath % project-root)
+                                                                                  (settings/get db [:source-paths])))
+                                         :namespaces #{namespace}})
+                    (update :violations #(group-by :namespace %))))))))))
 
 (defn db-with-results
   "Update `db` with clj-depend result."

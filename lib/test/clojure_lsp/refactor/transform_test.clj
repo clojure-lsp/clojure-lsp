@@ -6,7 +6,8 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z]
+   [clojure.string :as string]))
 
 (h/reset-db-after-test)
 
@@ -905,7 +906,7 @@
                                        :project-root-uri (h/file-uri "file:///project")})
       (let [test-code (h/code "(ns some.ns-test)"
                               "(deftest some-other-test)")]
-        (with-redefs [shared/file-exists? (constantly true)
+        (with-redefs [shared/file-exists? #(not (string/ends-with? % "config.edn"))
                       shared/slurp-filename (constantly test-code)]
           (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"

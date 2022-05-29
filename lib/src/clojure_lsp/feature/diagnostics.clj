@@ -127,11 +127,14 @@
 
 (defn find-diagnostics [^String uri db]
   (let [filename (shared/uri->filename uri)]
-    (cond-> []
-      (and (not= :off (settings/get db [:linters :clj-kondo :level]))
-           (not (shared/jar-file? filename)))
-      (concat (kondo-findings->diagnostics filename :clj-kondo db)
-              (clj-depend-violations->diagnostics filename db)))))
+    (if (shared/jar-file? filename)
+      []
+      (cond-> []
+        (not= :off (settings/get db [:linters :clj-kondo :level]))
+        (concat (kondo-findings->diagnostics filename :clj-kondo db))
+
+        (not= :off (settings/get db [:linters :clj-depend :level]))
+        (concat (clj-depend-violations->diagnostics filename db))))))
 
 (defn sync-publish-diagnostics! [uri db]
   (async/>!! db/diagnostics-chan

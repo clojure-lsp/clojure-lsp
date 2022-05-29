@@ -19,7 +19,7 @@
 (defn analyze-filename! [filename db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
     (let [config (resolve-user-clj-depend-config project-root db)]
-      (when (seq (seq config))
+      (when (seq config)
         (when-let [namespace (some-> filename (shared/filename->namespace db) symbol)]
           (-> {:violations {namespace []}}
               (medley/deep-merge
@@ -28,6 +28,16 @@
                                                                                   (settings/get db [:source-paths])))
                                          :namespaces #{namespace}})
                     (update :violations #(group-by :namespace %))))))))))
+
+(defn analyze-paths! [paths db]
+  (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
+    (let [config (resolve-user-clj-depend-config project-root db)]
+      (when (seq config)
+        (-> (clj-depend/analyze {:project-root (io/file project-root)
+                                 :config (assoc config :source-paths (map #(shared/relativize-filepath % project-root)
+                                                                          (settings/get db [:source-paths])))
+                                 :files (map io/file paths)})
+            (update :violations #(group-by :namespace %)))))))
 
 (defn db-with-results
   "Update `db` with clj-depend result."

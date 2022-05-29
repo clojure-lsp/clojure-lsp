@@ -38,11 +38,13 @@
 (defn did-open [uri text db* allow-create-ns]
   (load-document! uri text db*)
   (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
-        depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))]
+        depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
+        kondo-result @kondo-result*
+        depend-result @depend-result*]
     (swap! db* (fn [state-db]
                  (-> state-db
-                     (lsp.kondo/db-with-results @kondo-result*)
-                     (lsp.depend/db-with-results @depend-result*))))
+                     (lsp.kondo/db-with-results kondo-result)
+                     (lsp.depend/db-with-results depend-result))))
     (f.diagnostic/async-publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -185,14 +187,16 @@
   (let [filename (shared/uri->filename uri)]
     (loop [state-db @db*]
       (when (>= version (get-in state-db [:documents uri :v] -1))
-        (let [kondo-result (future
+        (let [kondo-result* (future
                              (shared/logging-time
                                (str "changes analyzed by clj-kondo took %s")
                                (lsp.kondo/run-kondo-on-text! text uri db*)))
-              depend-result (future
+              depend-result* (future
                               (shared/logging-time
                                 (str "changes analyzed by clj-depend took %s")
-                                (lsp.depend/analyze-filename! filename state-db)))]
+                                (lsp.depend/analyze-filename! filename state-db)))
+              kondo-result @kondo-result*
+              depend-result @depend-result*]
           (if (compare-and-set! db* state-db
                                 (-> state-db
                                     (lsp.kondo/db-with-results @kondo-result)

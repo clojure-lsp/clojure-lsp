@@ -32,12 +32,15 @@
                                :new-text new-text}]}]]
         (shared/client-changes changes db)))))
 
+(defn load-document! [uri text db*]
+  (swap! db* #(assoc-in % [:documents uri] {:v 0 :text text :saved-on-disk false})))
+
 (defn did-open [uri text db* allow-create-ns]
+  (load-document! uri text db*)
   (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
         depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))]
     (swap! db* (fn [state-db]
                  (-> state-db
-                     (assoc-in [:documents uri] {:v 0 :text text :saved-on-disk false})
                      (lsp.kondo/db-with-results @kondo-result*)
                      (lsp.depend/db-with-results @depend-result*))))
     (f.diagnostic/async-publish-diagnostics! uri @db*))

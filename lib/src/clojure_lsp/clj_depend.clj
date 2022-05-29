@@ -15,11 +15,11 @@
         (edn/read-string {} (slurp clj-depend-config-file))))))
 
 (defn analyze-filename! [filename db]
-  (when-let [namespace (some-> filename (shared/filename->namespace db) symbol)]
-    (let [project-root (shared/uri->filename (:project-root-uri db))
-          config (resolve-user-clj-depend-config project-root db)
-          source-paths (settings/get db [:source-paths])]
-      (when (seq (seq config))
+  (let [project-root (shared/uri->filename (:project-root-uri db))
+        config (resolve-user-clj-depend-config project-root db)
+        source-paths (settings/get db [:source-paths])]
+    (when (seq (seq config))
+      (when-let [namespace (some-> filename (shared/filename->namespace db) symbol)]
         (-> {:violations {namespace []}}
             (medley/deep-merge
               (-> (clj-depend/analyze {:project-root (io/file project-root)

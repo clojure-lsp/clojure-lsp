@@ -3,6 +3,11 @@
 ## Unreleased
 
 - General
+  - Bump clj-kondo to 2022.05.29
+
+## 2022.05.23-13.18.11
+
+- General
   - Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966
   - Allow `:linters` to be configured by LSP clients passing string keys/values. #977
   - Support clj-kondo `:config-in-ns` and `:ns-groups` for `clojure-lsp/unused-public-var` linter. #981
@@ -17,6 +22,9 @@
   - Fix find definition of macros required by :require-macros on cljs files. #980
   - Add support to completion keywords found on function definition `:keys` destructuring, improving completion on api calls.
   - Avoid duplicate parens when inserting snippets during completion. #982
+  
+- CLI/API
+  - Make all cli features open files faster, improving speed of all CLI/API features. Fixes #985
 
 ## 2022.05.03-12.35.40
 

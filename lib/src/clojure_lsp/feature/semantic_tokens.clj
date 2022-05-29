@@ -123,10 +123,6 @@
          (element->absolute-token slash-pos :event)
          (element->absolute-token name-pos :function)])
 
-      (and (identical? :clj-kondo/unknown-namespace to)
-           (.equals \. (.charAt name-str 0)))
-      [(element->absolute-token element :method)]
-
       (identical? :clj-kondo/unknown-namespace to)
       nil
 
@@ -163,28 +159,31 @@
        (keep
          (fn [{:keys [bucket] :as element}]
            (cond
-             (contains? #{:java-class-definitions
-                          :java-class-usages} bucket)
-             (java-class-element->absolute-tokens element)
-
-             (= bucket :var-usages)
+             (identical?  :var-usages bucket)
              (var-usage-element->absolute-tokens element)
 
-             (= bucket :var-definitions)
+             (identical? :var-definitions bucket)
              (var-definition-element->absolute-tokens element)
 
              (#{:locals :local-usages} bucket)
              [(element->absolute-token element :variable)]
 
-             (= bucket :namespace-definitions)
+             (identical? :namespace-definitions bucket)
              [(element->absolute-token element :namespace)]
 
-             (and (= bucket :keywords)
+             (and (identical? :keywords bucket)
                   (not (:str element))
                   (not (:keys-destructuring element)))
              (keywords->absolute-tokens element)
 
-             (= bucket :protocol-impls)
+             (#{:java-class-definitions
+                :java-class-usages} bucket)
+             (java-class-element->absolute-tokens element)
+
+             (identical? :instance-invocations bucket)
+             [(element->absolute-token element :method)]
+
+             (identical? :protocol-impls bucket)
              [(element->absolute-token element :method [:implementation])])))
        (mapcat identity)))
 

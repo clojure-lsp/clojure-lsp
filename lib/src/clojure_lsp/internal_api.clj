@@ -239,7 +239,7 @@
   (filter :uri ns+uris))
 
 (defn ^:private open-file! [{:keys [uri] :as ns+uri} components]
-  (handlers/did-open {:textDocument {:uri uri :text (slurp uri)}} components)
+  (f.file-management/load-document! uri (slurp uri) (:db* components))
   ns+uri)
 
 (defn ^:private find-new-uri-checking-rename

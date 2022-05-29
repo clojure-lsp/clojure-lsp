@@ -84,7 +84,7 @@
         :declarationProvider true
         :implementationProvider true
         :documentHighlightProvider true
-        :workspace {:fileOperations {:willRename {:filters [{:pattern {:glob "**/*.{clj,cljs,cljc,cljd,edn,bb}"
+        :workspace {:fileOperations {:willRename {:filters [{:pattern {:glob "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}"
                                                                        :matches "file"}
                                                              :scheme "file"}]}}}
         :experimental {:testTree true
@@ -104,5 +104,5 @@
   (testing "initialized notification"
     (lsp/notify! (fixture/initialized-notification))
     (h/assert-submaps
-      [{:registerOptions {:watchers [{:globPattern "**/*.{clj,cljs,cljc,cljd,edn,bb}"}]}}]
+      [{:registerOptions {:watchers [{:globPattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}"}]}}]
       (:registrations (lsp/client-awaits-server-request :client/registerCapability)))))

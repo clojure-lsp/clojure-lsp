@@ -38,7 +38,7 @@
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
 
-(def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb}")
+(def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}")
 
 (defn log! [level args fmeta]
   (timbre/log! level :p args {:?line (:line fmeta)

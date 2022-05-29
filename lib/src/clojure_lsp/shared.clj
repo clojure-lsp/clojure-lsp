@@ -107,6 +107,7 @@
     (string/ends-with? uri ".edn") :edn
     (string/ends-with? uri ".bb") :clj
     (string/ends-with? uri ".cljd") :clj
+    (string/ends-with? uri ".clj_kondo") :clj
     :else :unknown))
 
 (defn uri->available-langs [uri]
@@ -117,6 +118,7 @@
     (string/ends-with? uri ".edn") #{:edn}
     (string/ends-with? uri ".bb") #{:clj}
     (string/ends-with? uri ".cljd") #{:clj}
+    (string/ends-with? uri ".clj_kondo") #{:clj}
     :else #{}))
 
 (defn ^:private conform-uri

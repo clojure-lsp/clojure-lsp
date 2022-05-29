@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to 2022.05.29
+  - Consider `.clj_kondo` files as clj files.
 
 ## 2022.05.23-13.18.11
 

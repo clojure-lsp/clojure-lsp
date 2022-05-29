@@ -36,7 +36,7 @@
         (-> (clj-depend/analyze {:project-root (io/file project-root)
                                  :config (assoc config :source-paths (map #(shared/relativize-filepath % project-root)
                                                                           (settings/get db [:source-paths])))
-                                 :files (map io/file paths)})
+                                 :files (set (map io/file paths))})
             (update :violations #(group-by :namespace %)))))))
 
 (defn db-with-results

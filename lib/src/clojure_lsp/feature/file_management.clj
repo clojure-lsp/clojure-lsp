@@ -199,8 +199,8 @@
               depend-result @depend-result*]
           (if (compare-and-set! db* state-db
                                 (-> state-db
-                                    (lsp.kondo/db-with-results @kondo-result)
-                                    (lsp.depend/db-with-results @depend-result)
+                                    (lsp.kondo/db-with-results kondo-result)
+                                    (lsp.depend/db-with-results depend-result)
                                     (update :processing-changes disj uri)))
             (let [db @db*
                   old-local-analysis (get-in @db* [:analysis filename])]

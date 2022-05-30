@@ -34,6 +34,10 @@ jobs:
         with:
           cli: '1.10.3.1013'
 
+      - name: Update nightly version
+        run: |
+          date -u +"%Y.%m.%d-%H.%M.%S-nightly" > lib/resources/CLOJURE_LSP_VERSION
+
       - name: Generate jar for native
         run: make cli-jar-for-native
 

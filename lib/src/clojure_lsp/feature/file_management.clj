@@ -188,13 +188,13 @@
     (loop [state-db @db*]
       (when (>= version (get-in state-db [:documents uri :v] -1))
         (let [kondo-result* (future
-                             (shared/logging-time
-                               (str "changes analyzed by clj-kondo took %s")
-                               (lsp.kondo/run-kondo-on-text! text uri db*)))
-              depend-result* (future
                               (shared/logging-time
-                                (str "changes analyzed by clj-depend took %s")
-                                (lsp.depend/analyze-filename! filename state-db)))
+                                (str "changes analyzed by clj-kondo took %s")
+                                (lsp.kondo/run-kondo-on-text! text uri db*)))
+              depend-result* (future
+                               (shared/logging-time
+                                 (str "changes analyzed by clj-depend took %s")
+                                 (lsp.depend/analyze-filename! filename state-db)))
               kondo-result @kondo-result*
               depend-result @depend-result*]
           (if (compare-and-set! db* state-db

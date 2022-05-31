@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     clj-nix = {
-      url = "github:jlesquembre/clj-nix";
+      url = "github:jlesquembre/clj-nix/pname";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -29,7 +29,6 @@
                 mkdir -p target
                 make cli-jar-for-native
                 cp clojure-lsp-standalone.jar target
-
               '';
             maven-extra = [{
               content =

@@ -35,6 +35,14 @@ sudo ./install --version nightly
 nix-shell -p clojure-lsp
 ```
 
+or if using flakes:
+
+```bash
+nix run github:clojure-lsp/clojure-lsp#clojure-lsp
+# or 
+nix shell github:clojure-lsp/clojure-lsp#clojure-lsp
+```
+
 ## Arch Linux
 
 `clojure-lsp` is

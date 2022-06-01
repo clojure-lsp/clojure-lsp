@@ -1,5 +1,6 @@
 (ns clojure-lsp.features.diagnostics-test
   (:require
+   [clj-depend.api :as clj-depend]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.shared :as shared]
@@ -223,6 +224,49 @@
                          :settings {:source-paths ["/project/src"]}})
     (is (= []
            (f.diagnostic/find-diagnostics (h/file-uri "file:///some/place.jar:some/file.clj") @db/db*)))))
+
+(deftest lint-clj-depend-findings
+  (testing "when no clj-depend config is found"
+    (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
+                                     :settings {:source-paths ["/project/src"]}})
+
+    (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
+      (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
+      (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+    (is (= []
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") @db/db*))))
+  (testing "when clj-depend config is found but linter level is :off"
+    (swap! db/db* shared/deep-merge {:settings {:source-paths ["/project/src"]
+                                                :clj-depend {:layers {:foo {:defined-by ".*foo.*"
+                                                                            :accessed-by-layers #{}}
+                                                                      :bar {:defined-by ".*bar.*"
+                                                                            :accessed-by-layers #{:baz}}}}
+                                                :linters {:clj-depend {:level :off}}}})
+    (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
+      (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
+      (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+    (is (= []
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") @db/db*))))
+  (testing "when clj-depend config is found and a violation is present"
+    (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
+                                     :settings {:linters {:clj-depend {:level :info}}
+                                                :source-paths ["/project/src"]
+                                                :clj-depend {:layers {:foo {:defined-by ".*foo.*"
+                                                                            :accessed-by-layers #{}}
+                                                                      :bar {:defined-by ".*bar.*"
+                                                                            :accessed-by-layers #{:baz}}}}}})
+
+    (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
+      (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
+      (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+    (is (= [{:range
+             {:start {:line 0 :character 4} :end {:line 0 :character 7}}
+             :tags []
+             :message "Foo issue"
+             :code "clj-depend"
+             :severity 3
+             :source "clj-depend"}]
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") @db/db*)))))
 
 (deftest test-find-diagnostics
   (testing "wrong arity"

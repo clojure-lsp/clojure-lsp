@@ -11,7 +11,7 @@
                        :report-duplicates true
                        :ns-exclude-regex ""
                        :async-custom-lint? false}
-           :clj-depend {:level :on ;; Only if any clj-depend config is found
+           :clj-depend {:level :info ;; Only if any clj-depend config is found
                         }}
  :clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :next-line

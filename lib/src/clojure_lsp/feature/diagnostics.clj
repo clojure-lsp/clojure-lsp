@@ -130,7 +130,7 @@
 
 (defn find-diagnostics [^String uri db]
   (let [filename (shared/uri->filename uri)
-        kondo-level (settings/get db [:linters :clj-depend :level])
+        kondo-level (settings/get db [:linters :clj-kondo :level])
         depend-level (settings/get db [:linters :clj-depend :level] :info)]
     (if (shared/jar-file? filename)
       []

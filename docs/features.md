@@ -371,6 +371,12 @@ Below you can find the custom linters implemented on clojure-lsp side that uses 
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
+#### clj-depend 
+
+Clojure-lsp has a optional integration with [clj-depend](https://github.com/clj-depend/clj-depend), making it easier to configure namespaces relationship.
+
+For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
+
 ### Stub generation
 
 It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.

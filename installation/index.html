@@ -686,6 +686,11 @@ sudo ./install --version nightly
 <p><code>clojure-lsp</code> is available in the <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/misc/clojure-lsp/default.nix">nixpkgs</a>:</p>
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
 </code></pre></div>
+<p>or if using flakes:</p>
+<div class="highlight"><pre><span></span><code>nix run github:clojure-lsp/clojure-lsp#clojure-lsp
+<span class="c1"># or </span>
+nix shell github:clojure-lsp/clojure-lsp#clojure-lsp
+</code></pre></div>
 <h2 id="arch-linux">Arch Linux<a class="headerlink" href="#arch-linux" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> is
 <a href="https://aur.archlinux.org/packages/clojure-lsp-bin/">available</a> in the <a href="https://aur.archlinux.org">Arch User Repository</a>. It can be installed using your favorite <a href="https://aur.archlinux.org">AUR</a> helper such as

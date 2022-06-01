@@ -2,6 +2,7 @@
   (:require
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -54,14 +55,18 @@
 
 (defn db-with-analysis
   "Update `db` with normalized kondo analysis."
-  [db analysis]
-  (update db :analysis merge analysis))
+  [db {:keys [analysis external?]}]
+  (-> db
+      (update :analysis merge analysis)
+      (dep-graph/refresh-analysis (select-keys (:analysis db) (keys analysis))
+                                  analysis
+                                  (not external?))))
 
 (defn db-with-results
   "Update `db` with normalized kondo result."
-  [db {:keys [analysis findings config]}]
+  [db {:keys [findings config] :as results}]
   (-> db
-      (db-with-analysis analysis)
+      (db-with-analysis results)
       (update :findings merge findings)
       (assoc :kondo-config config)))
 
@@ -141,6 +146,7 @@
         empty-findings (zipmap filenames (repeat []))
         findings (merge empty-findings (group-by :filename findings))]
     (assoc kondo-results
+           :external? external?
            :analysis analysis
            :findings findings)))
 
@@ -164,25 +170,36 @@
   (not= :off (get-in config [:linters :clojure-lsp/unused-public-var :level])))
 
 (defn ^:private custom-lint-project!
-  [db {:keys [config analysis] :as kondo-ctx}]
+  [db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-time
       "Linting whole project for unused-public-var took %s"
-      (f.diagnostic/custom-lint-project! (db-with-analysis db analysis) kondo-ctx))))
+      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config))]
+        (f.diagnostic/custom-lint-project! db kondo-ctx)))))
 
 (defn ^:private custom-lint-files!
-  [files db {:keys [config analysis] :as kondo-ctx}]
+  [files db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-task
       :reference-files/lint
-      (f.diagnostic/custom-lint-files! files (db-with-analysis db analysis) kondo-ctx))))
+      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config))]
+        (f.diagnostic/custom-lint-files! files db kondo-ctx)))))
 
 (defn ^:private custom-lint-file!
-  [filename db {:keys [analysis config] :as kondo-ctx}]
+  [filename db {:keys [config] :as kondo-ctx}]
   (when (run-custom-lint? config)
-    (f.diagnostic/custom-lint-file! filename (db-with-analysis db analysis) kondo-ctx)))
+    (let [db (db-with-analysis db (normalize-for-filename kondo-ctx db filename))]
+      (f.diagnostic/custom-lint-file! filename db kondo-ctx))))
 
-(def ^:private config-for-internal-analysis
+(def ^:private config-for-shallow-analysis
+  {:arglists true
+   :keywords true
+   :protocol-impls true
+   :java-class-definitions true
+   :var-usages false
+   :var-definitions {:shallow true}})
+
+(def ^:private config-for-full-analysis
   {:arglists true
    :locals true
    :keywords true
@@ -205,18 +222,12 @@
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :custom-lint-fn custom-lint-fn)
-      (assoc-in [:config :analysis] config-for-internal-analysis)))
+      (assoc-in [:config :analysis] config-for-full-analysis)))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :skip-lint true)
-      (assoc-in [:config :analysis]
-                {:arglists true
-                 :keywords true
-                 :protocol-impls true
-                 :java-class-definitions true
-                 :var-usages false
-                 :var-definitions {:shallow true}})))
+      (assoc-in [:config :analysis] config-for-shallow-analysis)))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true
@@ -234,8 +245,7 @@
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        custom-lint-fn #(let [db @db*]
-                          (custom-lint-file! filename db (normalize-for-filename % db filename)))]
+        custom-lint-fn #(custom-lint-file! filename @db* %)]
     (-> {:cache true
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)
@@ -244,7 +254,7 @@
          :config-dir (project-config-dir (:project-root-uri db))
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
-                  :analysis config-for-internal-analysis}}
+                  :analysis config-for-full-analysis}}
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint db]
@@ -269,7 +279,7 @@
         config (if external?
                  (config-for-external-paths paths db file-analyzed-fn)
                  (config-for-internal-paths paths db
-                                            #(custom-lint-project! @db* (normalize % normalization-config))
+                                            #(custom-lint-project! @db* % normalization-config)
                                             file-analyzed-fn))]
     (-> config
         (run-kondo! (str "paths " (string/join ", " paths)) db)
@@ -296,15 +306,29 @@
       1 (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn 1 1))
       (->> batches
            (map (fn [{:keys [index paths]}]
-                  (logger/info "Analyzing" (str index "/" batch-count) "batch paths with clj-kondo...")
+                  (logger/info "Analyzing batch" (str index "/" batch-count))
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db*]
+  ;; TODO: We process the dependent and dependency files together, but we could
+  ;; be more efficient by processing them separately.
+  ;;
+  ;; The dependents may have been affected by changes to var definitions. Since
+  ;; some var definition data is copied to var usage data, this will change
+  ;; their analysis slightly. They may also gain or lose lint like
+  ;; unresolved-var or invalid-arity.
+  ;;
+  ;; The dependencies may have been affected by changes to var usages. Their
+  ;; analysis won't have changed, but they may gain or lose unused-public-var
+  ;; lint.
+  ;;
+  ;; So, we could send the dependents to kondo, bypassing custom-lint. And we
+  ;; could send the dependencies through custom-linting, bypassing kondo.
   (let [db @db*
         normalization-config {:external? false
                               :ensure-filenames filenames}
-        custom-lint-fn #(custom-lint-files! filenames @db* (normalize % normalization-config))]
+        custom-lint-fn #(custom-lint-files! filenames @db* % normalization-config)]
     (-> (config-for-internal-paths filenames db custom-lint-fn nil)
         (run-kondo! (str "files " (string/join ", " filenames)) db)
         (normalize normalization-config))))

@@ -347,7 +347,7 @@
   works for `let` and `for`. But it fails for `bindings` and other forms that
   don't establish new variables, but merely reference existing variables,
   according to the clj-kondo analysis."
-  [vector-zloc uri {:keys [analysis]}]
+  [vector-zloc uri db]
   (boolean
     (or (when-let [op-zloc (z-left vector-zloc)]
           (and (z-leftmost? op-zloc)
@@ -361,13 +361,13 @@
                                               :name-end-row end-row
                                               :name-end-col end-col}]
                                    #(shared/inside? % scope)))
-                  analysis (filter (enclosed-by? (z/node vector-zloc))
-                                   (get analysis (shared/uri->filename uri)))]
+                  elements (filter (enclosed-by? (z/node vector-zloc))
+                                   (get-in db [:analysis (shared/uri->filename uri)]))]
               (->> child-nodes
                    (partition 2)
                    (every? (fn [[lvar rvar]]
-                             (let [lelems (filter (enclosed-by? lvar) analysis)
-                                   relems (filter (enclosed-by? rvar) analysis)
+                             (let [lelems (filter (enclosed-by? lvar) elements)
+                                   relems (filter (enclosed-by? rvar) elements)
                                    local? #(identical? :locals (:bucket %))]
                                (and (some local? lelems)
                                     (not-any? local? relems))))))))))))

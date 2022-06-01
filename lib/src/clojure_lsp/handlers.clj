@@ -31,7 +31,8 @@
    [clojure.pprint :as pprint]
    [lsp4clj.protocols.feature-handler :as feature-handler]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]))
+   [lsp4clj.protocols.producer :as producer]
+   [clojure-lsp.dep-graph :as dep-graph]))
 
 (set! *warn-on-reflection* true)
 
@@ -74,13 +75,8 @@
                result#)))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db* producer]}]
-  (let [db @db*
-        project-files (into #{}
-                            (comp
-                              q/filter-project-analysis-xf
-                              (map key))
-                            (:analysis db))]
-    (->> project-files
+  (let [db @db*]
+    (->> (dep-graph/internal-files db)
          (map #(shared/filename->uri % db))
          (clojure-producer/refresh-test-tree producer))))
 

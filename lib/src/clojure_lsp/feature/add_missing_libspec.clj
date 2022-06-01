@@ -48,8 +48,7 @@
 
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/find-all-aliases-for-langs db
-                                                       (shared/uri->available-langs uri))
+        alias->info (->> (q/ns-aliases-for-langs db (shared/uri->available-langs uri))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -378,10 +377,10 @@
 
 (defn find-alias-ns-pairs [db uri]
   (let [langs (shared/uri->available-langs uri)]
-    (concat (->> (q/find-all-aliases-for-langs db langs)
+    (concat (->> (q/ns-aliases-for-langs db langs)
                  (map (juxt (comp str :to) (comp str :alias))))
-            (->> (q/find-all-ns-definitions-for-langs db langs)
-                 (map (juxt (comp str :name) (constantly nil)))))))
+            (->> (q/ns-names-for-langs db langs)
+                 (map (juxt str (constantly nil)))))))
 
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]

@@ -4,6 +4,7 @@
 
 - General
   - clojure-lsp has a flake.nix now, being able to be built using clj-nix. #999
+  - Add new optional linter: [clj-depend](https://github.com/clj-depend/clj-depend) integration. #957
 
 ## 2022.05.31-17.35.50
 

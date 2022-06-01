@@ -19,7 +19,7 @@
       {
         packages = {
 
-          cli-jdk = cljpkgs.mkCljBin {
+          clojure-lsp-jdk = cljpkgs.mkCljBin {
             projectSrc = ./.;
             name = "com.github.clojure-lsp/clojure-lsp";
             main-ns = "clojure-lsp.main";
@@ -52,9 +52,8 @@
             }];
           };
 
-
-          cli = cljpkgs.mkGraalBin {
-            cljDrv = self.packages."${system}".cli-jdk;
+          clojure-lsp = cljpkgs.mkGraalBin {
+            cljDrv = self.packages."${system}".clojure-lsp-jdk;
           };
 
         };

@@ -2,8 +2,9 @@
 /.lein-repl-history
 /.lein-failures
 .nrepl-port
-/.lsp/.cache
+**/.lsp/.cache
 /.clj-kondo/.cache
+/cli/.clj-kondo/
 /out
 target/
 /classes
@@ -25,3 +26,5 @@ cli/integration-test/sample-test/clojure-lsp.integration-test.out
 
 /.lh
 output.calva-repl
+
+result

@@ -3,7 +3,12 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to 2022.05.29
+  - clojure-lsp has a flake.nix now, being able to be built using clj-nix. #999
+
+## 2022.05.31-17.35.50
+
+- General
+  - Bump clj-kondo to 2022.05.31
   - Consider `.clj_kondo` files as clj files.
 
 ## 2022.05.23-13.18.11

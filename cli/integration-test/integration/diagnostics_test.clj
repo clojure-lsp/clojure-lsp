@@ -83,3 +83,41 @@
         :message "Unresolved symbol: bar"
         :tags []}]
       (lsp/client-awaits-server-diagnostics "diagnostics/kondo.clj"))))
+
+(deftest clj-depend-no-config-set
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/a.clj"))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/b.clj"))
+
+  (testing "When there is a wrong namespace dependency relationship"
+    (h/assert-submaps
+      []
+      (lsp/client-awaits-server-diagnostics "diagnostics/depend/b.clj"))))
+
+(deftest clj-depend-basic-config-set
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request {:initializationOptions
+                                             (assoc fixture/default-init-options
+                                                    :clj-depend {:layers {:a {:defined-by         ".*\\.depend\\.a"
+                                                                              :accessed-by-layers #{}}
+                                                                          :b {:defined-by         ".*\\.depend\\.b"
+                                                                              :accessed-by-layers #{:c}}}})}))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/a.clj"))
+  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/b.clj"))
+
+  (testing "When there is a wrong namespace dependency relationship"
+    (h/assert-submaps
+      []
+      (lsp/client-awaits-server-diagnostics "diagnostics/depend/a.clj"))
+    (h/assert-submaps
+      [{:range {:start {:line 0 :character 4}
+                :end {:line 0 :character 36}}
+        :severity 3
+        :code "clj-depend"
+        :source "clj-depend"
+        :message "\"sample-test.diagnostics.depend.b\" should not depends on \"sample-test.diagnostics.depend.a\""
+        :tags []}]
+      (lsp/client-awaits-server-diagnostics "diagnostics/depend/b.clj"))))

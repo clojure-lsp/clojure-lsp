@@ -79,7 +79,10 @@
             db*]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
-    (producer/publish-diagnostic lsp-producer diagnostic))
+    (shared/logging-time
+      (str (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic))
+           " took %s")
+      (producer/publish-diagnostic lsp-producer diagnostic)))
   (refresh-code-lens [_this]
     (producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]

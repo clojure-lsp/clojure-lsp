@@ -420,9 +420,7 @@
       {:name 'bar :filename (h/file-path "/a.clj")}
       (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
 
-(deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
-  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
-  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
+(defn assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs []
   (testing "when on a clj file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.clj"))
@@ -465,6 +463,16 @@
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some/foo.clj")}
         (q/find-definition-from-cursor ana (h/file-path "/a.cljs") bar-r bar-c)))))
+
+(deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
+  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
+  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
+  (assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs))
+
+(deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs-in-other-load-order
+  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/other-jar.cljs"))
+  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
+  (assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs))
 
 (deftest find-definition-from-cursor-when-declared
   (let [[[bar-r bar-c]] (h/load-code-and-locs

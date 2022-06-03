@@ -89,6 +89,8 @@
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "diagnostics/depend/a.clj"))
+  ;; TODO remove after integration timeout fixes
+  (Thread/sleep 200)
   (lsp/notify! (fixture/did-open-notification "diagnostics/depend/b.clj"))
 
   (testing "When there is a wrong namespace dependency relationship"
@@ -106,6 +108,8 @@
                                                                               :accessed-by-layers #{:c}}}})}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "diagnostics/depend/a.clj"))
+  ;; TODO remove after integration timeout fixes
+  (Thread/sleep 200)
   (lsp/notify! (fixture/did-open-notification "diagnostics/depend/b.clj"))
 
   (testing "When there is a wrong namespace dependency relationship"

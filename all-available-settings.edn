@@ -6,6 +6,7 @@
  :ignore-classpath-directories false
  :lint-project-files-after-startup? true
  :notify-references-on-file-change true
+ :compute-external-file-changes true
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""

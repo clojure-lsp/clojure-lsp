@@ -135,14 +135,23 @@
 
 (defmethod find-definition :var-usages
   [analysis element]
-  (find-last-order-by-project-analysis
-    #(and (identical? :var-definitions (:bucket %))
-          (= (:name %) (:name element))
-          (not (= (:defined-by %) 'clojure.core/declare))
-          (= (:ns %) (:to element))
-          (or (contains? (elem-langs element) :cljs)
-              (match-file-lang % element)))
-    analysis))
+  (letfn [(defines-elem? [candidate]
+            (and (identical? :var-definitions (:bucket candidate))
+                 (= (:name element) (:name candidate))
+                 (= (:to element) (:ns candidate))
+                 (not= 'clojure.core/declare (:defined-by candidate))))]
+    (or
+      (find-last-order-by-project-analysis
+        #(and (defines-elem? %)
+              (match-file-lang % element))
+        analysis)
+      (when (contains? (elem-langs element) :cljs)
+        ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
+        (find-last-order-by-project-analysis
+          #(and (defines-elem? %)
+                (:macro %)
+                (match-file-lang % (assoc element :lang :clj)))
+          analysis)))))
 
 (defmethod find-definition :local-usages
   [analysis {:keys [id filename] :as _element}]

@@ -1274,11 +1274,6 @@
 <td>Whether to use <code>^:private</code> metadata for refactorings instead of <code>defn-</code></td>
 <td><code>false</code></td>
 </tr>
-<tr>
-<td><code>:use-source-paths-from-classpath</code></td>
-<td>Whether to check source-paths from classpath or manually discover</td>
-<td><code>true</code></td>
-</tr>
 </tbody>
 </table>
 <h3 id="classpath-scan">Classpath scan<a class="headerlink" href="#classpath-scan" title="Permanent link">#</a></h3>
@@ -1370,14 +1365,14 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <p>Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.</p>
 <ul>
 <li>
-<p>When <code>:use-source-paths-from-classpath</code> setting is enabled (which is true by default), clojure-lsp will get source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check <code>:source-aliases</code> or <code>:source-paths</code> settings.</p>
+<p>By default, clojure-lsp will infer source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check next items. </p>
 </li>
 <li>
-<p>If <code>:use-source-paths-from-classpath</code> is manually disabled, clojure-lsp will do the following:</p>
+<p>You can specify a <code>source-aliases</code> setting, making clojure-lsp use those alias when conmputing the classpath, e.g. <code>#{:src :test :my-alias}</code></p>
 </li>
-<li>If your project is a <code>lein</code> project, clojure-lsp will scan the <code>project.clj</code> file for <code>:source-paths</code>, <code>:test-paths</code> and the optional <code>source-paths</code> from the specified <code>:source-aliases</code> setting (default <code>#{:dev :test}</code>), unless you specified <code>:source-paths</code> setting manually.</li>
-<li>If your project is a <code>deps.edn</code>, clojure-lsp will scan the <code>deps.edn</code> file for <code>:paths</code>, <code>:extra-paths</code>, <code>:local/root</code> on <code>:deps</code>, <code>:extra-deps</code> and the <code>paths</code>, <code>extra-paths</code>, <code>:local/root</code> in <code>:deps</code> and <code>:extra-deps</code> from the specified <code>:source-aliases</code> setting (default <code>#{:dev :test}</code>), unless you specified <code>:source-paths</code> setting manually.</li>
-<li>If your project is not a <code>deps.edn</code> or <code>lein</code> project, a <code>boot</code> project for example, clojure-lsp will use only the <code>:source-paths</code> setting (default <code>#{"src" "test"}</code>) which should point to the folders containing your clojure code.</li>
+<li>
+<p>If that is not enough, for example you have source-paths that are not included on any project profile (not recommended), you can manually specify via the <code>:source-paths</code> settings. e.g <code>["src" "test" "my/other/folder"]</code>.</p>
+</li>
 </ul>
 <h3 id="clean">Clean<a class="headerlink" href="#clean" title="Permanent link">#</a></h3>
 <p>Default: Check <code>:clean</code> in <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">all-available-settings.edn</a>.</p>

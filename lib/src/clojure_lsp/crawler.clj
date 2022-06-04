@@ -159,7 +159,7 @@
         (let [classpath (:classpath @db*)]
           (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db* assoc
-                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
+                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath)))
           (producer/publish-progress producer 15 "Copying kondo configs" progress-token)
           (copy-configs-from-classpath! classpath settings @db*))
         (do
@@ -169,7 +169,8 @@
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
                    :classpath classpath
-                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath settings)))
+                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath)))
+
             (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))

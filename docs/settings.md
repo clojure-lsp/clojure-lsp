@@ -102,7 +102,6 @@ __You can find all settings and its default values [here](https://github.com/clo
 | `:stubs`                                  | Stub generation related settings, check the [Stub generation](#stub-generation) section below.                                                                                                                                                                                                                                                                                                                       |                                                                                               |
 | `:text-document-sync-kind`                | The sync kind during document changes, if client should send whole buffer or just related changes. Should be `:full` or `:incremental`                                                                                                                                                                                                                                                                               | `:full`                                                                                       |
 | `:use-metadata-for-privacy?`              | Whether to use `^:private` metadata for refactorings instead of `defn-`                                                                                                                                                                                                                                                                                                                                              | `false`                                                                                       |
-| `:use-source-paths-from-classpath`        | Whether to check source-paths from classpath or manually discover                                                                                                                                                                                                                                                                                                                                                    | `true`                                                                                        |
 
 ### Classpath scan
 
@@ -223,12 +222,11 @@ For information on how to troubleshoot the linter, check the [troubleshooting se
 
 Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.
 
-- When `:use-source-paths-from-classpath` setting is enabled (which is true by default), clojure-lsp will get source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check `:source-aliases` or `:source-paths` settings.
+- By default, clojure-lsp will infer source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check next items. 
 
-- If `:use-source-paths-from-classpath` is manually disabled, clojure-lsp will do the following:
-  - If your project is a `lein` project, clojure-lsp will scan the `project.clj` file for `:source-paths`, `:test-paths` and the optional `source-paths` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
-  - If your project is a `deps.edn`, clojure-lsp will scan the `deps.edn` file for `:paths`, `:extra-paths`, `:local/root` on `:deps`, `:extra-deps` and the `paths`, `extra-paths`, `:local/root` in `:deps` and `:extra-deps` from the specified `:source-aliases` setting (default `#{:dev :test}`), unless you specified `:source-paths` setting manually.
-  - If your project is not a `deps.edn` or `lein` project, a `boot` project for example, clojure-lsp will use only the `:source-paths` setting (default `#{"src" "test"}`) which should point to the folders containing your clojure code.
+- You can specify a `source-aliases` setting, making clojure-lsp use those alias when conmputing the classpath, e.g. `#{:src :test :my-alias}`
+
+- If that is not enough, for example you have source-paths that are not included on any project profile (not recommended), you can manually specify via the `:source-paths` settings. e.g `["src" "test" "my/other/folder"]`.
 
 ### Clean
 

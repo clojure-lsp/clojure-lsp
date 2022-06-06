@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - 'deps-lock.json'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/bump_downstreams.yml'
+      - '.github/workflows/nightly.yml'
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/release.yml'
 
 jobs:
   check-deps-and-bump:

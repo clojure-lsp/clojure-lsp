@@ -7,12 +7,17 @@ on:
     paths-ignore:
       - '**/README.md'
       - '**/CHANGELOG.md'
+      - 'deps-lock.json'
       - 'resources/CLOJURE_LSP_VERSION'
       - 'docs/**'
       - 'images/**'
       - 'mkdocs.yml'
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_downstreams.yml'
+      - '.github/workflows/nightly.yml'
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/release.yml'
+
   pull_request:
 
 jobs:

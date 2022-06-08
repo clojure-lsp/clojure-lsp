@@ -8,6 +8,9 @@
   - Add `compute-external-file-changes` setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002
   - Bump lsp4clj to 0.4.0.
 
+- Editor
+  - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978
+
 ## 2022.05.31-17.35.50
 
 - General

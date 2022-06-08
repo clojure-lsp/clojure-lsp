@@ -26,14 +26,21 @@
            keys-destructuring] :as reference}]
   (let [ref-doc-uri (shared/filename->uri filename db)
         version (get-in db [:documents ref-doc-uri :v] 0)
-        ;; Extracts the name of the keyword
-        ;; Maybe have the replacement analyzed by clj-kondo instead?
-        replacement-name (string/replace replacement #":+(.+/)?" "")
         ;; Infers if the qualified keyword is of the ::kw-name kind
         ;; So the same-ns style or the full qualified name can be preserved
         ;; The 2 accounts for the 2 colons in same-namespace qualified keyword
         qualified-same-ns? (= (- name-end-col name-col)
                               (+ 2 (count name)))
+        ;; Extracts the name of the keyword
+        ;; Maybe have the replacement analyzed by clj-kondo instead?
+        replacement-name (string/replace replacement #":+(.+/)?" "")
+        ;; Extracts the namespace of the keyword
+        ;; Maybe have the replacement analyzed by clj-kondo instead?
+        replacement-ns (string/replace replacement-raw #":+(.+)/.+" "$1")
+        namespace-changed? (and ns
+                                replacement-ns
+                                ;; allow only simple namespaced keywords, not aliased keywords
+                                (re-matches #"^:(.+)/.+" replacement-raw))
         ;; we find the locals analysis since when destructuring we have both
         ;; keyword and a locals analysis for the same position
         local-element (when keys-destructuring
@@ -66,6 +73,9 @@
 
                namespace-from-prefix
                (str ":" replacement-name)
+
+               namespace-changed?
+               (str ":" replacement-ns "/" replacement-name)
 
                ns
                (str ":" ns "/" replacement-name)

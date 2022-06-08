@@ -29,6 +29,38 @@
                  {:new-text "b" :range (h/->range a-local-usage-start a-local-usage-stop)}]}
                changes))))))
 
+(deftest rename-namespaced-keywords
+  (let [[a-start a-stop] (h/load-code-and-locs
+                           "(ns a) |:hello/foo|"
+                           (h/file-uri "file:///a.cljc"))
+        [b-start b-stop] (h/load-code-and-locs
+                           "(ns b) |:hello/foo|"
+                           (h/file-uri "file:///b.cljc"))]
+    (testing "renaming only the name"
+      (let [[row col] a-start
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":hello/bar" row col db/db*))]
+        (is (= {(h/file-uri "file:///a.cljc")
+                [{:new-text ":hello/bar" :range (h/->range a-start a-stop)}]
+                (h/file-uri "file:///b.cljc")
+                [{:new-text ":hello/bar" :range (h/->range b-start b-stop)}]}
+               changes))))
+    (testing "renaming only the namespace"
+      (let [[row col] a-start
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":bye/foo" row col db/db*))]
+        (is (= {(h/file-uri "file:///a.cljc")
+                [{:new-text ":bye/foo" :range (h/->range a-start a-stop)}]
+                (h/file-uri "file:///b.cljc")
+                [{:new-text ":bye/foo" :range (h/->range b-start b-stop)}]}
+               changes))))
+    (testing "renaming namespace and name"
+      (let [[row col] a-start
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":bye/bar" row col db/db*))]
+        (is (= {(h/file-uri "file:///a.cljc")
+                [{:new-text ":bye/bar" :range (h/->range a-start a-stop)}]
+                (h/file-uri "file:///b.cljc")
+                [{:new-text ":bye/bar" :range (h/->range b-start b-stop)}]}
+               changes))))))
+
 (deftest rename-destructuring-keywords
   (let [[a-start a-stop
          a-binding-start a-binding-stop] (h/load-code-and-locs

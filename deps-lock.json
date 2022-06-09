@@ -590,24 +590,24 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj-protocols/0.4.0/lsp4clj-protocols-0.4.0.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj-protocols/0.4.1/lsp4clj-protocols-0.4.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-rzd4U6d1bNeoKOMR4MmGomVDSr6Jn9C/0ejKcUtYbE0="
+      "hash": "sha256-l54444VlrbBS8A2ASg54VUgtZBMwFMjIuy22gmj925U="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj-protocols/0.4.0/lsp4clj-protocols-0.4.0.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj-protocols/0.4.1/lsp4clj-protocols-0.4.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-C22w/pyVxcN2Tc9OA8begiGtlulC9iAAL1xLYboeHXg="
+      "hash": "sha256-IeqrirGykCofGnz9VLLiXHCempDRLuEXjSt19tMMiME="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj-server/0.4.0/lsp4clj-server-0.4.0.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj-server/0.4.1/lsp4clj-server-0.4.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-JMHTRTB6JnYlRAE83Yb8wgaQkdCe1D1lDEXxfuKHCTA="
+      "hash": "sha256-80VcYifyBBTdQBTwJ2ORiaO4tY1o2ha2iU+L2GwUNNs="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj-server/0.4.0/lsp4clj-server-0.4.0.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj-server/0.4.1/lsp4clj-server-0.4.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-WgJexM3nodTz4CbVYnBCk9tisIITIb4dw/mMs97w30k="
+      "hash": "sha256-pCyrj/OGb1b7kzgR/CD3SWcAjCtAvRHuc0apIoV7PHA="
     },
     {
       "mvn-path": "com/github/ericdallo/deps-bin/0.1.2/deps-bin-0.1.2.jar",

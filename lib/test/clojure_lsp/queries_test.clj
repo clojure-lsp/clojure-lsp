@@ -547,12 +547,16 @@
 
 (deftest find-declaration-from-cursor
   (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))
+  (h/load-code-and-locs (h/code "(ns colors) (def orange 123)"))
   (let [[[something-r something-c]
+         [orange-r orange-c]
          [other-r other-c]] (h/load-code-and-locs
                               (h/code "(ns sample"
                                       "  (:require [foo.bar :as foob]"
+                                      "            [colors :refer [orange]]"
                                       "            [foo.baz :refer :all]))"
                                       "foob/som|ething"
+                                      "|orange"
                                       "|other")
                               "file:///b.clj")
         ana (:analysis @db/db*)]
@@ -564,6 +568,14 @@
          :namespace-alias
          :to 'foo.bar}
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c)))
+    (testing "from usage with refer"
+      (h/assert-submap
+        '{:from sample
+          :to colors
+          :name orange
+          :bucket :var-usages
+          :refer true}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") orange-r orange-c)))
     (testing "from usage with refer all"
       (h/assert-submap
         {:from 'sample
@@ -571,6 +583,35 @@
          :namespace-usages
          :name 'foo.baz}
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c)))))
+
+(deftest find-declaration-from-cursor-in-cljc
+  (let [[[clj-ns-r clj-ns-c]
+         [cljs-ns-r cljs-ns-c]
+         [clj-usage-r clj-usage-c]
+         [cljs-usage-r cljs-usage-c]] (h/load-code-and-locs
+                                        (h/code "(ns sample"
+                                                "  (:require #?(:clj |foo"
+                                                "               :cljs |foo)))"
+                                                "#?(:clj foo/som|ething"
+                                                "   :cljs foo/som|ething)")
+                                        "file:///b.cljc")
+        ana (:analysis @db/db*)]
+    (testing "from clj usage"
+      (h/assert-submap
+        {:name 'foo
+         :from 'sample
+         :bucket :namespace-usages
+         :row clj-ns-r
+         :col clj-ns-c}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.cljc") clj-usage-r clj-usage-c)))
+    (testing "from cljs usage"
+      (h/assert-submap
+        {:name 'foo
+         :from 'sample
+         :bucket :namespace-usages
+         :row cljs-ns-r
+         :col cljs-ns-c}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.cljc") cljs-usage-r cljs-usage-c)))))
 
 (deftest find-implementations-from-cursor-protocols
   (h/load-code-and-locs (h/code "(ns a)"

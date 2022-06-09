@@ -510,34 +510,42 @@
                      (= (:name-end-col %) (:name-end-col keyword-element))))
        first))
 
-(defn find-all-ns-definition-names-xf []
+(def find-all-ns-definitions-xf
   (comp
     (mapcat val)
-    (filter #(identical? :namespace-definitions (:bucket %)))
+    (filter #(identical? :namespace-definitions (:bucket %)))))
+
+(def find-all-ns-definition-names-xf
+  (comp
+    find-all-ns-definitions-xf
     (map :name)))
 
 ;; TODO remove it, use only transducer one?
 (defn find-all-ns-definition-names [analysis]
   (into #{}
-        (find-all-ns-definition-names-xf)
+        find-all-ns-definition-names-xf
         analysis))
 
-(defn find-all-aliases
-  [analysis uri db]
-  (let [langs (shared/uri->available-langs uri)]
-    (into #{}
-          (comp
-            filter-project-analysis-xf
-            (mapcat val)
-            (filter #(identical? :namespace-alias (:bucket %)))
-            (filter :alias)
-            (filter (fn [element]
-                      (seq (set/intersection (-> element
-                                                 :filename
-                                                 (shared/filename->uri db)
-                                                 shared/uri->available-langs)
-                                             langs)))))
-          analysis)))
+(defn find-all-ns-definitions-for-langs
+  [analysis langs]
+  (into #{}
+        (comp
+          find-all-ns-definitions-xf
+          (filter (fn [element]
+                    (some langs (elem-langs element)))))
+        analysis))
+
+(defn find-all-aliases-for-langs
+  [analysis langs]
+  (into #{}
+        (comp
+          filter-project-analysis-xf
+          (mapcat val)
+          (filter #(identical? :namespace-alias (:bucket %)))
+          (filter :alias)
+          (filter (fn [element]
+                    (some langs (elem-langs element)))))
+        analysis))
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]

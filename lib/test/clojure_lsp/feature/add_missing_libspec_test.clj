@@ -211,6 +211,7 @@
     (testing "Do not add from wrong language"
       (h/clean-db!)
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.cljs")
+      (h/load-code-and-locs "(ns foo.s)" "file:///c.cljs")
       (is (= nil
              (-> "(ns foo) |s/thing"
                  add-missing-libspec))))

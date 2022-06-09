@@ -286,7 +286,7 @@
       (into #{}
             (comp
               q/filter-project-analysis-xf
-              (q/find-all-ns-definition-names-xf)
+              q/find-all-ns-definition-names-xf
               (remove (partial exclude-ns? options)))
             (:analysis db))))
 

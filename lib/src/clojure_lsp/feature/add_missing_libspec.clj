@@ -5,6 +5,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
@@ -47,7 +48,8 @@
 
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/find-all-aliases (:analysis db) uri db)
+        alias->info (->> (q/find-all-aliases-for-langs (:analysis db)
+                                                       (shared/uri->available-langs uri))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -374,11 +376,12 @@
       :else
       (resolve-best-namespaces-suggestions cursor-namespace-str aliases->namespaces namespaces->aliases))))
 
-(defn find-alias-ns-pairs [analysis uri db]
-  (concat (->> (q/find-all-aliases analysis uri db)
-               (map (juxt (comp str :to) (comp str :alias))))
-          (->> (q/find-all-ns-definition-names analysis)
-               (map (juxt str (constantly nil))))))
+(defn find-alias-ns-pairs [analysis uri]
+  (let [langs (shared/uri->available-langs uri)]
+    (concat (->> (q/find-all-aliases-for-langs analysis langs)
+                 (map (juxt (comp str :to) (comp str :alias))))
+            (->> (q/find-all-ns-definitions-for-langs analysis langs)
+                 (map (juxt (comp str :name) (constantly nil)))))))
 
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]
@@ -387,7 +390,7 @@
           analysis (:analysis db)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
-                                  (find-alias-ns-pairs analysis uri db))
+                                  (find-alias-ns-pairs analysis uri))
           suggestions (if (namespace cursor-sym)
                         namespace-suggestions
                         (concat

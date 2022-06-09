@@ -7,6 +7,7 @@
   - Remove `use-source-paths-from-classpath` setting, its value was already true and disabling it could cause false-positives.
   - Add `compute-external-file-changes` setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002
   - Bump lsp4clj to 0.4.0.
+  - Remove deprecated disabled setting `:linters :clj-kondo :async-custom-lint?`. #1017
 
 - Editor
   - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978

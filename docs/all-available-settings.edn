@@ -9,8 +9,7 @@
  :compute-external-file-changes true
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
-                       :ns-exclude-regex ""
-                       :async-custom-lint? false}}
+                       :ns-exclude-regex ""}}
  :clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :next-line
          :ns-import-classes-indentation :next-line

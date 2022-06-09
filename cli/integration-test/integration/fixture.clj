@@ -14,6 +14,10 @@
     (merge {:rootUri (h/file->uri (io/file h/root-project-path))}
            params)]))
 
+(defn shutdown-request
+  []
+  [:shutdown {}])
+
 (defn completion-request [path row col]
   [:textDocument/completion
    {:textDocument {:uri (h/source-path->uri path)}

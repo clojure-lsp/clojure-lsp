@@ -209,27 +209,21 @@
     (:bucket element)))
 
 (defmethod find-declaration :var-usages
-  [analysis element]
+  [analysis {:keys [filename] :as element}]
   (when-not (identical? :clj-kondo/unknown-namespace (:to element))
     (if (:alias element)
-      (find-last-order-by-project-analysis
-        #(and (identical? :namespace-alias (:bucket %))
-              (= (:to element) (:to %))
-              (= (:alias element) (:alias %))
-              (= (:filename element) (:filename %))
-              (match-file-lang % element))
-        analysis)
-      (find-last-order-by-project-analysis
-        #(if (:refer %)
-           (and (identical? :var-usages (:bucket %))
-                (= (:to element) (:to %))
-                (= (:filename element) (:filename %))
-                (match-file-lang % element))
-           (and (identical? :namespace-usages (:bucket %))
-                (= (:to element) (:name %))
-                (= (:filename element) (:filename %))
-                (match-file-lang % element)))
-        analysis))))
+      (->>  (get analysis filename)
+            (filter #(and (identical? :namespace-alias (:bucket %))
+                          (= (:to element) (:to %))
+                          (= (:alias element) (:alias %))))
+            first)
+      (->> (get analysis filename)
+           (filter #(if (:refer %)
+                      (and (identical? :var-usages (:bucket %))
+                           (= (:to element) (:to %)))
+                      (and (identical? :namespace-usages (:bucket %))
+                           (= (:to element) (:name %)))))
+           first))))
 
 (defmethod find-declaration :default [_ _] nil)
 

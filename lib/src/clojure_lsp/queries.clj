@@ -209,21 +209,23 @@
     (:bucket element)))
 
 (defmethod find-declaration :var-usages
-  [analysis {:keys [filename] :as element}]
-  (when-not (identical? :clj-kondo/unknown-namespace (:to element))
-    (if (:alias element)
-      (->>  (get analysis filename)
-            (filter #(and (identical? :namespace-alias (:bucket %))
-                          (= (:to element) (:to %))
-                          (= (:alias element) (:alias %))))
-            first)
-      (->> (get analysis filename)
-           (filter #(if (:refer %)
-                      (and (identical? :var-usages (:bucket %))
-                           (= (:to element) (:to %)))
-                      (and (identical? :namespace-usages (:bucket %))
-                           (= (:to element) (:name %)))))
-           first))))
+  [analysis {:keys [alias name to filename] :as element}]
+  (when-not (identical? :clj-kondo/unknown-namespace to)
+    (peek (into []
+                (comp (filter
+                        (if alias
+                          #(and (identical? :namespace-alias (:bucket %))
+                                (= to (:to %))
+                                (= alias (:alias %)))
+                          #(if (:refer %)
+                             (and (identical? :var-usages (:bucket %))
+                                  (= to (:to %))
+                                  (= name (:name %)))
+                             ;; :refer :all
+                             (and (identical? :namespace-usages (:bucket %))
+                                  (= to (:name %))))))
+                      (filter #(match-file-lang % element)))
+                (get analysis filename)))))
 
 (defmethod find-declaration :default [_ _] nil)
 

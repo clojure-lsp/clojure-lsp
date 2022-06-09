@@ -116,20 +116,24 @@
   `analysis` and `findings` indexed by filename."
   [{:keys [analysis findings] :as kondo-results}
    {:keys [external? ensure-filenames filter-analysis] :or {filter-analysis identity}}]
-  (let [analysis (->> analysis
-                      filter-analysis
-                      (normalize-analysis external?)
-                      (group-by :filename))
-        analysis (reduce (fn [analysis filename]
-                           (update analysis filename #(or % [])))
-                         analysis
-                         ensure-filenames)
-        filenames (keys analysis)
-        empty-findings (zipmap filenames (repeat []))
-        findings (merge empty-findings (group-by :filename findings))]
-    (assoc kondo-results
-           :analysis analysis
-           :findings findings)))
+  (if analysis
+    (let [analysis (->> analysis
+                        filter-analysis
+                        (normalize-analysis external?)
+                        (group-by :filename))
+          analysis (reduce (fn [analysis filename]
+                             (update analysis filename #(or % [])))
+                           analysis
+                           ensure-filenames)
+          filenames (keys analysis)
+          empty-findings (zipmap filenames (repeat []))
+          findings (merge empty-findings (group-by :filename findings))]
+      (assoc kondo-results
+             :analysis analysis
+             :findings findings))
+    (let [empty-findings (zipmap ensure-filenames (repeat []))
+          findings (merge empty-findings (group-by :filename findings))]
+      (assoc kondo-results :findings findings))))
 
 (defn ^:private normalize-for-filename
   "Normalize kondo result for a single file."
@@ -196,6 +200,10 @@
   (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :custom-lint-fn custom-lint-fn)
       (assoc-in [:config :analysis] config-for-internal-analysis)))
+
+(defn ^:private config-for-reference-internal-paths [paths db custom-lint-fn]
+  (-> (config-for-paths paths nil db)
+      (assoc :custom-lint-fn custom-lint-fn)))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
@@ -289,12 +297,12 @@
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
            (reduce shared/deep-merge)))))
 
-(defn run-kondo-on-reference-filenames! [filenames db*]
+(defn run-kondo-lint-only-on-reference-filenames! [filenames db*]
   (let [db @db*
         normalization-config {:external? false
                               :ensure-filenames filenames}
         custom-lint-fn #(custom-lint-files! filenames @db* (normalize % normalization-config))]
-    (-> (config-for-internal-paths filenames db custom-lint-fn nil)
+    (-> (config-for-reference-internal-paths filenames db custom-lint-fn)
         (run-kondo! (str "files " (string/join ", " filenames)) db)
         (normalize normalization-config))))
 

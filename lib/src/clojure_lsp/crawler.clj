@@ -30,10 +30,10 @@
     (swap! db* lsp.kondo/db-with-results result)))
 
 (defn analyze-reference-filenames! [filenames db*]
-  (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
+  (let [result (lsp.kondo/run-kondo-lint-only-on-reference-filenames! filenames db*)]
     (swap! db* lsp.kondo/db-with-results result)))
 
-(defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
+(defn ^:private lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath settings progress-token {:keys [db* producer]}]
   (let [ignore-directories? (get settings :ignore-classpath-directories)]

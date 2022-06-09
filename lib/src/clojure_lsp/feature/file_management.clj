@@ -118,22 +118,24 @@
     (set/union (or incoming-filenames #{})
                (or outgoing-filenames #{}))))
 
-(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db* producer]}]
-  (async/go
-    (shared/logging-task
-      :notify-references
-      (let [filenames (shared/logging-task
-                        :reference-files/find
-                        (reference-filenames filename old-local-analysis new-local-analysis @db*))]
-        (when (seq filenames)
-          (logger/debug "Analyzing references for files:" filenames)
-          (shared/logging-task
-            :reference-files/analyze
-            (crawler/analyze-reference-filenames! filenames db*))
-          (let [db @db*]
-            (doseq [filename filenames]
-              (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
-          (producer/refresh-code-lens producer))))))
+(defn ^:private notify-references
+  "Notify the dependencies of changed var comparing old and new analysis.
+  Important to lint unused-public-var / invalid-arity on reference files."
+  [filename old-local-analysis new-local-analysis {:keys [db* producer]}]
+  (shared/logging-task
+    :notify-references
+    (let [filenames (shared/logging-task
+                      :reference-files/find
+                      (reference-filenames filename old-local-analysis new-local-analysis @db*))]
+      (when (seq filenames)
+        (logger/debug "Analyzing references for files:" filenames)
+        (shared/logging-task
+          :reference-files/analyze
+          (crawler/analyze-reference-filenames! filenames db*))
+        (let [db @db*]
+          (doseq [filename filenames]
+            (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
+        (producer/refresh-code-lens producer)))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -191,7 +193,8 @@
             (let [db @db*]
               (f.diagnostic/sync-publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in db [:analysis filename]) components))
+                (async/go
+                  (notify-references filename old-local-analysis (get-in db [:analysis filename]) components)))
               (clojure-producer/refresh-test-tree producer [uri]))
             (recur @db*)))))))
 

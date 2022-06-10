@@ -196,9 +196,9 @@
 (defn custom-lint-files!
   [filenames db kondo-ctx]
   (let [project-db (q/db-with-project-analysis db)
-        file-db (update project-db :analysis select-keys filenames)]
-    (lint-defs! (all-var-definitions file-db)
-                (all-kw-definitions file-db)
+        files-db (update project-db :analysis select-keys filenames)]
+    (lint-defs! (all-var-definitions files-db)
+                (all-kw-definitions files-db)
                 project-db kondo-ctx)))
 
 (defn custom-lint-file!

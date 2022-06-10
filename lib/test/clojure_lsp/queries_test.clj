@@ -188,6 +188,26 @@
                 common-references)
         (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") ns-def-r ns-def-c true)))))
 
+(deftest find-references-from-namespace-usage
+  (let [_ (h/load-code-and-locs (h/code "(ns some.cool-ns) (def foo 1)"))
+        [[usage-r usage-c]] (h/load-code-and-locs (h/code "(ns other.cool-ns"
+                                                          " (:require [|some.cool-ns :as s])) s/foo")
+                                                  (h/file-uri "file:///b.clj"))
+        _ (h/load-code-and-locs (h/code "(ns another.cool-ns) :some.cool-ns/bar")
+                                (h/file-uri "file:///c.clj"))]
+    (testing "from ns usage"
+      (h/assert-submaps
+        [{:filename (h/file-path "/b.clj")
+          :bucket :namespace-usages
+          :name 'some.cool-ns
+          :from 'other.cool-ns}
+         {:filename (h/file-path "/c.clj")
+          :bucket :keywords
+          :from 'another.cool-ns
+          :name "bar"
+          :ns 'some.cool-ns}]
+        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") usage-r usage-c false)))))
+
 (deftest find-references-from-defrecord
   (let [code (str "(defrecord |MyRecord [])\n"
                   "(|MyRecord)"

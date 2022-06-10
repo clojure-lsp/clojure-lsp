@@ -13,6 +13,7 @@
   - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978
   - Improve performance of find-declaration feature. #1021
   - Fix to avoid suggesting an alias from a clj file to a cljs file. #1024
+  - Find references of namespace usages now find all namespace usages on project, not only the definition. #1022
 
 ## 2022.05.31-17.35.50
 

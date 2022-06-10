@@ -319,20 +319,9 @@
           analysis)))
 
 (defmethod find-references :namespace-usages
-  [analysis {:keys [name] :as element} include-declaration?]
-  (concat
-    (when include-declaration?
-      [element])
-    (into []
-          (comp
-            (mapcat val)
-            (filter #(or (and (identical? :namespace-definitions (:bucket %))
-                              (= (:name %) name))
-                         (and (identical? :keywords (:bucket %))
-                              (= (:ns %) name)
-                              (not (:auto-resolved %))
-                              (not (:namespace-from-prefix %))))))
-          analysis)))
+  [analysis element include-declaration?]
+  (let [namespace-definition (assoc element :bucket :namespace-definitions)]
+    (find-references analysis namespace-definition include-declaration?)))
 
 (defmethod find-references :namespace-alias
   [analysis {:keys [alias filename] :as element} include-declaration?]

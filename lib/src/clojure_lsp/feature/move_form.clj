@@ -157,7 +157,7 @@
                                                                             local-analysis))
                                                 namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
                                                                         (str dest-ns)
-                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri))
+                                                                        (f.add-missing-libspec/find-alias-ns-pairs db uri))
                                                 suggestion (if dest-require
                                                              {:alias (str (:alias dest-require))}
                                                              (first namespace-suggestions))

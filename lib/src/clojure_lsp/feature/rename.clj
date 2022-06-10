@@ -44,7 +44,7 @@
         ;; we find the locals analysis since when destructuring we have both
         ;; keyword and a locals analysis for the same position
         local-element (when keys-destructuring
-                        (q/find-local-by-destructured-keyword (:analysis db) filename reference))
+                        (q/find-local-by-destructured-keyword db filename reference))
         text (cond
                (and local-element
                     (string/includes? (:str local-element) "/")

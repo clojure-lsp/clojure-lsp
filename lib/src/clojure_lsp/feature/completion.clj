@@ -440,7 +440,7 @@
                                    (name cursor-value)
                                    (str cursor-value)))
             cursor-full-ns? (when cursor-value-or-ns
-                              (contains? (q/find-all-ns-definition-names analysis)
+                              (contains? (q/find-all-ns-definition-names db)
                                          (symbol cursor-value-or-ns)))
             items (cond
                     inside-refer?

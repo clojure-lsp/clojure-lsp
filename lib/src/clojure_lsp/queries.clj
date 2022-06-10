@@ -501,8 +501,8 @@
           (medley/distinct-by (juxt :ns :name :row :col)))
         (:analysis db)))
 
-(defn find-local-by-destructured-keyword [analysis filename keyword-element]
-  (->> (get analysis filename)
+(defn find-local-by-destructured-keyword [db filename keyword-element]
+  (->> (get-in db [:analysis filename])
        (filter #(and (identical? :locals (:bucket %))
                      (= (:name-row %) (:name-row keyword-element))
                      (= (:name-col %) (:name-col keyword-element))
@@ -521,22 +521,22 @@
     (map :name)))
 
 ;; TODO remove it, use only transducer one?
-(defn find-all-ns-definition-names [analysis]
+(defn find-all-ns-definition-names [db]
   (into #{}
         find-all-ns-definition-names-xf
-        analysis))
+        (:analysis db)))
 
 (defn find-all-ns-definitions-for-langs
-  [analysis langs]
+  [db langs]
   (into #{}
         (comp
           find-all-ns-definitions-xf
           (filter (fn [element]
                     (some langs (elem-langs element)))))
-        analysis))
+        (:analysis db)))
 
 (defn find-all-aliases-for-langs
-  [analysis langs]
+  [db langs]
   (into #{}
         (comp
           filter-project-analysis-xf
@@ -545,10 +545,10 @@
           (filter :alias)
           (filter (fn [element]
                     (some langs (elem-langs element)))))
-        analysis))
+        (:analysis db)))
 
-(defn find-unused-aliases [analysis findings filename]
-  (let [local-analysis (get analysis filename)]
+(defn find-unused-aliases [db filename]
+  (let [local-analysis (get-in db [:analysis filename])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-namespace %) :type))
@@ -558,10 +558,10 @@
                                   (safe-equal? (:ns finding) (:to %)))
                             local-analysis)))
             (map :ns))
-          (get findings filename))))
+          (get-in db [:findings filename]))))
 
-(defn find-unused-refers [analysis findings filename]
-  (let [local-analysis (get analysis filename)]
+(defn find-unused-refers [db filename]
+  (let [local-analysis (get-in db [:analysis filename])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-referred-var %) :type))
@@ -574,10 +574,10 @@
                               count)
                          1)))
             (map #(symbol (-> % :ns str) (-> % :refer str))))
-          (get findings filename))))
+          (get-in db [:findings filename]))))
 
-(defn find-unused-imports [analysis findings filename]
-  (let [local-analysis (get analysis filename)]
+(defn find-unused-imports [db filename]
+  (let [local-analysis (get-in db [:analysis filename])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-import %) :type))
@@ -591,14 +591,14 @@
                                       (not (:import %))))
                             local-analysis)))
             (map :class))
-          (get findings filename))))
+          (get-in db [:findings filename]))))
 
-(defn find-duplicate-requires [findings filename]
+(defn find-duplicate-requires [db filename]
   (into #{}
         (comp
           (filter (comp #(identical? :duplicate-require %) :type))
           (map :duplicate-ns))
-        (get findings filename)))
+        (get-in db [:findings filename])))
 
 (defn find-namespace-definitions [analysis filename]
   (into []

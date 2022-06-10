@@ -32,11 +32,7 @@
       defs)))
 
 (defn var-definitions-within [zloc uri db]
-  (let [analysis (:analysis db)
-        defs (q/find-var-definitions
-               analysis
-               (shared/uri->filename uri)
-               false)]
+  (let [defs (q/find-var-definitions db (shared/uri->filename uri) false)]
     (filterv
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))

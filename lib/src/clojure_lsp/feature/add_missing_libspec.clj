@@ -398,7 +398,7 @@
                           (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
                             [{:ns (name common-refer)
                               :refer cursor-name-str}]
-                            (->> (q/find-all-var-definitions analysis)
+                            (->> (q/find-all-var-definitions db)
                                  (filter #(= cursor-name-str (str (:name %))))
                                  (map (fn [element]
                                         {:ns (str (:ns element))

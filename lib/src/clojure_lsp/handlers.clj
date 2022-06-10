@@ -238,7 +238,7 @@
         :selection-range (if namespace-definition
                            (shared/->scope-range namespace-definition)
                            shared/full-file-range)
-        :children (->> (q/find-var-definitions analysis filename true)
+        :children (->> (q/find-var-definitions db filename true)
                        (mapv (fn [e]
                                (shared/assoc-some
                                  {:name (-> e :name name)

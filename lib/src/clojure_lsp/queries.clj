@@ -23,6 +23,15 @@
     nil
     coll))
 
+(defn ^:private project-analysis [{:keys [analysis]}]
+  (medley/remove-vals
+    (fn [elems]
+      (:external? (first elems)))
+    analysis))
+
+(defn db-with-project-analysis [db]
+  (assoc db :analysis (project-analysis db)))
+
 (def filter-project-analysis-xf
   "Filter only project elements from analysis.
   Checking if the first value is `external?`, we infer all elements
@@ -463,34 +472,34 @@
                  (and (safe-equal? 'clojure.core/deftype (:defined-by %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
-(defn find-var-definitions [analysis filename include-private?]
+(defn find-var-definitions [db filename include-private?]
   (into []
         (xf-var-defs include-private?)
-        (get analysis filename)))
+        (get-in db [:analysis filename])))
 
-(defn find-all-var-definitions [analysis]
+(defn find-all-var-definitions [db]
   (into []
         (comp
           (mapcat val)
           (xf-var-defs false))
-        analysis))
+        (:analysis db)))
 
-(defn find-keyword-definitions [analysis filename]
+(defn find-keyword-definitions [db filename]
   (into []
         (comp
           (filter #(and (identical? :keywords (:bucket %))
                         (:reg %)))
           (medley/distinct-by (juxt :ns :name :row :col)))
-        (get analysis filename)))
+        (get-in db [:analysis filename])))
 
-(defn find-all-keyword-definitions [analysis]
+(defn find-all-keyword-definitions [db]
   (into []
         (comp
           (mapcat val)
           (filter #(and (identical? :keywords (:bucket %))
                         (:reg %)))
           (medley/distinct-by (juxt :ns :name :row :col)))
-        analysis))
+        (:analysis db)))
 
 (defn find-local-by-destructured-keyword [analysis filename keyword-element]
   (->> (get analysis filename)

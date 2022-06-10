@@ -5,7 +5,6 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -167,37 +166,11 @@
         (f.diagnostic/custom-lint-files! files updated-analysis kondo-ctx)))))
 
 (defn ^:private custom-lint-file!
-  [{:keys [analysis config] :as kondo-ctx} filename uri db*]
+  [{:keys [analysis config] :as kondo-ctx} filename db*]
   (when (run-custom-lint? config)
     (let [db @db*
           updated-analysis (merge (:analysis db) analysis)]
-      (if (settings/get db [:linters :clj-kondo :async-custom-lint?] false)
-        (async/go-loop [tries 1]
-          (if (>= tries 200)
-            (logger/info "Max tries reached when async custom linting" uri)
-            (if (contains? (:processing-changes @db*) uri)
-              (do
-                (Thread/sleep 50)
-                (recur (inc tries)))
-              (let [db @db*
-                    old-findings (get-in db [:findings filename])
-                    new-findings (f.diagnostic/custom-lint-file-merging-findings! filename updated-analysis kondo-ctx db)]
-                ;; This equality check doesn't seem necessary, but it helps
-                ;; avoid an infinite loop. See
-                ;; https://github.com/clojure-lsp/clojure-lsp/issues/796#issuecomment-1065830737
-                ;; and the surrounding discussion. Even if the new-findings are
-                ;; `=` to the old-findings, they never seem to be `identical?`.
-                ;; (TODO: understand why?). If we swap them in, the
-                ;; `compare-and-set!` in `file-management.analyze-changes` is
-                ;; guaranteed to fail (since `compare-and-set!` is based on
-                ;; object identity, not equality). That will trigger a
-                ;; re-analysis and re-linting, bringing us back to this line and
-                ;; starting the loop again.
-                (when (not= old-findings new-findings)
-                  (swap! db* assoc-in [:findings filename] new-findings))
-                (when (not= :unknown (shared/uri->file-type uri))
-                  (f.diagnostic/sync-publish-diagnostics! uri @db*))))))
-        (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx)))))
+      (f.diagnostic/custom-lint-file! filename updated-analysis kondo-ctx))))
 
 (def ^:private config-for-internal-analysis
   {:arglists true
@@ -251,7 +224,7 @@
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        custom-lint-fn #(custom-lint-file! (normalize-for-filename % @db* filename) filename uri db*)]
+        custom-lint-fn #(custom-lint-file! (normalize-for-filename % @db* filename) filename db*)]
     (-> {:cache true
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)

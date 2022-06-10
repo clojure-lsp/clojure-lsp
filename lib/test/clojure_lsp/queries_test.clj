@@ -160,6 +160,54 @@
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
       (q/find-references-from-cursor ana (h/file-path "/a.cljc") alias-r alias-c true))))
 
+(deftest find-references-from-namespace-definition
+  (let [[[ns-def-r ns-def-c]] (h/load-code-and-locs (h/code "(ns |some.cool-ns) (def foo 1)"))
+        _ (h/load-code-and-locs (h/code "(ns |other.cool-ns"
+                                        " (:require [some.cool-ns :as s])) s/foo")
+                                (h/file-uri "file:///b.clj"))
+        _ (h/load-code-and-locs (h/code "(ns |another.cool-ns) :some.cool-ns/bar")
+                                (h/file-uri "file:///c.clj"))
+        common-references [{:filename (h/file-path "/b.clj")
+                            :bucket :namespace-usages
+                            :name 'some.cool-ns
+                            :from 'other.cool-ns}
+                           {:filename (h/file-path "/c.clj")
+                            :bucket :keywords
+                            :from 'another.cool-ns
+                            :name "bar"
+                            :ns 'some.cool-ns}]]
+    (testing "from ns definition"
+      (h/assert-submaps
+        common-references
+        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") ns-def-r ns-def-c false)))
+    (testing "Including definition"
+      (h/assert-submaps
+        (concat [{:filename (h/file-path "/a.clj")
+                  :name 'some.cool-ns
+                  :bucket :namespace-definitions}]
+                common-references)
+        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") ns-def-r ns-def-c true)))))
+
+(deftest find-references-from-namespace-usage
+  (let [_ (h/load-code-and-locs (h/code "(ns some.cool-ns) (def foo 1)"))
+        [[usage-r usage-c]] (h/load-code-and-locs (h/code "(ns other.cool-ns"
+                                                          " (:require [|some.cool-ns :as s])) s/foo")
+                                                  (h/file-uri "file:///b.clj"))
+        _ (h/load-code-and-locs (h/code "(ns another.cool-ns) :some.cool-ns/bar")
+                                (h/file-uri "file:///c.clj"))]
+    (testing "from ns usage"
+      (h/assert-submaps
+        [{:filename (h/file-path "/b.clj")
+          :bucket :namespace-usages
+          :name 'some.cool-ns
+          :from 'other.cool-ns}
+         {:filename (h/file-path "/c.clj")
+          :bucket :keywords
+          :from 'another.cool-ns
+          :name "bar"
+          :ns 'some.cool-ns}]
+        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") usage-r usage-c false)))))
+
 (deftest find-references-from-defrecord
   (let [code (str "(defrecord |MyRecord [])\n"
                   "(|MyRecord)"
@@ -519,12 +567,16 @@
 
 (deftest find-declaration-from-cursor
   (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))
+  (h/load-code-and-locs (h/code "(ns colors) (def orange 123)"))
   (let [[[something-r something-c]
+         [orange-r orange-c]
          [other-r other-c]] (h/load-code-and-locs
                               (h/code "(ns sample"
                                       "  (:require [foo.bar :as foob]"
+                                      "            [colors :refer [orange]]"
                                       "            [foo.baz :refer :all]))"
                                       "foob/som|ething"
+                                      "|orange"
                                       "|other")
                               "file:///b.clj")
         ana (:analysis @db/db*)]
@@ -536,6 +588,14 @@
          :namespace-alias
          :to 'foo.bar}
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c)))
+    (testing "from usage with refer"
+      (h/assert-submap
+        '{:from sample
+          :to colors
+          :name orange
+          :bucket :var-usages
+          :refer true}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") orange-r orange-c)))
     (testing "from usage with refer all"
       (h/assert-submap
         {:from 'sample
@@ -543,6 +603,35 @@
          :namespace-usages
          :name 'foo.baz}
         (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c)))))
+
+(deftest find-declaration-from-cursor-in-cljc
+  (let [[[clj-ns-r clj-ns-c]
+         [cljs-ns-r cljs-ns-c]
+         [clj-usage-r clj-usage-c]
+         [cljs-usage-r cljs-usage-c]] (h/load-code-and-locs
+                                        (h/code "(ns sample"
+                                                "  (:require #?(:clj |foo"
+                                                "               :cljs |foo)))"
+                                                "#?(:clj foo/som|ething"
+                                                "   :cljs foo/som|ething)")
+                                        "file:///b.cljc")
+        ana (:analysis @db/db*)]
+    (testing "from clj usage"
+      (h/assert-submap
+        {:name 'foo
+         :from 'sample
+         :bucket :namespace-usages
+         :row clj-ns-r
+         :col clj-ns-c}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.cljc") clj-usage-r clj-usage-c)))
+    (testing "from cljs usage"
+      (h/assert-submap
+        {:name 'foo
+         :from 'sample
+         :bucket :namespace-usages
+         :row cljs-ns-r
+         :col cljs-ns-c}
+        (q/find-declaration-from-cursor ana (h/file-path "/b.cljc") cljs-usage-r cljs-usage-c)))))
 
 (deftest find-implementations-from-cursor-protocols
   (h/load-code-and-locs (h/code "(ns a)"

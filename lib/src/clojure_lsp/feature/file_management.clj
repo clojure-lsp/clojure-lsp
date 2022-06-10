@@ -234,11 +234,13 @@
   (doseq [{:keys [uri type]} changes]
     (case type
       :created (async/>!! db/created-watched-files-chan uri)
-      ;; TODO Fix outdated changes overwriting newer changes.
-      :changed nil #_(did-change uri
-                                 [{:text (slurp filename)}]
-                                 (inc (get-in @db* [:documents uri :v] 0))
-                                 db)
+      :changed (when (settings/get @db* [:compute-external-file-changes] true)
+                 (shared/logging-task
+                   :changed-watched-file
+                   (did-change uri
+                               [{:text (slurp (shared/uri->filename uri))}]
+                               (inc (get-in @db* [:documents uri :v] 0))
+                               db*)))
       :deleted (shared/logging-task
                  :delete-watched-file
                  (let [filename (shared/uri->filename uri)]

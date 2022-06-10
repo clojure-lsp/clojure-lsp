@@ -454,7 +454,7 @@
                                                              (shared/uri->filename uri)
                                                              expr-meta)
                              (mapv :name))
-              expr-edit (z/edn (list* fn-sym used-syms))
+              expr-edit (z/of-node (list* fn-sym used-syms))
               private? false ;; TODO: shouldn't this be true?
               defn-loc (new-defn-zloc fn-sym private? used-syms
                                       [(n/newlines 1)
@@ -613,7 +613,7 @@
         ;; defined outside the `fn` are passed in as args.
         ;; First isolate the `fn` from its context, so it can be inserted at the
         ;; top level later.
-        isolated-zloc (z/edn (z/node zloc))
+        isolated-zloc (z/of-node (z/node zloc))
         ;; Replace `fn` node with `defn` or `defn-`
         metadata-for-privacy? (settings/get db [:use-metadata-for-privacy?] false)
         zloc-on-defn (-> isolated-zloc z/down (z/replace (if metadata-for-privacy? 'defn 'defn-)))
@@ -683,7 +683,7 @@
                                       (->> (concat used-locals literal-args)
                                            (interpose space))))))]
     [(prepend-preserving-comment (edit/to-top zloc) defn-zloc)
-     {:loc (z/edn* replacement-node)
+     {:loc (z/of-node* replacement-node)
       :range fn-form-meta}]))
 
 (defn demote-fn [zloc]

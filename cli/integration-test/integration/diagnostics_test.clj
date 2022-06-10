@@ -63,8 +63,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request {:initializationOptions
                                              (assoc fixture/default-init-options
-                                                    :linters {:clj-kondo {:report-duplicates  false
-                                                                          :async-custom-lint? false}})}))
+                                                    :linters {:clj-kondo {:report-duplicates false}})}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))
 

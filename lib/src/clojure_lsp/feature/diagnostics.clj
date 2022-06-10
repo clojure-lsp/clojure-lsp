@@ -234,13 +234,3 @@
     (lint-defs! (file-var-definitions project-analysis filename)
                 (file-kw-definitions project-analysis filename)
                 project-analysis kondo-ctx)))
-
-(defn custom-lint-file-merging-findings!
-  [filename analysis kondo-ctx db]
-  (let [kondo-findings (-> (custom-lint-file! filename analysis kondo-ctx)
-                           (get filename))
-        cur-findings (get-in db [:findings filename])]
-    (->> cur-findings
-         (remove #(identical? :clojure-lsp/unused-public-var (:type %)))
-         (concat kondo-findings)
-         vec)))

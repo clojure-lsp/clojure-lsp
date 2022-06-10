@@ -105,4 +105,9 @@
     (lsp/notify! (fixture/initialized-notification))
     (h/assert-submaps
       [{:registerOptions {:watchers [{:globPattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}"}]}}]
-      (:registrations (lsp/client-awaits-server-request :client/registerCapability)))))
+      (:registrations (lsp/client-awaits-server-request :client/registerCapability))))
+
+  (testing "shutdown request"
+    (h/assert-submaps
+      nil
+      (lsp/request! (fixture/shutdown-request)))))

@@ -4,7 +4,17 @@
 
 - General
   - clojure-lsp has a flake.nix now, being able to be built using clj-nix. #999
+  - Remove `use-source-paths-from-classpath` setting, its value was already true and disabling it could cause false-positives.
+  - Add `compute-external-file-changes` setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002
+  - Bump lsp4clj to 0.4.1.
+  - Remove deprecated disabled setting `:linters :clj-kondo :async-custom-lint?`. #1017
   - Add new optional linter: [clj-depend](https://github.com/clj-depend/clj-depend) integration. #957
+
+- Editor
+  - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978
+  - Improve performance of find-declaration feature. #1021
+  - Fix to avoid suggesting an alias from a clj file to a cljs file. #1024
+  - Find references of namespace usages now find all namespace usages on project, not only the definition. #1022
 
 ## 2022.05.31-17.35.50
 

@@ -209,27 +209,23 @@
     (:bucket element)))
 
 (defmethod find-declaration :var-usages
-  [analysis element]
-  (when-not (identical? :clj-kondo/unknown-namespace (:to element))
-    (if (:alias element)
-      (find-last-order-by-project-analysis
-        #(and (identical? :namespace-alias (:bucket %))
-              (= (:to element) (:to %))
-              (= (:alias element) (:alias %))
-              (= (:filename element) (:filename %))
-              (match-file-lang % element))
-        analysis)
-      (find-last-order-by-project-analysis
-        #(if (:refer %)
-           (and (identical? :var-usages (:bucket %))
-                (= (:to element) (:to %))
-                (= (:filename element) (:filename %))
-                (match-file-lang % element))
-           (and (identical? :namespace-usages (:bucket %))
-                (= (:to element) (:name %))
-                (= (:filename element) (:filename %))
-                (match-file-lang % element)))
-        analysis))))
+  [analysis {:keys [alias name to filename] :as element}]
+  (when-not (identical? :clj-kondo/unknown-namespace to)
+    (peek (into []
+                (comp (filter
+                        (if alias
+                          #(and (identical? :namespace-alias (:bucket %))
+                                (= to (:to %))
+                                (= alias (:alias %)))
+                          #(if (:refer %)
+                             (and (identical? :var-usages (:bucket %))
+                                  (= to (:to %))
+                                  (= name (:name %)))
+                             ;; :refer :all
+                             (and (identical? :namespace-usages (:bucket %))
+                                  (= to (:name %))))))
+                      (filter #(match-file-lang % element)))
+                (get analysis filename)))))
 
 (defmethod find-declaration :default [_ _] nil)
 
@@ -323,20 +319,9 @@
           analysis)))
 
 (defmethod find-references :namespace-usages
-  [analysis {:keys [name] :as element} include-declaration?]
-  (concat
-    (when include-declaration?
-      [element])
-    (into []
-          (comp
-            (mapcat val)
-            (filter #(or (and (identical? :namespace-definitions (:bucket %))
-                              (= (:name %) name))
-                         (and (identical? :keywords (:bucket %))
-                              (= (:ns %) name)
-                              (not (:auto-resolved %))
-                              (not (:namespace-from-prefix %))))))
-          analysis)))
+  [analysis element include-declaration?]
+  (let [namespace-definition (assoc element :bucket :namespace-definitions)]
+    (find-references analysis namespace-definition include-declaration?)))
 
 (defmethod find-references :namespace-alias
   [analysis {:keys [alias filename] :as element} include-declaration?]
@@ -516,34 +501,42 @@
                      (= (:name-end-col %) (:name-end-col keyword-element))))
        first))
 
-(defn find-all-ns-definition-names-xf []
+(def find-all-ns-definitions-xf
   (comp
     (mapcat val)
-    (filter #(identical? :namespace-definitions (:bucket %)))
+    (filter #(identical? :namespace-definitions (:bucket %)))))
+
+(def find-all-ns-definition-names-xf
+  (comp
+    find-all-ns-definitions-xf
     (map :name)))
 
 ;; TODO remove it, use only transducer one?
 (defn find-all-ns-definition-names [analysis]
   (into #{}
-        (find-all-ns-definition-names-xf)
+        find-all-ns-definition-names-xf
         analysis))
 
-(defn find-all-aliases
-  [analysis uri db]
-  (let [langs (shared/uri->available-langs uri)]
-    (into #{}
-          (comp
-            filter-project-analysis-xf
-            (mapcat val)
-            (filter #(identical? :namespace-alias (:bucket %)))
-            (filter :alias)
-            (filter (fn [element]
-                      (seq (set/intersection (-> element
-                                                 :filename
-                                                 (shared/filename->uri db)
-                                                 shared/uri->available-langs)
-                                             langs)))))
-          analysis)))
+(defn find-all-ns-definitions-for-langs
+  [analysis langs]
+  (into #{}
+        (comp
+          find-all-ns-definitions-xf
+          (filter (fn [element]
+                    (some langs (elem-langs element)))))
+        analysis))
+
+(defn find-all-aliases-for-langs
+  [analysis langs]
+  (into #{}
+        (comp
+          filter-project-analysis-xf
+          (mapcat val)
+          (filter #(identical? :namespace-alias (:bucket %)))
+          (filter :alias)
+          (filter (fn [element]
+                    (some langs (elem-langs element)))))
+        analysis))
 
 (defn find-unused-aliases [analysis findings filename]
   (let [local-analysis (get analysis filename)]

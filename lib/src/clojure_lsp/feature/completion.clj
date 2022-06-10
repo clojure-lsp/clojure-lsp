@@ -492,23 +492,18 @@
                                           :name (symbol name)
                                           :to (symbol ns)
                                           :bucket :var-usages})]
-    (if definition
-      (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db*)))
-      item)))
+    (cond-> item
+      definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
 
 (defn ^:private resolve-item-by-definition
   [{{:keys [name filename name-row name-col]} :data :as item} db*]
   (let [db @db*
-        local-analysis (get-in db [:analysis filename])
-        definition (q/find-first #(and (identical? :var-definitions (:bucket %))
-                                       (= name (str (:name %)))
-                                       (= name-row (:name-row %))
-                                       (= name-col (:name-col %))) local-analysis)]
-    (if definition
-      (-> item
-          (assoc :documentation (f.hover/hover-documentation definition db*)))
-      item)))
+        element (q/find-element-under-cursor db filename name-row name-col)
+        definition (when (and (identical? :var-definitions (:bucket element))
+                              (= name (str (:name element))))
+                     element)]
+    (cond-> item
+      definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
 
 (defn resolve-item [{{:keys [ns]} :data :as item} db*]
   (let [item (shared/assoc-some item

@@ -228,9 +228,7 @@
     :document-symbol
     (let [db @db/db*
           filename (shared/uri->filename textDocument)
-          analysis (:analysis db)
-          namespace-definition (->> (get analysis filename)
-                                    (q/find-first (comp #{:namespace-definitions} :bucket)))]
+          namespace-definition (q/find-namespace-definition-by-filename db filename)]
       [{:name (or (some-> namespace-definition :name name)
                   filename)
         :kind (f.document-symbol/element->symbol-kind namespace-definition)

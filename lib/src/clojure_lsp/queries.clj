@@ -15,7 +15,7 @@
     (.equals ^clojure.lang.Symbol a b)
     (.equals ^String a b)))
 
-(defn find-first [pred coll]
+(defn ^:private find-first [pred coll]
   (reduce
     (fn [_ i]
       (when (pred i)
@@ -612,7 +612,7 @@
     (:analysis db)))
 
 (defn find-namespace-definition-by-filename [db filename]
-  (peek (find-namespace-definitions db filename)))
+  (first (find-namespace-definitions db filename)))
 
 (defn find-namespace-usage-by-alias [db filename alias]
   (->> (get-in db [:analysis filename])

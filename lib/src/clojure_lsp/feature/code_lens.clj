@@ -30,13 +30,12 @@
        (remove (partial q/exclude-public-definition? (:kondo-config db)))))
 
 (defn reference-code-lens [uri db]
-  (let [analysis (:analysis db)
-        filename (shared/uri->filename uri)]
+  (let [filename (shared/uri->filename uri)]
     (into []
           (map (fn [element]
                  {:range (shared/->range element)
                   :data  [uri (:name-row element) (:name-col element)]}))
-          (concat (q/find-namespace-definitions analysis filename)
+          (concat (q/find-namespace-definitions db filename)
                   (var-definitions-lens filename db)
                   (keyword-definitions-lens filename db)))))
 

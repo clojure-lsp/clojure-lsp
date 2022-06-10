@@ -98,9 +98,9 @@
         form-loc (edit/to-top zloc)
         analysis (:analysis db)
         source-filename (shared/uri->filename uri)
-        source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename))
+        source-ns (:name (q/find-namespace-definition-by-filename db source-filename))
         dest-filename (shared/absolute-path dest-filename db)
-        dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename))
+        dest-ns (:name (q/find-namespace-definition-by-filename db dest-filename))
         inner-usages (var-usages-within zloc uri db)
         ;; if source-ns things are used within the form
         ;; we can't move it

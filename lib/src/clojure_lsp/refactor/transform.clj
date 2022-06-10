@@ -775,7 +775,7 @@
     (let [z-sexpr (z/sexpr zloc)
           z-name (name z-sexpr)
           z-ns (namespace z-sexpr)]
-      (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol z-ns))]
+      (if-let [ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol z-ns))]
         (if-let [ns-def (q/find-definition db ns-usage)]
           (when-not (:external? ns-def)
             {:ns (:name ns-def)
@@ -798,7 +798,7 @@
 
 (defn ^:private create-function-for-alias
   [local-zloc ns-or-alias fn-name defn-edit uri db]
-  (let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol ns-or-alias))
+  (let [ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
                         (q/find-definition db ns-usage))
         source-paths (settings/get db [:source-paths])

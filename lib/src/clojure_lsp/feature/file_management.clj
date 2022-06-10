@@ -258,12 +258,12 @@
   (swap! db* #(assoc-in % [:documents uri :saved-on-disk] true)))
 
 (defn will-rename-files [files db*]
-  (let [analysis (:analysis @db*)]
+  (let [db @db*]
     (->> files
          (keep (fn [{:keys [oldUri newUri]}]
                  (let [old-filename (shared/uri->filename oldUri)
-                       new-ns (shared/uri->namespace newUri @db*)
-                       ns-definition (q/find-namespace-definition-by-filename analysis old-filename)]
+                       new-ns (shared/uri->namespace newUri db)
+                       ns-definition (q/find-namespace-definition-by-filename db old-filename)]
                    (when ns-definition
                      (f.rename/rename-element oldUri new-ns db* old-filename ns-definition :rename-file)))))
          (reduce #(shared/deep-merge %1 %2) {:document-changes []}))))

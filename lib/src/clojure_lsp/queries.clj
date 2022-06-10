@@ -460,7 +460,7 @@
     (catch Throwable e
       (logger/error e "can't find references"))))
 
-(defn xf-var-defs [include-private?]
+(defn ^:private xf-var-defs [include-private?]
   (comp
     (filter #(and (identical? :var-definitions (:bucket %))
                   (or include-private?
@@ -510,7 +510,7 @@
                      (= (:name-end-col %) (:name-end-col keyword-element))))
        first))
 
-(def find-all-ns-definitions-xf
+(def ^:private find-all-ns-definitions-xf
   (comp
     (mapcat val)
     (filter #(identical? :namespace-definitions (:bucket %)))))
@@ -600,32 +600,32 @@
           (map :duplicate-ns))
         (get-in db [:findings filename])))
 
-(defn find-namespace-definitions [analysis filename]
+(defn find-namespace-definitions [db filename]
   (into []
         (filter #(identical? :namespace-definitions (:bucket %)))
-        (get analysis filename)))
+        (get-in db [:analysis filename])))
 
-(defn find-namespace-definition-by-namespace [analysis namespace]
+(defn find-namespace-definition-by-namespace [db namespace]
   (find-last-order-by-project-analysis
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) namespace))
-    analysis))
+    (:analysis db)))
 
-(defn find-namespace-definition-by-filename [analysis filename]
-  (peek (find-namespace-definitions analysis filename)))
+(defn find-namespace-definition-by-filename [db filename]
+  (peek (find-namespace-definitions db filename)))
 
-(defn find-namespace-usage-by-alias [analysis filename alias]
-  (->> (get analysis filename)
+(defn find-namespace-usage-by-alias [db filename alias]
+  (->> (get-in db [:analysis filename])
        (filter #(and (identical? :namespace-usages (:bucket %))
                      (= alias (:alias %))))
        last))
 
-(defn find-element-by-full-name [analysis name ns]
+(defn find-element-by-full-name [db name ns]
   (find-last-order-by-project-analysis
     #(and (identical? :var-definitions (:bucket %))
           (= ns (:ns %))
           (= name (:name %)))
-    analysis))
+    (:analysis db)))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

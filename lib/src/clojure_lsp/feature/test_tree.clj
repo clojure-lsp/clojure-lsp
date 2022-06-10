@@ -35,7 +35,7 @@
 
 (defn tree [uri db]
   (let [filename (shared/uri->filename uri)
-        ns-element (q/find-namespace-definition-by-filename (:analysis db) filename)
+        ns-element (q/find-namespace-definition-by-filename db filename)
         local-analysis (get-in db [:analysis filename])
         deftests (into []
                        (filter #(and (identical? :var-definitions (:bucket %))

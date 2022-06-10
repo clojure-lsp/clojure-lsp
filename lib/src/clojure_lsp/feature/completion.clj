@@ -11,7 +11,6 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
-   [clojure.walk :as walk]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 
@@ -177,10 +176,10 @@
                        arglist-strs (conj (string/join " " arglist-strs))))))]
     (cond-> {:label (element->label element cursor-alias priority)
              :priority (generic-priority->specific-priority element priority)
-             :data (walk/stringify-keys {:name (-> element :name str)
-                                         :filename (:filename element)
-                                         :name-row (:name-row element)
-                                         :name-col (:name-col element)})}
+             :data {"name" (-> element :name str)
+                    "filename" (:filename element)
+                    "name-row" (:name-row element)
+                    "name-col" (:name-col element)}}
       deprecated (assoc :tags [1])
       kind (assoc :kind kind)
       detail (assoc :detail detail))))
@@ -210,11 +209,13 @@
 
 (defn ^:private with-refer-elements [matches-fn cursor-loc other-ns-elements]
   (let [refer-ns (z/sexpr (edit/find-refer-ns cursor-loc))]
-    (->> other-ns-elements
-         (filter #(and (identical? :var-definitions (:bucket %))
-                       (= refer-ns (:ns %))
-                       (matches-fn (:name %))))
-         (map #(element->completion-item % nil :refer)))))
+    (into []
+          (comp
+            (filter #(and (identical? :var-definitions (:bucket %))
+                          (= refer-ns (:ns %))
+                          (matches-fn (:name %))))
+            (map #(element->completion-item % nil :refer)))
+          other-ns-elements)))
 
 (defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value current-ns-elements matches-fn db]
   (let [current-ns-alias (->> current-ns-elements
@@ -283,19 +284,22 @@
                           (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
                 (:analysis db)))))))
 
-(defn ^:private with-elements-from-full-ns [full-ns analysis]
-  (->> (mapcat val analysis)
-       (filter #(and (identical? :var-definitions (:bucket %))
-                     (= (:ns %) (symbol full-ns))
-                     (not (:private %))))
-       (mapv #(element->completion-item % full-ns :ns-definition))))
+(defn ^:private with-elements-from-full-ns [db full-ns]
+  (into []
+        (comp
+          (mapcat val)
+          (filter #(and (identical? :var-definitions (:bucket %))
+                        (= (:ns %) (symbol full-ns))
+                        (not (:private %))))
+          (map #(element->completion-item % full-ns :ns-definition)))
+        (:analysis db)))
 
 (defn ^:private with-elements-from-aliased-keyword
-  [cursor-loc cursor-element analysis filename elements]
+  [cursor-loc cursor-element current-ns-elements elements]
   (let [alias (or (:alias cursor-element)
                   (-> cursor-loc z/sexpr namespace (subs 1)))
         ns (or (:ns cursor-element)
-               (->> (get analysis filename)
+               (->> current-ns-elements
                     (filter #(and (identical? :namespace-usages (:bucket %))
                                   (= alias (str (:alias %)))))
                     first
@@ -407,10 +411,9 @@
       []
       (let [filename (shared/uri->filename uri)
             settings (settings/all db)
-            analysis (:analysis db)
-            current-ns-elements (get analysis filename)
+            current-ns-elements (get-in db [:analysis filename])
             support-snippets? (get-in db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
-            all-other-ns-elements (mapcat val (dissoc analysis filename))
+            all-other-ns-elements (mapcat val (dissoc (:analysis db) filename))
             cursor-element (q/find-element-under-cursor db filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
@@ -453,12 +456,12 @@
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings))
 
                     aliased-keyword-value?
-                    (with-elements-from-aliased-keyword cursor-loc cursor-element analysis filename all-other-ns-elements)
+                    (with-elements-from-aliased-keyword cursor-loc cursor-element current-ns-elements all-other-ns-elements)
 
                     :else
                     (cond-> []
                       cursor-full-ns?
-                      (into (with-elements-from-full-ns cursor-value-or-ns analysis))
+                      (into (with-elements-from-full-ns db cursor-value-or-ns))
 
                       (and cursor-value-or-ns
                            (not keyword-value?))

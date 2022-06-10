@@ -376,7 +376,6 @@
   [db {:keys [ns name] :as _element} include-declaration?]
   (into []
         (comp
-          filter-project-analysis-xf
           (mapcat val)
           (filter #(identical? :keywords (:bucket %)))
           (filter #(safe-equal? name (:name %)))
@@ -387,7 +386,7 @@
           (filter #(or include-declaration?
                        (not (:reg %))))
           (medley/distinct-by (juxt :filename :name :row :col)))
-        (:analysis db)))
+        (project-analysis db)))
 
 (defmethod find-references :local
   [db {:keys [id name filename] :as element} include-declaration?]
@@ -539,13 +538,12 @@
   [db langs]
   (into #{}
         (comp
-          filter-project-analysis-xf
           (mapcat val)
           (filter #(identical? :namespace-alias (:bucket %)))
           (filter :alias)
           (filter (fn [element]
                     (some langs (elem-langs element)))))
-        (:analysis db)))
+        (project-analysis db)))
 
 (defn find-unused-aliases [db filename]
   (let [local-analysis (get-in db [:analysis filename])]
@@ -605,12 +603,6 @@
         (filter #(identical? :namespace-definitions (:bucket %)))
         (get-in db [:analysis filename])))
 
-(defn find-namespace-definition-by-namespace [db namespace]
-  (find-last-order-by-project-analysis
-    #(and (identical? :namespace-definitions (:bucket %))
-          (= (:name %) namespace))
-    (:analysis db)))
-
 (defn find-namespace-definition-by-filename [db filename]
   (first (find-namespace-definitions db filename)))
 
@@ -620,12 +612,15 @@
                      (= alias (:alias %))))
        last))
 
-(defn find-element-by-full-name [db name ns]
+(defn find-element-for-rename [db from-ns from-name]
   (find-last-order-by-project-analysis
-    #(and (identical? :var-definitions (:bucket %))
-          (= ns (:ns %))
-          (= name (:name %)))
-    (:analysis db)))
+    (if from-name
+      #(and (identical? :var-definitions (:bucket %))
+            (= from-ns (:ns %))
+            (= from-name (:name %)))
+      #(and (identical? :namespace-definitions (:bucket %))
+            (= from-ns (:name %))))
+    (project-analysis db)))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

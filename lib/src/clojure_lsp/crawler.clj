@@ -100,7 +100,7 @@
                      (-> state-db
                          (merge (select-keys db-cache [:classpath :analysis-checksums :project-hash
                                                        :kondo-config-hash :stubs-generation-namespaces]))
-                         (update :analysis merge (:analysis db-cache)))))))))
+                         (lsp.kondo/db-with-analysis (:analysis db-cache)))))))))
 
 (defn ^:private build-db-cache [db]
   (-> db

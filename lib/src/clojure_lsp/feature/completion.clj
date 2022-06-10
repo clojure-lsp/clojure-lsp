@@ -411,7 +411,7 @@
             current-ns-elements (get analysis filename)
             support-snippets? (get-in db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
             all-other-ns-elements (mapcat val (dissoc analysis filename))
-            cursor-element (q/find-element-under-cursor analysis filename row col)
+            cursor-element (q/find-element-under-cursor db filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
                            (if (z/sexpr-able? cursor-loc)
@@ -428,7 +428,7 @@
             matches-fn (partial matches-cursor? cursor-value)
             {caller-usage-row :row caller-usage-col :col} (some-> cursor-op z/node meta)
             caller-var-definition (when (and caller-usage-row caller-usage-col)
-                                    (q/find-definition-from-cursor analysis filename caller-usage-row caller-usage-col))
+                                    (q/find-definition-from-cursor db filename caller-usage-row caller-usage-col))
             inside-require? (edit/inside-require? cursor-loc)
             inside-refer? (edit/inside-refer? cursor-loc)
             simple-cursor? (or (simple-ident? cursor-value)
@@ -488,11 +488,10 @@
 (defn ^:private resolve-item-by-ns
   [{{:keys [name ns filename]} :data :as item} db*]
   (let [db @db*
-        analysis (:analysis db)
-        definition (q/find-definition analysis {:filename filename
-                                                :name (symbol name)
-                                                :to (symbol ns)
-                                                :bucket :var-usages})]
+        definition (q/find-definition db {:filename filename
+                                          :name (symbol name)
+                                          :to (symbol ns)
+                                          :bucket :var-usages})]
     (if definition
       (-> item
           (assoc :documentation (f.hover/hover-documentation definition db*)))

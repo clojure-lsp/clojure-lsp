@@ -68,19 +68,19 @@
          [param-r param-c]
          [x-r x-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code)
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submap
       '{:alias f-alias}
-      (q/find-element-under-cursor ana (h/file-path "/a.clj") alias-r alias-c))
+      (q/find-element-under-cursor db (h/file-path "/a.clj") alias-r alias-c))
     (h/assert-submap
       '{:name x}
-      (q/find-element-under-cursor ana (h/file-path "/a.clj") x-r x-c))
+      (q/find-element-under-cursor db (h/file-path "/a.clj") x-r x-c))
     (h/assert-submap
       '{:name filename}
-      (q/find-element-under-cursor ana (h/file-path "/a.clj") param-r param-c))
+      (q/find-element-under-cursor db (h/file-path "/a.clj") param-r param-c))
     (h/assert-submap
       '{:name unknown}
-      (q/find-element-under-cursor ana (h/file-path "/a.clj") unknown-r unknown-c))))
+      (q/find-element-under-cursor db (h/file-path "/a.clj") unknown-r unknown-c))))
 
 (deftest find-references-from-cursor
   (let [a-code (h/code "(ns a.b.c (:require [d.e.f :as |f-alias]))"
@@ -103,34 +103,34 @@
          [b-baz-kw-r b-baz-kw-c]] (h/load-code-and-locs (h/code "(ns baz)"
                                                                 "|::foo/foo-kw"
                                                                 "|::baz-kw") (h/file-uri "file:///baz.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submaps
       [{:name 'x :name-row x-r :name-col x-c}
        {:name 'x :name-row x-use-r :name-col x-use-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.clj") x-r x-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.clj") x-r x-c true))
     (h/assert-submaps
       [{:name 'filename :name-row param-r :name-col param-c}
        {:name 'filename :name-row param-use-r :name-col param-use-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.clj") param-r param-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.clj") param-r param-c true))
     (h/assert-submaps
       ['{:name unknown}]
-      (q/find-references-from-cursor ana (h/file-path "/a.clj") unknown-r unknown-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.clj") unknown-r unknown-c true))
     (h/assert-submaps
       [{:alias 'f-alias :name-row alias-r :name-col alias-c}
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.clj") alias-r alias-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.clj") alias-r alias-c true))
     (h/assert-submaps
       [{:name "foo-kw" :name-row a-foo-kw-r :name-col a-foo-kw-c}
        {:name "foo-kw" :name-row b-foo-kw-r :name-col b-foo-kw-c}
        {:name "foo-kw" :name-row d-foo-kw-r :name-col d-foo-kw-c}
        {:name "foo-kw" :name-row c-foo-kw-r :name-col c-foo-kw-c}]
-      (q/find-references-from-cursor ana (h/file-path "/c.clj") b-foo-kw-r b-foo-kw-c true))
+      (q/find-references-from-cursor db (h/file-path "/c.clj") b-foo-kw-r b-foo-kw-c true))
     (h/assert-submaps
       [{:name "foo-kw" :name-row a-baz-kw-r :name-col a-baz-kw-c :ns :clj-kondo/unknown-namespace}]
-      (q/find-references-from-cursor ana (h/file-path "/baz.clj") a-baz-kw-r a-baz-kw-c true))
+      (q/find-references-from-cursor db (h/file-path "/baz.clj") a-baz-kw-r a-baz-kw-c true))
     (h/assert-submaps
       [{:name "baz-kw" :name-row b-baz-kw-r :name-col b-baz-kw-c :ns 'baz}]
-      (q/find-references-from-cursor ana (h/file-path "/baz.clj") b-baz-kw-r b-baz-kw-c true))))
+      (q/find-references-from-cursor db (h/file-path "/baz.clj") b-baz-kw-r b-baz-kw-c true))))
 
 (deftest find-references-from-cursor-cljc
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
@@ -143,22 +143,22 @@
          [alias-use-r alias-use-c]
          [x-use-r x-use-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code (h/file-uri "file:///a.cljc"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submaps
       [{:name 'x :name-row x-r :name-col x-c}
        {:name 'x :name-row x-use-r :name-col x-use-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.cljc") x-r x-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.cljc") x-r x-c true))
     (h/assert-submaps
       [{:name 'filename :name-row param-r :name-col param-c}
        {:name 'filename :name-row param-use-r :name-col param-use-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.cljc") param-r param-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.cljc") param-r param-c true))
     (h/assert-submaps
       ['{:name unknown}]
-      (q/find-references-from-cursor ana (h/file-path "/a.cljc") unknown-r unknown-c true))
+      (q/find-references-from-cursor db (h/file-path "/a.cljc") unknown-r unknown-c true))
     (h/assert-submaps
       [{:alias 'f-alias :name-row alias-r :name-col alias-c}
        {:alias 'f-alias :name 'foo :name-row alias-use-r :name-col alias-use-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.cljc") alias-r alias-c true))))
+      (q/find-references-from-cursor db (h/file-path "/a.cljc") alias-r alias-c true))))
 
 (deftest find-references-from-namespace-definition
   (let [[[ns-def-r ns-def-c]] (h/load-code-and-locs (h/code "(ns |some.cool-ns) (def foo 1)"))
@@ -179,14 +179,14 @@
     (testing "from ns definition"
       (h/assert-submaps
         common-references
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") ns-def-r ns-def-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") ns-def-r ns-def-c false)))
     (testing "Including definition"
       (h/assert-submaps
         (concat [{:filename (h/file-path "/a.clj")
                   :name 'some.cool-ns
                   :bucket :namespace-definitions}]
                 common-references)
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") ns-def-r ns-def-c true)))))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") ns-def-r ns-def-c true)))))
 
 (deftest find-references-from-namespace-usage
   (let [_ (h/load-code-and-locs (h/code "(ns some.cool-ns) (def foo 1)"))
@@ -206,7 +206,7 @@
           :from 'another.cool-ns
           :name "bar"
           :ns 'some.cool-ns}]
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") usage-r usage-c false)))))
+        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") usage-r usage-c false)))))
 
 (deftest find-references-from-defrecord
   (let [code (str "(defrecord |MyRecord [])\n"
@@ -217,12 +217,12 @@
          [raw-r raw-c]
          [to-r to-c]
          [map-to-r map-to-c]] (h/load-code-and-locs code (h/file-uri "file:///a.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submaps
       [{:name 'MyRecord :bucket :var-usages :name-row raw-r :name-col raw-c}
        {:name '->MyRecord :bucket :var-usages :name-row to-r :name-col to-c}
        {:name 'map->MyRecord :bucket :var-usages :name-row map-to-r :name-col map-to-c}]
-      (q/find-references-from-cursor ana (h/file-path "/a.clj") def-r def-c false))))
+      (q/find-references-from-cursor db (h/file-path "/a.clj") def-r def-c false))))
 
 (deftest find-references-excluding-function-different-arity
   (let [a-code (h/code "(ns a)"
@@ -238,7 +238,7 @@
         [[bar-def-r bar-def-c]
          [bar-usa-r bar-usa-c]] (h/load-code-and-locs a-code (h/file-uri "file:///a.clj"))
         [[bar-usa-b-r bar-usa-b-c]] (h/load-code-and-locs b-code (h/file-uri "file:///b.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (testing "from definition"
       (h/assert-submaps
         '[{:name-row 6
@@ -252,7 +252,7 @@
            :from b
            :name-col 4
            :from-var bar}]
-        (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-def-r bar-def-c false)))
+        (q/find-references-from-cursor db (h/file-path "/a.clj") bar-def-r bar-def-c false)))
     (testing "from usage"
       (h/assert-submaps
         '[{:name-row 6
@@ -266,7 +266,7 @@
            :from b
            :name-col 4
            :from-var bar}]
-        (q/find-references-from-cursor ana (h/file-path "/a.clj") bar-usa-r bar-usa-c false)))
+        (q/find-references-from-cursor db (h/file-path "/a.clj") bar-usa-r bar-usa-c false)))
     (testing "from other ns"
       (h/assert-submaps
         '[{:name-row 6
@@ -280,7 +280,7 @@
            :from b
            :name-col 4
            :from-var bar}]
-        (q/find-references-from-cursor ana (h/file-path "/b.clj") bar-usa-b-r bar-usa-b-c false)))))
+        (q/find-references-from-cursor db (h/file-path "/b.clj") bar-usa-b-r bar-usa-b-c false)))))
 
 (deftest find-references-from-protocol-impl
   (h/load-code-and-locs (h/code "(ns a)"
@@ -313,7 +313,7 @@
          :row 9 :col 1 :end-row 9 :end-col 27
          :bucket :var-usages
          :to a}]
-      (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") 7 9 false))))
+      (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") 7 9 false))))
 
 (deftest find-references-for-defmulti
   (let [[[defmulti-r defmulti-c]]
@@ -349,15 +349,15 @@
     (testing "from defmulti method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") defmulti-r defmulti-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") defmulti-r defmulti-c false)))
     (testing "from defmethod method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") defmethod-r defmethod-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") defmethod-r defmethod-c false)))
     (testing "from usage name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") usage-r usage-c false)))))
+        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") usage-r usage-c false)))))
 
 (deftest find-references-for-defmulti-without-usages
   (let [[[defmulti-r defmulti-c]]
@@ -381,11 +381,11 @@
     (testing "from defmulti method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") defmulti-r defmulti-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") defmulti-r defmulti-c false)))
     (testing "from defmethod method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") defmethod-r defmethod-c false)))))
+        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") defmethod-r defmethod-c false)))))
 
 (deftest find-references-from-declare
   (let [[[declare-r declare-c]
@@ -405,15 +405,15 @@
     (testing "from declare"
       (h/assert-submaps
         [usage-element]
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") declare-r declare-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") declare-r declare-c false)))
     (testing "from def"
       (h/assert-submaps
         [usage-element]
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") def-r def-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") def-r def-c false)))
     (testing "from usage name"
       (h/assert-submaps
         [usage-element]
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") usage-r usage-c false)))))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") usage-r usage-c false)))))
 
 (deftest find-references-from-declare-without-usages
   (let [[[declare-r declare-c]
@@ -424,11 +424,11 @@
     (testing "from declare"
       (h/assert-submaps
         '[]
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") declare-r declare-c false)))
+        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") declare-r declare-c false)))
     (testing "from def"
       (h/assert-submaps
         '[]
-        (q/find-references-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") def-r def-c false)))))
+        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") def-r def-c false)))))
 
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
@@ -442,75 +442,75 @@
          [x-use-r x-use-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code)
         _ (h/load-code-and-locs "(ns d.e.f) (def foo 1)" (h/file-uri "file:///b.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submap
       {:name 'x :name-row x-r :name-col x-c}
-      (q/find-definition-from-cursor ana (h/file-path "/a.clj") x-use-r x-use-c))
+      (q/find-definition-from-cursor db (h/file-path "/a.clj") x-use-r x-use-c))
     (h/assert-submap
       {:name 'filename :name-row param-r :name-col param-c}
-      (q/find-definition-from-cursor ana (h/file-path "/a.clj") param-use-r param-use-c))
+      (q/find-definition-from-cursor db (h/file-path "/a.clj") param-use-r param-use-c))
     (is (= nil
-           (q/find-definition-from-cursor ana (h/file-path "/a.clj") unknown-r unknown-c)))
+           (q/find-definition-from-cursor db (h/file-path "/a.clj") unknown-r unknown-c)))
     (h/assert-submap
       {:name 'foo :filename (h/file-path "/b.clj") :ns 'd.e.f}
-      (q/find-definition-from-cursor ana (h/file-path "/a.clj") alias-use-r alias-use-c))
+      (q/find-definition-from-cursor db (h/file-path "/a.clj") alias-use-r alias-use-c))
     (h/assert-submap
       {:name 'd.e.f :bucket :namespace-definitions}
-      (q/find-definition-from-cursor ana (h/file-path "/a.clj") alias-r alias-c))))
+      (q/find-definition-from-cursor db (h/file-path "/a.clj") alias-r alias-c))))
 
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis
   (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "jar:file:///some.jar!/some-jar.clj")
         _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "file:///a.clj"))
         [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                       "|f/bar") (h/file-uri "file:///b.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/a.clj")}
-      (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
+      (q/find-definition-from-cursor db (h/file-path "/b.clj") bar-r bar-c))))
 
 (defn assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs []
   (testing "when on a clj file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.clj"))
-          ana (:analysis @db/db*)]
+          db @db/db*]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.clj") bar-r bar-c))))
+        (q/find-definition-from-cursor db (h/file-path "/b.clj") bar-r bar-c))))
   (testing "when on a cljs file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljs"))
-          ana (:analysis @db/db*)]
+          db @db/db*]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.cljs") bar-r bar-c))))
+        (q/find-definition-from-cursor db (h/file-path "/b.cljs") bar-r bar-c))))
   (testing "when on a cljc file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljc"))
-          ana (:analysis @db/db*)]
+          db @db/db*]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r bar-c))))
+        (q/find-definition-from-cursor db (h/file-path "/b.cljc") bar-r bar-c))))
   (testing "when on a cljc file with multiple langs available"
     (let [[[bar-r-clj bar-c-clj]
            [bar-r-cljs bar-c-cljs]] (h/load-code-and-locs (h/code "(ns baz #?(:clj (:require [foo :as fc]) :cljs (:require [foo :as fs])))"
                                                                   "|fc/bar"
                                                                   "|fs/bar") (h/file-uri "file:///b.cljc"))
-          ana (:analysis @db/db*)]
+          db @db/db*]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-clj bar-c-clj))
+        (q/find-definition-from-cursor db (h/file-path "/b.cljc") bar-r-clj bar-c-clj))
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
-        (q/find-definition-from-cursor ana (h/file-path "/b.cljc") bar-r-cljs bar-c-cljs))))
+        (q/find-definition-from-cursor db (h/file-path "/b.cljc") bar-r-cljs bar-c-cljs))))
   (testing "when a macro is require-macros on cljs, being the var-definition on a clj/cljc file."
     (h/clean-db!)
     (h/load-code-and-locs (h/code "(ns some.foo) (defmacro bar [& body] @body)") (h/file-uri "file:///some/foo.clj"))
     (h/load-code-and-locs (h/code "(ns some.foo (:require-macros [some.foo])) (def baz)") (h/file-uri "file:///some/foo.cljs"))
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns a (:require [some.foo :as f])) (f/|bar 1)") (h/file-uri "file:///a.cljs"))
-          ana (:analysis @db/db*)]
+          db @db/db*]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some/foo.clj")}
-        (q/find-definition-from-cursor ana (h/file-path "/a.cljs") bar-r bar-c)))))
+        (q/find-definition-from-cursor db (h/file-path "/a.cljs") bar-r bar-c)))))
 
 (deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
   (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "jar:file:///some.jar!/some-jar.clj"))
@@ -528,18 +528,18 @@
                                   "(declare bar)"
                                   "(|bar)"
                                   "(defn bar [] 1)") (h/file-uri "file:///a.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
-      (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c))))
+      (q/find-definition-from-cursor db (h/file-path "/a.clj") bar-r bar-c))))
 
 (deftest find-definition-from-namespace-alias
   (h/load-code-and-locs (h/code "(ns foo.bar) (def a 1)") (h/file-uri "file:///a.clj"))
   (let [[[foob-r foob-c]] (h/load-code-and-locs (h/code "(ns foo.baz (:require [foo.bar :as |foob]))") (h/file-uri "file:///b.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submap
       {:name-end-col 12 :name-end-row 1 :name-row 1 :name 'foo.bar :filename "/a.clj" :col 1 :name-col 5 :bucket :namespace-definitions :row 1}
-      (q/find-definition-from-cursor ana (h/file-path "/b.clj") foob-r foob-c))))
+      (q/find-definition-from-cursor db (h/file-path "/b.clj") foob-r foob-c))))
 
 (deftest find-definition-from-cursor-when-on-potemkin
   (h/load-code-and-locs (h/code "(ns foo.impl) (def bar)") (h/file-uri "file:///b.clj"))
@@ -548,10 +548,10 @@
                                   "  (:require [potemkin :refer [import-vars]]"
                                   "            [foo.impl]))"
                                   "(import-vars |impl/bar)") (h/file-uri "file:///a.clj"))
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
-      (q/find-definition-from-cursor ana (h/file-path "/a.clj") bar-r bar-c))))
+      (q/find-definition-from-cursor db (h/file-path "/a.clj") bar-r bar-c))))
 
 ;; Uncoment after clj-kondo solves https://github.com/clj-kondo/clj-kondo/issues/1632
 #_(deftest find-definition-form-java-class-usage
@@ -563,7 +563,7 @@
                                                           "(|Foo.)") (h/file-uri "file:///a.clj"))]
         (h/assert-submap
           {} ;; TODO
-          (q/find-definition-from-cursor (:analysis @db/db) (h/file-path "/a.clj") foo-r foo-c @db/db)))))
+          (q/find-definition-from-cursor @db/db (h/file-path "/a.clj") foo-r foo-c @db/db)))))
 
 (deftest find-declaration-from-cursor
   (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))
@@ -579,7 +579,7 @@
                                       "|orange"
                                       "|other")
                               "file:///b.clj")
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (testing "from usage with alias"
       (h/assert-submap
         {:alias 'foob
@@ -587,7 +587,7 @@
          :bucket
          :namespace-alias
          :to 'foo.bar}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") something-r something-c)))
+        (q/find-declaration-from-cursor db (h/file-path "/b.clj") something-r something-c)))
     (testing "from usage with refer"
       (h/assert-submap
         '{:from sample
@@ -595,14 +595,14 @@
           :name orange
           :bucket :var-usages
           :refer true}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") orange-r orange-c)))
+        (q/find-declaration-from-cursor db (h/file-path "/b.clj") orange-r orange-c)))
     (testing "from usage with refer all"
       (h/assert-submap
         {:from 'sample
          :bucket
          :namespace-usages
          :name 'foo.baz}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.clj") other-r other-c)))))
+        (q/find-declaration-from-cursor db (h/file-path "/b.clj") other-r other-c)))))
 
 (deftest find-declaration-from-cursor-in-cljc
   (let [[[clj-ns-r clj-ns-c]
@@ -615,7 +615,7 @@
                                                 "#?(:clj foo/som|ething"
                                                 "   :cljs foo/som|ething)")
                                         "file:///b.cljc")
-        ana (:analysis @db/db*)]
+        db @db/db*]
     (testing "from clj usage"
       (h/assert-submap
         {:name 'foo
@@ -623,7 +623,7 @@
          :bucket :namespace-usages
          :row clj-ns-r
          :col clj-ns-c}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.cljc") clj-usage-r clj-usage-c)))
+        (q/find-declaration-from-cursor db (h/file-path "/b.cljc") clj-usage-r clj-usage-c)))
     (testing "from cljs usage"
       (h/assert-submap
         {:name 'foo
@@ -631,7 +631,7 @@
          :bucket :namespace-usages
          :row cljs-ns-r
          :col cljs-ns-c}
-        (q/find-declaration-from-cursor ana (h/file-path "/b.cljc") cljs-usage-r cljs-usage-c)))))
+        (q/find-declaration-from-cursor db (h/file-path "/b.cljc") cljs-usage-r cljs-usage-c)))))
 
 (deftest find-implementations-from-cursor-protocols
   (h/load-code-and-locs (h/code "(ns a)"
@@ -672,7 +672,7 @@
          :from-var make-foo
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") 2 16)))
+      (q/find-implementations-from-cursor @db/db* (h/file-path "/a.clj") 2 16)))
   (testing "from protocol method definitions"
     (h/assert-submaps
       [{:impl-ns 'b
@@ -700,7 +700,7 @@
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
-      (q/find-implementations-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") 3 4)))
+      (q/find-implementations-from-cursor @db/db* (h/file-path "/a.clj") 3 4)))
   (testing "from implementation usage"
     (h/assert-submaps
       [{:impl-ns 'b
@@ -728,7 +728,7 @@
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
-      (q/find-implementations-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") 9 2))))
+      (q/find-implementations-from-cursor @db/db* (h/file-path "/b.clj") 9 2))))
 
 (deftest find-implementations-from-cursor-defmulti
   (h/load-code-and-locs (h/code "(ns a)"
@@ -760,7 +760,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db*) (h/file-path "/a.clj") 2 12)))
+      (q/find-implementations-from-cursor @db/db* (h/file-path "/a.clj") 2 12)))
   (testing "from defmethod declaration"
     (h/assert-submaps
       '[{:name foo
@@ -779,7 +779,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") 2 13)))
+      (q/find-implementations-from-cursor @db/db* (h/file-path "/b.clj") 2 13)))
   (testing "from defmethod usage"
     (h/assert-submaps
       '[{:name foo
@@ -798,7 +798,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor (:analysis @db/db*) (h/file-path "/b.clj") 8 2))))
+      (q/find-implementations-from-cursor @db/db* (h/file-path "/b.clj") 8 2))))
 
 (deftest find-unused-aliases
   (testing "clj"
@@ -951,7 +951,7 @@
           (h/load-code-and-locs "(ns a) (let [a 2 b 1] |(+ 2 b)| (- 2 a))")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form (:analysis @db/db*) (h/file-path "/a.clj")
+        (q/find-local-usages-under-form @db/db* (h/file-path "/a.clj")
                                         {:row sum-pos-r, :col sum-pos-c
                                          :end-row sum-end-pos-r, :end-col sum-end-pos-c}))))
   (testing "inside defn"
@@ -960,6 +960,6 @@
           (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))|) (defn other [c] c)")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form (:analysis @db/db*) (h/file-path "/a.clj")
+        (q/find-local-usages-under-form @db/db* (h/file-path "/a.clj")
                                         {:row let-pos-r, :col let-pos-c
                                          :end-row let-end-pos-r, :end-col let-end-pos-c})))))

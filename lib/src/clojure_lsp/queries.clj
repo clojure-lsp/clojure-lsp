@@ -79,8 +79,8 @@
        (= (:from usage) (:to usage))))
 
 (defn find-local-usages-under-form
-  [analysis filename {:keys [row col end-row end-col]}]
-  (let [local-analysis (get analysis filename)
+  [db filename {:keys [row col end-row end-col]}]
+  (let [local-analysis (get-in db [:analysis filename])
         form-scope {:name-row row
                     :name-col col
                     :name-end-row end-row
@@ -102,8 +102,8 @@
                              local-analysis))))))
 
 (defn find-var-usages-under-form
-  [analysis filename line column end-line end-column]
-  (let [local-analysis (get analysis filename)]
+  [db filename line column end-line end-column]
+  (let [local-analysis (get-in db [:analysis filename])]
     (filter (fn [{:keys [bucket] :as element}]
               (and (= :var-usages bucket)
                    (shared/inside? element
@@ -114,27 +114,27 @@
             local-analysis)))
 
 (defmulti find-definition
-  (fn [_analysis element]
+  (fn [_db element]
     (:bucket element)))
 
 (defmethod find-definition :namespace-alias
-  [analysis element]
+  [db element]
   (find-last-order-by-project-analysis
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) (:to element))
           (match-file-lang % element))
-    analysis))
+    (:analysis db)))
 
 (defmethod find-definition :namespace-usages
-  [analysis element]
+  [db element]
   (find-last-order-by-project-analysis
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) (:name element))
           (match-file-lang % element))
-    analysis))
+    (:analysis db)))
 
 (defmethod find-definition :var-usages
-  [analysis element]
+  [db element]
   (letfn [(defines-elem? [candidate]
             (and (identical? :var-definitions (:bucket candidate))
                  (= (:name element) (:name candidate))
@@ -144,54 +144,54 @@
       (find-last-order-by-project-analysis
         #(and (defines-elem? %)
               (match-file-lang % element))
-        analysis)
+        (:analysis db))
       (when (contains? (elem-langs element) :cljs)
         ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
         (find-last-order-by-project-analysis
           #(and (defines-elem? %)
                 (:macro %)
                 (match-file-lang % (assoc element :lang :clj)))
-          analysis)))))
+          (:analysis db))))))
 
 (defmethod find-definition :local-usages
-  [analysis {:keys [id filename] :as _element}]
+  [db {:keys [id filename] :as _element}]
   (find-first #(and (= :locals (:bucket %)) (= (:id %) id))
-              (get analysis filename)))
+              (get-in db [:analysis filename])))
 
 (defmethod find-definition :keywords
-  [analysis element]
+  [db element]
   (or (when (:ns element)
         (find-last-order-by-project-analysis
           #(and (identical? :keywords (:bucket %))
                 (= (:name %) (:name element))
                 (:reg %)
                 (= (:ns %) (:ns element)))
-          analysis))
+          (:analysis db)))
       element))
 
 (defmethod find-definition :var-definitions
-  [analysis element]
+  [db element]
   (if (= 'potemkin/import-vars (:defined-by element))
     (find-last-order-by-project-analysis
       #(and (identical? :var-definitions (:bucket %))
             (= (:name %) (:name element))
             (not= 'potemkin/import-vars (:defined-by %))
             (match-file-lang % element))
-      analysis)
+      (:analysis db))
     element))
 
 (defmethod find-definition :protocol-impls
-  [analysis element]
+  [db element]
   (find-last-order-by-project-analysis
     #(and (identical? :var-definitions (:bucket %))
           (= (:name %) (:method-name element))
           (= (:ns %) (:protocol-ns element))
           (match-file-lang % element))
-    analysis))
+    (:analysis db)))
 
 (defmethod find-definition :java-class-usages
-  [analysis element]
-  (->> analysis
+  [db element]
+  (->> (:analysis db)
        (into []
              (comp
                (mapcat val)
@@ -201,15 +201,15 @@
        first))
 
 (defmethod find-definition :default
-  [_analysis element]
+  [_db element]
   element)
 
 (defmulti find-declaration
-  (fn [_analysis element]
+  (fn [_db element]
     (:bucket element)))
 
 (defmethod find-declaration :var-usages
-  [analysis {:keys [alias name to filename] :as element}]
+  [db {:keys [alias name to filename] :as element}]
   (when-not (identical? :clj-kondo/unknown-namespace to)
     (peek (into []
                 (comp (filter
@@ -225,16 +225,16 @@
                              (and (identical? :namespace-usages (:bucket %))
                                   (= to (:name %))))))
                       (filter #(match-file-lang % element)))
-                (get analysis filename)))))
+                (get-in db [:analysis filename])))))
 
 (defmethod find-declaration :default [_ _] nil)
 
 (defmulti find-implementations
-  (fn [_analysis element]
+  (fn [_db element]
     (:bucket element)))
 
 (defmethod find-implementations :var-definitions
-  [analysis element]
+  [db element]
   (into []
         (comp
           (mapcat val)
@@ -263,10 +263,10 @@
             (constantly false))
           (filter #(match-file-lang % element))
           (medley/distinct-by (juxt :filename :name :row :col)))
-        analysis))
+        (:analysis db)))
 
 (defmethod find-implementations :var-usages
-  [analysis element]
+  [db element]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     []
     (into []
@@ -291,19 +291,19 @@
                                 (safe-equal? (:name element) (:name %))))))
             (filter #(match-file-lang % element))
             (medley/distinct-by (juxt :filename :name :row :col)))
-          analysis)))
+          (:analysis db))))
 
 (defmethod find-implementations :default [_ _] [])
 
 (defmulti find-references
-  (fn [_analysis element _include-declaration?]
+  (fn [_db element _include-declaration?]
     (case (:bucket element)
       :locals :local
       :local-usages :local
       (:bucket element))))
 
 (defmethod find-references :namespace-definitions
-  [analysis {:keys [name] :as element} include-declaration?]
+  [db {:keys [name] :as element} include-declaration?]
   (concat
     (when include-declaration?
       [element])
@@ -316,15 +316,15 @@
                               (= (:ns %) name)
                               (not (:auto-resolved %))
                               (not (:namespace-from-prefix %))))))
-          analysis)))
+          (:analysis db))))
 
 (defmethod find-references :namespace-usages
-  [analysis element include-declaration?]
+  [db element include-declaration?]
   (let [namespace-definition (assoc element :bucket :namespace-definitions)]
-    (find-references analysis namespace-definition include-declaration?)))
+    (find-references db namespace-definition include-declaration?)))
 
 (defmethod find-references :namespace-alias
-  [analysis {:keys [alias filename] :as element} include-declaration?]
+  [db {:keys [alias filename] :as element} include-declaration?]
   (concat
     (when include-declaration?
       [element])
@@ -335,19 +335,19 @@
                          (and (= :keywords (:bucket %))
                               (= (:alias %) alias))))
             (medley/distinct-by (juxt :filename :name :name-row :name-col)))
-          (get analysis filename))))
+          (get-in db [:analysis filename]))))
 
 (defmethod find-references :var-usages
-  [analysis element include-declaration?]
+  [db element include-declaration?]
   (if (= (:to element) :clj-kondo/unknown-namespace)
     [element]
     (let [var-definition {:ns (:to element)
                           :name (:name element)
                           :bucket :var-definitions}]
-      (find-references analysis var-definition include-declaration?))))
+      (find-references db var-definition include-declaration?))))
 
 (defmethod find-references :var-definitions
-  [analysis element include-declaration?]
+  [db element include-declaration?]
   (let [names (var-definition-names element)
         exclude-declaration? (not include-declaration?)]
     (into []
@@ -361,10 +361,10 @@
                             (identical? :var-definitions (:bucket %))
                             (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :filename :name :row :col)))
-          analysis)))
+          (:analysis db))))
 
 (defmethod find-references :keywords
-  [analysis {:keys [ns name] :as _element} include-declaration?]
+  [db {:keys [ns name] :as _element} include-declaration?]
   (into []
         (comp
           filter-project-analysis-xf
@@ -378,19 +378,19 @@
           (filter #(or include-declaration?
                        (not (:reg %))))
           (medley/distinct-by (juxt :filename :name :row :col)))
-        analysis))
+        (:analysis db)))
 
 (defmethod find-references :local
-  [analysis {:keys [id name filename] :as element} include-declaration?]
+  [db {:keys [id name filename] :as element} include-declaration?]
   (if (or id name)
     (filter #(and (= (:id %) id)
                   (or include-declaration?
                       (not (identical? :locals (:bucket %)))))
-            (get analysis filename))
+            (get-in db [:analysis filename]))
     [element]))
 
 (defmethod find-references :protocol-impls
-  [analysis element include-declaration?]
+  [db element include-declaration?]
   (concat
     (when include-declaration?
       [element])
@@ -401,53 +401,53 @@
             (filter #(safe-equal? (:method-name element) (:name %)))
             (filter #(safe-equal? (:protocol-ns element) (:to %)))
             (medley/distinct-by (juxt :filename :name :row :col)))
-          analysis)))
+          (:analysis db))))
 
 (defmethod find-references :default
-  [_analysis element _]
+  [_db element _]
   [element])
 
 (defn find-element-under-cursor
-  [analysis filename line column]
+  [db filename line column]
   (find-first (fn [{:keys [name-row name-col name-end-row name-end-col]}]
                 ;; TODO Probably should use q/inside? instead
                 (and (<= name-row line name-end-row)
                      (<= name-col column name-end-col)))
-              (get analysis filename)))
+              (get-in db [:analysis filename])))
 
 (defn find-all-elements-under-cursor
-  [analysis filename line column]
+  [db filename line column]
   (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
                 ;; TODO Probably should use q/inside? instead
             (and (<= name-row line name-end-row)
                  (<= name-col column name-end-col)))
-          (get analysis filename)))
+          (get-in db [:analysis filename])))
 
-(defn find-definition-from-cursor [analysis filename line column]
+(defn find-definition-from-cursor [db filename line column]
   (try
-    (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-definition analysis element))
+    (when-let [element (find-element-under-cursor db filename line column)]
+      (find-definition db element))
     (catch Throwable e
       (logger/error e "can't find definition"))))
 
-(defn find-declaration-from-cursor [analysis filename line column]
+(defn find-declaration-from-cursor [db filename line column]
   (try
-    (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-declaration analysis element))
+    (when-let [element (find-element-under-cursor db filename line column)]
+      (find-declaration db element))
     (catch Throwable e
       (logger/error e "can't find declaration"))))
 
-(defn find-implementations-from-cursor [analysis filename line column]
+(defn find-implementations-from-cursor [db filename line column]
   (try
-    (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-implementations analysis element))
+    (when-let [element (find-element-under-cursor db filename line column)]
+      (find-implementations db element))
     (catch Throwable e
       (logger/error e "can't find implementation"))))
 
-(defn find-references-from-cursor [analysis filename line column include-declaration?]
+(defn find-references-from-cursor [db filename line column include-declaration?]
   (try
-    (when-let [element (find-element-under-cursor analysis filename line column)]
-      (find-references analysis element include-declaration?))
+    (when-let [element (find-element-under-cursor db filename line column)]
+      (find-references db element include-declaration?))
     (catch Throwable e
       (logger/error e "can't find references"))))
 

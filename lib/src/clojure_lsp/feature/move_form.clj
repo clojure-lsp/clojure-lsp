@@ -20,9 +20,8 @@
 
 (defn var-usages-within [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        analysis (:analysis db)
         defs (q/find-var-usages-under-form
-               analysis
+               db
                (shared/uri->filename uri)
                row
                col
@@ -122,7 +121,7 @@
                        single-def?)]
     (when can-move?
       (let [def-to-move (first defs)
-            refs (q/find-references analysis def-to-move false)
+            refs (q/find-references db def-to-move false)
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
             per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
             dest-uri (shared/filename->uri dest-filename db)

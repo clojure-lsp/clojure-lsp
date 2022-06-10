@@ -1,6 +1,8 @@
 name: "Update deps-lock.json"
 on:
   push:
+    branches:
+      - master
     paths:
       - "**/deps.edn"
 

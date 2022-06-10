@@ -251,8 +251,8 @@
                                (let [orig-leading (concat before earlier-clause)
                                      col (:col (meta (first orig-leading)))]
                                  [(n/newline-node "\n") (n/spaces (dec col))]))]
-    (z/up (z/edn (n/forms-node
-                   (concat swapped trailing-comment-fix))))))
+    (z/up (z/of-node (n/forms-node
+                       (concat swapped trailing-comment-fix))))))
 
 (defn ^:private editing-range [earlier-clause later-clause]
   (let [{:keys [row col]} (meta (first earlier-clause))

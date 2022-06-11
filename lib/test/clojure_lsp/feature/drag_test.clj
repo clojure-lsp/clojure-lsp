@@ -682,7 +682,9 @@
                           (h/code "[1 #'|two]"))
     (assert-drag-backward (h/code "[|#::foo {:b 2} 1]")
                           (h/code "[1 #:|:foo {:b 2}]"))
-    ;; doesn't work, because uneval is treated as whitespace by rest of drag code
+    (assert-drag-backward (h/code "[|#\"re\" 1]")
+                          (h/code "[1 #|\"re\"]"))
+    ;; doesn't work, because uneval is treated as a comment by rest of drag code
     #_(assert-drag-backward (h/code "[|#_two 1]")
                             (h/code "[1 #_|two]"))))
 
@@ -1080,7 +1082,9 @@
                          (h/code "[#'|one 2]"))
     (assert-drag-forward (h/code "[2 |#::foo {:a 1}]")
                          (h/code "[#:|:foo {:a 1} 2]"))
-    ;; doesn't work, because uneval is treated as whitespace by rest of drag code
+    (assert-drag-forward (h/code "[2 |#\"re\"]")
+                         (h/code "[#|\"re\" 2]"))
+    ;; doesn't work, because uneval is treated as a comment by rest of drag code
     #_(assert-drag-forward (h/code "[2 |#_one]")
                            (h/code "[#_|one 2]"))))
 

@@ -226,13 +226,6 @@
           (get h/default-uri)
           (h/changes->code @db/db*)))
 
-(defn- as-range [change]
-  (some-> change
-          :changes-by-uri
-          (get h/default-uri)
-          first
-          :range))
-
 (defn- as-position [change]
   (when-let [{:keys [row col end-row end-col]} (some-> change
                                                        :show-document-after-edit
@@ -336,11 +329,10 @@
                           (h/code "(def a) |(def b)"))
     (assert-drag-backward (h/code "|(def b) (def a) (def c)")
                           (h/code "(def a) |(def b) (def c)"))
-    (is (= {:row 1 :col 1
-            :end-row 2 :end-col 8}
-           (as-range
-             (drag-code-backward (h/code "(def a)"
-                                         "|(def b)"))))))
+    (assert-drag-backward (h/code "|(def b)"
+                                  "(def a)")
+                          (h/code "(def a)"
+                                  "|(def b)")))
   (testing "within special functions"
     (assert-drag-backward (h/code "(cond |b 2 a 1)")
                           (h/code "(cond a 1 |b 2)"))
@@ -772,11 +764,10 @@
                          (h/code "|(def a) (def b)"))
     (assert-drag-forward (h/code "(def a) (def c) |(def b)")
                          (h/code "(def a) |(def b) (def c)"))
-    (is (= {:row 1 :col 1
-            :end-row 2 :end-col 8}
-           (as-range
-             (drag-code-forward (h/code "|(def a)"
-                                        "(def b)"))))))
+    (assert-drag-forward (h/code "(def b)"
+                                 "|(def a)")
+                         (h/code "|(def a)"
+                                 "(def b)")))
   (testing "within special functions"
     (assert-drag-forward (h/code "(cond b 2 |a 1)")
                          (h/code "(cond |a 1 b 2)"))

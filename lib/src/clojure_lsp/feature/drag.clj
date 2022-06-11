@@ -250,8 +250,8 @@
 (defn ^:private clause-range [clause]
   (let [{:keys [row col]} (meta (first clause))
         {:keys [end-row end-col]} (meta (last clause))]
-       {:row row :col col
-        :end-row end-row :end-col end-col}))
+    {:row row :col col
+     :end-row end-row :end-col end-col}))
 
 (defn ^:private edited-nodes [before earlier-clause later-clause after]
   (let [final-trailing (concat earlier-clause after)
@@ -288,10 +288,13 @@
 
 (defn ^:private final-position [dir earlier-clause interstitial later-clause]
   (let [top-position (select-keys (meta (first earlier-clause))
-                                  [:row :col])]
-    (case dir
-      :backward top-position
-      :forward (bottom-position top-position (concat later-clause interstitial)))))
+                                  [:row :col])
+        {:keys [row col]}
+        (case dir
+          :backward top-position
+          :forward (bottom-position top-position (concat later-clause interstitial)))]
+    {:row row :col col
+     :end-row row :end-col col}))
 
 (defn ^:private drag-clause
   "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
@@ -468,9 +471,8 @@
       (some-> spec
               (assoc :pulp (pulp (:rind spec) child-count))))))
 
-;;;; Public API
-
-;; Drag zloc's clause forward or backward.
+;;;; Plan
+;; Form a plan about how to drag
 
 (defn ^:private probable-valid-movement?
   "Checks whether `zloc` can be dragged in direction `dir`, assuming it is part of
@@ -493,12 +495,6 @@
            ;; will eventually be allocated to padding or another element.
            (<= breadth (case dir :backward movable-before, :forward movable-after))))))
 
-(defn ^:private can-drag? [zloc dir uri db]
-  (probable-valid-movement? zloc dir (clause-spec (z-up zloc) uri db)))
-
-(defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
-(defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
-
 (defn ^:private target-locs [zloc]
   ;; [v 'q :kw] is parsed as
   ;; [:vector [:token v] [:quote [:token q]] [:keyword :kw]]
@@ -512,15 +508,28 @@
       [parent-zloc (z-up parent-zloc)]
       [zloc parent-zloc])))
 
+(defn ^:private plan [zloc dir uri db]
+  (when zloc
+    (let [[zloc parent-zloc] (target-locs zloc)
+          clause-spec (clause-spec parent-zloc uri db)]
+      (when (probable-valid-movement? zloc dir clause-spec)
+        [zloc clause-spec]))))
+
+;;;; Public API
+
+;; Drag zloc's clause forward or backward.
+
+(defn ^:private can-drag? [zloc dir uri db] (boolean (plan zloc dir uri db)))
+(defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
+(defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
+
 (defn ^:private drag [zloc dir uri db]
-  (let [[zloc parent-zloc] (target-locs zloc)
-        clause-spec (clause-spec parent-zloc uri db)]
-    (when (probable-valid-movement? zloc dir clause-spec)
-      (when-let [[edits cursor-position] (drag-clause zloc dir clause-spec)]
-        {:show-document-after-edit {:uri         uri
-                                    :take-focus? true
-                                    :range       (assoc cursor-position :end-row (:row cursor-position) :end-col (:col cursor-position))}
-         :changes-by-uri {uri edits}}))))
+  (when-let [[zloc clause-spec] (plan zloc dir uri db)]
+    (when-let [[edits cursor-position] (drag-clause zloc dir clause-spec)]
+      {:show-document-after-edit {:uri         uri
+                                  :take-focus? true
+                                  :range       cursor-position}
+       :changes-by-uri {uri edits}})))
 
 (defn drag-backward [zloc uri db] (drag zloc :backward uri db))
 (defn drag-forward [zloc uri db] (drag zloc :forward uri db))

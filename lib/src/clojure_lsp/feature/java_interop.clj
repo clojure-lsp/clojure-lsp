@@ -250,7 +250,7 @@
       (= :jdk-already-installed result)
       (let [global-db (db/read-global-cache)]
         (swap! db* #(-> %
-                        (update :analysis merge (:analysis global-db))
+                        (lsp.kondo/db-with-analysis (:analysis global-db))
                         (update :analysis-checksums merge (:analysis-checksums global-db))))
         (logger/info java-logger-tag "JDK source cached loaded successfully."))
 

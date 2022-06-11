@@ -224,7 +224,7 @@
                    :changed-watched-file
                    (did-change uri
                                [{:text (slurp (shared/uri->filename uri))}]
-                               (inc (get-in @db* [:documents uri :v] 0))
+                               (get-in @db* [:documents uri :v] 0)
                                db*)))
       :deleted (shared/logging-task
                  :delete-watched-file

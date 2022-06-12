@@ -34,6 +34,11 @@
     (is (not (can-drag-code-backward? "|#{:a :b :c :d}")))
     (is (not (can-drag-code-backward? "|[:a :b :c :d]")))
     (is (not (can-drag-code-backward? "|'(:a :b :c :d)"))))
+  (testing "after last clause"
+    (is (not (can-drag-code-backward? (h/code "{:a 1"
+                                              ""
+                                              " :b 2"
+                                              "|}")))))
   (testing "on first entry"
     (is (not (can-drag-code-backward? "[|1]")))
     (is (not (can-drag-code-backward? "#{|1 2 3}")))
@@ -501,24 +506,6 @@
                           (h/code "(for [a [1 2]"
                                   "      :let [{:keys [b]} {:b 1}"
                                   "            |{:keys [c]} {:c 1}]])")))
-  (testing "blank lines"
-    (assert-drag-backward (h/code "{|:b 2"
-                                  ""
-                                  " :a 1}")
-                          (h/code "{:a 1"
-                                  "|"
-                                  " :b 2}"))
-    (assert-drag-backward (h/code "{:a 1"
-                                  ""
-                                  " |:c 2"
-                                  ""
-                                  " :b 2}")
-                          (h/code "{:a 1"
-                                  ""
-                                  " :b 2"
-                                  "|"
-                                  " :c 2}")))
-
   (testing "comments"
     (assert-drag-backward (h/code "{|:b (+ 1 1) ;; two comment"
                                   " :a 1 ;; one comment"
@@ -918,25 +905,6 @@
                          (h/code "(for [a [1 2]"
                                  "      :let [|{:keys [b]} {:b 1}"
                                  "            {:keys [c]} {:c 1}]])")))
-  (testing "blank lines"
-    (assert-drag-forward (h/code "{"
-                                 " :b 2"
-                                 ""
-                                 " |:a 1}")
-                         (h/code "{|"
-                                 " :a 1"
-                                 ""
-                                 " :b 2}"))
-    (assert-drag-forward (h/code "{:a 1"
-                                 ""
-                                 " :c 2"
-                                 ""
-                                 " |:b 2}")
-                         (h/code "{:a 1"
-                                 "|"
-                                 " :b 2"
-                                 ""
-                                 " :c 2}")))
   (testing "comments"
     (assert-drag-forward (h/code "{:b (+ 1 1) ;; two comment"
                                  " |:a 1 ;; one comment"
@@ -1112,6 +1080,15 @@
     (assert-no-erroneous-backwards (h/code "(case a"
                                            "   1 :first |;; one comment"
                                            ")")))
+  (testing "between clauses"
+    (assert-no-erroneous-backwards (h/code "{:a 1"
+                                           "|"
+                                           " :b 2}"))
+    (assert-no-erroneous-backwards (h/code "{:a 1"
+                                           ""
+                                           " :b 2"
+                                           "|"
+                                           " :c 2}")))
 
   (testing "from blank line before last element"
     (assert-no-erroneous-forwards (h/code "[|"
@@ -1129,4 +1106,14 @@
                                           " :a 1}"))
     (assert-no-erroneous-forwards (h/code "(case a"
                                           "   |;; one comment"
-                                          "   1 :first :else)"))))
+                                          "   1 :first :else)")))
+  (testing "between clauses"
+    (assert-no-erroneous-forwards (h/code "{|"
+                                          " :a 1"
+                                          ""
+                                          " :b 2}"))
+    (assert-no-erroneous-forwards (h/code "{:a 1"
+                                          "|"
+                                          " :b 2"
+                                          ""
+                                          " :c 2}"))))

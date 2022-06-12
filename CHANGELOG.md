@@ -17,6 +17,7 @@
   - Improve element selected on `textDocument/hover`, showing the function being called instead of the closest element found backwards. #995
   - Fix drag from quoted symbols and other special nodes #969
   - Drag requests two smaller edits, instead of one large edit, potentially avoiding flicker. #1043
+  - Drag is disabled between clauses, to avoid arbitrarily choosing one to move. #1030
 
 ## 2022.05.31-17.35.50
 

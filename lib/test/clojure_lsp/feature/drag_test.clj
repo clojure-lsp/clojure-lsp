@@ -664,7 +664,7 @@
     (assert-drag-backward (h/code "[#|\"re\" 1]")
                           (h/code "[1 #|\"re\"]"))
     ;; doesn't work, because uneval is treated as a comment by rest of drag code
-    #_(assert-drag-backward (h/code "[|#_two 1]")
+    #_(assert-drag-backward (h/code "[#_|two 1]")
                             (h/code "[1 #_|two]"))))
 
 (deftest drag-forward
@@ -1044,7 +1044,7 @@
     (assert-drag-forward (h/code "[2 #|\"re\"]")
                          (h/code "[#|\"re\" 2]"))
     ;; doesn't work, because uneval is treated as a comment by rest of drag code
-    #_(assert-drag-forward (h/code "[2 |#_one]")
+    #_(assert-drag-forward (h/code "[2 #_|one]")
                            (h/code "[#_|one 2]"))))
 
 ;; These are macros so test failures have the right line numbers

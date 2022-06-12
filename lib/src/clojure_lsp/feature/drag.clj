@@ -189,13 +189,12 @@
      :end-row end-row :end-col end-col}))
 
 (defn ^:private edited-nodes [before earlier-clause later-clause after]
-  (let [final-trailing (concat earlier-clause after)
-        trailing-comment-fix (when (some-> final-trailing last n/comment?)
-                               (let [orig-leading (concat before earlier-clause)
-                                     col (:col (meta (first orig-leading)))]
+  (let [trailing-node (or (last after) (last earlier-clause))
+        trailing-comment-fix (when (some-> trailing-node n/comment?)
+                               (let [orig-leading-node (or (first before) (first earlier-clause))
+                                     col (:col (meta orig-leading-node))]
                                  [(n/newline-node "\n") (n/spaces (dec col))]))]
-    ;; The actual swap. Puts the later clause where the earlier was, and
-    ;; vice-versa.
+    ;; The actual swap.
     [{:range (clause-range earlier-clause)
       :loc (loc-of-clause later-clause)}
      {:range (clause-range later-clause)

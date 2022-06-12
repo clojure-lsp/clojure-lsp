@@ -49,11 +49,11 @@
 (defmethod refactor :expand-let [{:keys [loc uri db]}]
   (r.transform/expand-let loc uri db))
 
-(defmethod refactor :drag-backward [{:keys [loc uri db]}]
-  (f.drag/drag-backward loc uri db))
+(defmethod refactor :drag-backward [{:keys [loc row col uri db]}]
+  (f.drag/drag-backward loc {:row row :col col} uri db))
 
-(defmethod refactor :drag-forward [{:keys [loc uri db]}]
-  (f.drag/drag-forward loc uri db))
+(defmethod refactor :drag-forward [{:keys [loc row col uri db]}]
+  (f.drag/drag-forward loc {:row row :col col} uri db))
 
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))
@@ -92,12 +92,12 @@
   (f.sort-map/sort-map loc))
 
 ;; Deprecated. Use drag-backward
-(defmethod refactor :move-coll-entry-up [{:keys [loc uri db]}]
-  (f.drag/drag-backward loc uri db))
+(defmethod refactor :move-coll-entry-up [args]
+  (refactor (assoc args :refactoring :drag-backward)))
 
 ;; Deprecated. Use drag-forward
-(defmethod refactor :move-coll-entry-down [{:keys [loc uri db]}]
-  (f.drag/drag-forward loc uri db))
+(defmethod refactor :move-coll-entry-down [args]
+  (refactor (assoc args :refactoring :drag-forward)))
 
 (defmethod refactor :suppress-diagnostic [{:keys [loc args]}]
   (apply r.transform/suppress-diagnostic loc args))

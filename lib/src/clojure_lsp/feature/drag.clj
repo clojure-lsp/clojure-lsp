@@ -104,7 +104,7 @@
 ;; 4. Based on the breadth of a clause, group the pulp into clauses, leaving interstitial padding between clauses.
 ;; 5. Notice which clause contains the cursor.
 ;; 6. Swap that clause with the previous or next clause, depending on the direction of movement.
-;; 7. Reposition the cursor so that it appears at the beginning of the original clause.
+;; 7. Reposition the cursor so that it appears to maintain its position within the original clause.
 
 (defn ^:private divide-parent
   "Returns the contents of `parent-zloc` split up into elements and padding.
@@ -221,14 +221,23 @@
     {:row bottom-row
      :col bottom-col}))
 
-(defn ^:private final-position [dir earlier-clause interstitial later-clause]
+(defn ^:private final-position [dir cursor-offset earlier-clause interstitial later-clause]
   (let [top-position (meta (first earlier-clause))
         {:keys [row col]}
         (case dir
           :backward top-position
-          :forward (bottom-position top-position (concat later-clause interstitial)))]
+          :forward (bottom-position top-position (concat later-clause interstitial)))
+        [row col] (n.protocols/+extent [row col] cursor-offset)]
     {:row row :col col
      :end-row row :end-col col}))
+
+(defn ^:private offset [{clause-row :row clause-col :col} {cursor-row :row cursor-col :col}]
+  ;; See n.protocols/extent
+  (let [rows (- cursor-row clause-row)]
+    [rows
+     (if (zero? rows)
+       (- cursor-col clause-col)
+       cursor-col)]))
 
 (defn ^:private drag-clause
   "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
@@ -237,7 +246,7 @@
   Returns two pieces of data:
   - The edits that swap the clauses, each with the old range and the new loc.
   - The position where the cursor should be placed after the edits."
-  [zloc dir {:keys [breadth rind pulp]}]
+  [zloc dir cursor-position {:keys [breadth rind pulp]}]
   (let [zloc (edit/mark-position zloc ::orig)
         parent-zloc (z-up zloc)
 
@@ -261,7 +270,10 @@
                          [;; clause
                           {:idx clause-idx
                            :nodes clause-nodes
-                           :origin? origin?}
+                           :origin? origin?
+                           :cursor-offset (when origin?
+                                            (offset (meta (first clause-nodes))
+                                                    cursor-position))}
                           ;; padding
                           {:nodes padding-nodes}]))))
         origin-clause (->> clauses+padding (filter :origin?) first)]
@@ -282,7 +294,8 @@
                 later-clause (:nodes later-clause)
                 after (concat (mapcat :nodes pulp-after) (flatten rind-after))]
             [(edited-nodes before earlier-clause later-clause after)
-             (final-position dir earlier-clause interstitial later-clause)]))))))
+             (final-position dir (:cursor-offset origin-clause)
+                             earlier-clause interstitial later-clause)]))))))
 
 ;;;; Clause specs
 ;;
@@ -476,13 +489,13 @@
 (defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
 (defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
-(defn ^:private drag [zloc dir uri db]
+(defn ^:private drag [zloc dir cursor-position uri db]
   (when-let [[zloc clause-spec] (plan zloc dir uri db)]
-    (when-let [[edits cursor-position] (drag-clause zloc dir clause-spec)]
+    (when-let [[edits cursor-position] (drag-clause zloc dir cursor-position clause-spec)]
       {:show-document-after-edit {:uri         uri
                                   :take-focus? true
                                   :range       cursor-position}
        :changes-by-uri {uri edits}})))
 
-(defn drag-backward [zloc uri db] (drag zloc :backward uri db))
-(defn drag-forward [zloc uri db] (drag zloc :forward uri db))
+(defn drag-backward [zloc cursor-position uri db] (drag zloc :backward cursor-position uri db))
+(defn drag-forward [zloc cursor-position uri db] (drag zloc :forward cursor-position uri db))

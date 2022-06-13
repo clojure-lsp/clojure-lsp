@@ -14,8 +14,9 @@
   - Improve performance of find-declaration feature. #1021
   - Fix to avoid suggesting an alias from a clj file to a cljs file. #1024
   - Find references of namespace usages now find all namespace usages on project, not only the definition. #1022
-  - Fix drag from quoted symbols and other special nodes #969
   - Improve element selected on `textDocument/hover`, showing the function being called instead of the closest element found backwards. #995
+  - Fix drag from quoted symbols and other special nodes #969
+  - Drag requests two smaller edits, instead of one large edit, potentially avoiding flicker. #1043
 
 ## 2022.05.31-17.35.50
 

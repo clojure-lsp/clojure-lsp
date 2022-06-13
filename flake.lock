@@ -9,15 +9,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1654025848,
-        "narHash": "sha256-sBSbeFIH9zOWPgN8C24iKwICSdp2cp9YEmhINi7hL1E=",
+        "lastModified": 1655125606,
+        "narHash": "sha256-mnqND6/PZMug5Jr92adJcNmwS+XYtVvtKjuowK9A9ec=",
         "owner": "jlesquembre",
         "repo": "clj-nix",
-        "rev": "983813df50ad1ff075e393cfef02d1b2835c28a9",
+        "rev": "77302aa77afa25e24292aa54eec31e70caa4faf0",
         "type": "github"
       },
       "original": {
         "owner": "jlesquembre",
+        "ref": "0.2.0",
         "repo": "clj-nix",
         "type": "github"
       }

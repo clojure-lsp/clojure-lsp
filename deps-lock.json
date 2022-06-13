@@ -1,5 +1,5 @@
 {
-  "lock-version": 2,
+  "lock-version": 3,
   "git-deps": [
     {
       "lib": "babashka/babashka.pods",
@@ -19,6 +19,7 @@
       "lib": "io.github.clojure/tools.build",
       "url": "https://github.com/clojure/tools.build.git",
       "rev": "ba1a2bf421838802e7bdefc541b41f57582e53b6",
+      "tag": "v0.8.2",
       "git-dir": "https/github.com/clojure/tools.build",
       "hash": "sha256-p8kdg9UmpUq+JeyxL+g5R0GwdcP7cOI6wZuJnXK9Y8I="
     }

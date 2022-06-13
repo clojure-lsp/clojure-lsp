@@ -20,9 +20,8 @@
 
 (defn var-usages-within [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        analysis (:analysis db)
         defs (q/find-var-usages-under-form
-               analysis
+               db
                (shared/uri->filename uri)
                row
                col
@@ -33,11 +32,7 @@
       defs)))
 
 (defn var-definitions-within [zloc uri db]
-  (let [analysis (:analysis db)
-        defs (q/find-var-definitions
-               analysis
-               (shared/uri->filename uri)
-               false)]
+  (let [defs (q/find-var-definitions db (shared/uri->filename uri) false)]
     (filterv
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
@@ -103,9 +98,9 @@
         form-loc (edit/to-top zloc)
         analysis (:analysis db)
         source-filename (shared/uri->filename uri)
-        source-ns (:name (q/find-namespace-definition-by-filename analysis source-filename))
+        source-ns (:name (q/find-namespace-definition-by-filename db source-filename))
         dest-filename (shared/absolute-path dest-filename db)
-        dest-ns (:name (q/find-namespace-definition-by-filename analysis dest-filename))
+        dest-ns (:name (q/find-namespace-definition-by-filename db dest-filename))
         inner-usages (var-usages-within zloc uri db)
         ;; if source-ns things are used within the form
         ;; we can't move it
@@ -122,7 +117,7 @@
                        single-def?)]
     (when can-move?
       (let [def-to-move (first defs)
-            refs (q/find-references analysis def-to-move false)
+            refs (q/find-references db def-to-move false)
             dest-refs (filter (comp #(= % dest-filename) :filename) refs)
             per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
             dest-uri (shared/filename->uri dest-filename db)
@@ -162,7 +157,7 @@
                                                                             local-analysis))
                                                 namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
                                                                         (str dest-ns)
-                                                                        (f.add-missing-libspec/find-alias-ns-pairs analysis uri))
+                                                                        (f.add-missing-libspec/find-alias-ns-pairs db uri))
                                                 suggestion (if dest-require
                                                              {:alias (str (:alias dest-require))}
                                                              (first namespace-suggestions))

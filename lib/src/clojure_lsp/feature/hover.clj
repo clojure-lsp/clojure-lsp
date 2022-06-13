@@ -114,7 +114,6 @@
 
 (defn hover [uri line column db*]
   (let [db @db*
-        analysis (:analysis db)
         filename (shared/uri->filename uri)
         zloc (some-> (f.file-management/force-get-document-text uri db*)
                      (parser/safe-zloc-of-string)
@@ -124,13 +123,13 @@
                                         z/node
                                         meta)
         element (if function-loc-row
-                  (q/find-element-under-cursor analysis filename function-loc-row function-loc-col)
+                  (q/find-element-under-cursor db filename function-loc-row function-loc-col)
                   (loop [try-column column]
-                    (if-let [usage (q/find-element-under-cursor analysis filename line try-column)]
+                    (if-let [usage (q/find-element-under-cursor db filename line try-column)]
                       usage
                       (when (pos? try-column)
                         (recur (dec try-column))))))
-        definition (when element (q/find-definition analysis element))]
+        definition (when element (q/find-definition db element))]
     (cond
       definition
       {:range (shared/->range element)

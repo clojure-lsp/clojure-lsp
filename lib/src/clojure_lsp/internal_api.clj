@@ -405,11 +405,8 @@
         from-name (when-not ns-only? (symbol (name from)))
         from-ns (if ns-only?
                   from
-                  (symbol (namespace from)))
-        project-analysis (into {} q/filter-project-analysis-xf (:analysis db))]
-    (if-let [from-element (if ns-only?
-                            (q/find-namespace-definition-by-namespace project-analysis from-ns)
-                            (q/find-element-by-full-name project-analysis from-name from-ns))]
+                  (symbol (namespace from)))]
+    (if-let [from-element (q/find-element-for-rename db from-ns from-name)]
       (let [uri (shared/filename->uri (:filename from-element) db)]
         (open-file! {:uri uri :namespace from-ns} components)
         (let [{:keys [error document-changes]} (f.rename/rename-from-position uri (str to) (:name-row from-element) (:name-col from-element) db*)]

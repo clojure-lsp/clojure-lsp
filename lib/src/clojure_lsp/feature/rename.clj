@@ -44,7 +44,7 @@
         ;; we find the locals analysis since when destructuring we have both
         ;; keyword and a locals analysis for the same position
         local-element (when keys-destructuring
-                        (q/find-local-by-destructured-keyword (:analysis db) filename reference))
+                        (q/find-local-by-destructured-keyword db filename reference))
         text (cond
                (and local-element
                     (string/includes? (:str local-element) "/")
@@ -192,11 +192,11 @@
 (defn prepare-rename
   [uri row col db]
   (let [filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor (:analysis db) filename row col)]
+        element (q/find-element-under-cursor db filename row col)]
     (if-not element
       error-no-element
-      (let [references (q/find-references (:analysis db) element true)
-            definition (q/find-definition (:analysis db) element)
+      (let [references (q/find-references db element true)
+            definition (q/find-definition db element)
             source-paths (settings/get db [:source-paths])
             client-capabilities (:client-capabilities db)
             {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
@@ -206,8 +206,8 @@
 
 (defn rename-element [uri new-name db* filename element source]
   (let [db @db*
-        references (q/find-references (:analysis db) element true)
-        definition (q/find-definition (:analysis db) element)
+        references (q/find-references db element true)
+        definition (q/find-definition db element)
         source-paths (settings/get db [:source-paths])
         client-capabilities (:client-capabilities db)
         {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
@@ -239,7 +239,7 @@
   [uri new-name row col db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor (:analysis db) filename row col)]
+        element (q/find-element-under-cursor db filename row col)]
     (if-not element
       error-no-element
       (rename-element uri new-name db* filename element :rename))))

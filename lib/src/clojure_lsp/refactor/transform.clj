@@ -243,11 +243,10 @@
 
 (defn ^:private widest-scoped-local [zloc uri db]
   (let [z-meta (meta (z/node zloc))
-        analysis (:analysis db)
-        local-defs (->> (q/find-local-usages-under-form analysis
+        local-defs (->> (q/find-local-usages-under-form db
                                                         (shared/uri->filename uri)
                                                         z-meta)
-                        (map #(q/find-definition analysis %)))]
+                        (map #(q/find-definition db %)))]
     (reduce
       (fn [accum d]
         (if (or (not accum)
@@ -449,8 +448,8 @@
               {defn-col :col} (meta (z/node form-loc))
 
               fn-sym (symbol fn-name)
-              clj-analysis (unify-to-one-language (:analysis db))
-              used-syms (->> (q/find-local-usages-under-form clj-analysis
+              scoped-db (update db :analysis unify-to-one-language)
+              used-syms (->> (q/find-local-usages-under-form scoped-db
                                                              (shared/uri->filename uri)
                                                              expr-meta)
                              (mapv :name))
@@ -635,7 +634,7 @@
                            (z/right)))
         ;; Prepend locals to param lists.
         ;; We prepend because it works whether replacing with `partial` or `#()`.
-        used-locals (->> (q/find-local-usages-under-form (:analysis db)
+        used-locals (->> (q/find-local-usages-under-form db
                                                          (shared/uri->filename uri)
                                                          fn-form-meta)
                          (map :name))
@@ -733,9 +732,9 @@
 
 (defn inline-symbol
   [uri line column db]
-  (let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename uri) line column)]
+  (let [definition (q/find-definition-from-cursor db (shared/uri->filename uri) line column)]
     (when-let [op (inline-symbol? definition db)]
-      (let [references (q/find-references-from-cursor (:analysis db) (shared/uri->filename uri) line column false)
+      (let [references (q/find-references-from-cursor db (shared/uri->filename uri) line column false)
             def-uri    (shared/filename->uri (:filename definition) db)
             ;; TODO: use safe-zloc-of-file and handle nils
             def-loc    (some-> (parser/zloc-of-file db def-uri)
@@ -776,8 +775,8 @@
     (let [z-sexpr (z/sexpr zloc)
           z-name (name z-sexpr)
           z-ns (namespace z-sexpr)]
-      (if-let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol z-ns))]
-        (if-let [ns-def (q/find-definition (:analysis db) ns-usage)]
+      (if-let [ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol z-ns))]
+        (if-let [ns-def (q/find-definition db ns-usage)]
           (when-not (:external? ns-def)
             {:ns (:name ns-def)
              :name z-name})
@@ -799,9 +798,9 @@
 
 (defn ^:private create-function-for-alias
   [local-zloc ns-or-alias fn-name defn-edit uri db]
-  (let [ns-usage (q/find-namespace-usage-by-alias (:analysis db) (shared/uri->filename uri) (symbol ns-or-alias))
+  (let [ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol ns-or-alias))
         ns-definition (when ns-usage
-                        (q/find-definition (:analysis db) ns-usage))
+                        (q/find-definition db ns-usage))
         source-paths (settings/get db [:source-paths])
         def-uri (cond
                   ns-definition

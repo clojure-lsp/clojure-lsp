@@ -35,7 +35,7 @@
 
 (defn prepare [uri row col db*]
   (let [db @db*
-        cursor-element (q/find-element-under-cursor (:analysis db) (shared/uri->filename uri) row col)]
+        cursor-element (q/find-element-under-cursor db (shared/uri->filename uri) row col)]
     [(element-by-uri->call-hierarchy-item
        {:uri uri
         :usage-element cursor-element
@@ -54,11 +54,11 @@
       (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
         {:uri uri
          :usage-element element
-         :parent-element (q/find-element-under-cursor (:analysis db) filename parent-row parent-col)}))))
+         :parent-element (q/find-element-under-cursor db filename parent-row parent-col)}))))
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
-  (when-let [definition (q/find-definition (:analysis db) element)]
+  (when-let [definition (q/find-definition db element)]
     (let [def-filename (:filename definition)
           definition-uri (if (shared/plain-uri? def-filename)
                            def-filename
@@ -68,7 +68,7 @@
        :parent-element definition})))
 
 (defn incoming [uri row col db*]
-  (->> (q/find-references-from-cursor (:analysis @db*) (shared/uri->filename uri) row col false)
+  (->> (q/find-references-from-cursor @db* (shared/uri->filename uri) row col false)
        (map (partial element->incoming-usage-by-uri db*))
        (remove nil?)
        (mapv (fn [element-by-uri]
@@ -81,13 +81,12 @@
                      (parser/zloc-of-string) ;; throws on invalid Clojure
                      (parser/to-pos row col))
         db @db*
-        analysis (:analysis db)
         {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename db)
                                                   z/node
                                                   meta)]
     (when (and parent-row parent-col)
-      (let [definition (q/find-element-under-cursor analysis filename parent-row parent-col)]
-        (->> (q/find-var-usages-under-form analysis
+      (let [definition (q/find-element-under-cursor db filename parent-row parent-col)]
+        (->> (q/find-var-usages-under-form db
                                            filename
                                            (:name-row definition)
                                            (:name-col definition)

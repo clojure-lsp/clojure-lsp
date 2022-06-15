@@ -10,6 +10,8 @@
   - Remove deprecated disabled setting `:linters :clj-kondo :async-custom-lint?`. #1017
   - Fix references and code lens of defrecord/deftype for cljs files. #1055
   - Fix clean-ns to move reader conditionals to before normal requires. #1057
+  - Improve system wide performance by keeping a graph of dependencies between namespaces. #990 #1053
+    Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
 
 - Editor
   - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978

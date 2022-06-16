@@ -89,7 +89,10 @@
     analysis))
 
 (defn db-with-analysis [db f & args]
-  (assoc db :analysis (apply f db args)))
+  (let [analysis (apply f db args)]
+    (-> db
+        (assoc :analysis analysis)
+        (update :file-meta #(select-keys % (keys analysis))))))
 
 (defn db-with-internal-analysis [db]
   (db-with-analysis db internal-analysis))

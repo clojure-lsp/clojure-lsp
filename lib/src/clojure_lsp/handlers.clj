@@ -4,6 +4,7 @@
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.code-actions :as f.code-actions]
@@ -31,8 +32,7 @@
    [clojure.pprint :as pprint]
    [lsp4clj.protocols.feature-handler :as feature-handler]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
-   [clojure-lsp.dep-graph :as dep-graph]))
+   [lsp4clj.protocols.producer :as producer]))
 
 (set! *warn-on-reflection* true)
 

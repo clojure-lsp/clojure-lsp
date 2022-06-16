@@ -189,55 +189,57 @@
      :end-row end-row :end-col end-col}))
 
 (defn ^:private edited-nodes [before earlier-clause later-clause after]
-  (let [final-trailing (concat earlier-clause after)
-        trailing-comment-fix (when (some-> final-trailing last n/comment?)
-                               (let [orig-leading (concat before earlier-clause)
-                                     col (:col (meta (first orig-leading)))]
+  (let [trailing-node (or (last after) (last earlier-clause))
+        trailing-comment-fix (when (some-> trailing-node n/comment?)
+                               (let [orig-leading-node (or (first before) (first earlier-clause))
+                                     col (:col (meta orig-leading-node))]
                                  [(n/newline-node "\n") (n/spaces (dec col))]))]
-    ;; The actual swap. Puts the later clause where the earlier was, and
-    ;; vice-versa.
+    ;; The actual swap.
     [{:range (clause-range earlier-clause)
       :loc (loc-of-clause later-clause)}
      {:range (clause-range later-clause)
       :loc (loc-of-clause (concat earlier-clause trailing-comment-fix))}]))
 
-(defn ^:private bottom-position
-  "Returns the position where the cursor should be placed after the swap in
-  order to end up at the top of the (eventual) bottom clause.
+(defn ^:private start-point [node]
+  (let [{:keys [row col]} (meta node)]
+    [row col]))
 
-  This is calculated by starting at the `top-position`, and adjusting by adding
-  the extent of the `intervening-nodes`. The extent is calculated by re-parsing
-  the intervening nodes, counting their rows and columns by looking at their
-  string representations. This is probably slow, but it avoids needing to use
-  {:track-position? true} in the parser. If someday this project uses
-  :track-position?, this code probably should be changed to read the revised
-  position of the original zloc."
-  [top-position intervening-nodes]
-  (let [[bottom-row bottom-col]
-        (reduce (fn [pos node]
-                  (n.protocols/+extent pos (n.protocols/extent node)))
-                [(:row top-position) (:col top-position)]
-                intervening-nodes)]
-    {:row bottom-row
-     :col bottom-col}))
+(defn ^:private end-point [node]
+  (let [{:keys [end-row end-col]} (meta node)]
+    [end-row end-col]))
 
-(defn ^:private final-position [dir cursor-offset earlier-clause interstitial later-clause]
-  (let [top-position (meta (first earlier-clause))
-        {:keys [row col]}
-        (case dir
-          :backward top-position
-          :forward (bottom-position top-position (concat later-clause interstitial)))
-        [row col] (n.protocols/+extent [row col] cursor-offset)]
-    {:row row :col col
-     :end-row row :end-col col}))
-
-(defn ^:private offset [{clause-row :row clause-col :col} {cursor-row :row cursor-col :col}]
+(defn ^:private offset [[first-row first-col] [second-row second-col]]
   ;; See n.protocols/extent
-  (let [rows (- cursor-row clause-row)]
+  (let [rows (- second-row first-row)]
     [rows
      (if (zero? rows)
-       (- cursor-col clause-col)
-       cursor-col)]))
+       (- second-col first-col)
+       second-col)]))
+
+(defn ^:private nodes-offset [nodes]
+  (offset (start-point (first nodes)) (end-point (last nodes))))
+
+(defn ^:private later-point
+  "Returns the point where the cursor should be placed after the swap in order
+  to end up at the top of the (eventual) later clause.
+
+  This is calculated by starting at the `earlier-point`, and adjusting by adding
+  the extents of the nodes that sit between it and the later clause."
+  [earlier-point new-earlier-clause interstitial]
+  (reduce n.protocols/+extent
+          earlier-point
+          [(nodes-offset new-earlier-clause)
+           (nodes-offset interstitial)]))
+
+(defn ^:private final-position [dir cursor-offset earlier-clause interstitial later-clause]
+  (let [earlier-point (start-point (first earlier-clause))
+        final-clause-point
+        (case dir
+          :backward earlier-point
+          :forward (later-point earlier-point later-clause interstitial))
+        [row col] (n.protocols/+extent final-clause-point cursor-offset)]
+    {:row row :col col
+     :end-row row :end-col col}))
 
 (defn ^:private drag-clause
   "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
@@ -272,8 +274,9 @@
                            :nodes clause-nodes
                            :origin? origin?
                            :cursor-offset (when origin?
-                                            (offset (meta (first clause-nodes))
-                                                    cursor-position))}
+                                            (offset (start-point (first clause-nodes))
+                                                    [(:row cursor-position)
+                                                     (:col cursor-position)]))}
                           ;; padding
                           {:nodes padding-nodes}]))))
         origin-clause (->> clauses+padding (filter :origin?) first)]

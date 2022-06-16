@@ -12,7 +12,7 @@
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! go go-loop]]
+   [clojure.core.async :refer [<! <!! go go-loop]]
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.components :as components]
@@ -204,6 +204,43 @@
                     "serverInfo" true
                     "clojuredocs" true}}))
 
+(defn ^:private safe-async-task [task-name task-fn]
+  (go-loop []
+    (try
+      (task-fn)
+      (catch Exception e
+        (logger/error e (format "Error during async task %s" task-name))))
+    (recur)))
+
+(defn ^:private spawn-async-tasks!
+  [{:keys [producer] :as components}]
+  (let [debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
+        debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
+        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
+    (safe-async-task
+      :edits
+      (fn []
+        (let [edit (<!! db/edits-chan)]
+          (producer/publish-workspace-edit producer edit))))
+    (safe-async-task
+      :diagnostics
+      (fn []
+        (producer/publish-diagnostic producer (<!! debounced-diags))))
+    (safe-async-task
+      :changes
+      (fn []
+        (let [changes (<!! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
+          (shared/logging-task
+            :analyze-file
+            (f.file-management/analyze-changes changes components)))))
+    (safe-async-task
+      :watched-files
+      (fn []
+        (let [created-watched-files (<! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+          (shared/logging-task
+            :analyze-created-files-in-watched-dir
+            (f.file-management/analyze-watched-created-files! created-watched-files components)))))))
+
 (defonce ^:private components* (atom {}))
 
 (defn run-server! []
@@ -229,36 +266,10 @@
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db*)
-                                       db*)
-        debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
-        debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
-        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
+                                       db*)]
     ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
     (reset! producer* producer)
     (swap! components* assoc :producer producer)
     (nrepl/setup-nrepl db*)
-    (go-loop [edit (<! db/edits-chan)]
-      (producer/publish-workspace-edit producer edit)
-      (recur (<! db/edits-chan)))
-    (go-loop []
-      (producer/publish-diagnostic producer (<! debounced-diags))
-      (recur))
-    (go-loop []
-      (try
-        (let [changes (<! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
-          (shared/logging-task
-            :analyze-file
-            (f.file-management/analyze-changes changes @components*)))
-        (catch Exception e
-          (logger/error e "Error during analyzing buffer file changes")))
-      (recur))
-    (go-loop []
-      (try
-        (let [created-watched-files (<! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
-          (shared/logging-task
-            :analyze-created-files-in-watched-dir
-            (f.file-management/analyze-watched-created-files! created-watched-files @components*)))
-        (catch Exception e
-          (logger/error e "Error during analyzing created watched files")))
-      (recur))
+    (spawn-async-tasks! @components*)
     (.startListening launcher)))

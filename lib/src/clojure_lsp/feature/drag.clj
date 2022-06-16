@@ -361,8 +361,9 @@
                                               :name-end-row end-row
                                               :name-end-col end-col}]
                                    #(shared/inside? % scope)))
-                  elements (filter (enclosed-by? (z/node vector-zloc))
-                                   (get-in db [:analysis (shared/uri->filename uri)]))]
+                  elements (->> (get-in db [:analysis (shared/uri->filename uri)])
+                                (mapcat val)
+                                (filter (enclosed-by? (z/node vector-zloc))))]
               (->> child-nodes
                    (partition 2)
                    (every? (fn [[lvar rvar]]

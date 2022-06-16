@@ -47,8 +47,9 @@
 (defn workspace-symbols [query db]
   ;; TODO refactor to be a complete transducer
   (->> (q/internal-analysis db)
-       (mapcat val)
-       (filter f.document-symbol/declaration?)
+       (map val)
+       (mapcat (fn [buckets]
+                 (mapcat buckets f.document-symbol/declaration-buckets)))
        (fuzzy-filter query)
        (mapv (fn [element]
                {:name (-> element :name name)

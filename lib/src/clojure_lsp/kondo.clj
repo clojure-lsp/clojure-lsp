@@ -74,9 +74,19 @@
       (update :findings merge findings)
       (assoc :kondo-config config)))
 
-(defn entry->normalized-entries [{:keys [bucket arglist-strs] :as element}]
-  (cond
-    (identical? :var-definitions bucket)
+;;;; Normalization
+
+;; The analysis we get back from clj-kondo is indexed by bucket
+;; {(bucket [element+])*}
+;; We re-index by filename then bucket
+;; {(filename {(bucket [element+])+})*}
+;; We also normalize elements somewhat, changing their keys, and even spliting
+;; some into two elements. As such, the buckets we get from clj-kondo aren't
+;; exactly the same as the buckets we have in our db.
+
+(defn ^:private element->normalized-elements [{:keys [bucket arglist-strs] :as element}]
+  (case bucket
+    :var-definitions
     [(-> element
          (shared/assoc-some :arglist-kws (->> arglist-strs
                                               (keep (fn [arglist-str]
@@ -85,23 +95,25 @@
                                                         (catch Exception _ nil))))
                                               seq)))]
 
-    ;; We create two entries here (and maybe more for refer)
-    (identical? :namespace-usages bucket)
+    ;; We create two elements here (and maybe more for refer)
+    :namespace-usages
     (cond-> [(set/rename-keys element {:to :name})]
       (:alias element)
-      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
-                                                                       :alias-col :name-col
-                                                                       :alias-end-row :name-end-row
-                                                                       :alias-end-col :name-end-col})))
+      (conj (-> element
+                (assoc :bucket :namespace-alias)
+                (set/rename-keys {:alias-row     :name-row
+                                  :alias-col     :name-col
+                                  :alias-end-row :name-end-row
+                                  :alias-end-col :name-end-col}))))
 
-    (contains? #{:locals :local-usages :keywords} bucket)
+    (:locals :local-usages :keywords)
     [(-> element
          (assoc :name-row (or (:name-row element) (:row element))
                 :name-col (or (:name-col element) (:col element))
                 :name-end-row (or (:name-end-row element) (:end-row element))
                 :name-end-col (or (:name-end-col element) (:end-col element))))]
 
-    (identical? :java-class-definitions bucket)
+    :java-class-definitions
     [(-> element
          (dissoc :uri)
          (assoc :name-row 0
@@ -109,7 +121,7 @@
                 :name-end-row 0
                 :name-end-col 0))]
 
-    (identical? :java-class-usages bucket)
+    :java-class-usages
     [(-> element
          (dissoc :uri)
          (assoc :name-row (or (:name-row element) (:row element))
@@ -117,7 +129,6 @@
                 :name-end-row (or (:name-end-row element) (:end-row element))
                 :name-end-col (or (:name-end-col element) (:end-col element))))]
 
-    :else
     [element]))
 
 (defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
@@ -127,11 +138,22 @@
        name-end-col))
 
 (defn ^:private normalize-analysis [external? analysis]
-  (for [[bucket vs] analysis
-        v vs
-        element (entry->normalized-entries (assoc v :bucket bucket :external? external?))
-        :when (valid-element? element)]
-    element))
+  (reduce-kv
+    (fn [result kondo-bucket kondo-elements]
+      (transduce
+        (comp
+          (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?)))
+          (filter valid-element?))
+        (completing
+          (fn [result {:keys [filename bucket] :as element}]
+            ;; intentionally use element bucket, since it may have been
+            ;; normalized to something besides kondo-bucket
+            (update-in result [filename bucket] (fnil conj []) element)))
+        result
+        kondo-elements))
+    ;; TODO: Can result be a transient?
+    {}
+    analysis))
 
 (defn ^:private normalize
   "Put kondo result in a standard format, with `analysis` normalized and
@@ -140,10 +162,9 @@
    {:keys [external? ensure-filenames filter-analysis] :or {filter-analysis identity}}]
   (let [analysis (->> analysis
                       filter-analysis
-                      (normalize-analysis external?)
-                      (group-by :filename))
+                      (normalize-analysis external?))
         analysis (reduce (fn [analysis filename]
-                           (update analysis filename #(or % [])))
+                           (update analysis filename #(or % {})))
                          analysis
                          ensure-filenames)
         filenames (keys analysis)

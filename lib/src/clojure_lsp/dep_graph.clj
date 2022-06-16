@@ -269,43 +269,36 @@
     :name cljs.core})
 
 (defn ^:private ns-definitions-and-usages [analysis]
-  (letfn [(result-with-element [result element]
-            (let [result (if (= 'user (:ns element))
-                           (assoc result :in-user true)
-                           result)]
-              (case (:bucket element)
-                :namespace-definitions (update result :defs conj element)
-                :namespace-usages      (update result :usages conj element)
-                :var-usages            (case (:to element)
-                                         clojure.core (update result :to-clj conj (:from element))
-                                         cljs.core    (update result :to-cljs conj (:from element))
-                                         result)
-                result)))]
-    (let [{:keys [defs usages]}
-          (reduce-kv (fn [result filename elements]
-                       (let [result (reduce result-with-element
-                                            (assoc result
-                                                   :in-user false
-                                                   :to-clj #{}
-                                                   :to-cljs #{})
-                                            elements)
-                             implicit-elements (concat
-                                                 (when (:in-user result)
-                                                   [(assoc user-ns-def :filename filename)])
-                                                 (map (fn [from-ns]
-                                                        (assoc clojure-core-ns-usage
-                                                               :from from-ns
-                                                               :filename filename))
-                                                      (:to-clj result))
-                                                 (map (fn [from-ns]
-                                                        (assoc cljs-core-ns-usage
-                                                               :from from-ns
-                                                               :filename filename))
-                                                      (:to-cljs result)))]
-                         (reduce result-with-element result implicit-elements)))
-                     {:defs [] :usages []}
-                     analysis)]
-      [defs usages])))
+  (let [{:keys [defs usages]}
+        (reduce-kv (fn [result filename {:keys [var-definitions namespace-definitions var-usages namespace-usages]}]
+                     (let [in-user? (some #(= 'user (:ns %)) var-definitions)
+                           defs (cond-> namespace-definitions
+                                  in-user? (conj (assoc user-ns-def :filename filename)))
+                           core (->> var-usages
+                                     (reduce (fn [result element]
+                                               (case (:to element)
+                                                 clojure.core (update result :to-clj conj (:from element))
+                                                 cljs.core    (update result :to-cljs conj (:from element))
+                                                 result))
+                                             {:to-clj #{}
+                                              :to-cljs #{}}))
+                           usages (concat namespace-usages
+                                          (map (fn [from-ns]
+                                                 (assoc clojure-core-ns-usage
+                                                        :from from-ns
+                                                        :filename filename))
+                                               (:to-clj core))
+                                          (map (fn [from-ns]
+                                                 (assoc cljs-core-ns-usage
+                                                        :from from-ns
+                                                        :filename filename))
+                                               (:to-cljs core)))]
+                       (-> result
+                           (update :defs into defs)
+                           (update :usages into usages))))
+                   {:defs [] :usages []}
+                   analysis)]
+    [defs usages]))
 
 (defn refresh-analysis [db old-analysis new-analysis internal?]
   ;; NOTE: When called during startup this takes a little time (500ms in medium

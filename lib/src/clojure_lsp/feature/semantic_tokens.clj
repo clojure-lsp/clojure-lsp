@@ -216,15 +216,17 @@
        doall))
 
 (defn full-tokens [uri db]
-  (let [elements (get-in db [:analysis (shared/uri->filename uri)])]
-    (->> elements
+  (let [buckets (get-in db [:analysis (shared/uri->filename uri)])]
+    (->> buckets
+         (mapcat val)
          elements->absolute-tokens
          absolute-tokens->relative-tokens)))
 
 (defn range-tokens
   [uri range db]
-  (let [elements (get-in db [:analysis (shared/uri->filename uri)])]
-    (->> elements
+  (let [buckets (get-in db [:analysis (shared/uri->filename uri)])]
+    (->> buckets
+         (mapcat val)
          (filter #(element-inside-range? % range))
          elements->absolute-tokens
          absolute-tokens->relative-tokens)))

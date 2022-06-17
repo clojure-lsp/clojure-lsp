@@ -6,7 +6,7 @@
                               io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
                                                              :tag "v0.8.2"
                                                              :sha "ba1a2bf"}}}
-           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.66.1034"}}
+           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.67.1055"}}
                   :extra-paths ["lib/src"
                                 "cli/src"
                                 "common-test/src"

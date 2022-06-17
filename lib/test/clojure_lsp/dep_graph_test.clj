@@ -231,8 +231,7 @@
     (load-code "/aaa.clj" "(ns aaa)")
     (h/load-code-and-locs "(ns bbb)" (h/file-uri "jar:file:///some.jar!/bbb.clj"))
     (let [db @db/db*]
-      (is (= ["/aaa.clj"] (dep-graph/internal-files db)))
-      (is (= ["/some.jar:bbb.clj"] (dep-graph/external-files db)))))
+      (is (= ["/aaa.clj"] (dep-graph/internal-files db)))))
   (testing "namespaces defined internally and externally"
     (h/clean-db!)
     (load-code "/aaa.clj" "(ns aaa)")
@@ -240,8 +239,7 @@
     (let [db @db/db*]
       (is (= #{"/aaa.clj" "/some.jar:aaa.clj"} (dep-graph/ns-files db 'aaa)))
       (is (= ["/aaa.clj"] (dep-graph/ns-internal-files db 'aaa)))
-      (is (= ["/aaa.clj"] (dep-graph/internal-files db)))
-      (is (= ["/some.jar:aaa.clj"] (dep-graph/external-files db)))))
+      (is (= ["/aaa.clj"] (dep-graph/internal-files db)))))
   (testing "file with multiple namespaces"
     (h/clean-db!)
     (load-code "/aaa.clj"

@@ -28,7 +28,9 @@
 
 (defn internal-analysis [{:keys [analysis] :as db}]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/internal-files db))
+    (medley/filter-keys
+      #(dep-graph/file-internal? db %)
+      analysis)
     (medley/remove-vals
       (fn [elems]
         (:external? (first elems)))
@@ -36,7 +38,9 @@
 
 (defn external-analysis [{:keys [analysis] :as db}]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/external-files db))
+    (medley/remove-keys
+      #(dep-graph/file-internal? db %)
+      analysis)
     (medley/filter-vals
       (fn [elems]
         (:external? (first elems)))
@@ -89,10 +93,7 @@
     analysis))
 
 (defn db-with-analysis [db f & args]
-  (let [analysis (apply f db args)]
-    (-> db
-        (assoc :analysis analysis)
-        (update :file-meta #(select-keys % (keys analysis))))))
+  (assoc db :analysis (apply f db args)))
 
 (defn db-with-internal-analysis [db]
   (db-with-analysis db internal-analysis))

@@ -115,7 +115,7 @@
 (def ^:private s-conj (fnil conj #{}))
 (def ^:private s-disj (fnil disj #{}))
 
-(defn ^:private file-internal? [db filename]
+(defn file-internal? [db filename]
   (get-in db [:file-meta filename :internal?]))
 
 (defn ^:private update-usage [db f {:keys [from name alias filename] :as element}]
@@ -293,9 +293,4 @@
 (defn internal-files [{:keys [file-meta]}]
   (into []
         (comp internal-xf (map key))
-        file-meta))
-
-(defn external-files [{:keys [file-meta]}]
-  (into []
-        (comp external-xf (map key))
         file-meta))

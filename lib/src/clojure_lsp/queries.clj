@@ -68,9 +68,11 @@
 
 (defn var-definition-names [{:keys [defined-by name]}]
   (case defined-by
-    clojure.core/defrecord
+    (clojure.core/defrecord
+     cljs.core/defrecord)
     , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
-    clojure.core/deftype
+    (clojure.core/deftype
+     cljs.core/deftype)
     , #{name (symbol (str "->" name))}
     , #{name}))
 
@@ -465,10 +467,12 @@
                   (or include-private?
                       (not (get % :private)))))
     (medley/distinct-by (juxt :ns :name :row :col))
-    (remove #(or (and (safe-equal? 'clojure.core/defrecord (:defined-by %))
+    (remove #(or (and (#{'clojure.core/defrecord
+                         'cljs.core/defrecord} (:defined-by %))
                       (or (string/starts-with? (str (:name %)) "->")
                           (string/starts-with? (str (:name %)) "map->")))
-                 (and (safe-equal? 'clojure.core/deftype (:defined-by %))
+                 (and (#{'clojure.core/deftype
+                         'cljs.core/deftype} (:defined-by %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
 (defn find-var-definitions [db filename include-private?]

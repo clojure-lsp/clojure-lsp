@@ -82,7 +82,7 @@
                                       (-> node n/children first n/string string/lower-case)
 
                                       ;; we should move cljc reader conditionals before normal requires,
-                                      ;; prepending 0 will make those come before normal requires (because of ascii table),
+                                      ;; returning 0 we make sure those come before normal requires (because of ascii table),
                                       ;; is there a better way to do this?
                                       ;;
                                       ;; #1057 There are multiple ways to sort a reader conditional, so we keep the user order,

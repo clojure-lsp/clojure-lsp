@@ -12,7 +12,7 @@
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! <!! go go-loop]]
+   [clojure.core.async :refer [<!! go go-loop]]
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.components :as components]
@@ -236,7 +236,7 @@
     (safe-async-task
       :watched-files
       (fn []
-        (let [created-watched-files (<! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+        (let [created-watched-files (<!! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
           (shared/logging-task
             :analyze-created-files-in-watched-dir
             (f.file-management/analyze-watched-created-files! created-watched-files components)))))))

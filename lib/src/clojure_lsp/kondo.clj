@@ -58,6 +58,10 @@
   [db {:keys [analysis external?]}]
   (-> db
       (update :analysis merge analysis)
+      ;; Whenever the analysis is updated, we refresh the dep graph. This is the
+      ;; only place this is done, so to keep the dep graph in sync with the
+      ;; analysis, everything that puts analysis in the db must either call this
+      ;; function or db-with-results, which calls this function.
       (dep-graph/refresh-analysis (select-keys (:analysis db) (keys analysis))
                                   analysis
                                   (not external?))))

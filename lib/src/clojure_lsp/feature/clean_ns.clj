@@ -81,6 +81,15 @@
                                            (first (n/children node)))
                                       (-> node n/children first n/string string/lower-case)
 
+                                      ;; we should move cljc reader conditionals before normal requires,
+                                      ;; prepending 0 will make those come before normal requires (because of ascii table),
+                                      ;; is there a better way to do this?
+                                      ;;
+                                      ;; #1057 There are multiple ways to sort a reader conditional, so we keep the user order,
+                                      ;; but just move them to top
+                                      (identical? :reader-macro tag)
+                                      "0"
+
                                       :else
                                       (some-> node n/sexpr first string/lower-case))))
                                 form-type

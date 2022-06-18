@@ -1923,8 +1923,9 @@
 <li>Add <code>compute-external-file-changes</code> setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002</li>
 <li>Bump lsp4clj to 0.4.1.</li>
 <li>Remove deprecated disabled setting <code>:linters :clj-kondo :async-custom-lint?</code>. #1017</li>
+<li>Fix references and code lens of defrecord/deftype for cljs files. #1055</li>
 <li>
-<p>Fix references and code lens of defrecord/deftype for cljs files. #1055</p>
+<p>Fix clean-ns to move reader conditionals to before normal requires. #1057</p>
 </li>
 <li>
 <p>Editor</p>

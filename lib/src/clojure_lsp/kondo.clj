@@ -311,20 +311,6 @@
            (reduce shared/deep-merge)))))
 
 (defn run-kondo-on-reference-filenames! [filenames db*]
-  ;; TODO: We process the dependent and dependency files together, but we could
-  ;; be more efficient by processing them separately.
-  ;;
-  ;; The dependents may have been affected by changes to var definitions. Since
-  ;; some var definition data is copied to var usage data, this will change
-  ;; their analysis slightly. They may also gain or lose lint like
-  ;; unresolved-var or invalid-arity.
-  ;;
-  ;; The dependencies may have been affected by changes to var usages. Their
-  ;; analysis won't have changed, but they may gain or lose unused-public-var
-  ;; lint.
-  ;;
-  ;; So, we could send the dependents to kondo, bypassing custom-lint. And we
-  ;; could send the dependencies through custom-linting, bypassing kondo.
   (let [db @db*
         normalization-config {:external? false
                               :ensure-filenames filenames}

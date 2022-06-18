@@ -454,7 +454,7 @@
                                                              expr-meta)
                              (mapv :name))
               expr-edit (z/of-node (list* fn-sym used-syms))
-              private? false ;; TODO: shouldn't this be true?
+              private? false ;; TODO: shouldn't this be true? See https://github.com/clojure-lsp/clojure-lsp/issues/1039
               defn-loc (new-defn-zloc fn-sym private? used-syms
                                       [(n/newlines 1)
                                        (n/spaces (+ defn-col 1))
@@ -776,6 +776,7 @@
           z-name (name z-sexpr)
           z-ns (namespace z-sexpr)
           ;; TODO: shouldn't this also look for unaliased ns-usages?
+          ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
           ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol z-ns))
           ns-def (when ns-usage
                    (q/find-definition db ns-usage))]
@@ -807,6 +808,7 @@
   [local-zloc ns-or-alias fn-name defn-edit uri db]
   (let [filename (shared/uri->filename uri)
         ;; TODO: shouldn't this also look for unaliased ns-usages?
+        ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
         ns-usage (q/find-namespace-usage-by-alias db filename (symbol ns-or-alias))
         ns-definition (when ns-usage
                         (q/find-definition db ns-usage))

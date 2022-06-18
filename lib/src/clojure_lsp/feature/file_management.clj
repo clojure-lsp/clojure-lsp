@@ -44,6 +44,9 @@
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
       (async/>!! db/edits-chan create-ns-edits))))
 
+;; See https://github.com/clojure-lsp/clojure-lsp/issues/1019
+;; This includes increases and decreases as changed elems, but since those won't
+;; change lint, we should limit to additions and removals.
 (defn ^:private find-changed-elems-by
   "Detect elements that changed number of occurrences."
   [signature-fn old-elems new-elems]
@@ -84,7 +87,8 @@
 ;; TODO: this neglects to detect changes to the usages of registered keywords,
 ;; and to notify files where they are registered. Fixing this probably means we
 ;; have to use (:analysis project-db) instead of (q/file-dependencies-analysis
-;; project-db filename), which will hurt performance.
+;; project-db filename), which will hurt performance. See
+;; https://github.com/clojure-lsp/clojure-lsp/issues/1018
 (defn reference-filenames [filename db-before db-after]
   (let [old-local-elements (get-in db-before [:analysis filename])
         new-local-elements (get-in db-after [:analysis filename])
@@ -124,8 +128,8 @@
                                                     (some usage-langs (q/elem-langs %))))
                                          (map :filename))
                                        (q/file-dependencies-analysis project-db filename))))]
-    ;; TODO: see note on `clojure-lsp.kondo/run-kondo-on-reference-filenames!`
-    ;; We may want to handle these two sets of files differently
+    ;; TODO: see note on `notify-references` We may want to handle these two
+    ;; sets of files differently.
     (set/union (or dependent-filenames #{})
                (or dependency-filenames #{}))))
 
@@ -140,6 +144,25 @@
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task
             :reference-files/analyze
+            ;; TODO: We process the dependent and dependency files together, but
+            ;; it may be possible to be more efficient by processing them
+            ;; separately.
+            ;;
+            ;; The dependents may have been affected by changes to var
+            ;; definitions. Since some var definition data is copied to var
+            ;; usage data, this will change their analysis slightly. They may
+            ;; also gain or lose clj-kondo lint like unresolved-var or
+            ;; invalid-arity.
+            ;;
+            ;; The dependencies may have been affected by changes to var usages.
+            ;; Their analysis won't have changed, but they may gain or lose
+            ;; custom unused-public-var lint.
+            ;;
+            ;; So, we could send the dependents to kondo, bypassing custom-lint.
+            ;; And we could send the dependencies to custom-lint, bypassing
+            ;; kondo. See
+            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
+            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
             (crawler/analyze-reference-filenames! filenames db*))
           (let [db @db*]
             (doseq [filename filenames]

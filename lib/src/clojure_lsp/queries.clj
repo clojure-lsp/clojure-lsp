@@ -377,9 +377,10 @@
   [db element]
   (if (= 'potemkin/import-vars (:defined-by element))
     ;; FIXME: this is buggy... it goes to **any** definition with the same name,
-    ;; not specifically the one from the imported ns.
-    ;; TODO: use :imported-ns and :imported-var, and treat this like a var-usage
-    ;; Don't forget to switch from db to (db-with-ns-analysis db
+    ;; not specifically the one from the imported ns. See
+    ;; https://github.com/clojure-lsp/clojure-lsp/issues/1020
+    ;; To fix, use :imported-ns and :imported-var, and treat this like a
+    ;; var-usage Don't forget to switch from db to (db-with-ns-analysis db
     ;; (:imported-ns element))
     (find-last-order-by-project-analysis
       #(and (identical? :var-definitions (:bucket %))

@@ -38,9 +38,7 @@
 
 (deftest all-test
   (swap! db/db* shared/deep-merge {:settings {:a {:b {:c 2}}}})
-  (is (= (if (h/use-dep-graph? @db/db*)
-           {:a {:b {:c 2}}, :experimental {:dep-graph-queries true}}
-           {:a {:b {:c 2}}})
+  (is (= {:a {:b {:c 2}}}
          (settings/all @db/db*))))
 
 (deftest get-test

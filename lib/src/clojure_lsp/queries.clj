@@ -21,7 +21,8 @@
 ;; NOTE: Do not make this public. It will make it harder to end the dep-graph
 ;; experiment.
 (defn ^:private use-dep-graph? [db]
-  (settings/get db [:experimental :dep-graph-queries] false))
+  (or (settings/get db [:experimental :dep-graph-queries] false)
+      (= "true" (System/getenv "CLOJURE_LSP_USE_DEP_GRAPH"))))
 
 (def ^:private deprecated-filter-project-analysis-xf ;; works for analysis only
   (remove (comp :external? first val)))

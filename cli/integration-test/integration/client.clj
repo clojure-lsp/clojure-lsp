@@ -195,3 +195,13 @@
                                      #(= method-str (:method %))
                                      :received-requests)]
     (:params msg)))
+
+(defn request-and-await-server-response! [client method body]
+  (let [resp (deref (send-request client method body)
+                    30000
+                    ::timeout)]
+    (if (= ::timeout resp)
+      (do
+        (log client :red "timeout waiting for server response to client request:" method)
+        (throw (ex-info "timeout waiting for server response to client request" {:method method :body body})))
+      resp)))

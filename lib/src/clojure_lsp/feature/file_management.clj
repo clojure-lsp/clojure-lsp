@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.clojure-producer :as clojure-producer]
-   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
@@ -128,6 +127,10 @@
     (set/union (or incoming-filenames #{})
                (or outgoing-filenames #{}))))
 
+(defn analyze-reference-filenames! [filenames db*]
+  (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
+    (swap! db* lsp.kondo/db-with-results result)))
+
 (defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
   (async/go
     (shared/logging-task
@@ -139,7 +142,7 @@
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task
             :reference-files/analyze
-            (crawler/analyze-reference-filenames! filenames db*))
+            (analyze-reference-filenames! filenames db*))
           (let [db @db*]
             (doseq [filename filenames]
               (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))

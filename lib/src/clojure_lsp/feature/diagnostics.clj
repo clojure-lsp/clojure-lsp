@@ -115,8 +115,8 @@
 
 (defn ^:private clj-depend-violations->diagnostics [filename level db]
   (when-let [namespace (shared/filename->namespace filename db)]
-    (mapv (fn [{:keys [message namespace]}]
-            (let [ns-definition (q/find-namespace-definition-by-namespace (:analysis db) namespace)]
+    (mapv (fn [{:keys [message]}]
+            (let [ns-definition (q/find-namespace-definition-by-filename (:analysis db) filename)]
               {:range (shared/->range ns-definition)
                :tags []
                :message message

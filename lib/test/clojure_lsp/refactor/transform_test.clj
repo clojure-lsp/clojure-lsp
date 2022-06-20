@@ -509,7 +509,6 @@
 (defn- extract-function
   ([code new-fn-name] (extract-function code new-fn-name h/default-uri))
   ([code new-fn-name filepath]
-   (h/clean-db!)
    (let [file-uri (h/file-uri filepath)
          zloc     (h/load-code-and-zloc code file-uri)]
      (transform/extract-function zloc
@@ -519,21 +518,23 @@
 
 (deftest extract-function-test
   (testing "simple extract"
-    (are [filepath] (= [(h/code ""
-                                "(defn foo [b]"
-                                "  (let [c 1] (b c)))"
-                                "")
-                        (h/code "(foo b)")]
-                       (as-strings
-                         (extract-function "(defn a [b] (|let [c 1] (b c)))"
-                                           "foo"
-                                           filepath)))
+    (are [filepath] (do
+                      (h/clean-db!)
+                      (= [(h/code ""
+                                  "(defn- foo [b]"
+                                  "  (let [c 1] (b c)))"
+                                  "")
+                          (h/code "(foo b)")]
+                         (as-strings
+                           (extract-function "(defn a [b] (|let [c 1] (b c)))"
+                                             "foo"
+                                             filepath))))
       "file:///a.clj"
       "file:///a.cljc"
       "file:///a.cljs"))
   (testing "multiple locals extract"
     (is (= [(h/code ""
-                    "(defn foo [a]"
+                    "(defn- foo [a]"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]
@@ -541,9 +542,21 @@
                        "  |(+ 1 a))")
                (extract-function "foo")
                as-strings))))
-  (testing "after local usage"
+  (testing "with-setting"
+    (h/clean-db!)
+    (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= [(h/code ""
-                    "(defn foo [b c]"
+                    "(defn ^:private foo []"
+                    "  (inc 1))"
+                    "")
+            (h/code "(foo)")]
+           (-> "(|inc 1)"
+               (extract-function "foo")
+               as-strings))))
+  (testing "after local usage"
+    (h/clean-db!)
+    (is (= [(h/code ""
+                    "(defn- foo [b c]"
                     "  (+ 2 b c))"
                     "")
             (h/code "(foo b c)")]
@@ -551,8 +564,9 @@
                (extract-function "foo")
                as-strings))))
   (testing "On multi-arity function"
+    (h/clean-db!)
     (is (= [(h/code ""
-                    "(defn foo [a b]"
+                    "(defn- foo [a b]"
                     "  (= a b))"
                     "")
             (h/code "(foo a b)")]
@@ -564,8 +578,9 @@
                (extract-function "foo")
                as-strings))))
   (testing "from comment"
+    (h/clean-db!)
     (is (= [(h/code ""
-                    "(defn foo [a]"
+                    "(defn- foo [a]"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]
@@ -576,8 +591,9 @@
                (extract-function "foo")
                as-strings))))
   (testing "from whitespace"
+    (h/clean-db!)
     (is (= [(h/code ""
-                    "(defn foo [a]"
+                    "(defn- foo [a]"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]
@@ -588,8 +604,9 @@
                (extract-function "foo")
                as-strings))))
   (testing "from trailing comment"
+    (h/clean-db!)
     (is (= [(h/code ""
-                    "(defn foo []"
+                    "(defn- foo []"
                     "  (let [a 1 b 2 c 3]"
                     "  (+ 1 a)"
                     "  ;; comment"
@@ -603,9 +620,10 @@
                (extract-function "foo")
                as-strings))))
   (testing "with comments above origin function"
+    (h/clean-db!)
     (h/assert-submaps
       [{:loc   (h/code ""
-                       "(defn foo [b]"
+                       "(defn- foo [b]"
                        "  (let [c 1] (b c)))"
                        "")
         :range {:row 2 :col 1 :end-row 2 :end-col 1}}
@@ -617,9 +635,10 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with spaces"
+    (h/clean-db!)
     (h/assert-submaps
       [{:loc   (h/code ""
-                       "(defn foo [b]"
+                       "(defn- foo [b]"
                        "  (let [c 1] (b c)))"
                        "")
         :range {:row 2 :col 1 :end-row 2 :end-col 1}}
@@ -633,9 +652,10 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with multi line comments"
+    (h/clean-db!)
     (h/assert-submaps
       [{:loc   (h/code ""
-                       "(defn foo [b]"
+                       "(defn- foo [b]"
                        "  (let [c 1] (b c)))"
                        "")
         :range {:row 2 :col 1 :end-row 2 :end-col 1}}
@@ -649,6 +669,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "from end of file"
+    (h/clean-db!)
     (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" @db/db*)))
     (h/assert-submaps
       []

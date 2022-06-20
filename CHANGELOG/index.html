@@ -1924,8 +1924,9 @@
 <li>Bump lsp4clj to 0.4.1.</li>
 <li>Remove deprecated disabled setting <code>:linters :clj-kondo :async-custom-lint?</code>. #1017</li>
 <li>Fix references and code lens of defrecord/deftype for cljs files. #1055</li>
+<li>Fix clean-ns to move reader conditionals to before normal requires. #1057</li>
 <li>
-<p>Fix clean-ns to move reader conditionals to before normal requires. #1057</p>
+<p>Add new optional linter: <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> integration. #957</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2980,7 +2981,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 18, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 20, 2022</span>
     
   </small>
 </div>

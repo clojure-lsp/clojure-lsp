@@ -446,6 +446,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clj-depend" class="md-nav__link">
+    clj-depend
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#disable-linter" class="md-nav__link">
     Disable linter
   </a>
@@ -866,6 +873,13 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clj-depend" class="md-nav__link">
+    clj-depend
+  </a>
   
 </li>
         
@@ -1354,10 +1368,13 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                            <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}</span>
                                            <span class="ss">:exclude-when-defined-by-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my.custom/macro-.*&quot;</span><span class="p">}}}}</span>
 </code></pre></div></p>
+<h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
+<p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
 <h4 id="disable-linter">Disable linter<a class="headerlink" href="#disable-linter" title="Permanent link">#</a></h4>
-<p>It's not recommended to disable the linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:</p>
+<p>It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:</p>
 <p><code>.lsp/config.edn</code>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}}}</span>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}</span>
+           <span class="ss">:clj-depend</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}}}</span>
 </code></pre></div></p>
 <p>For information on how to troubleshoot the linter, check the <a href="../troubleshooting/">troubleshooting section</a></p>
 <h3 id="source-paths-discovery">Source paths discovery<a class="headerlink" href="#source-paths-discovery" title="Permanent link">#</a></h3>
@@ -1486,7 +1503,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 18, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 20, 2022</span>
     
   </small>
 </div>

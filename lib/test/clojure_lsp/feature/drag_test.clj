@@ -34,6 +34,11 @@
     (is (not (can-drag-code-backward? "|#{:a :b :c :d}")))
     (is (not (can-drag-code-backward? "|[:a :b :c :d]")))
     (is (not (can-drag-code-backward? "|'(:a :b :c :d)"))))
+  (testing "after last clause"
+    (is (not (can-drag-code-backward? (h/code "{:a 1"
+                                              ""
+                                              " :b 2"
+                                              "|}")))))
   (testing "on first entry"
     (is (not (can-drag-code-backward? "[|1]")))
     (is (not (can-drag-code-backward? "#{|1 2 3}")))
@@ -208,30 +213,23 @@
       ;; from invalid are
       (is (not (can-drag-code-forward? (h/code "(are [] (= 1 1) |1 2)")))))))
 
-(defn drag-zloc-backward [zloc]
-  (f.drag/drag-backward zloc h/default-uri @db/db*))
+(defn drag-zloc-backward [{:keys [zloc position]}]
+  (f.drag/drag-backward zloc position h/default-uri @db/db*))
 
-(defn drag-zloc-forward [zloc]
-  (f.drag/drag-forward zloc h/default-uri @db/db*))
+(defn drag-zloc-forward [{:keys [zloc position]}]
+  (f.drag/drag-forward zloc position h/default-uri @db/db*))
 
 (defn drag-code-backward [code]
-  (drag-zloc-backward (h/load-code-and-zloc code)))
+  (drag-zloc-backward (h/load-code-into-zloc-and-position code)))
 
 (defn drag-code-forward [code]
-  (drag-zloc-forward (h/load-code-and-zloc code)))
+  (drag-zloc-forward (h/load-code-into-zloc-and-position code)))
 
 (defn- as-string [change]
   (some-> change
           :changes-by-uri
           (get h/default-uri)
           (h/changes->code @db/db*)))
-
-(defn- as-range [change]
-  (some-> change
-          :changes-by-uri
-          (get h/default-uri)
-          first
-          :range))
 
 (defn- as-position [change]
   (when-let [{:keys [row col end-row end-col]} (some-> change
@@ -262,7 +260,7 @@
                                   " 1 2}")
                           (h/code "{1 2"
                                   " |3 4}"))
-    (assert-drag-backward (h/code "{|3 4"
+    (assert-drag-backward (h/code "{3 |4"
                                   " 1 2}")
                           (h/code "{1 2"
                                   " 3 |4}"))
@@ -336,19 +334,18 @@
                           (h/code "(def a) |(def b)"))
     (assert-drag-backward (h/code "|(def b) (def a) (def c)")
                           (h/code "(def a) |(def b) (def c)"))
-    (is (= {:row 1 :col 1
-            :end-row 2 :end-col 8}
-           (as-range
-             (drag-code-backward (h/code "(def a)"
-                                         "|(def b)"))))))
+    (assert-drag-backward (h/code "|(def b)"
+                                  "(def a)")
+                          (h/code "(def a)"
+                                  "|(def b)")))
   (testing "within special functions"
     (assert-drag-backward (h/code "(cond |b 2 a 1)")
                           (h/code "(cond a 1 |b 2)"))
-    (assert-drag-backward (h/code "(cond |b 2 a 1)")
+    (assert-drag-backward (h/code "(cond b |2 a 1)")
                           (h/code "(cond a 1 b |2)"))
     (assert-drag-backward (h/code "(assoc x |:b 1 :a 2)")
                           (h/code "(assoc x :a 2 |:b 1)"))
-    (assert-drag-backward (h/code "(assoc x |:b 1 :a 2)")
+    (assert-drag-backward (h/code "(assoc x :b |1 :a 2)")
                           (h/code "(assoc x :a 2 :b |1)"))
     (assert-drag-backward (h/code "#(assoc % |:b 2 :a 1)")
                           (h/code "#(assoc % :a 1 |:b 2)"))
@@ -366,7 +363,7 @@
                                   "  true (assoc :a 2 |:b 1))"))
     (assert-drag-backward (h/code "(assoc! x |:b 1 :a 2)")
                           (h/code "(assoc! x :a 2 |:b 1)"))
-    (assert-drag-backward (h/code "(assoc! x |:b 1 :a 2)")
+    (assert-drag-backward (h/code "(assoc! x :b |1 :a 2)")
                           (h/code "(assoc! x :a 2 :b |1)"))
     (assert-drag-backward (h/code "(-> {}"
                                   "    (assoc! |:b 1 :a 2))")
@@ -382,7 +379,7 @@
                                   "  true (assoc! :a 2 |:b 1))"))
     (assert-drag-backward (h/code "(cond-> x |b dec a inc)")
                           (h/code "(cond-> x a inc |b dec)"))
-    (assert-drag-backward (h/code "(cond-> x |b dec a inc)")
+    (assert-drag-backward (h/code "(cond-> x b |dec a inc)")
                           (h/code "(cond-> x a inc b |dec)"))
     (assert-drag-backward (h/code "(-> 1"
                                   "    (cond-> |b dec a inc))")
@@ -398,7 +395,7 @@
                                   "  true (cond-> a inc |b dec))"))
     (assert-drag-backward (h/code "(cond->> x |b dec a inc)")
                           (h/code "(cond->> x a inc |b dec)"))
-    (assert-drag-backward (h/code "(cond->> x |b dec a inc)")
+    (assert-drag-backward (h/code "(cond->> x b |dec a inc)")
                           (h/code "(cond->> x a inc b |dec)"))
     (assert-drag-backward (h/code "(-> 1"
                                   "    (cond->> |b dec a inc))")
@@ -414,11 +411,11 @@
                                   "  true (cond->> a inc |b dec))"))
     (assert-drag-backward (h/code "(case a |2 :second 1 :first)")
                           (h/code "(case a 1 :first |2 :second)"))
-    (assert-drag-backward (h/code "(case a |2 :second 1 :first)")
+    (assert-drag-backward (h/code "(case a 2 |:second 1 :first)")
                           (h/code "(case a 1 :first 2 |:second)"))
     (assert-drag-backward (h/code "(case a |2 :second 1 :first :else)")
                           (h/code "(case a 1 :first |2 :second :else)"))
-    (assert-drag-backward (h/code "(case a |2 :second 1 :first :else)")
+    (assert-drag-backward (h/code "(case a 2 |:second 1 :first :else)")
                           (h/code "(case a 1 :first 2 |:second :else)"))
     (assert-drag-backward (h/code "(-> 1"
                                   "    (case |2 :second 1 :first))")
@@ -434,11 +431,11 @@
                                   "  true (case 1 :first |2 :second))"))
     (assert-drag-backward (h/code "(condp = x |b 2 a 1)")
                           (h/code "(condp = x a 1 |b 2)"))
-    (assert-drag-backward (h/code "(condp = x |b 2 a 1)")
+    (assert-drag-backward (h/code "(condp = x b |2 a 1)")
                           (h/code "(condp = x a 1 b |2)"))
     (assert-drag-backward (h/code "(condp = x |b 2 a 1 :else)")
                           (h/code "(condp = x a 1 |b 2 :else)"))
-    (assert-drag-backward (h/code "(condp = x |b 2 a 1 :else)")
+    (assert-drag-backward (h/code "(condp = x b |2 a 1 :else)")
                           (h/code "(condp = x a 1 b |2 :else)"))
     (assert-drag-backward (h/code "(condp some [1 2 3 4]"
                                   "  |#{4 5 9} :>> dec"
@@ -447,19 +444,19 @@
                                   "  #{0 6 7} :>> inc"
                                   "  |#{4 5 9} :>> dec)"))
     (assert-drag-backward (h/code "(condp some [1 2 3 4]"
-                                  "  |#{4 5 9} :>> dec"
+                                  "  #{4 5 9} |:>> dec"
                                   "  #{0 6 7} :>> inc)")
                           (h/code "(condp some [1 2 3 4]"
                                   "  #{0 6 7} :>> inc"
                                   "  #{4 5 9} |:>> dec)"))
     (assert-drag-backward (h/code "(condp some [1 2 3 4]"
-                                  "  |#{4 5 9} :>> dec"
+                                  "  #{4 5 9} :>> |dec"
                                   "  #{0 6 7} :>> inc)")
                           (h/code "(condp some [1 2 3 4]"
                                   "  #{0 6 7} :>> inc"
                                   "  #{4 5 9} :>> |dec)"))
     (assert-drag-backward (h/code "(condp some [1 2 3 4]"
-                                  "  |#{4 5 9} :>> dec"
+                                  "  #{4 5 9} :>> |dec"
                                   "  #{0 6 7} :>> inc"
                                   "  :else)")
                           (h/code "(condp some [1 2 3 4]"
@@ -470,7 +467,7 @@
                           (h/code "(are [x] (= x 1) 1 |2)"))
     (assert-drag-backward (h/code "(are [expected x] (= expected x) |3 4 1 2)")
                           (h/code "(are [expected x] (= expected x) 1 2 |3 4)"))
-    (assert-drag-backward (h/code "(are [expected x] (= expected x) |3 4 1 2)")
+    (assert-drag-backward (h/code "(are [expected x] (= expected x) 3 |4 1 2)")
                           (h/code "(are [expected x] (= expected x) 1 2 3 |4)"))
     (assert-drag-backward (h/code
                             "(ns my-test-ns"
@@ -509,24 +506,6 @@
                           (h/code "(for [a [1 2]"
                                   "      :let [{:keys [b]} {:b 1}"
                                   "            |{:keys [c]} {:c 1}]])")))
-  (testing "blank lines"
-    (assert-drag-backward (h/code "{|:b 2"
-                                  ""
-                                  " :a 1}")
-                          (h/code "{:a 1"
-                                  "|"
-                                  " :b 2}"))
-    (assert-drag-backward (h/code "{:a 1"
-                                  ""
-                                  " |:c 2"
-                                  ""
-                                  " :b 2}")
-                          (h/code "{:a 1"
-                                  ""
-                                  " :b 2"
-                                  "|"
-                                  " :c 2}")))
-
   (testing "comments"
     (assert-drag-backward (h/code "{|:b (+ 1 1) ;; two comment"
                                   " :a 1 ;; one comment"
@@ -535,8 +514,8 @@
                                   " |:b (+ 1 1) ;; two comment"
                                   " :c 3} ;; three comment"))
     (assert-drag-backward (h/code ";; main comment"
-                                  "{|;; b comment"
-                                  " :b (+ 1 1) ;; two comment"
+                                  "{;; b comment"
+                                  " |:b (+ 1 1) ;; two comment"
                                   " :a 1 ;; one comment"
                                   " ;; c comment"
                                   " :c 3} ;; three comment")
@@ -557,8 +536,8 @@
     (assert-drag-backward (h/code "{;; a"
                                   " a 1"
                                   ""
-                                  " |;; c"
-                                  " c 3"
+                                  " ;; c"
+                                  " |c 3"
                                   ""
                                   " ;; b"
                                   " b 2}")
@@ -570,8 +549,8 @@
                                   ""
                                   " ;; c"
                                   " |c 3}"))
-    (assert-drag-backward (h/code "{|;; b"
-                                  " b 2"
+    (assert-drag-backward (h/code "{;; b"
+                                  " |b 2"
                                   ""
                                   " ;; a"
                                   " a 1"
@@ -608,7 +587,7 @@
                           (h/code "{:a 1 ;; one comment"
                                   "    |:b 2}"))
     ;; from leading comment
-    (assert-drag-backward (h/code "{|;; b comment"
+    (assert-drag-backward (h/code "{;; |b comment"
                                   " :b 2 ;; two comment"
                                   " :a 1 ;; one comment"
                                   " :c 3}")
@@ -617,7 +596,7 @@
                                   " :b 2 ;; two comment"
                                   " :c 3}"))
     ;; from trailing comment
-    (assert-drag-backward (h/code "{|:b 2 ;; two comment"
+    (assert-drag-backward (h/code "{:b 2 ;; |two comment"
                                   " :a 1 ;; one comment"
                                   " :c 3}")
                           (h/code "{:a 1 ;; one comment"
@@ -658,7 +637,35 @@
                                   " :c 3}")
                           (h/code "{:c 3"
                                   " |:a {:a/a 1"
-                                  "     :a/b 2}}"))))
+                                  "     :a/b 2}}")))
+  (testing "special nodes"
+    (assert-drag-backward (h/code "['|b 1]")
+                          (h/code "[1 '|b]"))
+    (assert-drag-backward (h/code "[@|b 1]")
+                          (h/code "[1 @|b]"))
+    (assert-drag-backward (h/code "[#=|b 1]")
+                          (h/code "[1 #=|b]"))
+    (assert-drag-backward (h/code "[^|:foo 2 1]")
+                          (h/code "[1 ^|:foo 2]"))
+    (assert-drag-backward (h/code "[#^|:foo 2 1]")
+                          (h/code "[1 #^|:foo 2]"))
+    (assert-drag-backward (h/code "[#|my-macro 2 1]")
+                          (h/code "[1 #|my-macro 2]"))
+    (assert-drag-backward (h/code "[`|map 1]")
+                          (h/code "[1 `|map]"))
+    (assert-drag-backward (h/code "[~|two 1]")
+                          (h/code "[1 ~|two]"))
+    (assert-drag-backward (h/code "[~@|two 1]")
+                          (h/code "[1 ~@|two]"))
+    (assert-drag-backward (h/code "[#'|two 1]")
+                          (h/code "[1 #'|two]"))
+    (assert-drag-backward (h/code "[#:|:foo {:b 2} 1]")
+                          (h/code "[1 #:|:foo {:b 2}]"))
+    (assert-drag-backward (h/code "[#|\"re\" 1]")
+                          (h/code "[1 #|\"re\"]"))
+    ;; doesn't work, because uneval is treated as a comment by rest of drag code
+    #_(assert-drag-backward (h/code "[#_|two 1]")
+                            (h/code "[1 #_|two]"))))
 
 (deftest drag-forward
   (testing "common cases"
@@ -671,7 +678,7 @@
                          (h/code "{|1 2"
                                  " 3 4}"))
     (assert-drag-forward (h/code "{3 4"
-                                 " |1 2}")
+                                 " 1 |2}")
                          (h/code "{1 |2"
                                  " 3 4}"))
     (assert-drag-forward (h/code "{3 4,"
@@ -744,19 +751,18 @@
                          (h/code "|(def a) (def b)"))
     (assert-drag-forward (h/code "(def a) (def c) |(def b)")
                          (h/code "(def a) |(def b) (def c)"))
-    (is (= {:row 1 :col 1
-            :end-row 2 :end-col 8}
-           (as-range
-             (drag-code-forward (h/code "|(def a)"
-                                        "(def b)"))))))
+    (assert-drag-forward (h/code "(def b)"
+                                 "|(def a)")
+                         (h/code "|(def a)"
+                                 "(def b)")))
   (testing "within special functions"
     (assert-drag-forward (h/code "(cond b 2 |a 1)")
                          (h/code "(cond |a 1 b 2)"))
-    (assert-drag-forward (h/code "(cond b 2 |a 1)")
+    (assert-drag-forward (h/code "(cond b 2 a |1)")
                          (h/code "(cond a |1 b 2)"))
     (assert-drag-forward (h/code "(assoc x :b 1 |:a 2)")
                          (h/code "(assoc x |:a 2 :b 1)"))
-    (assert-drag-forward (h/code "(assoc x :b 1 |:a 2)")
+    (assert-drag-forward (h/code "(assoc x :b 1 :a |2)")
                          (h/code "(assoc x :a |2 :b 1)"))
     (assert-drag-forward (h/code "(-> {}"
                                  "    (assoc :b 1 |:a 2))")
@@ -772,7 +778,7 @@
                                  "  true (assoc |:a 2 :b 1))"))
     (assert-drag-forward (h/code "(assoc! x :b 1 |:a 2)")
                          (h/code "(assoc! x |:a 2 :b 1)"))
-    (assert-drag-forward (h/code "(assoc! x :b 1 |:a 2)")
+    (assert-drag-forward (h/code "(assoc! x :b 1 :a |2)")
                          (h/code "(assoc! x :a |2 :b 1)"))
     (assert-drag-forward (h/code "(-> {}"
                                  "    (assoc! :b 1 |:a 2))")
@@ -788,7 +794,7 @@
                                  "  true (assoc! |:a 2 :b 1))"))
     (assert-drag-forward (h/code "(cond-> x b dec |a inc)")
                          (h/code "(cond-> x |a inc b dec)"))
-    (assert-drag-forward (h/code "(cond-> x b dec |a inc)")
+    (assert-drag-forward (h/code "(cond-> x b dec a |inc)")
                          (h/code "(cond-> x a |inc b dec)"))
     (assert-drag-forward (h/code "(-> 1"
                                  "    (cond-> b dec |a inc))")
@@ -804,7 +810,7 @@
                                  "  true (cond-> |a inc b dec))"))
     (assert-drag-forward (h/code "(cond->> x b dec |a inc)")
                          (h/code "(cond->> x |a inc b dec)"))
-    (assert-drag-forward (h/code "(cond->> x b dec |a inc)")
+    (assert-drag-forward (h/code "(cond->> x b dec a |inc)")
                          (h/code "(cond->> x a |inc b dec)"))
     (assert-drag-forward (h/code "(-> 1"
                                  "    (cond->> b dec |a inc))")
@@ -820,11 +826,11 @@
                                  "  true (cond->> |a inc b dec))"))
     (assert-drag-forward (h/code "(case a 2 :second |1 :first)")
                          (h/code "(case a |1 :first 2 :second)"))
-    (assert-drag-forward (h/code "(case a 2 :second |1 :first)")
+    (assert-drag-forward (h/code "(case a 2 :second 1 |:first)")
                          (h/code "(case a 1 |:first 2 :second)"))
     (assert-drag-forward (h/code "(case a 2 :second |1 :first :else)")
                          (h/code "(case a |1 :first 2 :second :else)"))
-    (assert-drag-forward (h/code "(case a 2 :second |1 :first :else)")
+    (assert-drag-forward (h/code "(case a 2 :second 1 |:first :else)")
                          (h/code "(case a 1 |:first 2 :second :else)"))
     (assert-drag-forward (h/code "(-> 1"
                                  "    (case 2 :second |1 :first))")
@@ -840,11 +846,11 @@
                                  "  true (case |1 :first 2 :second))"))
     (assert-drag-forward (h/code "(condp = x b 2 |a 1)")
                          (h/code "(condp = x |a 1 b 2)"))
-    (assert-drag-forward (h/code "(condp = x b 2 |a 1)")
+    (assert-drag-forward (h/code "(condp = x b 2 a |1)")
                          (h/code "(condp = x a |1 b 2)"))
     (assert-drag-forward (h/code "(condp = x b 2 |a 1 :else)")
                          (h/code "(condp = x |a 1 b 2 :else)"))
-    (assert-drag-forward (h/code "(condp = x b 2 |a 1 :else)")
+    (assert-drag-forward (h/code "(condp = x b 2 a |1 :else)")
                          (h/code "(condp = x a |1 b 2 :else)"))
     (assert-drag-forward (h/code "(condp some [1 2 3 4]"
                                  "  #{4 5 9} :>> dec"
@@ -854,19 +860,19 @@
                                  "  #{4 5 9} :>> dec)"))
     (assert-drag-forward (h/code "(condp some [1 2 3 4]"
                                  "  #{4 5 9} :>> dec"
-                                 "  |#{0 6 7} :>> inc)")
+                                 "  #{0 6 7} |:>> inc)")
                          (h/code "(condp some [1 2 3 4]"
                                  "  #{0 6 7} |:>> inc"
                                  "  #{4 5 9} :>> dec)"))
     (assert-drag-forward (h/code "(condp some [1 2 3 4]"
                                  "  #{4 5 9} :>> dec"
-                                 "  |#{0 6 7} :>> inc)")
+                                 "  #{0 6 7} :>> |inc)")
                          (h/code "(condp some [1 2 3 4]"
                                  "  #{0 6 7} :>> |inc"
                                  "  #{4 5 9} :>> dec)"))
     (assert-drag-forward (h/code "(condp some [1 2 3 4]"
                                  "  #{4 5 9} :>> dec"
-                                 "  |#{0 6 7} :>> inc"
+                                 "  #{0 6 7} :>> |inc"
                                  "  :else)")
                          (h/code "(condp some [1 2 3 4]"
                                  "  #{0 6 7} :>> |inc"
@@ -876,7 +882,7 @@
                          (h/code "(are [x] (= x 1) |1 2)"))
     (assert-drag-forward (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
                          (h/code "(are [expected x] (= expected x) |1 2 3 4)"))
-    (assert-drag-forward (h/code "(are [expected x] (= expected x) 3 4 |1 2)")
+    (assert-drag-forward (h/code "(are [expected x] (= expected x) 3 4 1 |2)")
                          (h/code "(are [expected x] (= expected x) 1 |2 3 4)")))
   (testing "with destructuring"
     (assert-drag-forward (h/code "(let [{:keys [a c |b d]} x])")
@@ -899,25 +905,6 @@
                          (h/code "(for [a [1 2]"
                                  "      :let [|{:keys [b]} {:b 1}"
                                  "            {:keys [c]} {:c 1}]])")))
-  (testing "blank lines"
-    (assert-drag-forward (h/code "{"
-                                 " :b 2"
-                                 ""
-                                 " |:a 1}")
-                         (h/code "{|"
-                                 " :a 1"
-                                 ""
-                                 " :b 2}"))
-    (assert-drag-forward (h/code "{:a 1"
-                                 ""
-                                 " :c 2"
-                                 ""
-                                 " |:b 2}")
-                         (h/code "{:a 1"
-                                 "|"
-                                 " :b 2"
-                                 ""
-                                 " :c 2}")))
   (testing "comments"
     (assert-drag-forward (h/code "{:b (+ 1 1) ;; two comment"
                                  " |:a 1 ;; one comment"
@@ -951,8 +938,8 @@
                                  " ;; c"
                                  " c 3"
                                  ""
-                                 " |;; b"
-                                 " b 2}")
+                                 " ;; b"
+                                 " |b 2}")
                          (h/code "{;; a"
                                  " a 1"
                                  ""
@@ -964,8 +951,8 @@
     (assert-drag-forward (h/code "{;; b"
                                  " b 2"
                                  ""
-                                 " |;; a"
-                                 " a 1"
+                                 " ;; a"
+                                 " |a 1"
                                  ""
                                  " ;; c"
                                  " c 3}")
@@ -991,7 +978,7 @@
     ;; from leading comment
     (assert-drag-forward (h/code "{;; b comment"
                                  " :b 2 ;; two comment"
-                                 " |;; a comment"
+                                 " ;; |a comment"
                                  " :a 1 ;; one comment"
                                  " :c 3}")
                          (h/code "{;; |a comment"
@@ -1001,7 +988,7 @@
                                  " :c 3}"))
     ;; from trailing comment
     (assert-drag-forward (h/code "{:b 2 ;; two comment"
-                                 " |:a 1 ;; one comment"
+                                 " :a 1 ;; |one comment"
                                  " :c 3}")
                          (h/code "{:a 1 ;; |one comment"
                                  " :b 2 ;; two comment"
@@ -1030,17 +1017,45 @@
                                  " |:c 3}")
                          (h/code "{|:c 3"
                                  " :a {:a/a 1"
-                                 "     :a/b 2}}"))))
+                                 "     :a/b 2}}")))
+  (testing "special nodes"
+    (assert-drag-forward (h/code "[2 '|b]")
+                         (h/code "['|b 2]"))
+    (assert-drag-forward (h/code "[2 @|b]")
+                         (h/code "[@|b 2]"))
+    (assert-drag-forward (h/code "[2 #=|b]")
+                         (h/code "[#=|b 2]"))
+    (assert-drag-forward (h/code "[2 ^|:foo 1]")
+                         (h/code "[^|:foo 1 2]"))
+    (assert-drag-forward (h/code "[2 #^|:foo 1]")
+                         (h/code "[#^|:foo 1 2]"))
+    (assert-drag-forward (h/code "[2 #|my-macro 1]")
+                         (h/code "[#|my-macro 1 2]"))
+    (assert-drag-forward (h/code "[2 `|map]")
+                         (h/code "[`|map 2]"))
+    (assert-drag-forward (h/code "[2 ~|one]")
+                         (h/code "[~|one 2]"))
+    (assert-drag-forward (h/code "[2 ~@|one]")
+                         (h/code "[~@|one 2]"))
+    (assert-drag-forward (h/code "[2 #'|one]")
+                         (h/code "[#'|one 2]"))
+    (assert-drag-forward (h/code "[2 #:|:foo {:a 1}]")
+                         (h/code "[#:|:foo {:a 1} 2]"))
+    (assert-drag-forward (h/code "[2 #|\"re\"]")
+                         (h/code "[#|\"re\" 2]"))
+    ;; doesn't work, because uneval is treated as a comment by rest of drag code
+    #_(assert-drag-forward (h/code "[2 #_|one]")
+                           (h/code "[#_|one 2]"))))
 
 ;; These are macros so test failures have the right line numbers
 (defmacro assert-no-erroneous-backwards [code]
-  `(let [ws-zloc# (h/load-code-and-zloc ~code)]
-     (is (can-drag-zloc-backward? ws-zloc#))
-     (is (nil? (as-string (drag-zloc-backward ws-zloc#))))))
+  `(let [zloc-and-position# (h/load-code-into-zloc-and-position ~code)]
+     (is (can-drag-zloc-backward? (:zloc zloc-and-position#)))
+     (is (nil? (as-string (drag-zloc-backward zloc-and-position#))))))
 (defmacro assert-no-erroneous-forwards [code]
-  `(let [ws-zloc# (h/load-code-and-zloc ~code)]
-     (is (can-drag-zloc-forward? ws-zloc#))
-     (is (nil? (as-string (drag-zloc-forward ws-zloc#))))))
+  `(let [zloc-and-position# (h/load-code-into-zloc-and-position ~code)]
+     (is (can-drag-zloc-forward? (:zloc zloc-and-position#)))
+     (is (nil? (as-string (drag-zloc-forward zloc-and-position#))))))
 
 (deftest erroneous-swaps
   ;; NOTE: ideally can-drag-*? and drag-* would always agree, but when they
@@ -1065,6 +1080,15 @@
     (assert-no-erroneous-backwards (h/code "(case a"
                                            "   1 :first |;; one comment"
                                            ")")))
+  (testing "between clauses"
+    (assert-no-erroneous-backwards (h/code "{:a 1"
+                                           "|"
+                                           " :b 2}"))
+    (assert-no-erroneous-backwards (h/code "{:a 1"
+                                           ""
+                                           " :b 2"
+                                           "|"
+                                           " :c 2}")))
 
   (testing "from blank line before last element"
     (assert-no-erroneous-forwards (h/code "[|"
@@ -1082,4 +1106,14 @@
                                           " :a 1}"))
     (assert-no-erroneous-forwards (h/code "(case a"
                                           "   |;; one comment"
-                                          "   1 :first :else)"))))
+                                          "   1 :first :else)")))
+  (testing "between clauses"
+    (assert-no-erroneous-forwards (h/code "{|"
+                                          " :a 1"
+                                          ""
+                                          " :b 2}"))
+    (assert-no-erroneous-forwards (h/code "{:a 1"
+                                          "|"
+                                          " :b 2"
+                                          ""
+                                          " :c 2}"))))

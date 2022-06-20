@@ -170,7 +170,7 @@
                         (shared/filename->uri db)
                         (f.java-interop/uri->translated-uri db))
                :range (shared/->range reference)})
-            (q/find-references-from-cursor (:analysis db) (shared/uri->filename textDocument) row col (:includeDeclaration context))))))
+            (q/find-references-from-cursor db (shared/uri->filename textDocument) row col (:includeDeclaration context))))))
 
 (defn completion-resolve-item [item {:keys [db*]}]
   (shared/logging-task
@@ -187,14 +187,14 @@
   (shared/logging-task
     :rename
     (let [[row col] (shared/position->line-column position)]
-      (f.rename/rename-from-position textDocument newName row col db/db*))))
+      (f.rename/rename-from-position textDocument newName row col @db/db*))))
 
 (defn definition [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :definition
     (let [db @db*
           [line column] (shared/position->line-column position)]
-      (when-let [definition (q/find-definition-from-cursor (:analysis db) (shared/uri->filename textDocument) line column)]
+      (when-let [definition (q/find-definition-from-cursor db (shared/uri->filename textDocument) line column)]
         {:uri (-> (:filename definition)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri db))
@@ -205,7 +205,7 @@
     :declaration
     (let [db @db*
           [line column] (shared/position->line-column position)]
-      (when-let [declaration (q/find-declaration-from-cursor (:analysis db) (shared/uri->filename textDocument) line column)]
+      (when-let [declaration (q/find-declaration-from-cursor db (shared/uri->filename textDocument) line column)]
         {:uri (-> (:filename declaration)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri db))
@@ -221,16 +221,14 @@
                         (shared/filename->uri db)
                         (f.java-interop/uri->translated-uri db))
                :range (shared/->range implementation)})
-            (q/find-implementations-from-cursor (:analysis db) (shared/uri->filename textDocument) row col)))))
+            (q/find-implementations-from-cursor db (shared/uri->filename textDocument) row col)))))
 
 (defn document-symbol [{:keys [textDocument]}]
   (shared/logging-task
     :document-symbol
     (let [db @db/db*
           filename (shared/uri->filename textDocument)
-          analysis (:analysis db)
-          namespace-definition (->> (get analysis filename)
-                                    (q/find-first (comp #{:namespace-definitions} :bucket)))]
+          namespace-definition (q/find-namespace-definition-by-filename db filename)]
       [{:name (or (some-> namespace-definition :name name)
                   filename)
         :kind (f.document-symbol/element->symbol-kind namespace-definition)
@@ -238,7 +236,7 @@
         :selection-range (if namespace-definition
                            (shared/->scope-range namespace-definition)
                            shared/full-file-range)
-        :children (->> (q/find-var-definitions analysis filename true)
+        :children (->> (q/find-var-definitions db filename true)
                        (mapv (fn [e]
                                (shared/assoc-some
                                  {:name (-> e :name name)
@@ -257,8 +255,8 @@
           line (-> position :line inc)
           column (-> position :character inc)
           filename (shared/uri->filename textDocument)
-          scoped-analysis (select-keys (:analysis db) [filename])
-          references (q/find-references-from-cursor scoped-analysis filename line column true)]
+          local-db (update db :analysis select-keys [filename])
+          references (q/find-references-from-cursor local-db filename line column true)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -297,13 +295,12 @@
 
 (defn ^:private cursor-info [[doc-id line character]]
   (let [db @db/db*
-        analysis (:analysis db)
-        elements (q/find-all-elements-under-cursor analysis (shared/uri->filename doc-id) (inc line) (inc character))]
+        elements (q/find-all-elements-under-cursor db (shared/uri->filename doc-id) (inc line) (inc character))]
     (shared/assoc-some {}
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}
-                                           :definition (q/find-definition analysis e)
+                                           :definition (q/find-definition db e)
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
@@ -371,9 +368,8 @@
 (defn hover [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :hover
-    (let [[line column] (shared/position->line-column position)
-          filename (shared/uri->filename textDocument)]
-      (f.hover/hover filename line column db*))))
+    (let [[line column] (shared/position->line-column position)]
+      (f.hover/hover textDocument line column db*))))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (shared/logging-task
@@ -486,7 +482,7 @@
 (defn will-rename-files [{:keys [files]} {:keys [db*]}]
   (shared/logging-task
     :will-rename-files
-    (f.file-management/will-rename-files files db*)))
+    (f.file-management/will-rename-files files @db*)))
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler

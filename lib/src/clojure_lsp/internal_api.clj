@@ -405,30 +405,26 @@
         from-name (when-not ns-only? (symbol (name from)))
         from-ns (if ns-only?
                   from
-                  (symbol (namespace from)))
-        project-analysis (into {} q/filter-project-analysis-xf (:analysis db))]
-    (if-let [from-element (if ns-only?
-                            (q/find-namespace-definition-by-namespace project-analysis from-ns)
-                            (q/find-element-by-full-name project-analysis from-name from-ns))]
+                  (symbol (namespace from)))]
+    (if-let [from-element (q/find-element-for-rename db from-ns from-name)]
       (let [uri (shared/filename->uri (:filename from-element) db)]
         (open-file! {:uri uri :namespace from-ns} components)
-        (let [{:keys [error document-changes]} (f.rename/rename-from-position uri (str to) (:name-row from-element) (:name-col from-element) db*)]
+        (let [{:keys [error document-changes]} (f.rename/rename-from-position uri (str to) (:name-row from-element) (:name-col from-element) db)]
           (if document-changes
-            (let [db @db*]
-              (if-let [edits (->> document-changes
-                                  (pmap #(document-change->edit-summary % db))
-                                  (remove nil?)
-                                  seq)]
-                (if dry?
+            (if-let [edits (->> document-changes
+                                (pmap #(document-change->edit-summary % db))
+                                (remove nil?)
+                                seq)]
+              (if dry?
+                {:result-code 0
+                 :message (edits->diff-string edits options db)
+                 :edits edits}
+                (do
+                  (mapv #(apply-workspace-edit-summary! % db*) edits)
                   {:result-code 0
-                   :message (edits->diff-string edits options db)
-                   :edits edits}
-                  (do
-                    (mapv #(apply-workspace-edit-summary! % db*) edits)
-                    {:result-code 0
-                     :message (format "Renamed %s to %s" from to)
-                     :edits edits}))
-                {:result-code 1 :message "Nothing to rename"}))
+                   :message (format "Renamed %s to %s" from to)
+                   :edits edits}))
+              {:result-code 1 :message "Nothing to rename"})
             {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))})))
       {:result-code 1 :message (format "Symbol %s not found in project" from)})))
 

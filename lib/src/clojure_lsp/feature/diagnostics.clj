@@ -175,14 +175,14 @@
                  :diagnostics []}))))
 
 (defn ^:private lint-defs!
-  [var-defs kw-defs project-analysis {:keys [config reg-finding!]}]
+  [var-defs kw-defs project-db {:keys [config reg-finding!]}]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
         var-usages (into #{}
                          (comp
                            (q/xf-all-var-usages-to-namespaces var-nses)
                            (map q/var-usage-signature))
-                         project-analysis)
+                         (:analysis project-db))
         var-used? (fn [var-def]
                     (some var-usages (q/var-definition-signatures var-def)))
         kw-definitions (remove (partial exclude-public-diagnostic-definition? config) kw-defs)
@@ -190,7 +190,7 @@
                         (comp
                           q/xf-all-keyword-usages
                           (map q/kw-signature))
-                        project-analysis)
+                        (:analysis project-db))
         kw-used? (fn [kw-def]
                    (contains? kw-usages (q/kw-signature kw-def)))
         findings (->> (concat (remove var-used? var-definitions)
@@ -201,36 +201,30 @@
       (reg-finding! finding))
     (group-by :filename findings)))
 
-(defn ^:private file-var-definitions [project-analysis filename]
-  (q/find-var-definitions project-analysis filename false))
+(defn ^:private file-var-definitions [project-db filename]
+  (q/find-var-definitions project-db filename false))
 (def ^:private file-kw-definitions q/find-keyword-definitions)
 (def ^:private all-var-definitions q/find-all-var-definitions)
 (def ^:private all-kw-definitions q/find-all-keyword-definitions)
 
 (defn custom-lint-project!
-  [new-analysis kondo-ctx]
-  (let [project-analysis (into {}
-                               q/filter-project-analysis-xf
-                               new-analysis)]
-    (lint-defs! (all-var-definitions project-analysis)
-                (all-kw-definitions project-analysis)
-                project-analysis kondo-ctx)))
+  [db kondo-ctx]
+  (let [project-db (q/db-with-project-analysis db)]
+    (lint-defs! (all-var-definitions project-db)
+                (all-kw-definitions project-db)
+                project-db kondo-ctx)))
 
 (defn custom-lint-files!
-  [filenames new-analysis kondo-ctx]
-  (let [project-analysis (into {}
-                               q/filter-project-analysis-xf
-                               new-analysis)
-        file-analyses (select-keys project-analysis filenames)]
-    (lint-defs! (all-var-definitions file-analyses)
-                (all-kw-definitions file-analyses)
-                project-analysis kondo-ctx)))
+  [filenames db kondo-ctx]
+  (let [project-db (q/db-with-project-analysis db)
+        files-db (update project-db :analysis select-keys filenames)]
+    (lint-defs! (all-var-definitions files-db)
+                (all-kw-definitions files-db)
+                project-db kondo-ctx)))
 
 (defn custom-lint-file!
-  [filename analysis kondo-ctx]
-  (let [project-analysis (into {}
-                               q/filter-project-analysis-xf
-                               analysis)]
-    (lint-defs! (file-var-definitions project-analysis filename)
-                (file-kw-definitions project-analysis filename)
-                project-analysis kondo-ctx)))
+  [filename db kondo-ctx]
+  (let [project-db (q/db-with-project-analysis db)]
+    (lint-defs! (file-var-definitions project-db filename)
+                (file-kw-definitions project-db filename)
+                project-db kondo-ctx)))

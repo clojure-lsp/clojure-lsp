@@ -57,18 +57,19 @@
 
     (testing "the code action edit is applied asynchronously"
       (h/assert-submaps
-        [{:edits [{:range {:start {:line 4, :character 3},
-                           :end {:line 6, :character 7}},
-                   :newText (h/code ":c 3"
-                                    "   ;; b comment"
-                                    "   :b 2 ;; 2 comment")}]}]
+        [{:edits [{:range {:start {:line 4, :character 3}
+                           :end {:line 5, :character 20}}
+                   :newText ":c 3"}
+                  {:range {:start {:line 6, :character 3}
+                           :end {:line 6, :character 7}}
+                   :newText ";; b comment\n   :b 2 ;; 2 comment"}]}]
         (:documentChanges (:edit (lsp/client-awaits-server-request :workspace/applyEdit)))))
     (testing "the cursor is repositioned"
       (h/assert-submap
         {:takeFocus true
-         ;; 5/3 is the start of <comment ";; b comment">, after the move
-         :selection {:start {:line      5
-                             :character 3}
-                     :end   {:line      5
-                             :character 3}}}
+         ;; the cursor starts at :b and moves down one line
+         :selection {:start {:line      6
+                             :character 4}
+                     :end   {:line      6
+                             :character 4}}}
         (lsp/client-awaits-server-request :window/showDocument)))))

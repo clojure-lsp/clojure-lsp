@@ -20,26 +20,24 @@
 (defn ^:private test-references->string [references]
   (references->string references " test"))
 
-(defn ^:private var-definitions-lens [filename kondo-config analysis]
-  (->> (q/find-var-definitions analysis filename true)
-       (remove (partial q/exclude-public-definition? kondo-config))))
+(defn ^:private var-definitions-lens [filename db]
+  (->> (q/find-var-definitions db filename true)
+       (remove (partial q/exclude-public-definition? (:kondo-config db)))))
 
 (defn ^:private keyword-definitions-lens
-  [filename kondo-config analysis]
-  (->> (q/find-keyword-definitions analysis filename)
-       (remove (partial q/exclude-public-definition? kondo-config))))
+  [filename db]
+  (->> (q/find-keyword-definitions db filename)
+       (remove (partial q/exclude-public-definition? (:kondo-config db)))))
 
 (defn reference-code-lens [uri db]
-  (let [analysis (:analysis db)
-        kondo-config (:kondo-config db)
-        filename (shared/uri->filename uri)]
+  (let [filename (shared/uri->filename uri)]
     (into []
           (map (fn [element]
                  {:range (shared/->range element)
                   :data  [uri (:name-row element) (:name-col element)]}))
-          (concat (q/find-namespace-definitions analysis filename)
-                  (var-definitions-lens filename kondo-config analysis)
-                  (keyword-definitions-lens filename kondo-config analysis)))))
+          (concat (q/find-namespace-definitions db filename)
+                  (var-definitions-lens filename db)
+                  (keyword-definitions-lens filename db)))))
 
 (defn test-reference? [source-path {:keys [filename]}]
   (and source-path
@@ -49,7 +47,7 @@
 (defn resolve-code-lens [uri row col range db]
   (let [filename (shared/uri->filename uri)
         segregate-lens? (settings/get db [:code-lens :segregate-test-references] true)
-        references (q/find-references-from-cursor (:analysis db) filename row col false)]
+        references (q/find-references-from-cursor db filename row col false)]
     (if segregate-lens?
       (let [source-path (->> (settings/get db [:source-paths])
                              (filter #(string/starts-with? filename %))

@@ -8,6 +8,8 @@
   - Add `compute-external-file-changes` setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002
   - Bump lsp4clj to 0.4.1.
   - Remove deprecated disabled setting `:linters :clj-kondo :async-custom-lint?`. #1017
+  - Fix references and code lens of defrecord/deftype for cljs files. #1055
+  - Fix clean-ns to move reader conditionals to before normal requires. #1057
   - Add new optional linter: [clj-depend](https://github.com/clj-depend/clj-depend) integration. #957
 
 - Editor
@@ -15,6 +17,13 @@
   - Improve performance of find-declaration feature. #1021
   - Fix to avoid suggesting an alias from a clj file to a cljs file. #1024
   - Find references of namespace usages now find all namespace usages on project, not only the definition. #1022
+  - Improve element selected on `textDocument/hover`, showing the function being called instead of the closest element found backwards. #995
+  - Fix drag from quoted symbols and other special nodes #969
+  - Drag requests two smaller edits, instead of one large edit, potentially avoiding flicker. #1043
+  - Drag is disabled between clauses, to avoid arbitrarily choosing one to move. #1030
+  - Cursor doesn't move within dragged clause. #1029
+  - Improve performance of drag forward.
+  - Avoid invalid cached analysis and document text after a rename. #1049
 
 ## 2022.05.31-17.35.50
 

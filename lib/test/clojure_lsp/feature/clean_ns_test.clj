@@ -854,10 +854,10 @@
                              "#?(:clj (do Calendar Date DateTime)) File")
                      (h/code "(ns foo.bar"
                              " (:import"
-                             "  [java.util Calendar]"
                              "  #?@(:clj [(java.time DateTime)
                                         (java.io File)])"
-                             "  #?@(:clj [(java.util Date)])))"
+                             "  #?@(:clj [(java.util Date)])"
+                             "  [java.util Calendar]))"
                              "#?(:clj (do Calendar Date DateTime)) File")
                      true
                      "file:///a.cljc"))
@@ -910,6 +910,28 @@
                              "  [other.zeta Z]))"
                              "#?(:clj F)"
                              "Z")
+                     true
+                     "file:///a.cljc"))
+    (testing "sort reader conditionals before normal requires"
+      (test-clean-ns {}
+                     (h/code "(ns a"
+                             "  (:require"
+                             "   [a.b]"
+                             "   [b.c]"
+                             "   #?(:cljs [b.d])"
+                             "   #?@(:clj [[a.h]]"
+                             "       :cljs [[a.a]])"
+                             "   #?(:clj [a.b])"
+                             "   [c.d]))")
+                     (h/code "(ns a"
+                             "  (:require"
+                             "   #?(:cljs [b.d])"
+                             "   #?@(:clj [[a.h]]"
+                             "       :cljs [[a.a]])"
+                             "   #?(:clj [a.b])"
+                             "   [a.b]"
+                             "   [b.c]"
+                             "   [c.d]))")
                      true
                      "file:///a.cljc"))
     (testing "Mixed cases"

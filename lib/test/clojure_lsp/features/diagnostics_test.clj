@@ -22,7 +22,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
@@ -39,7 +39,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
@@ -56,7 +56,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
@@ -73,7 +73,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
@@ -90,7 +90,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
@@ -107,7 +107,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
     (h/assert-submaps
@@ -117,7 +117,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
     (h/assert-submaps
@@ -127,7 +127,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
@@ -137,7 +137,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/b.clj"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
@@ -147,7 +147,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/c.cljs"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
@@ -172,7 +172,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/d.cljs"
-      (:analysis @db/db*)
+      @db/db*
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps [] @findings)))

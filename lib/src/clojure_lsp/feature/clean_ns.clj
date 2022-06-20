@@ -81,6 +81,15 @@
                                            (first (n/children node)))
                                       (-> node n/children first n/string string/lower-case)
 
+                                      ;; we should move cljc reader conditionals before normal requires,
+                                      ;; returning 0 we make sure those come before normal requires (because of ascii table),
+                                      ;; is there a better way to do this?
+                                      ;;
+                                      ;; #1057 There are multiple ways to sort a reader conditional, so we keep the user order,
+                                      ;; but just move them to top
+                                      (identical? :reader-macro tag)
+                                      "0"
+
                                       :else
                                       (some-> node n/sexpr first string/lower-case))))
                                 form-type
@@ -409,16 +418,14 @@
   (let [settings (settings/all db)
         ;; TODO: use parser?
         safe-loc (or zloc (z/of-string (get-in db [:documents uri :text])))
-        ns-loc (edit/find-namespace safe-loc)
-        analysis (:analysis db)
-        findings (:findings db)]
+        ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             filename (shared/uri->filename uri)
-            unused-aliases* (future (q/find-unused-aliases analysis findings filename))
-            unused-refers* (future (q/find-unused-refers analysis findings filename))
-            unused-imports* (future (q/find-unused-imports analysis findings filename))
-            duplicate-requires* (future (q/find-duplicate-requires findings filename))
+            unused-aliases* (future (q/find-unused-aliases db filename))
+            unused-refers* (future (q/find-unused-refers db filename))
+            unused-imports* (future (q/find-unused-imports db filename))
+            duplicate-requires* (future (q/find-duplicate-requires db filename))
             clean-ctx {:db db
                        :old-ns-loc ns-loc
                        :filename filename

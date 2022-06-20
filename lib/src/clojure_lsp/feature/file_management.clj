@@ -87,12 +87,15 @@
         usage-signature (juxt :to :name)]
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
-(defn reference-filenames [filename old-local-analysis new-local-analysis db]
-  (let [changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
+(defn reference-filenames [filename db-before db-after]
+  (let [old-local-analysis (get-in db-before [:analysis filename])
+        new-local-analysis (get-in db-after [:analysis filename])
+        changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
         changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
-        project-analysis (into {}
-                               q/filter-project-analysis-xf
-                               (dissoc (:analysis db) filename)) ;; don't notify self
+        project-db (-> db-after
+                       q/db-with-project-analysis
+                       ;; don't notify self
+                       (update :analysis dissoc filename))
         incoming-filenames (when (seq changed-var-definitions)
                              (let [def-signs (->> changed-var-definitions
                                                   (map q/var-definition-signatures)
@@ -103,7 +106,7 @@
                                        (filter #(identical? :var-usages (:bucket %)))
                                        (filter #(contains? def-signs (q/var-usage-signature %)))
                                        (map :filename))
-                                     project-analysis)))
+                                     (:analysis project-db))))
         outgoing-filenames (when (seq changed-var-usages)
                              ;; If definition is in both a clj and cljs file, and this is a clj
                              ;; usage, we are careful to notify only the clj file. But, it wouldn't
@@ -121,17 +124,17 @@
                                        (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
                                                   (some usage-langs (q/elem-langs %))))
                                        (map :filename))
-                                     project-analysis)))]
+                                     (:analysis project-db))))]
     (set/union (or incoming-filenames #{})
                (or outgoing-filenames #{}))))
 
-(defn ^:private notify-references [filename old-local-analysis new-local-analysis {:keys [db* producer]}]
+(defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
   (async/go
     (shared/logging-task
       :notify-references
       (let [filenames (shared/logging-task
                         :reference-files/find
-                        (reference-filenames filename old-local-analysis new-local-analysis @db*))]
+                        (reference-filenames filename db-before db-after))]
         (when (seq filenames)
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task
@@ -196,17 +199,17 @@
                                  (str "changes analyzed by clj-depend took %s")
                                  (lsp.depend/analyze-filename! filename state-db)))
               kondo-result @kondo-result*
-              depend-result @depend-result*]
+              depend-result @depend-result*
+              old-db @db*]
           (if (compare-and-set! db* state-db
                                 (-> state-db
                                     (lsp.kondo/db-with-results kondo-result)
                                     (lsp.depend/db-with-results depend-result)
                                     (update :processing-changes disj uri)))
-            (let [db @db*
-                  old-local-analysis (get-in @db* [:analysis filename])]
+            (let [db @db*]
               (f.diagnostic/sync-publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-local-analysis (get-in db [:analysis filename]) components))
+                (notify-references filename old-db db components))
               (clojure-producer/refresh-test-tree producer [uri]))
             (recur @db*)))))))
 
@@ -239,7 +242,7 @@
                    :changed-watched-file
                    (did-change uri
                                [{:text (slurp (shared/uri->filename uri))}]
-                               (inc (get-in @db* [:documents uri :v] 0))
+                               (get-in @db* [:documents uri :v] 0)
                                db*)))
       :deleted (shared/logging-task
                  :delete-watched-file
@@ -272,13 +275,12 @@
 (defn did-save [uri db*]
   (swap! db* #(assoc-in % [:documents uri :saved-on-disk] true)))
 
-(defn will-rename-files [files db*]
-  (let [analysis (:analysis @db*)]
-    (->> files
-         (keep (fn [{:keys [oldUri newUri]}]
-                 (let [old-filename (shared/uri->filename oldUri)
-                       new-ns (shared/uri->namespace newUri @db*)
-                       ns-definition (q/find-namespace-definition-by-filename analysis old-filename)]
-                   (when ns-definition
-                     (f.rename/rename-element oldUri new-ns db* old-filename ns-definition :rename-file)))))
-         (reduce #(shared/deep-merge %1 %2) {:document-changes []}))))
+(defn will-rename-files [files db]
+  (->> files
+       (keep (fn [{:keys [oldUri newUri]}]
+               (let [old-filename (shared/uri->filename oldUri)
+                     new-ns (shared/uri->namespace newUri db)
+                     ns-definition (q/find-namespace-definition-by-filename db old-filename)]
+                 (when ns-definition
+                   (f.rename/rename-element oldUri new-ns db ns-definition :rename-file)))))
+       (reduce #(shared/deep-merge %1 %2) {:document-changes []})))

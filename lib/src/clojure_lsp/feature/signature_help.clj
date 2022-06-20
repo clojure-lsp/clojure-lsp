@@ -85,7 +85,7 @@
       (let [db @db*
             arglist-nodes (function-loc->arglist-nodes function-loc)
             function-meta (meta (z/node function-loc))
-            definition (q/find-definition-from-cursor (:analysis db) filename (:row function-meta) (:col function-meta))
+            definition (q/find-definition-from-cursor db filename (:row function-meta) (:col function-meta))
             signatures (definition->signature-informations definition)
             active-signature (get-active-signature-index definition arglist-nodes)]
         (when (seq signatures)

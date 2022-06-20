@@ -3,7 +3,6 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.set :as set]
    [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
@@ -44,7 +43,7 @@
         ;; we find the locals analysis since when destructuring we have both
         ;; keyword and a locals analysis for the same position
         local-element (when keys-destructuring
-                        (q/find-local-by-destructured-keyword (:analysis db) filename reference))
+                        (q/find-local-by-destructured-keyword db filename reference))
         text (cond
                (and local-element
                     (string/includes? (:str local-element) "/")
@@ -192,11 +191,11 @@
 (defn prepare-rename
   [uri row col db]
   (let [filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor (:analysis db) filename row col)]
+        element (q/find-element-under-cursor db filename row col)]
     (if-not element
       error-no-element
-      (let [references (q/find-references (:analysis db) element true)
-            definition (q/find-definition (:analysis db) element)
+      (let [references (q/find-references db element true)
+            definition (q/find-definition db element)
             source-paths (settings/get db [:source-paths])
             client-capabilities (:client-capabilities db)
             {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
@@ -204,10 +203,9 @@
           result
           (shared/->range element))))))
 
-(defn rename-element [uri new-name db* filename element source]
-  (let [db @db*
-        references (q/find-references (:analysis db) element true)
-        definition (q/find-definition (:analysis db) element)
+(defn rename-element [uri new-name db element source]
+  (let [references (q/find-references db element true)
+        definition (q/find-definition db element)
         source-paths (settings/get db [:source-paths])
         client-capabilities (:client-capabilities db)
         {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
@@ -225,9 +223,6 @@
                  (not (identical? :namespace-alias (:bucket element)))
                  (not= :rename-file source))
           (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
-            (swap! db* (fn [db] (-> db
-                                    (update :documents #(set/rename-keys % {filename (shared/uri->filename new-uri)}))
-                                    (update :analysis #(set/rename-keys % {filename (shared/uri->filename new-uri)})))))
             (shared/client-changes (concat doc-changes
                                            [{:kind "rename"
                                              :old-uri uri
@@ -236,10 +231,9 @@
           (shared/client-changes doc-changes db))))))
 
 (defn rename-from-position
-  [uri new-name row col db*]
-  (let [db @db*
-        filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor (:analysis db) filename row col)]
+  [uri new-name row col db]
+  (let [filename (shared/uri->filename uri)
+        element (q/find-element-under-cursor db filename row col)]
     (if-not element
       error-no-element
-      (rename-element uri new-name db* filename element :rename))))
+      (rename-element uri new-name db element :rename))))

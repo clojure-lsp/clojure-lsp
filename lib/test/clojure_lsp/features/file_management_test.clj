@@ -50,7 +50,7 @@
 
 (deftest outgoing-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
-                                  :project-root-uri (h/file-uri "file:///")})
+                                   :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(def a)"
                                 "(def b)") (h/file-uri "file:///src/a.clj"))
@@ -58,16 +58,13 @@
                                 "(def x)"
                                 "a/a"
                                 "a/a") (h/file-uri "file:///src/b.clj"))
-  (let [analysis-before (get-in @db/db* [:analysis "/src/b.clj"])]
+  (let [db-before @db/db*]
     (are [expected new-code]
          (do
            (h/load-code-and-locs new-code (h/file-uri "file:///src/b.clj"))
-           (let [analysis-after (get-in @db/db* [:analysis "/src/b.clj"])]
+           (let [db-after @db/db*]
              (is (= expected
-                    (f.file-management/reference-filenames "/src/b.clj"
-                                                           analysis-before
-                                                           analysis-after
-                                                           @db/db*)))))
+                    (f.file-management/reference-filenames "/src/b.clj" db-before db-after)))))
       ;; increasing
       #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
                               "(def x)"
@@ -107,23 +104,20 @@
 
 (deftest incoming-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
-                                  :project-root-uri (h/file-uri "file:///")})
+                                   :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(def a)"
                                 "(def b)") (h/file-uri "file:///src/a.clj"))
   (h/load-code-and-locs (h/code "(ns b (:require [a]))"
                                 "a/a"
                                 "a/c") (h/file-uri "file:///src/b.clj"))
-  (let [analysis-before (get-in @db/db* [:analysis "/src/a.clj"])]
+  (let [db-before @db/db*]
     (are [expected new-code]
          (do
            (h/load-code-and-locs new-code (h/file-uri "file:///src/a.clj"))
-           (let [analysis-after (get-in @db/db* [:analysis "/src/a.clj"])]
+           (let [db-after @db/db*]
              (is (= expected
-                    (f.file-management/reference-filenames "/src/a.clj"
-                                                           analysis-before
-                                                           analysis-after
-                                                           @db/db*)))))
+                    (f.file-management/reference-filenames "/src/a.clj" db-before db-after)))))
       ;; remove existing
       #{"/src/b.clj"} (h/code "(ns a)"
                               "(def b)")

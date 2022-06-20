@@ -16,7 +16,7 @@ jobs:
       - uses: cachix/install-nix-action@v17
 
       - name: Update deps-lock
-        run: "nix run github:jlesquembre/clj-nix#deps-lock"
+        run: "nix run github:jlesquembre/clj-nix?ref=0.2.0#deps-lock"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4.0.3

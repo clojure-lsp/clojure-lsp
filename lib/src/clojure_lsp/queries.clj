@@ -236,25 +236,35 @@
     (.equals ^clojure.lang.Symbol a b)
     (.equals ^String a b)))
 
-(defn ^:private find-first [pred coll]
-  (reduce
-    (fn [_ i]
-      (when (pred i)
-        (reduced i)))
-    nil
-    coll))
+;; Borrowed from https://github.com/cgrand/xforms
+;; Copyright © 2015-2016 Christophe Grand
+;; Distributed under the Eclipse Public License version 1.0
+
+(defn rf-last
+  "Reducing function that returns the last value."
+  ([] nil)
+  ([x] x)
+  ([_ x] x))
+
+(defn rf-some
+  "Reducing function that returns the first logical true value."
+  ([] nil)
+  ([x] x)
+  ([_ x] (when x (reduced x))))
+
+;; End cgrand/xforms
 
 (defn ^:private find-last-order-by-project-analysis [pred? db]
-  (or (peek (into []
-                  (comp
-                    (mapcat val)
-                    (filter pred?))
-                  (internal-analysis db)))
-      (peek (into []
-                  (comp
-                    (mapcat val)
-                    (filter pred?))
-                  (external-analysis db)))))
+  (or (transduce (comp
+                   (mapcat val)
+                   (filter pred?))
+                 rf-last
+                 (internal-analysis db))
+      (transduce (comp
+                   (mapcat val)
+                   (filter pred?))
+                 rf-last
+                 (external-analysis db))))
 
 (defn ^:private match-file-lang
   [check-element match-element]
@@ -360,8 +370,10 @@
 
 (defmethod find-definition :local-usages
   [db {:keys [id filename] :as _element}]
-  (find-first #(and (= :locals (:bucket %)) (= (:id %) id))
-              (get-in db [:analysis filename])))
+  (transduce (filter
+               #(and (= :locals (:bucket %)) (= (:id %) id)))
+             rf-some
+             (get-in db [:analysis filename])))
 
 (defmethod find-definition :keywords
   [db element]
@@ -422,21 +434,22 @@
 (defmethod find-declaration :var-usages
   [db {:keys [alias name to filename] :as element}]
   (when-not (identical? :clj-kondo/unknown-namespace to)
-    (peek (into []
-                (comp (filter
-                        (if alias
-                          #(and (identical? :namespace-alias (:bucket %))
-                                (= to (:to %))
-                                (= alias (:alias %)))
-                          #(if (:refer %)
-                             (and (identical? :var-usages (:bucket %))
-                                  (= to (:to %))
-                                  (= name (:name %)))
+    (transduce
+      (comp (filter
+              (if alias
+                #(and (identical? :namespace-alias (:bucket %))
+                      (= to (:to %))
+                      (= alias (:alias %)))
+                #(if (:refer %)
+                   (and (identical? :var-usages (:bucket %))
+                        (= to (:to %))
+                        (= name (:name %)))
                              ;; :refer :all
-                             (and (identical? :namespace-usages (:bucket %))
-                                  (= to (:name %))))))
-                      (filter #(match-file-lang % element)))
-                (get-in db [:analysis filename])))))
+                   (and (identical? :namespace-usages (:bucket %))
+                        (= to (:name %))))))
+            (filter #(match-file-lang % element)))
+      rf-last
+      (get-in db [:analysis filename]))))
 
 (defmethod find-declaration :default [_ _] nil)
 
@@ -622,16 +635,18 @@
 
 (defn find-element-under-cursor
   [db filename line column]
-  (find-first (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-                ;; TODO Probably should use q/inside? instead
-                (and (<= name-row line name-end-row)
-                     (<= name-col column name-end-col)))
-              (get-in db [:analysis filename])))
+  (transduce (filter
+               (fn [{:keys [name-row name-col name-end-row name-end-col]}]
+                 ;; TODO Probably should use q/inside? instead
+                 (and (<= name-row line name-end-row)
+                      (<= name-col column name-end-col))))
+             rf-some
+             (get-in db [:analysis filename])))
 
 (defn find-all-elements-under-cursor
   [db filename line column]
   (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-                ;; TODO Probably should use q/inside? instead
+            ;; TODO Probably should use q/inside? instead
             (and (<= name-row line name-end-row)
                  (<= name-col column name-end-col)))
           (get-in db [:analysis filename])))
@@ -784,14 +799,16 @@
        last))
 
 (defn find-element-for-rename [db from-ns from-name]
-  (find-last-order-by-project-analysis
-    (if from-name
-      #(and (identical? :var-definitions (:bucket %))
-            (= from-ns (:ns %))
-            (= from-name (:name %)))
-      #(and (identical? :namespace-definitions (:bucket %))
-            (= from-ns (:name %))))
-    (db-with-internal-analysis db)))
+  (transduce
+    (comp (mapcat val)
+          (filter (if from-name
+                    #(and (identical? :var-definitions (:bucket %))
+                          (= from-ns (:ns %))
+                          (= from-name (:name %)))
+                    #(and (identical? :namespace-definitions (:bucket %))
+                          (= from-ns (:name %))))))
+    rf-last
+    (internal-analysis db)))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

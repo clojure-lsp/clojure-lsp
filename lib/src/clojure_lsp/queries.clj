@@ -808,7 +808,7 @@
                     #(and (identical? :namespace-definitions (:bucket %))
                           (= from-ns (:name %))))))
     rf-last
-    (ns-analysis db from-ns)))
+    (internal-analysis (db-with-ns-analysis db from-ns))))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

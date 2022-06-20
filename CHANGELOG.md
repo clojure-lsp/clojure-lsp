@@ -12,6 +12,7 @@
   - Fix clean-ns to move reader conditionals to before normal requires. #1057
   - Improve system wide performance by keeping a graph of dependencies between namespaces. #990 #1053
     Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
+  - Add new optional linter: [clj-depend](https://github.com/clj-depend/clj-depend) integration. #957
 
 - Editor
   - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978

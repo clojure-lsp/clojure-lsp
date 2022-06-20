@@ -81,7 +81,7 @@
               :else           (receive-notification client json))
             (recur))
           (do
-            (log client :red "listener closed:" "server closed")
+            (log client :white "listener closed:" "server closed")
             (flush)))))
     (catch Throwable e
       (log client :red "listener closed:" "exception")

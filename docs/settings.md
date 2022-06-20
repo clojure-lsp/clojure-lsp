@@ -207,13 +207,19 @@ Example:
                                            :exclude-when-defined-by-regex #{"my.custom/macro-.*"}}}}
 ```
 
+
+#### clj-depend
+
+clojure-lsp uses [clj-depend](https://github.com/clj-depend/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.
+
 #### Disable linter
 
-It's not recommended to disable the linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:
+It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:
 
 `.lsp/config.edn`
 ```clojure
-{:linters {:clj-kondo {:level :off}}}
+{:linters {:clj-kondo {:level :off}
+           :clj-depend {:level :off}}}
 ```
 
 For information on how to troubleshoot the linter, check the [troubleshooting section](troubleshooting.md)

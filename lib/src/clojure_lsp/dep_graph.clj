@@ -252,9 +252,6 @@
 (def internal-xf ;; works for dep-graph or file-meta
   (filter (comp :internal? val)))
 
-(def external-xf ;; works for dep-graph or file-meta
-  (remove (comp :internal? val)))
-
 (def from-internal-xf ;; works for dep-graph only
   (filter (comp :from-internal? val)))
 

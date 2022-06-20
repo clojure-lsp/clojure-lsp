@@ -361,6 +361,16 @@
       "hash": "sha256-n6pYYudCO9kUHuBAUHGxemuzocncPdgstHX1qka57IM="
     },
     {
+      "mvn-path": "com/fabiodomingues/clj-depend/0.6.0/clj-depend-0.6.0.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-6Q0SJ0uoP7uamSQiuhajzUeOhqzYPWppK1MAu6l1hbk="
+    },
+    {
+      "mvn-path": "com/fabiodomingues/clj-depend/0.6.0/clj-depend-0.6.0.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-jaelnsBJOY54FRWpKRmUW2eOpOMlhsx2IZn3hL+PzAA="
+    },
+    {
       "mvn-path": "com/fasterxml/jackson/core/jackson-annotations/2.9.10/jackson-annotations-2.9.10.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-yHby6F0PEIo0zdEczJ2NeHVpc2fvx1vxConCwmrumUw="
@@ -2164,6 +2174,16 @@
       "mvn-path": "org/clojure/tools.logging/1.2.4/tools.logging-1.2.4.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-blrU/1STs92xl92GinrigNnJ0QAoqg4KnF2NkD7j1Po="
+    },
+    {
+      "mvn-path": "org/clojure/tools.namespace/1.2.0/tools.namespace-1.2.0.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-vJrJkFEIlHOUPVs9MIfQnS02WtrgZEBnHl+4oAYb1+k="
+    },
+    {
+      "mvn-path": "org/clojure/tools.namespace/1.2.0/tools.namespace-1.2.0.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-tSXgZ8g39Dj94ADXivrKHe2F0AwNR50oeqn0oa42tbo="
     },
     {
       "mvn-path": "org/clojure/tools.namespace/1.3.0/tools.namespace-1.3.0.jar",

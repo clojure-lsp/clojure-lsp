@@ -1,6 +1,7 @@
 (ns clojure-lsp.crawler
   (:require
    [clojure-lsp.classpath :as classpath]
+   [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -24,10 +25,20 @@
         :else :unkown))
 
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
-  (let [result (shared/logging-time
-                 (str startup-logger-tag " Project only paths analyzed, took %s")
-                 (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn))]
-    (swap! db* lsp.kondo/db-with-results result)))
+  (let [kondo-result* (future
+                        (shared/logging-time
+                          (str startup-logger-tag " Project only paths analyzed by clj-kondo, took %s")
+                          (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn)))
+        depend-result* (future
+                         (shared/logging-time
+                           (str startup-logger-tag " Project only paths analyzed by clj-depend, took %s")
+                           (lsp.depend/analyze-paths! paths @db*)))
+        kondo-result @kondo-result*
+        depend-result @depend-result*]
+    (swap! db* (fn [state-db]
+                 (-> state-db
+                     (lsp.kondo/db-with-results kondo-result)
+                     (lsp.depend/db-with-results depend-result))))))
 
 (defn analyze-reference-filenames! [filenames db*]
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]

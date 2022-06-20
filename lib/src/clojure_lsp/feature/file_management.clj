@@ -14,8 +14,7 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
-   [medley.core :as medley]))
+   [lsp4clj.protocols.producer :as producer]))
 
 (set! *warn-on-reflection* true)
 

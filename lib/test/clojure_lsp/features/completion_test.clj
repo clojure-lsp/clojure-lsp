@@ -41,7 +41,8 @@
   (h/load-code-and-locs (h/code ";; comment")
                         (h/file-uri "file:///h.clj"))
 
-  (swap! db/db* merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
+  (swap! db/db* merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}
+                                                             :completion {:completion-item {:resolve-support {:properties ["documentation"]}}}}}})
   (testing "complete-alp"
     (h/assert-submaps
       [{:label "alpha" :kind :variable}
@@ -102,6 +103,64 @@
   (testing "complete comment returns nothing"
     (is (empty? (f.completion/completion (h/file-uri "file:///h.clj") 1 10 @db/db*)))))
 
+(deftest completing-aliases
+  (h/load-code-and-locs (h/code "(ns bbb)"
+                                "(def bar)")
+                        (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs (h/code "(ns ccc"
+                                "  (:require [bbb :as bb]))")
+                        (h/file-uri "file:///ccc.clj"))
+  (let [[[bb-row bb-col]]
+        (h/load-code-and-locs (h/code "(ns aaa)"
+                                      "bb|")
+                              (h/file-uri "file:///aaa.clj"))]
+    (testing "without resolve support"
+      (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:resolve-support {:properties ["documentation"]}}}}}})
+      (h/assert-submaps
+        [;; to ns
+         {:label "bb",
+          :kind :property,
+          :detail "alias to: bbb",
+          :additional-text-edits
+          [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
+            :new-text (h/code "(ns aaa "
+                              "  (:require"
+                              "    [bbb :as bb]))")}]}
+         ;; to var in ns
+         {:label "bb/bar",
+          :kind :variable
+          :data {"unresolved" [["documentation" {"name" "bar"
+                                                 "filename" "/bbb.clj"
+                                                 "name-row" 2
+                                                 "name-col" 6}]]},
+          :additional-text-edits
+          [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
+            :new-text (h/code "(ns aaa "
+                              "  (:require"
+                              "    [bbb :as bb]))")}]}]
+        (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col @db/db*)))
+    (testing "with resolve support"
+      (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:resolve-support {:properties ["documentation" "additionalTextEdits"]}}}}}})
+      (h/assert-submaps
+        [;; to ns
+         {:label "bb",
+          :kind :property,
+          :detail "alias to: bbb",
+          :data {"unresolved" [["alias" {"ns-to-add" "bbb"
+                                         "alias-to-add" "bb"
+                                         "uri" "file:///aaa.clj"}]]}}
+         ;; to var in ns
+         {:label "bb/bar",
+          :kind :variable
+          :data {"unresolved" [["documentation" {"name" "bar"
+                                                 "filename" "/bbb.clj"
+                                                 "name-row" 2
+                                                 "name-col" 6}]
+                               ["alias" {"ns-to-add" "bbb"
+                                         "alias-to-add" "bb"
+                                         "uri" "file:///aaa.clj"}]]}}]
+        (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col @db/db*)))))
+
 (deftest completing-full-ns
   (h/load-code-and-locs
     (h/code "(ns alpaca.ns)"
@@ -159,7 +218,7 @@
   (testing "When element does not contains data"
     (is (= {:label "Some" :kind :module}
            (f.completion/resolve-item {:label "Some" :kind :module} db/db*))))
-  (testing "When element contains data of a element/knows the element"
+  (testing "When element needs documentation and has a position"
     (h/assert-submap {:label "foo"
                       :documentation [{:language "clojure" :value "a/foo"}
                                       "Some docs"
@@ -167,12 +226,13 @@
                       :kind :variable}
                      (f.completion/resolve-item {:label "foo"
                                                  :kind :variable
-                                                 :data {:name "foo"
-                                                        :filename (h/file-path "/a.clj")
-                                                        :name-row 1
-                                                        :name-col 13}}
+                                                 :data {:unresolved [["documentation"
+                                                                      {:name "foo"
+                                                                       :filename (h/file-path "/a.clj")
+                                                                       :name-row 1
+                                                                       :name-col 13}]]}}
                                                 db/db*)))
-  (testing "When element contains data of a element/knows the element"
+  (testing "When element needs documentation and has a namespace"
     (h/assert-submap {:label "foo"
                       :documentation [{:language "clojure" :value "a/foo"}
                                       "Some docs"
@@ -180,11 +240,25 @@
                       :kind :function}
                      (f.completion/resolve-item {:label "foo"
                                                  :kind :function
-                                                 :data {:name "foo"
-                                                        :filename (h/file-path "/a.clj")
-                                                        :name-row 1
-                                                        :name-col 13
-                                                        :ns "a"}}
+                                                 :data {:unresolved [["documentation"
+                                                                      {:name "foo"
+                                                                       :filename (h/file-path "/a.clj")
+                                                                       :ns "a"}]]}}
+                                                db/db*)))
+  (testing "When element needs an alias"
+    (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
+    (h/assert-submap {:label "foo"
+                      :kind :function
+                      :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
+                                               :new-text (h/code "(ns aaa "
+                                                                 "  (:require"
+                                                                 "    [bbb :as b]))")}]}
+                     (f.completion/resolve-item {:label "foo"
+                                                 :kind :function
+                                                 :data {:unresolved [["alias"
+                                                                      {:ns-to-add "bbb"
+                                                                       :alias-to-add "b"
+                                                                       :uri (h/file-uri "file:///aaa.clj")}]]}}
                                                 db/db*))))
 
 (deftest completing-refers
@@ -219,13 +293,14 @@
             "(comm)"))
 
   (testing "completing comment snippet when client does not support snippets"
-    (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false}}}}})
+    (swap! db/db* merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false
+                                                                                              :resolve-support {:properties ["documentation"]}}}}}})
     (h/assert-submaps
       [{:label "comment"
         :kind :function
-        :data {"filename" "/clojure.core.clj"
-               "name" "comment"
-               "ns" "clojure.core"}
+        :data {"unresolved" [["documentation" {"filename" "/clojure.core.clj"
+                                               "name" "comment"
+                                               "ns" "clojure.core"}]]}
         :detail "clojure.core/comment"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 2 8 @db/db*)))
 

@@ -321,6 +321,7 @@
 {
   "name":"org.eclipse.lsp4j.CompletionItemResolveSupportCapabilities",
   "allDeclaredFields":true,
+  "allPublicMethods":true,
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {

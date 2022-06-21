@@ -103,6 +103,48 @@
     :else
     (-> element :name name)))
 
+(defn add-unresolved [completion-item unresolved-type args]
+  (update-in completion-item [:data "unresolved"] (fnil conj []) [unresolved-type args]))
+
+(defn ^:private completion-item-with-documentation
+  [completion-item element var-name db*]
+  (let [definition (when (and element
+                              (identical? :var-definitions (:bucket element))
+                              (= var-name (str (:name element))))
+                     element)]
+    (cond-> completion-item
+      definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
+
+(defn ^:private completion-item-with-alias-edit
+  [completion-item cursor-loc alias-to-add ns-to-add db]
+  (let [edits (some-> cursor-loc
+                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
+                      r.transform/result)]
+    (cond-> completion-item
+      (seq edits) (assoc :additional-text-edits (mapv #(update % :range shared/->range)
+                                                      edits)))))
+
+(defn ^:private completion-item-with-unresolved-documentation
+  [completion-item args resolve-support]
+  (if (contains? (:properties resolve-support) "documentation")
+    ;; client supports postponing documentation lookup
+    (add-unresolved completion-item "documentation" args)
+    ;; clients that don't support postponing documentation don't get
+    ;; documentation at all
+    completion-item))
+
+(defn ^:private completion-item-with-unresolved-alias-edit
+  [completion-item cursor-loc alias-to-add ns-to-add db uri resolve-support]
+  (if (contains? (:properties resolve-support) "additionalTextEdits")
+    ;; client supports postponing the expensive edit calculation
+    (add-unresolved completion-item
+                    "alias"
+                    {"ns-to-add"    (name ns-to-add)
+                     "alias-to-add" (name alias-to-add)
+                     "uri"          uri})
+    ;; client can't postpone the edit calculation, so do it now, even though it's expensive
+    (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add db)))
+
 (defn ^:private generic-priority->specific-priority
   [element priority]
   (cond
@@ -118,7 +160,7 @@
     priority))
 
 (defn ^:private element->completion-item
-  [{:keys [deprecated ns bucket arglist-strs] :as element} cursor-alias priority]
+  [{:keys [deprecated ns bucket arglist-strs] :as element} cursor-alias priority resolve-support]
   (let [kind (element->completion-item-kind element)
         definition? (contains? #{:namespace-definitions :var-definitions} bucket)
         detail (when (not definition?)
@@ -133,14 +175,16 @@
                        ns (conj (str (name ns) "/" (name (:name element))))
                        arglist-strs (conj (string/join " " arglist-strs))))))]
     (cond-> {:label (element->label element cursor-alias priority)
-             :priority (generic-priority->specific-priority element priority)
-             :data {"name" (-> element :name str)
-                    "filename" (:filename element)
-                    "name-row" (:name-row element)
-                    "name-col" (:name-col element)}}
+             :priority (generic-priority->specific-priority element priority)}
       deprecated (assoc :tags [1])
       kind (assoc :kind kind)
-      detail (assoc :detail detail))))
+      detail (assoc :detail detail)
+      :always (completion-item-with-unresolved-documentation
+                {"name" (-> element :name str)
+                 "filename" (:filename element)
+                 "name-row" (:name-row element)
+                 "name-col" (:name-col element)}
+                resolve-support))))
 
 (defn ^:private name-matches-xf [matches-fn]
   (filter (fn [{:keys [name]}]
@@ -182,7 +226,7 @@
     (filter #(shared/inside? cursor-element %))
     (name-matches-xf matches-fn)))
 
-(defn ^:private with-local-items [matches-fn cursor-uri cursor-element local-buckets row col]
+(defn ^:private with-local-items [matches-fn cursor-uri cursor-element local-buckets row col resolve-support]
   (let [cursor-langs (shared/uri->available-langs cursor-uri)
         cursor-element (or cursor-element {:name-row row, :name-col col})]
     (into []
@@ -193,11 +237,11 @@
                                   (filter #(or (not (:lang %))
                                                (contains? cursor-langs (:lang %)))))
                             (get local-buckets bucket))))
-            (map #(element->completion-item % nil :simple-cursor)))
+            (map #(element->completion-item % nil :simple-cursor resolve-support)))
           [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals])))
 
 (defn ^:private with-definition-kws-args-element-items
-  [matches-fn {:keys [arglist-kws name-row name-col filename]}]
+  [matches-fn {:keys [arglist-kws name-row name-col filename]} resolve-support]
   (->> (flatten arglist-kws)
        (map (fn [kw]
               {:name (str kw)
@@ -206,27 +250,28 @@
                :filename filename
                :bucket :keyword-usages}))
        (filter #(matches-fn (keyword-element->str % nil nil)))
-       (mapv #(element->completion-item % nil :kw-arg))))
+       (mapv #(element->completion-item % nil :kw-arg resolve-support))))
 
-(defn ^:private with-ns-definition-elements [matches-fn non-local-db]
+(defn ^:private with-ns-definition-elements [matches-fn non-local-db resolve-support]
   (into []
         (comp
           q/xf-analysis->namespace-definitions
           (filter #(matches-fn (:name %)))
-          (map #(element->completion-item % nil :ns-definition)))
+          (map #(element->completion-item % nil :ns-definition resolve-support)))
         (:analysis non-local-db)))
 
-(defn ^:private with-refer-elements [matches-fn cursor-loc non-local-db]
+(defn ^:private with-refer-elements [matches-fn cursor-loc non-local-db resolve-support]
   (let [refer-ns (z/sexpr (edit/find-refer-ns cursor-loc))]
     (into []
           (comp
             q/xf-analysis->var-definitions
             (filter #(and (= refer-ns (:ns %))
                           (matches-fn (:name %))))
-            (map #(element->completion-item % nil :refer)))
+            (map #(element->completion-item % nil :refer resolve-support)))
           (q/ns-analysis non-local-db refer-ns))))
 
-(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value local-buckets matches-fn db]
+(defn ^:private with-elements-from-alias
+  [cursor-loc cursor-alias cursor-value local-buckets matches-fn db uri resolve-support]
   (when-let [aliases (or (->> local-buckets
                               :namespace-alias
                               (filter #(= (-> % :alias str) cursor-alias))
@@ -276,7 +321,7 @@
                        #(when (and (not (:private %))
                                    (contains? alias-namespaces (:ns %))
                                    (or (simple-ident? cursor-value) (matches-fn (:name %))))
-                          [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
+                          [(:ns %) (element->completion-item % cursor-alias :unrequired-alias resolve-support)]))
                      (distinct)
                      (map
                        (fn [[element-ns completion-item]]
@@ -285,23 +330,19 @@
                           :ns-to-add    element-ns})))
                    (q/nses-analysis db alias-namespaces))))
          (map (fn [{:keys [item alias-to-add ns-to-add]}]
-                (let [require-edit (some-> cursor-loc
-                                           (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
-                                           r.transform/result)]
-                  (cond-> item
-                    (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))
+                (completion-item-with-unresolved-alias-edit item cursor-loc alias-to-add ns-to-add db uri resolve-support))))))
 
-(defn ^:private with-elements-from-full-ns [db full-ns]
+(defn ^:private with-elements-from-full-ns [db full-ns resolve-support]
   (into []
         (comp
           q/xf-analysis->var-definitions
           (filter #(and (= (:ns %) (symbol full-ns))
                         (not (:private %))))
-          (map #(element->completion-item % full-ns :ns-definition)))
+          (map #(element->completion-item % full-ns :ns-definition resolve-support)))
         (q/ns-analysis db (symbol full-ns))))
 
 (defn ^:private with-elements-from-aliased-keyword
-  [cursor-loc cursor-element local-buckets non-local-db]
+  [cursor-loc cursor-element local-buckets non-local-db resolve-support]
   (let [alias (or (:alias cursor-element)
                   (-> cursor-loc z/sexpr namespace (subs 1)))
         ns (or (:ns cursor-element)
@@ -316,33 +357,39 @@
             (filter #(and (= ns (:ns %))
                           (or (not cursor-loc)
                               (string/starts-with? (:name %) name))))
-            (map #(element->completion-item % alias :alias-keyword)))
+            (map #(element->completion-item % alias :alias-keyword resolve-support)))
           (:analysis non-local-db))))
 
-(defn ^:private with-core-items [matches-fn {:keys [filename ns-name symbols priority]}]
+(defn ^:private with-core-items [matches-fn {:keys [filename ns-name symbols priority]} resolve-support]
   (keep (fn [{:keys [name kind]}]
           (let [sym-name (str name)]
             (when (matches-fn sym-name)
-              {:label sym-name
-               :kind kind
-               :data {"filename" filename
-                      "name" sym-name
-                      "ns" ns-name}
-               :detail (str ns-name "/" sym-name)
-               :priority priority})))
+              (-> {:label    sym-name
+                   :kind     kind
+                   :detail   (str ns-name "/" sym-name)
+                   :priority priority}
+                  (completion-item-with-unresolved-documentation
+                    {"filename" filename
+                     "name"     sym-name
+                     "ns"       ns-name}
+                    resolve-support)))))
         symbols))
 
-(defn ^:private with-clojure-core-items [matches-fn]
-  (with-core-items matches-fn {:filename "/clojure.core.clj"
-                               :ns-name "clojure.core"
-                               :symbols common-sym/clj-syms
-                               :priority :clojure-core}))
+(defn ^:private with-clojure-core-items [matches-fn resolve-support]
+  (with-core-items matches-fn
+                   {:filename "/clojure.core.clj"
+                    :ns-name "clojure.core"
+                    :symbols common-sym/clj-syms
+                    :priority :clojure-core}
+                   resolve-support))
 
-(defn ^:private with-clojurescript-items [matches-fn]
-  (with-core-items matches-fn {:filename "/cljs.core.cljs"
-                               :ns-name "cljs.core"
-                               :symbols common-sym/cljs-syms
-                               :priority :clojurescript-core}))
+(defn ^:private with-clojurescript-items [matches-fn resolve-support]
+  (with-core-items matches-fn
+                   {:filename "/cljs.core.cljs"
+                    :ns-name "cljs.core"
+                    :symbols common-sym/cljs-syms
+                    :priority :clojurescript-core}
+                   resolve-support))
 
 (defn ^:private with-java-items [matches-fn]
   (concat
@@ -417,9 +464,12 @@
       []
       (let [filename (shared/uri->filename uri)
             settings (settings/all db)
+            client-completion-item-caps (get-in db [:client-capabilities :text-document :completion :completion-item])
+            resolve-support (-> (get client-completion-item-caps :resolve-support {})
+                                (update :properties set))
+            support-snippets? (get client-completion-item-caps :snippet-support false)
             non-local-db (update db :analysis dissoc filename)
             local-buckets (get-in db [:analysis filename])
-            support-snippets? (get-in db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
             cursor-element (q/find-element-under-cursor db filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
@@ -452,37 +502,37 @@
                               (contains? (q/ns-names db) (symbol cursor-value-or-ns)))
             items (cond
                     inside-refer?
-                    (with-refer-elements matches-fn cursor-loc non-local-db)
+                    (with-refer-elements matches-fn cursor-loc non-local-db resolve-support)
 
                     inside-require?
-                    (cond-> (with-ns-definition-elements matches-fn non-local-db)
+                    (cond-> (with-ns-definition-elements matches-fn non-local-db resolve-support)
                       (and support-snippets?
                            simple-cursor?)
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings))
 
                     aliased-keyword-value?
-                    (with-elements-from-aliased-keyword cursor-loc cursor-element local-buckets non-local-db)
+                    (with-elements-from-aliased-keyword cursor-loc cursor-element local-buckets non-local-db resolve-support)
 
                     :else
                     (cond-> []
                       cursor-full-ns?
-                      (into (with-elements-from-full-ns db cursor-value-or-ns))
+                      (into (with-elements-from-full-ns db cursor-value-or-ns resolve-support))
 
                       (and cursor-value-or-ns
                            (not keyword-value?))
-                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value local-buckets matches-fn db))
+                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value local-buckets matches-fn db uri resolve-support))
 
                       (or simple-cursor?
                           keyword-value?)
-                      (-> (into (with-local-items matches-fn uri cursor-element local-buckets row col))
-                          (into (with-clojure-core-items matches-fn)))
+                      (-> (into (with-local-items matches-fn uri cursor-element local-buckets row col resolve-support))
+                          (into (with-clojure-core-items matches-fn resolve-support)))
 
                       (:arglist-kws caller-var-definition)
-                      (into (with-definition-kws-args-element-items matches-fn caller-var-definition))
+                      (into (with-definition-kws-args-element-items matches-fn caller-var-definition resolve-support))
 
                       (and simple-cursor?
                            (supports-cljs? uri))
-                      (into (with-clojurescript-items matches-fn))
+                      (into (with-clojurescript-items matches-fn resolve-support))
 
                       (and simple-cursor?
                            (supports-clj-core? uri))
@@ -493,34 +543,44 @@
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings)))]
         (sorting-and-distincting-items items)))))
 
-(defn ^:private resolve-item-by-ns
-  [{{:keys [name ns filename]} :data :as item} db*]
-  (let [db @db*
-        definition (q/find-definition db {:filename filename
-                                          :name (symbol name)
-                                          :to (symbol ns)
-                                          :bucket :var-usages})]
-    (cond-> item
-      definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
+;;;; Resolve Completion Item (completionItem/resolve)
 
-(defn ^:private resolve-item-by-definition
-  [{{:keys [name filename name-row name-col]} :data :as item} db*]
-  (let [db @db*
-        element (q/find-element-under-cursor db filename name-row name-col)
-        definition (when (and (identical? :var-definitions (:bucket element))
-                              (= (symbol name) (:name element)))
-                     element)]
-    (cond-> item
-      definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
+(defn ^:private find-element-by-ns [{:keys [name ns filename]} db]
+  (q/find-definition db {:filename filename
+                         :name (symbol name)
+                         :to (symbol ns)
+                         :bucket :var-usages}))
 
-(defn resolve-item [{{:keys [ns]} :data :as item} db*]
-  (let [item (shared/assoc-some item
-                                :insert-text-format (:insertTextFormat item)
-                                :text-edit (:textEdit item)
-                                :filter-text (:filterText item)
-                                :insert-text (:insertText item))]
-    (if (:data item)
-      (if ns
-        (resolve-item-by-ns item db*)
-        (resolve-item-by-definition item db*))
+(defn ^:private find-element-by-position [{:keys [filename name-row name-col]} db]
+  (q/find-element-under-cursor db filename name-row name-col))
+
+(defmulti ^:private resolve-unresolved (fn [unresolved-type _item _args] unresolved-type))
+
+(defmethod resolve-unresolved "documentation" [_ item {:keys [ns db db*] :as args}]
+  (if-let [element (if ns
+                     (find-element-by-ns args db)
+                     (find-element-by-position args db))]
+    (completion-item-with-documentation item element (:name args) db*)
+    item))
+
+(defmethod resolve-unresolved "alias" [_ item {:keys [uri alias-to-add ns-to-add db]}]
+  (if-let [zloc (parser/safe-zloc-of-file db uri)]
+    (completion-item-with-alias-edit item zloc (symbol alias-to-add) (symbol ns-to-add) db)
+    item))
+
+(defn resolve-item [{:keys [data] :as item} db*]
+  (let [db @db*
+        item (-> item
+                 (dissoc :data)
+                 (shared/assoc-some :insert-text-format (:insertTextFormat item)
+                                    :text-edit (:textEdit item)
+                                    :filter-text (:filterText item)
+                                    :insert-text (:insertText item)))]
+    (if-let [unresolved (some-> data :unresolved seq)]
+      (reduce (fn [item [unresolved-type args]]
+                (resolve-unresolved unresolved-type
+                                    item
+                                    (assoc args :db db :db* db*)))
+              item
+              unresolved)
       item)))

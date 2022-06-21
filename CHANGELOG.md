@@ -38,6 +38,7 @@
   - Add refactoring `Destructure keys` to destructure keywords. #905
   - Add refactoring `Extract to def` to create a `def` from the thing under the cursor. #1136
   - Include defmethods in document and workspace symbols. #1016
+  - Improve performance of some completions by postponing ns form edits #1068
 
 ## 2022.06.29-19.32.13
 

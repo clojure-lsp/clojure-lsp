@@ -43,7 +43,7 @@
   (client/send-notification *mock-client* method body))
 
 (defn request! [[method body]]
-  @(client/send-request *mock-client* method body))
+  (client/request-and-await-server-response! *mock-client* method body))
 
 (defn client-awaits-server-diagnostics [path]
   (client/await-server-diagnostics *mock-client* path))

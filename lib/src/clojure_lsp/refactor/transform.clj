@@ -454,7 +454,7 @@
                                                              expr-meta)
                              (mapv :name))
               expr-edit (z/of-node (list* fn-sym used-syms))
-              private? false ;; TODO: shouldn't this be true? See https://github.com/clojure-lsp/clojure-lsp/issues/1039
+              private? true
               defn-loc (new-defn-zloc fn-sym private? used-syms
                                       [(n/newlines 1)
                                        (n/spaces (+ defn-col 1))

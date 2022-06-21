@@ -72,15 +72,15 @@
              (is (= expected
                     (f.file-management/reference-filenames "/src/b.clj" db-before db-after)))))
       ;; increasing
-      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
-                              "(def x)"
-                              "a/a"
-                              "a/a"
-                              "a/a")
+      #{} (h/code "(ns b (:require [a]))"
+                  "(def x)"
+                  "a/a"
+                  "a/a"
+                  "a/a")
       ;; decreasing
-      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
-                              "(def x)"
-                              "a/a")
+      #{} (h/code "(ns b (:require [a]))"
+                  "(def x)"
+                  "a/a")
       ;; removing
       #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
                               "(def x)")

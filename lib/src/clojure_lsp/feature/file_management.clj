@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.clojure-producer :as clojure-producer]
-   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
@@ -16,8 +15,7 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
-   [medley.core :as medley]))
+   [lsp4clj.protocols.producer :as producer]))
 
 (set! *warn-on-reflection* true)
 
@@ -51,32 +49,20 @@
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
       (async/>!! db/edits-chan create-ns-edits))))
 
-;; See https://github.com/clojure-lsp/clojure-lsp/issues/1019
-;; This includes increases and decreases as changed elems, but since those won't
-;; change lint, we should limit to additions and removals.
+(defn ^:private set-xor [a b]
+  (into (set/difference a b)
+        (set/difference b a)))
+
 (defn ^:private find-changed-elems-by
-  "Detect elements that changed number of occurrences."
+  "Detect elements that went from 0 to 1 occurrence, or from 1 to 0
+  occurrences."
   [signature-fn old-elems new-elems]
-  (comment
-    ;; increased
-    (merge-with - {:a 2} {:a 1}) ;; => {:a 1}
-    ;; decreased
-    (merge-with - {:a 1} {:a 2}) ;; => {:a -1}
-    ;; removed
-    (merge-with - {} {:a 1}) ;; => {:a 1} ;; not {:a -1}, as you'd expect with removing, but at least it's not 0
-    ;; added
-    (merge-with - {:a 1} {}) ;; => {:a 1}
-    ;; same
-    (merge-with - {:a 1} {:a 1}) ;; => {:a 0}
-    )
   (let [signature-with-elem (fn [elem]
                               (with-meta (signature-fn elem) {:elem elem}))
-        old-counts (->> old-elems (map signature-with-elem) frequencies)
-        new-counts (->> new-elems (map signature-with-elem) frequencies)]
-    (->> (merge-with - new-counts old-counts)
-         (medley/remove-vals zero?)
-         keys
-         (map (comp :elem meta)))))
+        old-signs (->> old-elems (map signature-with-elem) (into #{}))
+        new-signs (->> new-elems (map signature-with-elem) (into #{}))]
+    (map (comp :elem meta)
+         (set-xor old-signs new-signs))))
 
 (defn ^:private find-changed-var-definitions [old-local-elements new-local-elements]
   (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-elements)
@@ -140,6 +126,10 @@
     (set/union (or dependent-filenames #{})
                (or dependency-filenames #{}))))
 
+(defn analyze-reference-filenames! [filenames db*]
+  (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
+    (swap! db* lsp.kondo/db-with-results result)))
+
 (defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
   (async/go
     (shared/logging-task
@@ -170,7 +160,7 @@
             ;; kondo. See
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
-            (crawler/analyze-reference-filenames! filenames db*))
+            (analyze-reference-filenames! filenames db*))
           (let [db @db*]
             (doseq [filename filenames]
               (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))

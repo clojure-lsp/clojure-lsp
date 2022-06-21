@@ -12,7 +12,7 @@
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<!! go go-loop]]
+   [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.components :as components]
@@ -204,13 +204,13 @@
                     "serverInfo" true
                     "clojuredocs" true}}))
 
-(defn ^:private safe-async-task [task-name task-fn]
-  (go-loop []
-    (try
-      (task-fn)
-      (catch Exception e
-        (logger/error e (format "Error during async task %s" task-name))))
-    (recur)))
+(defmacro ^:private safe-async-task [task-name & task-body]
+  `(go-loop []
+     (try
+       ~@task-body
+       (catch Exception e#
+         (logger/error e# (format "Error during async task %s" ~task-name))))
+     (recur)))
 
 (defn ^:private spawn-async-tasks!
   [{:keys [producer] :as components}]
@@ -219,27 +219,22 @@
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     (safe-async-task
       :edits
-      (fn []
-        (let [edit (<!! db/edits-chan)]
-          (producer/publish-workspace-edit producer edit))))
+      (producer/publish-workspace-edit producer (<! db/edits-chan)))
     (safe-async-task
       :diagnostics
-      (fn []
-        (producer/publish-diagnostic producer (<!! debounced-diags))))
+      (producer/publish-diagnostic producer (<! debounced-diags)))
     (safe-async-task
       :changes
-      (fn []
-        (let [changes (<!! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
-          (shared/logging-task
-            :analyze-file
-            (f.file-management/analyze-changes changes components)))))
+      (let [changes (<! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
+        (shared/logging-task
+          :analyze-file
+          (f.file-management/analyze-changes changes components))))
     (safe-async-task
       :watched-files
-      (fn []
-        (let [created-watched-files (<!! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
-          (shared/logging-task
-            :analyze-created-files-in-watched-dir
-            (f.file-management/analyze-watched-created-files! created-watched-files components)))))))
+      (let [created-watched-files (<! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+        (shared/logging-task
+          :analyze-created-files-in-watched-dir
+          (f.file-management/analyze-watched-created-files! created-watched-files components))))))
 
 (defonce ^:private components* (atom {}))
 

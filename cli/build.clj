@@ -66,7 +66,7 @@
   ((requiring-resolve 'deps-bin.impl.bin/build-bin)
    {:jar uber-file
     :name "clojure-lsp"
-    :jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])
+    :jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server" "-Dclojure.core.async.go-checking=true"])
     :skip-realign true}))
 
 (def prod-jar uber-aot)

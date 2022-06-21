@@ -24,6 +24,7 @@
   - Cursor doesn't move within dragged clause. #1029
   - Improve performance of drag forward.
   - Avoid invalid cached analysis and document text after a rename. #1049
+  - Improve lint performance by only linting references files when usage is added or removed. #1019
   - Extracted functions are private. #1039
 
 ## 2022.05.31-17.35.50

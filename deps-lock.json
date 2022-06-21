@@ -1131,14 +1131,14 @@
       "hash": "sha256-1PXzUUHstr5hI/+oPIQUGogO744bynAw2Zoo5HSjTbE="
     },
     {
-      "mvn-path": "lambdaisland/kaocha/1.66.1034/kaocha-1.66.1034.jar",
+      "mvn-path": "lambdaisland/kaocha/1.68.1059/kaocha-1.68.1059.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-91DPQM8HW/sC8L1BnY5c6Ew+bGycbRqXoVZ5q8GUIJs="
+      "hash": "sha256-+LEg3jmSDFr9JqS1ffD7Wg8Cutr14I/mID0sVklaZTw="
     },
     {
-      "mvn-path": "lambdaisland/kaocha/1.66.1034/kaocha-1.66.1034.pom",
+      "mvn-path": "lambdaisland/kaocha/1.68.1059/kaocha-1.68.1059.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-e/NSus/pfNJsvcJ4nzL7xBnWRsKKPNAZymQFJx+s/+s="
+      "hash": "sha256-+/jfEL0tOn2JkdgmFIqrvtAtWxAir881TD8m4Lr1A80="
     },
     {
       "mvn-path": "lambdaisland/tools.namespace/0.1.247/tools.namespace-0.1.247.jar",

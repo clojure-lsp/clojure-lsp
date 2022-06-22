@@ -19,14 +19,12 @@ task:
     fi
     popd
 
+    gu install native-image || true
+
     export PATH=$GRAALVM_HOME/bin:$PATH
     java -version
 
-    make cli-jar-for-native
     make native-cli
-
-    # script/test
-    # script/run_lib_tests
 
     arch=${CLOJURE_LSP_ARCH:-amd64}
     archive="clojure-lsp-native-macos-$arch.zip"

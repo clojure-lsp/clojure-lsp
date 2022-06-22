@@ -78,7 +78,6 @@ e.g.,
           "classpath-cmd": ["clj", "-Spath"]
         }],
         "use-metadata-for-privacy?": true,
-        "ignore-classpath-directories": true
       }
     }
   }

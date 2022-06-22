@@ -1926,8 +1926,9 @@
 <li>Fix references and code lens of defrecord/deftype for cljs files. #1055</li>
 <li>Fix clean-ns to move reader conditionals to before normal requires. #1057</li>
 <li>Add new optional linter: <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> integration. #957</li>
+<li>Add new setting <code>:source-paths-ignore-regex</code> to filter source-paths that are auto generated for example for cljs projects, the default value should be enought for most cases (<code>["resources.*" "target.*"]</code>), replacing old <code>ignore-classpath-directories</code>.</li>
 <li>
-<p>Add new setting <code>:source-paths-ignore-regex</code> to filter source-paths that are auto generated for example for cljs projects, the default value should be enought for most cases (<code>["resources.*" "target.*"]</code>), replacing old <code>ignore-classpath-directories</code>.</p>
+<p>Bump clj-kondo to 2022.06.22.</p>
 </li>
 <li>
 <p>Editor</p>

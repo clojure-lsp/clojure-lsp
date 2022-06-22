@@ -10,7 +10,7 @@ task:
     CLOJURE_LSP_XMX: "-J-Xmx6g"
     GITHUB_TOKEN: ENCRYPTED[d6ff8cdc392157f211c754fa0763875434d1bfde0c00a05e48ba9470003a76c14c9213adb80623f81e13f2f0fa8fbd57]
   script: |
-    sudo scripts/install-clojure
+    sudo scripts/install-clojure /usr/local
 
     pushd ~
     if ! [ -d graalvm-ce-java11-22.1.0 ]; then

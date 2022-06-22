@@ -8,7 +8,7 @@ task:
     CLOJURE_LSP_PLATFORM: macos # used in release script
     CLOJURE_LSP_ARCH: aarch64
     CLOJURE_LSP_XMX: "-J-Xmx6g"
-    GITHUB_TOKEN: ENCRYPTED[d6ff8cdc392157f211c754fa0763875434d1bfde0c00a05e48ba9470003a76c14c9213adb80623f81e13f2f0fa8fbd57]
+    GITHUB_TOKEN: ENCRYPTED[26786ca53221eb81db22b2ed4ebfde12d3765204867931bfad580dd31a0d677fce9df4da487c5b6969ac3397af638c7e]
   script: |
     sudo scripts/install-clojure /usr/local
 

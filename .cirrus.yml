@@ -19,10 +19,9 @@ task:
     fi
     popd
 
-    gu install native-image || true
-
     export PATH=$GRAALVM_HOME/bin:$PATH
-    java -version
+
+    gu install native-image || true
 
     make native-cli
 
@@ -31,4 +30,4 @@ task:
     zip "$archive" clojure-lsp
     bb release-artifact "$archive" || true
   binaries_artifacts:
-    path: "babashka-*.tar.gz"
+    path: "clojure-lsp-*.zip"

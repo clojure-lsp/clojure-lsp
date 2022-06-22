@@ -17,7 +17,7 @@
         ght (System/getenv "GITHUB_TOKEN")
         file (first args)
         branch (current-branch)
-        release-branch? true #_(contains? #{"master" "main"} branch)]
+        release-branch? (contains? #{"master" "main"} branch)]
     (when-not ght
       (println "Skipping: not GITHUB_TOKEN"))
     (when-not release-branch?

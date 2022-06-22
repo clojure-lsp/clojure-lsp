@@ -12,7 +12,7 @@
           str/trim)))
 
 (defn release [& args]
-  (let [current-version (-> (slurp "resources/CLOJURE_LSP_VERSION")
+  (let [current-version (-> (slurp "lib/resources/CLOJURE_LSP_VERSION")
                             str/trim)
         ght (System/getenv "GITHUB_TOKEN")
         file (first args)

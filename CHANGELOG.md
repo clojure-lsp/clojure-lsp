@@ -12,6 +12,7 @@
   - Fix clean-ns to move reader conditionals to before normal requires. #1057
   - Add new optional linter: [clj-depend](https://github.com/clj-depend/clj-depend) integration. #957
   - Add new setting `:source-paths-ignore-regex` to filter source-paths that are auto generated for example for cljs projects, the default value should be enought for most cases (`["resources.*" "target.*"]`), replacing old `ignore-classpath-directories`.
+  - Bump clj-kondo to 2022.06.22.
 
 - Editor
   - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978

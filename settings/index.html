@@ -1209,9 +1209,9 @@
 <td><code>false</code></td>
 </tr>
 <tr>
-<td><code>:ignore-classpath-directories</code></td>
-<td>will not consider clojure files within the directories specified by your classpath. This is needed, for instance, if your build puts artifacts into <code>resources</code> or <code>target</code> that you want lsp to ignore.</td>
-<td><code>false</code></td>
+<td><code>:source-paths-ignore-regex</code></td>
+<td>list of regex to filter source-paths. By default, source-paths are retrieved from classpath, and usually the classpath contains folders that are not directly project code or it's auto-generated like cljs <code>resources</code> or <code>target</code> folders but it's inside your project. Replace old <code>:ignore-classpath-directories</code> setting.</td>
+<td><code>["resources.*" "target.*"]</code></td>
 </tr>
 <tr>
 <td><code>:java</code> <code>:download-jdk-source?</code></td>

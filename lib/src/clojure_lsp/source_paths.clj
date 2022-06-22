@@ -60,9 +60,16 @@
         {:source-paths default-source-paths
          :origins #{:default}})))
 
-(defn process-source-paths [root-path classpath given-source-paths]
-  (let [{:keys [origins source-paths classpath-paths]} (resolve-source-paths root-path classpath given-source-paths)]
-    (when (contains? origins :settings) (logger/info startup-paths-logger-tag "Using given source-paths:" given-source-paths))
-    (when (contains? origins :classpath) (logger/info startup-paths-logger-tag "Using source-paths from classpath:" classpath-paths))
-    (when (contains? origins :default) (logger/info startup-paths-logger-tag "Using default source-paths:" default-source-paths))
-    (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str) (set source-paths))))
+(defn process-source-paths [settings root-path classpath given-source-paths]
+  (let [source-paths-ignore-regex (get settings :source-paths-ignore-regex ["resources.*" "target.*"])
+        {:keys [origins source-paths]} (resolve-source-paths root-path classpath given-source-paths)
+        final-source-paths (->> source-paths
+                                set
+                                (remove (fn [source-path]
+                                          (let [relative-source-path (shared/relativize-filepath source-path (str root-path))]
+                                            (some #(re-matches (re-pattern %) relative-source-path) source-paths-ignore-regex))))
+                                (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str)))]
+    (when (contains? origins :settings) (logger/info startup-paths-logger-tag "Using given source-paths:" final-source-paths))
+    (when (contains? origins :classpath) (logger/info startup-paths-logger-tag "Using source-paths from classpath:" final-source-paths))
+    (when (contains? origins :default) (logger/info startup-paths-logger-tag "Using default source-paths:" final-source-paths))
+    final-source-paths))

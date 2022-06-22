@@ -19,11 +19,6 @@
 
 (def startup-logger-tag "[Startup]")
 
-(defn ^:private get-cp-entry-type [^java.io.File e]
-  (cond (.isFile e) :file
-        (.isDirectory e) :directory
-        :else :unkown))
-
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [kondo-result* (future
                         (shared/logging-time
@@ -42,34 +37,32 @@
 
 (defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
-(defn ^:private analyze-external-classpath! [root-path source-paths classpath settings progress-token {:keys [db* producer]}]
-  (let [ignore-directories? (get settings :ignore-classpath-directories)]
-    (logger/info "Analyzing classpath for project root" root-path)
-    (when classpath
-      (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
-            external-paths (cond->> (->> classpath
-                                         (remove (set source-paths-abs))
-                                         (remove (set source-paths)))
-                             ignore-directories? (remove #(let [f (io/file %)] (= :directory (get-cp-entry-type f)))))
-            {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
-            batch-update-callback (fn [batch-index batch-count {:keys [total-files files-done]}]
-                                    (let [percentage (lerp (lerp 25 70 (/ (dec batch-index) batch-count))
-                                                           (lerp 25 70 (/ batch-index batch-count))
-                                                           (/ files-done total-files))]
-                                      (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
-            normalization-config {:external? true
-                                  :filter-analysis (fn [analysis]
-                                                     (update analysis :var-definitions #(remove :private %)))}
-            kondo-result (shared/logging-time
-                           "External classpath paths analyzed, took %s"
-                           (lsp.kondo/run-kondo-on-paths-batch! paths-not-on-checksum normalization-config batch-update-callback db*))]
-        (swap! db* #(-> %
-                        (update :analysis-checksums merge new-checksums)
-                        (lsp.kondo/db-with-results kondo-result)))
-        (shared/logging-time
-          "Manual GC after classpath scan took %s"
-          (System/gc))
-        (swap! db* assoc :full-scan-analysis-startup true)))))
+(defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
+  (logger/info "Analyzing classpath for project root" root-path)
+  (when classpath
+    (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
+          external-paths (->> classpath
+                              (remove (set source-paths-abs))
+                              (remove (set source-paths)))
+          {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
+          batch-update-callback (fn [batch-index batch-count {:keys [total-files files-done]}]
+                                  (let [percentage (lerp (lerp 25 70 (/ (dec batch-index) batch-count))
+                                                         (lerp 25 70 (/ batch-index batch-count))
+                                                         (/ files-done total-files))]
+                                    (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
+          normalization-config {:external? true
+                                :filter-analysis (fn [analysis]
+                                                   (update analysis :var-definitions #(remove :private %)))}
+          kondo-result (shared/logging-time
+                         "External classpath paths analyzed, took %s"
+                         (lsp.kondo/run-kondo-on-paths-batch! paths-not-on-checksum normalization-config batch-update-callback db*))]
+      (swap! db* #(-> %
+                      (update :analysis-checksums merge new-checksums)
+                      (lsp.kondo/db-with-results kondo-result)))
+      (shared/logging-time
+        "Manual GC after classpath scan took %s"
+        (System/gc))
+      (swap! db* assoc :full-scan-analysis-startup true))))
 
 (defn ^:private copy-configs-from-classpath! [classpath settings db]
   (when (get settings :copy-kondo-configs? true)
@@ -165,7 +158,7 @@
         (let [classpath (:classpath @db*)]
           (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db* assoc
-                 :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath)))
+                 :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (producer/publish-progress producer 15 "Copying kondo configs" progress-token)
           (copy-configs-from-classpath! classpath settings @db*))
         (do
@@ -175,13 +168,13 @@
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
                    :classpath classpath
-                   :settings (update settings :source-paths (partial source-paths/process-source-paths root-path classpath)))
+                   :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
             (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
               (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
-              (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath settings progress-token components))
+              (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")
             (upsert-db-cache! @db*))))
       (producer/publish-progress producer (if fast-startup? 15 75) "Resolving config paths" progress-token)

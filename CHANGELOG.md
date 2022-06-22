@@ -3,6 +3,14 @@
 ## Unreleased
 
 - General
+
+- Editor
+  - Improve system wide performance by keeping a graph of dependencies between namespaces. #990 #1053
+    Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
+
+## 2022.06.22-14.09.50
+
+- General
   - clojure-lsp has a flake.nix now, being able to be built using clj-nix. #999
   - Remove `use-source-paths-from-classpath` setting, its value was already true and disabling it could cause false-positives.
   - Add `compute-external-file-changes` setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002
@@ -10,9 +18,9 @@
   - Remove deprecated disabled setting `:linters :clj-kondo :async-custom-lint?`. #1017
   - Fix references and code lens of defrecord/deftype for cljs files. #1055
   - Fix clean-ns to move reader conditionals to before normal requires. #1057
-  - Improve system wide performance by keeping a graph of dependencies between namespaces. #990 #1053
-    Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
   - Add new optional linter: [clj-depend](https://github.com/clj-depend/clj-depend) integration. #957
+  - Add new setting `:source-paths-ignore-regex` to filter source-paths that are auto generated for example for cljs projects, the default value should be enought for most cases (`["resources.*" "target.*"]`), replacing old `ignore-classpath-directories`.
+  - Bump clj-kondo to 2022.06.22.
 
 - Editor
   - Add support to rename namespace of namespaced keywords like re-frame events/subs. #978
@@ -28,6 +36,7 @@
   - Avoid invalid cached analysis and document text after a rename. #1049
   - Improve lint performance by only linting references files when usage is added or removed. #1019
   - Extracted functions are private. #1039
+  - Fix errors when Emacs lock files are linted. #1054
 
 ## 2022.05.31-17.35.50
 

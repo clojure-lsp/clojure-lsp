@@ -1,3 +1,8 @@
 {:paths ["scripts"]
- :min-bb-version "0.4.0"
- :tasks {get-last-changelog-entry ci/get-last-changelog-entry}}
+ :deps {borkdude/gh-release-artifact
+        #_{:local/root "../gh-release-artifact"}
+        {:git/url "https://github.com/borkdude/gh-release-artifact"
+         :sha "cf082df46a648178d1904e9cbcb787d8136a35c6"}}
+ :min-bb-version "0.8.156"
+ :tasks {get-last-changelog-entry ci/get-last-changelog-entry
+         release-artifact clojure-lsp.release-artifact/release}}

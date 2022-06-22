@@ -28,6 +28,9 @@ task:
     arch=${CLOJURE_LSP_ARCH:-amd64}
     archive="clojure-lsp-native-macos-$arch.zip"
     zip "$archive" clojure-lsp
+
+    sudo bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
+
     bb release-artifact "$archive" || true
   binaries_artifacts:
     path: "clojure-lsp-*.zip"

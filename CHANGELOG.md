@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.06.22-14.09.50
+
 - General
   - clojure-lsp has a flake.nix now, being able to be built using clj-nix. #999
   - Remove `use-source-paths-from-classpath` setting, its value was already true and disabling it could cause false-positives.

@@ -45,7 +45,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2022.05.31</version>
+      <version>2022.06.22</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>

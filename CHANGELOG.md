@@ -26,6 +26,7 @@
   - Avoid invalid cached analysis and document text after a rename. #1049
   - Improve lint performance by only linting references files when usage is added or removed. #1019
   - Extracted functions are private. #1039
+  - Fix errors when Emacs lock files are linted. #1054
 
 ## 2022.05.31-17.35.50
 

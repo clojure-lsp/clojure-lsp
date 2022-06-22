@@ -11,7 +11,7 @@
         clj-kondo/clj-kondo {:mvn/version "2022.06.22"
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}
-        com.fabiodomingues/clj-depend {:mvn/version "0.6.0"}
+        com.fabiodomingues/clj-depend {:mvn/version "0.6.1"}
         com.cognitect/transit-clj {:mvn/version "1.0.329"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}

@@ -14,6 +14,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go go-loop]]
    [clojure.java.data :as j]
+   [clojure.java.io :as io]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.components :as components]
    [lsp4clj.core :as lsp]
@@ -255,9 +256,10 @@
                                               known-files-pattern)
                                   clojure-feature-handler)
         ;; For debugging, it's possible to trace all I/O through lsp4j.
-        ;; tracer (java.io.PrintWriter. (io/writer (io/file "path/to/some/log/file")))
-        ;; launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out false tracer)
-        launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out)
+        ;; FIXME: do not merge with tracing turned on
+        tracer (java.io.PrintWriter. (io/writer (io/file "../../integration-test/sample-test/clojure-lsp.lsp-trace.out")))
+        launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out false tracer)
+        ;; launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db*)

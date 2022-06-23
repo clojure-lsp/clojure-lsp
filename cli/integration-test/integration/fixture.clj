@@ -83,6 +83,11 @@
     :context      {:diagnostics []}
     :range        {:start {:line row :character col}}}])
 
+(defn hover-request [path row col]
+  [:textDocument/hover
+   {:textDocument {:uri (h/source-path->uri path)}
+    :position     {:line row :character col}}])
+
 (defn execute-command-request [command & args]
   [:workspace/executeCommand
    {:command   command
@@ -110,3 +115,13 @@
        :languageId "clojure"
        :version 0
        :text text}}]))
+
+(defn did-change-notification [path version changes]
+  [:textDocument/didChange
+   {:textDocument {:uri (h/source-path->uri path)
+                   :version version}
+    :contentChanges (map (fn [[text start-row start-col end-row end-col]]
+                           {:text text
+                            :range {:start {:line start-row :character start-col}
+                                    :end {:line end-row :character end-col}}})
+                         changes)}])

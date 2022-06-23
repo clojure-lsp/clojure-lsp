@@ -75,13 +75,17 @@
         ;; Block, waiting for next Content-Length line, then discard it. If
         ;; the server output stream is closed, also close the client by
         ;; exiting this loop.
+        (log client :white "listener reading:" "waiting for content length")
         (if-let [_content-length (read-line)]
-          (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-            (cond
-              (and id method) (receive-request client json)
-              id              (receive-response client json)
-              :else           (receive-notification client json))
-            (recur))
+          (do
+            (log client :white "listener reading:" (str "content length: " _content-length ", passing to cheshire"))
+            (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
+              (log client :white "listener reading:" "read")
+              (cond
+                (and id method) (receive-request client json)
+                id              (receive-response client json)
+                :else           (receive-notification client json))
+              (recur)))
           (do
             (log client :white "listener closed:" "server closed")
             (flush)))))

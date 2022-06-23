@@ -46,7 +46,7 @@
     (f.diagnostic/async-publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
-      (async/>!! db/edits-chan create-ns-edits))))
+      (async/put! db/edits-chan create-ns-edits))))
 
 (defn ^:private set-xor [a b]
   (into (set/difference a b)
@@ -213,9 +213,9 @@
                                   (assoc-in [:documents uri :v] version)
                                   (assoc-in [:documents uri :text] final-text)
                                   (update :processing-changes conj uri))))
-    (async/>!! db/current-changes-chan {:uri uri
-                                        :text final-text
-                                        :version version})))
+    (async/put! db/current-changes-chan {:uri uri
+                                         :text final-text
+                                         :version version})))
 
 (defn analyze-watched-created-files! [uris {:keys [db* producer]}]
   (let [filenames (map shared/uri->filename uris)
@@ -229,7 +229,7 @@
 (defn did-change-watched-files [changes db*]
   (doseq [{:keys [uri type]} changes]
     (case type
-      :created (async/>!! db/created-watched-files-chan uri)
+      :created (async/put! db/created-watched-files-chan uri)
       :changed (when (settings/get @db* [:compute-external-file-changes] true)
                  (shared/logging-task
                    :changed-watched-file

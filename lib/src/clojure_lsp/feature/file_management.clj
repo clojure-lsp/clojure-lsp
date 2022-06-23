@@ -43,7 +43,7 @@
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result))))
-    (f.diagnostic/async-publish-diagnostics! uri @db*))
+    (f.diagnostic/publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
       (async/put! db/edits-chan create-ns-edits))))
@@ -135,7 +135,7 @@
             (analyze-reference-filenames! filenames db*))
           (let [db @db*]
             (doseq [filename filenames]
-              (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
+              (f.diagnostic/publish-diagnostics! (shared/filename->uri filename db) db)))
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line col end-line end-col]

@@ -141,20 +141,10 @@
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics filename depend-level db))))))
 
-(defn sync-publish-diagnostics! [uri db]
+(defn publish-diagnostics! [uri db]
   (async/put! db/diagnostics-chan
               {:uri uri
                :diagnostics (find-diagnostics uri db)}))
-
-(defn async-publish-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env db)) ;; Avoid async on test which cause flakeness
-    (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (find-diagnostics uri db)})
-    (async/go
-      (async/>! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (find-diagnostics uri db)}))))
 
 (defn publish-all-diagnostics! [paths db]
   (doseq [path paths]
@@ -162,17 +152,12 @@
       (let [filename (.getAbsolutePath ^java.io.File file)
             uri (shared/filename->uri filename db)]
         (when (not= :unknown (shared/uri->file-type uri))
-          (sync-publish-diagnostics! uri db))))))
+          (publish-diagnostics! uri db))))))
 
 (defn publish-empty-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env db))
-    (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics []})
-    (async/go
-      (async/>! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics []}))))
+  (async/put! db/diagnostics-chan
+              {:uri uri
+               :diagnostics []}))
 
 (defn ^:private lint-defs!
   [var-defs kw-defs project-db {:keys [config reg-finding!]}]

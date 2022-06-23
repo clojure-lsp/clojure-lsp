@@ -363,13 +363,12 @@
              rf-some
              (get-in db [:analysis filename :locals])))
 
-(defmethod find-definition :keywords
+(defmethod find-definition :keyword-usages
   [db element]
   (or (when (:ns element)
         (find-last-order-by-project-analysis
-          :keywords
+          :keyword-definitions
           #(and (= (:name %) (:name element))
-                (:reg %)
                 (= (:ns %) (:ns element)))
           db))
       element))
@@ -512,8 +511,8 @@
 (defmulti find-references
   (fn [_db element _include-declaration?]
     (case (:bucket element)
-      :locals :local
-      :local-usages :local
+      (:locals :local-usages) :local
+      (:keyword-definitions :keyword-usages) :keywords
       (:bucket element))))
 
 (defmethod find-references :namespace-definitions
@@ -533,7 +532,9 @@
         ;; and a slow version that adds these keywords.
         (into []
               (comp
-                (mapcat (comp :keywords val))
+                (map val)
+                (mapcat (fn [{:keys [keyword-usages keyword-definitions]}]
+                          (concat keyword-definitions keyword-usages)))
                 (filter
                   #(and (= (:ns %) name)
                         (not (:auto-resolved %))
@@ -550,12 +551,12 @@
   (concat
     (when include-declaration?
       [element])
-    (let [{:keys [var-usages keywords]} (get-in db [:analysis filename])]
+    (let [{:keys [var-usages keyword-usages keyword-definitions]} (get-in db [:analysis filename])]
       (into []
             (comp
               (filter #(= (:alias %) alias))
               (medley/distinct-by (juxt :filename :name :name-row :name-col)))
-            (concat keywords var-usages)))))
+            (concat keyword-definitions keyword-usages var-usages)))))
 
 (defmethod find-references :var-usages
   [db element include-declaration?]
@@ -571,10 +572,10 @@
   (let [names (var-definition-names element)]
     (into []
           (comp
-            (mapcat (fn [[_filename {:keys [var-definitions var-usages]}]]
-                      (concat (when include-declaration?
-                                var-definitions)
-                              var-usages)))
+            (map val)
+            (mapcat (fn [{:keys [var-definitions var-usages]}]
+                      (cond->> (vec var-usages)
+                        include-declaration? (into (vec var-definitions)))))
             (filter #(contains? names (:name %)))
             (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
@@ -586,14 +587,15 @@
   [db {:keys [ns name] :as _element} include-declaration?]
   (into []
         (comp
-          (mapcat (comp :keywords val))
+          (map val)
+          (mapcat (fn [{:keys [keyword-usages keyword-definitions]}]
+                    (cond->> (vec keyword-usages)
+                      include-declaration? (into (vec keyword-definitions)))))
           (filter #(safe-equal? name (:name %)))
           (filter (cond
                     (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
                     ns #(safe-equal? ns (:ns %))
                     :else #(not (:ns %))))
-          (filter #(or include-declaration?
-                       (not (:reg %))))
           (medley/distinct-by (juxt :filename :name :row :col)))
         (internal-analysis db)))
 
@@ -697,16 +699,13 @@
 
 (defn find-keyword-definitions [db filename]
   (into []
-        (comp
-          (filter :reg)
-          (medley/distinct-by (juxt :ns :name :row :col)))
-        (get-in db [:analysis filename :keywords])))
+        (medley/distinct-by (juxt :ns :name :row :col))
+        (get-in db [:analysis filename :keyword-definitions])))
 
 (defn find-all-keyword-definitions [db]
   (into []
         (comp
-          (mapcat (comp :keywords val))
-          (filter :reg)
+          (mapcat (comp :keyword-definitions val))
           (medley/distinct-by (juxt :ns :name :row :col)))
         (:analysis db)))
 
@@ -807,14 +806,17 @@
         excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
         excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
         excluded-ns-or-var (set (filter simple-ident? excluded-syms))
-        keyword? (boolean (:reg definition))
+        keyword-definition? (identical? :keyword-definitions (:bucket definition))
         fqsn (symbol (-> definition :ns str) (-> definition :name str))]
     (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
-                   (if keyword?
+                   (if keyword-definition?
                      (:reg definition)
                      (:defined-by definition)))
         (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
-                   (if keyword?
+                   (if keyword-definition?
+                     ;; FIXME: this creates a qualified symbol, but the set is
+                     ;; all unqualified symbols, and so this check will always
+                     ;; be false for keywords. What should it be? Needs a test.
                      (symbol (str (:ns definition)) (:name definition))
                      (:name definition)))
         (contains? (set excluded-ns-or-var) (:ns definition))
@@ -829,6 +831,4 @@
     (remove var-usage-from-own-definition?)))
 
 (def xf-all-keyword-usages
-  (comp
-    (mapcat (comp :keywords val))
-    (remove :reg)))
+  (mapcat (comp :keyword-usages val)))

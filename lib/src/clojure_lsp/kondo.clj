@@ -74,6 +74,13 @@
       (update :findings merge findings)
       (assoc :kondo-config config)))
 
+(defn ^:private element-with-fallback-name-position [element]
+  (assoc element
+         :name-row (or (:name-row element) (:row element))
+         :name-col (or (:name-col element) (:col element))
+         :name-end-row (or (:name-end-row element) (:end-row element))
+         :name-end-col (or (:name-end-col element) (:end-col element))))
+
 ;;;; Normalization
 
 ;; The analysis we get back from clj-kondo is indexed by bucket
@@ -106,12 +113,13 @@
                                   :alias-end-row :name-end-row
                                   :alias-end-col :name-end-col}))))
 
-    (:locals :local-usages :keywords)
+    (:locals :local-usages)
+    [(element-with-fallback-name-position element)]
+
+    :keywords
     [(-> element
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
+         element-with-fallback-name-position
+         (assoc :bucket (if (:reg element) :keyword-definitions :keyword-usages)))]
 
     :java-class-definitions
     [(-> element
@@ -124,10 +132,7 @@
     :java-class-usages
     [(-> element
          (dissoc :uri)
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
+         (element-with-fallback-name-position))]
 
     [element]))
 

@@ -308,7 +308,7 @@
                             :name 'some.cool-ns
                             :from 'other.cool-ns}
                            {:filename (h/file-path "/c.clj")
-                            :bucket :keywords
+                            :bucket :keyword-usages
                             :from 'another.cool-ns
                             :name "bar"
                             :ns 'some.cool-ns}]]
@@ -338,7 +338,7 @@
           :name 'some.cool-ns
           :from 'other.cool-ns}
          {:filename (h/file-path "/c.clj")
-          :bucket :keywords
+          :bucket :keyword-usages
           :from 'another.cool-ns
           :name "bar"
           :ns 'some.cool-ns}]

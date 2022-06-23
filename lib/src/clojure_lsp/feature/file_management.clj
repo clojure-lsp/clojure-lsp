@@ -200,7 +200,7 @@
                                     (lsp.depend/db-with-results depend-result)
                                     (update :processing-changes disj uri)))
             (let [db @db*]
-              (f.diagnostic/sync-publish-diagnostics! uri db)
+              (f.diagnostic/publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-db db components))
               (clojure-producer/refresh-test-tree producer [uri]))

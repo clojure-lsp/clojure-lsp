@@ -43,7 +43,7 @@
 (def first-print-log-tail?* (atom true))
 
 (defn print-log-tail! []
-  (when (medley/deref-reset! first-print-log-tail?* false)
+  (when true #_(medley/deref-reset! first-print-log-tail?* false)
     (binding [*out* *err*]
       (println "--- LSP TRACE ---")
       (print (log-tail "clojure-lsp.lsp-trace.out" 1000))

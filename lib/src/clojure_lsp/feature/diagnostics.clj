@@ -154,7 +154,7 @@
         (when (not= :unknown (shared/uri->file-type uri))
           (publish-diagnostics! uri db))))))
 
-(defn publish-empty-diagnostics! [uri db]
+(defn publish-empty-diagnostics! [uri]
   (async/put! db/diagnostics-chan
               {:uri uri
                :diagnostics []}))

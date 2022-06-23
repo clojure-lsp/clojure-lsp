@@ -255,7 +255,7 @@
                                     (shared/dissoc-in [:documents uri])
                                     (shared/dissoc-in [:analysis filename])
                                     (shared/dissoc-in [:findings filename]))))
-      (f.diagnostic/publish-empty-diagnostics! uri @db*))))
+      (f.diagnostic/publish-empty-diagnostics! uri))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"

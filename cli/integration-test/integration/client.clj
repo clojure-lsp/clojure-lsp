@@ -46,8 +46,10 @@
 (defn ^:private log
   ([{:keys [client-id]} color msg params]
    (println (local-datetime-str)
-            (colored color (str "Client " client-id " " msg))
-            (colored :yellow params))))
+            (str "Client " client-id " " msg)
+            params
+            #_(colored color (str "Client " client-id " " msg))
+            #_(colored :yellow params))))
 
 (def ^:private wire-lock (Object.))
 

@@ -12,7 +12,7 @@
   ([binary]
    (start-server binary []))
   ([binary args]
-   (p/process (into [(.getCanonicalPath (io/file binary))] args)
+   (p/process (into ["stdbuf" "-i0" "-o0" "-e0" (.getCanonicalPath (io/file binary))] args)
               {:dir "integration-test/sample-test/"})))
 
 (defn start-process! []

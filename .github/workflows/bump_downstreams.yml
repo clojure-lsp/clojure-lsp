@@ -77,9 +77,11 @@ jobs:
         env:
           VERSION: ${{ steps.latest-tag.outputs.tag }}
         run: |
-          macsha256=$(shasum -a 256 clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip | awk '{print $1}')
+          mac_amd_sha256=$(shasum -a 256 clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip | awk '{print $1}')
+          mac_arm_sha256=$(shasum -a 256 clojure-lsp-native-macos-aarch64.zip/clojure-lsp-native-macos-aarch64.zip | awk '{print $1}')
           linuxsha256=$(shasum -a 256 clojure-lsp-native-linux-amd64.zip/clojure-lsp-native-linux-amd64.zip | awk '{print $1}')
-          echo "::set-output name=macsha256::$macsha256"
+          echo "::set-output name=mac_amd_sha256::$mac_amd_sha256"
+          echo "::set-output name=mac_arm_sha256::$mac_arm_sha256"
           echo "::set-output name=linuxsha256::$linuxsha256"
 
       - name: Install Babashka
@@ -97,7 +99,7 @@ jobs:
           echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/homebrew-brew.git
           cd homebrew-brew
-          bb -o render.clj --version "${{ env.VERSION }}" --mac-sha "${{ env.MAC_SHA256 }}" --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
+          bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }} --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
           cat clojure-lsp-native.rb
           git add .
           git commit -m "Bump to version: ${{ env.VERSION }}"

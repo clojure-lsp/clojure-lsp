@@ -45,19 +45,19 @@
 (defn print-log-tail! []
   (when true #_(medley/deref-reset! first-print-log-tail?* false)
     (binding [*out* *err*]
-      (println "--- LSP TRACE ---")
-      (print (log-tail "clojure-lsp.lsp-trace.out" 1000))
-      (println "--- END LSP TRACE ---")
       (println "--- RECENT LOG OUTPUT ---")
       (print (log-tail "clojure-lsp.integration-test.out" 300))
-      (println "--- END RECENT LOG OUTPUT ---"))))
+      (println "--- END RECENT LOG OUTPUT ---")
+      (println "--- LSP TRACE ---")
+      (print (log-tail "clojure-lsp.lsp-trace.out" 500))
+      (println "--- END LSP TRACE ---"))))
 
 (declare ^:dynamic original-report)
 
 (defn log-tail-report [data]
+  (original-report data)
   (when (contains? #{:fail :error} (:type data))
-    (print-log-tail!))
-  (original-report data))
+    (print-log-tail!)))
 
 (defmacro with-log-tail-report
   "Execute body with modified test reporting functions that prints log tail on failure."

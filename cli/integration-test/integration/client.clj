@@ -47,7 +47,6 @@
   ([{:keys [client-id]} color msg params]
    (println (local-datetime-str)
             (str "Client " client-id " " msg)
-            params
             (colored color (str "Client " client-id " " msg))
             (colored :yellow params))))
 

@@ -48,8 +48,8 @@
    (println (local-datetime-str)
             (str "Client " client-id " " msg)
             params
-            #_(colored color (str "Client " client-id " " msg))
-            #_(colored :yellow params))))
+            (colored color (str "Client " client-id " " msg))
+            (colored :yellow params))))
 
 (def ^:private wire-lock (Object.))
 

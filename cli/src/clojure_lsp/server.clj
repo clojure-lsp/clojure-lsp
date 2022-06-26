@@ -25,6 +25,7 @@
    (clojure_lsp ClojureLanguageClient ClojureLanguageServer)
    (clojure_lsp.feature.clojuredocs ClojuredocsParams)
    (clojure_lsp.feature.cursor_info CursorInfoParams)
+   (clojure_lsp.helpers OutputPrintStream)
    (java.util.concurrent CompletableFuture)
    (lsp4clj.core LSPServer)
    (lsp4clj.protocols.feature_handler ILSPFeatureHandler)
@@ -255,11 +256,12 @@
                                               client-settings
                                               known-files-pattern)
                                   clojure-feature-handler)
+        in System/in
+        out (OutputPrintStream. System/out)
         ;; For debugging, it's possible to trace all I/O through lsp4j.
         ;; FIXME: do not merge with tracing turned on
-        tracer (java.io.PrintWriter. (io/writer (io/file "../../integration-test/sample-test/clojure-lsp.lsp-trace.out")))
-        launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out false tracer)
-        ;; launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out)
+        launcher (Launcher/createLauncher server ClojureLanguageClient in out false (java.io.PrintWriter. (io/writer (io/file "../../integration-test/sample-test/clojure-lsp.lsp-trace.out"))))
+        ;; launcher (Launcher/createLauncher server ClojureLanguageClient in out)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db*)

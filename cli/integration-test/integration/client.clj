@@ -46,7 +46,6 @@
 (defn ^:private log
   ([{:keys [client-id]} color msg params]
    (println (local-datetime-str)
-            (str "Client " client-id " " msg)
             (colored color (str "Client " client-id " " msg))
             (colored :yellow params))))
 
@@ -77,9 +76,8 @@
         (log client :white "listener reading:" "waiting for content length")
         (if-let [_content-length (read-line)]
           (do
-            (log client :white "listener reading:" (str "content length: " _content-length ", passing to cheshire"))
+            (log client :white "listener reading:" (str "content length: " _content-length))
             (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-              (log client :white "listener reading:" "read")
               (cond
                 (and id method) (receive-request client json)
                 id              (receive-response client json)

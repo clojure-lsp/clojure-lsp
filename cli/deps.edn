@@ -9,6 +9,8 @@
         borkdude/dynaload {:mvn/version "0.2.2"}
         nrepl/bencode {:mvn/version "1.1.0"}
         com.taoensso/timbre {:mvn/version "5.2.1"}
+        com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
+        org.slf4j/jul-to-slf4j {:mvn/version "1.7.36"}
         com.github.clojure-lsp/lsp4clj-server {:mvn/version "0.4.1"}
         ;; com.github.clojure-lsp/lsp4clj-server {:local/root "../../lsp4clj/server"}
         clojure-lsp/lib {:local/root "../lib"}}

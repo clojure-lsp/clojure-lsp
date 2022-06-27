@@ -88,8 +88,12 @@
   (refresh-code-lens [_this]
     (producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
-    (some-> (producer/publish-workspace-edit lsp-producer edit)
-            deref))
+    (let [result (some-> (producer/publish-workspace-edit lsp-producer edit)
+                         (deref 5000 :timeout/publishing-edit))]
+      (if (= :timeout/publishing-edit result)
+        (do (logger/error "Timed out after 5s publishing edit. Moving on to next edit.")
+            nil)
+        result)))
   (show-document-request [_this document-request]
     (producer/show-document-request lsp-producer document-request))
   (publish-progress [_this percentage message progress-token]

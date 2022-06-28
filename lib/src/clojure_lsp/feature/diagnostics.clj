@@ -142,9 +142,9 @@
         (concat (clj-depend-violations->diagnostics filename depend-level db))))))
 
 (defn sync-publish-diagnostics! [uri db]
-  (async/put! db/diagnostics-chan
-              {:uri uri
-               :diagnostics (find-diagnostics uri db)}))
+  (async/>!! db/diagnostics-chan
+             {:uri uri
+              :diagnostics (find-diagnostics uri db)}))
 
 (defn async-publish-diagnostics! [uri db]
   (if (#{:unit-test :api-test} (:env db)) ;; Avoid async on test which cause flakeness

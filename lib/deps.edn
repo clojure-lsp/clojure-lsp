@@ -28,7 +28,7 @@
                   :main-opts ["-m" "kaocha.runner"]}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.8.2"
-                                                         :sha "ba1a2bf"}
+                                                         :tag "v0.8.3"
+                                                         :sha "0d20256"}
                           slipset/deps-deploy {:mvn/version "0.2.0"}}
                    :ns-default build}}}

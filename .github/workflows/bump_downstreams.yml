@@ -1,62 +1,59 @@
 name: Bump downstreams
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
+  push:
 
 jobs:
-  release-clojars:
-    name: Release artifact to Clojars
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
+  # release-clojars:
+  #   name: Release artifact to Clojars
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Prepare java
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: 1.8
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.1013'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.1013'
 
-      - name: Deploy clojars
-        env:
-          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
-          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
-        run: |
-          make deploy-clojars
+  #     - name: Deploy clojars
+  #       env:
+  #         CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+  #         CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+  #       run: |
+  #         make deploy-clojars
 
-  release-clojars-standalone:
-    name: Release standalone artifact to Clojars
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
+  # release-clojars-standalone:
+  #   name: Release standalone artifact to Clojars
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Prepare java
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: 1.8
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.1013'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.10.3.1013'
 
-      - name: Deploy clojars
-        env:
-          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
-          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
-        run: |
-          make deploy-clojars-standalone
+  #     - name: Deploy clojars
+  #       env:
+  #         CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+  #         CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+  #       run: |
+  #         make deploy-clojars-standalone
 
 
   bump-homebrew-formula:
     name: Bump Homebrew formula
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2.2.0
@@ -100,66 +97,66 @@ jobs:
           echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/homebrew-brew.git
           cd homebrew-brew
-          bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }} --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
+          bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }}" --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
           cat clojure-lsp-native.rb
           git add .
           git commit -m "Bump to version: ${{ env.VERSION }}"
           git push
 
-  bump-setup-clojure-lsp:
-    name: Bump setup-clojure-lsp Github Action
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+  # bump-setup-clojure-lsp:
+  #   name: Bump setup-clojure-lsp Github Action
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2.2.0
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Get latest tag
+  #       id: latest-tag
+  #       uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Update version in files
-        env:
-          VERSION: ${{ steps.latest-tag.outputs.tag }}
-        run: |
-          git config --global user.name "Clojure LSP Bot"
-          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
-          mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-          git clone git@github.com:clojure-lsp/setup-clojure-lsp.git
-          cd setup-clojure-lsp
-          sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
-          git add README.md .github/workflows/self_check.yml .github/workflows/main.yml
-          git commit -m "Bump to version: ${{ env.VERSION }}"
-          git push
+  #     - name: Update version in files
+  #       env:
+  #         VERSION: ${{ steps.latest-tag.outputs.tag }}
+  #       run: |
+  #         git config --global user.name "Clojure LSP Bot"
+  #         git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+  #         mkdir ~/.ssh && touch ~/.ssh/id_rsa
+  #         echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  #         git clone git@github.com:clojure-lsp/setup-clojure-lsp.git
+  #         cd setup-clojure-lsp
+  #         sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
+  #         git add README.md .github/workflows/self_check.yml .github/workflows/main.yml
+  #         git commit -m "Bump to version: ${{ env.VERSION }}"
+  #         git push
 
-  bump-lein-clojure-lsp:
-    name: Bump lein-clojure-lsp
-    needs: [release-clojars-standalone]
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+  # bump-lein-clojure-lsp:
+  #   name: Bump lein-clojure-lsp
+  #   needs: [release-clojars-standalone]
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2.2.0
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Get latest tag
+  #       id: latest-tag
+  #       uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+  #     - name: Install Babashka
+  #       run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Update version in files
-        env:
-          VERSION: ${{ steps.latest-tag.outputs.tag }}
-        run: |
-          git config --global user.name "Clojure LSP Bot"
-          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
-          mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-          git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
-          cd lein-clojure-lsp
-          bb tag-patch-for-version "${{ env.VERSION }}"
+  #     - name: Update version in files
+  #       env:
+  #         VERSION: ${{ steps.latest-tag.outputs.tag }}
+  #       run: |
+  #         git config --global user.name "Clojure LSP Bot"
+  #         git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+  #         mkdir ~/.ssh && touch ~/.ssh/id_rsa
+  #         echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  #         git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
+  #         cd lein-clojure-lsp
+  #         bb tag-patch-for-version "${{ env.VERSION }}"
 
   # not working
   # nixpkgs-update:

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+ - Restored #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
+
 ## 2022.06.29-19.32.13
 
 - Editor

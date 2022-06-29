@@ -1,10 +1,14 @@
 (ns clojure-lsp.feature.hover
   (:require
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
+   [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -108,13 +112,23 @@
         sym (cons {:language "clojure"
                    :value (str (if arity-on-same-line? sym-line sym))})))))
 
-(defn hover [filename line column db*]
+(defn hover [uri line column db*]
   (let [db @db*
-        element (loop [try-column column]
-                  (if-let [usage (q/find-element-under-cursor db filename line try-column)]
-                    usage
-                    (when (pos? try-column)
-                      (recur (dec try-column)))))
+        filename (shared/uri->filename uri)
+        zloc (some-> (f.file-management/force-get-document-text uri db*)
+                     (parser/safe-zloc-of-string)
+                     (parser/to-pos line column))
+        {function-loc-row :row
+         function-loc-col :col} (some-> (edit/find-function-usage-name-loc zloc)
+                                        z/node
+                                        meta)
+        element (if function-loc-row
+                  (q/find-element-under-cursor db filename function-loc-row function-loc-col)
+                  (loop [try-column column]
+                    (if-let [usage (q/find-element-under-cursor db filename line try-column)]
+                      usage
+                      (when (pos? try-column)
+                        (recur (dec try-column))))))
         definition (when element (q/find-definition db element))]
     (cond
       definition

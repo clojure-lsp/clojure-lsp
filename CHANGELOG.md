@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.06.29-19.32.13
+
 - Editor
   - Reverted #995 Improve element selected on `textDocument/hover`, as it caused clojure-lsp to stop working for Calva users after a syntax error was introduced. #1080
 

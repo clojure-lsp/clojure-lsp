@@ -368,9 +368,8 @@
 (defn hover [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
     :hover
-    (let [[line column] (shared/position->line-column position)
-          filename (shared/uri->filename textDocument)]
-      (f.hover/hover filename line column db*))))
+    (let [[line column] (shared/position->line-column position)]
+      (f.hover/hover textDocument line column db*))))
 
 (defn signature-help [{:keys [textDocument position _context]}]
   (shared/logging-task

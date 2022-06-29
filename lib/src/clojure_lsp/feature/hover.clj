@@ -116,7 +116,7 @@
   (let [db @db*
         filename (shared/uri->filename uri)
         zloc (some-> (f.file-management/force-get-document-text uri db*)
-                     (parser/safe-zloc-of-string)
+                     (parser/zloc-of-string)
                      (parser/to-pos line column))
         {function-loc-row :row
          function-loc-col :col} (some-> (edit/find-function-usage-name-loc zloc)

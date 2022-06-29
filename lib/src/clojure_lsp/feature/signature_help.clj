@@ -77,7 +77,6 @@
 (defn signature-help [uri row col db*]
   (let [filename (shared/uri->filename uri)
         zloc (some-> (f.file-management/force-get-document-text uri db*)
-                     ;; TODO: use safe-zloc-of-string and handle nils
                      (parser/zloc-of-string)
                      (parser/to-pos row col))
         function-loc (edit/find-function-usage-name-loc zloc)]

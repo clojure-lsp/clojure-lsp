@@ -98,13 +98,6 @@
           (handle-single-colon-code text e)
           (throw e)))))
 
-(defn safe-zloc-of-string [text]
-  ;; TODO: only used by tests.
-  (try
-    (zloc-of-string text)
-    (catch Exception _e
-      (logger/warn "It was not possible to parse text. Probably not valid clojure code."))))
-
 (defn zloc-of-file [db uri]
   (zloc-of-string (get-in db [:documents uri :text])))
 

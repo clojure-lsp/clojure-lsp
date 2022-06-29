@@ -7,8 +7,8 @@
 
 (h/reset-db-after-test)
 
-(deftest safe-zloc-of-string
-  (are [s] (= s (z/root-string (parser/safe-zloc-of-string s)))
+(deftest zloc-of-string
+  (are [s] (= s (z/root-string (parser/zloc-of-string s)))
     "(ns foo) foo/bar"
     "(ns foo) foo/ (+ 1 2)"
     "(ns foo) foo/\n(+ 1 2)"
@@ -25,7 +25,7 @@
     "(ns foo)\n::foo/\n"))
 
 (defn to-pos [s row col]
-  (-> s parser/safe-zloc-of-string (parser/to-pos row col) z/string))
+  (-> s parser/zloc-of-string (parser/to-pos row col) z/string))
 
 (deftest to-pos-test
   (testing "complete code"

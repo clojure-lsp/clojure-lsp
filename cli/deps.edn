@@ -26,7 +26,7 @@
                                                    :sha "66867eee7f050af0126c83c876f8031e0eae709a"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.8.2" :sha "ba1a2bf"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.8.3" :sha "0d20256"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.1.2"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}
                                   com.google.guava/guava {:mvn/version "31.1-jre"}}

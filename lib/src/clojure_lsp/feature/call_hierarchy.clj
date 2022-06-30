@@ -15,31 +15,15 @@
   (some-> (f.file-management/force-get-document-text uri db*)
           (parser/safe-zloc-of-string)))
 
-;; TODO: call-hierarchies could be made much faster if
-;; element-by-uri->call-hierarchy-item didn't re-parse so often.
-;; 1. Reason through whether it really needs the branch that parses. The tests
-;;    suggest it doesn't.
-;; 2. Failing that, when dep-graph is merged, use it to find ns name.
-;; 3. Failing that, gather URIs that need to be parsed up front, parse each one
-;;    once, then thread those root zlocs through the rest of the code.
 (defn ^:private element-by-uri->call-hierarchy-item
-  [{:keys [uri parent-element usage-element]} db*]
-  (let [{:keys [ns filename name-row name-col arglist-strs deprecated] el-name :name} parent-element
-        project-file? (string/starts-with? uri "file://")
-        detail (if project-file?
-                 ;; TODO: tests pass if this branch is removed. Why can't we use
-                 ;; the else branch for project files?
-                 (some-> (safe-zloc-of-forced-uri db* uri)
-                         (parser/to-pos name-row name-col)
-                         edit/find-namespace-name)
-                 (or (some-> ns str)
-                     filename))]
+  [{:keys [uri parent-element usage-element]}]
+  (let [{:keys [ns filename arglist-strs deprecated] el-name :name} parent-element]
     {:name (if arglist-strs
              (str (name el-name) " " (some->> arglist-strs (remove nil?) (string/join " ")))
              (name el-name))
      :kind (f.document-symbol/element->symbol-kind parent-element)
      :tags (cond-> [] deprecated (conj 1))
-     :detail detail
+     :detail (or (some-> ns str) filename)
      :uri uri
      :range (shared/->range parent-element)
      :selection-range (shared/->range usage-element)}))
@@ -50,8 +34,7 @@
     [(element-by-uri->call-hierarchy-item
        {:uri uri
         :usage-element cursor-element
-        :parent-element cursor-element}
-       db*)]))
+        :parent-element cursor-element})]))
 
 (defn ^:private parent-var-def
   "Returns var def analysis element that surrounds the element at row/col (or
@@ -102,7 +85,7 @@
                  (element->incoming-usage-by-uri db (get file-meta (:filename element)) element)))
          (mapv (fn [element-by-uri]
                  {:from-ranges []
-                  :from (element-by-uri->call-hierarchy-item element-by-uri db*)})))))
+                  :from (element-by-uri->call-hierarchy-item element-by-uri)})))))
 
 (defn outgoing [uri row col db*]
   (let [filename (shared/uri->filename uri)
@@ -118,4 +101,4 @@
            (keep (partial element->outgoing-usage-by-uri db))
            (mapv (fn [element-by-uri]
                    {:from-ranges []
-                    :to (element-by-uri->call-hierarchy-item element-by-uri db*)}))))))
+                    :to (element-by-uri->call-hierarchy-item element-by-uri)}))))))

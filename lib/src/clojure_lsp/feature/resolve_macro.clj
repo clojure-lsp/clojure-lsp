@@ -57,20 +57,20 @@
              (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))))))
 
 (def ^:private known-full-symbol-resolve
-  (sort
-   ["clojure.core/fn"
-    "clojure.core/def"
-    "clojure.core/defn"
-    "clojure.core/let"
-    "clojure.core/for"
-    "clojure.core/->"
-    "clojure.core/->>"
-    "clj-kondo.lint-as/def-catch-all"]))
+  (sort ["clojure.core/fn"
+         "clojure.core/def"
+         "clojure.core/defn"
+         "clojure.core/let"
+         "clojure.core/for"
+         "clojure.core/->"
+         "clojure.core/->>"
+         "clj-kondo.lint-as/def-catch-all"]))
 
 (defn resolve-macro-as!
   [zloc uri db {:keys [producer] :as components}]
   (let [project-root-uri (:project-root-uri db)
-        resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
+        resolved-full-symbol-str (producer/show-message-request
+                                  producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
                                     (lsp.kondo/home-config-path)]
         kondo-config-path (producer/show-message-request producer "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options))]

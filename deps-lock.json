@@ -18,10 +18,10 @@
     {
       "lib": "io.github.clojure/tools.build",
       "url": "https://github.com/clojure/tools.build.git",
-      "rev": "ba1a2bf421838802e7bdefc541b41f57582e53b6",
-      "tag": "v0.8.2",
+      "rev": "0d20256c40b5a6b6adbcbdf7d0c52cf9e22e994d",
+      "tag": "v0.8.3",
       "git-dir": "https/github.com/clojure/tools.build",
-      "hash": "sha256-p8kdg9UmpUq+JeyxL+g5R0GwdcP7cOI6wZuJnXK9Y8I="
+      "hash": "sha256-VsTZN8Z86roXxjxUx1jdrEAIMtznCBtw54qPomhcyLo="
     }
   ],
   "mvn-deps": [
@@ -361,14 +361,14 @@
       "hash": "sha256-n6pYYudCO9kUHuBAUHGxemuzocncPdgstHX1qka57IM="
     },
     {
-      "mvn-path": "com/fabiodomingues/clj-depend/0.6.0/clj-depend-0.6.0.jar",
+      "mvn-path": "com/fabiodomingues/clj-depend/0.6.1/clj-depend-0.6.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-6Q0SJ0uoP7uamSQiuhajzUeOhqzYPWppK1MAu6l1hbk="
+      "hash": "sha256-Nr7MUKEYmY4HFEKsZsBg94ofz5+GnUVwiG+XwCEUZzw="
     },
     {
-      "mvn-path": "com/fabiodomingues/clj-depend/0.6.0/clj-depend-0.6.0.pom",
+      "mvn-path": "com/fabiodomingues/clj-depend/0.6.1/clj-depend-0.6.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-jaelnsBJOY54FRWpKRmUW2eOpOMlhsx2IZn3hL+PzAA="
+      "hash": "sha256-swTA2eKMeRg5JPuAgiIMDOkr1F69VDg7nMzoSt3L/aI="
     },
     {
       "mvn-path": "com/fasterxml/jackson/core/jackson-annotations/2.9.10/jackson-annotations-2.9.10.jar",
@@ -2136,24 +2136,24 @@
       "hash": "sha256-/QDNC4q1yffBaViwVlAtuvcqR6TLiG6AArWw27s49J4="
     },
     {
-      "mvn-path": "org/clojure/tools.deps.alpha/0.14.1178/tools.deps.alpha-0.14.1178.jar",
+      "mvn-path": "org/clojure/tools.deps.alpha/0.14.1212/tools.deps.alpha-0.14.1212.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-Q9z/9nnejIMWL52YGGlIgVZIjpStqkyA6iF8xXAc00s="
+      "hash": "sha256-JoEud60tFuDAQoyNlfvlllWwYkI8C2Ma+WOmN1K0J3U="
     },
     {
-      "mvn-path": "org/clojure/tools.deps.alpha/0.14.1178/tools.deps.alpha-0.14.1178.pom",
+      "mvn-path": "org/clojure/tools.deps.alpha/0.14.1212/tools.deps.alpha-0.14.1212.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-G0gLT3TIbbXdEIaKQtgwKhyR2FDUYzzUMzArxW5AJcc="
+      "hash": "sha256-nAxGQ4eYV6RE/TtwMHAluN5jDBdG4aLkkrd/31ykgqQ="
     },
     {
-      "mvn-path": "org/clojure/tools.gitlibs/2.4.172/tools.gitlibs-2.4.172.jar",
+      "mvn-path": "org/clojure/tools.gitlibs/2.4.181/tools.gitlibs-2.4.181.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-+Lw4XHu6Gy4BIufzxFShyRYfY5Nw00u0sq/p6A9+CJA="
+      "hash": "sha256-uOmis0/oH3kHvj+2Nf7jo9iYgP/JkDN9hxj2VvGlrGg="
     },
     {
-      "mvn-path": "org/clojure/tools.gitlibs/2.4.172/tools.gitlibs-2.4.172.pom",
+      "mvn-path": "org/clojure/tools.gitlibs/2.4.181/tools.gitlibs-2.4.181.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-YyMGDB0LF0igawXfPo8jsDMjJYa+gUwpZVbo92Q0q48="
+      "hash": "sha256-wSsgyMceD9JgaRY/27eHY9QiigZ0secC/At13yEVA1I="
     },
     {
       "mvn-path": "org/clojure/tools.logging/1.2.1/tools.logging-1.2.1.jar",

@@ -103,7 +103,7 @@
   (try
     (zloc-of-string text)
     (catch Exception _e
-      (println "It was not possible to parse text. Probably not valid clojure code."))))
+      (logger/warn "It was not possible to parse text. Probably not valid clojure code."))))
 
 (defn zloc-of-file [db uri]
   (zloc-of-string (get-in db [:documents uri :text])))
@@ -111,7 +111,7 @@
 (defn safe-zloc-of-file [db uri]
   (try
     (zloc-of-file db uri)
-    (catch Exception _
+    (catch Exception _e
       (logger/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
 (defn to-pos [zloc row col]

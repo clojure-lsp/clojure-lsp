@@ -90,7 +90,8 @@ jobs:
       - name: Bump Homebrew formula
         env:
           VERSION: ${{ steps.latest-tag.outputs.tag }}
-          MAC_SHA256: ${{ steps.sha256.outputs.macsha256 }}
+          MAC_ARM_SHA256: ${{ steps.sha256.outputs.mac_arm_sha256 }}
+          MAC_AMD_SHA256: ${{ steps.sha256.outputs.mac_amd_sha256 }}
           LINUX_SHA256: ${{ steps.sha256.outputs.linuxsha256 }}
         run: |
           git config --global user.name "Clojure LSP Bot"
@@ -99,7 +100,7 @@ jobs:
           echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
           git clone git@github.com:clojure-lsp/homebrew-brew.git
           cd homebrew-brew
-          bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }} --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
+          bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }}" --linux-sha "${{ env.LINUX_SHA256 }}" > clojure-lsp-native.rb
           cat clojure-lsp-native.rb
           git add .
           git commit -m "Bump to version: ${{ env.VERSION }}"

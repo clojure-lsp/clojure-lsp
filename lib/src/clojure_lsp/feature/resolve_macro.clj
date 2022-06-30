@@ -69,8 +69,7 @@
 (defn resolve-macro-as!
   [zloc uri db {:keys [producer] :as components}]
   (let [project-root-uri (:project-root-uri db)
-        resolved-full-symbol-str (producer/show-message-request
-                                  producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
+        resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
         kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
                                     (lsp.kondo/home-config-path)]
         kondo-config-path (producer/show-message-request producer "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options))]

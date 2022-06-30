@@ -11,14 +11,25 @@
 
 (set! *warn-on-reflection* true)
 
+(defn ^:private safe-zloc-of-forced-uri [db* uri]
+  (some-> (f.file-management/force-get-document-text uri db*)
+          (parser/safe-zloc-of-string)))
+
+;; TODO: call-hierarchies could be made much faster if
+;; element-by-uri->call-hierarchy-item didn't re-parse so often.
+;; 1. Reason through whether it really needs the branch that parses. The tests
+;;    suggest it doesn't.
+;; 2. Failing that, when dep-graph is merged, use it to find ns name.
+;; 3. Failing that, gather URIs that need to be parsed up front, parse each one
+;;    once, then thread those root zlocs through the rest of the code.
 (defn ^:private element-by-uri->call-hierarchy-item
-  [{uri :uri
-    {:keys [ns filename name-row name-col arglist-strs deprecated] el-name :name :as parent-element} :parent-element
-    usage-element :usage-element} db*]
-  (let [project-file? (string/starts-with? uri "file://")
+  [{:keys [uri parent-element usage-element]} db*]
+  (let [{:keys [ns filename name-row name-col arglist-strs deprecated] el-name :name} parent-element
+        project-file? (string/starts-with? uri "file://")
         detail (if project-file?
-                 (some-> (f.file-management/force-get-document-text uri db*)
-                         (parser/zloc-of-string) ;; throws on invalid Clojure
+                 ;; TODO: tests pass if this branch is removed. Why can't we use
+                 ;; the else branch for project files?
+                 (some-> (safe-zloc-of-forced-uri db* uri)
                          (parser/to-pos name-row name-col)
                          edit/find-namespace-name)
                  (or (some-> ns str)
@@ -42,19 +53,27 @@
         :parent-element cursor-element}
        db*)]))
 
+(defn ^:private parent-var-def
+  "Returns var def analysis element that surrounds the element at row/col (or
+  that is the element at that position)."
+  [root-zloc db filename row col]
+  (when-let [{:keys [row col]} (some-> root-zloc
+                                       (parser/to-pos row col)
+                                       (edit/find-var-definition-name-loc)
+                                       z/node
+                                       meta)]
+    (when-let [definition (q/find-element-under-cursor db filename row col)]
+      (when (or (identical? :var-definitions (:bucket definition))
+                (and (identical? :var-usages (:bucket definition))
+                     (:defmethod definition)))
+        definition))))
+
 (defn ^:private element->incoming-usage-by-uri
-  [db* {:keys [name-row name-col filename] :as element}]
-  (let [uri (shared/filename->uri filename @db*)
-        zloc (some-> (f.file-management/force-get-document-text uri db*)
-                     (parser/zloc-of-string) ;; throws on invalid Clojure
-                     (parser/to-pos name-row name-col))
-        db @db*
-        parent-zloc (edit/find-var-definition-name-loc zloc filename db)]
-    (when parent-zloc
-      (let [{parent-row :row parent-col :col} (-> parent-zloc z/node meta)]
-        {:uri uri
-         :usage-element element
-         :parent-element (q/find-element-under-cursor db filename parent-row parent-col)}))))
+  [db {:keys [uri root-zloc]} {:keys [name-row name-col filename] :as element}]
+  (when-let [parent-element (parent-var-def root-zloc db filename name-row name-col)]
+    {:uri uri
+     :usage-element element
+     :parent-element parent-element}))
 
 (defn ^:private element->outgoing-usage-by-uri
   [db element]
@@ -68,32 +87,35 @@
        :parent-element definition})))
 
 (defn incoming [uri row col db*]
-  (->> (q/find-references-from-cursor @db* (shared/uri->filename uri) row col false)
-       (map (partial element->incoming-usage-by-uri db*))
-       (remove nil?)
-       (mapv (fn [element-by-uri]
-               {:from-ranges []
-                :from (element-by-uri->call-hierarchy-item element-by-uri db*)}))))
+  (let [db @db*
+        references (q/find-references-from-cursor db (shared/uri->filename uri) row col false)
+        filenames (->> references (map :filename) distinct)
+        file-meta (zipmap filenames
+                          (map (fn [filename]
+                                 (let [uri (shared/filename->uri filename db)]
+                                   {:uri uri
+                                    :root-zloc (safe-zloc-of-forced-uri db* uri)}))
+                               filenames))
+        db @db*]
+    (->> references
+         (keep (fn [element]
+                 (element->incoming-usage-by-uri db (get file-meta (:filename element)) element)))
+         (mapv (fn [element-by-uri]
+                 {:from-ranges []
+                  :from (element-by-uri->call-hierarchy-item element-by-uri db*)})))))
 
 (defn outgoing [uri row col db*]
   (let [filename (shared/uri->filename uri)
-        zloc (some-> (f.file-management/force-get-document-text uri db*)
-                     (parser/zloc-of-string) ;; throws on invalid Clojure
-                     (parser/to-pos row col))
-        db @db*
-        {parent-row :row parent-col :col} (some-> (edit/find-var-definition-name-loc zloc filename db)
-                                                  z/node
-                                                  meta)]
-    (when (and parent-row parent-col)
-      (let [definition (q/find-element-under-cursor db filename parent-row parent-col)]
-        (->> (q/find-var-usages-under-form db
-                                           filename
-                                           (:name-row definition)
-                                           (:name-col definition)
-                                           (:end-row definition)
-                                           (:end-col definition))
-             (map (partial element->outgoing-usage-by-uri db))
-             (remove nil?)
-             (mapv (fn [element-by-uri]
-                     {:from-ranges []
-                      :to (element-by-uri->call-hierarchy-item element-by-uri db*)})))))))
+        root-zloc (safe-zloc-of-forced-uri db* uri)
+        db @db*]
+    (when-let [definition (parent-var-def root-zloc db filename row col)]
+      (->> (q/find-var-usages-under-form db
+                                         filename
+                                         (:name-row definition)
+                                         (:name-col definition)
+                                         (:end-row definition)
+                                         (:end-col definition))
+           (keep (partial element->outgoing-usage-by-uri db))
+           (mapv (fn [element-by-uri]
+                   {:from-ranges []
+                    :to (element-by-uri->call-hierarchy-item element-by-uri db*)}))))))

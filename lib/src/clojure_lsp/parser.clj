@@ -89,7 +89,7 @@
                     (z/find-token z/next #(= (str "::" temporary-value) (z/string %)))
                     (z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
 
-(defn zloc-of-string [text]
+(defn ^:private zloc-of-string [text]
   (try
     (z/of-string text)
     (catch clojure.lang.ExceptionInfo e
@@ -99,7 +99,6 @@
           (throw e)))))
 
 (defn safe-zloc-of-string [text]
-  ;; TODO: only used by tests.
   (try
     (zloc-of-string text)
     (catch Exception _e

@@ -5,4 +5,5 @@
                                       rewrite-clj.node]}}
  :lint-as {rewrite-clj.zip.subedit/edit->    clojure.core/->
            rewrite-clj.zip.subedit/subedit-> clojure.core/->
-           clojure-lsp.refactor.edit/my-defn clojure.core/defn}}
+           clojure-lsp.refactor.edit/my-defn clojure.core/defn
+           clojure-lsp.test-helper/let-mock-chans clojure.core/let}}

@@ -214,8 +214,9 @@
   (let [[code [[row col] :as positions]] (positions-from-text code)]
     (let [position-count (count positions)]
       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-    (-> (parser/zloc-of-string code)
-        (parser/to-pos row col))))
+    (let [zloc (parser/safe-zloc-of-string code)]
+      (assert zloc "Unable to parse code")
+      (parser/to-pos zloc row col))))
 
 (defn- results->doc
   "Should mimic an LSP client processing results on a document"

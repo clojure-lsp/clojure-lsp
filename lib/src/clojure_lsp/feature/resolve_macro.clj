@@ -57,14 +57,14 @@
              (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))))))
 
 (def ^:private known-full-symbol-resolve
-  (sort ["clojure.core/fn"
-         "clojure.core/def"
-         "clojure.core/defn"
-         "clojure.core/let"
-         "clojure.core/for"
-         "clojure.core/->"
-         "clojure.core/->>"
-         "clj-kondo.lint-as/def-catch-all"]))
+  ["clojure.core/fn"
+   "clojure.core/def"
+   "clojure.core/defn"
+   "clojure.core/let"
+   "clojure.core/for"
+   "clojure.core/->"
+   "clojure.core/->>"
+   "clj-kondo.lint-as/def-catch-all"])
 
 (defn resolve-macro-as!
   [zloc uri db {:keys [producer] :as components}]

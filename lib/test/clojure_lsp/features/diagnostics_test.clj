@@ -290,15 +290,18 @@
                   (foo 1)
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
-        (h/with-mock-diagnostics
+        (h/let-mock-chans
+          [mock-diagnostics-chan #'db/diagnostics-chan]
           (h/load-code-and-locs code)
-          (is (= ["user/foo is called with 3 args but expects 1 or 2"
-                  "user/baz is called with 1 arg but expects 3"
-                  "user/bar is called with 0 args but expects 1 or more"
-                  "user/foo is called with 3 args but expects 1 or 2"
-                  "user/foo is called with 0 args but expects 1 or 2"
-                  "user/foo is called with 4 args but expects 1 or 2"]
-                 (map :message (get @h/mock-diagnostics "file:///a.clj")))))))
+          (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+            (is (= "file:///a.clj" uri))
+            (is (= ["user/foo is called with 3 args but expects 1 or 2"
+                    "user/baz is called with 1 arg but expects 3"
+                    "user/bar is called with 0 args but expects 1 or more"
+                    "user/foo is called with 3 args but expects 1 or 2"
+                    "user/foo is called with 0 args but expects 1 or 2"
+                    "user/foo is called with 4 args but expects 1 or 2"]
+                   (map :message diagnostics)))))))
     (testing "for threading macros"
       (h/clean-db!)
       (let [code "(defn foo ([x] x) ([x y z] (z x y)))
@@ -322,15 +325,18 @@
                     (foo)
                     (foo 1)
                     (bar))"]
-        (h/with-mock-diagnostics
+        (h/let-mock-chans
+          [mock-diagnostics-chan #'db/diagnostics-chan]
           (h/load-code-and-locs code)
-          (is (= ["user/foo is called with 2 args but expects 1 or 3"
-                  "user/bar is called with 1 arg but expects 0"
-                  "user/bar is called with 1 arg but expects 0"
-                  "user/bar is called with 3 args but expects 0"
-                  "user/foo is called with 2 args but expects 1 or 3"
-                  "user/bar is called with 1 arg but expects 0"]
-                 (map :message (get @h/mock-diagnostics "file:///a.clj")))))))
+          (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+            (is (= "file:///a.clj" uri))
+            (is (= ["user/foo is called with 2 args but expects 1 or 3"
+                    "user/bar is called with 1 arg but expects 0"
+                    "user/bar is called with 1 arg but expects 0"
+                    "user/bar is called with 3 args but expects 0"
+                    "user/foo is called with 2 args but expects 1 or 3"
+                    "user/bar is called with 1 arg but expects 0"]
+                   (map :message diagnostics)))))))
     (testing "with annotations"
       (h/clean-db!)
       (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
@@ -339,10 +345,13 @@
                   (foo foo foo)
                   (bar :a)
                   (bar :a :b)"]
-        (h/with-mock-diagnostics
+        (h/let-mock-chans
+          [mock-diagnostics-chan #'db/diagnostics-chan]
           (h/load-code-and-locs code)
-          (is (= ["user/foo is called with 2 args but expects 1"]
-                 (map :message (get @h/mock-diagnostics "file:///a.clj")))))))
+          (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+            (is (= "file:///a.clj" uri))
+            (is (= ["user/foo is called with 2 args but expects 1"]
+                   (map :message diagnostics)))))))
     (testing "for schema defs"
       (h/clean-db!)
       (let [code "(ns user (:require [schema.core :as s]))
@@ -352,14 +361,19 @@
                   (foo)
                   (foo 1 2)
                   (foo 1)"]
-        (h/with-mock-diagnostics
+        (h/let-mock-chans
+          [mock-diagnostics-chan #'db/diagnostics-chan]
           (h/load-code-and-locs code)
-          (is (= ["user/foo is called with 0 args but expects 2"
-                  "user/foo is called with 1 arg but expects 2"]
-                 (map :message (get @h/mock-diagnostics "file:///a.clj"))))))))
+          (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+            (is (= "file:///a.clj" uri))
+            (is (= ["user/foo is called with 0 args but expects 2"
+                    "user/foo is called with 1 arg but expects 2"]
+                   (map :message diagnostics))))))))
   (testing "custom unused namespace declaration"
     (h/clean-db!)
-    (h/with-mock-diagnostics
+    (h/let-mock-chans
+      [mock-diagnostics-chan #'db/diagnostics-chan]
       (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///foo/bar.clj"))
-      (is (empty?
-            (map :message (get @h/mock-diagnostics "file:////foo/bar.clj")))))))
+      (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+        (is (= "file:///foo/bar.clj" uri))
+        (is (= [] diagnostics))))))

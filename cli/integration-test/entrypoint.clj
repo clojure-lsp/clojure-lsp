@@ -10,6 +10,7 @@
     integration.definition-test
     integration.declaration-test
     integration.implementation-test
+    integration.text-change-test
     integration.code-action-test
     integration.completion-test
     integration.diagnostics-test
@@ -36,8 +37,8 @@
       (future-cancel fut))
     ret))
 
-(defn log-tail []
-  (:out (sh/sh "tail" "-n" "300" "clojure-lsp.integration-test.out" :dir "integration-test/sample-test/")))
+(defn log-tail [file lines]
+  (:out (sh/sh "tail" "-n" (str lines) file :dir "integration-test/sample-test/")))
 
 (def first-print-log-tail?* (atom true))
 
@@ -45,15 +46,18 @@
   (when (medley/deref-reset! first-print-log-tail?* false)
     (binding [*out* *err*]
       (println "--- RECENT LOG OUTPUT ---")
-      (print (log-tail))
-      (println "--- END RECENT LOG OUTPUT ---"))))
+      (print (log-tail "clojure-lsp.integration-test.out" 300))
+      (println "--- END RECENT LOG OUTPUT ---")
+      #_(println "--- LSP TRACE ---")
+      #_(print (log-tail "clojure-lsp.lsp-trace.out" 500))
+      #_(println "--- END LSP TRACE ---"))))
 
 (declare ^:dynamic original-report)
 
 (defn log-tail-report [data]
+  (original-report data)
   (when (contains? #{:fail :error} (:type data))
-    (print-log-tail!))
-  (original-report data))
+    (print-log-tail!)))
 
 (defmacro with-log-tail-report
   "Execute body with modified test reporting functions that prints log tail on failure."

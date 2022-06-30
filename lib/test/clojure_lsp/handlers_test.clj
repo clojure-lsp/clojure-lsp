@@ -27,37 +27,42 @@
 (deftest did-open
   (testing "opening a existing file"
     (h/clean-db!)
-    (h/with-mock-diagnostics
+    (h/let-mock-chans
+      [mock-diagnostics-chan #'db/diagnostics-chan]
       (let [_ (h/load-code-and-locs "(ns a) (when)")]
         (is (some? (get-in @db/db* [:analysis (h/file-path "/a.clj")])))
-        (h/assert-submaps
-          [{:code "missing-body-in-when"}
-           {:code "invalid-arity"}]
-          (get @h/mock-diagnostics "file:///a.clj")))))
+        (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+          (is (= "file:///a.clj" uri))
+          (h/assert-submaps
+            [{:code "missing-body-in-when"}
+             {:code "invalid-arity"}]
+            diagnostics)))))
   (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
     (swap! db/db* merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{(h/file-path "/project/src")}}
-                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                        :project-root-uri (h/file-uri "file:///project")})
-    (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
-    (h/edits
-      #(h/assert-submaps
-         [{:edits [{:range {:start {:line 0, :character 0}
-                            :end {:line 999998, :character 999998}}
-                    :new-text "(ns foo.bar)"}]}]
-         (:document-changes %)))
-    (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/bar.clj")]))))
+                                    :source-paths #{(h/file-path "/project/src")}}
+                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                         :project-root-uri (h/file-uri "file:///project")})
+    (h/let-mock-chans
+      [mock-edits-chan #'db/edits-chan]
+      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
+      (h/assert-submaps
+        [{:edits [{:range {:start {:line 0, :character 0}
+                           :end {:line 999998, :character 999998}}
+                   :new-text "(ns foo.bar)"}]}]
+        (:document-changes (h/take-or-timeout mock-edits-chan 500)))
+      (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
   (testing "opening a new edn file not adding the ns"
     (h/clean-db!)
     (swap! db/db* merge {:settings {:auto-add-ns-to-new-files? true
-                                   :source-paths #{(h/file-path "/project/src")}}
-                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                        :project-root-uri (h/file-uri "file:///project")})
-    (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
-    (h/edits
-      #(is (= [] (:document-changes %))))
-    (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/baz.edn")])))))
+                                    :source-paths #{(h/file-path "/project/src")}}
+                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                         :project-root-uri (h/file-uri "file:///project")})
+    (h/let-mock-chans
+      [mock-edits-chan #'db/edits-chan]
+      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
+      (h/assert-no-take mock-edits-chan 500)
+      (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1)"

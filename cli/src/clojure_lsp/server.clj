@@ -254,10 +254,11 @@
                                               client-settings
                                               known-files-pattern)
                                   clojure-feature-handler)
+        in System/in
+        out System/out
         ;; For debugging, it's possible to trace all I/O through lsp4j.
-        ;; tracer (java.io.PrintWriter. (io/writer (io/file "path/to/some/log/file")))
-        ;; launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out false tracer)
-        launcher (Launcher/createLauncher server ClojureLanguageClient System/in System/out)
+        ;; launcher (Launcher/createLauncher server ClojureLanguageClient in out false (java.io.PrintWriter. (io/writer (io/file "../../integration-test/sample-test/clojure-lsp.lsp-trace.out"))))
+        launcher (Launcher/createLauncher server ClojureLanguageClient in out)
         language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
         producer (->ClojureLspProducer language-client
                                        (lsp/->LSPProducer language-client db*)

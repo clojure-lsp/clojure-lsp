@@ -919,7 +919,7 @@
                                      :range (-> test-zloc z/node meta)}]}}))))
 
 (defn can-create-test? [zloc uri db]
-  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc (shared/uri->filename uri) db)]
+  (when-let [function-name-loc (edit/find-var-definition-name-loc zloc)]
     (let [source-paths (settings/get db [:source-paths])]
       (when-let [current-source-path (->> source-paths
                                           (filter #(and (string/starts-with? (shared/uri->filename uri) %)

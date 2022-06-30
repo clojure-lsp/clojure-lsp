@@ -75,20 +75,18 @@
        arglist-strs))
 
 (defn signature-help [uri row col db*]
-  (let [filename (shared/uri->filename uri)
-        zloc (some-> (f.file-management/force-get-document-text uri db*)
-                     ;; TODO: use safe-zloc-of-string and handle nils
-                     (parser/zloc-of-string)
-                     (parser/to-pos row col))
-        function-loc (edit/find-function-usage-name-loc zloc)]
-    (when function-loc
-      (let [db @db*
-            arglist-nodes (function-loc->arglist-nodes function-loc)
-            function-meta (meta (z/node function-loc))
-            definition (q/find-definition-from-cursor db filename (:row function-meta) (:col function-meta))
-            signatures (definition->signature-informations definition)
-            active-signature (get-active-signature-index definition arglist-nodes)]
-        (when (seq signatures)
-          {:signatures signatures
-           :active-parameter (get-active-parameter-index signatures active-signature arglist-nodes row col)
-           :active-signature active-signature})))))
+  (when-let [function-loc (some-> (f.file-management/force-get-document-text uri db*)
+                                  parser/safe-zloc-of-string
+                                  (parser/to-pos row col)
+                                  edit/find-function-usage-name-loc)]
+    (let [db @db*
+          arglist-nodes (function-loc->arglist-nodes function-loc)
+          filename (shared/uri->filename uri)
+          function-meta (meta (z/node function-loc))
+          definition (q/find-definition-from-cursor db filename (:row function-meta) (:col function-meta))
+          signatures (definition->signature-informations definition)
+          active-signature (get-active-signature-index definition arglist-nodes)]
+      (when (seq signatures)
+        {:signatures signatures
+         :active-parameter (get-active-parameter-index signatures active-signature arglist-nodes row col)
+         :active-signature active-signature}))))

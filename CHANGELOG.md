@@ -5,6 +5,7 @@
 - Editor
   - Restored #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
   - Add clojure.core/fn to resolve-macro-as options. [#1094](https://github.com/clojure-lsp/clojure-lsp/issues/1094)
+  - Improved call hierarchy performance by parsing less frequently. #1092
 
 ## 2022.06.29-19.32.13
 

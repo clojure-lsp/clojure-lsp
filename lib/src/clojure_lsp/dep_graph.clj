@@ -285,11 +285,13 @@
     (let [[old-definitions old-usages] (ns-definitions-and-usages old-analysis)
           [new-definitions new-usages] (ns-definitions-and-usages new-analysis)]
       (-> db
+          ;; ensure-files needs to be first
           (ensure-files (keys new-analysis) internal?)
+          ;; The rest doesn't depend on ordering, but nicer to define before using
           (remove-usages old-usages)
-          (add-usages new-usages)
           (remove-definitions old-definitions)
-          (add-definitions new-definitions)))))
+          (add-definitions new-definitions)
+          (add-usages new-usages)))))
 
 (defn remove-file [db filename]
   (-> db

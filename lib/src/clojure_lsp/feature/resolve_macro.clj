@@ -57,10 +57,10 @@
              (update-macro-resolve-for-config (symbol resolved-full-symbol-str) full-symbol))))))
 
 (def ^:private known-full-symbol-resolve
-  ["clojure.core/fn"
-   "clojure.core/def"
+  ["clojure.core/def"
    "clojure.core/defn"
    "clojure.core/let"
+   "clojure.core/fn"
    "clojure.core/for"
    "clojure.core/->"
    "clojure.core/->>"

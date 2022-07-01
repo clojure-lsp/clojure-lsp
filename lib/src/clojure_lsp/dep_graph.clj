@@ -136,10 +136,7 @@
     "~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
     {:internal? false
      :langs #{:clj :cljs}
-     :namespaces #{clojure.tools.cli}}}
-  ;;
-  )
-
+     :namespaces #{clojure.tools.cli}}})
 
 ;;;; DB Maintenance
 

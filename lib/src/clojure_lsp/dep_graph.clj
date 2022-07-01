@@ -11,30 +11,25 @@
 ;; + one or more
 ;; * zero or more
 ;; '' literal
-;; "" string
-;; [] = list or vector
-;; {} = map {k1 v1 ...}
-;; #{} = set #{i1 ...}
-;; #<> = multiset #<i1 ...>
-;;       a mulitset is represented internally as a hashmap {i1 f1 ...} where f1 =
-;;       integer > 0, frequency of i1
+;; {} map {k1 v1 ...}
+;; #{} set #{i1 ...}
+;; #<> multiset #<i1 ...>
+;;     a mulitset is represented internally as a hashmap {i1 f1 ...} where f1 =
+;;     integer > 0, frequency of i1
 
-;; db = {':dep-graph' dep-graph
-;;       ':file-meta' file-meta}
-
-;; dep-graph = {(ns dep-graph-item)*}
 ;; ns = symbol
+;; filename = string
+;; alias = symbol
+;; lang = ':clj' | ':cljs' | ':edn'
+
 ;; dep-graph-item =
 ;; {(':dependencies' #<ns*>)?
 ;;  (':dependents' #<ns*>)?
-;;  (':aliases' #<alias*>)?
+;;  (':aliases' #<(alias | nil)*>)? ;; nil for when the ns is required without an alias
 ;;  (':files' #{filename*})?
 ;;  (':internal?' boolean)?
 ;;  (':from-internal?' boolean)?
-;;  (':from-langs' #{lang*})?}
-;; filename = string
-;; alias = (symbol | nil)
-;; lang = ':clj' | ':cljs' | ':edn'
+;;  (':from-langs' #<lang*>)?}
 
 ;; :dependencies is a multiset of the namespaces that this namespace depends on.
 ;; It's a multiset because a dependency may be required several times, either
@@ -70,11 +65,10 @@
 ;; namespace, falsy otherwise. May be absent if the namespace isn't required by
 ;; other namespaces.
 
-;; :from-langs is a set of the langs of the :namespace-usages or files (if the
+;; :from-langs is a multiset of the langs of the :namespace-usages or files (if the
 ;; :namespace-usages don't have langs) that use this namespace. May be either
 ;; empty or absent if the namespace isn't required by other namespaces.
 
-;; file-meta = {(filename file-meta-item)*}
 ;; file-meta-item =
 ;; {(:namespaces #{ns*})?
 ;;  :internal? boolean
@@ -86,6 +80,66 @@
 ;; :internal? is whether this file is internal to the project.
 
 ;; :langs is a set of the langs used by this file.
+
+;; file-meta = {(filename file-meta-item)*}
+;; dep-graph = {(ns dep-graph-item)*}
+;; db = {':dep-graph' dep-graph
+;;       ':file-meta' file-meta}
+
+(comment
+  ;; Example
+  (require '[clojure-lsp.db :as db])
+  (-> @db/db*
+      :dep-graph
+      (select-keys '[clojure-lsp.main
+                     clojure.tools.cli]))
+  '{clojure-lsp.main  {:dependents     {clojure-lsp.main-test 1}
+                       :aliases        {main 1}
+                       :from-internal? true
+                       :from-langs     {:clj 1}
+                       :dependencies   {borkdude.dynaload        1
+                                        clojure-lsp.internal-api 1
+                                        clojure-lsp.kondo        1
+                                        clojure-lsp.server       1
+                                        clojure-lsp.shared       1
+                                        clojure.core             1
+                                        clojure.edn              1
+                                        clojure.java.io          1
+                                        clojure.string           1
+                                        clojure.tools.cli        1
+                                        pod.clojure-lsp.api      1}
+                       :files          #{"~/code/clojure-lsp/cli/src/clojure_lsp/main.clj"}
+                       :internal?      true}
+    clojure.tools.cli {:dependents     {clj-depend.main                                    1
+                                        cljfmt.main                                        1
+                                        clojure-lsp.main                                   1
+                                        clojure.tools.deps.alpha.script.generate-manifest2 1
+                                        clojure.tools.deps.alpha.script.make-classpath2    1
+                                        clojure.tools.deps.alpha.script.print-tree         1
+                                        clojure.tools.deps.alpha.script.resolve-tags       1
+                                        kaocha.runner                                      1}
+                       :aliases        {cli 7, nil 1}
+                       :from-internal? true
+                       :from-langs     {:clj 8}
+                       :dependencies   {clojure.string 2, goog.string.format 1}
+                       :files          #{"~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"}
+                       :internal?      false}}
+  (-> @db/db*
+      :file-meta
+      (select-keys ["~/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+                    "~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"]))
+
+  '{"~/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+    {:internal? true
+     :langs #{:clj}
+     :namespaces #{clojure-lsp.main}}
+    "~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
+    {:internal? false
+     :langs #{:clj :cljs}
+     :namespaces #{clojure.tools.cli}}}
+  ;;
+  )
+
 
 ;;;; DB Maintenance
 
@@ -132,12 +186,12 @@
         (update-in [:dep-graph name :dependents] f from)
         (update-in [:dep-graph name :aliases] f alias)
         ;; NOTE: We could store :from-filenames, and look up whether any of them
-        ;; are internal. But this way keeps that lookup out of ns-aliases, which
-        ;; is on the hotpath in completion. :from-langs is only used in
-        ;; add-missing-libspec, so it's not on a hotpath, but we've already
-        ;; established this pattern.
+        ;; are internal. But this way keeps that lookup out of q/ns-aliases,
+        ;; which is on the hotpath in completion.
         ;; TODO: is it wrong that once from-internal?, always from-internal?
         (update-in [:dep-graph name :from-internal?] #(or % (:internal? from-file)))
+        ;; NOTE: :from-langs is used only in add-missing-libspec, so it's not on
+        ;; a hotpath, but :from-internal? has already established this pattern.
         (update-in [:dep-graph name :from-langs] #(reduce f % from-langs)))))
 
 (defn ^:private update-usages [db f namespace-usages]

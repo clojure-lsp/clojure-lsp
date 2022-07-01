@@ -50,50 +50,53 @@
 (defn uris-to-filenames [db uris]
   (map #(dep-graph/uri-to-filename db %) uris))
 
+(defn ^:private uris-analysis [{:keys [analysis] :as db} uris]
+  (select-keys analysis (uris-to-filenames db uris)))
+
 (defn ns-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (uris-to-filenames db (dep-graph/ns-uris db namespace)))
+    (uris-analysis db (dep-graph/ns-uris db namespace))
     analysis))
 
 (defn ns-dependents-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (uris-to-filenames db (dep-graph/ns-dependents-uris db namespace)))
+    (uris-analysis db (dep-graph/ns-dependents-uris db namespace))
     analysis))
 
 (defn ns-and-dependents-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (uris-to-filenames db (dep-graph/ns-and-dependents-uris db namespace)))
+    (uris-analysis db (dep-graph/ns-and-dependents-uris db namespace))
     analysis))
 
 (defn ns-dependencies-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (uris-to-filenames db (dep-graph/ns-dependencies-uris db namespace)))
+    (uris-analysis db (dep-graph/ns-dependencies-uris db namespace))
     analysis))
 
 (defn nses-analysis [{:keys [analysis] :as db} namespaces]
   (if (use-dep-graph? db)
-    (select-keys analysis (uris-to-filenames db (dep-graph/nses-uris db namespaces)))
+    (uris-analysis db (dep-graph/nses-uris db namespaces))
     analysis))
 
 (defn nses-and-dependents-analysis [{:keys [analysis] :as db} namespaces]
   (if (use-dep-graph? db)
-    (select-keys analysis (uris-to-filenames db (dep-graph/nses-and-dependents-uris db namespaces)))
+    (uris-analysis db (dep-graph/nses-and-dependents-uris db namespaces))
     analysis))
 
-(defn file-dependents-analysis [{:keys [analysis documents] :as db} filename]
+(defn uri-dependents-analysis [{:keys [analysis documents] :as db} uri]
   (if (use-dep-graph? db)
     (transduce (map #(ns-dependents-analysis db %))
                merge
                {}
-               (get-in documents [(dep-graph/filename-to-uri db filename) :namespaces]))
+               (get-in documents [uri :namespaces]))
     analysis))
 
-(defn file-dependencies-analysis [{:keys [analysis documents] :as db} filename]
+(defn uri-dependencies-analysis [{:keys [analysis documents] :as db} uri]
   (if (use-dep-graph? db)
     (transduce (map #(ns-dependencies-analysis db %))
                merge
                {}
-               (get-in documents [(dep-graph/filename-to-uri db filename) :namespaces]))
+               (get-in documents [uri :namespaces]))
     analysis))
 
 (defn db-with-analysis [db f & args]
@@ -212,24 +215,25 @@
     ;; TODO: this is a very specific return value, but has to be this way to
     ;; match the non-dep-graph version. When use-dep-graph? is removed, it'd be
     ;; better to refactor internal-api/nses->ns+uri to use
-    ;; dep-graph/ns-internal-files directly, perhaps changing it to return all
+    ;; dep-graph/ns-internal-uris directly, perhaps changing it to return all
     ;; uris for a given namespace.
     (into {}
           (keep (fn [namespace]
                   (when-first [uri (dep-graph/ns-internal-uris db namespace)]
                     [namespace uri])))
           namespaces)
-    ;; Performance sensitive: Gather filenames in one pass, instead of (count
+    ;; Performance sensitive: Gather uris in one pass, instead of (count
     ;; namespaces) passes.
-    (into {}
-          (comp
-            deprecated-filter-project-analysis-xf
-            (mapcat val)
-            (filter #(and (identical? :namespace-definitions (:bucket %))
-                          (contains? (set namespaces) (:name %))))
-            (map (fn [{:keys [name filename]}]
-                   [name (shared/filename->uri filename db)])))
-          (:analysis db))))
+    (medley/map-vals
+      #(shared/filename->uri % db)
+      (into {}
+            (comp
+              deprecated-filter-project-analysis-xf
+              (mapcat val)
+              (filter #(and (identical? :namespace-definitions (:bucket %))
+                            (contains? (set namespaces) (:name %))))
+              (map (juxt :name :filename)))
+            (:analysis db)))))
 
 ;;;; Filter elements in analysis
 

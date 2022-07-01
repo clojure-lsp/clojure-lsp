@@ -83,7 +83,8 @@
 ;; project-db filename), which will hurt performance. See
 ;; https://github.com/clojure-lsp/clojure-lsp/issues/1018
 (defn reference-filenames [filename db-before db-after]
-  (let [old-local-elements (get-in db-before [:analysis filename])
+  (let [uri (shared/filename->uri filename db-before)
+        old-local-elements (get-in db-before [:analysis filename])
         new-local-elements (get-in db-after [:analysis filename])
         changed-var-definitions (find-changed-var-definitions old-local-elements new-local-elements)
         changed-var-usages (find-changed-var-usages old-local-elements new-local-elements)
@@ -102,7 +103,7 @@
                                         (filter #(identical? :var-usages (:bucket %)))
                                         (filter #(contains? def-signs (q/var-usage-signature %)))
                                         (map :filename))
-                                      (q/file-dependents-analysis project-db filename))))
+                                      (q/uri-dependents-analysis project-db uri))))
         dependency-filenames (when (seq changed-var-usages)
                                ;; If definition is in both a clj and cljs file, and this is a clj
                                ;; usage, we are careful to notify only the clj file. But, it wouldn't
@@ -120,7 +121,7 @@
                                          (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
                                                     (some usage-langs (q/elem-langs %))))
                                          (map :filename))
-                                       (q/file-dependencies-analysis project-db filename))))]
+                                       (q/uri-dependencies-analysis project-db uri))))]
     ;; TODO: see note on `notify-references` We may want to handle these two
     ;; sets of files differently.
     (set/union (or dependent-filenames #{})

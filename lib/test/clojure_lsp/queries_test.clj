@@ -86,21 +86,21 @@
   (is (= (if (dg?) 3 3) (count (q/nses-and-dependents-analysis @db/db* '#{ccc}))))
   (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis @db/db* '#{aaa bbb})))))
 
-(deftest file-dependents-analysis
+(deftest uri-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 0 3) (count (q/file-dependents-analysis @db/db* "/aaa.clj"))))
-  (is (= (if (dg?) 1 3) (count (q/file-dependents-analysis @db/db* "/bbb.clj"))))
-  (is (= (if (dg?) 2 3) (count (q/file-dependents-analysis @db/db* "/ccc.clj")))))
+  (is (= (if (dg?) 0 3) (count (q/uri-dependents-analysis @db/db* "file:///aaa.clj"))))
+  (is (= (if (dg?) 1 3) (count (q/uri-dependents-analysis @db/db* "file:///bbb.clj"))))
+  (is (= (if (dg?) 2 3) (count (q/uri-dependents-analysis @db/db* "file:///ccc.clj")))))
 
-(deftest file-dependencies-analysis
+(deftest uri-dependencies-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 2 3) (count (q/file-dependencies-analysis @db/db* "/aaa.clj"))))
-  (is (= (if (dg?) 1 3) (count (q/file-dependencies-analysis @db/db* "/bbb.clj"))))
-  (is (= (if (dg?) 0 3) (count (q/file-dependencies-analysis @db/db* "/ccc.clj")))))
+  (is (= (if (dg?) 2 3) (count (q/uri-dependencies-analysis @db/db* "file:///aaa.clj"))))
+  (is (= (if (dg?) 1 3) (count (q/uri-dependencies-analysis @db/db* "file:///bbb.clj"))))
+  (is (= (if (dg?) 0 3) (count (q/uri-dependencies-analysis @db/db* "file:///ccc.clj")))))
 
 (deftest test-ns-aliases
   (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))

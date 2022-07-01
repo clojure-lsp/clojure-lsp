@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2022.06.22-14.09.50</version>
+  <version>2022.06.29-19.32.13</version>
   <name>clojure-lsp</name>
   <dependencies>
     <dependency>
@@ -86,7 +86,7 @@
     <dependency>
       <groupId>com.fabiodomingues</groupId>
       <artifactId>clj-depend</artifactId>
-      <version>0.6.0</version>
+      <version>0.6.1</version>
     </dependency>
     <dependency>
       <groupId>medley</groupId>
@@ -112,6 +112,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2022.06.22-14.09.50</tag>
+    <tag>2022.06.29-19.32.13</tag>
   </scm>
 </project>

@@ -89,7 +89,7 @@
                     (z/find-token z/next #(= (str "::" temporary-value) (z/string %)))
                     (z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
 
-(defn zloc-of-string [text]
+(defn ^:private zloc-of-string [text]
   (try
     (z/of-string text)
     (catch clojure.lang.ExceptionInfo e
@@ -99,11 +99,10 @@
           (throw e)))))
 
 (defn safe-zloc-of-string [text]
-  ;; TODO: only used by tests.
   (try
     (zloc-of-string text)
     (catch Exception _e
-      (println "It was not possible to parse text. Probably not valid clojure code."))))
+      (logger/warn "It was not possible to parse text. Probably not valid clojure code."))))
 
 (defn zloc-of-file [db uri]
   (zloc-of-string (get-in db [:documents uri :text])))
@@ -111,7 +110,7 @@
 (defn safe-zloc-of-file [db uri]
   (try
     (zloc-of-file db uri)
-    (catch Exception _
+    (catch Exception _e
       (logger/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
 (defn to-pos [zloc row col]

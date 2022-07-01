@@ -1,1 +1,36 @@
+macos_instance:
+  image: ghcr.io/cirruslabs/macos-monterey-base:latest
 
+task:
+  env:
+    GRAALVM_VERSION: "22.1.0"
+    GRAALVM_HOME: ${HOME}/graalvm-ce-java11-22.1.0/Contents/Home
+    CLOJURE_LSP_PLATFORM: macos # used in release script
+    CLOJURE_LSP_ARCH: aarch64
+    CLOJURE_LSP_XMX: "-J-Xmx6g"
+    GITHUB_TOKEN: ENCRYPTED[26786ca53221eb81db22b2ed4ebfde12d3765204867931bfad580dd31a0d677fce9df4da487c5b6969ac3397af638c7e]
+  script: |
+    sudo scripts/install-clojure /usr/local
+
+    pushd ~
+    if ! [ -d graalvm-ce-java11-22.1.0 ]; then
+      curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.1.0/graalvm-ce-java11-darwin-aarch64-22.1.0.tar.gz
+      tar xzf graalvm-ce-java11-darwin-aarch64-22.1.0.tar.gz
+    fi
+    popd
+
+    export PATH=$GRAALVM_HOME/bin:$PATH
+
+    gu install native-image || true
+
+    make native-cli
+
+    arch=${CLOJURE_LSP_ARCH:-amd64}
+    archive="clojure-lsp-native-macos-$arch.zip"
+    zip "$archive" clojure-lsp
+
+    sudo bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
+
+    bb release-artifact "$archive" || true
+  binaries_artifacts:
+    path: "clojure-lsp-*.zip"

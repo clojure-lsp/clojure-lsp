@@ -14,8 +14,6 @@
    [lsp4clj.protocols.producer :as producer]
    [rewrite-clj.zip :as z]))
 
-(def mock-diagnostics (atom {}))
-
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 
 (defn file-path [path]
@@ -78,9 +76,9 @@
                          :env env
                          :producer (:producer components)
                          #_#_:settings {:experimental {:dep-graph-queries true}}))
-   (reset! mock-diagnostics {})
-   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
+   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+   (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))
    (alter-var-root #'db/edits-chan (constantly (async/chan 1)))))
 
 (defn reset-db-after-test
@@ -92,6 +90,32 @@
      (fn [f]
        (clean-db! env)
        (f)))))
+
+(defmacro let-mock-chans [bindings & body]
+  (assert (even? (count bindings)))
+  (let [bs (partition 2 bindings)
+        let-bindings (mapcat (fn [[binding _]]
+                               `[~binding (async/chan 1)])
+                             bs)
+        alter-vars (map (fn [[binding chan-var]]
+                          `(alter-var-root ~chan-var (constantly ~binding)))
+                        bs)]
+    `(let [~@let-bindings]
+       ~@alter-vars
+       ~@body)))
+
+(defn take-or-timeout [c timeout-ms]
+  (let [timeout (async/timeout timeout-ms)
+        [val port] (async/alts!! [c timeout])]
+    (is (= port c) "timeout waiting for message to be put on chan")
+    val))
+
+(defn assert-no-take [c timeout-ms]
+  (let [timeout (async/timeout timeout-ms)
+        [val port] (async/alts!! [c timeout])]
+    (is (= port timeout) "received message on chan, but expected none")
+    (is (nil? val))
+    val))
 
 (defn submap? [smaller larger]
   (every? (fn [[smaller-k smaller-v]]
@@ -158,15 +182,6 @@
     (handlers/did-open {:textDocument {:uri uri :text code}} components)
     positions))
 
-(defmacro with-mock-diagnostics [& body]
-  `(do
-     (reset! mock-diagnostics {})
-     (with-redefs [async/put! #(swap! mock-diagnostics assoc (:uri %2) (:diagnostics %2))]
-       ~@body)))
-
-(defn edits [after-fn]
-  (async/take! db/edits-chan after-fn))
-
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})
 
@@ -201,8 +216,9 @@
   (let [[code [[row col] :as positions]] (positions-from-text code)]
     (let [position-count (count positions)]
       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-    (-> (parser/zloc-of-string code)
-        (parser/to-pos row col))))
+    (let [zloc (parser/safe-zloc-of-string code)]
+      (assert zloc "Unable to parse code")
+      (parser/to-pos zloc row col))))
 
 (defn- results->doc
   "Should mimic an LSP client processing results on a document"

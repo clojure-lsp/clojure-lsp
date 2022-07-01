@@ -112,33 +112,11 @@
     :else
     (z/next loc)))
 
-(defn find-var-definition [loc filename db]
-  (when-let [root-loc (to-top loc)]
-    (when-let [fn-name-loc (some-> loc to-top z/next var-name-loc-from-op)]
-      (let [fn-name-loc-meta (meta (z/node fn-name-loc))
-            var-definition-ops (into []
-                                     (comp
-                                       (filter #(or (and (identical? :var-definitions (:bucket %))
-                                                         (= (:row fn-name-loc-meta) (:name-row %))
-                                                         (= (:col fn-name-loc-meta) (:name-col %)))
-                                                    (and (identical? :var-usages (:bucket %))
-                                                         (:defmethod %)
-                                                         (= (:row fn-name-loc-meta) (:name-row %))
-                                                         (= (:col fn-name-loc-meta) (:name-col %)))))
-                                       (keep #(find-at-pos root-loc (:name-row %) (:name-col %))))
-                                     (get-in db [:analysis filename]))]
-        (when (seq var-definition-ops)
-          {:fn-name-loc fn-name-loc
-           :var-definitions var-definition-ops})))))
-
-;; TODO Move the query part to queries.clj ?
-(defn find-var-definition-name-loc [loc filename db]
-  (:fn-name-loc (find-var-definition loc filename db)))
+(defn find-var-definition-name-loc [loc]
+  (some-> loc to-top z/next var-name-loc-from-op))
 
 (defn find-function-usage-name-loc [zloc]
-  (some-> zloc
-          (z/find-tag z/up :list)
-          z/down))
+  (some-> zloc (z/find-tag z/up :list) z/down))
 
 (defn single-child?
   [zloc]

@@ -47,50 +47,53 @@
         (:external? (first elems)))
       analysis)))
 
+(defn uris-to-filenames [db uris]
+  (map #(dep-graph/uri-to-filename db %) uris))
+
 (defn ns-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-filenames db namespace))
+    (select-keys analysis (uris-to-filenames db (dep-graph/ns-uris db namespace)))
     analysis))
 
 (defn ns-dependents-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-dependents-filenames db namespace))
+    (select-keys analysis (uris-to-filenames db (dep-graph/ns-dependents-uris db namespace)))
     analysis))
 
 (defn ns-and-dependents-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-and-dependents-filenames db namespace))
+    (select-keys analysis (uris-to-filenames db (dep-graph/ns-and-dependents-uris db namespace)))
     analysis))
 
 (defn ns-dependencies-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-dependencies-filenames db namespace))
+    (select-keys analysis (uris-to-filenames db (dep-graph/ns-dependencies-uris db namespace)))
     analysis))
 
 (defn nses-analysis [{:keys [analysis] :as db} namespaces]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/nses-filenames db namespaces))
+    (select-keys analysis (uris-to-filenames db (dep-graph/nses-uris db namespaces)))
     analysis))
 
 (defn nses-and-dependents-analysis [{:keys [analysis] :as db} namespaces]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/nses-and-dependents-filenames db namespaces))
+    (select-keys analysis (uris-to-filenames db (dep-graph/nses-and-dependents-uris db namespaces)))
     analysis))
 
-(defn file-dependents-analysis [{:keys [analysis file-meta] :as db} filename]
+(defn file-dependents-analysis [{:keys [analysis documents] :as db} filename]
   (if (use-dep-graph? db)
     (transduce (map #(ns-dependents-analysis db %))
                merge
                {}
-               (get-in file-meta [filename :namespaces]))
+               (get-in documents [(dep-graph/filename-to-uri db filename) :namespaces]))
     analysis))
 
-(defn file-dependencies-analysis [{:keys [analysis file-meta] :as db} filename]
+(defn file-dependencies-analysis [{:keys [analysis documents] :as db} filename]
   (if (use-dep-graph? db)
     (transduce (map #(ns-dependencies-analysis db %))
                merge
                {}
-               (get-in file-meta [filename :namespaces]))
+               (get-in documents [(dep-graph/filename-to-uri db filename) :namespaces]))
     analysis))
 
 (defn db-with-analysis [db f & args]
@@ -154,13 +157,13 @@
             deprecated-as-alias-elems-xf)
           analysis)))
 
-(defn ns-names-for-langs [{:keys [analysis file-meta] :as db} langs]
+(defn ns-names-for-langs [{:keys [analysis documents] :as db} langs]
   (if (use-dep-graph? db)
     (into #{}
-          (mapcat (fn [file-meta]
-                    (when (some langs (:langs file-meta))
-                      (:namespaces file-meta))))
-          (vals file-meta))
+          (mapcat (fn [doc]
+                    (when (some langs (:langs doc))
+                      (:namespaces doc))))
+          (vals documents))
     (into #{}
           (comp
             (mapcat val)
@@ -170,9 +173,9 @@
             (map :name))
           analysis)))
 
-(defn ns-names-for-file [{:keys [file-meta] :as db} filename]
+(defn ns-names-for-uri [{:keys [documents] :as db} uri filename]
   (if (use-dep-graph? db)
-    (vec (get-in file-meta [filename :namespaces]))
+    (vec (get-in documents [uri :namespaces]))
     (into []
           (comp
             (filter #(identical? :namespace-definitions (:bucket %)))
@@ -189,13 +192,13 @@
             (map :name))
           analysis)))
 
-(defn internal-ns-names [{:keys [analysis file-meta] :as db}]
+(defn internal-ns-names [{:keys [analysis documents] :as db}]
   (if (use-dep-graph? db)
     (into #{}
           (comp
             dep-graph/internal-xf
             (mapcat (comp :namespaces val)))
-          file-meta)
+          documents)
     (into #{}
           (comp
             deprecated-filter-project-analysis-xf
@@ -204,7 +207,7 @@
             (map :name))
           analysis)))
 
-(defn nses-some-internal-filename [db namespaces]
+(defn nses-some-internal-uri [db namespaces]
   (if (use-dep-graph? db)
     ;; TODO: this is a very specific return value, but has to be this way to
     ;; match the non-dep-graph version. When use-dep-graph? is removed, it'd be
@@ -213,8 +216,8 @@
     ;; uris for a given namespace.
     (into {}
           (keep (fn [namespace]
-                  (when-first [file (dep-graph/ns-internal-filenames db namespace)]
-                    [namespace file])))
+                  (when-first [uri (dep-graph/ns-internal-uris db namespace)]
+                    [namespace uri])))
           namespaces)
     ;; Performance sensitive: Gather filenames in one pass, instead of (count
     ;; namespaces) passes.
@@ -224,7 +227,8 @@
             (mapcat val)
             (filter #(and (identical? :namespace-definitions (:bucket %))
                           (contains? (set namespaces) (:name %))))
-            (map (juxt :name :filename)))
+            (map (fn [{:keys [name filename]}]
+                   [name (shared/filename->uri filename db)])))
           (:analysis db))))
 
 ;;;; Filter elements in analysis

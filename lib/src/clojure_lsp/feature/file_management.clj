@@ -256,7 +256,7 @@
 
 (defn ^:private db-without-file [state-db uri filename]
   (-> state-db
-      (dep-graph/remove-file filename)
+      (dep-graph/remove-file uri filename)
       (shared/dissoc-in [:documents uri])
       (shared/dissoc-in [:analysis filename])
       (shared/dissoc-in [:findings filename])))

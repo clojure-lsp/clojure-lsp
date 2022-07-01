@@ -197,11 +197,11 @@
     (analyze! options components)))
 
 (defn ^:private nses->ns+uri [namespaces db]
-  (let [found (q/nses-some-internal-filename db namespaces)]
+  (let [found (q/nses-some-internal-uri db namespaces)]
     (map (fn [namespace]
-           (if-let [filename (get found namespace)]
+           (if-let [uri (get found namespace)]
              {:namespace namespace
-              :uri (shared/filename->uri filename db)}
+              :uri uri}
              {:namespace namespace}))
          namespaces)))
 

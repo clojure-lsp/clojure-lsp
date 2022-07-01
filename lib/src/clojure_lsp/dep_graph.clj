@@ -18,7 +18,7 @@
 ;;     integer > 0, frequency of i1
 
 ;; ns = symbol
-;; filename = string
+;; uri = string
 ;; alias = symbol
 ;; lang = ':clj' | ':cljs' | ':edn'
 
@@ -26,7 +26,7 @@
 ;; {(':dependencies' #<ns*>)?
 ;;  (':dependents' #<ns*>)?
 ;;  (':aliases' #<(alias | nil)*>)? ;; nil for when the ns is required without an alias
-;;  (':filenames' #{filename*})?
+;;  (':uris' #{uri*})?
 ;;  (':internal?' boolean)?
 ;;  (':from-internal?' boolean)?
 ;;  (':from-langs' #<lang*>)?}
@@ -53,13 +53,13 @@
 ;; include `nil` in their aliases. May be either empty or absent if a namespace
 ;; isn't required by other namespaces.
 
-;; :filenames is a set of the names of the files in which the namespace is
-;; defined. This can be either absent or empty if the namespace is required but
-;; never defined, either as a syntax error or via :as-alias.
+;; :uris is a set of the uris of the files in which the namespace is defined.
+;; This can be either absent or empty if the namespace is required but never
+;; defined, either as a syntax error or via :as-alias.
 
 ;; :internal? is true when the namespace is defined in any internal file, falsy
 ;; otherwise. May be absent if the namespace is required but never defined, as
-;; for :filenames.
+;; for :uris.
 
 ;; :from-internal? is true when the namespace is required by any internal
 ;; namespace, falsy otherwise. May be absent if the namespace isn't required by
@@ -69,7 +69,7 @@
 ;; :namespace-usages don't have langs) that use this namespace. May be either
 ;; empty or absent if the namespace isn't required by other namespaces.
 
-;; file-meta-item =
+;; documents-item =
 ;; {(:namespaces #{ns*})?
 ;;  :internal? boolean
 ;;  :langs #{lang+}}
@@ -81,9 +81,11 @@
 
 ;; :langs is a set of the langs used by this file.
 
-;; file-meta = {(filename file-meta-item)*}
 ;; dep-graph = {(ns dep-graph-item)*}
+;; documents = {(uri documents-item)*}
+;; file-meta = {(filename file-meta-item)*}
 ;; db = {':dep-graph' dep-graph
+;;       ':documents' documents
 ;;       ':file-meta' file-meta}
 
 (comment
@@ -93,50 +95,61 @@
       :dep-graph
       (select-keys '[clojure-lsp.main
                      clojure.tools.cli]))
-  '{clojure-lsp.main  {:dependents     {clojure-lsp.main-test 1}
-                       :aliases        {main 1}
-                       :from-internal? true
-                       :from-langs     {:clj 1}
-                       :dependencies   {borkdude.dynaload        1
-                                        clojure-lsp.internal-api 1
-                                        clojure-lsp.kondo        1
-                                        clojure-lsp.server       1
-                                        clojure-lsp.shared       1
-                                        clojure.core             1
-                                        clojure.edn              1
-                                        clojure.java.io          1
-                                        clojure.string           1
-                                        clojure.tools.cli        1
-                                        pod.clojure-lsp.api      1}
-                       :filenames      #{"/Users/me/code/clojure-lsp/cli/src/clojure_lsp/main.clj"}
-                       :internal?      true}
-    clojure.tools.cli {:dependents     {clj-depend.main                                    1
-                                        cljfmt.main                                        1
-                                        clojure-lsp.main                                   1
-                                        clojure.tools.deps.alpha.script.generate-manifest2 1
-                                        clojure.tools.deps.alpha.script.make-classpath2    1
-                                        clojure.tools.deps.alpha.script.print-tree         1
-                                        clojure.tools.deps.alpha.script.resolve-tags       1
-                                        kaocha.runner                                      1}
-                       :aliases        {cli 7, nil 1}
-                       :from-internal? true
-                       :from-langs     {:clj 8}
-                       :dependencies   {clojure.string 2, goog.string.format 1}
-                       :filenames      #{"/Users/me/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"}
-                       :internal?      false}}
+  '{clojure-lsp.main {:aliases {main 1},
+                      :dependencies {borkdude.dynaload 1,
+                                     clojure-lsp.internal-api 1,
+                                     clojure-lsp.kondo 1,
+                                     clojure-lsp.server 1,
+                                     clojure-lsp.shared 1,
+                                     clojure.core 1,
+                                     clojure.edn 1,
+                                     clojure.java.io 1,
+                                     clojure.string 1,
+                                     clojure.tools.cli 1,
+                                     pod.clojure-lsp.api 1},
+                      :dependents {clojure-lsp.main-test 1},
+                      :from-internal? true,
+                      :from-langs {:clj 1},
+                      :internal? true,
+                      :uris #{"file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"}},
+    clojure.tools.cli {:aliases {cli 7, nil 1},
+                       :dependencies {clojure.string 2, goog.string.format 1},
+                       :dependents {clj-depend.main 1,
+                                    cljfmt.main 1,
+                                    clojure-lsp.main 1,
+                                    clojure.tools.deps.alpha.script.generate-manifest2 1,
+                                    clojure.tools.deps.alpha.script.make-classpath2 1,
+                                    clojure.tools.deps.alpha.script.print-tree 1,
+                                    clojure.tools.deps.alpha.script.resolve-tags 1,
+                                    kaocha.runner 1},
+                       :from-internal? true,
+                       :from-langs {:clj 8},
+                       :internal? false,
+                       :uris #{"jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"}}}
+
+  (-> @db/db*
+      :documents
+      (select-keys ["file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+                    "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"]))
+  '{"file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+    {:filename "/path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj",
+     :internal? true,
+     :langs #{:clj},
+     :namespaces #{clojure-lsp.main}},
+    "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"
+    {:filename "/path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc",
+     :internal? false,
+     :langs #{:clj :cljs},
+     :namespaces #{clojure.tools.cli}}}
+
   (-> @db/db*
       :file-meta
-      (select-keys ["/Users/me/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-                    "/Users/me/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"]))
-
-  '{"/Users/me/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-    {:internal? true
-     :langs #{:clj}
-     :namespaces #{clojure-lsp.main}}
-    "/Users/me/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
-    {:internal? false
-     :langs #{:clj :cljs}
-     :namespaces #{clojure.tools.cli}}})
+      (select-keys ["/path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+                    "/path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"]))
+  {"/path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+   {:uri "file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"},
+   "/path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
+   {:uri "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"}})
 
 ;;;; DB Maintenance
 
@@ -166,12 +179,21 @@
 (def ^:private s-conj (fnil conj #{}))
 (def ^:private s-disj (fnil disj #{}))
 
+(defn filename-to-uri [db filename]
+  (get-in db [:file-meta filename :uri]))
+
+(defn uri-to-filename [db uri]
+  (get-in db [:documents uri :filename]))
+
+(defn uri-internal? [db uri]
+  (get-in db [:documents uri :internal?]))
+
 (defn file-internal? [db filename]
-  (get-in db [:file-meta filename :internal?]))
+  (uri-internal? db (filename-to-uri db filename)))
 
 (defn ^:private update-usage [db f {:keys [from name alias filename] :as element}]
-  (let [from-file (get-in db [:file-meta filename])
-        from-langs (or (some-> element :lang list set) (:langs from-file))]
+  (let [from-doc (get-in db [:documents (filename-to-uri db filename)])
+        from-langs (or (some-> element :lang list set) (:langs from-doc))]
     ;; A dep-graph item is a summary of the ways a namespace is used across the
     ;; whole project. We keep multisets of most of its data, so that we know not
     ;; only that a namespace `aaa` is aliased as `a`, but that it is aliased as
@@ -182,11 +204,11 @@
         (update-in [:dep-graph from :dependencies] f name)
         (update-in [:dep-graph name :dependents] f from)
         (update-in [:dep-graph name :aliases] f alias)
-        ;; NOTE: We could store :from-filenames, and look up whether any of them
+        ;; NOTE: We could store :from-uris, and look up whether any of them
         ;; are internal. But this way keeps that lookup out of q/ns-aliases,
         ;; which is on the hotpath in completion.
         ;; TODO: is it wrong that once from-internal?, always from-internal?
-        (update-in [:dep-graph name :from-internal?] #(or % (:internal? from-file)))
+        (update-in [:dep-graph name :from-internal?] #(or % (:internal? from-doc)))
         ;; NOTE: :from-langs is used only in add-missing-libspec, so it's not on
         ;; a hotpath, but :from-internal? has already established this pattern.
         (update-in [:dep-graph name :from-langs] #(reduce f % from-langs)))))
@@ -198,11 +220,12 @@
 (defn ^:private add-usages [db usages]    (update-usages db ms-conj usages))
 
 (defn ^:private update-definition [db f {:keys [name filename]}]
-  (let [in-file (get-in db [:file-meta filename])]
+  (let [uri (filename-to-uri db filename)
+        in-doc (get-in db [:documents uri])]
     (-> db
-        (update-in [:dep-graph name :filenames] f filename)
-        (update-in [:dep-graph name :internal?] #(or % (:internal? in-file)))
-        (update-in [:file-meta filename :namespaces] f name))))
+        (update-in [:dep-graph name :uris] f uri)
+        (update-in [:dep-graph name :internal?] #(or % (:internal? in-doc)))
+        (update-in [:documents uri :namespaces] f name))))
 
 (defn ^:private update-definitions [db f namespace-definitions]
   (reduce #(update-definition %1 f %2) db namespace-definitions))
@@ -212,11 +235,15 @@
 
 (defn ^:private ensure-file [db filename internal?]
   (let [uri (shared/filename->uri filename db)]
-    ;; TODO: consider using file-meta as a cache for other things: uri,
-    ;; file-type, etc.
-    (update-in db [:file-meta filename] assoc
-               :internal? internal?
-               :langs (shared/uri->available-langs uri))))
+    (-> db
+        ;; Bridge from filename to URI until we use URI consistently
+        (update-in [:file-meta filename] assoc :uri uri)
+        ;; TODO: consider using documents as a cache for other things:
+        ;; file-type, etc.
+        (update-in [:documents uri] assoc
+                   :filename filename
+                   :internal? internal?
+                   :langs (shared/uri->available-langs uri)))))
 
 (defn ^:private ensure-files [db filenames internal?]
   (reduce #(ensure-file %1 %2 internal?) db filenames))
@@ -293,54 +320,54 @@
           (add-definitions new-definitions)
           (add-usages new-usages)))))
 
-(defn remove-file [db filename]
+(defn remove-file [db uri filename]
   (-> db
       (refresh-analysis (select-keys (:analysis db) [filename])
                         {}
-                        (file-internal? db filename))
+                        (uri-internal? db uri))
       (update :file-meta dissoc filename)))
 
 ;;;; File filtering
 
-(def internal-xf ;; works for dep-graph or file-meta
+(def internal-xf ;; works for dep-graph or documents
   (filter (comp :internal? val)))
 
 (def from-internal-xf ;; works for dep-graph only
   (filter (comp :from-internal? val)))
 
-(defn ns-filenames [{:keys [dep-graph]} namespace]
-  (get-in dep-graph [namespace :filenames]))
+(defn ns-uris [{:keys [dep-graph]} namespace]
+  (get-in dep-graph [namespace :uris]))
 
-(defn ns-internal-filenames [db namespace]
-  (filter #(file-internal? db %) (ns-filenames db namespace)))
+(defn ns-internal-uris [db namespace]
+  (filter #(uri-internal? db %) (ns-uris db namespace)))
 
-(defn ns-dependents-filenames [{:keys [dep-graph] :as db} namespace]
+(defn ns-dependents-uris [{:keys [dep-graph] :as db} namespace]
   (let [dependents (get-in dep-graph [namespace :dependents])]
     (into #{}
-          (mapcat #(ns-filenames db %))
+          (mapcat #(ns-uris db %))
           (ms-distinct dependents))))
 
-(defn ns-dependencies-filenames [{:keys [dep-graph] :as db} namespace]
+(defn ns-dependencies-uris [{:keys [dep-graph] :as db} namespace]
   (let [dependencies (get-in dep-graph [namespace :dependencies])]
     (into #{}
-          (mapcat #(ns-filenames db %))
+          (mapcat #(ns-uris db %))
           (ms-distinct dependencies))))
 
-(defn ns-and-dependents-filenames [db namespace]
-  (set/union (ns-filenames db namespace)
-             (ns-dependents-filenames db namespace)))
+(defn ns-and-dependents-uris [db namespace]
+  (set/union (ns-uris db namespace)
+             (ns-dependents-uris db namespace)))
 
-(defn nses-filenames [db namespaces]
+(defn nses-uris [db namespaces]
   (apply set/union
-         (map #(ns-filenames db %)
+         (map #(ns-uris db %)
               namespaces)))
 
-(defn nses-and-dependents-filenames [db namespaces]
+(defn nses-and-dependents-uris [db namespaces]
   (apply set/union
-         (map #(ns-and-dependents-filenames db %)
+         (map #(ns-and-dependents-uris db %)
               namespaces)))
 
-(defn internal-filenames [{:keys [file-meta]}]
+(defn internal-uris [{:keys [documents]}]
   (into []
         (comp internal-xf (map key))
-        file-meta))
+        documents))

@@ -148,7 +148,7 @@
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (is (= '[aaa ccc]
-         (q/ns-names-for-file @db/db* "/aaa.clj"))))
+         (q/ns-names-for-uri @db/db* (h/file-uri "file:///aaa.clj") "/aaa.clj"))))
 
 (deftest ns-names
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
@@ -163,20 +163,20 @@
   (h/load-code-and-locs "(ns some)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
   (is (= '#{aaa bbb} (q/internal-ns-names @db/db*))))
 
-(deftest nses-some-internal-filename
+(deftest nses-some-internal-uri
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-  ;; rename uses nses-some-internal-filename, but it doesn't do a good job with
+  ;; rename uses nses-some-internal-uri, but it doesn't do a good job with
   ;; namespaces that are defined in many files. It performs the rename in only
   ;; one of the files, and which one is a bit arbitrary. For whatever reason,
   ;; the dep-graph version returns a different, though equally valid file. We
-  ;; allow that version here. See the comment in q/nses-some-internal-filename
+  ;; allow that version here. See the comment in q/nses-some-internal-uri
   ;; for more thoughts.
   (is (= (if (dg?)
-           '{aaa "/aaa.clj"}
-           '{aaa "/bbb.clj"})
-         (q/nses-some-internal-filename @db/db* '#{aaa}))))
+           '{aaa "file:///aaa.clj"}
+           '{aaa "file:///bbb.clj"})
+         (q/nses-some-internal-uri @db/db* '#{aaa}))))
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"

@@ -23,13 +23,13 @@
     (h/load-code-and-locs "(ns xxx.yyy)"
                           (h/file-uri "jar:file:///some.jar!/xxx/yyy.clj"))
     (is (= '{xxx {:dependencies {xxx.yyy 1}
-                  :files #{"/some.jar:xxx.clj"}
+                  :filenames #{"/some.jar:xxx.clj"}
                   :internal? false}
              xxx.yyy {:dependents {xxx 1}
                       :aliases {nil 1}
                       :from-internal? false
                       :from-langs {:clj 1}
-                      :files #{"/some.jar:xxx/yyy.clj"}
+                      :filenames #{"/some.jar:xxx/yyy.clj"}
                       :internal? false}}
            (:dep-graph @db/db*)))
     (is (= '{"/some.jar:xxx.clj"     {:internal? false, :langs #{:clj}, :namespaces #{xxx}},
@@ -47,20 +47,20 @@
     (load-code "/ccc.clj"
                "(ns ccc)")
     (is (= '{aaa {:dependencies {bbb 1, ccc 1}
-                  :files #{"/aaa.clj"}
+                  :filenames #{"/aaa.clj"}
                   :internal? true}
              bbb {:dependents {aaa 1}
                   :aliases {b 1}
                   :from-internal? true
                   :from-langs {:clj 1}
                   :dependencies {ccc 1}
-                  :files #{"/bbb.clj"}
+                  :filenames #{"/bbb.clj"}
                   :internal? true}
              ccc {:dependents {aaa 1, bbb 1}
                   :aliases {c 2}
                   :from-internal? true
                   :from-langs {:clj 2}
-                  :files #{"/ccc.clj"}
+                  :filenames #{"/ccc.clj"}
                   :internal? true}}
            (:dep-graph @db/db*)))
     (is (= '{"/aaa.clj" {:internal? true, :langs #{:clj}, :namespaces #{aaa}}
@@ -153,7 +153,7 @@
     (let [db @db/db*]
       (is (seq (get-in db [:dep-graph 'aaa :dependencies])))
       (is (= '{ccc 1} (get-in db [:dep-graph 'aaa :dependents])))
-      (is (seq (get-in db [:dep-graph 'aaa :files])))
+      (is (seq (get-in db [:dep-graph 'aaa :filenames])))
       (is (seq (get-in db [:dep-graph 'bbb :dependents])))
       (is (not (nil? (get-in db [:file-meta "/aaa.clj"])))))
     #_(alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
@@ -162,7 +162,7 @@
     (let [db @db/db*]
       (is (empty? (get-in db [:dep-graph 'aaa :dependencies])))
       (is (= '{ccc 1} (get-in db [:dep-graph 'aaa :dependents]))) ;; <-- no change, because ccc stil depends on aaa, even though aaa is now undefined
-      (is (empty? (get-in db [:dep-graph 'aaa :files])))
+      (is (empty? (get-in db [:dep-graph 'aaa :filenames])))
       (is (empty? (get-in db [:dep-graph 'bbb :dependents])))
       (is (nil? (get-in db [:file-meta "/aaa.clj"])))))
   (testing "in implicit user ns"
@@ -170,7 +170,7 @@
     (load-code "/scratch.clj"
                "(def x 1)")
     (let [db @db/db*]
-      (is (= #{"/scratch.clj"} (get-in db [:dep-graph 'user :files])))
+      (is (= #{"/scratch.clj"} (get-in db [:dep-graph 'user :filenames])))
       (is (= '#{user} (get-in db [:file-meta "/scratch.clj" :namespaces])))))
   (testing "with implicit dependency on clojure.core"
     (h/clean-db!)
@@ -203,57 +203,57 @@
                "(ns ccc)")
     (let [db @db/db*]
       (are [expected namespace]
-           (= expected (dep-graph/ns-files db namespace))
+           (= expected (dep-graph/ns-filenames db namespace))
         #{"/aaa.clj"} 'aaa
         #{"/bbb.clj"} 'bbb
         #{"/ccc.clj"} 'ccc)
       (are [expected namespace]
-           (= expected (dep-graph/ns-dependencies-files db namespace))
+           (= expected (dep-graph/ns-dependencies-filenames db namespace))
         #{"/bbb.clj" "/ccc.clj"} 'aaa
         #{"/ccc.clj"}            'bbb
         #{}                      'ccc)
       (are [expected namespace]
-           (= expected (dep-graph/ns-dependents-files db namespace))
+           (= expected (dep-graph/ns-dependents-filenames db namespace))
         #{}                      'aaa
         #{"/aaa.clj"}            'bbb
         #{"/aaa.clj" "/bbb.clj"} 'ccc)
       (are [expected namespace]
-           (= expected (dep-graph/ns-and-dependents-files db namespace))
+           (= expected (dep-graph/ns-and-dependents-filenames db namespace))
         #{"/aaa.clj"}                       'aaa
         #{"/aaa.clj" "/bbb.clj"}            'bbb
         #{"/aaa.clj" "/bbb.clj" "/ccc.clj"} 'ccc)
       (is (= #{"/aaa.clj" "/bbb.clj"}
-             (dep-graph/nses-files db '#{aaa bbb})))
+             (dep-graph/nses-filenames db '#{aaa bbb})))
       (is (= #{"/aaa.clj" "/bbb.clj" "/ccc.clj"}
-             (dep-graph/nses-and-dependents-files db '#{bbb ccc})))))
+             (dep-graph/nses-and-dependents-filenames db '#{bbb ccc})))))
   (testing "external namespaces"
     (h/clean-db!)
     (load-code "/aaa.clj" "(ns aaa)")
     (h/load-code-and-locs "(ns bbb)" (h/file-uri "jar:file:///some.jar!/bbb.clj"))
     (let [db @db/db*]
-      (is (= ["/aaa.clj"] (dep-graph/internal-files db)))))
+      (is (= ["/aaa.clj"] (dep-graph/internal-filenames db)))))
   (testing "namespaces defined internally and externally"
     (h/clean-db!)
     (load-code "/aaa.clj" "(ns aaa)")
     (h/load-code-and-locs "(ns aaa)" (h/file-uri "jar:file:///some.jar!/aaa.clj"))
     (let [db @db/db*]
-      (is (= #{"/aaa.clj" "/some.jar:aaa.clj"} (dep-graph/ns-files db 'aaa)))
-      (is (= ["/aaa.clj"] (dep-graph/ns-internal-files db 'aaa)))
-      (is (= ["/aaa.clj"] (dep-graph/internal-files db)))))
+      (is (= #{"/aaa.clj" "/some.jar:aaa.clj"} (dep-graph/ns-filenames db 'aaa)))
+      (is (= ["/aaa.clj"] (dep-graph/ns-internal-filenames db 'aaa)))
+      (is (= ["/aaa.clj"] (dep-graph/internal-filenames db)))))
   (testing "file with multiple namespaces"
     (h/clean-db!)
     (load-code "/aaa.clj"
                "(ns aaa)"
                "(ns aaa2)")
     (let [db @db/db*]
-      (is (= #{"/aaa.clj"} (dep-graph/ns-files db 'aaa)))
-      (is (= #{"/aaa.clj"} (dep-graph/ns-files db 'aaa2)))
+      (is (= #{"/aaa.clj"} (dep-graph/ns-filenames db 'aaa)))
+      (is (= #{"/aaa.clj"} (dep-graph/ns-filenames db 'aaa2)))
       (is (= '#{aaa aaa2} (get-in db [:file-meta "/aaa.clj" :namespaces])))))
   (testing "namespace with multiple files"
     (h/clean-db!)
     (load-code "/aaa.clj" "(ns aaa)")
     (load-code "/also/aaa.clj" "(ns aaa)")
     (let [db @db/db*]
-      (is (= #{"/aaa.clj" "/also/aaa.clj"} (dep-graph/ns-files db 'aaa)))
+      (is (= #{"/aaa.clj" "/also/aaa.clj"} (dep-graph/ns-filenames db 'aaa)))
       (is (= '#{aaa} (get-in db [:file-meta "/aaa.clj" :namespaces])))
       (is (= '#{aaa} (get-in db [:file-meta "/also/aaa.clj" :namespaces]))))))

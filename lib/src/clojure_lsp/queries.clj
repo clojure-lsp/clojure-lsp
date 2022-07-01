@@ -49,32 +49,32 @@
 
 (defn ns-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-files db namespace))
+    (select-keys analysis (dep-graph/ns-filenames db namespace))
     analysis))
 
 (defn ns-dependents-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-dependents-files db namespace))
+    (select-keys analysis (dep-graph/ns-dependents-filenames db namespace))
     analysis))
 
 (defn ns-and-dependents-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-and-dependents-files db namespace))
+    (select-keys analysis (dep-graph/ns-and-dependents-filenames db namespace))
     analysis))
 
 (defn ns-dependencies-analysis [{:keys [analysis] :as db} namespace]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/ns-dependencies-files db namespace))
+    (select-keys analysis (dep-graph/ns-dependencies-filenames db namespace))
     analysis))
 
 (defn nses-analysis [{:keys [analysis] :as db} namespaces]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/nses-files db namespaces))
+    (select-keys analysis (dep-graph/nses-filenames db namespaces))
     analysis))
 
 (defn nses-and-dependents-analysis [{:keys [analysis] :as db} namespaces]
   (if (use-dep-graph? db)
-    (select-keys analysis (dep-graph/nses-and-dependents-files db namespaces))
+    (select-keys analysis (dep-graph/nses-and-dependents-filenames db namespaces))
     analysis))
 
 (defn file-dependents-analysis [{:keys [analysis file-meta] :as db} filename]
@@ -213,7 +213,7 @@
     ;; uris for a given namespace.
     (into {}
           (keep (fn [namespace]
-                  (when-first [file (dep-graph/ns-internal-files db namespace)]
+                  (when-first [file (dep-graph/ns-internal-filenames db namespace)]
                     [namespace file])))
           namespaces)
     ;; Performance sensitive: Gather filenames in one pass, instead of (count

@@ -33,7 +33,7 @@
       (is (get-in @db/db* [:analysis "/user/project/src/clj/foo.clj"]))
       (is (get-in @db/db* [:findings "/user/project/src/clj/foo.clj"]))
       (is (get-in @db/db* [:file-meta "/user/project/src/clj/foo.clj"]))
-      (is (seq (get-in @db/db* [:dep-graph 'foo :files])))
+      (is (seq (get-in @db/db* [:dep-graph 'foo :filenames])))
       (is (get-in @db/db* [:documents "file:///user/project/src/clj/foo.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
@@ -44,7 +44,7 @@
       (is (nil? (get-in @db/db* [:analysis "/user/project/src/clj/bar.clj"])))
       (is (nil? (get-in @db/db* [:findings "/user/project/src/clj/bar.clj"])))
       (is (nil? (get-in @db/db* [:file-meta "/user/project/src/clj/bar.clj"])))
-      (is (not (seq (get-in @db/db* [:dep-graph 'bar :files]))))
+      (is (not (seq (get-in @db/db* [:dep-graph 'bar :filenames]))))
       (is (nil? (get-in @db/db* [:documents "file:///user/project/src/clj/bar.clj"])))
       (is (= {:uri "file:///user/project/src/clj/bar.clj"
               :diagnostics []}
@@ -57,7 +57,7 @@
       (is (get-in @db/db* [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in @db/db* [:findings "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in @db/db* [:file-meta "/some/path/to/jar.jar:/some/file.clj"]))
-      (is (seq (get-in @db/db* [:dep-graph 'some-jar :files])))
+      (is (seq (get-in @db/db* [:dep-graph 'some-jar :filenames])))
       (is (get-in @db/db* [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500))))
 

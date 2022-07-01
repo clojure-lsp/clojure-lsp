@@ -76,7 +76,7 @@
 
 (defn ^:private analyze-test-paths! [{:keys [db* producer]}]
   (let [db @db*]
-    (->> (dep-graph/internal-files db)
+    (->> (dep-graph/internal-filenames db)
          (map #(shared/filename->uri % db))
          (clojure-producer/refresh-test-tree producer))))
 

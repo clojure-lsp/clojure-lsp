@@ -26,7 +26,7 @@
 ;; {(':dependencies' #<ns*>)?
 ;;  (':dependents' #<ns*>)?
 ;;  (':aliases' #<(alias | nil)*>)? ;; nil for when the ns is required without an alias
-;;  (':files' #{filename*})?
+;;  (':filenames' #{filename*})?
 ;;  (':internal?' boolean)?
 ;;  (':from-internal?' boolean)?
 ;;  (':from-langs' #<lang*>)?}
@@ -53,13 +53,13 @@
 ;; include `nil` in their aliases. May be either empty or absent if a namespace
 ;; isn't required by other namespaces.
 
-;; :files is a set of the files in which the namespace is defined. This can be
-;; either absent or empty if the namespace is required but never defined, either
-;; as a syntax error or via :as-alias.
+;; :filenames is a set of the names of the files in which the namespace is
+;; defined. This can be either absent or empty if the namespace is required but
+;; never defined, either as a syntax error or via :as-alias.
 
 ;; :internal? is true when the namespace is defined in any internal file, falsy
 ;; otherwise. May be absent if the namespace is required but never defined, as
-;; for :files.
+;; for :filenames.
 
 ;; :from-internal? is true when the namespace is required by any internal
 ;; namespace, falsy otherwise. May be absent if the namespace isn't required by
@@ -108,7 +108,7 @@
                                         clojure.string           1
                                         clojure.tools.cli        1
                                         pod.clojure-lsp.api      1}
-                       :files          #{"~/code/clojure-lsp/cli/src/clojure_lsp/main.clj"}
+                       :filenames      #{"/Users/me/code/clojure-lsp/cli/src/clojure_lsp/main.clj"}
                        :internal?      true}
     clojure.tools.cli {:dependents     {clj-depend.main                                    1
                                         cljfmt.main                                        1
@@ -122,18 +122,18 @@
                        :from-internal? true
                        :from-langs     {:clj 8}
                        :dependencies   {clojure.string 2, goog.string.format 1}
-                       :files          #{"~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"}
+                       :filenames      #{"/Users/me/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"}
                        :internal?      false}}
   (-> @db/db*
       :file-meta
-      (select-keys ["~/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-                    "~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"]))
+      (select-keys ["/Users/me/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+                    "/Users/me/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"]))
 
-  '{"~/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+  '{"/Users/me/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
     {:internal? true
      :langs #{:clj}
      :namespaces #{clojure-lsp.main}}
-    "~/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
+    "/Users/me/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
     {:internal? false
      :langs #{:clj :cljs}
      :namespaces #{clojure.tools.cli}}})
@@ -200,8 +200,7 @@
 (defn ^:private update-definition [db f {:keys [name filename]}]
   (let [in-file (get-in db [:file-meta filename])]
     (-> db
-        (update-in [:dep-graph name :files] f filename)
-        ;; TODO: is it wrong that once an internal ns, always an internal ns?
+        (update-in [:dep-graph name :filenames] f filename)
         (update-in [:dep-graph name :internal?] #(or % (:internal? in-file)))
         (update-in [:file-meta filename :namespaces] f name))))
 
@@ -277,9 +276,10 @@
       [defs usages])))
 
 (defn refresh-analysis [db old-analysis new-analysis internal?]
-  ;; TODO: should this be wrapped in use-dep-graph? If it is, startup will be
-  ;; faster (500ms in medium projects 1200ms in v. large). But if it isn't, you
-  ;; can toggle the setting live.
+  ;; NOTE: When called during startup this takes a little time (500ms in medium
+  ;; projects 1200ms in v. large). Although while in beta not every user will
+  ;; need it, we calculate it anyway. This way it can be toggled in the settings
+  ;; live, which is useful for beta testing.
   (shared/logging-task
     :maintain-dep-graph
     (let [[old-definitions old-usages] (ns-definitions-and-usages old-analysis)
@@ -306,39 +306,39 @@
 (def from-internal-xf ;; works for dep-graph only
   (filter (comp :from-internal? val)))
 
-(defn ns-files [{:keys [dep-graph]} namespace]
-  (get-in dep-graph [namespace :files]))
+(defn ns-filenames [{:keys [dep-graph]} namespace]
+  (get-in dep-graph [namespace :filenames]))
 
-(defn ns-internal-files [db namespace]
-  (filter #(file-internal? db %) (ns-files db namespace)))
+(defn ns-internal-filenames [db namespace]
+  (filter #(file-internal? db %) (ns-filenames db namespace)))
 
-(defn ns-dependents-files [{:keys [dep-graph] :as db} namespace]
+(defn ns-dependents-filenames [{:keys [dep-graph] :as db} namespace]
   (let [dependents (get-in dep-graph [namespace :dependents])]
     (into #{}
-          (mapcat #(ns-files db %))
+          (mapcat #(ns-filenames db %))
           (ms-distinct dependents))))
 
-(defn ns-dependencies-files [{:keys [dep-graph] :as db} namespace]
+(defn ns-dependencies-filenames [{:keys [dep-graph] :as db} namespace]
   (let [dependencies (get-in dep-graph [namespace :dependencies])]
     (into #{}
-          (mapcat #(ns-files db %))
+          (mapcat #(ns-filenames db %))
           (ms-distinct dependencies))))
 
-(defn ns-and-dependents-files [db namespace]
-  (set/union (ns-files db namespace)
-             (ns-dependents-files db namespace)))
+(defn ns-and-dependents-filenames [db namespace]
+  (set/union (ns-filenames db namespace)
+             (ns-dependents-filenames db namespace)))
 
-(defn nses-files [db namespaces]
+(defn nses-filenames [db namespaces]
   (apply set/union
-         (map #(ns-files db %)
+         (map #(ns-filenames db %)
               namespaces)))
 
-(defn nses-and-dependents-files [db namespaces]
+(defn nses-and-dependents-filenames [db namespaces]
   (apply set/union
-         (map #(ns-and-dependents-files db %)
+         (map #(ns-and-dependents-filenames db %)
               namespaces)))
 
-(defn internal-files [{:keys [file-meta]}]
+(defn internal-filenames [{:keys [file-meta]}]
   (into []
         (comp internal-xf (map key))
         file-meta))

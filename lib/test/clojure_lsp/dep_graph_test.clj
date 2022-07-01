@@ -23,14 +23,14 @@
     (h/load-code-and-locs "(ns xxx.yyy)"
                           (h/file-uri "jar:file:///some.jar!/xxx/yyy.clj"))
     (is (= '{xxx {:dependencies {xxx.yyy 1}
-                  :uris #{"zipfile:///some.jar::xxx.clj"}
-                  :internal? false}
-             xxx.yyy {:dependents {xxx 1}
-                      :aliases {nil 1}
-                      :from-internal? false
-                      :from-langs {:clj 1}
-                      :uris #{"zipfile:///some.jar::xxx/yyy.clj"}
-                      :internal? false}}
+                  :internal? false
+                  :uris #{"zipfile:///some.jar::xxx.clj"}}
+             xxx.yyy {:aliases {nil 1}
+                      :dependents {xxx 1}
+                      :dependents-internal? false
+                      :dependents-langs {:clj 1}
+                      :internal? false
+                      :uris #{"zipfile:///some.jar::xxx/yyy.clj"}}}
            (:dep-graph @db/db*)))
     (h/assert-submap
      '{:internal? false, :langs #{:clj}, :namespaces #{xxx} :filename "/some.jar:xxx.clj"}
@@ -50,21 +50,21 @@
     (load-code "/ccc.clj"
                "(ns ccc)")
     (is (= '{aaa {:dependencies {bbb 1, ccc 1}
-                  :uris #{"file:///aaa.clj"}
-                  :internal? true}
-             bbb {:dependents {aaa 1}
-                  :aliases {b 1}
-                  :from-internal? true
-                  :from-langs {:clj 1}
+                  :internal? true
+                  :uris #{"file:///aaa.clj"}}
+             bbb {:aliases {b 1}
                   :dependencies {ccc 1}
-                  :uris #{"file:///bbb.clj"}
-                  :internal? true}
-             ccc {:dependents {aaa 1, bbb 1}
-                  :aliases {c 2}
-                  :from-internal? true
-                  :from-langs {:clj 2}
-                  :uris #{"file:///ccc.clj"}
-                  :internal? true}}
+                  :dependents {aaa 1}
+                  :dependents-internal? true
+                  :dependents-langs {:clj 1}
+                  :internal? true
+                  :uris #{"file:///bbb.clj"}}
+             ccc {:aliases {c 2}
+                  :dependents {aaa 1, bbb 1}
+                  :dependents-internal? true
+                  :dependents-langs {:clj 2}
+                  :internal? true
+                  :uris #{"file:///ccc.clj"}}}
            (:dep-graph @db/db*)))
     (h/assert-submap
      '{:internal? true, :langs #{:clj}, :namespaces #{aaa}, :filename "/aaa.clj"}
@@ -86,9 +86,9 @@
           xxx (get-in db [:dep-graph 'xxx])
           xxx-yyy (get-in db [:dep-graph 'xxx.yyy])]
       (is (not (:internal? xxx)))
-      (is (not (:from-internal? xxx)))
+      (is (not (:dependents-internal? xxx)))
       (is (not (:internal? xxx-yyy)))
-      (is (not (:from-internal? xxx-yyy))))
+      (is (not (:dependents-internal? xxx-yyy))))
     (load-code "/aaa.clj"
                "(ns aaa"
                " (:require [xxx :as x]))")
@@ -96,9 +96,9 @@
           xxx (get-in db [:dep-graph 'xxx])
           xxx-yyy (get-in db [:dep-graph 'xxx.yyy])]
       (is (not (:internal? xxx)))
-      (is (:from-internal? xxx)) ;; <-- this is the change
+      (is (:dependents-internal? xxx)) ;; <-- this is the change
       (is (not (:internal? xxx-yyy)))
-      (is (not (:from-internal? xxx-yyy)))))
+      (is (not (:dependents-internal? xxx-yyy)))))
   (testing "adding dependency"
     (h/clean-db!)
     (load-code "/bbb.clj"

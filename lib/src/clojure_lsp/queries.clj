@@ -129,7 +129,7 @@
   (if (use-dep-graph? db)
     (into #{}
           (comp
-            dep-graph/from-internal-xf
+            dep-graph/some-dependents-internal-xf
             as-alias-elems-xf)
           dep-graph)
     (into #{}
@@ -144,9 +144,9 @@
   (if (use-dep-graph? db)
     (into #{}
           (comp
-            dep-graph/from-internal-xf
-            (filter (fn [[_namespace {:keys [from-langs]}]]
-                      (dep-graph/ms-overlaps-set? from-langs langs)))
+            dep-graph/some-dependents-internal-xf
+            (filter (fn [[_namespace {:keys [dependents-langs]}]]
+                      (dep-graph/ms-overlaps-set? dependents-langs langs)))
             as-alias-elems-xf)
           dep-graph)
     (into #{}

@@ -491,16 +491,15 @@
                                    (safe-equal? (:to element) (:to %))
                                    (safe-equal? (:name element) (:name %)))))
                ;; protocol method usage or defmethod usage
-               (comp
-                 (mapcat (fn [[_ {:keys [protocol-impls var-usages]}]]
-                           (concat protocol-impls var-usages)))
-                 (filter #(or (and (identical? :protocol-impls (:bucket %))
-                                   (safe-equal? (:to element) (:protocol-ns %))
-                                   (safe-equal? (:name element) (:method-name %)))
-                              (and (identical? :var-usages (:bucket %))
-                                   (:defmethod %)
-                                   (safe-equal? (:to element) (:to %))
-                                   (safe-equal? (:name element) (:name %)))))))]
+               (comp (map val)
+                     (mapcat (fn [{:keys [protocol-impls var-usages]}]
+                               (concat (filter #(and (safe-equal? (:to element) (:protocol-ns %))
+                                                     (safe-equal? (:name element) (:method-name %)))
+                                               protocol-impls)
+                                       (filter #(and (:defmethod %)
+                                                     (safe-equal? (:to element) (:to %))
+                                                     (safe-equal? (:name element) (:name %)))
+                                               var-usages))))))]
       (into []
             (comp
               xf

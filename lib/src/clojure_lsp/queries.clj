@@ -573,8 +573,9 @@
     (into []
           (comp
             (mapcat (fn [[_filename {:keys [var-definitions var-usages]}]]
-                      (cond->> var-usages
-                        include-declaration? (into var-definitions))))
+                      (concat (when include-declaration?
+                                var-definitions)
+                              var-usages)))
             (filter #(contains? names (:name %)))
             (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?

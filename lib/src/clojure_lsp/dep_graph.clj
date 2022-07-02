@@ -75,16 +75,16 @@
 ;;  :internal? boolean
 ;;  :langs #{lang+}}
 
-;; :namespaces is a set of the namespaces defined by this file. May be either
-;; empty or absent if the file doesn't define any namespaces.
+;; :namespaces is a set of the namespaces defined by this document. May be
+;; either empty or absent if the document doesn't define any namespaces.
 
-;; :internal? is whether this file is internal to the project.
+;; :internal? is whether this document is internal to the project.
 
-;; :langs is a set of the langs used by this file.
+;; :langs is a set of the langs used by this document.
 
 ;; dep-graph = {(ns dep-graph-item)*}
 ;; documents = {(uri documents-item)*}
-;; file-meta = {(filename file-meta-item)*}
+;; file-meta = {(filename {:uri uri})*}
 ;; db = {':dep-graph' dep-graph
 ;;       ':documents' documents
 ;;       ':file-meta' file-meta}

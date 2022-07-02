@@ -154,7 +154,9 @@
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns jjj)" (h/file-uri "file:///jjj.cljs"))
-  (is (= '#{aaa bbb ccc jjj}
+  (is (= (if (dg?)
+           '#{aaa bbb ccc jjj clojure.core cljs.core}
+           '#{aaa bbb ccc jjj})
          (q/ns-names @db/db*))))
 
 (deftest internal-ns-names

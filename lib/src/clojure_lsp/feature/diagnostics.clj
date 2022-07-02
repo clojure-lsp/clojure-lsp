@@ -182,10 +182,11 @@
                          (comp
                            (q/xf-all-var-usages-to-namespaces var-nses)
                            (map q/var-usage-signature))
-                         (:analysis project-db))
+                         (q/nses-and-dependents-analysis project-db var-nses))
         var-used? (fn [var-def]
                     (some var-usages (q/var-definition-signatures var-def)))
         kw-definitions (remove (partial exclude-public-diagnostic-definition? config) kw-defs)
+        ;; TODO: skip if no kw-definitions
         kw-usages (into #{}
                         (comp
                           q/xf-all-keyword-usages
@@ -209,14 +210,14 @@
 
 (defn custom-lint-project!
   [db kondo-ctx]
-  (let [project-db (q/db-with-project-analysis db)]
+  (let [project-db (q/db-with-internal-analysis db)]
     (lint-defs! (all-var-definitions project-db)
                 (all-kw-definitions project-db)
                 project-db kondo-ctx)))
 
 (defn custom-lint-files!
   [filenames db kondo-ctx]
-  (let [project-db (q/db-with-project-analysis db)
+  (let [project-db (q/db-with-internal-analysis db)
         files-db (update project-db :analysis select-keys filenames)]
     (lint-defs! (all-var-definitions files-db)
                 (all-kw-definitions files-db)
@@ -224,7 +225,7 @@
 
 (defn custom-lint-file!
   [filename db kondo-ctx]
-  (let [project-db (q/db-with-project-analysis db)]
+  (let [project-db (q/db-with-internal-analysis db)]
     (lint-defs! (file-var-definitions project-db filename)
                 (file-kw-definitions project-db filename)
                 project-db kondo-ctx)))

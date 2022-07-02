@@ -4,6 +4,7 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
@@ -73,7 +74,8 @@
   ([env]
    (reset! db/db* (assoc db/initial-db
                          :env env
-                         :producer (:producer components)))
+                         :producer (:producer components)
+                         #_#_:settings {:experimental {:dep-graph-queries true}}))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))
@@ -268,3 +270,6 @@
 
 (defn changes-by-uri->code [changes-by-uri uri db]
   (changes->code (get changes-by-uri uri) uri db))
+
+(defn use-dep-graph? [db]
+  (#'q/use-dep-graph? db))

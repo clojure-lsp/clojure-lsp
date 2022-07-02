@@ -36,17 +36,17 @@
 (defn tree [uri db]
   (let [filename (shared/uri->filename uri)
         ns-element (q/find-namespace-definition-by-filename db filename)
-        local-analysis (get-in db [:analysis filename])
+        local-elements (get-in db [:analysis filename])
         deftests (into []
                        (filter #(and (identical? :var-definitions (:bucket %))
                                      (contains? '#{clojure.test/deftest cljs.test/deftest}
                                                 (:defined-by %))))
-                       local-analysis)
+                       local-elements)
         testings (into []
                        (filter #(and (identical? :var-usages (:bucket %))
                                      (= 'testing (:name %))
                                      (contains? '#{clojure.test cljs.test} (:to %))))
-                       local-analysis)
+                       local-elements)
         tests-tree (mapv #(deftest->tree % testings) deftests)]
     (when (seq tests-tree)
       {:uri uri

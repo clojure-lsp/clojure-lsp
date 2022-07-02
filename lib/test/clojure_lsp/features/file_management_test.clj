@@ -32,6 +32,8 @@
         (f.file-management/did-close "file:///user/project/src/clj/foo.clj" db/db*))
       (is (get-in @db/db* [:analysis "/user/project/src/clj/foo.clj"]))
       (is (get-in @db/db* [:findings "/user/project/src/clj/foo.clj"]))
+      (is (get-in @db/db* [:file-meta "/user/project/src/clj/foo.clj"]))
+      (is (seq (get-in @db/db* [:dep-graph 'foo :uris])))
       (is (get-in @db/db* [:documents "file:///user/project/src/clj/foo.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
@@ -41,6 +43,8 @@
         (f.file-management/did-close "file:///user/project/src/clj/bar.clj" db/db*))
       (is (nil? (get-in @db/db* [:analysis "/user/project/src/clj/bar.clj"])))
       (is (nil? (get-in @db/db* [:findings "/user/project/src/clj/bar.clj"])))
+      (is (nil? (get-in @db/db* [:file-meta "/user/project/src/clj/bar.clj"])))
+      (is (not (seq (get-in @db/db* [:dep-graph 'bar :uris]))))
       (is (nil? (get-in @db/db* [:documents "file:///user/project/src/clj/bar.clj"])))
       (is (= {:uri "file:///user/project/src/clj/bar.clj"
               :diagnostics []}
@@ -52,6 +56,8 @@
         (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" db/db*))
       (is (get-in @db/db* [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in @db/db* [:findings "/some/path/to/jar.jar:/some/file.clj"]))
+      (is (get-in @db/db* [:file-meta "/some/path/to/jar.jar:/some/file.clj"]))
+      (is (seq (get-in @db/db* [:dep-graph 'some-jar :uris])))
       (is (get-in @db/db* [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500))))
 
@@ -68,6 +74,9 @@
         (h/load-code-and-locs "" uri)
         (is (get-in @db/db* [:analysis filename]))
         (is (get-in @db/db* [:findings filename]))
+        (is (get-in @db/db* [:file-meta filename]))
+        ;; The ns won't be in the dep graph until after the edit adding it is applied.
+        (is (not (contains? (get @db/db* :dep-graph) 'aaa.bbb)))
         (is (get-in @db/db* [:documents uri]))
         (testing "should publish empty diagnostics"
           (is (= {:uri uri, :diagnostics []}

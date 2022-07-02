@@ -1,5 +1,8 @@
 (ns clojure-lsp.queries
+  (:refer-clojure :exclude [ns-aliases])
   (:require
+   [clojure-lsp.dep-graph :as dep-graph]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -8,6 +11,232 @@
 
 (set! *warn-on-reflection* true)
 
+(defn elem-langs [element]
+  (or (some-> element :lang list set)
+      (shared/uri->available-langs (:filename element))))
+
+;;;; Filter analysis, using dep-graph
+
+;; TODO: Remove this when the dep graph experiment is done.
+;; NOTE: Do not make this public. It will make it harder to end the dep-graph
+;; experiment.
+(defn ^:private use-dep-graph? [db]
+  (or (settings/get db [:experimental :dep-graph-queries] false)
+      (= "true" (System/getenv "CLOJURE_LSP_USE_DEP_GRAPH"))))
+
+(def ^:private deprecated-filter-project-analysis-xf ;; works for analysis only
+  (remove (comp :external? first val)))
+
+(defn internal-analysis [{:keys [analysis] :as db}]
+  (if (use-dep-graph? db)
+    (medley/filter-keys
+      #(dep-graph/file-internal? db %)
+      analysis)
+    (medley/remove-vals
+      (fn [elems]
+        (:external? (first elems)))
+      analysis)))
+
+(defn external-analysis [{:keys [analysis] :as db}]
+  (if (use-dep-graph? db)
+    (medley/remove-keys
+      #(dep-graph/file-internal? db %)
+      analysis)
+    (medley/filter-vals
+      (fn [elems]
+        (:external? (first elems)))
+      analysis)))
+
+(defn uris-to-filenames [db uris]
+  (map #(dep-graph/uri-to-filename db %) uris))
+
+(defn ^:private uris-analysis [{:keys [analysis] :as db} uris]
+  (select-keys analysis (uris-to-filenames db uris)))
+
+(defn ns-analysis [{:keys [analysis] :as db} namespace]
+  (if (use-dep-graph? db)
+    (uris-analysis db (dep-graph/ns-uris db namespace))
+    analysis))
+
+(defn ns-dependents-analysis [{:keys [analysis] :as db} namespace]
+  (if (use-dep-graph? db)
+    (uris-analysis db (dep-graph/ns-dependents-uris db namespace))
+    analysis))
+
+(defn ns-and-dependents-analysis [{:keys [analysis] :as db} namespace]
+  (if (use-dep-graph? db)
+    (uris-analysis db (dep-graph/ns-and-dependents-uris db namespace))
+    analysis))
+
+(defn ns-dependencies-analysis [{:keys [analysis] :as db} namespace]
+  (if (use-dep-graph? db)
+    (uris-analysis db (dep-graph/ns-dependencies-uris db namespace))
+    analysis))
+
+(defn nses-analysis [{:keys [analysis] :as db} namespaces]
+  (if (use-dep-graph? db)
+    (uris-analysis db (dep-graph/nses-uris db namespaces))
+    analysis))
+
+(defn nses-and-dependents-analysis [{:keys [analysis] :as db} namespaces]
+  (if (use-dep-graph? db)
+    (uris-analysis db (dep-graph/nses-and-dependents-uris db namespaces))
+    analysis))
+
+(defn uri-dependents-analysis [{:keys [analysis documents] :as db} uri]
+  (if (use-dep-graph? db)
+    (transduce (map #(ns-dependents-analysis db %))
+               merge
+               {}
+               (get-in documents [uri :namespaces]))
+    analysis))
+
+(defn uri-dependencies-analysis [{:keys [analysis documents] :as db} uri]
+  (if (use-dep-graph? db)
+    (transduce (map #(ns-dependencies-analysis db %))
+               merge
+               {}
+               (get-in documents [uri :namespaces]))
+    analysis))
+
+(defn db-with-analysis [db f & args]
+  (assoc db :analysis (apply f db args)))
+
+(defn db-with-internal-analysis [db]
+  (db-with-analysis db internal-analysis))
+
+(defn db-with-ns-analysis [db namespace]
+  (db-with-analysis db ns-analysis namespace))
+
+;;;; Miscelaneous helpers that may belong in clojure-lsp.dep-graph
+
+;; When using the dep-graph, these helpers don't need the analysis, though they
+;; do on the non-dep-graph path. Perhaps they should be moved to
+;; clojure-lsp.dep-graph when use-dep-graph? is removed.
+
+(def ^:private as-alias-elems-xf ;; works for dep-graph only
+  (mapcat (fn [[namespace {:keys [aliases]}]]
+            (keep (fn [alias]
+                    (when alias
+                      {:to namespace
+                       :alias alias}))
+                  (dep-graph/ms-distinct aliases)))))
+
+(def ^:private deprecated-as-alias-elems-xf ; works for :namespace-aliases only
+  (map #(select-keys % [:to :alias])))
+
+(defn ns-aliases [{:keys [analysis dep-graph] :as db}]
+  (if (use-dep-graph? db)
+    (into #{}
+          (comp
+            dep-graph/some-dependents-internal-xf
+            as-alias-elems-xf)
+          dep-graph)
+    (into #{}
+          (comp
+            deprecated-filter-project-analysis-xf
+            (mapcat val)
+            (filter #(identical? :namespace-alias (:bucket %)))
+            deprecated-as-alias-elems-xf)
+          analysis)))
+
+(defn ns-aliases-for-langs [{:keys [analysis dep-graph] :as db} langs]
+  (if (use-dep-graph? db)
+    (into #{}
+          (comp
+            dep-graph/some-dependents-internal-xf
+            (filter (fn [[_namespace {:keys [dependents-langs]}]]
+                      (dep-graph/ms-overlaps-set? dependents-langs langs)))
+            as-alias-elems-xf)
+          dep-graph)
+    (into #{}
+          (comp
+            deprecated-filter-project-analysis-xf
+            (mapcat val)
+            (filter #(identical? :namespace-alias (:bucket %)))
+            (filter :alias)
+            (filter (fn [element]
+                      (some langs (elem-langs element))))
+            deprecated-as-alias-elems-xf)
+          analysis)))
+
+(defn ns-names-for-langs [{:keys [analysis documents] :as db} langs]
+  (if (use-dep-graph? db)
+    (into #{}
+          (mapcat (fn [doc]
+                    (when (some langs (:langs doc))
+                      (:namespaces doc))))
+          (vals documents))
+    (into #{}
+          (comp
+            (mapcat val)
+            (filter #(identical? :namespace-definitions (:bucket %)))
+            (filter (fn [element]
+                      (some langs (elem-langs element))))
+            (map :name))
+          analysis)))
+
+(defn ns-names-for-uri [{:keys [documents] :as db} uri filename]
+  (if (use-dep-graph? db)
+    (vec (get-in documents [uri :namespaces]))
+    (into []
+          (comp
+            (filter #(identical? :namespace-definitions (:bucket %)))
+            (map :name))
+          (get-in db [:analysis filename]))))
+
+(defn ns-names [{:keys [analysis dep-graph] :as db}]
+  (if (use-dep-graph? db)
+    (set (keys dep-graph))
+    (into #{}
+          (comp
+            (mapcat val)
+            (filter #(identical? :namespace-definitions (:bucket %)))
+            (map :name))
+          analysis)))
+
+(defn internal-ns-names [{:keys [analysis documents] :as db}]
+  (if (use-dep-graph? db)
+    (into #{}
+          (comp
+            dep-graph/internal-xf
+            (mapcat (comp :namespaces val)))
+          documents)
+    (into #{}
+          (comp
+            deprecated-filter-project-analysis-xf
+            (mapcat val)
+            (filter #(identical? :namespace-definitions (:bucket %)))
+            (map :name))
+          analysis)))
+
+(defn nses-some-internal-uri [db namespaces]
+  (if (use-dep-graph? db)
+    ;; TODO: this is a very specific return value, but has to be this way to
+    ;; match the non-dep-graph version. When use-dep-graph? is removed, it'd be
+    ;; better to refactor internal-api/nses->ns+uri to use
+    ;; dep-graph/ns-internal-uris directly, perhaps changing it to return all
+    ;; uris for a given namespace.
+    (into {}
+          (keep (fn [namespace]
+                  (when-first [uri (dep-graph/ns-internal-uris db namespace)]
+                    [namespace uri])))
+          namespaces)
+    ;; Performance sensitive: Gather uris in one pass, instead of (count
+    ;; namespaces) passes.
+    (medley/map-vals
+      #(shared/filename->uri % db)
+      (into {}
+            (comp
+              deprecated-filter-project-analysis-xf
+              (mapcat val)
+              (filter #(and (identical? :namespace-definitions (:bucket %))
+                            (contains? (set namespaces) (:name %))))
+              (map (juxt :name :filename)))
+            (:analysis db)))))
+
+;;;; Filter elements in analysis
+
 (defn ^:private safe-equal?
   "Fast equals for string and symbols."
   [a b]
@@ -15,52 +244,35 @@
     (.equals ^clojure.lang.Symbol a b)
     (.equals ^String a b)))
 
-(defn ^:private find-first [pred coll]
-  (reduce
-    (fn [_ i]
-      (when (pred i)
-        (reduced i)))
-    nil
-    coll))
+;; Borrowed from https://github.com/cgrand/xforms
+;; Copyright © 2015-2016 Christophe Grand
+;; Distributed under the Eclipse Public License version 1.0
 
-(defn ^:private project-analysis [{:keys [analysis]}]
-  (medley/remove-vals
-    (fn [elems]
-      (:external? (first elems)))
-    analysis))
+(defn rf-last
+  "Reducing function that returns the last value."
+  ([] nil)
+  ([x] x)
+  ([_ x] x))
 
-(defn db-with-project-analysis [db]
-  (assoc db :analysis (project-analysis db)))
+(defn rf-some
+  "Reducing function that returns the first logical true value."
+  ([] nil)
+  ([x] x)
+  ([_ x] (when x (reduced x))))
 
-(def filter-project-analysis-xf
-  "Filter only project elements from analysis.
-  Checking if the first value is `external?`, we infer all elements
-  for that filename are too."
-  (remove (comp :external? first val)))
+;; End cgrand/xforms
 
-(def filter-external-analysis-xf
-  "Filter only external elements from analysis.
-  Checking if the first value is not `external?`, we infer all elements
-  for that filename are not too."
-  (filter (comp :external? first val)))
-
-(defn ^:private find-last-order-by-project-analysis [pred? analysis]
-  (or (peek (into []
-                  (comp
-                    filter-project-analysis-xf
-                    (mapcat val)
-                    (filter pred?))
-                  analysis))
-      (peek (into []
-                  (comp
-                    filter-external-analysis-xf
-                    (mapcat val)
-                    (filter pred?))
-                  analysis))))
-
-(defn elem-langs [element]
-  (or (some-> element :lang list set)
-      (shared/uri->available-langs (:filename element))))
+(defn ^:private find-last-order-by-project-analysis [pred? db]
+  (or (transduce (comp
+                   (mapcat val)
+                   (filter pred?))
+                 rf-last
+                 (internal-analysis db))
+      (transduce (comp
+                   (mapcat val)
+                   (filter pred?))
+                 rf-last
+                 (external-analysis db))))
 
 (defn ^:private match-file-lang
   [check-element match-element]
@@ -91,30 +303,30 @@
 
 (defn find-local-usages-under-form
   [db filename {:keys [row col end-row end-col]}]
-  (let [local-analysis (get-in db [:analysis filename])
+  (let [local-elements (get-in db [:analysis filename])
         form-scope {:name-row row
                     :name-col col
                     :name-end-row end-row
-                    :name-end-col end-col}]
-    (->> local-analysis
-         ;; 1. find locals defined above form
-         (filter (fn [{:keys [bucket] :as local-def}]
-                   (and (= :locals bucket)
-                        (shared/inside? form-scope local-def))))
-         ;; 2. find first usage inside of form
-         (keep (fn [local-def]
-                 ;; This is a nested-loop over local analysis. If it becomes a
-                 ;; performance bottleneck, replace nested-loop with hashjoin on
-                 ;; id.
-                 (find-first (fn [local-usage]
-                               (and (= :local-usages (:bucket local-usage))
-                                    (= (:id local-def) (:id local-usage))
-                                    (shared/inside? local-usage form-scope)))
-                             local-analysis))))))
+                    :name-end-col end-col}
+        ;; find locals definitions whose scope includes the form
+        local-def-ids (into #{}
+                            (comp
+                              (filter (fn [{:keys [bucket] :as local-def}]
+                                        (and (identical? :locals bucket)
+                                             (shared/inside? form-scope local-def))))
+                              (map :id))
+                            local-elements)]
+    ;; find locals usages inside the form, whose def is outside the form
+    (->> local-elements
+         (filter (fn [local-usage]
+                   (and (identical? :local-usages (:bucket local-usage))
+                        (contains? local-def-ids (:id local-usage))
+                        (shared/inside? local-usage form-scope))))
+         (medley/distinct-by :id))))
 
 (defn find-var-usages-under-form
   [db filename line column end-line end-column]
-  (let [local-analysis (get-in db [:analysis filename])]
+  (let [local-elements (get-in db [:analysis filename])]
     (filter (fn [{:keys [bucket] :as element}]
               (and (= :var-usages bucket)
                    (shared/inside? element
@@ -122,19 +334,19 @@
                                     :name-col column
                                     :name-end-row end-line
                                     :name-end-col end-column})))
-            local-analysis)))
+            local-elements)))
 
 (defmulti find-definition
   (fn [_db element]
     (:bucket element)))
 
 (defmethod find-definition :namespace-alias
-  [db element]
+  [db {:keys [to] :as element}]
   (find-last-order-by-project-analysis
     #(and (identical? :namespace-definitions (:bucket %))
-          (= (:name %) (:to element))
+          (= (:name %) to)
           (match-file-lang % element))
-    (:analysis db)))
+    (db-with-ns-analysis db to)))
 
 (defmethod find-definition :namespace-usages
   [db element]
@@ -142,7 +354,7 @@
     #(and (identical? :namespace-definitions (:bucket %))
           (= (:name %) (:name element))
           (match-file-lang % element))
-    (:analysis db)))
+    (db-with-ns-analysis db (:name element))))
 
 (defmethod find-definition :var-usages
   [db element]
@@ -155,19 +367,21 @@
       (find-last-order-by-project-analysis
         #(and (defines-elem? %)
               (match-file-lang % element))
-        (:analysis db))
+        (db-with-ns-analysis db (:to element)))
       (when (contains? (elem-langs element) :cljs)
         ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
         (find-last-order-by-project-analysis
           #(and (defines-elem? %)
                 (:macro %)
                 (match-file-lang % (assoc element :lang :clj)))
-          (:analysis db))))))
+          (db-with-ns-analysis db (:to element)))))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id filename] :as _element}]
-  (find-first #(and (= :locals (:bucket %)) (= (:id %) id))
-              (get-in db [:analysis filename])))
+  (transduce (filter
+               #(and (= :locals (:bucket %)) (= (:id %) id)))
+             rf-some
+             (get-in db [:analysis filename])))
 
 (defmethod find-definition :keywords
   [db element]
@@ -177,18 +391,24 @@
                 (= (:name %) (:name element))
                 (:reg %)
                 (= (:ns %) (:ns element)))
-          (:analysis db)))
+          db))
       element))
 
 (defmethod find-definition :var-definitions
   [db element]
   (if (= 'potemkin/import-vars (:defined-by element))
+    ;; FIXME: this is buggy... it goes to **any** definition with the same name,
+    ;; not specifically the one from the imported ns. See
+    ;; https://github.com/clojure-lsp/clojure-lsp/issues/1020
+    ;; To fix, use :imported-ns and :imported-var, and treat this like a
+    ;; var-usage Don't forget to switch from db to (db-with-ns-analysis db
+    ;; (:imported-ns element))
     (find-last-order-by-project-analysis
       #(and (identical? :var-definitions (:bucket %))
             (= (:name %) (:name element))
             (not= 'potemkin/import-vars (:defined-by %))
             (match-file-lang % element))
-      (:analysis db))
+      db)
     element))
 
 (defmethod find-definition :protocol-impls
@@ -198,7 +418,7 @@
           (= (:name %) (:method-name element))
           (= (:ns %) (:protocol-ns element))
           (match-file-lang % element))
-    (:analysis db)))
+    (db-with-ns-analysis db (:protocol-ns element))))
 
 (defmethod find-definition :java-class-usages
   [db element]
@@ -222,21 +442,22 @@
 (defmethod find-declaration :var-usages
   [db {:keys [alias name to filename] :as element}]
   (when-not (identical? :clj-kondo/unknown-namespace to)
-    (peek (into []
-                (comp (filter
-                        (if alias
-                          #(and (identical? :namespace-alias (:bucket %))
-                                (= to (:to %))
-                                (= alias (:alias %)))
-                          #(if (:refer %)
-                             (and (identical? :var-usages (:bucket %))
-                                  (= to (:to %))
-                                  (= name (:name %)))
+    (transduce
+      (comp (filter
+              (if alias
+                #(and (identical? :namespace-alias (:bucket %))
+                      (= to (:to %))
+                      (= alias (:alias %)))
+                #(if (:refer %)
+                   (and (identical? :var-usages (:bucket %))
+                        (= to (:to %))
+                        (= name (:name %)))
                              ;; :refer :all
-                             (and (identical? :namespace-usages (:bucket %))
-                                  (= to (:name %))))))
-                      (filter #(match-file-lang % element)))
-                (get-in db [:analysis filename])))))
+                   (and (identical? :namespace-usages (:bucket %))
+                        (= to (:name %))))))
+            (filter #(match-file-lang % element)))
+      rf-last
+      (get-in db [:analysis filename]))))
 
 (defmethod find-declaration :default [_ _] nil)
 
@@ -274,7 +495,7 @@
             (constantly false))
           (filter #(match-file-lang % element))
           (medley/distinct-by (juxt :filename :name :row :col)))
-        (:analysis db)))
+        (ns-and-dependents-analysis db (:ns element))))
 
 (defmethod find-implementations :var-usages
   [db element]
@@ -302,7 +523,7 @@
                                 (safe-equal? (:name element) (:name %))))))
             (filter #(match-file-lang % element))
             (medley/distinct-by (juxt :filename :name :row :col)))
-          (:analysis db))))
+          (ns-and-dependents-analysis db (:to element)))))
 
 (defmethod find-implementations :default [_ _] [])
 
@@ -323,6 +544,9 @@
             (mapcat val)
             (filter #(or (and (identical? :namespace-usages (:bucket %))
                               (= (:name %) name))
+                         ;; TODO: do we always need these keywords? If not, a
+                         ;; faster version of this could be made that uses
+                         ;; (dep-graph/ns-and-dependents-analysis db name)
                          (and (identical? :keywords (:bucket %))
                               (= (:ns %) name)
                               (not (:auto-resolved %))
@@ -372,7 +596,7 @@
                             (identical? :var-definitions (:bucket %))
                             (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :filename :name :row :col)))
-          (:analysis db))))
+          (ns-and-dependents-analysis db (:ns element)))))
 
 (defmethod find-references :keywords
   [db {:keys [ns name] :as _element} include-declaration?]
@@ -388,7 +612,7 @@
           (filter #(or include-declaration?
                        (not (:reg %))))
           (medley/distinct-by (juxt :filename :name :row :col)))
-        (project-analysis db)))
+        (internal-analysis db)))
 
 (defmethod find-references :local
   [db {:keys [id name filename] :as element} include-declaration?]
@@ -400,7 +624,7 @@
     [element]))
 
 (defmethod find-references :protocol-impls
-  [db element include-declaration?]
+  [db {:keys [method-name protocol-ns] :as element} include-declaration?]
   (concat
     (when include-declaration?
       [element])
@@ -408,10 +632,10 @@
           (comp
             (mapcat val)
             (filter #(identical? :var-usages (:bucket %)))
-            (filter #(safe-equal? (:method-name element) (:name %)))
-            (filter #(safe-equal? (:protocol-ns element) (:to %)))
+            (filter #(safe-equal? method-name (:name %)))
+            (filter #(safe-equal? protocol-ns (:to %)))
             (medley/distinct-by (juxt :filename :name :row :col)))
-          (:analysis db))))
+          (ns-and-dependents-analysis db protocol-ns))))
 
 (defmethod find-references :default
   [_db element _]
@@ -419,16 +643,18 @@
 
 (defn find-element-under-cursor
   [db filename line column]
-  (find-first (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-                ;; TODO Probably should use q/inside? instead
-                (and (<= name-row line name-end-row)
-                     (<= name-col column name-end-col)))
-              (get-in db [:analysis filename])))
+  (transduce (filter
+               (fn [{:keys [name-row name-col name-end-row name-end-col]}]
+                 ;; TODO Probably should use q/inside? instead
+                 (and (<= name-row line name-end-row)
+                      (<= name-col column name-end-col))))
+             rf-some
+             (get-in db [:analysis filename])))
 
 (defn find-all-elements-under-cursor
   [db filename line column]
   (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-                ;; TODO Probably should use q/inside? instead
+            ;; TODO Probably should use q/inside? instead
             (and (<= name-row line name-end-row)
                  (<= name-col column name-end-col)))
           (get-in db [:analysis filename])))
@@ -513,44 +739,8 @@
                      (= (:name-end-col %) (:name-end-col keyword-element))))
        first))
 
-(def ^:private find-all-ns-definitions-xf
-  (comp
-    (mapcat val)
-    (filter #(identical? :namespace-definitions (:bucket %)))))
-
-(def find-all-ns-definition-names-xf
-  (comp
-    find-all-ns-definitions-xf
-    (map :name)))
-
-;; TODO remove it, use only transducer one?
-(defn find-all-ns-definition-names [db]
-  (into #{}
-        find-all-ns-definition-names-xf
-        (:analysis db)))
-
-(defn find-all-ns-definitions-for-langs
-  [db langs]
-  (into #{}
-        (comp
-          find-all-ns-definitions-xf
-          (filter (fn [element]
-                    (some langs (elem-langs element)))))
-        (:analysis db)))
-
-(defn find-all-aliases-for-langs
-  [db langs]
-  (into #{}
-        (comp
-          (mapcat val)
-          (filter #(identical? :namespace-alias (:bucket %)))
-          (filter :alias)
-          (filter (fn [element]
-                    (some langs (elem-langs element)))))
-        (project-analysis db)))
-
 (defn find-unused-aliases [db filename]
-  (let [local-analysis (get-in db [:analysis filename])]
+  (let [local-elements (get-in db [:analysis filename])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-namespace %) :type))
@@ -558,17 +748,17 @@
                       (some #(and (identical? :var-usages (:bucket %))
                                   (not (:refer %))
                                   (safe-equal? (:ns finding) (:to %)))
-                            local-analysis)))
+                            local-elements)))
             (map :ns))
           (get-in db [:findings filename]))))
 
 (defn find-unused-refers [db filename]
-  (let [local-analysis (get-in db [:analysis filename])]
+  (let [local-elements (get-in db [:analysis filename])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-referred-var %) :type))
             (remove (fn [finding]
-                      (> (->> local-analysis
+                      (> (->> local-elements
                               (filter #(and (identical? :var-usages (:bucket %))
                                             (safe-equal? (:refer finding) (:name %))
                                             (safe-equal? (:ns finding) (:to %))))
@@ -579,7 +769,7 @@
           (get-in db [:findings filename]))))
 
 (defn find-unused-imports [db filename]
-  (let [local-analysis (get-in db [:analysis filename])]
+  (let [local-elements (get-in db [:analysis filename])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-import %) :type))
@@ -591,7 +781,7 @@
                                       (safe-equal? (str (:class finding))
                                                    (:class %))
                                       (not (:import %))))
-                            local-analysis)))
+                            local-elements)))
             (map :class))
           (get-in db [:findings filename]))))
 
@@ -617,14 +807,16 @@
        last))
 
 (defn find-element-for-rename [db from-ns from-name]
-  (find-last-order-by-project-analysis
-    (if from-name
-      #(and (identical? :var-definitions (:bucket %))
-            (= from-ns (:ns %))
-            (= from-name (:name %)))
-      #(and (identical? :namespace-definitions (:bucket %))
-            (= from-ns (:name %))))
-    (project-analysis db)))
+  (transduce
+    (comp (mapcat val)
+          (filter (if from-name
+                    #(and (identical? :var-definitions (:bucket %))
+                          (= from-ns (:ns %))
+                          (= from-name (:name %)))
+                    #(and (identical? :namespace-definitions (:bucket %))
+                          (= from-ns (:name %))))))
+    rf-last
+    (internal-analysis (db-with-ns-analysis db from-ns))))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest

@@ -3,8 +3,10 @@
 ## Unreleased
 
 - Editor
- - Restored #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
- - Improved call hierarchy performance by parsing less frequently. #1092
+  - Restore #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
+  - Improve call hierarchy performance by parsing less frequently. #1092
+  - Improve system wide performance by keeping a graph of dependencies between namespaces. #990 #1053
+    Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
 
 ## 2022.06.29-19.32.13
 

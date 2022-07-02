@@ -197,31 +197,11 @@
     (analyze! options components)))
 
 (defn ^:private nses->ns+uri [namespaces db]
-  (let [ns->filename-xf (comp
-                          (mapcat val)
-                          (filter #(and (identical? :namespace-definitions (:bucket %))
-                                        (contains? (set namespaces) (:name %))))
-                          (map (juxt :name :filename)))
-        ;; Performance sensitive: Gather filenames in two passes, instead of
-        ;; (count namespaces) passes, as would be required by
-        ;; q/find-namespace-definition-by-namespace. Simulates
-        ;; q/find-last-order-by-project-analysis, preferring internal
-        ;; definitions.
-        found-external (into {}
-                             (comp
-                               q/filter-external-analysis-xf
-                               ns->filename-xf)
-                             (:analysis db))
-        found-internal (into {}
-                             (comp
-                               q/filter-project-analysis-xf
-                               ns->filename-xf)
-                             (:analysis db))
-        found (merge found-external found-internal)]
+  (let [found (q/nses-some-internal-uri db namespaces)]
     (map (fn [namespace]
-           (if-let [filename (get found namespace)]
+           (if-let [uri (get found namespace)]
              {:namespace namespace
-              :uri (shared/filename->uri filename db)}
+              :uri uri}
              {:namespace namespace}))
          namespaces)))
 
@@ -284,11 +264,8 @@
            (map symbol)
            seq)
       (into #{}
-            (comp
-              q/filter-project-analysis-xf
-              q/find-all-ns-definition-names-xf
-              (remove (partial exclude-ns? options)))
-            (:analysis db))))
+            (remove (partial exclude-ns? options))
+            (q/internal-ns-names db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)
@@ -352,7 +329,8 @@
   (cli-println options "Finding diagnostics...")
   (let [db @db*
         namespaces (options->namespaces options db)
-        diags-by-uri (->> (nses->ns+uri namespaces db)
+        ns+uris (nses->ns+uri namespaces db)
+        diags-by-uri (->> ns+uris
                           (assert-ns-exists-or-drop! options)
                           (pmap (fn [{:keys [uri]}]
                                   {:uri uri

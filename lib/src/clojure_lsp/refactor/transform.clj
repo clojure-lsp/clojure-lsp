@@ -774,17 +774,25 @@
              (qualified-symbol? (z/sexpr zloc)))
     (let [z-sexpr (z/sexpr zloc)
           z-name (name z-sexpr)
-          z-ns (namespace z-sexpr)]
-      (if-let [ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol z-ns))]
-        (if-let [ns-def (q/find-definition db ns-usage)]
-          (when-not (:external? ns-def)
-            {:ns (:name ns-def)
-             :name z-name})
-          (when-not (:external? ns-usage)
-            {:new-ns (:name ns-usage)
-             :name z-name}))
-        {:new-ns z-ns
-         :name z-name}))))
+          z-ns (namespace z-sexpr)
+          ;; TODO: shouldn't this also look for unaliased ns-usages?
+          ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
+          ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol z-ns))
+          ns-def (when ns-usage
+                   (q/find-definition db ns-usage))]
+      (cond
+        ;; namespace exists; add a function in it
+        ns-def   (when-not (:external? ns-def)
+                   {:ns   (:name ns-def)
+                    :name z-name})
+        ;; alias exists, but namespace it points to does not; create namespace
+        ;; and function
+        ns-usage {:new-ns (:name ns-usage)
+                  :name   z-name}
+        ;; neither namespace nor alias exists; assume alias is full name of new
+        ;; namespace; create namespace and function
+        :else    {:new-ns z-ns
+                  :name   z-name}))))
 
 (defn ^:private create-function-param [node index]
   (if (and node
@@ -798,7 +806,10 @@
 
 (defn ^:private create-function-for-alias
   [local-zloc ns-or-alias fn-name defn-edit uri db]
-  (let [ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol ns-or-alias))
+  (let [filename (shared/uri->filename uri)
+        ;; TODO: shouldn't this also look for unaliased ns-usages?
+        ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
+        ns-usage (q/find-namespace-usage-by-alias db filename (symbol ns-or-alias))
         ns-definition (when ns-usage
                         (q/find-definition db ns-usage))
         source-paths (settings/get db [:source-paths])
@@ -806,32 +817,32 @@
                   ns-definition
                   (shared/filename->uri (:filename ns-definition) db)
                   ns-usage
-                  (shared/namespace->uri (:name ns-usage) source-paths (:filename ns-usage) db)
+                  (shared/namespace->uri (:name ns-usage) source-paths filename db)
                   :else
-                  (shared/namespace->uri ns-or-alias source-paths (shared/uri->filename uri) db))
+                  (shared/namespace->uri ns-or-alias source-paths filename db))
         min-range {:row 1 :end-row 1 :col 1 :end-col 1}
-        max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}]
-    {:show-document-after-edit {:uri def-uri
-                                :take-focus? true}
-     :resource-changes (when-not ns-definition
-                         [{:kind "create"
-                           :uri def-uri
-                           :options {:overwrite? false
-                                     :ignore-if-exists? true}}])
-     :changes-by-uri {uri (when-not ns-definition
-                            (f.add-missing-libspec/add-known-alias
-                              local-zloc
-                              (symbol ns-or-alias)
-                              (symbol fn-name)
-                              db))
-                      def-uri (->> [(when-not ns-definition
-                                      {:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
-                                       :range min-range})
-                                    {:loc defn-edit
-                                     :range max-range}
-                                    {:loc (z/of-string "\n")
-                                     :range max-range}]
-                                   (remove nil?))}}))
+        max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}
+        defn-edits [{:loc defn-edit
+                     :range max-range}
+                    {:loc (z/of-string "\n")
+                     :range max-range}]]
+    (merge {:show-document-after-edit {:uri def-uri
+                                       :take-focus? true}}
+           (if ns-definition
+             {:changes-by-uri {def-uri defn-edits}}
+             {:resource-changes [{:kind "create"
+                                  :uri def-uri
+                                  :options {:overwrite? false
+                                            :ignore-if-exists? true}}]
+              :changes-by-uri {uri (f.add-missing-libspec/add-known-alias
+                                     local-zloc
+                                     (symbol ns-or-alias)
+                                     (symbol fn-name)
+                                     db)
+                               def-uri (into
+                                         [{:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
+                                           :range min-range}]
+                                         defn-edits)}}))))
 
 (defn create-function [local-zloc uri db]
   (when (and local-zloc

@@ -3,6 +3,7 @@
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -63,59 +64,68 @@
     (map (comp :elem meta)
          (set-xor old-signs new-signs))))
 
-(defn ^:private find-changed-var-definitions [old-local-analysis new-local-analysis]
-  (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-analysis)
-        new-var-defs (filter #(identical? :var-definitions (:bucket %)) new-local-analysis)
+(defn ^:private find-changed-var-definitions [old-local-elements new-local-elements]
+  (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-elements)
+        new-var-defs (filter #(identical? :var-definitions (:bucket %)) new-local-elements)
         definition-signature (juxt :ns :name :fixed-arities :defined-by)]
     (find-changed-elems-by definition-signature old-var-defs new-var-defs)))
 
 (defn ^:private find-changed-var-usages
-  [old-local-analysis new-local-analysis]
-  (let [old-var-usages (filter #(identical? :var-usages (:bucket %)) old-local-analysis)
-        new-var-usages (filter #(identical? :var-usages (:bucket %)) new-local-analysis)
+  [old-local-elements new-local-elements]
+  (let [old-var-usages (filter #(identical? :var-usages (:bucket %)) old-local-elements)
+        new-var-usages (filter #(identical? :var-usages (:bucket %)) new-local-elements)
         usage-signature (juxt :to :name)]
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
+;; TODO: this neglects to detect changes to the usages of registered keywords,
+;; and to notify files where they are registered. Fixing this probably means we
+;; have to use (:analysis project-db) instead of (q/file-dependencies-analysis
+;; project-db filename), which will hurt performance. See
+;; https://github.com/clojure-lsp/clojure-lsp/issues/1018
 (defn reference-filenames [filename db-before db-after]
-  (let [old-local-analysis (get-in db-before [:analysis filename])
-        new-local-analysis (get-in db-after [:analysis filename])
-        changed-var-definitions (find-changed-var-definitions old-local-analysis new-local-analysis)
-        changed-var-usages (find-changed-var-usages old-local-analysis new-local-analysis)
+  (let [uri (shared/filename->uri filename db-before)
+        old-local-elements (get-in db-before [:analysis filename])
+        new-local-elements (get-in db-after [:analysis filename])
+        changed-var-definitions (find-changed-var-definitions old-local-elements new-local-elements)
+        changed-var-usages (find-changed-var-usages old-local-elements new-local-elements)
         project-db (-> db-after
-                       q/db-with-project-analysis
-                       ;; don't notify self
+                       q/db-with-internal-analysis
+                       ;; don't notify self (maybe possible to remove after
+                       ;; use-dep-graph? is removed)
                        (update :analysis dissoc filename))
-        incoming-filenames (when (seq changed-var-definitions)
-                             (let [def-signs (->> changed-var-definitions
-                                                  (map q/var-definition-signatures)
-                                                  (apply set/union))]
-                               (into #{}
-                                     (comp
-                                       (mapcat val)
-                                       (filter #(identical? :var-usages (:bucket %)))
-                                       (filter #(contains? def-signs (q/var-usage-signature %)))
-                                       (map :filename))
-                                     (:analysis project-db))))
-        outgoing-filenames (when (seq changed-var-usages)
-                             ;; If definition is in both a clj and cljs file, and this is a clj
-                             ;; usage, we are careful to notify only the clj file. But, it wouldn't
-                             ;; really hurt to notify both files. So, if it helps readability,
-                             ;; maintenance, or symmetry with `incoming-filenames`, we could look
-                             ;; at just signature, not signature and lang.
-                             (let [usage-signs->langs (->> changed-var-usages
-                                                           (reduce (fn [result usage]
-                                                                     (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
-                                                                   {}))]
-                               (into #{}
-                                     (comp
-                                       (mapcat val)
-                                       (filter #(identical? :var-definitions (:bucket %)))
-                                       (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
-                                                  (some usage-langs (q/elem-langs %))))
-                                       (map :filename))
-                                     (:analysis project-db))))]
-    (set/union (or incoming-filenames #{})
-               (or outgoing-filenames #{}))))
+        dependent-filenames (when (seq changed-var-definitions)
+                              (let [def-signs (->> changed-var-definitions
+                                                   (map q/var-definition-signatures)
+                                                   (apply set/union))]
+                                (into #{}
+                                      (comp
+                                        (mapcat val)
+                                        (filter #(identical? :var-usages (:bucket %)))
+                                        (filter #(contains? def-signs (q/var-usage-signature %)))
+                                        (map :filename))
+                                      (q/uri-dependents-analysis project-db uri))))
+        dependency-filenames (when (seq changed-var-usages)
+                               ;; If definition is in both a clj and cljs file, and this is a clj
+                               ;; usage, we are careful to notify only the clj file. But, it wouldn't
+                               ;; really hurt to notify both files. So, if it helps readability,
+                               ;; maintenance, or symmetry with `dependent-filenames`, we could look
+                               ;; at just signature, not signature and lang.
+                               (let [usage-signs->langs (->> changed-var-usages
+                                                             (reduce (fn [result usage]
+                                                                       (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
+                                                                     {}))]
+                                 (into #{}
+                                       (comp
+                                         (mapcat val)
+                                         (filter #(identical? :var-definitions (:bucket %)))
+                                         (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
+                                                    (some usage-langs (q/elem-langs %))))
+                                         (map :filename))
+                                       (q/uri-dependencies-analysis project-db uri))))]
+    ;; TODO: see note on `notify-references` We may want to handle these two
+    ;; sets of files differently.
+    (set/union (or dependent-filenames #{})
+               (or dependency-filenames #{}))))
 
 (defn analyze-reference-filenames! [filenames db*]
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
@@ -132,6 +142,25 @@
           (logger/debug "Analyzing references for files:" filenames)
           (shared/logging-task
             :reference-files/analyze
+            ;; TODO: We process the dependent and dependency files together, but
+            ;; it may be possible to be more efficient by processing them
+            ;; separately.
+            ;;
+            ;; The dependents may have been affected by changes to var
+            ;; definitions. Since some var definition data is copied to var
+            ;; usage data, this will change their analysis slightly. They may
+            ;; also gain or lose clj-kondo lint like unresolved-var or
+            ;; invalid-arity.
+            ;;
+            ;; The dependencies may have been affected by changes to var usages.
+            ;; Their analysis won't have changed, but they may gain or lose
+            ;; custom unused-public-var lint.
+            ;;
+            ;; So, we could send the dependents to kondo, bypassing custom-lint.
+            ;; And we could send the dependencies to custom-lint, bypassing
+            ;; kondo. See
+            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
+            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
             (analyze-reference-filenames! filenames db*))
           (let [db @db*]
             (doseq [filename filenames]
@@ -226,6 +255,13 @@
     (f.diagnostic/publish-all-diagnostics! filenames @db*)
     (clojure-producer/refresh-test-tree producer uris)))
 
+(defn ^:private db-without-file [state-db uri filename]
+  (-> state-db
+      (dep-graph/remove-file uri filename)
+      (shared/dissoc-in [:documents uri])
+      (shared/dissoc-in [:analysis filename])
+      (shared/dissoc-in [:findings filename])))
+
 (defn did-change-watched-files [changes db*]
   (doseq [{:keys [uri type]} changes]
     (case type
@@ -240,21 +276,14 @@
       :deleted (shared/logging-task
                  :delete-watched-file
                  (let [filename (shared/uri->filename uri)]
-                   (swap! db* (fn [state-db]
-                                (-> state-db
-                                    (shared/dissoc-in [:documents uri])
-                                    (shared/dissoc-in [:analysis filename])
-                                    (shared/dissoc-in [:findings filename])))))))))
+                   (swap! db* db-without-file uri filename))))))
 
 (defn did-close [uri db*]
   (let [filename (shared/uri->filename uri)
         source-paths (settings/get @db* [:source-paths])]
     (when (and (not (shared/external-filename? filename source-paths))
                (not (shared/file-exists? (io/file filename))))
-      (swap! db* (fn [state-db] (-> state-db
-                                    (shared/dissoc-in [:documents uri])
-                                    (shared/dissoc-in [:analysis filename])
-                                    (shared/dissoc-in [:findings filename]))))
+      (swap! db* db-without-file uri filename)
       (f.diagnostic/publish-empty-diagnostics! uri @db*))))
 
 (defn force-get-document-text

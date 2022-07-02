@@ -12,14 +12,16 @@
 (def ^:private db-logger-tag "[DB]")
 
 (def initial-db {:documents {}
-                 :processing-changes #{}})
+                 :processing-changes #{}
+                 :dep-graph {}
+                 :file-meta {}})
 (defonce db* (atom initial-db))
 (defonce current-changes-chan (async/chan 1))
 (defonce diagnostics-chan (async/chan 1))
 (defonce created-watched-files-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
-(def version 2)
+(def version 3)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))

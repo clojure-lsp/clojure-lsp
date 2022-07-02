@@ -46,12 +46,8 @@
 
 (defn workspace-symbols [query db]
   ;; TODO refactor to be a complete transducer
-  (->> (into {}
-             (comp
-               q/filter-project-analysis-xf)
-             (:analysis db))
-       vals
-       flatten
+  (->> (q/internal-analysis db)
+       (mapcat val)
        (filter f.document-symbol/declaration?)
        (fuzzy-filter query)
        (mapv (fn [element]

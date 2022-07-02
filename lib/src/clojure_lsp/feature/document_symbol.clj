@@ -2,8 +2,7 @@
 
 (set! *warn-on-reflection* true)
 
-(defn declaration? [e]
-  (#{:namespace-definitions :var-definitions} (:bucket e)))
+(def declaration-buckets #{:namespace-definitions :var-definitions})
 
 (defn element->symbol-kind [el]
   (cond

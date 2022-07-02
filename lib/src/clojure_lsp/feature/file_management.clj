@@ -64,16 +64,16 @@
     (map (comp :elem meta)
          (set-xor old-signs new-signs))))
 
-(defn ^:private find-changed-var-definitions [old-local-elements new-local-elements]
-  (let [old-var-defs (filter #(identical? :var-definitions (:bucket %)) old-local-elements)
-        new-var-defs (filter #(identical? :var-definitions (:bucket %)) new-local-elements)
+(defn ^:private find-changed-var-definitions [old-local-buckets new-local-buckets]
+  (let [old-var-defs (:var-definitions old-local-buckets)
+        new-var-defs (:var-definitions new-local-buckets)
         definition-signature (juxt :ns :name :fixed-arities :defined-by)]
     (find-changed-elems-by definition-signature old-var-defs new-var-defs)))
 
 (defn ^:private find-changed-var-usages
-  [old-local-elements new-local-elements]
-  (let [old-var-usages (filter #(identical? :var-usages (:bucket %)) old-local-elements)
-        new-var-usages (filter #(identical? :var-usages (:bucket %)) new-local-elements)
+  [old-local-buckets new-local-buckets]
+  (let [old-var-usages (:var-usages old-local-buckets)
+        new-var-usages (:var-usages new-local-buckets)
         usage-signature (juxt :to :name)]
     (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
 
@@ -84,10 +84,10 @@
 ;; https://github.com/clojure-lsp/clojure-lsp/issues/1018
 (defn reference-filenames [filename db-before db-after]
   (let [uri (shared/filename->uri filename db-before)
-        old-local-elements (get-in db-before [:analysis filename])
-        new-local-elements (get-in db-after [:analysis filename])
-        changed-var-definitions (find-changed-var-definitions old-local-elements new-local-elements)
-        changed-var-usages (find-changed-var-usages old-local-elements new-local-elements)
+        old-local-buckets (get-in db-before [:analysis filename])
+        new-local-buckets (get-in db-after [:analysis filename])
+        changed-var-definitions (find-changed-var-definitions old-local-buckets new-local-buckets)
+        changed-var-usages (find-changed-var-usages old-local-buckets new-local-buckets)
         project-db (-> db-after
                        q/db-with-internal-analysis
                        ;; don't notify self (maybe possible to remove after
@@ -96,13 +96,13 @@
         dependent-filenames (when (seq changed-var-definitions)
                               (let [def-signs (->> changed-var-definitions
                                                    (map q/var-definition-signatures)
-                                                   (apply set/union))]
+                                                   (apply set/union))
+                                    usage-of-changed-def? (fn [var-usage]
+                                                            (contains? def-signs (q/var-usage-signature var-usage)))]
                                 (into #{}
-                                      (comp
-                                        (mapcat val)
-                                        (filter #(identical? :var-usages (:bucket %)))
-                                        (filter #(contains? def-signs (q/var-usage-signature %)))
-                                        (map :filename))
+                                      (keep (fn [[filename {:keys [var-usages]}]]
+                                              (when (some usage-of-changed-def? var-usages)
+                                                filename)))
                                       (q/uri-dependents-analysis project-db uri))))
         dependency-filenames (when (seq changed-var-usages)
                                ;; If definition is in both a clj and cljs file, and this is a clj
@@ -113,14 +113,15 @@
                                (let [usage-signs->langs (->> changed-var-usages
                                                              (reduce (fn [result usage]
                                                                        (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
-                                                                     {}))]
+                                                                     {}))
+                                     def-of-changed-usage? (fn [var-def]
+                                                             (when-let [usage-langs (some usage-signs->langs
+                                                                                          (q/var-definition-signatures var-def))]
+                                                               (some usage-langs (q/elem-langs var-def))))]
                                  (into #{}
-                                       (comp
-                                         (mapcat val)
-                                         (filter #(identical? :var-definitions (:bucket %)))
-                                         (filter #(when-let [usage-langs (some usage-signs->langs (q/var-definition-signatures %))]
-                                                    (some usage-langs (q/elem-langs %))))
-                                         (map :filename))
+                                       (keep (fn [[filename {:keys [var-definitions]}]]
+                                               (when (some def-of-changed-usage? var-definitions)
+                                                 filename)))
                                        (q/uri-dependencies-analysis project-db uri))))]
     ;; TODO: see note on `notify-references` We may want to handle these two
     ;; sets of files differently.

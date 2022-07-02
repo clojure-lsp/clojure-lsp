@@ -224,19 +224,44 @@
 (defn ^:private remove-usages [db usages] (update-usages db ms-disj usages))
 (defn ^:private add-usages    [db usages] (update-usages db ms-conj usages))
 
-(defn ^:private update-definition [db f {:keys [name filename]}]
+(def ^:private user-ns-def
+  ;; add :filename
+  '{:bucket :namespace-definitions
+    :name user})
+
+(def ^:private clojure-core-ns-usage
+  ;; add :filename and :from ns
+  '{:bucket :namespace-usages
+    :name clojure.core})
+
+(def ^:private cljs-core-ns-usage
+  ;; add :filename and :from ns
+  '{:bucket :namespace-usages
+    :name cljs.core})
+
+(defn ^:private update-definition [db s-f ms-f {:keys [name filename]}]
   (let [uri (filename-to-uri db filename)
-        in-doc (get-in db [:documents uri])]
-    (-> db
-        (update-in [:dep-graph name :uris] f uri)
-        (update-in [:dep-graph name :internal?] #(or % (:internal? in-doc)))
-        (update-in [:documents uri :namespaces] f name))))
+        in-doc (get-in db [:documents uri])
+        doc-langs (:langs in-doc)
+        db (-> db
+               (update-in [:dep-graph name :uris] s-f uri)
+               (update-in [:dep-graph name :internal?] #(or % (:internal? in-doc)))
+               (update-in [:documents uri :namespaces] s-f name))]
+    (cond-> db
+      (contains? doc-langs :clj)
+      (update-usage ms-f (assoc clojure-core-ns-usage
+                                :from name
+                                :filename filename))
+      (contains? doc-langs :cljs)
+      (update-usage ms-f (assoc cljs-core-ns-usage
+                                :from name
+                                :filename filename)))))
 
-(defn ^:private update-definitions [db f namespace-definitions]
-  (reduce #(update-definition %1 f %2) db namespace-definitions))
+(defn ^:private update-definitions [db s-f ms-f namespace-definitions]
+  (reduce #(update-definition %1 s-f ms-f %2) db namespace-definitions))
 
-(defn ^:private remove-definitions [db namespace-definitions] (update-definitions db s-disj namespace-definitions))
-(defn ^:private add-definitions    [db namespace-definitions] (update-definitions db s-conj namespace-definitions))
+(defn ^:private remove-definitions [db namespace-definitions] (update-definitions db s-disj ms-disj namespace-definitions))
+(defn ^:private add-definitions    [db namespace-definitions] (update-definitions db s-conj ms-conj namespace-definitions))
 
 (defn ^:private ensure-file [db filename internal?]
   (let [uri (shared/filename->uri filename db)]
@@ -253,59 +278,19 @@
 (defn ^:private ensure-files [db filenames internal?]
   (reduce #(ensure-file %1 %2 internal?) db filenames))
 
-(def ^:private user-ns-def
-  ;; add :filename
-  '{:bucket :namespace-definitions
-    :name user})
-
-(def ^:private clojure-core-ns-usage
-  ;; add :filename and :from ns
-  '{:bucket :namespace-usages
-    :name clojure.core})
-
-(def ^:private cljs-core-ns-usage
-  ;; add :filename and :from ns
-  '{:bucket :namespace-usages
-    :name cljs.core})
-
 (defn ^:private ns-definitions-and-usages [analysis]
-  (letfn [(result-with-element [result element]
-            (let [result (if (= 'user (:ns element))
-                           (assoc result :in-user true)
-                           result)]
-              (case (:bucket element)
-                :namespace-definitions (update result :defs conj element)
-                :namespace-usages      (update result :usages conj element)
-                :var-usages            (case (:to element)
-                                         clojure.core (update result :to-clj conj (:from element))
-                                         cljs.core    (update result :to-cljs conj (:from element))
-                                         result)
-                result)))]
-    (let [{:keys [defs usages]}
-          (reduce-kv (fn [result filename elements]
-                       (let [result (reduce result-with-element
-                                            (assoc result
-                                                   :in-user false
-                                                   :to-clj #{}
-                                                   :to-cljs #{})
-                                            elements)
-                             implicit-elements (concat
-                                                 (when (:in-user result)
-                                                   [(assoc user-ns-def :filename filename)])
-                                                 (map (fn [from-ns]
-                                                        (assoc clojure-core-ns-usage
-                                                               :from from-ns
-                                                               :filename filename))
-                                                      (:to-clj result))
-                                                 (map (fn [from-ns]
-                                                        (assoc cljs-core-ns-usage
-                                                               :from from-ns
-                                                               :filename filename))
-                                                      (:to-cljs result)))]
-                         (reduce result-with-element result implicit-elements)))
-                     {:defs [] :usages []}
-                     analysis)]
-      [defs usages])))
+  (let [{:keys [defs usages]}
+        (reduce-kv (fn [result filename {:keys [var-definitions namespace-definitions namespace-usages]}]
+                     (let [defs (cond-> namespace-definitions
+                                  ;; implicitly in user ns
+                                  (some #(= 'user (:ns %)) var-definitions)
+                                  (conj (assoc user-ns-def :filename filename)))]
+                       (-> result
+                           (update :defs into defs)
+                           (update :usages into namespace-usages))))
+                   {:defs [] :usages []}
+                   analysis)]
+    [defs usages]))
 
 (defn refresh-analysis [db old-analysis new-analysis internal?]
   ;; NOTE: When called during startup this takes a little time (500ms in medium

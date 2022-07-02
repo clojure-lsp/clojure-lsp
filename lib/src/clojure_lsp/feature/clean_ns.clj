@@ -210,10 +210,9 @@
                          (z/find-next-value ':as)
                          z/right
                          z/sexpr)]
-    (let [local-elements (get-in db [:analysis filename])
-          used-alias? (some #(and (= :var-usages (:bucket %))
-                                  (= alias (:alias %)))
-                            local-elements)]
+    (let [local-var-usages (get-in db [:analysis filename :var-usages])
+          used-alias? (some #(= alias (:alias %))
+                            local-var-usages)]
       (if used-alias?
         node
         (z/remove node)))

@@ -37,19 +37,6 @@
                 (dissoc :loc))))
         zip-edits))
 
-(defn- unify-to-one-language
-  "Drop the clojurescript analysis info when there is also clojure info"
-  [analysis]
-  (let [langs-present (->> analysis
-                           vals
-                           flatten
-                           (map :lang)
-                           (into #{}))
-        non-clj-lang? (fn [{:keys [lang]}] (and lang (not (= :clj lang))))]
-    (if (= #{:clj :cljs} langs-present)
-      (medley/map-vals (partial remove non-clj-lang?) analysis)
-      analysis)))
-
 (defn- coll-tag [zloc]
   (get #{:vector :set :list :map} (z/tag zloc)))
 
@@ -448,11 +435,13 @@
               {defn-col :col} (meta (z/node form-loc))
 
               fn-sym (symbol fn-name)
-              scoped-db (update db :analysis unify-to-one-language)
-              used-syms (->> (q/find-local-usages-under-form scoped-db
-                                                             (shared/uri->filename uri)
-                                                             expr-meta)
-                             (mapv :name))
+              used-syms (into []
+                              (comp (map :name)
+                                    (distinct))
+                              (q/find-local-usages-under-form db
+                                                              (shared/uri->filename uri)
+                                                              expr-meta))
+
               expr-edit (z/of-node (list* fn-sym used-syms))
               private? true
               defn-loc (new-defn-zloc fn-sym private? used-syms

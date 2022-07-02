@@ -22,22 +22,27 @@
                           (h/file-uri "jar:file:///some.jar!/xxx.clj"))
     (h/load-code-and-locs "(ns xxx.yyy)"
                           (h/file-uri "jar:file:///some.jar!/xxx/yyy.clj"))
-    (is (= '{xxx {:dependencies {xxx.yyy 1}
+    (is (= '{xxx {:dependencies {clojure.core 1, xxx.yyy 1}
                   :internal? false
                   :uris #{"zipfile:///some.jar::xxx.clj"}}
              xxx.yyy {:aliases {nil 1}
+                      :dependencies {clojure.core 1}
                       :dependents {xxx 1}
                       :dependents-internal? false
                       :dependents-langs {:clj 1}
                       :internal? false
-                      :uris #{"zipfile:///some.jar::xxx/yyy.clj"}}}
+                      :uris #{"zipfile:///some.jar::xxx/yyy.clj"}}
+             clojure.core {:aliases {nil 2},
+                           :dependents {xxx 1, xxx.yyy 1},
+                           :dependents-internal? false,
+                           :dependents-langs {:clj 2}}}
            (:dep-graph @db/db*)))
     (h/assert-submap
-     '{:internal? false, :langs #{:clj}, :namespaces #{xxx} :filename "/some.jar:xxx.clj"}
-     (get-in @db/db* [:documents "zipfile:///some.jar::xxx.clj"]))
+      '{:internal? false, :langs #{:clj}, :namespaces #{xxx} :filename "/some.jar:xxx.clj"}
+      (get-in @db/db* [:documents "zipfile:///some.jar::xxx.clj"]))
     (h/assert-submap
-     '{:internal? false, :langs #{:clj}, :namespaces #{xxx.yyy} :filename "/some.jar:xxx/yyy.clj"}
-     (get-in @db/db* [:documents "zipfile:///some.jar::xxx/yyy.clj"])))
+      '{:internal? false, :langs #{:clj}, :namespaces #{xxx.yyy} :filename "/some.jar:xxx/yyy.clj"}
+      (get-in @db/db* [:documents "zipfile:///some.jar::xxx/yyy.clj"])))
   (testing "initial internal analysis"
     (h/clean-db!)
     (load-code "/aaa.clj"
@@ -49,32 +54,37 @@
                " (:require [ccc :as c]))")
     (load-code "/ccc.clj"
                "(ns ccc)")
-    (is (= '{aaa {:dependencies {bbb 1, ccc 1}
+    (is (= '{aaa {:dependencies {clojure.core 1, bbb 1, ccc 1}
                   :internal? true
                   :uris #{"file:///aaa.clj"}}
              bbb {:aliases {b 1}
-                  :dependencies {ccc 1}
+                  :dependencies {clojure.core 1, ccc 1}
                   :dependents {aaa 1}
                   :dependents-internal? true
                   :dependents-langs {:clj 1}
                   :internal? true
                   :uris #{"file:///bbb.clj"}}
              ccc {:aliases {c 2}
+                  :dependencies {clojure.core 1}
                   :dependents {aaa 1, bbb 1}
                   :dependents-internal? true
                   :dependents-langs {:clj 2}
                   :internal? true
-                  :uris #{"file:///ccc.clj"}}}
+                  :uris #{"file:///ccc.clj"}}
+             clojure.core {:aliases {nil 3},
+                           :dependents {aaa 1, bbb 1, ccc 1},
+                           :dependents-internal? true,
+                           :dependents-langs {:clj 3}}}
            (:dep-graph @db/db*)))
     (h/assert-submap
-     '{:internal? true, :langs #{:clj}, :namespaces #{aaa}, :filename "/aaa.clj"}
-     (get-in @db/db* [:documents "file:///aaa.clj"]))
+      '{:internal? true, :langs #{:clj}, :namespaces #{aaa}, :filename "/aaa.clj"}
+      (get-in @db/db* [:documents "file:///aaa.clj"]))
     (h/assert-submap
-     '{:internal? true, :langs #{:clj}, :namespaces #{bbb}, :filename "/bbb.clj"}
-     (get-in @db/db* [:documents "file:///bbb.clj"]))
+      '{:internal? true, :langs #{:clj}, :namespaces #{bbb}, :filename "/bbb.clj"}
+      (get-in @db/db* [:documents "file:///bbb.clj"]))
     (h/assert-submap
-     '{:internal? true, :langs #{:clj}, :namespaces #{ccc}, :filename "/ccc.clj"}
-     (get-in @db/db* [:documents "file:///ccc.clj"])))
+      '{:internal? true, :langs #{:clj}, :namespaces #{ccc}, :filename "/ccc.clj"}
+      (get-in @db/db* [:documents "file:///ccc.clj"])))
   (testing "extending initial external analysis with internal analysis"
     (h/clean-db!)
     (h/load-code-and-locs (h/code "(ns xxx"
@@ -106,7 +116,7 @@
     (load-code "/aaa.clj"
                "(ns aaa)")
     (let [db @db/db*]
-      (is (empty? (get-in db [:dep-graph 'aaa :dependencies])))
+      (is (= '{clojure.core 1} (get-in db [:dep-graph 'aaa :dependencies])))
       (is (empty? (get-in db [:dep-graph 'bbb :dependents]))))
     (load-code "/aaa.clj"
                "(ns aaa"
@@ -127,7 +137,7 @@
     (load-code "/aaa.clj"
                "(ns aaa)")
     (let [db @db/db*]
-      (is (empty? (get-in db [:dep-graph 'aaa :dependencies])))
+      (is (= '{clojure.core 1} (get-in db [:dep-graph 'aaa :dependencies])))
       (is (empty? (get-in db [:dep-graph 'bbb :dependents])))))
   (testing "removing duplicate dependency"
     (h/clean-db!)
@@ -183,16 +193,14 @@
   (testing "with implicit dependency on clojure.core"
     (h/clean-db!)
     (load-code "/aaa.clj"
-               "(ns aaa)"
-               "(def x 1)")
+               "(ns aaa)")
     (let [db @db/db*]
       (is (get-in db [:dep-graph 'aaa :dependencies 'clojure.core]))
       (is (get-in db [:dep-graph 'clojure.core :dependents 'aaa]))))
   (testing "with implicit dependency on cljs.core"
     (h/clean-db!)
     (load-code "/aaa.cljs"
-               "(ns aaa)"
-               "(def x 1)")
+               "(ns aaa)")
     (let [db @db/db*]
       (is (get-in db [:dep-graph 'aaa :dependencies 'cljs.core]))
       (is (get-in db [:dep-graph 'cljs.core :dependents 'aaa])))))

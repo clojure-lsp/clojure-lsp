@@ -154,7 +154,9 @@
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns jjj)" (h/file-uri "file:///jjj.cljs"))
-  (is (= '#{aaa bbb ccc jjj}
+  (is (= (if (dg?)
+           '#{aaa bbb ccc jjj clojure.core cljs.core}
+           '#{aaa bbb ccc jjj})
          (q/ns-names @db/db*))))
 
 (deftest internal-ns-names
@@ -183,14 +185,14 @@
     (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
-    (let [element (#'q/find-last-order-by-project-analysis #(= 'foo.bar (:name %)) @db/db*)]
+    (let [element (#'q/find-last-order-by-project-analysis :namespace-definitions #(= 'foo.bar (:name %)) @db/db*)]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
     (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
-    (let [element (#'q/find-last-order-by-project-analysis #(= 'foo.bar (:name %)) @db/db*)]
+    (let [element (#'q/find-last-order-by-project-analysis :namespace-definitions #(= 'foo.bar (:name %)) @db/db*)]
       (is (= (h/file-path "/b.clj") (:filename element))))))
 
 (deftest find-element-under-cursor

@@ -21,7 +21,7 @@
 (defonce created-watched-files-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
-(def version 3)
+(def version 4)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))

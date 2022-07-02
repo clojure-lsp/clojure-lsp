@@ -37,20 +37,19 @@
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
 
-(defn ^:private determine-ns-edits [local-elements file-loc def-to-move source-ns source-refer libspec uri db]
+(defn ^:private determine-ns-edits [local-buckets file-loc def-to-move source-ns source-refer libspec uri db]
   (let [other-source-refers (filter #(and (:refer %)
                                           (= (:to %) source-ns)
                                           (not= (:name %) (:name def-to-move)))
-                                    local-elements)
+                                    (:var-usages local-buckets))
 
         other-source-usages (filter #(and (not (:refer %))
                                           (not (:alias %))
                                           (= (:to %) source-ns)
                                           (not= (:name %) (:name def-to-move)))
-                                    local-elements)
-        source-require (first (filter #(and (= :namespace-usages (:bucket %))
-                                            (= (:name %) source-ns))
-                                      local-elements))
+                                    (:var-usages local-buckets))
+        source-require (first (filter #(= (:name %) source-ns)
+                                      (:namespace-usages local-buckets)))
         remove-source-require? (and source-require (empty? other-source-usages))
         namespace-loc (edit/find-namespace file-loc)]
     (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec db)]
@@ -149,15 +148,14 @@
                                                     file-loc (-> (f.file-management/force-get-document-text file-uri db*)
                                                                  z/of-string)
                                                     db @db*
-                                                    local-elements (vec (get-in db [:analysis filename]))
+                                                    local-buckets (get-in db [:analysis filename])
                                                     source-refer (first (filter #(and (:refer %)
                                                                                       (= (:to %) source-ns)
                                                                                       (= (:name %) (:name def-to-move)))
-                                                                                local-elements))
+                                                                                (:var-usages local-buckets)))
 
-                                                    dest-require (first (filter #(and (= :namespace-usages (:bucket %))
-                                                                                      (= (:name %) dest-ns))
-                                                                                local-elements))
+                                                    dest-require (first (filter #(= (:name %) dest-ns)
+                                                                                (:namespace-usages local-buckets)))
                                                     namespace-suggestions (f.add-missing-libspec/find-namespace-suggestions
                                                                             (str dest-ns)
                                                                             (f.add-missing-libspec/find-alias-ns-pairs db source-uri))
@@ -167,7 +165,7 @@
                                                     usages (filter #(and (not (:refer %))
                                                                          (= (:to %) source-ns)
                                                                          (= (:name %) (:name def-to-move)))
-                                                                   local-elements)
+                                                                   (:var-usages local-buckets))
                                                     libspec (merge
                                                               {:type :require
                                                                :lib dest-ns}
@@ -176,7 +174,7 @@
                                                               (when source-refer
                                                                 {:refer (:name source-refer)}))
 
-                                                    ns-changes (determine-ns-edits local-elements file-loc def-to-move source-ns source-refer libspec source-uri db)
+                                                    ns-changes (determine-ns-edits local-buckets file-loc def-to-move source-ns source-refer libspec source-uri db)
                                                     replacement-ns (cond
                                                                      (:alias libspec)
                                                                      (:alias libspec)

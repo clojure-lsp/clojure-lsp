@@ -53,80 +53,80 @@
   (into (set/difference a b)
         (set/difference b a)))
 
-(defn ^:private find-changed-elems-by
+(defn ^:private find-changed-elems
   "Detect elements that went from 0 to 1 occurrence, or from 1 to 0
   occurrences."
-  [signature-fn old-elems new-elems]
+  [old-local-buckets new-local-buckets bucket signature-fn]
   (let [signature-with-elem (fn [elem]
                               (with-meta (signature-fn elem) {:elem elem}))
-        old-signs (->> old-elems (map signature-with-elem) (into #{}))
-        new-signs (->> new-elems (map signature-with-elem) (into #{}))]
+        old-signs (into #{} (map signature-with-elem) (bucket old-local-buckets))
+        new-signs (into #{} (map signature-with-elem) (bucket new-local-buckets))]
     (map (comp :elem meta)
          (set-xor old-signs new-signs))))
 
-(defn ^:private find-changed-var-definitions [old-local-buckets new-local-buckets]
-  (let [old-var-defs (:var-definitions old-local-buckets)
-        new-var-defs (:var-definitions new-local-buckets)
-        definition-signature (juxt :ns :name :fixed-arities :defined-by)]
-    (find-changed-elems-by definition-signature old-var-defs new-var-defs)))
+(def ^:private definition-signature
+  "Attributes of a var definition that, if they change, merit re-linting files
+  that use the var. This isn't the full list of attributets copied by kondo from
+  defs to usages, but it includes the attributes we care about."
+  (juxt :ns :name :private :fixed-arities :defined-by))
 
-(defn ^:private find-changed-var-usages
-  [old-local-buckets new-local-buckets]
-  (let [old-var-usages (:var-usages old-local-buckets)
-        new-var-usages (:var-usages new-local-buckets)
-        usage-signature (juxt :to :name)]
-    (find-changed-elems-by usage-signature old-var-usages new-var-usages)))
-
-;; TODO: this neglects to detect changes to the usages of registered keywords,
-;; and to notify files where they are registered. Fixing this probably means we
-;; have to use (:analysis project-db) instead of (q/file-dependencies-analysis
-;; project-db filename), which will hurt performance. See
-;; https://github.com/clojure-lsp/clojure-lsp/issues/1018
 (defn reference-filenames [filename db-before db-after]
   (let [uri (shared/filename->uri filename db-before)
         old-local-buckets (get-in db-before [:analysis filename])
         new-local-buckets (get-in db-after [:analysis filename])
-        changed-var-definitions (find-changed-var-definitions old-local-buckets new-local-buckets)
-        changed-var-usages (find-changed-var-usages old-local-buckets new-local-buckets)
+        changed-var-definitions (find-changed-elems old-local-buckets new-local-buckets :var-definitions definition-signature)
+        changed-var-usages (find-changed-elems old-local-buckets new-local-buckets :var-usages q/var-usage-signature)
+        changed-kw-usages (find-changed-elems old-local-buckets new-local-buckets :keyword-usages q/kw-signature)
         project-db (-> db-after
                        q/db-with-internal-analysis
-                       ;; don't notify self (maybe possible to remove after
-                       ;; use-dep-graph? is removed)
+                       ;; don't notify self
                        (update :analysis dissoc filename))
-        dependent-filenames (when (seq changed-var-definitions)
-                              (let [def-signs (->> changed-var-definitions
-                                                   (map q/var-definition-signatures)
-                                                   (apply set/union))
-                                    usage-of-changed-def? (fn [var-usage]
-                                                            (contains? def-signs (q/var-usage-signature var-usage)))]
-                                (into #{}
-                                      (keep (fn [[filename {:keys [var-usages]}]]
-                                              (when (some usage-of-changed-def? var-usages)
-                                                filename)))
-                                      (q/uri-dependents-analysis project-db uri))))
-        dependency-filenames (when (seq changed-var-usages)
-                               ;; If definition is in both a clj and cljs file, and this is a clj
-                               ;; usage, we are careful to notify only the clj file. But, it wouldn't
-                               ;; really hurt to notify both files. So, if it helps readability,
-                               ;; maintenance, or symmetry with `dependent-filenames`, we could look
-                               ;; at just signature, not signature and lang.
-                               (let [usage-signs->langs (->> changed-var-usages
-                                                             (reduce (fn [result usage]
-                                                                       (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
-                                                                     {}))
-                                     def-of-changed-usage? (fn [var-def]
-                                                             (when-let [usage-langs (some usage-signs->langs
-                                                                                          (q/var-definition-signatures var-def))]
-                                                               (some usage-langs (q/elem-langs var-def))))]
-                                 (into #{}
-                                       (keep (fn [[filename {:keys [var-definitions]}]]
-                                               (when (some def-of-changed-usage? var-definitions)
-                                                 filename)))
-                                       (q/uri-dependencies-analysis project-db uri))))]
-    ;; TODO: see note on `notify-references` We may want to handle these two
+        var-dependent-filenames (when (seq changed-var-definitions)
+                                  (let [def-signs (into #{}
+                                                        (mapcat q/var-definition-signatures)
+                                                        changed-var-definitions)
+                                        usage-of-changed-def? (fn [var-usage]
+                                                                (contains? def-signs (q/var-usage-signature var-usage)))]
+                                    (into #{}
+                                          (keep (fn [[filename {:keys [var-usages]}]]
+                                                  (when (some usage-of-changed-def? var-usages)
+                                                    filename)))
+                                          (q/uri-dependents-analysis project-db uri))))
+        var-dependency-filenames (when (seq changed-var-usages)
+                                   ;; If definition is in both a clj and cljs file, and this is a clj
+                                   ;; usage, we are careful to notify only the clj file. But, it wouldn't
+                                   ;; really hurt to notify both files. So, if it helps readability,
+                                   ;; maintenance, or symmetry with `dependent-filenames`, we could look
+                                   ;; at just signature, not signature and lang.
+                                   (let [usage-signs->langs (->> changed-var-usages
+                                                                 (reduce (fn [result usage]
+                                                                           (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
+                                                                         {}))
+                                         def-of-changed-usage? (fn [var-def]
+                                                                 (when-let [usage-langs (some usage-signs->langs
+                                                                                              (q/var-definition-signatures var-def))]
+                                                                   (some usage-langs (q/elem-langs var-def))))]
+                                     (into #{}
+                                           (keep (fn [[filename {:keys [var-definitions]}]]
+                                                   (when (some def-of-changed-usage? var-definitions)
+                                                     filename)))
+                                           (q/uri-dependencies-analysis project-db uri))))
+        kw-dependency-filenames (when (seq changed-kw-usages)
+                                  (let [usage-signs (into #{}
+                                                          (map q/kw-signature)
+                                                          changed-kw-usages)
+                                        def-of-changed-usage? (fn [kw-def]
+                                                                (contains? usage-signs (q/kw-signature kw-def)))]
+                                    (into #{}
+                                          (keep (fn [[filename {:keys [keyword-definitions]}]]
+                                                  (when (some def-of-changed-usage? keyword-definitions)
+                                                    filename)))
+                                          (:analysis project-db))))]
+    ;; TODO: see note on `notify-references` We may want to handle these
     ;; sets of files differently.
-    (set/union (or dependent-filenames #{})
-               (or dependency-filenames #{}))))
+    (set/union (or var-dependent-filenames #{})
+               (or var-dependency-filenames #{})
+               (or kw-dependency-filenames #{}))))
 
 (defn analyze-reference-filenames! [filenames db*]
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]

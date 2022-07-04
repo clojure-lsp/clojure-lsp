@@ -274,10 +274,10 @@
 (def kw-signature (juxt :ns :name))
 (def var-usage-signature (juxt :to :name))
 (defn var-definition-signatures [var-def]
-  (->> (var-definition-names var-def)
-       (map (fn [var-name]
-              [(:ns var-def) var-name]))
-       (into #{})))
+  (into #{}
+        (map (fn [var-name]
+               [(:ns var-def) var-name]))
+        (var-definition-names var-def)))
 
 (defn ns-equal?-fn [ns]
   (cond

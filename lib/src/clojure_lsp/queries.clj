@@ -279,6 +279,17 @@
               [(:ns var-def) var-name]))
        (into #{})))
 
+(defn ns-equal?-fn [ns]
+  (cond
+    (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace %)
+    ns #(safe-equal? ns %)
+    :else #(not %)))
+
+(defn keyword-signature-equal?-fn [ns name]
+  (let [ns-equal? (ns-equal?-fn ns)]
+    #(and (safe-equal? name (:name %))
+          (ns-equal? (:ns %)))))
+
 (defn ^:private var-usage-from-own-definition? [usage]
   (and (:from-var usage)
        (= (:from-var usage) (:name usage))
@@ -365,12 +376,10 @@
 
 (defmethod find-definition :keyword-usages
   [db element]
-  (or (when (:ns element)
-        (find-last-order-by-project-analysis
-          :keyword-definitions
-          #(and (= (:name %) (:name element))
-                (= (:ns %) (:ns element)))
-          db))
+  (or (find-last-order-by-project-analysis
+        :keyword-definitions
+        (keyword-signature-equal?-fn (:ns element) (:name element))
+        db)
       element))
 
 (defmethod find-definition :var-definitions
@@ -591,11 +600,7 @@
           (mapcat (fn [{:keys [keyword-usages keyword-definitions]}]
                     (cond->> (vec keyword-usages)
                       include-declaration? (into (vec keyword-definitions)))))
-          (filter #(safe-equal? name (:name %)))
-          (filter (cond
-                    (identical? :clj-kondo/unknown-namespace ns) #(identical? :clj-kondo/unknown-namespace (:ns %))
-                    ns #(safe-equal? ns (:ns %))
-                    :else #(not (:ns %))))
+          (filter (keyword-signature-equal?-fn ns name))
           (medley/distinct-by (juxt :filename :name :row :col)))
         (internal-analysis db)))
 

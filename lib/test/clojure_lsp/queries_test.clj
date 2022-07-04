@@ -689,6 +689,30 @@
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
       (q/find-definition-from-cursor db (h/file-path "/a.clj") bar-r bar-c))))
 
+(deftest find-definition-from-keyword-usage
+  (h/load-code-and-locs (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-fx :namespaced/kw (fn []))"
+                                "(r/reg-event-fx :simple-kw (fn []))")
+                        (h/file-uri "file:///bbb.clj"))
+  (let [[[ns-kw-r ns-kw-c]
+         [simple-kw-r simple-kw-c]
+         [unreg-kw-r unreg-kw-c]]
+        (h/load-code-and-locs (h/code "(ns aaa)"
+                                      "|:namespaced/kw"
+                                      "|:simple-kw"
+                                      "|:unregistered-kw")
+                              (h/file-uri "file:///aaa.clj"))
+        db @db/db*]
+    (h/assert-submap
+      '{:ns namespaced, :name "kw", :filename "/bbb.clj", :bucket :keyword-definitions}
+      (q/find-definition-from-cursor db (h/file-path "/aaa.clj") ns-kw-r ns-kw-c))
+    (h/assert-submap
+      '{:ns nil, :name "simple-kw", :filename "/bbb.clj", :bucket :keyword-definitions}
+      (q/find-definition-from-cursor db (h/file-path "/aaa.clj") simple-kw-r simple-kw-c))
+    (h/assert-submap
+      '{:ns nil, :name "unregistered-kw", :filename "/aaa.clj", :bucket :keyword-usages}
+      (q/find-definition-from-cursor db (h/file-path "/aaa.clj") unreg-kw-r unreg-kw-c))))
+
 ;; Uncoment after clj-kondo solves https://github.com/clj-kondo/clj-kondo/issues/1632
 #_(deftest find-definition-form-java-class-usage
     (h/load-code-and-locs (h/code "package project;"

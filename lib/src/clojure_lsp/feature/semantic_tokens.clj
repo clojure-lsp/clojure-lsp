@@ -171,7 +171,7 @@
              (identical? :namespace-definitions bucket)
              [(element->absolute-token element :namespace)]
 
-             (and (identical? :keywords bucket)
+             (and (contains? #{:keyword-definitions :keyword-usages} bucket)
                   (not (:str element))
                   (not (:keys-destructuring element)))
              (keywords->absolute-tokens element)

@@ -72,7 +72,7 @@
     (#{:namespace-alias} bucket)
     :property
 
-    (#{:keywords} bucket)
+    (#{:keyword-usages :keyword-definitions} bucket)
     :keyword
 
     (and (#{:var-definitions} bucket)
@@ -90,7 +90,7 @@
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
   (cond
-    (= :keywords bucket)
+    (#{:keyword-usages :keyword-definitions} bucket)
     (keyword-element->str element cursor-alias priority)
 
     (#{:namespace-alias :namespace-usages} bucket)
@@ -106,7 +106,7 @@
   [element priority]
   (cond
     (and (identical? :simple-cursor priority)
-         (identical? :keywords (:bucket element)))
+         (contains? #{:keyword-usages :keyword-definitions} (:bucket element)))
     :keyword
 
     :else
@@ -141,7 +141,11 @@
   (filter (fn [{:keys [name]}]
             (and name (matches-fn name)))))
 
-(defmulti ^:private bucket-elems-xf (fn [bucket _matches-fn _cursor-element] bucket))
+(defmulti ^:private bucket-elems-xf
+  (fn [bucket _matches-fn _cursor-element]
+    (if (contains? #{:keyword-usages :keyword-definitions} bucket)
+      :keywords
+      bucket)))
 
 ;; TODO: this completes to the namespace the cursor is already in. Why would you
 ;; want that?
@@ -178,14 +182,14 @@
         cursor-element (or cursor-element {:name-row row, :name-col col})]
     (into []
           (comp
-            (mapcat (fn [[bucket elements]]
+            (mapcat (fn [bucket]
                       (into []
                             (comp (bucket-elems-xf bucket matches-fn cursor-element)
                                   (filter #(or (not (:lang %))
                                                (contains? cursor-langs (:lang %)))))
-                            elements)))
+                            (get local-buckets bucket))))
             (map #(element->completion-item % nil :simple-cursor)))
-          (select-keys local-buckets [:namespace-definitions :var-definitions :keywords :locals]))))
+          [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals])))
 
 (defn ^:private with-definition-kws-args-element-items
   [matches-fn {:keys [arglist-kws name-row name-col filename]}]
@@ -195,7 +199,7 @@
                :name-row name-row
                :name-col name-col
                :filename filename
-               :bucket :keywords}))
+               :bucket :keyword-usages}))
        (filter #(matches-fn (keyword-element->str % nil nil)))
        (mapv #(element->completion-item % nil :kw-arg))))
 
@@ -305,9 +309,8 @@
         name (-> cursor-loc z/sexpr name)]
     (into []
           (comp
-            (mapcat (comp :keywords val))
-            (filter #(and (:reg %)
-                          (= ns (:ns %))
+            (mapcat (comp :keyword-definitions val))
+            (filter #(and (= ns (:ns %))
                           (or (not cursor-loc)
                               (string/starts-with? (:name %) name))))
             (map #(element->completion-item % alias :alias-keyword)))

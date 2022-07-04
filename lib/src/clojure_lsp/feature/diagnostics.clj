@@ -36,7 +36,7 @@
     kondo-config))
 
 (defn ^:private unused-public-var->finding [element kondo-config]
-  (let [keyword-def? (boolean (:reg element))
+  (let [keyword-def? (identical? :keyword-definitions (:bucket element))
         kondo-config (if (:ns element)
                        (kondo-config-for-ns kondo-config (:ns element))
                        kondo-config)]

@@ -86,18 +86,6 @@
                (edit/find-ops-up "->")
                z/sexpr)))))
 
-(deftest find-namespace-name
-  (testing "without ns on file"
-    (is (nil? (-> "(foo ((x) [a] (b {c |d})))"
-                  h/zloc-from-code
-                  edit/find-namespace-name))))
-  (testing "with ns on file"
-    (is (= "some.foo.bar"
-           (-> (h/code "(ns some.foo.bar (require [some.foo :as s]))"
-                       "(foo ((x) [a] (b {c |d})))")
-               h/zloc-from-code
-               edit/find-namespace-name)))))
-
 (defn ^:private assert-function-name [code]
   (h/clean-db!)
   (h/load-code-and-locs code)

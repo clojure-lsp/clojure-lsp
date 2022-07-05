@@ -211,14 +211,6 @@
       (z/find-value z/next 'ns) ; go to ns
       (z/up))) ; ns form
 
-(defn find-namespace-name [zloc]
-  (some-> zloc
-          find-namespace
-          z/down
-          z/next
-          z/sexpr
-          str))
-
 (defn node-marked? [node marker]
   (contains? (get node ::markers) marker))
 

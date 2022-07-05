@@ -1,7 +1,6 @@
 (ns clojure-lsp.refactor.edit
   (:require
    [clojure.set :as set]
-   [lsp4clj.protocols.logger :as logger]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 

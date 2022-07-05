@@ -3,7 +3,7 @@
 
 (a/some-public-func 2)
 
-:my-key
+:definition-b-key
 
 ::my-key
 

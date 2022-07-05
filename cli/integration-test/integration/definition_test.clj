@@ -41,7 +41,7 @@
       (h/assert-submap
         {:uri (h/source-path->uri "definition/b.clj")
          :range {:start {:line 5 :character 0}
-                 :end {:line 5 :character 7}}}
+                 :end {:line 5 :character 17}}}
         (lsp/request! (fixture/definition-request "definition/b.clj" 5 2))))
 
     (testing "definition of invalid local namespaced keyword is the keyword itself"

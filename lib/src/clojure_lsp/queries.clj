@@ -349,24 +349,19 @@
 
 (defmethod find-definition :var-usages
   [db element]
-  (letfn [(defines-elem? [candidate]
-            (and (= (:name element) (:name candidate))
-                 (= (:to element) (:ns candidate))
-                 (not= 'clojure.core/declare (:defined-by candidate))))]
-    (or
-      (find-last-order-by-project-analysis
-        :var-definitions
-        #(and (defines-elem? %)
-              (match-file-lang % element))
-        (db-with-ns-analysis db (:to element)))
-      (when (contains? (elem-langs element) :cljs)
-        ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
-        (find-last-order-by-project-analysis
-          :var-definitions
-          #(and (defines-elem? %)
-                (:macro %)
-                (match-file-lang % (assoc element :lang :clj)))
-          (db-with-ns-analysis db (:to element)))))))
+  (or
+    (find-last-order-by-project-analysis
+      :var-definitions
+      #(and (= (:name element) (:name %))
+            (= (:to element) (:ns %))
+            (not= 'clojure.core/declare (:defined-by %))
+            (match-file-lang % element))
+      (db-with-ns-analysis db (:to element)))
+    (when (contains? (elem-langs element) :cljs)
+      ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
+      (let [definition (find-definition db (assoc element :lang :clj))]
+        (when (:macro definition)
+          definition)))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id filename] :as _element}]

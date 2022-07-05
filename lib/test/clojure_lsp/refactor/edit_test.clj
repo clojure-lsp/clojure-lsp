@@ -147,7 +147,9 @@
   (let [zloc (h/zloc-from-code "(defn foo [] (let [a 1] |d))")]
     (is (= "let" (z/string (edit/find-function-usage-name-loc zloc)))))
   (let [zloc (h/zloc-from-code "(defn foo [] (let [a 1] (and 1 |d)))")]
-    (is (= "and" (z/string (edit/find-function-usage-name-loc zloc))))))
+    (is (= "and" (z/string (edit/find-function-usage-name-loc zloc)))))
+  (let [zloc (h/zloc-from-code "(defn foo [a] (map #(foo |%) [1 2 3]))")]
+    (is (= "foo" (z/string (edit/find-function-usage-name-loc zloc))))))
 
 (deftest inside-refer?
   (let [zloc (h/zloc-from-code "(ns a (:require [clojure.test :refer [|deftes]]))")]

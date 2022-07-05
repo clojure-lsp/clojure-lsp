@@ -1,6 +1,7 @@
 (ns clojure-lsp.refactor.edit
   (:require
    [clojure.set :as set]
+   [lsp4clj.protocols.logger :as logger]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -116,7 +117,7 @@
   (some-> loc to-top z/next var-name-loc-from-op))
 
 (defn find-function-usage-name-loc [zloc]
-  (some-> zloc (z/find-tag z/up :list) z/down))
+  (some-> zloc (z/find z/up #(contains? #{:list :fn} (z/tag %))) z/down))
 
 (defn single-child?
   [zloc]

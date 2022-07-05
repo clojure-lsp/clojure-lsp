@@ -9,6 +9,7 @@
     Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
   - Improve performance by adding second level of analysis indexing.
   - Improve performance of things that need keyword definitions, like completion and custom lint.
+  - Fix hover showing previous function elements on some cases. #1098
 
 ## 2022.06.29-19.32.13
 

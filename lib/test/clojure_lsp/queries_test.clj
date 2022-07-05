@@ -187,7 +187,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (let [element (#'q/find-last-order-by-project-analysis
                    (comp q/xf-analysis->namespace-definitions
-                         (filter #(= 'foo.bar (:name %))))
+                         (q/xf-same-name 'foo.bar))
                    @db/db*)]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
@@ -197,7 +197,7 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (let [element (#'q/find-last-order-by-project-analysis
                    (comp q/xf-analysis->namespace-definitions
-                         (filter #(= 'foo.bar (:name %))))
+                         (q/xf-same-name 'foo.bar))
                    @db/db*)]
       (is (= (h/file-path "/b.clj") (:filename element))))))
 

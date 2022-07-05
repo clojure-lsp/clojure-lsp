@@ -122,6 +122,31 @@
 (def ^:private deprecated-as-alias-elems-xf ; works for :namespace-alias only
   (map #(select-keys % [:to :alias])))
 
+(def ^:private xf-analysis->by-bucket (map val))
+(defn ^:private xf-by-bucket->bucket-elems [bucket-name]
+  (mapcat bucket-name))
+(defn ^:private xf-by-bucket->buckets-elems [bucket-names]
+  (mapcat (fn [buckets]
+            (mapcat buckets bucket-names))))
+(defn ^:private xf-analysis->bucket-elems [bucket-name]
+  (comp xf-analysis->by-bucket
+        (xf-by-bucket->bucket-elems bucket-name)))
+(defn ^:private xf-analysis->buckets-elems [& bucket-names]
+  (comp xf-analysis->by-bucket
+        (xf-by-bucket->buckets-elems bucket-names)))
+
+(def xf-analysis->java-class-definitions (xf-analysis->bucket-elems :java-class-definitions))
+(def xf-analysis->keyword-definitions (xf-analysis->bucket-elems :keyword-definitions))
+(def xf-analysis->keyword-usages (xf-analysis->bucket-elems :keyword-usages))
+(def xf-analysis->keywords (xf-analysis->buckets-elems :keyword-definitions :keyword-usages))
+(def xf-analysis->namespace-alias (xf-analysis->bucket-elems :namespace-alias))
+(def xf-analysis->namespace-definitions (xf-analysis->bucket-elems :namespace-definitions))
+(def xf-analysis->namespace-usages (xf-analysis->bucket-elems :namespace-usages))
+(def xf-analysis->protocol-impls (xf-analysis->bucket-elems :protocol-impls))
+(def xf-analysis->var-definitions (xf-analysis->bucket-elems :var-definitions))
+(def xf-analysis->var-usages (xf-analysis->bucket-elems :var-usages))
+(def xf-analysis->vars (xf-analysis->buckets-elems :var-definitions :var-usages))
+
 (defn ns-aliases [{:keys [dep-graph] :as db}]
   (if (use-dep-graph? db)
     (into #{}
@@ -131,7 +156,7 @@
           dep-graph)
     (into #{}
           (comp
-            (mapcat (comp :namespace-alias val))
+            xf-analysis->namespace-alias
             deprecated-as-alias-elems-xf)
           (deprecated-internal-analysis db))))
 
@@ -146,7 +171,7 @@
           dep-graph)
     (into #{}
           (comp
-            (mapcat (comp :namespace-alias val))
+            xf-analysis->namespace-alias
             (filter :alias)
             (filter (fn [element]
                       (some langs (elem-langs element))))
@@ -162,7 +187,7 @@
           (vals documents))
     (into #{}
           (comp
-            (mapcat (comp :namespace-definitions val))
+            xf-analysis->namespace-definitions
             (filter (fn [element]
                       (some langs (elem-langs element))))
             (map :name))
@@ -178,7 +203,7 @@
     (set (keys dep-graph))
     (into #{}
           (comp
-            (mapcat (comp :namespace-definitions val))
+            xf-analysis->namespace-definitions
             (map :name))
           analysis)))
 
@@ -191,7 +216,7 @@
           documents)
     (into #{}
           (comp
-            (mapcat (comp :namespace-definitions val))
+            xf-analysis->namespace-definitions
             (map :name))
           (deprecated-internal-analysis db))))
 
@@ -213,7 +238,7 @@
       #(shared/filename->uri % db)
       (into {}
             (comp
-              (mapcat (comp :namespace-definitions val))
+              xf-analysis->namespace-definitions
               (filter #(contains? (set namespaces) (:name %)))
               (map (juxt :name :filename)))
             (deprecated-internal-analysis db)))))
@@ -231,13 +256,13 @@
 ;; Copyright © 2015-2016 Christophe Grand
 ;; Distributed under the Eclipse Public License version 1.0
 
-(defn rf-last
+(defn ^:private rf-last
   "Reducing function that returns the last value."
   ([] nil)
   ([x] x)
   ([_ x] x))
 
-(defn rf-some
+(defn ^:private rf-some
   "Reducing function that returns the first logical true value."
   ([] nil)
   ([x] x)
@@ -245,17 +270,12 @@
 
 ;; End cgrand/xforms
 
-(defn ^:private find-last-order-by-project-analysis [bucket pred? db]
-  (or (transduce (comp
-                   (mapcat (comp bucket val))
-                   (filter pred?))
-                 rf-last
-                 (internal-analysis db))
-      (transduce (comp
-                   (mapcat (comp bucket val))
-                   (filter pred?))
-                 rf-last
-                 (external-analysis db))))
+(defn ^:private find-first [xf coll] (transduce xf rf-some coll))
+(defn ^:private find-last  [xf coll] (transduce xf rf-last coll))
+
+(defn ^:private find-last-order-by-project-analysis [xf db]
+  (or (find-last xf (internal-analysis db))
+      (find-last xf (external-analysis db))))
 
 (defn ^:private match-file-lang
   [check-element match-element]
@@ -340,19 +360,19 @@
 (defmethod find-definition :namespace-usages
   [db element]
   (find-last-order-by-project-analysis
-    :namespace-definitions
-    #(and (= (:name %) (:name element))
-          (match-file-lang % element))
+    (comp xf-analysis->namespace-definitions
+          (filter #(and (= (:name %) (:name element))
+                        (match-file-lang % element))))
     (db-with-ns-analysis db (:name element))))
 
 (defmethod find-definition :var-usages
   [db element]
   (or
     (find-last-order-by-project-analysis
-      :var-definitions
-      #(and (= (:name element) (:name %))
-            (= (:to element) (:ns %))
-            (match-file-lang % element))
+      (comp xf-analysis->var-definitions
+            (filter #(and (= (:name element) (:name %))
+                          (= (:to element) (:ns %))
+                          (match-file-lang % element))))
       (db-with-ns-analysis db (:to element)))
     (when (contains? (elem-langs element) :cljs)
       ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
@@ -362,15 +382,14 @@
 
 (defmethod find-definition :local-usages
   [db {:keys [id filename] :as _element}]
-  (transduce (filter #(= (:id %) id))
-             rf-some
-             (get-in db [:analysis filename :locals])))
+  (find-first (filter #(= (:id %) id))
+              (get-in db [:analysis filename :locals])))
 
 (defmethod find-definition :keyword-usages
   [db element]
   (or (find-last-order-by-project-analysis
-        :keyword-definitions
-        (keyword-signature-equal?-fn (:ns element) (:name element))
+        (comp xf-analysis->keyword-definitions
+              (filter (keyword-signature-equal?-fn (:ns element) (:name element))))
         db)
       element))
 
@@ -385,10 +404,10 @@
 (defmethod find-definition :protocol-impls
   [db element]
   (find-last-order-by-project-analysis
-    :var-definitions
-    #(and (= (:name %) (:method-name element))
-          (= (:ns %) (:protocol-ns element))
-          (match-file-lang % element))
+    (comp xf-analysis->var-definitions
+          (filter #(and (= (:name %) (:method-name element))
+                        (= (:ns %) (:protocol-ns element))
+                        (match-file-lang % element))))
     (db-with-ns-analysis db (:protocol-ns element))))
 
 (defmethod find-definition :java-class-usages
@@ -396,7 +415,7 @@
   (->> (:analysis db)
        (into []
              (comp
-               (mapcat (comp :java-class-definitions val))
+               xf-analysis->java-class-definitions
                (filter #(safe-equal? (:class %) (:class element)))))
        (sort-by (complement #(string/ends-with? (:filename %) ".java")))
        first))
@@ -414,10 +433,9 @@
   (when-not (identical? :clj-kondo/unknown-namespace to)
     (let [buckets (get-in db [:analysis filename])
           find-last (fn [xf elems]
-                      (transduce
+                      (find-last
                         (comp xf
                               (filter #(match-file-lang % var-usage)))
-                        rf-last
                         elems))]
       (if alias
         (find-last (filter #(and (= to (:to %))
@@ -439,32 +457,31 @@
 
 (defmethod find-implementations :var-definitions
   [db element]
-  (if-let [[bucket xf] (cond
-                         ;; protocol method definition
-                         (and (= 'clojure.core/defprotocol (:defined-by element))
-                              (:protocol-name element))
-                         [:protocol-impls
-                          (filter #(and (safe-equal? (:ns element) (:protocol-ns %))
-                                        (safe-equal? (:name element) (:method-name %))))]
+  (if-let [xf (cond
+                ;; protocol method definition
+                (and (= 'clojure.core/defprotocol (:defined-by element))
+                     (:protocol-name element))
+                (comp xf-analysis->protocol-impls
+                      (filter #(and (safe-equal? (:ns element) (:protocol-ns %))
+                                    (safe-equal? (:name element) (:method-name %)))))
 
-                         ;; protocol name definition
-                         (= 'clojure.core/defprotocol (:defined-by element))
-                         [:var-usages
-                          (filter #(and (safe-equal? (:ns element) (:to %))
-                                        (safe-equal? (:name element) (:name %))))]
+                ;; protocol name definition
+                (= 'clojure.core/defprotocol (:defined-by element))
+                (comp xf-analysis->var-usages
+                      (filter #(and (safe-equal? (:ns element) (:to %))
+                                    (safe-equal? (:name element) (:name %)))))
 
-                         ;; defmulti definition
-                         (= 'clojure.core/defmulti (:defined-by element))
-                         [:var-usages
-                          (filter #(and (:defmethod %)
-                                        (safe-equal? (:ns element) (:to %))
-                                        (safe-equal? (:name element) (:name %))))]
+                ;; defmulti definition
+                (= 'clojure.core/defmulti (:defined-by element))
+                (comp xf-analysis->var-usages
+                      (filter #(and (:defmethod %)
+                                    (safe-equal? (:ns element) (:to %))
+                                    (safe-equal? (:name element) (:name %)))))
 
-                         :else
-                         nil)]
+                :else
+                nil)]
     (into []
           (comp
-            (mapcat (comp bucket val))
             xf
             (filter #(match-file-lang % element))
             (medley/distinct-by (juxt :filename :name :row :col)))
@@ -477,12 +494,12 @@
     []
     (let [xf (if (:defmethod element)
                ;; defmethod declaration
-               (comp (mapcat (comp :var-usages val))
+               (comp xf-analysis->var-usages
                      (filter #(and (:defmethod %)
                                    (safe-equal? (:to element) (:to %))
                                    (safe-equal? (:name element) (:name %)))))
                ;; protocol method usage or defmethod usage
-               (comp (map val)
+               (comp xf-analysis->by-bucket
                      (mapcat (fn [{:keys [protocol-impls var-usages]}]
                                (concat (filter #(and (safe-equal? (:to element) (:protocol-ns %))
                                                      (safe-equal? (:name element) (:method-name %)))
@@ -516,7 +533,7 @@
       (concat
         (into []
               (comp
-                (mapcat (comp :namespace-usages val))
+                xf-analysis->namespace-usages
                 (filter #(= (:name %) name)))
               (ns-and-dependents-analysis db name))
         ;; TODO: do we always need these keywords? If not, probably better to
@@ -524,9 +541,7 @@
         ;; and a slow version that adds these keywords.
         (into []
               (comp
-                (map val)
-                (mapcat (fn [{:keys [keyword-usages keyword-definitions]}]
-                          (concat keyword-definitions keyword-usages)))
+                xf-analysis->keywords
                 (filter
                   #(and (= (:ns %) name)
                         (not (:auto-resolved %))
@@ -564,10 +579,7 @@
   (let [names (var-definition-names element)]
     (into []
           (comp
-            (map val)
-            (mapcat (fn [{:keys [var-definitions var-usages]}]
-                      (cond->> (vec var-usages)
-                        include-declaration? (into (vec var-definitions)))))
+            (if include-declaration? xf-analysis->vars xf-analysis->var-usages)
             (filter #(contains? names (:name %)))
             (filter #(safe-equal? (:ns element) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
@@ -579,10 +591,7 @@
   [db {:keys [ns name] :as _element} include-declaration?]
   (into []
         (comp
-          (map val)
-          (mapcat (fn [{:keys [keyword-usages keyword-definitions]}]
-                    (cond->> (vec keyword-usages)
-                      include-declaration? (into (vec keyword-definitions)))))
+          (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
           (filter (keyword-signature-equal?-fn ns name))
           (medley/distinct-by (juxt :filename :name :row :col)))
         (internal-analysis db)))
@@ -603,7 +612,7 @@
       [element])
     (into []
           (comp
-            (mapcat (comp :var-usages val))
+            xf-analysis->var-usages
             (filter #(safe-equal? method-name (:name %)))
             (filter #(safe-equal? protocol-ns (:to %)))
             (medley/distinct-by (juxt :filename :name :row :col)))
@@ -613,24 +622,24 @@
   [_db element _]
   [element])
 
+(defn ^:private xf-under-cursor [line column]
+  (comp (mapcat val)
+        (filter
+          (fn [{:keys [name-row name-col name-end-row name-end-col]}]
+            ;; TODO Probably should use q/inside? instead
+            (and (<= name-row line name-end-row)
+                 (<= name-col column name-end-col))))))
+
 (defn find-element-under-cursor
   [db filename line column]
-  (transduce (comp (mapcat val)
-                   (filter
-                     (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-                       ;; TODO Probably should use q/inside? instead
-                       (and (<= name-row line name-end-row)
-                            (<= name-col column name-end-col)))))
-             rf-some
-             (get-in db [:analysis filename])))
+  (find-first (xf-under-cursor line column)
+              (get-in db [:analysis filename])))
 
 (defn find-all-elements-under-cursor
   [db filename line column]
-  (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-            ;; TODO Probably should use q/inside? instead
-            (and (<= name-row line name-end-row)
-                 (<= name-col column name-end-col)))
-          (mapcat val (get-in db [:analysis filename]))))
+  (into []
+        (xf-under-cursor line column)
+        (get-in db [:analysis filename])))
 
 (defn find-definition-from-cursor [db filename line column]
   (try
@@ -681,7 +690,7 @@
 (defn find-all-var-definitions [db]
   (into []
         (comp
-          (mapcat (comp :var-definitions val))
+          xf-analysis->var-definitions
           (xf-var-defs false))
         (:analysis db)))
 
@@ -693,17 +702,16 @@
 (defn find-all-keyword-definitions [db]
   (into []
         (comp
-          (mapcat (comp :keyword-definitions val))
+          xf-analysis->keyword-definitions
           (medley/distinct-by (juxt :ns :name :row :col)))
         (:analysis db)))
 
 (defn find-local-by-destructured-keyword [db filename keyword-element]
-  (transduce (filter #(and (= (:name-row %) (:name-row keyword-element))
-                           (= (:name-col %) (:name-col keyword-element))
-                           (= (:name-end-row %) (:name-end-row keyword-element))
-                           (= (:name-end-col %) (:name-end-col keyword-element))))
-             rf-some
-             (get-in db [:analysis filename :locals])))
+  (find-first (filter #(and (= (:name-row %) (:name-row keyword-element))
+                            (= (:name-col %) (:name-col keyword-element))
+                            (= (:name-end-row %) (:name-end-row keyword-element))
+                            (= (:name-end-col %) (:name-end-col keyword-element))))
+              (get-in db [:analysis filename :locals])))
 
 (defn find-unused-aliases [db filename]
   (let [local-var-usages (get-in db [:analysis filename :var-usages])]
@@ -763,22 +771,21 @@
   (first (find-namespace-definitions db filename)))
 
 (defn find-namespace-usage-by-alias [db filename alias]
-  (->> (get-in db [:analysis filename :namespace-usages])
-       (filter #(= alias (:alias %)))
-       last))
+  (find-last (filter #(= alias (:alias %)))
+             (get-in db [:analysis filename :namespace-usages])))
 
 (defn find-element-for-rename [db from-ns from-name]
   (let [xf
         (if from-name
           (comp
-            (mapcat (comp :var-definitions val))
+            xf-analysis->var-definitions
             (filter
               #(and (= from-ns (:ns %))
                     (= from-name (:name %)))))
           (comp
-            (mapcat (comp :namespace-definitions val))
+            xf-analysis->namespace-definitions
             (filter #(= from-ns (:name %)))))]
-    (transduce xf rf-last (internal-analysis (db-with-ns-analysis db from-ns)))))
+    (find-last xf (internal-analysis (db-with-ns-analysis db from-ns)))))
 
 (def default-public-vars-defined-by-to-exclude
   '#{clojure.test/deftest
@@ -814,9 +821,8 @@
 
 (defn xf-all-var-usages-to-namespaces [namespaces]
   (comp
-    (mapcat (comp :var-usages val))
+    xf-analysis->var-usages
     (filter #(contains? namespaces (:to %)))
     (remove var-usage-from-own-definition?)))
 
-(def xf-all-keyword-usages
-  (mapcat (comp :keyword-usages val)))
+(def xf-all-keyword-usages xf-analysis->keyword-usages)

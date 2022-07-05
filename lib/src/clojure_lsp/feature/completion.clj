@@ -206,7 +206,7 @@
 (defn ^:private with-ns-definition-elements [matches-fn non-local-db]
   (into []
         (comp
-          (mapcat (comp :namespace-definitions val))
+          q/xf-analysis->namespace-definitions
           (filter #(matches-fn (:name %)))
           (map #(element->completion-item % nil :ns-definition)))
         (:analysis non-local-db)))
@@ -215,7 +215,7 @@
   (let [refer-ns (z/sexpr (edit/find-refer-ns cursor-loc))]
     (into []
           (comp
-            (mapcat (comp :var-definitions val))
+            q/xf-analysis->var-definitions
             (filter #(and (= refer-ns (:ns %))
                           (matches-fn (:name %))))
             (map #(element->completion-item % nil :refer)))
@@ -272,7 +272,7 @@
                                   set)]
         (into []
               (comp
-                (mapcat (comp :var-definitions val))
+                q/xf-analysis->var-definitions
                 (keep
                   #(when (and (not (:private %))
                               (contains? alias-namespaces (:ns %))
@@ -291,7 +291,7 @@
 (defn ^:private with-elements-from-full-ns [db full-ns]
   (into []
         (comp
-          (mapcat (comp :var-definitions val))
+          q/xf-analysis->var-definitions
           (filter #(and (= (:ns %) (symbol full-ns))
                         (not (:private %))))
           (map #(element->completion-item % full-ns :ns-definition)))
@@ -309,7 +309,7 @@
         name (-> cursor-loc z/sexpr name)]
     (into []
           (comp
-            (mapcat (comp :keyword-definitions val))
+            q/xf-analysis->keyword-definitions
             (filter #(and (= ns (:ns %))
                           (or (not cursor-loc)
                               (string/starts-with? (:name %) name))))

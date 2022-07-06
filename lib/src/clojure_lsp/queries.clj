@@ -333,11 +333,9 @@
 
 (defmethod find-definition :namespace-alias
   [db {:keys [to] :as element}]
-  (find-last-order-by-project-analysis
-    :namespace-definitions
-    #(and (= (:name %) to)
-          (match-file-lang % element))
-    (db-with-ns-analysis db to)))
+  (find-definition db (assoc element
+                             :bucket :namespace-usages
+                             :name to)))
 
 (defmethod find-definition :namespace-usages
   [db element]

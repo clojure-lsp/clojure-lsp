@@ -119,7 +119,7 @@
         db/db*)
       (is (= h/default-uri (h/take-or-timeout mock-created-chan 500))))))
 
-(deftest outgoing-reference-filenames
+(deftest var-dependency-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
@@ -173,7 +173,63 @@
                   "a/a"
                   "x"))))
 
-(deftest incoming-reference-filenames
+(deftest kw-dependency-reference-filenames
+  (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+                                   :project-root-uri (h/file-uri "file:///")})
+  (h/load-code-and-locs (h/code "(ns aaa (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :aaa/command identity)"
+                                "(r/reg-event-db ::event identity)")
+                        (h/file-uri "file:///src/aaa.clj"))
+  (h/load-code-and-locs (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :bbb/command identity)"
+                                ":aaa/command"
+                                ":aaa/command")
+                        (h/file-uri "file:///src/bbb.clj"))
+  (let [db-before @db/db*]
+    (are [expected new-code]
+         (do
+           (h/load-code-and-locs new-code (h/file-uri "file:///src/bbb.clj"))
+           (let [db-after @db/db*]
+             (is (= expected
+                    (f.file-management/reference-filenames "/src/bbb.clj" db-before db-after)))))
+      ;; increasing
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command"
+                  ":aaa/command")
+      ;; decreasing
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command")
+      ;; removing
+      #{"/src/aaa.clj"} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :bbb/command identity)")
+      ;; adding
+      #{"/src/aaa.clj"} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :bbb/command identity)"
+                                ":aaa/command"
+                                ":aaa/command"
+                                ":aaa/event")
+      ;; same
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command")
+      ;; unregistered kw
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command"
+                  ":unregistered")
+      ;; same ns
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command"
+                  ":bbb/command"))))
+
+(deftest var-dependent-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"

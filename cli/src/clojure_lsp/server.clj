@@ -79,97 +79,118 @@
             db*]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
-    (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
-    (shared/logging-task
-      :publish-diagnostics
-      (producer/publish-diagnostic lsp-producer diagnostic)))
+    (shared/capturing-stdout
+      (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
+      (shared/logging-task
+        :publish-diagnostics
+        (producer/publish-diagnostic lsp-producer diagnostic))))
   (refresh-code-lens [_this]
-    (producer/refresh-code-lens lsp-producer))
+    (shared/capturing-stdout
+      (producer/refresh-code-lens lsp-producer)))
   (publish-workspace-edit [_this edit]
-    (some-> (producer/publish-workspace-edit lsp-producer edit)
-            deref))
+    (shared/capturing-stdout
+      (some-> (producer/publish-workspace-edit lsp-producer edit)
+              deref)))
   (show-document-request [_this document-request]
-    (producer/show-document-request lsp-producer document-request))
+    (shared/capturing-stdout
+      (producer/show-document-request lsp-producer document-request)))
   (publish-progress [_this percentage message progress-token]
-    (producer/publish-progress lsp-producer percentage message progress-token))
+    (shared/capturing-stdout
+      (producer/publish-progress lsp-producer percentage message progress-token)))
   (show-message-request [_this message type actions]
-    (producer/show-message-request lsp-producer message type actions))
+    (shared/capturing-stdout
+      (producer/show-message-request lsp-producer message type actions)))
   (show-message [_this message type extra]
-    (producer/show-message lsp-producer message type extra))
+    (shared/capturing-stdout
+      (producer/show-message lsp-producer message type extra)))
   (register-capability [_this capability]
-    (producer/register-capability lsp-producer capability))
+    (shared/capturing-stdout
+      (producer/register-capability lsp-producer capability)))
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
     (go
-      (let [db @db*]
-        (when (some-> db :client-capabilities :experimental j/from-java :testTree)
-          (shared/logging-task
-            :refreshing-test-tree
-            (doseq [uri uris]
-              (when-let [test-tree (f.test-tree/tree uri db)]
-                (->> test-tree
-                     (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
-                     (.publishTestTree client))))))))))
+      (shared/capturing-stdout
+        (let [db @db*]
+          (when (some-> db :client-capabilities :experimental j/from-java :testTree)
+            (shared/logging-task
+              :refreshing-test-tree
+              (doseq [uri uris]
+                (when-let [test-tree (f.test-tree/tree uri db)]
+                  (->> test-tree
+                       (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
+                       (.publishTestTree client)))))))))))
 
 (deftype ClojureLspServer
          [^LSPServer lsp-server
           ^ILSPFeatureHandler feature-handler]
   ClojureLanguageServer
   (^CompletableFuture initialize [_ ^InitializeParams params]
-    (.initialize lsp-server params))
+    (shared/capturing-stdout
+      (.initialize lsp-server params)))
   (^void initialized [_ ^InitializedParams _params]
-    (.initialized lsp-server _params))
+    (shared/capturing-stdout
+      (.initialized lsp-server _params)))
   (^CompletableFuture shutdown [_]
-    (.shutdown lsp-server))
+    (shared/capturing-stdout
+      (.shutdown lsp-server)))
   (exit [_]
-    (.exit lsp-server))
+    (shared/capturing-stdout
+      (.exit lsp-server)))
   (getTextDocumentService [_]
-    (.getTextDocumentService lsp-server))
+    (shared/capturing-stdout
+      (.getTextDocumentService lsp-server)))
   (getWorkspaceService [_]
-    (.getWorkspaceService lsp-server))
+    (shared/capturing-stdout
+      (.getWorkspaceService lsp-server)))
   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
     (CompletableFuture/completedFuture
-      (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri)))
+      (shared/capturing-stdout
+        (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri))))
 
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
-      (->> (clojure-feature/server-info-raw feature-handler)
-           (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
+      (shared/capturing-stdout
+        (->> (clojure-feature/server-info-raw feature-handler)
+             (coercer/conform-or-log ::clojure-coercer/server-info-raw)))))
 
   (^void serverInfoLog [_]
     (future
-      (try
-        (clojure-feature/server-info-log feature-handler)
-        (catch Throwable e
-          (logger/error e)
-          (throw e))))
+      (shared/capturing-stdout
+        (try
+          (clojure-feature/server-info-log feature-handler)
+          (catch Throwable e
+            (logger/error e)
+            (throw e)))))
     nil)
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (CompletableFuture/completedFuture
-      (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw)))
+      (shared/capturing-stdout
+        (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (future
-      (try
-        (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)
-        (catch Throwable e
-          (logger/error e)
-          (throw e)))))
+      (shared/capturing-stdout
+        (try
+          (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)
+          (catch Throwable e
+            (logger/error e)
+            (throw e))))))
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (CompletableFuture/completedFuture
-      (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw))))
+      (shared/capturing-stdout
+        (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
 
-(defn client-settings [params]
+(defn ^:private client-settings [params]
   (-> params
       :initializationOptions
       (or {})
       shared/keywordize-first-depth
       (settings/clean-client-settings)))
 
-(defn capabilites [db*]
+(defn ^:private capabilites [db*]
   (let [settings (settings/all @db*)]
     {:document-highlight-provider true
      :hover-provider true
@@ -205,12 +226,15 @@
                     "clojuredocs" true}}))
 
 (defmacro ^:private safe-async-task [task-name & task-body]
-  `(go-loop []
-     (try
-       ~@task-body
-       (catch Exception e#
-         (logger/error e# (format "Error during async task %s" ~task-name))))
-     (recur)))
+  (with-meta
+    `(go-loop []
+       (shared/capturing-stdout
+         (try
+           ~@task-body
+           (catch Exception e#
+             (logger/error e# (format "Error during async task %s" ~task-name)))))
+       (recur))
+    (meta &form)))
 
 (defn ^:private spawn-async-tasks!
   [{:keys [producer] :as components}]
@@ -239,33 +263,34 @@
 (defonce ^:private components* (atom {}))
 
 (defn run-server! []
-  (let [producer* (atom nil)
-        db* db/db*
-        timbre-logger (doto (->TimbreLogger db*)
-                        (logger/setup))
-        _ (logger/info "[SERVER]" "Starting server...")
-        _ (reset! components* (components/->components db* timbre-logger nil))
-        clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
-        server (ClojureLspServer. (LSPServer. clojure-feature-handler
-                                              producer*
-                                              db*
-                                              db/initial-db
-                                              capabilites
-                                              client-settings
-                                              known-files-pattern)
-                                  clojure-feature-handler)
-        in System/in
-        out System/out
-        ;; For debugging, it's possible to trace all I/O through lsp4j.
-        ;; launcher (Launcher/createLauncher server ClojureLanguageClient in out false (java.io.PrintWriter. (io/writer (io/file "../../integration-test/sample-test/clojure-lsp.lsp-trace.out"))))
-        launcher (Launcher/createLauncher server ClojureLanguageClient in out)
-        language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
-        producer (->ClojureLspProducer language-client
-                                       (lsp/->LSPProducer language-client db*)
-                                       db*)]
-    ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
-    (reset! producer* producer)
-    (swap! components* assoc :producer producer)
-    (nrepl/setup-nrepl db*)
-    (spawn-async-tasks! @components*)
-    (.startListening launcher)))
+  (shared/capturing-stdout
+    (let [producer* (atom nil)
+          db* db/db*
+          timbre-logger (doto (->TimbreLogger db*)
+                          (logger/setup))
+          _ (logger/info "[SERVER]" "Starting server...")
+          _ (reset! components* (components/->components db* timbre-logger nil))
+          clojure-feature-handler (handlers/->ClojureLSPFeatureHandler components*)
+          server (ClojureLspServer. (LSPServer. clojure-feature-handler
+                                                producer*
+                                                db*
+                                                db/initial-db
+                                                capabilites
+                                                client-settings
+                                                known-files-pattern)
+                                    clojure-feature-handler)
+          in System/in
+          out System/out
+          ;; For debugging, it's possible to trace all I/O through lsp4j.
+          ;; launcher (Launcher/createLauncher server ClojureLanguageClient in out false (java.io.PrintWriter. (io/writer (io/file "../../integration-test/sample-test/clojure-lsp.lsp-trace.out"))))
+          launcher (Launcher/createLauncher server ClojureLanguageClient in out)
+          language-client ^ClojureLanguageClient (.getRemoteProxy launcher)
+          producer (->ClojureLspProducer language-client
+                                         (lsp/->LSPProducer language-client db*)
+                                         db*)]
+      ;; TODO remove atom, think in a way to build all components in the same place and not need to assoc to atom later.
+      (reset! producer* producer)
+      (swap! components* assoc :producer producer)
+      (nrepl/setup-nrepl db*)
+      (spawn-async-tasks! @components*)
+      (.startListening launcher))))

@@ -137,7 +137,7 @@
   [action options]
   (if (= "listen" action)
     (do
-      (with-out-str @(server/run-server!))
+      @(server/run-server!)
       {:result-code 0})
     (try
       (case action

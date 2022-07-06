@@ -36,8 +36,12 @@
 
 (defn did-open [uri text db* allow-create-ns]
   (load-document! uri text db*)
-  (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
-        depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
+  (let [kondo-result* (future
+                        (shared/capturing-stdout
+                          (lsp.kondo/run-kondo-on-text! text uri db*)))
+        depend-result* (future
+                         (shared/capturing-stdout
+                           (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*)))
         kondo-result @kondo-result*
         depend-result @depend-result*]
     (swap! db* (fn [state-db]
@@ -134,15 +138,16 @@
 
 (defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
   (async/go
-    (shared/logging-task
-      :notify-references
-      (let [filenames (shared/logging-task
-                        :reference-files/find
-                        (reference-filenames filename db-before db-after))]
-        (when (seq filenames)
-          (logger/debug "Analyzing references for files:" filenames)
-          (shared/logging-task
-            :reference-files/analyze
+    (shared/capturing-stdout
+      (shared/logging-task
+        :notify-references
+        (let [filenames (shared/logging-task
+                          :reference-files/find
+                          (reference-filenames filename db-before db-after))]
+          (when (seq filenames)
+            (logger/debug "Analyzing references for files:" filenames)
+            (shared/logging-task
+              :reference-files/analyze
             ;; TODO: We process the dependent and dependency files together, but
             ;; it may be possible to be more efficient by processing them
             ;; separately.
@@ -162,11 +167,11 @@
             ;; kondo. See
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
-            (analyze-reference-filenames! filenames db*))
-          (let [db @db*]
-            (doseq [filename filenames]
-              (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
-          (producer/refresh-code-lens producer))))))
+              (analyze-reference-filenames! filenames db*))
+            (let [db @db*]
+              (doseq [filename filenames]
+                (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
+            (producer/refresh-code-lens producer)))))))
 
 (defn ^:private offsets [lines line col end-line end-col]
   (loop [lines (seq lines)
@@ -214,13 +219,15 @@
     (loop [state-db @db*]
       (when (>= version (get-in state-db [:documents uri :v] -1))
         (let [kondo-result* (future
-                              (shared/logging-time
-                                (str "changes analyzed by clj-kondo took %s")
-                                (lsp.kondo/run-kondo-on-text! text uri db*)))
+                              (shared/capturing-stdout
+                                (shared/logging-time
+                                  (str "changes analyzed by clj-kondo took %s")
+                                  (lsp.kondo/run-kondo-on-text! text uri db*))))
               depend-result* (future
-                               (shared/logging-time
-                                 (str "changes analyzed by clj-depend took %s")
-                                 (lsp.depend/analyze-filename! filename state-db)))
+                               (shared/capturing-stdout
+                                 (shared/logging-time
+                                   (str "changes analyzed by clj-depend took %s")
+                                   (lsp.depend/analyze-filename! filename state-db))))
               kondo-result @kondo-result*
               depend-result @depend-result*
               old-db @db*]

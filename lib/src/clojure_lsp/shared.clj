@@ -430,6 +430,20 @@
   (with-meta `(logging-time (str ~task-id " %s") ~@body)
              (meta &form)))
 
+(defmacro capturing-stdout
+  "Evaluates exprs in a context in which *out* is bound to a fresh StringWriter.
+  Logs any output, and returns the result of the exprs."
+  [& body]
+  (let [m (meta &form)
+        out-sym (gensym "out")]
+    `(let [s# (java.io.StringWriter.)]
+       (binding [*out* s#]
+         (let [result# (do ~@body)
+               ~out-sym (str s#)]
+           (when (seq ~out-sym)
+             ~(with-meta `(logger/warn "captured stdout:\n" ~out-sym) m))
+           result#)))))
+
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
     {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}

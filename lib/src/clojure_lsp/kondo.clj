@@ -288,18 +288,14 @@
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint db]
-  (let [err-writer (java.io.StringWriter.)
-        out-writer (java.io.StringWriter.)]
+  (let [err-writer (java.io.StringWriter.)]
     (try
       (let [result (if (:api? db)
                      (kondo/run! config)
-                     (binding [*err* err-writer
-                               *out* out-writer]
+                     (binding [*err* err-writer]
                        (kondo/run! config)))]
         (when-not (string/blank? (str err-writer))
           (logger/warn "Non-fatal error from clj-kondo:" (str err-writer)))
-        (when-not (string/blank? (str out-writer))
-          (logger/warn "Output from clj-kondo:" (str out-writer)))
         result)
       (catch Exception e
         (logger/error e "Error running clj-kondo on" err-hint)))))

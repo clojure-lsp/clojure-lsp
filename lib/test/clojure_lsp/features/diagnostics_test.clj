@@ -7,9 +7,11 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
+(def findings (atom []))
+
 (h/reset-db-after-test)
 
-(deftest lint-unused-public-vars
+(deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns some-ns) (defn -main [& _args] 1)" (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs (h/code "(ns some-ns (:require [re-frame.core :as r]))"
@@ -17,6 +19,12 @@
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
   (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
   (testing "when linter level is :info"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :info
@@ -26,11 +34,14 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:level :info}}})))
+      @findings))
   (testing "when linter level is :warning"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :warning
@@ -40,11 +51,14 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:level :warning}}})))
+      @findings))
   (testing "when linter level is :error"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :error
@@ -54,11 +68,14 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:level :error}}})))
+      @findings))
   (testing "when linter level is :off"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :off
@@ -68,11 +85,14 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:level :off}}})))
+      @findings))
   (testing "linter level by default is :info"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
     (h/assert-submaps
       [{:filename "/a.clj"
         :level :info
@@ -82,39 +102,54 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {})))
+      @findings))
   (testing "excluding the whole ns"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
     (h/assert-submaps
       []
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}})))
+      @findings))
   (testing "excluding the simple var from ns"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
     (h/assert-submaps
       []
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}})))
+      @findings))
   (testing "excluding the specific var"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/a.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
       []
-      (f.diagnostic/file-findings
-        "/a.clj"
-        @db/db*
-        {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}})))
-  (testing "excluding specific commonly unused syms"
+      @findings))
+  (testing "excluding specific syms"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/b.clj"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
     (h/assert-submaps
       []
-      (f.diagnostic/file-findings
-        "/b.clj"
-        @db/db*
-        {})))
+      @findings))
   (testing "unused keyword definitions"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/c.cljs"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
     (h/assert-submaps
       [{:filename "/c.cljs"
         :level :info
@@ -132,17 +167,15 @@
         :col 17
         :end-row 3
         :end-col 28}]
-      (f.diagnostic/file-findings
-        "/c.cljs"
-        @db/db*
-        {})))
+      @findings))
   (testing "var marked ^:export is excluded"
-    (h/assert-submaps
-      []
-      (f.diagnostic/file-findings
-        "/d.cljs"
-        @db/db*
-        {}))))
+    (reset! findings [])
+    (f.diagnostic/custom-lint-file!
+      "/d.cljs"
+      @db/db*
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
+    (h/assert-submaps [] @findings)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))

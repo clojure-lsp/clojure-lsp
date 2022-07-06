@@ -12,6 +12,7 @@
   - Fix hover showing previous function elements on some cases. #1098
   - Fix: find definition will find registration of unnamespaced keyword.
   - Fix to update unused-public-var lint on registered keywords as usages change in other files. #1018
+  - Fix to navigate to var defined by declare, when there aren't any later defs. #1107
 
 ## 2022.06.29-19.32.13
 

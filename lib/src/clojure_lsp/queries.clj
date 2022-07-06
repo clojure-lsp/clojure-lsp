@@ -354,7 +354,6 @@
       :var-definitions
       #(and (= (:name element) (:name %))
             (= (:to element) (:ns %))
-            (not= 'clojure.core/declare (:defined-by %))
             (match-file-lang % element))
       (db-with-ns-analysis db (:to element)))
     (when (contains? (elem-langs element) :cljs)

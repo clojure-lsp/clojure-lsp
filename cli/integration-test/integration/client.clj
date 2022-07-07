@@ -1,6 +1,8 @@
 (ns integration.client
   (:require
    [cheshire.core :as json]
+   [clojure.java.io :as io]
+   [clojure.string :as string]
    [integration.helper :as h])
   (:import
    [java.time LocalDateTime]
@@ -66,23 +68,43 @@
    :params params
    :id (swap! request-id inc)})
 
+(defn read-n-chars [^java.io.Reader input content-length]
+  (let [cs (char-array content-length)]
+    (loop [total-read 0]
+      (when (< total-read content-length)
+        (let [new-read (.read input cs total-read (- content-length total-read))]
+          (when (< new-read 0)
+            (throw (ex-info "no content" {})))
+          (recur (+ total-read new-read)))))
+    (String. cs)))
+
+(defn read-content-length [input]
+  (binding [*in* input]
+    (when-let [line (read-line)] ;; returns nil when input is closed, i.e. server output has closed
+      (let [[h v] (string/split line #":")]
+        (when-not (= h "Content-Length")
+          (throw (ex-info "unexpected header" {:line line})))
+        (parse-long (string/trim v))))))
+
 (defn ^:private listen! [server-out client]
   (try
-    (binding [*in* server-out]
-      (loop []
-        ;; Block, waiting for next Content-Length line, then discard it. If
-        ;; the server output stream is closed, also close the client by
-        ;; exiting this loop.
-        (if-let [_content-length (read-line)]
-          (let [{:keys [id method] :as json} (cheshire.core/parse-stream *in* true)]
-            (cond
-              (and id method) (receive-request client json)
-              id              (receive-response client json)
-              :else           (receive-notification client json))
-            (recur))
-          (do
-            (log client :white "listener closed:" "server closed")
-            (flush)))))
+    (loop []
+      ;; Block, waiting for next Content-Length line, then parse the number of
+      ;; characters specified as JSON-RPC. If the server output stream is
+      ;; closed, also close the client by exiting this loop.
+      (if-let [content-length (read-content-length server-out)]
+        ;; NOTE: this doesn't attempt to handle Content-Type header
+        (let [content-length (+ 2 content-length) ;; include \r\n before message
+              content (read-n-chars server-out content-length)
+              {:keys [id method] :as json} (cheshire.core/parse-string content true)]
+          (cond
+            (and id method) (receive-request client json)
+            id              (receive-response client json)
+            :else           (receive-notification client json))
+          (recur))
+        (do
+          (log client :white "listener closed:" "server closed")
+          (flush))))
     (catch Throwable e
       (log client :red "listener closed:" "exception")
       (println e)

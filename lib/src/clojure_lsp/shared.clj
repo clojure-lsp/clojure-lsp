@@ -425,24 +425,22 @@
           `(logger/info (format ~message (start-time->end-time-ms ~start-sym) ~results-msg))
           (meta &form))
        result#)))
-
 (defmacro logging-task [task-id & body]
   (with-meta `(logging-time (str ~task-id " %s") ~@body)
              (meta &form)))
 
+(def null-output-stream-writer
+  (java.io.OutputStreamWriter.
+    (proxy [java.io.OutputStream] []
+      (write
+        ([^bytes b])
+        ([^bytes b, off, len])))))
+
 (defmacro capturing-stdout
-  "Evaluates exprs in a context in which *out* is bound to a fresh StringWriter.
-  Logs any output, and returns the result of the exprs."
+  "Evaluates body in a context in which writes to *out* are discarded."
   [& body]
-  (let [m (meta &form)
-        out-sym (gensym "out")]
-    `(let [s# (java.io.StringWriter.)]
-       (binding [*out* s#]
-         (let [result# (do ~@body)
-               ~out-sym (str s#)]
-           (when (seq ~out-sym)
-             ~(with-meta `(logger/warn "captured stdout:\n" ~out-sym) m))
-           result#)))))
+  `(binding [*out* null-output-stream-writer]
+     ~@body))
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element

@@ -85,27 +85,21 @@
         :publish-diagnostics
         (producer/publish-diagnostic lsp-producer diagnostic))))
   (refresh-code-lens [_this]
-    (shared/capturing-stdout
-      (producer/refresh-code-lens lsp-producer)))
+    (producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
     (shared/capturing-stdout
       (some-> (producer/publish-workspace-edit lsp-producer edit)
               deref)))
   (show-document-request [_this document-request]
-    (shared/capturing-stdout
-      (producer/show-document-request lsp-producer document-request)))
+    (producer/show-document-request lsp-producer document-request))
   (publish-progress [_this percentage message progress-token]
-    (shared/capturing-stdout
-      (producer/publish-progress lsp-producer percentage message progress-token)))
+    (producer/publish-progress lsp-producer percentage message progress-token))
   (show-message-request [_this message type actions]
-    (shared/capturing-stdout
-      (producer/show-message-request lsp-producer message type actions)))
+    (producer/show-message-request lsp-producer message type actions))
   (show-message [_this message type extra]
-    (shared/capturing-stdout
-      (producer/show-message lsp-producer message type extra)))
+    (producer/show-message lsp-producer message type extra))
   (register-capability [_this capability]
-    (shared/capturing-stdout
-      (producer/register-capability lsp-producer capability)))
+    (producer/register-capability lsp-producer capability))
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
@@ -126,23 +120,17 @@
           ^ILSPFeatureHandler feature-handler]
   ClojureLanguageServer
   (^CompletableFuture initialize [_ ^InitializeParams params]
-    (shared/capturing-stdout
-      (.initialize lsp-server params)))
+    (.initialize lsp-server params))
   (^void initialized [_ ^InitializedParams _params]
-    (shared/capturing-stdout
-      (.initialized lsp-server _params)))
+    (.initialized lsp-server _params))
   (^CompletableFuture shutdown [_]
-    (shared/capturing-stdout
-      (.shutdown lsp-server)))
+    (.shutdown lsp-server))
   (exit [_]
-    (shared/capturing-stdout
-      (.exit lsp-server)))
+    (.exit lsp-server))
   (getTextDocumentService [_]
-    (shared/capturing-stdout
-      (.getTextDocumentService lsp-server)))
+    (.getTextDocumentService lsp-server))
   (getWorkspaceService [_]
-    (shared/capturing-stdout
-      (.getWorkspaceService lsp-server)))
+    (.getWorkspaceService lsp-server))
   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
     (CompletableFuture/completedFuture
       (shared/capturing-stdout
@@ -228,11 +216,10 @@
 (defmacro ^:private safe-async-task [task-name & task-body]
   (with-meta
     `(go-loop []
-       (shared/capturing-stdout
-         (try
-           ~@task-body
-           (catch Exception e#
-             (logger/error e# (format "Error during async task %s" ~task-name)))))
+       (try
+         ~@task-body
+         (catch Exception e#
+           (logger/error e# (format "Error during async task %s" ~task-name))))
        (recur))
     (meta &form)))
 

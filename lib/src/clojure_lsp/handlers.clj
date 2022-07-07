@@ -83,41 +83,35 @@
    client-settings
    work-done-token
    {:keys [db* producer] :as components}]
-  (shared/capturing-stdout
-    (shared/logging-task
-      :initialize
-      (swap! db* assoc :project-analysis-type :project-and-deps)
-      (if project-root-uri
-        (do
-          (crawler/initialize-project
-            project-root-uri
-            client-capabilities
-            client-settings
-            {}
-            work-done-token
-            components)
-          (let [db @db*]
-            (when (settings/get db [:lint-project-files-after-startup?] true)
-              (async/go
-                (shared/capturing-stdout
-                  (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db))))
+  (shared/logging-task
+    :initialize
+    (swap! db* assoc :project-analysis-type :project-and-deps)
+    (if project-root-uri
+      (do
+        (crawler/initialize-project
+          project-root-uri
+          client-capabilities
+          client-settings
+          {}
+          work-done-token
+          components)
+        (let [db @db*]
+          (when (settings/get db [:lint-project-files-after-startup?] true)
             (async/go
-              (shared/capturing-stdout
-                (f.clojuredocs/refresh-cache! db*)))
+              (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db)))
+          (async/go
+            (f.clojuredocs/refresh-cache! db*))
+          (async/go
+            (let [settings (:settings db)]
+              (when (stubs/check-stubs? settings)
+                (stubs/generate-and-analyze-stubs! settings db*))))
+          (async/go
+            (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+            (analyze-test-paths! components))
+          (when (settings/get db [:java] true)
             (async/go
-              (shared/capturing-stdout
-                (let [settings (:settings db)]
-                  (when (stubs/check-stubs? settings)
-                    (stubs/generate-and-analyze-stubs! settings db*)))))
-            (async/go
-              (shared/capturing-stdout
-                (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-                (analyze-test-paths! components)))
-            (when (settings/get db [:java] true)
-              (async/go
-                (shared/capturing-stdout
-                  (f.java-interop/retrieve-jdk-source-and-analyze! db*))))))
-        (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil)))))
+              (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
+      (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
 (defn did-open [{:keys [textDocument]} {:keys [producer db*]}]
   (shared/logging-task
@@ -486,103 +480,71 @@
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler
   (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
-    (shared/capturing-stdout
-      (initialize project-root-uri client-capabilities client-settings work-done-token @components*)))
+    (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
   (did-open [_ doc]
-    (shared/capturing-stdout
-      (did-open doc @components*)))
+    (did-open doc @components*))
   (did-change [_ doc]
-    (shared/capturing-stdout
-      (did-change doc)))
+    (did-change doc))
   (did-save [_ doc]
-    (shared/capturing-stdout
-      (did-save doc)))
+    (did-save doc))
   (execute-command [_ doc]
-    (shared/capturing-stdout
-      (execute-command doc @components*)))
+    (execute-command doc @components*))
   (did-close [_ doc]
-    (shared/capturing-stdout
-      (did-close doc)))
+    (did-close doc))
   (did-change-watched-files [_ doc]
-    (shared/capturing-stdout
-      (did-change-watched-files doc)))
+    (did-change-watched-files doc))
   (references [_ doc]
-    (shared/capturing-stdout
-      (references doc @components*)))
+    (references doc @components*))
   (completion [_ doc]
-    (shared/capturing-stdout
-      (completion doc)))
+    (completion doc))
   (completion-resolve-item [_ doc]
-    (shared/capturing-stdout
-      (completion-resolve-item doc @components*)))
+    (completion-resolve-item doc @components*))
   (prepare-rename [_ doc]
-    (shared/capturing-stdout
-      (prepare-rename doc)))
+    (prepare-rename doc))
   (rename [_ doc]
-    (shared/capturing-stdout
-      (rename doc)))
+    (rename doc))
   (hover [_ doc]
-    (shared/capturing-stdout
-      (hover doc @components*)))
+    (hover doc @components*))
   (signature-help [_ doc]
-    (shared/capturing-stdout
-      (signature-help doc)))
+    (signature-help doc))
   (formatting [_ doc]
-    (shared/capturing-stdout
-      (formatting doc)))
+    (formatting doc))
   (code-actions [_ doc]
-    (shared/capturing-stdout
-      (code-actions doc)))
+    (code-actions doc))
   (code-lens [_ doc]
-    (shared/capturing-stdout
-      (code-lens doc)))
+    (code-lens doc))
   (code-lens-resolve [_ doc]
-    (shared/capturing-stdout
-      (code-lens-resolve doc)))
+    (code-lens-resolve doc))
   (definition [_ doc]
-    (shared/capturing-stdout
-      (definition doc @components*)))
+    (definition doc @components*))
   (declaration [_ doc]
-    (shared/capturing-stdout
-      (declaration doc @components*)))
+    (declaration doc @components*))
   (implementation [_ doc]
-    (shared/capturing-stdout
-      (implementation doc @components*)))
+    (implementation doc @components*))
   (document-symbol [_ doc]
-    (shared/capturing-stdout
-      (document-symbol doc)))
+    (document-symbol doc))
   (document-highlight [_ doc]
-    (shared/capturing-stdout
-      (document-highlight doc)))
+    (document-highlight doc))
   (semantic-tokens-full [_ doc]
-    (shared/capturing-stdout
-      (semantic-tokens-full doc)))
+    (semantic-tokens-full doc))
   (semantic-tokens-range [_ doc]
-    (shared/capturing-stdout
-      (semantic-tokens-range doc)))
+    (semantic-tokens-range doc))
   (prepare-call-hierarchy [_ doc]
-    (shared/capturing-stdout
-      (prepare-call-hierarchy doc)))
+    (prepare-call-hierarchy doc))
   (call-hierarchy-incoming [_ doc]
-    (shared/capturing-stdout
-      (call-hierarchy-incoming doc)))
+    (call-hierarchy-incoming doc))
   (call-hierarchy-outgoing [_ doc]
-    (shared/capturing-stdout
-      (call-hierarchy-outgoing doc)))
+    (call-hierarchy-outgoing doc))
   (linked-editing-ranges [_ doc]
-    (shared/capturing-stdout
-      (linked-editing-ranges doc)))
+    (linked-editing-ranges doc))
   (workspace-symbols [_ doc]
-    (shared/capturing-stdout
-      (workspace-symbols doc)))
+    (workspace-symbols doc))
   (will-rename-files [_ rename-files]
-    (shared/capturing-stdout
-      (will-rename-files rename-files @components*)))
+    (will-rename-files rename-files @components*))
   (range-formatting [_ doc]
-    (shared/capturing-stdout
-      (range-formatting doc)))
+    (range-formatting doc))
   ;; (did-delete-files [_ doc]
-  ;;   (shared/capturing-stdout (did-delete-files doc)))
+  ;;   (did-delete-files doc))
   clojure-feature/IClojureLSPFeature
   (cursor-info-log [_ doc]
     (shared/capturing-stdout

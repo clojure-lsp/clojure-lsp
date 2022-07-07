@@ -36,10 +36,8 @@
 
 (defn did-open [uri text db* allow-create-ns]
   (load-document! uri text db*)
-  (let [kondo-result* (future
-                        (lsp.kondo/run-kondo-on-text! text uri db*))
-        depend-result* (future
-                         (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
+  (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
+        depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
         kondo-result @kondo-result*
         depend-result @depend-result*]
     (swap! db* (fn [state-db]

@@ -152,10 +152,9 @@
                 {:uri uri
                  :diagnostics (find-diagnostics uri db)})
     (async/go
-      (shared/capturing-stdout
-        (async/>! db/diagnostics-chan
-                  {:uri uri
-                   :diagnostics (find-diagnostics uri db)})))))
+      (async/>! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics (find-diagnostics uri db)}))))
 
 (defn publish-all-diagnostics! [paths db]
   (doseq [path paths]
@@ -171,10 +170,9 @@
                 {:uri uri
                  :diagnostics []})
     (async/go
-      (shared/capturing-stdout
-        (async/>! db/diagnostics-chan
-                  {:uri uri
-                   :diagnostics []})))))
+      (async/>! db/diagnostics-chan
+                {:uri uri
+                 :diagnostics []}))))
 
 (defn ^:private unused-public-vars [var-defs kw-defs project-db kondo-config]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) var-defs)

@@ -21,15 +21,13 @@
 
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [kondo-result* (future
-                        (shared/capturing-stdout
-                          (shared/logging-time
-                            (str startup-logger-tag " Project only paths analyzed by clj-kondo, took %s")
-                            (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn))))
+                        (shared/logging-time
+                          (str startup-logger-tag " Project only paths analyzed by clj-kondo, took %s")
+                          (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn)))
         depend-result* (future
-                         (shared/capturing-stdout
-                           (shared/logging-time
-                             (str startup-logger-tag " Project only paths analyzed by clj-depend, took %s")
-                             (lsp.depend/analyze-paths! paths @db*))))
+                         (shared/logging-time
+                           (str startup-logger-tag " Project only paths analyzed by clj-depend, took %s")
+                           (lsp.depend/analyze-paths! paths @db*)))
         kondo-result @kondo-result*
         depend-result @depend-result*]
     (swap! db* (fn [state-db]
@@ -114,8 +112,7 @@
   (if (:api? db)
     (db/upsert-local-cache! (build-db-cache db) db)
     (async/go
-      (shared/capturing-stdout
-        (db/upsert-local-cache! (build-db-cache db) db)))))
+      (db/upsert-local-cache! (build-db-cache db) db))))
 
 (defn initialize-project
   [project-root-uri

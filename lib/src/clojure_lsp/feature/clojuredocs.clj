@@ -43,8 +43,7 @@
         (get cache full-keyword)
         (do
           (async/go
-            (shared/capturing-stdout
-              (refresh-cache! db*)))
+            (refresh-cache! db*))
           nil)))))
 
 (defn find-hover-docs-for [sym-name sym-ns db*]

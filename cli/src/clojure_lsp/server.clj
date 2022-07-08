@@ -2,12 +2,16 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.refactor :as f.refactor]
+   [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.handlers :as handler]
    [clojure-lsp.nrepl :as nrepl]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.java.io :as io]
+   [lsp4clj.liveness-probe :as lsp.liveness-probe]
+   [lsp4clj.protocols.endpoint :as lsp.endpoint]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.endpoint :as endpoint]
    [lsp4clj.server :as lsp.server]
    [taoensso.timbre :as timbre]))
 
@@ -16,6 +20,8 @@
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
+
+(def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}")
 
 (defn log! [level args fmeta]
   (timbre/log! level :p args {:?line (:line fmeta)
@@ -144,41 +150,55 @@
 ;;       (or {})
 ;;       shared/keywordize-first-depth
 ;;       (settings/clean-client-settings)))
-;;
-;; (defn capabilites [db*]
-;;   (let [settings (settings/all @db*)]
-;;     {:document-highlight-provider true
-;;      :hover-provider true
-;;      :declaration-provider true
-;;      :implementation-provider true
-;;      :signature-help-provider []
-;;      :call-hierarchy-provider true
-;;      :linked-editing-range-provider true
-;;      :code-action-provider (vec (vals coercer/code-action-kind))
-;;      :code-lens-provider true
-;;      :references-provider true
-;;      :rename-provider true
-;;      :definition-provider true
-;;      :document-formatting-provider ^Boolean (:document-formatting? settings)
-;;      :document-range-formatting-provider ^Boolean (:document-range-formatting? settings)
-;;      :document-symbol-provider true
-;;      :workspace-symbol-provider true
-;;      :workspace {:file-operations {:will-rename {:filters [{:scheme "file"
-;;                                                             :pattern {:glob known-files-pattern
-;;                                                                       :matches "file"}}]}}}
-;;      :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
-;;                                          (:semantic-tokens? settings))
-;;                                  {:token-types semantic-tokens/token-types-str
-;;                                   :token-modifiers semantic-tokens/token-modifiers-str
-;;                                   :range true
-;;                                   :full true})
-;;      :execute-command-provider f.refactor/available-refactors
-;;      :text-document-sync (:text-document-sync-kind settings)
-;;      :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
-;;      :experimental {"testTree" true
-;;                     "cursorInfo" true
-;;                     "serverInfo" true
-;;                     "clojuredocs" true}}))
+
+
+
+(defn capabilities [settings]
+  {:document-highlight-provider true
+   :hover-provider true
+   :declaration-provider true
+   :implementation-provider true
+   :signature-help-provider []
+   :call-hierarchy-provider true
+   :linked-editing-range-provider true
+   :code-action-provider ["quickfix"
+                          "refactor"
+                          "refactor.extract"
+                          "refactor.inline"
+                          "refactor.rewrite"
+                          "source"
+                          "source.organizeImports"
+                          #_"source.fixAll"]
+   :code-lens-provider true
+   :references-provider true
+   :rename-provider true
+   :definition-provider true
+   :document-formatting-provider ^Boolean (:document-formatting? settings)
+   :document-range-formatting-provider ^Boolean (:document-range-formatting? settings)
+   :document-symbol-provider true
+   :workspace-symbol-provider true
+   :workspace {:file-operations {:will-rename {:filters [{:scheme "file"
+                                                          :pattern {:glob known-files-pattern
+                                                                    :matches "file"}}]}}}
+   :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
+                                       (:semantic-tokens? settings))
+                               {:token-types semantic-tokens/token-types-str
+                                :token-modifiers semantic-tokens/token-modifiers-str
+                                :range true
+                                :full true})
+   :execute-command-provider f.refactor/available-refactors
+   :text-document-sync (:text-document-sync-kind settings)
+   :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
+   :experimental {:test-tree true
+                  :cursor-info true
+                  :server-info true
+                  :clojuredocs true}})
+
+(defn client-settings [params]
+  (-> params
+      :initialization-options
+      (or {})
+      (settings/clean-client-settings)))
 
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/go-loop []
@@ -197,12 +217,12 @@
       :edits
       (->> (async/<! db/edits-chan)
            ;; TODO: (coercer/conform-or-log ::coercer/workspace-edit-or-error)
-           (endpoint/send-request server "workspace/applyEdit")
+           (lsp.endpoint/send-request server "workspace/applyEdit")
            deref))
     (safe-async-task
       :diagnostics
       (->> (async/<! debounced-diags)
-           (endpoint/send-notification server "textDocument/publishDiagnostics")))
+           (lsp.endpoint/send-notification server "textDocument/publishDiagnostics")))
     (safe-async-task
       :changes
       (let [changes (async/<! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
@@ -218,18 +238,37 @@
 
 (defonce ^:private components* (atom {}))
 
+(defmethod lsp.server/handle-request "initialize" [_ params]
+  (logger/info "clojure-lsp initializing...")
+  (handler/initialize (:root-uri params)
+                              ;; TODO: lsp2clj do we need any of the client capabilities
+                              ;; coercion that used to happen?
+                      (:capabilities params)
+                      (client-settings params)
+                      (some-> params :work-done-token str)
+                      @components*)
+  (when-let [parent-process-id (:process-id params)]
+    (lsp.liveness-probe/start!
+      parent-process-id
+      (fn []
+        ;; TODO: lsp2clj shutdown
+        )))
+  ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
+  (capabilities (settings/all (deref (:db* @components*)))))
+
 (defn run-server! []
   (let [timbre-logger (->TimbreLogger)
         log-path (logger/setup timbre-logger)
         db (assoc db/initial-db :log-path log-path)
         db* (atom db)
         server (lsp.server/stdio-server {:trace? true
-                                         :in (io/reader System/in)
-                                         :out (io/writer System/out)})
+                                         :in System/in
+                                         :out System/out})
         components {:db* db*
+                    :logger timbre-logger
                     :server server}]
     (logger/info "[SERVER]" "Starting server...")
     (nrepl/setup-nrepl db*)
     (reset! components* components)
     (spawn-async-tasks! components)
-    (endpoint/start server)))
+    (lsp.endpoint/start server)))

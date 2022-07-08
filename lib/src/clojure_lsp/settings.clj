@@ -25,7 +25,7 @@
 
 (defn- clean-keys-map [m]
   (->> (or m {})
-       (medley/map-keys keyword)
+       ;; (medley/map-keys keyword)
        (medley/map-vals typify-json)))
 
 (defn parse-source-paths [paths]
@@ -53,20 +53,19 @@
          (not-empty))))
 
 (defn clean-client-settings [client-settings]
-  (let [kwd-keys #(medley/map-keys keyword %)]
-    (-> client-settings
-        (update :dependency-scheme #(or % "zipfile"))
-        (update :text-document-sync-kind kwd-string)
-        (update :source-paths parse-source-paths)
-        (update :source-aliases parse-source-aliases)
-        (update :project-specs #(->> % (mapv kwd-keys) not-empty))
-        (update :cljfmt-config-path #(or % ".cljfmt.edn"))
-        (update :cljfmt kwd-keys)
-        (update :linters kwd-keys)
-        (medley/update-existing-in [:cljfmt :indents] clean-symbol-map)
-        (medley/update-existing-in [:linters] clean-keys-map)
-        (update :document-formatting? (fnil identity true))
-        (update :document-range-formatting? (fnil identity true)))))
+  (-> client-settings
+      (update :dependency-scheme #(or % "zipfile"))
+      (update :text-document-sync-kind kwd-string)
+      (update :source-paths parse-source-paths)
+      (update :source-aliases parse-source-aliases)
+        ;; (update :project-specs #(->> % (mapv kwd-keys) not-empty))
+      (update :cljfmt-config-path #(or % ".cljfmt.edn"))
+        ;; (update :cljfmt kwd-keys)
+        ;; (update :linters kwd-keys)
+      (medley/update-existing-in [:cljfmt :indents] clean-symbol-map)
+      (medley/update-existing-in [:linters] clean-keys-map)
+      (update :document-formatting? (fnil identity true))
+      (update :document-range-formatting? (fnil identity true))))
 
 (defn ^:private get-refreshed-settings [project-root-uri settings force-settings]
   (let [new-project-settings (config/resolve-for-root project-root-uri)]

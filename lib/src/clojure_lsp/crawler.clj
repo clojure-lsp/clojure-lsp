@@ -10,14 +10,29 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer])
+   [lsp4clj.protocols.endpoint :as lsp.endpoint]
+   [lsp4clj.protocols.logger :as logger])
   (:import
    (java.net URI)))
 
 (set! *warn-on-reflection* true)
 
 (def startup-logger-tag "[Startup]")
+
+;; TODO lsp2clj move this back to lsp4clj?
+(defn ^:private notify-progress [server percentage message progress-token]
+  (let [percentage (int percentage)
+        progress {:kind (case percentage
+                          0 :begin
+                          100 :end
+                          :report)
+                  :title message
+                  :percentage percentage}]
+    (->> {:token (or progress-token "clojure-lsp")
+          :value progress}
+           ;; TODO lsp2clj restore?
+           ;; (coercer/conform-or-log ::coercer/notify-progress)
+         (lsp.endpoint/send-notification server "$/progress"))))
 
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [kondo-result* (future
@@ -37,7 +52,7 @@
 
 (defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
-(defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
+(defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* server]}]
   (logger/info "Analyzing classpath for project root" root-path)
   (when classpath
     (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
@@ -49,7 +64,7 @@
                                   (let [percentage (lerp (lerp 25 70 (/ (dec batch-index) batch-count))
                                                          (lerp 25 70 (/ batch-index batch-count))
                                                          (/ files-done total-files))]
-                                    (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
+                                    (notify-progress server percentage "Analyzing external classpath" progress-token)))
           normalization-config {:external? true
                                 :filter-analysis (fn [analysis]
                                                    (update analysis :var-definitions #(remove :private %)))}
@@ -120,8 +135,8 @@
    client-settings
    force-settings
    progress-token
-   {:keys [db* logger producer] :as components}]
-  (producer/publish-progress producer 0 "clojure-lsp" progress-token)
+   {:keys [db* logger server] :as components}]
+  (notify-progress server 0 "clojure-lsp" progress-token)
   (let [project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
@@ -144,9 +159,9 @@
            :force-settings force-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (producer/publish-progress producer 5 "Finding kondo config" progress-token)
+    (notify-progress server 5 "Finding kondo config" progress-token)
     (ensure-kondo-config-dir-exists! project-root-uri @db*)
-    (producer/publish-progress producer 10 "Finding cache" progress-token)
+    (notify-progress server 10 "Finding cache" progress-token)
     (load-db-cache! root-path db*)
     (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
@@ -159,10 +174,10 @@
           (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
-          (producer/publish-progress producer 15 "Copying kondo configs" progress-token)
+          (notify-progress server 15 "Copying kondo configs" progress-token)
           (copy-configs-from-classpath! classpath settings @db*))
         (do
-          (producer/publish-progress producer 15 "Discovering classpath" progress-token)
+          (notify-progress server 15 "Discovering classpath" progress-token)
           (when-let [classpath (classpath/scan-classpath! components)]
             (swap! db* assoc
                    :project-hash project-hash
@@ -170,14 +185,14 @@
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
-            (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
+            (notify-progress server 20 "Copying kondo configs" progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
-              (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
+              (notify-progress server 25 "Analyzing external classpath" progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")
             (upsert-db-cache! @db*))))
-      (producer/publish-progress producer (if fast-startup? 15 75) "Resolving config paths" progress-token)
+      (notify-progress server (if fast-startup? 15 75) "Resolving config paths" progress-token)
       (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                          (:classpath @db*)
                                          (config/resolve-from-classpath-config-paths (:classpath @db*) settings))]
@@ -187,12 +202,12 @@
                                             project-settings
                                             force-settings)
                :classpath-settings classpath-settings))
-      (producer/publish-progress producer (if fast-startup? 20 80) "Analyzing project files" progress-token)
+      (notify-progress server (if fast-startup? 20 80) "Analyzing project files" progress-token)
       (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
       (analyze-source-paths! (-> @db* :settings :source-paths)
                              db*
                              (fn [{:keys [total-files files-done]}]
                                (let [percentage (lerp (if fast-startup? 20 80) 99 (/ files-done total-files))]
-                                 (producer/publish-progress producer percentage "Analyzing project files" progress-token))))
+                                 (notify-progress server percentage "Analyzing project files" progress-token))))
       (swap! db* assoc :settings-auto-refresh? true)
-      (producer/publish-progress producer 100 "Project analyzed" progress-token))))
+      (notify-progress server 100 "Project analyzed" progress-token))))

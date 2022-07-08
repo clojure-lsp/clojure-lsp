@@ -1,7 +1,6 @@
 (ns integration.client
   (:require
    [cheshire.core :as json]
-   [clojure.java.io :as io]
    [clojure.string :as string]
    [integration.helper :as h])
   (:import

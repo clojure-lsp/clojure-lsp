@@ -122,27 +122,13 @@
 ;;          [^LSPServer lsp-server
 ;;           ^ILSPFeatureHandler feature-handler]
 ;;   ClojureLanguageServer
-;;   (^CompletableFuture initialize [_ ^InitializeParams params]
-;;     (.initialize lsp-server params))
-;;   (^void initialized [_ ^InitializedParams _params]
-;;     (.initialized lsp-server _params))
-;;   (^CompletableFuture shutdown [_]
-;;     (.shutdown lsp-server))
-;;   (exit [_]
-;;     (.exit lsp-server))
-;;   (getTextDocumentService [_]
-;;     (.getTextDocumentService lsp-server))
-;;   (getWorkspaceService [_]
-;;     (.getWorkspaceService lsp-server))
 ;;   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
 ;;     (CompletableFuture/completedFuture
 ;;       (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri)))
-;;
 ;;   (^CompletableFuture serverInfoRaw [_]
 ;;     (CompletableFuture/completedFuture
 ;;       (->> (clojure-feature/server-info-raw feature-handler)
 ;;            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
-;;
 ;;   (^void serverInfoLog [_]
 ;;     (future
 ;;       (try
@@ -151,11 +137,9 @@
 ;;           (logger/error e)
 ;;           (throw e))))
 ;;     nil)
-;;
 ;;   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
 ;;     (CompletableFuture/completedFuture
 ;;       (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw)))
-;;
 ;;   (^void cursorInfoLog [_ ^CursorInfoParams params]
 ;;     (future
 ;;       (try
@@ -163,23 +147,13 @@
 ;;         (catch Throwable e
 ;;           (logger/error e)
 ;;           (throw e)))))
-;;
 ;;   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
 ;;     (CompletableFuture/completedFuture
 ;;       (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw))))
-;;
-;; (defn client-settings [params]
-;;   (-> params
-;;       :initializationOptions
-;;       (or {})
-;;       shared/keywordize-first-depth
-;;       (settings/clean-client-settings)))
 
 ;; (deftype LSPTextDocumentService
 ;;          [^ILSPFeatureHandler handler]
 ;;   TextDocumentService
-;;   (^void didOpen [_ ^DidOpenTextDocumentParams params]
-;;     (handle-notification params feature-handler/did-open handler))
 ;;
 ;;   (^void didChange [_ ^DidChangeTextDocumentParams params]
 ;;     (handle-notification params feature-handler/did-change handler))
@@ -394,6 +368,11 @@
       (or {})
       (settings/clean-client-settings)))
 
+(defn ^:private exit []
+  (logger/info "clojure-lsp Exiting...")
+  (shutdown-agents)
+  (System/exit 0))
+
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/go-loop []
      (try
@@ -439,11 +418,7 @@
                       (some-> params :work-done-token str)
                       components)
   (when-let [parent-process-id (:process-id params)]
-    (lsp.liveness-probe/start!
-      parent-process-id
-      (fn []
-        ;; TODO: lsp2clj shutdown
-        )))
+    (lsp.liveness-probe/start! parent-process-id exit))
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
   (capabilities (settings/all (deref (:db* components)))))
 
@@ -451,9 +426,17 @@
   (lsp.endpoint/send-request
     (:server components)
     "client/registerCapability"
-    {:registrations [{:id "id" ;; TODO: lsp2clj this is what it was, but seems odd. Would only be used to unregister capability.
+    {:registrations [{:id "id"
                       :method "workspace/didChangeWatchedFiles"
                       :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}))
+
+(defmethod lsp.server/handle-request "shutdown" [_ components _params]
+  (logger/info "clojure-lsp Shutting down")
+  (reset! (:db* components) db/initial-db)
+  nil)
+
+(defmethod lsp.server/handle-notification "exit" [_ _components _params]
+  (exit))
 
 (defmethod lsp.server/handle-notification "textDocument/didOpen" [_ components params]
   (handler/did-open params components))

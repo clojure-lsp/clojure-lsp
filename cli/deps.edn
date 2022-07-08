@@ -9,8 +9,8 @@
         borkdude/dynaload {:mvn/version "0.2.2"}
         nrepl/bencode {:mvn/version "1.1.0"}
         com.taoensso/timbre {:mvn/version "5.2.1"}
-        com.github.clojure-lsp/lsp4clj-server {:mvn/version "0.4.1"}
-        ;; com.github.clojure-lsp/lsp4clj-server {:local/root "../../lsp4clj/server"}
+        ;; com.github.clojure-lsp/lsp4clj-server {:mvn/version "0.4.1"}
+        com.github.clojure-lsp/lsp4clj-server {:local/root "../../lsp4clj/server"}
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources" "target/lsp-classes"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}

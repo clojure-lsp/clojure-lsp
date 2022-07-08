@@ -257,9 +257,7 @@
           :analyze-created-files-in-watched-dir
           (f.file-management/analyze-watched-created-files! created-watched-files components))))))
 
-(defonce ^:private components* (atom {}))
-
-(defmethod lsp.server/handle-request "initialize" [_ params]
+(defmethod lsp.server/handle-request "initialize" [_ components params]
   (logger/info "clojure-lsp initializing...")
   (handler/initialize (:root-uri params)
                               ;; TODO: lsp2clj do we need any of the client capabilities
@@ -267,7 +265,7 @@
                       (:capabilities params)
                       (client-settings params)
                       (some-> params :work-done-token str)
-                      @components*)
+                      components)
   (when-let [parent-process-id (:process-id params)]
     (lsp.liveness-probe/start!
       parent-process-id
@@ -275,11 +273,11 @@
         ;; TODO: lsp2clj shutdown
         )))
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
-  (capabilities (settings/all (deref (:db* @components*)))))
+  (capabilities (settings/all (deref (:db* components)))))
 
-(defmethod lsp.server/handle-notification "initialized" [_ _params]
+(defmethod lsp.server/handle-notification "initialized" [_ components _params]
   (lsp.endpoint/send-request
-    (:server @components*)
+    (:server components)
     "client/registerCapability"
     {:registrations [{:id "id" ;; TODO: lsp2clj this is what it was, but seems odd. Would only be used to unregister capability.
                       :method "workspace/didChangeWatchedFiles"
@@ -300,6 +298,5 @@
                     :server server}]
     (logger/info "[SERVER]" "Starting server...")
     (nrepl/setup-nrepl db*)
-    (reset! components* components)
     (spawn-async-tasks! components)
-    (lsp.endpoint/start server)))
+    (lsp.endpoint/start server components)))

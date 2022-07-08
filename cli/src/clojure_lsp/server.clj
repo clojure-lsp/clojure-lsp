@@ -118,208 +118,181 @@
                      ;; (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
                      (lsp.endpoint/send-notification server "clojure/textDocument/testTree"))))))))))
 
-;; (deftype ClojureLspServer
-;;          [^LSPServer lsp-server
-;;           ^ILSPFeatureHandler feature-handler]
-;;   ClojureLanguageServer
-;;   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
-;;     (CompletableFuture/completedFuture
-;;       (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri)))
-;;   (^CompletableFuture serverInfoRaw [_]
-;;     (CompletableFuture/completedFuture
-;;       (->> (clojure-feature/server-info-raw feature-handler)
-;;            (coercer/conform-or-log ::clojure-coercer/server-info-raw))))
-;;   (^void serverInfoLog [_]
-;;     (future
-;;       (try
-;;         (clojure-feature/server-info-log feature-handler)
-;;         (catch Throwable e
-;;           (logger/error e)
-;;           (throw e))))
-;;     nil)
-;;   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
-;;     (CompletableFuture/completedFuture
-;;       (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw)))
-;;   (^void cursorInfoLog [_ ^CursorInfoParams params]
-;;     (future
-;;       (try
-;;         (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)
-;;         (catch Throwable e
-;;           (logger/error e)
-;;           (throw e)))))
-;;   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
-;;     (CompletableFuture/completedFuture
-;;       (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw))))
+;;;; clojure experimental features
 
-;; (deftype LSPTextDocumentService
-;;          [^ILSPFeatureHandler handler]
-;;   TextDocumentService
-;;
-;;   (^void didChange [_ ^DidChangeTextDocumentParams params]
-;;     (handle-notification params feature-handler/did-change handler))
-;;
-;;   (^void didSave [_ ^DidSaveTextDocumentParams params]
-;;     (future
-;;       (try
-;;         (handle-notification params feature-handler/did-save handler)
-;;         (catch Throwable e
-;;           (logger/error e)
-;;           (throw e))))
-;;     (CompletableFuture/completedFuture 0))
-;;
-;;   (^void didClose [_ ^DidCloseTextDocumentParams params]
-;;     (in-completable-future
-;;       (handle-notification params feature-handler/did-close handler)))
-;;
-;;   (^CompletableFuture references [_ ^ReferenceParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/references handler ::coercer/locations)))
-;;
-;;   (^CompletableFuture completion [_ ^CompletionParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/completion handler ::coercer/completion-items)))
-;;
-;;   (^CompletableFuture resolveCompletionItem [_ ^CompletionItem item]
-;;     (in-completable-future
-;;       (handle-request item feature-handler/completion-resolve-item handler ::coercer/completion-item)))
-;;
-;;   (^CompletableFuture prepareRename [_ ^PrepareRenameParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/prepare-rename handler ::coercer/prepare-rename-or-error)))
-;;
-;;   (^CompletableFuture rename [_ ^RenameParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/rename handler ::coercer/workspace-edit-or-error)))
-;;
-;;   (^CompletableFuture hover [_ ^HoverParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/hover handler ::coercer/hover)))
-;;
-;;   (^CompletableFuture signatureHelp [_ ^SignatureHelpParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/signature-help handler ::coercer/signature-help)))
-;;
-;;   (^CompletableFuture formatting [_ ^DocumentFormattingParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/formatting handler ::coercer/edits)))
-;;
-;;   (^CompletableFuture rangeFormatting [_this ^DocumentRangeFormattingParams params]
-;;     (CompletableFuture/completedFuture
-;;       (when (compare-and-set! formatting false true)
-;;         (try
-;;           (handle-request params feature-handler/range-formatting handler ::coercer/edits)
-;;           (catch Exception e
-;;             (logger/error e))
-;;           (finally
-;;             (reset! formatting false))))))
-;;
-;;   (^CompletableFuture codeAction [_ ^CodeActionParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/code-actions handler ::coercer/code-actions)))
-;;
-;;   (^CompletableFuture codeLens [_ ^CodeLensParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/code-lens handler ::coercer/code-lenses)))
-;;
-;;   (^CompletableFuture resolveCodeLens [_ ^CodeLens params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/code-lens-resolve handler ::coercer/code-lens)))
-;;
-;;   (^CompletableFuture definition [_ ^DefinitionParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/definition handler ::coercer/location)))
-;;
-;;   (^CompletableFuture declaration [_ ^DeclarationParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/declaration handler ::coercer/location)))
-;;
-;;   (^CompletableFuture implementation [_ ^ImplementationParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/implementation handler ::coercer/locations)))
-;;
-;;   (^CompletableFuture documentSymbol [_ ^DocumentSymbolParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/document-symbol handler ::coercer/document-symbols)))
-;;
-;;   (^CompletableFuture documentHighlight [_ ^DocumentHighlightParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/document-highlight handler ::coercer/document-highlights)))
-;;
-;;   (^CompletableFuture semanticTokensFull [_ ^SemanticTokensParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/semantic-tokens-full handler ::coercer/semantic-tokens)))
-;;
-;;   (^CompletableFuture semanticTokensRange [_ ^SemanticTokensRangeParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/semantic-tokens-range handler ::coercer/semantic-tokens)))
-;;
-;;   (^CompletableFuture prepareCallHierarchy [_ ^CallHierarchyPrepareParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/prepare-call-hierarchy handler ::coercer/call-hierarchy-items)))
-;;
-;;   (^CompletableFuture callHierarchyIncomingCalls [_ ^CallHierarchyIncomingCallsParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/call-hierarchy-incoming handler ::coercer/call-hierarchy-incoming-calls)))
-;;
-;;   (^CompletableFuture callHierarchyOutgoingCalls [_ ^CallHierarchyOutgoingCallsParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/call-hierarchy-outgoing handler ::coercer/call-hierarchy-outgoing-calls)))
-;;
-;;   (^CompletableFuture linkedEditingRange [_ ^LinkedEditingRangeParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/linked-editing-ranges handler ::coercer/linked-editing-ranges-or-error))))
-;;
-;; (deftype LSPWorkspaceService
-;;          [^ILSPFeatureHandler handler]
-;;   WorkspaceService
-;;   (^CompletableFuture executeCommand [_ ^ExecuteCommandParams params]
-;;     (future
-;;       (try
-;;         (handle-notification params feature-handler/execute-command handler)
-;;         (catch Throwable e
-;;           (logger/error e)
-;;           (throw e))))
-;;     (CompletableFuture/completedFuture 0))
-;;
-;;   (^void didChangeConfiguration [_ ^DidChangeConfigurationParams params]
-;;     (logger/warn (coercer/java->clj params)))
-;;
-;;   (^void didChangeWatchedFiles [_ ^DidChangeWatchedFilesParams params]
-;;     (in-completable-future
-;;       (handle-notification params feature-handler/did-change-watched-files handler)))
-;;
-;;   ;; TODO implement it, but should we do anything?
-;;   #_(^void didDeleteFiles [_ ^DeleteFilesParams params]
-;;                           (in-completable-future
-;;                             (handle-notification params handler/did-delete-files handler)))
-;;
-;;   (^CompletableFuture symbol [_ ^WorkspaceSymbolParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/workspace-symbols handler ::coercer/workspace-symbols)))
-;;
-;;   (^CompletableFuture willCreateFiles [_ ^CreateFilesParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/will-create-files handler ::coercer/workspace-edit)))
-;;
-;;   (^void didCreateFiles [_ ^CreateFilesParams params]
-;;     (in-completable-future
-;;       (handle-notification params feature-handler/did-create-files handler)))
-;;
-;;   (^CompletableFuture willRenameFiles [_ ^RenameFilesParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/will-rename-files handler ::coercer/workspace-edit)))
-;;
-;;   (^void didRenameFiles [_ ^RenameFilesParams params]
-;;     (in-completable-future
-;;       (handle-notification params feature-handler/did-rename-files handler)))
-;;
-;;   (^CompletableFuture willDeleteFiles [_ ^DeleteFilesParams params]
-;;     (in-completable-future
-;;       (handle-request params feature-handler/will-delete-files handler ::coercer/workspace-edit)))
-;;
-;;   (^void didDeleteFiles [_ ^DeleteFilesParams params]
-;;     (in-completable-future
-;;       (handle-notification params feature-handler/did-delete-files handler))))
+(defmethod lsp.server/handle-request "clojure/dependencyContents" [_ components uri]
+  ;; ::coercer/uri
+  (handler/dependency-contents uri components))
+(defmethod lsp.server/handle-request "clojure/serverInfo/raw" [_ _components _params]
+  ;; ::clojure-coercer/server-info-raw
+  (handler/server-info-raw))
+(defmethod lsp.server/handle-notification "clojure/serverInfo/log" [_ components _params]
+  (future
+    (try
+      (handler/server-info-log components)
+      (catch Throwable e
+        (logger/error e)
+        (throw e)))))
+(defmethod lsp.server/handle-request "clojure/cursorInfo/raw" [_ _components params]
+  ;;  ::clojure-coercer/cursor-info-raw
+  (handler/cursor-info-raw params))
+(defmethod lsp.server/handle-notification "clojure/cursorInfo/log" [_ components params]
+  (future
+    (try
+      (handler/cursor-info-log params components)
+      (catch Throwable e
+        (logger/error e)
+        (throw e)))))
+(defmethod lsp.server/handle-request "clojure/clojuredocs/raw" [_ components params]
+  ;;  ::clojure-coercer/clojuredocs-raw
+  (handler/clojuredocs-raw params components))
+
+;;;; Document sync features
+
+;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization
+
+(defmethod lsp.server/handle-notification "textDocument/didOpen" [_ components params]
+  (handler/did-open params components))
+
+(defmethod lsp.server/handle-notification "textDocument/didChange" [_ _components params]
+  (handler/did-change params))
+
+(defmethod lsp.server/handle-notification "textDocument/didSave" [_ _components params]
+  (future
+    (try
+      (handler/did-save params)
+      (catch Throwable e
+        (logger/error e)
+        (throw e)))))
+
+(defmethod lsp.server/handle-notification "textDocument/didClose" [_ _components params]
+  (handler/did-close params))
+
+(defmethod lsp.server/handle-request "textDocument/references" [_ components params]
+  ;; ::coercer/locations
+  (handler/references params components))
+
+(defmethod lsp.server/handle-request "textDocument/completion" [_ _components params]
+  ;; ::coercer/completion-items
+  (handler/completion params))
+
+(defmethod lsp.server/handle-request "textDocument/resolveCompletionItem" [_ components item]
+  ;; ::coercer/completion-item
+  (handler/completion-resolve-item item components))
+
+(defmethod lsp.server/handle-request "textDocument/prepareRename" [_ _components params]
+  ;; ::coercer/prepare-rename-or-error
+  (handler/prepare-rename params))
+
+(defmethod lsp.server/handle-request "textDocument/rename" [_ _components params]
+  ;; ::coercer/workspace-edit-or-error
+  (handler/rename params))
+
+(defmethod lsp.server/handle-request "textDocument/hover" [_ components params]
+  ;; ::coercer/hover
+  (handler/hover params components))
+
+(defmethod lsp.server/handle-request "textDocument/signatureHelp" [_ _components params]
+  ;; ::coercer/signature-help
+  (handler/signature-help params))
+
+(defmethod lsp.server/handle-request "textDocument/formatting" [_ _components params]
+  ;; ::coercer/edits
+  (handler/formatting params))
+
+(def ^:private formatting (atom false))
+
+(defmethod lsp.server/handle-request "textDocument/rangeFormatting" [_this _components params]
+  ;; ::coercer/edits
+  (when (compare-and-set! formatting false true)
+    (try
+      (handler/range-formatting params)
+      (catch Exception e
+        (logger/error e))
+      (finally
+        (reset! formatting false)))))
+
+(defmethod lsp.server/handle-request "textDocument/codeAction" [_ _components params]
+  ;; ::coercer/code-actions
+  (handler/code-actions params))
+
+(defmethod lsp.server/handle-request "textDocument/codeLens" [_ _components params]
+  ;; ::coercer/code-lenses
+  (handler/code-lens params))
+
+(defmethod lsp.server/handle-request "textDocument/resolveCodeLens" [_ _components params]
+  ;; ::coercer/code-lens
+  (handler/code-lens-resolve params))
+
+(defmethod lsp.server/handle-request "textDocument/definition" [_ components params]
+  ;; ::coercer/location
+  (handler/definition params components))
+
+(defmethod lsp.server/handle-request "textDocument/declaration" [_ components params]
+  ;; ::coercer/location
+  (handler/declaration params components))
+
+(defmethod lsp.server/handle-request "textDocument/implementation" [_ components params]
+  ;; ::coercer/locations
+  (handler/implementation params components))
+
+(defmethod lsp.server/handle-request "textDocument/documentSymbol" [_ _components params]
+  ;; ::coercer/document-symbols
+  (handler/document-symbol params))
+
+(defmethod lsp.server/handle-request "textDocument/documentHighlight" [_ _components params]
+  ;; ::coercer/document-highlights
+  (handler/document-highlight params))
+
+(defmethod lsp.server/handle-request "textDocument/semanticTokensFull" [_ _components params]
+  ;; ::coercer/semantic-tokens
+  (handler/semantic-tokens-full params))
+
+(defmethod lsp.server/handle-request "textDocument/semanticTokensRange" [_ _components params]
+  ;; ::coercer/semantic-tokens
+  (handler/semantic-tokens-range params))
+
+(defmethod lsp.server/handle-request "textDocument/prepareCallHierarchy" [_ _components params]
+  ;; ::coercer/call-hierarchy-items
+  (handler/prepare-call-hierarchy params))
+
+(defmethod lsp.server/handle-request "textDocument/callHierarchyIncomingCalls" [_ _components params]
+  ;; ::coercer/call-hierarchy-incoming-calls
+  (handler/call-hierarchy-incoming params))
+
+(defmethod lsp.server/handle-request "textDocument/callHierarchyOutgoingCalls" [_ _components params]
+  ;; ::coercer/call-hierarchy-outgoing-calls
+  (handler/call-hierarchy-outgoing params))
+
+(defmethod lsp.server/handle-request "textDocument/linkedEditingRange" [_ _components params]
+  ;; ::coercer/linked-editing-ranges-or-error
+  (handler/linked-editing-ranges params))
+
+;;;; Workspace features
+
+;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
+
+(defmethod lsp.server/handle-notification "workspace/executeCommand" [_ components params]
+  (future
+    (try
+      (handler/execute-command params components)
+      (catch Throwable e
+        (logger/error e)
+        (throw e)))))
+
+(defmethod lsp.server/handle-notification "workspace/didChangeConfiguration" [_ _components params]
+  (logger/warn params))
+
+(defmethod lsp.server/handle-notification "workspace/didChangeWatchedFiles" [_ _components params]
+  (handler/did-change-watched-files params))
+
+(defmethod lsp.server/handle-request "workspace/symbol" [_ _components params]
+  ;; ::coercer/workspace-symbols
+  (handler/workspace-symbols params))
+
+(defmethod lsp.server/handle-request "workspace/willRenameFiles" [_ components params]
+  ;; ::coercer/workspace-edit
+  (handler/will-rename-files params components))
 
 (defn capabilities [settings]
   {:document-highlight-provider true
@@ -373,6 +346,40 @@
   (shutdown-agents)
   (System/exit 0))
 
+;;;; Lifecycle messages
+
+;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages
+
+(defmethod lsp.server/handle-request "initialize" [_ components params]
+  (logger/info "clojure-lsp initializing...")
+  (handler/initialize (:root-uri params)
+                              ;; TODO: lsp2clj do we need any of the client capabilities
+                              ;; coercion that used to happen?
+                      (:capabilities params)
+                      (client-settings params)
+                      (some-> params :work-done-token str)
+                      components)
+  (when-let [parent-process-id (:process-id params)]
+    (lsp.liveness-probe/start! parent-process-id exit))
+  ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
+  (capabilities (settings/all (deref (:db* components)))))
+
+(defmethod lsp.server/handle-notification "initialized" [_ components _params]
+  (lsp.endpoint/send-request
+    (:server components)
+    "client/registerCapability"
+    {:registrations [{:id "id"
+                      :method "workspace/didChangeWatchedFiles"
+                      :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}))
+
+(defmethod lsp.server/handle-request "shutdown" [_ components _params]
+  (logger/info "clojure-lsp Shutting down")
+  (reset! (:db* components) db/initial-db)
+  nil)
+
+(defmethod lsp.server/handle-notification "exit" [_ _components _params]
+  (exit))
+
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/go-loop []
      (try
@@ -407,39 +414,6 @@
         (shared/logging-task
           :analyze-created-files-in-watched-dir
           (f.file-management/analyze-watched-created-files! created-watched-files components))))))
-
-(defmethod lsp.server/handle-request "initialize" [_ components params]
-  (logger/info "clojure-lsp initializing...")
-  (handler/initialize (:root-uri params)
-                              ;; TODO: lsp2clj do we need any of the client capabilities
-                              ;; coercion that used to happen?
-                      (:capabilities params)
-                      (client-settings params)
-                      (some-> params :work-done-token str)
-                      components)
-  (when-let [parent-process-id (:process-id params)]
-    (lsp.liveness-probe/start! parent-process-id exit))
-  ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
-  (capabilities (settings/all (deref (:db* components)))))
-
-(defmethod lsp.server/handle-notification "initialized" [_ components _params]
-  (lsp.endpoint/send-request
-    (:server components)
-    "client/registerCapability"
-    {:registrations [{:id "id"
-                      :method "workspace/didChangeWatchedFiles"
-                      :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}))
-
-(defmethod lsp.server/handle-request "shutdown" [_ components _params]
-  (logger/info "clojure-lsp Shutting down")
-  (reset! (:db* components) db/initial-db)
-  nil)
-
-(defmethod lsp.server/handle-notification "exit" [_ _components _params]
-  (exit))
-
-(defmethod lsp.server/handle-notification "textDocument/didOpen" [_ components params]
-  (handler/did-open params components))
 
 (defn run-server! []
   (let [timbre-logger (->TimbreLogger)

@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.clojure-feature :as clojure-feature]
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
@@ -30,7 +29,6 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
-   [lsp4clj.protocols.feature-handler :as feature-handler]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer]))
 
@@ -479,85 +477,3 @@
   (shared/logging-task
     :will-rename-files
     (f.file-management/will-rename-files files @db*)))
-
-(defrecord ClojureLSPFeatureHandler [components*]
-  feature-handler/ILSPFeatureHandler
-  (initialize [_ project-root-uri client-capabilities client-settings work-done-token]
-    (initialize project-root-uri client-capabilities client-settings work-done-token @components*))
-  (did-open [_ doc]
-    (did-open doc @components*))
-  (did-change [_ doc]
-    (did-change doc))
-  (did-save [_ doc]
-    (did-save doc))
-  (execute-command [_ doc]
-    (execute-command doc @components*))
-  (did-close [_ doc]
-    (did-close doc))
-  (did-change-watched-files [_ doc]
-    (did-change-watched-files doc))
-  (references [_ doc]
-    (references doc @components*))
-  (completion [_ doc]
-    (completion doc))
-  (completion-resolve-item [_ doc]
-    (completion-resolve-item doc @components*))
-  (prepare-rename [_ doc]
-    (prepare-rename doc))
-  (rename [_ doc]
-    (rename doc))
-  (hover [_ doc]
-    (hover doc @components*))
-  (signature-help [_ doc]
-    (signature-help doc))
-  (formatting [_ doc]
-    (formatting doc))
-  (code-actions [_ doc]
-    (code-actions doc))
-  (code-lens [_ doc]
-    (code-lens doc))
-  (code-lens-resolve [_ doc]
-    (code-lens-resolve doc))
-  (definition [_ doc]
-    (definition doc @components*))
-  (declaration [_ doc]
-    (declaration doc @components*))
-  (implementation [_ doc]
-    (implementation doc @components*))
-  (document-symbol [_ doc]
-    (document-symbol doc))
-  (document-highlight [_ doc]
-    (document-highlight doc))
-  (semantic-tokens-full [_ doc]
-    (semantic-tokens-full doc))
-  (semantic-tokens-range [_ doc]
-    (semantic-tokens-range doc))
-  (prepare-call-hierarchy [_ doc]
-    (prepare-call-hierarchy doc))
-  (call-hierarchy-incoming [_ doc]
-    (call-hierarchy-incoming doc))
-  (call-hierarchy-outgoing [_ doc]
-    (call-hierarchy-outgoing doc))
-  (linked-editing-ranges [_ doc]
-    (linked-editing-ranges doc))
-  (workspace-symbols [_ doc]
-    (workspace-symbols doc))
-  (will-rename-files [_ rename-files]
-    (will-rename-files rename-files @components*))
-  (range-formatting [_ doc]
-    (range-formatting doc))
-  ;; (did-delete-files [_ doc]
-  ;;   (did-delete-files doc))
-  clojure-feature/IClojureLSPFeature
-  (cursor-info-log [_ doc]
-    (cursor-info-log doc @components*))
-  (cursor-info-raw [_ doc]
-    (cursor-info-raw doc))
-  (server-info-raw [_]
-    (server-info-raw))
-  (clojuredocs-raw [_ doc]
-    (clojuredocs-raw doc @components*))
-  (server-info-log [_]
-    (server-info-log @components*))
-  (dependency-contents [_ doc-id]
-    (dependency-contents doc-id @components*)))

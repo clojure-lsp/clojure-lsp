@@ -1,19 +1,25 @@
 (ns clojure-lsp.server
   (:require
+   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
+   [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handler]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [lsp4clj.json-rpc.messages :as lsp.messages]
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
    [lsp4clj.protocols.endpoint :as lsp.endpoint]
    [lsp4clj.protocols.logger :as logger]
+   [lsp4clj.protocols.producer :as producer]
    [lsp4clj.server :as lsp.server]
-   [taoensso.timbre :as timbre]))
+   [taoensso.timbre :as timbre])
+  (:import
+   (lsp4clj.protocols.endpoint IEndpoint)))
 
 (set! *warn-on-reflection* true)
 
@@ -55,45 +61,60 @@
   (-debug [_this fmeta arg1 arg2] (log! :debug [arg1 arg2] fmeta))
   (-debug [_this fmeta arg1 arg2 arg3] (log! :debug [arg1 arg2 arg3] fmeta)))
 
-;; (defrecord ^:private ClojureLspProducer
-;;            [^ClojureLanguageClient client
-;;             ^ILSPProducer lsp-producer
-;;             db*]
-;;   producer/ILSPProducer
-;;   (publish-diagnostic [_this diagnostic]
-;;     (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
-;;     (shared/logging-task
-;;       :publish-diagnostics
-;;       (producer/publish-diagnostic lsp-producer diagnostic)))
-;;   (refresh-code-lens [_this]
-;;     (producer/refresh-code-lens lsp-producer))
-;;   (publish-workspace-edit [_this edit]
-;;     (some-> (producer/publish-workspace-edit lsp-producer edit)
-;;             deref))
-;;   (show-document-request [_this document-request]
-;;     (producer/show-document-request lsp-producer document-request))
-;;   (publish-progress [_this percentage message progress-token]
-;;     (producer/publish-progress lsp-producer percentage message progress-token))
-;;   (show-message-request [_this message type actions]
-;;     (producer/show-message-request lsp-producer message type actions))
-;;   (show-message [_this message type extra]
-;;     (producer/show-message lsp-producer message type extra))
-;;   (register-capability [_this capability]
-;;     (producer/register-capability lsp-producer capability))
-;;
-;;   clojure-producer/IClojureProducer
-;;   (refresh-test-tree [_this uris]
-;;     (go
-;;       (let [db @db*]
-;;         (when (some-> db :client-capabilities :experimental j/from-java :testTree)
-;;           (shared/logging-task
-;;             :refreshing-test-tree
-;;             (doseq [uri uris]
-;;               (when-let [test-tree (f.test-tree/tree uri db)]
-;;                 (->> test-tree
-;;                      (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
-;;                      (.publishTestTree client))))))))))
-;;
+;; TODO: lsp2clj bring the ILSPProducer protocol from lsp4clj into clojure-lsp. We
+;; need it so that we can provide dummy implementations on CLI and tests. Other
+;; servers can organize however they wish.
+(defrecord ^:private ClojureLspProducer
+           [^IEndpoint server
+            db*]
+  producer/ILSPProducer
+  (publish-diagnostic [_this diagnostic]
+    ;; TODO: lsp2clj turn back on
+    #_(logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
+    #_(shared/logging-task
+        :publish-diagnostics
+        (producer/publish-diagnostic lsp-producer diagnostic)))
+  (refresh-code-lens [_this]
+    ;; TODO: lsp2clj turn back on
+    #_(producer/refresh-code-lens lsp-producer))
+  (publish-workspace-edit [_this edit]
+    ;; TODO: lsp2clj turn back on
+    #_(some-> (producer/publish-workspace-edit lsp-producer edit)
+              deref))
+  (show-document-request [_this document-request]
+    ;; TODO: lsp2clj turn back on
+    #_(producer/show-document-request lsp-producer document-request))
+  (publish-progress [_this percentage message progress-token]
+    (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
+           ;; TODO lsp2clj restore?
+           ;; (coercer/conform-or-log ::coercer/notify-progress)
+         (lsp.endpoint/send-notification server "$/progress"))
+    #_(producer/publish-progress lsp-producer percentage message progress-token))
+  (show-message-request [_this message type actions]
+    ;; TODO: lsp2clj turn back on
+    #_(producer/show-message-request lsp-producer message type actions))
+  (show-message [_this message type extra]
+    ;; TODO: lsp2clj turn back on
+    #_(producer/show-message lsp-producer message type extra))
+  ;; TODO: lsp2clj this is now unused; remove from protocol
+  (register-capability [_this capability]
+    ;; TODO: lsp2clj turn back on
+    #_(producer/register-capability lsp-producer capability))
+
+  clojure-producer/IClojureProducer
+  (refresh-test-tree [_this uris]
+    (async/go
+      (let [db @db*]
+        (when (some-> db :client-capabilities :experimental :test-tree)
+          (shared/logging-task
+            :refreshing-test-tree
+            (doseq [uri uris]
+              (when-let [test-tree (f.test-tree/tree uri db)]
+                (->> test-tree
+                     ;; TODO: lsp2clj restore?
+                     ;; (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
+                     (lsp.endpoint/send-notification server "clojure/textDocument/testTree"))))))))))
+
 ;; (deftype ClojureLspServer
 ;;          [^LSPServer lsp-server
 ;;           ^ILSPFeatureHandler feature-handler]
@@ -256,6 +277,14 @@
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
   (capabilities (settings/all (deref (:db* @components*)))))
 
+(defmethod lsp.server/handle-notification "initialized" [_ _params]
+  (lsp.endpoint/send-request
+    (:server @components*)
+    "client/registerCapability"
+    {:registrations [{:id "id" ;; TODO: lsp2clj this is what it was, but seems odd. Would only be used to unregister capability.
+                      :method "workspace/didChangeWatchedFiles"
+                      :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}))
+
 (defn run-server! []
   (let [timbre-logger (->TimbreLogger)
         log-path (logger/setup timbre-logger)
@@ -264,8 +293,10 @@
         server (lsp.server/stdio-server {:trace? true
                                          :in System/in
                                          :out System/out})
+        producer (ClojureLspProducer. server db*)
         components {:db* db*
                     :logger timbre-logger
+                    :producer producer
                     :server server}]
     (logger/info "[SERVER]" "Starting server...")
     (nrepl/setup-nrepl db*)

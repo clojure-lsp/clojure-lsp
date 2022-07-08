@@ -116,11 +116,11 @@
               (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
-(defn did-open [{:keys [textDocument]} {:keys [producer db*]}]
+(defn did-open [{:keys [text-document]} {:keys [producer db*]}]
   (shared/logging-task
     :did-open
-    (let [uri (:uri textDocument)
-          text (:text textDocument)]
+    (let [uri (:uri text-document)
+          text (:text text-document)]
       (f.file-management/did-open uri text db* true)
       (clojure-producer/refresh-test-tree producer [uri])))
   nil)

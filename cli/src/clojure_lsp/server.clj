@@ -1,6 +1,7 @@
 (ns clojure-lsp.server
   (:require
    [clojure-lsp.clojure-producer :as clojure-producer]
+   [clojure-lsp.coercer-v1 :as coercer-v1]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
@@ -295,45 +296,47 @@
   (handler/will-rename-files params components))
 
 (defn capabilities [settings]
-  {:document-highlight-provider true
-   :hover-provider true
-   :declaration-provider true
-   :implementation-provider true
-   :signature-help-provider []
-   :call-hierarchy-provider true
-   :linked-editing-range-provider true
-   :code-action-provider ["quickfix"
-                          "refactor"
-                          "refactor.extract"
-                          "refactor.inline"
-                          "refactor.rewrite"
-                          "source"
-                          "source.organizeImports"
-                          #_"source.fixAll"]
-   :code-lens-provider true
-   :references-provider true
-   :rename-provider true
-   :definition-provider true
-   :document-formatting-provider ^Boolean (:document-formatting? settings)
-   :document-range-formatting-provider ^Boolean (:document-range-formatting? settings)
-   :document-symbol-provider true
-   :workspace-symbol-provider true
-   :workspace {:file-operations {:will-rename {:filters [{:scheme "file"
-                                                          :pattern {:glob known-files-pattern
-                                                                    :matches "file"}}]}}}
-   :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
-                                       (:semantic-tokens? settings))
-                               {:token-types semantic-tokens/token-types-str
-                                :token-modifiers semantic-tokens/token-modifiers-str
-                                :range true
-                                :full true})
-   :execute-command-provider f.refactor/available-refactors
-   :text-document-sync (:text-document-sync-kind settings)
-   :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
-   :experimental {:test-tree true
-                  :cursor-info true
-                  :server-info true
-                  :clojuredocs true}})
+  (coercer-v1/conform-or-log
+    ::coercer-v1/server-capabilities
+    {:document-highlight-provider true
+     :hover-provider true
+     :declaration-provider true
+     :implementation-provider true
+     :signature-help-provider []
+     :call-hierarchy-provider true
+     :linked-editing-range-provider true
+     :code-action-provider ["quickfix"
+                            "refactor"
+                            "refactor.extract"
+                            "refactor.inline"
+                            "refactor.rewrite"
+                            "source"
+                            "source.organizeImports"
+                            #_"source.fixAll"]
+     :code-lens-provider true
+     :references-provider true
+     :rename-provider true
+     :definition-provider true
+     :document-formatting-provider ^Boolean (:document-formatting? settings)
+     :document-range-formatting-provider ^Boolean (:document-range-formatting? settings)
+     :document-symbol-provider true
+     :workspace-symbol-provider true
+     :workspace {:file-operations {:will-rename {:filters [{:scheme "file"
+                                                            :pattern {:glob known-files-pattern
+                                                                      :matches "file"}}]}}}
+     :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
+                                         (:semantic-tokens? settings))
+                                 {:token-types semantic-tokens/token-types-str
+                                  :token-modifiers semantic-tokens/token-modifiers-str
+                                  :range true
+                                  :full true})
+     :execute-command-provider f.refactor/available-refactors
+     :text-document-sync (:text-document-sync-kind settings)
+     :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
+     :experimental {:test-tree true
+                    :cursor-info true
+                    :server-info true
+                    :clojuredocs true}}))
 
 (defn client-settings [params]
   (-> params

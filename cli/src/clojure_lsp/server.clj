@@ -176,7 +176,7 @@
   ;; ::coercer/completion-items
   (handler/completion params))
 
-(defmethod lsp.server/handle-request "textDocument/resolveCompletionItem" [_ components item]
+(defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
   ;; ::coercer/completion-item
   (handler/completion-resolve-item item components))
 
@@ -220,7 +220,7 @@
   ;; ::coercer/code-lenses
   (handler/code-lens params))
 
-(defmethod lsp.server/handle-request "textDocument/resolveCodeLens" [_ _components params]
+(defmethod lsp.server/handle-request "codeLens/resolve" [_ _components params]
   ;; ::coercer/code-lens
   (handler/code-lens-resolve params))
 
@@ -244,11 +244,11 @@
   ;; ::coercer/document-highlights
   (handler/document-highlight params))
 
-(defmethod lsp.server/handle-request "textDocument/semanticTokensFull" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/semanticTokens/full" [_ _components params]
   ;; ::coercer/semantic-tokens
   (handler/semantic-tokens-full params))
 
-(defmethod lsp.server/handle-request "textDocument/semanticTokensRange" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/semanticTokens/range" [_ _components params]
   ;; ::coercer/semantic-tokens
   (handler/semantic-tokens-range params))
 
@@ -256,11 +256,11 @@
   ;; ::coercer/call-hierarchy-items
   (handler/prepare-call-hierarchy params))
 
-(defmethod lsp.server/handle-request "textDocument/callHierarchyIncomingCalls" [_ _components params]
+(defmethod lsp.server/handle-request "callHierarchy/incomingCalls" [_ _components params]
   ;; ::coercer/call-hierarchy-incoming-calls
   (handler/call-hierarchy-incoming params))
 
-(defmethod lsp.server/handle-request "textDocument/callHierarchyOutgoingCalls" [_ _components params]
+(defmethod lsp.server/handle-request "callHierarchy/outgoingCalls" [_ _components params]
   ;; ::coercer/call-hierarchy-outgoing-calls
   (handler/call-hierarchy-outgoing params))
 
@@ -362,7 +362,7 @@
   (when-let [parent-process-id (:process-id params)]
     (lsp.liveness-probe/start! parent-process-id exit))
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
-  (capabilities (settings/all (deref (:db* components)))))
+  {:capabilities (capabilities (settings/all (deref (:db* components))))})
 
 (defmethod lsp.server/handle-notification "initialized" [_ components _params]
   (lsp.endpoint/send-request

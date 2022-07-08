@@ -61,6 +61,9 @@
   (-debug [_this fmeta arg1 arg2] (log! :debug [arg1 arg2] fmeta))
   (-debug [_this fmeta arg1 arg2 arg3] (log! :debug [arg1 arg2 arg3] fmeta)))
 
+(defn publish-diagnostic [server diagnostic]
+  (lsp.endpoint/send-notification server "textDocument/publishDiagnostics" diagnostic))
+
 ;; TODO: lsp2clj bring the ILSPProducer protocol from lsp4clj into clojure-lsp. We
 ;; need it so that we can provide dummy implementations on CLI and tests. Other
 ;; servers can organize however they wish.
@@ -70,10 +73,10 @@
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
     ;; TODO: lsp2clj turn back on
-    #_(logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
-    #_(shared/logging-task
-        :publish-diagnostics
-        (producer/publish-diagnostic lsp-producer diagnostic)))
+    (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
+    (shared/logging-task
+      :publish-diagnostics
+      (publish-diagnostic server diagnostic)))
   (refresh-code-lens [_this]
     ;; TODO: lsp2clj turn back on
     #_(producer/refresh-code-lens lsp-producer))
@@ -242,8 +245,7 @@
            deref))
     (safe-async-task
       :diagnostics
-      (->> (async/<! debounced-diags)
-           (lsp.endpoint/send-notification server "textDocument/publishDiagnostics")))
+      (publish-diagnostic server (async/<! debounced-diags)))
     (safe-async-task
       :changes
       (let [changes (async/<! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time

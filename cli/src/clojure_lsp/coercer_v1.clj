@@ -78,7 +78,13 @@
 ;;                              (string/lower-case map-key)
 ;;                              (keyword map-key))))))
 ;;
-;; (def watched-files-type-enum {1 :created 2 :changed 3 :deleted})
+(def file-change-type-enum {1 :created 2 :changed 3 :deleted})
+(s/def :file-event/type (s/and int?
+                               file-change-type-enum
+                               (s/conformer file-change-type-enum)))
+(s/def ::file-event (s/keys :req-un [::uri :file-event/type]))
+(s/def :did-change-watched-files/changes (s/coll-of ::file-event))
+(s/def ::did-change-watched-files-params (s/keys :req-un [:did-change-watched-files/changes]) )
 ;;
 ;; (defn document->uri [^TextDocumentIdentifier document]
 ;;   (.getUri document))
@@ -136,14 +142,12 @@
 ;;
 ;; (s/def ::response-error (s/and (s/keys :req-un [::error])))
 ;;
-;; (s/def ::line (s/and integer? (s/conformer int)))
-;; (s/def ::character (s/and integer? (s/conformer int)))
-;; (s/def ::position (s/and (s/keys :req-un [::line ::character])
-;;                          (s/conformer #(Position. (:line %1) (:character %1)))))
-;; (s/def ::start ::position)
-;; (s/def ::end ::position)
-;; (s/def ::range (s/and (s/keys :req-un [::start ::end])
-;;                       (s/conformer #(Range. (:start %1) (:end %1)))))
+(s/def ::line (s/and integer? (s/conformer int)))
+(s/def ::character (s/and integer? (s/conformer int)))
+(s/def ::position (s/keys :req-un [::line ::character]))
+(s/def ::start ::position)
+(s/def ::end ::position)
+(s/def ::range (s/keys :req-un [::start ::end]))
 ;; (s/def ::selection-range ::range)
 ;;
 (def completion-kind-enum
@@ -181,34 +185,14 @@
 ;;                :start ::range)
 ;;          (s/conformer second)))
 ;;
-(s/def ::completion-item (s/and (s/keys :req-un [::label]
-                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
-                                                 :completion-item.v1/kind ::documentation ::data
-                                                 ::insert-text :completion-item.v1/insert-text-format])
-                                (s/conformer (fn [{:keys [label
-                                                          additional-text-edits
-                                                          filter-text
-                                                          detail
-                                                          text-edit
-                                                          kind
-                                                          documentation
-                                                          data
-                                                          insert-text
-                                                          insert-text-format]}]
-                                               (medley/assoc-some {:label label}
-                                                                  :filter-text filter-text
-                                                                  :kind kind
-                                                                  :text-edit text-edit
-                                                                  :additional-text-edits additional-text-edits
-                                                                  :insert-text insert-text
-                                                                  :insert-text-format insert-text-format
-                                                                  :detail detail
-                                                                  :documentation documentation
-                                                                  :data data)))))
+(s/def ::completion-item (s/keys :req-un [::label]
+                                 :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
+                                          :completion-item.v1/kind ::documentation ::data
+                                          ::insert-text :completion-item.v1/insert-text-format]))
 
 (s/def ::completion-items (s/coll-of ::completion-item))
 ;; (s/def ::version (s/and integer? (s/conformer int)))
-;; (s/def ::uri string?)
+(s/def ::uri string?)
 ;; (s/def ::edits (s/coll-of ::text-edit))
 ;; (s/def ::text-document (s/and (s/keys :req-un [::version ::uri])
 ;;                               (s/conformer #(VersionedTextDocumentIdentifier. (:uri %) (:version %)))))
@@ -297,32 +281,27 @@
 ;;                                                (.setActiveSignature (some-> % :active-signature int))
 ;;                                                (.setActiveParameter (some-> % :active-parameter int))))))
 ;;
-;; (def symbol-kind-enum
-;;   {:file 1 :module 2 :namespace 3 :package 4 :class 5 :method 6 :property 7 :field 8 :constructor 9
-;;    :enum 10 :interface 11 :function 12 :variable 13 :constant 14 :string 15 :number 16 :boolean 17
-;;    :array 18 :object 19 :key 20 :null 21 :enum-member 22 :struct 23 :event 24 :operator 25
-;;    :type-parameter 26})
-;;
-;; (s/def :symbol/kind (s/and keyword?
-;;                            symbol-kind-enum
-;;                            (s/conformer (fn [v] (SymbolKind/forValue (get symbol-kind-enum v))))))
-;;
-;; (s/def :document-symbol/selection-range ::range)
-;;
-;; (s/def :document-symbol/detail string?)
-;;
-;; (s/def ::document-symbol (s/and (s/keys :req-un [::name :symbol/kind ::range :document-symbol/selection-range]
-;;                                         :opt-un [:document-symbol/detail :document-symbol/children])
-;;                                 (s/conformer (fn [m]
-;;                                                (DocumentSymbol. (:name m) (:kind m) (:range m)
-;;                                                                 (:selection-range m) (:detail m) (:children m))))))
-;;
-;; (s/def :document-symbol/children (s/coll-of ::document-symbol))
-;;
-;; (s/def ::document-symbols (s/and (s/coll-of ::document-symbol)
-;;                                  (s/conformer (fn [c]
-;;                                                 (map #(Either/forRight %) c)))))
-;;
+(def symbol-kind-enum
+  {:file 1 :module 2 :namespace 3 :package 4 :class 5 :method 6 :property 7 :field 8 :constructor 9
+   :enum 10 :interface 11 :function 12 :variable 13 :constant 14 :string 15 :number 16 :boolean 17
+   :array 18 :object 19 :key 20 :null 21 :enum-member 22 :struct 23 :event 24 :operator 25
+   :type-parameter 26})
+
+(s/def :symbol.v1/kind (s/and keyword?
+                              symbol-kind-enum
+                              (s/conformer symbol-kind-enum)))
+
+(s/def :document-symbol.v1/selection-range ::range)
+
+(s/def :document-symbol.v1/detail string?)
+
+(s/def ::document-symbol (s/keys :req-un [::name :symbol.v1/kind ::range :document-symbol.v1/selection-range]
+                                 :opt-un [:document-symbol.v1/detail :document-symbol.v1/children]))
+
+(s/def :document-symbol.v1/children (s/coll-of ::document-symbol))
+
+(s/def ::document-symbols (s/coll-of ::document-symbol))
+
 ;; (s/def ::document-highlight (s/and (s/keys :req-un [::range])
 ;;                                    (s/conformer (fn [m]
 ;;                                                   (DocumentHighlight. (:range m))))))

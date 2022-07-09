@@ -239,8 +239,9 @@
   (handler/implementation params components))
 
 (defmethod lsp.server/handle-request "textDocument/documentSymbol" [_ components params]
-  ;; ::coercer/document-symbols
-  (handler/document-symbol params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/document-symbols
+    (handler/document-symbol params components)))
 
 (defmethod lsp.server/handle-request "textDocument/documentHighlight" [_ components params]
   ;; ::coercer/document-highlights
@@ -286,7 +287,7 @@
   (logger/warn params))
 
 (defmethod lsp.server/handle-notification "workspace/didChangeWatchedFiles" [_ components params]
-  (handler/did-change-watched-files params components))
+  (handler/did-change-watched-files (coercer-v1/conform-or-log ::coercer-v1/did-change-watched-files-params params) components))
 
 (defmethod lsp.server/handle-request "workspace/symbol" [_ components params]
   ;; ::coercer/workspace-symbols

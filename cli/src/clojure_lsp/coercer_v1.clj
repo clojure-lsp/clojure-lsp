@@ -1,70 +1,12 @@
 (ns clojure-lsp.coercer-v1
   (:require
-   [clojure.data.json :as json]
-   [clojure.java.data :as j]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as string]
-   [clojure.walk :as walk]
-   [lsp4clj.protocols.logger :as logger]
-   [medley.core :as medley]
    [clojure.set :as set]
-   [lsp4clj.json-rpc.messages :as lsp.messages])
+   [clojure.spec.alpha :as s]
+   [lsp4clj.json-rpc.messages :as lsp.messages]
+   [lsp4clj.protocols.logger :as logger])
   (:import
-   (com.google.gson JsonElement)
-   (org.eclipse.lsp4j
-     CallHierarchyIncomingCall
-     CallHierarchyItem
-     CallHierarchyOutgoingCall
-     CodeAction
-     CodeActionKind
-     CodeLens
-     Command
-     CompletionItem
-     CompletionItemKind
-     CreateFile
-     CreateFileOptions
-     Diagnostic
-     DiagnosticSeverity
-     DocumentHighlight
-     DocumentSymbol
-     FileChangeType
-     Hover
-     InsertTextFormat
-     LinkedEditingRanges
-     Location
-     MarkedString
-     MarkupContent
-     MessageActionItem
-     MessageParams
-     MessageType
-     ParameterInformation
-     Position
-     PrepareRenameResult
-     ProgressParams
-     PublishDiagnosticsParams
-     Range
-     RenameFile
-     SemanticTokens
-     ShowDocumentParams
-     ShowMessageRequestParams
-     SignatureHelp
-     SignatureInformation
-     SymbolInformation
-     SymbolKind
-     TextDocumentEdit
-     TextDocumentIdentifier
-     TextDocumentSyncKind
-     TextEdit
-     VersionedTextDocumentIdentifier
-     WorkDoneProgressBegin
-     WorkDoneProgressEnd
-     WorkDoneProgressKind
-     WorkDoneProgressNotification
-     WorkDoneProgressReport
-     WorkspaceEdit)
    (org.eclipse.lsp4j.jsonrpc
-     ResponseErrorException)
-   (org.eclipse.lsp4j.jsonrpc.messages Either ResponseError ResponseErrorCode)))
+     ResponseErrorException)))
 
 (set! *warn-on-reflection* true)
 
@@ -345,37 +287,32 @@
 ;;                                 :opt-un [:command/arguments])
 ;;                         (s/conformer #(Command. (:title %1) (:command %1) (:arguments %1)))))
 ;;
-;; (def show-message-type-enum
-;;   {:error MessageType/Error
-;;    :warning MessageType/Warning
-;;    :info MessageType/Info
-;;    :log MessageType/Log})
-;;
-;; (s/def :show-message/type (s/and keyword?
-;;                                  show-message-type-enum
-;;                                  (s/conformer #(get show-message-type-enum %))))
-;;
-;; (s/def :show-message/message string?)
-;;
-;; (s/def ::show-message (s/and (s/keys :req-un [:show-message/type
-;;                                               :show-message/message])
-;;                              (s/conformer #(MessageParams. (:type %) (:message %)))))
-;;
-;; (s/def :show-message-request-action/title string?)
-;;
-;; (s/def :show-message-request/action (s/and (s/keys :req-un [:show-message-request-action/title])
-;;                                            (s/conformer #(MessageActionItem. (:title %)))))
-;;
-;; (s/def :show-message-request/actions (s/coll-of :show-message-request/action))
-;;
-;; (s/def ::show-message-request (s/and (s/keys :req-un [:show-message/type
-;;                                                       :show-message/message]
-;;                                              :opt-un [:show-message-request/actions])
-;;                                      (s/conformer #(doto (ShowMessageRequestParams.)
-;;                                                      (.setMessage (:message %))
-;;                                                      (.setType (:type %))
-;;                                                      (.setActions (:actions %))))))
-;;
+
+(def show-message-type-enum
+  {:error 1
+   :warning 2
+   :info 3
+   :log 4})
+
+(s/def :show-message.v1/type (s/and keyword?
+                                 show-message-type-enum
+                                 (s/conformer show-message-type-enum)))
+
+(s/def :show-message.v1/message string?)
+
+(s/def ::show-message (s/keys :req-un [:show-message.v1/type
+                                       :show-message.v1/message]))
+
+(s/def :show-message-request-action.v1/title string?)
+
+(s/def :show-message-request.v1/action (s/keys :req-un [:show-message-request-action.v1/title]))
+
+(s/def :show-message-request.v1/actions (s/coll-of :show-message-request.v1/action))
+
+(s/def ::show-message-request (s/keys :req-un [:show-message.v1/type
+                                               :show-message.v1/message]
+                                      :opt-un [:show-message-request.v1/actions]))
+
 ;; (def work-done-progress-kind-enum
 ;;   {:begin WorkDoneProgressKind/begin
 ;;    :report WorkDoneProgressKind/report

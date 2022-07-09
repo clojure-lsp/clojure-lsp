@@ -72,12 +72,14 @@
            [^IEndpoint server
             db*]
   producer/ILSPProducer
+
   (publish-diagnostic [_this diagnostic]
     ;; ::coercer/publish-diagnostics-params
     (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
     (shared/logging-task
       :publish-diagnostics
       (publish-diagnostic server diagnostic)))
+
   (refresh-code-lens [_this]
     ;; TODO: lsp2clj turn back on
     ;; (when-let [code-lens-capability ^CodeLensWorkspaceCapabilities (get-in @db [:client-capabilities :workspace :code-lens])]
@@ -95,35 +97,36 @@
       (->> document-request
            (coercer-v1/conform-or-log ::coercer-v1/show-document-request)
            (lsp.endpoint/send-request server "window/showDocument"))))
+
   (publish-progress [_this percentage message progress-token]
     ;; ::coercer/notify-progress
     (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
          (lsp.endpoint/send-notification server "$/progress")))
-  (show-message-request [_this _message _type _actions]
-    ;; (let [result (->> {:type type
-    ;;                    :message message
-    ;;                    :actions actions}
-    ;;                   (coercer/conform-or-log ::coercer/show-message-request)
-    ;;                   (.showMessageRequest client)
-    ;;                   .get)]
-    ;;   (.getTitle ^MessageActionItem result))
-    ;; TODO: lsp2clj turn back on
-    #_(producer/show-message-request lsp-producer message type actions))
-  (show-message [_this _message _type _extra]
-    ;; (let [message-content {:message message
-    ;;                        :type type
-    ;;                        :extra extra}]
-    ;;   (logger/info message-content)
-    ;;   (->> message-content
-    ;;        (coercer/conform-or-log ::coercer/show-message)
-    ;;        (.showMessage client)))
-    ;; TODO: lsp2clj turn back on
-    #_(producer/show-message lsp-producer message type extra))
-  ;; TODO: lsp2clj this is now unused; remove from protocol
+
+  (show-message-request [_this message type actions]
+    (->> {:type type
+          :message message
+          :actions actions}
+         (coercer-v1/conform-or-log ::coercer-v1/show-message-request)
+         (lsp.endpoint/send-request server "window/showMessageRequest")
+         deref
+         :title))
+
+  (show-message [_this message type extra]
+    (let [message-content {:message message
+                           :type type
+                           :extra extra}]
+      (logger/info message-content)
+      (->> message-content
+           (coercer-v1/conform-or-log ::coercer-v1/show-message)
+           (lsp.endpoint/send-notification server "window/showMessage"))))
+
+  ;; TODO: lsp2clj capabilities are now registered directly by "initialized"
+  ;; handler, meaning this is unused by clojure-lsp; remove from its version of
+  ;; protocol
   (register-capability [_this _capability]
-    ;; TODO: lsp2clj turn back on
     ;; (.registerCapability client capability)
-    #_(producer/register-capability lsp-producer capability))
+    )
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]

@@ -13,6 +13,7 @@
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification sample-file-path))
+  (lsp/client-awaits-server-diagnostics sample-file-path)
 
   (testing "Change is applied"
     (is (= "original"

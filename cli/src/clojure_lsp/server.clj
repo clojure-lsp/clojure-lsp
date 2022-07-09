@@ -87,11 +87,9 @@
       (publish-diagnostic server diagnostic)))
 
   (refresh-code-lens [_this]
-    ;; TODO: lsp2clj turn back on
-    ;; (when-let [code-lens-capability ^CodeLensWorkspaceCapabilities (get-in @db [:client-capabilities :workspace :code-lens])]
-    ;;   (when (.getRefreshSupport code-lens-capability)
-    ;;     (.refreshCodeLenses client)))
-    #_(producer/refresh-code-lens lsp-producer))
+    (when (get-in @db* [:client-capabilities :workspace :code-lens :refresh-support])
+      (lsp.endpoint/send-request server "workspace/codeLens/refresh" nil)))
+
   (publish-workspace-edit [_this edit]
     (apply-edit server edit))
 

@@ -65,6 +65,12 @@
 (defn publish-diagnostic [server diagnostic]
   (lsp.endpoint/send-notification server "textDocument/publishDiagnostics" diagnostic))
 
+(defn apply-edit [server edit]
+  (->> edit
+       (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-or-error)
+       (lsp.endpoint/send-request server "workspace/applyEdit")
+       deref))
+
 ;; TODO: lsp2clj bring the ILSPProducer protocol from lsp4clj into clojure-lsp. We
 ;; need it so that we can provide dummy implementations on CLI and tests. Other
 ;; servers can organize however they wish.
@@ -87,10 +93,8 @@
     ;;     (.refreshCodeLenses client)))
     #_(producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
-    (->> edit
-         (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-or-error)
-         (lsp.endpoint/send-request server "workspace/applyEdit")
-         deref))
+    (apply-edit server edit))
+
   (show-document-request [_this document-request]
     (logger/info "Requesting to show on editor the document" document-request)
     (when (get-in @db* [:client-capabilities :window :show-document])
@@ -426,10 +430,7 @@
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     (safe-async-task
       :edits
-      (->> (async/<! db/edits-chan)
-           ;; TODO: (coercer/conform-or-log ::coercer/workspace-edit-or-error)
-           (lsp.endpoint/send-request server "workspace/applyEdit")
-           deref))
+      (apply-edit server (async/<! db/edits-chan)))
     (safe-async-task
       :diagnostics
       (publish-diagnostic server (async/<! debounced-diags)))

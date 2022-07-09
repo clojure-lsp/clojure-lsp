@@ -6,7 +6,9 @@
    [clojure.string :as string]
    [clojure.walk :as walk]
    [lsp4clj.protocols.logger :as logger]
-   [medley.core :as medley])
+   [medley.core :as medley]
+   [clojure.set :as set]
+   [lsp4clj.json-rpc.messages :as lsp.messages])
   (:import
    (com.google.gson JsonElement)
    (org.eclipse.lsp4j
@@ -84,7 +86,7 @@
                                (s/conformer file-change-type-enum)))
 (s/def ::file-event (s/keys :req-un [::uri :file-event/type]))
 (s/def :did-change-watched-files/changes (s/coll-of ::file-event))
-(s/def ::did-change-watched-files-params (s/keys :req-un [:did-change-watched-files/changes]) )
+(s/def ::did-change-watched-files-params (s/keys :req-un [:did-change-watched-files/changes]))
 ;;
 ;; (defn document->uri [^TextDocumentIdentifier document]
 ;;   (.getUri document))
@@ -122,26 +124,19 @@
 ;;       .toString
 ;;       json/read-str
 ;;       walk/keywordize-keys))
-;;
-;; (defn respond-with-error [e]
-;;   (let [error (ResponseError. (.getValue ^ResponseErrorCode (:code e))
-;;                               ^String (:message e)
-;;                               nil)]
-;;     (throw (ResponseErrorException. error))))
-;;
-;; (def error-code-enum
-;;   {:invalid-params ResponseErrorCode/InvalidParams})
-;;
-;; (s/def :error/code (s/and keyword?
-;;                           error-code-enum
-;;                           (s/conformer #(get error-code-enum %))))
-;; (s/def :error/message string?)
-;;
-;; (s/def ::error (s/and (s/keys :req-un [:error/code :error/message])
-;;                       (s/conformer respond-with-error)))
-;;
-;; (s/def ::response-error (s/and (s/keys :req-un [::error])))
-;;
+
+(s/def :error.v1/code (s/and (s/or :kw keyword? :int int?)
+                             (s/conformer second)))
+(s/def :error.v1/message string?)
+
+(s/def ::error (s/keys :req-un [:error.v1/code :error.v1/message]
+                       :opt-un [::data]))
+
+(s/def ::response-error (s/and (s/keys :req-un [::error])
+                               (s/conformer
+                                 (fn [{:keys [error]}]
+                                   (lsp.messages/error-response (:code error) (:message error) (:data error))))))
+
 (s/def ::line (s/and integer? (s/conformer int)))
 (s/def ::character (s/and integer? (s/conformer int)))
 (s/def ::position (s/keys :req-un [::line ::character]))
@@ -156,8 +151,8 @@
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
 (s/def :completion-item.v1/kind (s/and keyword?
-                                    completion-kind-enum
-                                    (s/conformer completion-kind-enum)))
+                                       completion-kind-enum
+                                       (s/conformer completion-kind-enum)))
 
 (def insert-text-format-enum
   {:plaintext 1
@@ -191,55 +186,43 @@
                                           ::insert-text :completion-item.v1/insert-text-format]))
 
 (s/def ::completion-items (s/coll-of ::completion-item))
-;; (s/def ::version (s/and integer? (s/conformer int)))
+(s/def ::version (s/and integer? (s/conformer int)))
 (s/def ::uri string?)
-;; (s/def ::edits (s/coll-of ::text-edit))
-;; (s/def ::text-document (s/and (s/keys :req-un [::version ::uri])
-;;                               (s/conformer #(VersionedTextDocumentIdentifier. (:uri %) (:version %)))))
-;; (s/def ::text-document-edit (s/and (s/keys :req-un [::text-document ::edits])
-;;                                    (s/conformer #(TextDocumentEdit. (:text-document %1) (:edits %1)))))
-;; (s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
-;;
-;; (s/def :create-file/options (s/and (s/keys :opt-un [::overwrite? ::ignore-if-exists?])
-;;                                    (s/conformer #(CreateFileOptions. (boolean (:overwrite? %))
-;;                                                                      (boolean (:ignore-if-exists? %))))))
-;;
-;; (s/def :create-file/kind (s/and string?
-;;                                 #(= % "create")))
-;; (s/def ::create-file (s/and (s/keys :req-un [:create-file/kind ::uri]
-;;                                     :opt-un [:create-file/options])
-;;                             (s/conformer #(CreateFile. (:uri %) (:options %)))))
-;; (s/def :rename-file/kind (s/and string?
-;;                                 #(= % "rename")))
-;; (s/def :rename-file/old-uri ::uri)
-;; (s/def :rename-file/new-uri ::uri)
-;;
-;; (s/def ::rename-file (s/and (s/keys :req-un [:rename-file/kind :rename-file/old-uri :rename-file/new-uri])
-;;                             (s/conformer #(RenameFile. (:old-uri %) (:new-uri %)))))
-;;
-;; (s/def ::document-changes-entry (s/or :create-file ::create-file
-;;                                       :rename-file ::rename-file
-;;                                       :text-document-edit ::text-document-edit))
-;; (s/def ::document-changes (s/and (s/coll-of ::document-changes-entry)
-;;                                  (s/conformer #(map (fn [c]
-;;                                                       (case (first c)
-;;                                                         :text-document-edit (Either/forLeft (second c))
-;;                                                         :create-file (Either/forRight (second c))
-;;                                                         :rename-file (Either/forRight (second c))))
-;;                                                     %))))
-;;
-;; (s/def ::workspace-edit
-;;   (s/and (s/keys :opt-un [::document-changes ::changes])
-;;          (s/conformer #(if-let [changes (:changes %)]
-;;                          (WorkspaceEdit. ^java.util.Map changes)
-;;                          (WorkspaceEdit. ^java.util.List (:document-changes %))))))
-;;
-;; (s/def ::workspace-edit-or-error
-;;   (s/and (s/or :error ::response-error
-;;                :changes ::workspace-edit
-;;                :document-changes ::workspace-edit)
-;;          (s/conformer second)))
-;;
+
+(s/def ::edits (s/coll-of ::text-edit))
+(s/def ::text-document (s/keys :req-un [::version ::uri]))
+(s/def ::text-document-edit (s/keys :req-un [::text-document ::edits]))
+(s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
+
+(s/def :create-file.v1/options (s/keys :opt-un [::overwrite? ::ignore-if-exists?]))
+
+(s/def :create-file.v1/kind (s/and string?
+                                   #(= % "create")))
+(s/def ::create-file (s/keys :req-un [:create-file.v1/kind ::uri]
+                             :opt-un [:create-file.v1/options]))
+(s/def :rename-file.v1/kind (s/and string?
+                                   #(= % "rename")))
+(s/def :rename-file.v1/old-uri ::uri)
+(s/def :rename-file.v1/new-uri ::uri)
+
+(s/def ::rename-file (s/keys :req-un [:rename-file.v1/kind :rename-file.v1/old-uri :rename-file.v1/new-uri]))
+
+(s/def ::document-changes-entry (s/or :create-file ::create-file
+                                      :rename-file ::rename-file
+                                      :text-document-edit ::text-document-edit))
+(s/def ::document-changes (s/and (s/coll-of ::document-changes-entry)
+                                 (s/conformer #(map second %))))
+
+(s/def ::workspace-edit
+  (s/and (s/keys :opt-un [::document-changes ::changes])
+         (s/conformer (fn [edit] {:edit edit}))))
+
+(s/def ::workspace-edit-or-error
+  (s/and (s/or :error ::response-error
+               :changes ::workspace-edit
+               :document-changes ::workspace-edit)
+         (s/conformer second)))
+
 ;; (s/def ::location (s/and (s/keys :req-un [::uri ::range])
 ;;                          (s/conformer #(Location. (:uri %1) (:range %1)))))
 ;; (s/def ::locations (s/coll-of ::location))
@@ -425,13 +408,12 @@
 ;;                                 (s/conformer #(ProgressParams. (Either/forLeft ^String (:token %))
 ;;                                                                (Either/forLeft ^WorkDoneProgressNotification (:value %))))))
 ;;
-;; (s/def ::show-document-request
-;;   (s/and (s/keys :req-un [::uri ::range]
-;;                  :opt-un [::take-focus?])
-;;          (s/conformer #(doto (ShowDocumentParams. (:uri %))
-;;                          (.setTakeFocus (:take-focus? %))
-;;                          (.setSelection (:range %))))))
-;;
+(s/def ::show-document-request
+  (s/and (s/keys :req-un [::uri ::range]
+                 :opt-un [::take-focus?])
+         (s/conformer (fn [element]
+                        (set/rename-keys element {:range :selection})))))
+
 ;; (s/def :code-action/title string?)
 ;;
 ;; (s/def :code-action/edit ::workspace-edit-or-error)

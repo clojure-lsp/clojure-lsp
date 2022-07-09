@@ -73,36 +73,56 @@
             db*]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
-    ;; TODO: lsp2clj turn back on
+    ;; ::coercer/publish-diagnostics-params
     (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
     (shared/logging-task
       :publish-diagnostics
       (publish-diagnostic server diagnostic)))
   (refresh-code-lens [_this]
     ;; TODO: lsp2clj turn back on
+    ;; (when-let [code-lens-capability ^CodeLensWorkspaceCapabilities (get-in @db [:client-capabilities :workspace :code-lens])]
+    ;;   (when (.getRefreshSupport code-lens-capability)
+    ;;     (.refreshCodeLenses client)))
     #_(producer/refresh-code-lens lsp-producer))
-  (publish-workspace-edit [_this _edit]
-    ;; TODO: lsp2clj turn back on
-    #_(some-> (producer/publish-workspace-edit lsp-producer edit)
-              deref))
-  (show-document-request [_this _document-request]
-    ;; TODO: lsp2clj turn back on
-    #_(producer/show-document-request lsp-producer document-request))
+  (publish-workspace-edit [_this edit]
+    (->> edit
+         (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-or-error)
+         (lsp.endpoint/send-request server "workspace/applyEdit")
+         deref))
+  (show-document-request [_this document-request]
+    (logger/info "Requesting to show on editor the document" document-request)
+    (when (get-in @db* [:client-capabilities :window :show-document])
+      (->> document-request
+           (coercer-v1/conform-or-log ::coercer-v1/show-document-request)
+           (lsp.endpoint/send-request server "window/showDocument"))))
   (publish-progress [_this percentage message progress-token]
+    ;; ::coercer/notify-progress
     (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
-           ;; TODO lsp2clj restore?
-           ;; (coercer/conform-or-log ::coercer/notify-progress)
-         (lsp.endpoint/send-notification server "$/progress"))
-    #_(producer/publish-progress lsp-producer percentage message progress-token))
+         (lsp.endpoint/send-notification server "$/progress")))
   (show-message-request [_this _message _type _actions]
+    ;; (let [result (->> {:type type
+    ;;                    :message message
+    ;;                    :actions actions}
+    ;;                   (coercer/conform-or-log ::coercer/show-message-request)
+    ;;                   (.showMessageRequest client)
+    ;;                   .get)]
+    ;;   (.getTitle ^MessageActionItem result))
     ;; TODO: lsp2clj turn back on
     #_(producer/show-message-request lsp-producer message type actions))
   (show-message [_this _message _type _extra]
+    ;; (let [message-content {:message message
+    ;;                        :type type
+    ;;                        :extra extra}]
+    ;;   (logger/info message-content)
+    ;;   (->> message-content
+    ;;        (coercer/conform-or-log ::coercer/show-message)
+    ;;        (.showMessage client)))
     ;; TODO: lsp2clj turn back on
     #_(producer/show-message lsp-producer message type extra))
   ;; TODO: lsp2clj this is now unused; remove from protocol
   (register-capability [_this _capability]
     ;; TODO: lsp2clj turn back on
+    ;; (.registerCapability client capability)
     #_(producer/register-capability lsp-producer capability))
 
   clojure-producer/IClojureProducer

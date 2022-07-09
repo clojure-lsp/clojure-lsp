@@ -200,8 +200,8 @@
 
 (defmethod lsp.server/handle-request "textDocument/completion" [_ components params]
   (coercer-v1/conform-or-log
-   ::coercer-v1/completion-items
-   (handler/completion params components)))
+    ::coercer-v1/completion-items
+    (handler/completion params components)))
 
 (defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
   ;; ::coercer/completion-item
@@ -230,18 +230,20 @@
 (def ^:private formatting (atom false))
 
 (defmethod lsp.server/handle-request "textDocument/rangeFormatting" [_this components params]
-  ;; ::coercer/edits
   (when (compare-and-set! formatting false true)
     (try
-      (handler/range-formatting params components)
+      (coercer-v1/conform-or-log
+        ::coercer-v1/edits
+        (handler/range-formatting params components))
       (catch Exception e
         (logger/error e))
       (finally
         (reset! formatting false)))))
 
 (defmethod lsp.server/handle-request "textDocument/codeAction" [_ components params]
-  ;; ::coercer/code-actions
-  (handler/code-actions params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/code-actions
+    (handler/code-actions params components)))
 
 (defmethod lsp.server/handle-request "textDocument/codeLens" [_ components params]
   ;; ::coercer/code-lenses

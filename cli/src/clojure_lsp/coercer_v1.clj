@@ -238,17 +238,14 @@
 ;;                                                   (SymbolInformation. (:name m) (:kind m) (:location m))))))
 ;;
 ;; (s/def ::workspace-symbols (s/coll-of ::symbol-information))
-;;
-;; (s/def ::severity (s/and integer?
-;;                          (s/conformer #(DiagnosticSeverity/forValue %1))))
-;;
-;; (s/def ::code (s/conformer name))
-;;
-;; (s/def ::diagnostic (s/and (s/keys :req-un [::range ::message]
-;;                                    :opt-un [::severity ::code ::tag ::source ::message])
-;;                            (s/conformer #(doto (Diagnostic. (:range %1) (:message %1) (:severity %1) (:source %1) (:code %1))
-;;                                            (.setTags (:tags %1))))))
-;; (s/def ::diagnostics (s/coll-of ::diagnostic))
+
+(s/def ::severity integer?)
+
+(s/def ::code (s/conformer name))
+
+(s/def ::diagnostic (s/keys :req-un [::range ::message]
+                            :opt-un [::severity ::code ::tag ::source ::message]))
+(s/def ::diagnostics (s/coll-of ::diagnostic))
 ;; (s/def ::publish-diagnostics-params (s/and (s/keys :req-un [::uri ::diagnostics])
 ;;                                            (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))
 ;;
@@ -279,14 +276,13 @@
 ;;                                          (Hover. ^java.util.List contents
 ;;                                                  range)))))))
 ;;
-;; (s/def :command/title string?)
-;; (s/def :command/command string?)
-;; (s/def :command/arguments (s/coll-of any?))
-;;
-;; (s/def ::command (s/and (s/keys :req-un [:command/title :command/command]
-;;                                 :opt-un [:command/arguments])
-;;                         (s/conformer #(Command. (:title %1) (:command %1) (:arguments %1)))))
-;;
+(s/def :command.v1/title string?)
+(s/def :command.v1/command string?)
+(s/def :command.v1/arguments (s/coll-of any?))
+
+(s/def ::command (s/keys :req-un [:command.v1/title :command.v1/command]
+                         :opt-un [:command.v1/arguments]))
+
 
 (def show-message-type-enum
   {:error 1
@@ -351,39 +347,36 @@
          (s/conformer (fn [element]
                         (set/rename-keys element {:range :selection})))))
 
-;; (s/def :code-action/title string?)
-;;
-;; (s/def :code-action/edit ::workspace-edit-or-error)
-;;
-;; (def code-action-kind
-;;   {:quick-fix CodeActionKind/QuickFix
-;;    :refactor CodeActionKind/Refactor
-;;    :refactor-extract CodeActionKind/RefactorExtract
-;;    :refactor-inline CodeActionKind/RefactorInline
-;;    :refactor-rewrite CodeActionKind/RefactorRewrite
-;;    :source CodeActionKind/Source
-;;    :source-organize-imports CodeActionKind/SourceOrganizeImports})
-;;
-;; (s/def :code-action/preferred? boolean?)
-;;
-;; (s/def :code-action/kind (s/and (s/or :keyword (s/and keyword?
-;;                                                       code-action-kind
-;;                                                       (s/conformer #(get code-action-kind %)))
-;;                                       :string (s/and string?
-;;                                                      (s/conformer identity)))
-;;                                 (s/conformer second)))
-;;
-;; (s/def ::code-action (s/and (s/keys :req-un [:code-action/title]
-;;                                     :opt-un [:code-action/kind ::diagnostics :code-action/edit ::command :code-action/preferred? ::data])
-;;                             (s/conformer #(doto (CodeAction. (:title %1))
-;;                                             (.setKind (:kind %1))
-;;                                             (.setDiagnostics (:diagnostics %1))
-;;                                             (.setIsPreferred (:preferred? %1))
-;;                                             (.setEdit (:edit %1))
-;;                                             (.setCommand (:command %1))
-;;                                             (.setData (walk/stringify-keys (:data %1)))))))
-;;
-;; (s/def ::code-actions (s/coll-of ::code-action))
+(s/def :code-action.v1/title string?)
+
+(s/def :code-action.v1/edit ::workspace-edit-or-error)
+
+(def code-action-kind
+  {:quick-fix "quickfix"
+   :refactor "refactor"
+   :refactor-extract "refactor.extract"
+   :refactor-inline "refactor.inline"
+   :refactor-rewrite "refactor.rewrite"
+   :source "source"
+   :source-organize-imports "source.organizeImports"})
+
+(s/def :code-action.v1/preferred? boolean?)
+
+(s/def :code-action.v1/kind (s/and (s/or :keyword (s/and keyword?
+                                                         code-action-kind
+                                                         (s/conformer code-action-kind))
+                                         :string string?)
+                                   (s/conformer second)))
+
+(s/def ::code-action (s/keys :req-un [:code-action.v1/title]
+                             :opt-un [:code-action.v1/kind
+                                      ::diagnostics
+                                      :code-action.v1/edit
+                                      ::command
+                                      :code-action.v1/preferred?
+                                      ::data]))
+
+(s/def ::code-actions (s/coll-of ::code-action))
 ;;
 ;; (s/def ::code-lens (s/and (s/keys :req-un [::range]
 ;;                                   :opt-un [::command ::data])

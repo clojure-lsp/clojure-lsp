@@ -361,14 +361,7 @@
      :signature-help-provider []
      :call-hierarchy-provider true
      :linked-editing-range-provider true
-     :code-action-provider ["quickfix"
-                            "refactor"
-                            "refactor.extract"
-                            "refactor.inline"
-                            "refactor.rewrite"
-                            "source"
-                            "source.organizeImports"
-                            #_"source.fixAll"]
+     :code-action-provider (vec (vals coercer-v1/code-action-kind))
      :code-lens-provider true
      :references-provider true
      :rename-provider true

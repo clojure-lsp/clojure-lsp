@@ -1,4 +1,5 @@
 (ns clojure-lsp.coercer-v1
+  ;; This ns is a candidate for going back to lsp4clj.
   (:require
    [clojure.set :as set]
    [clojure.spec.alpha :as s]

@@ -81,11 +81,11 @@
   (refresh-code-lens [_this]
     ;; TODO: lsp2clj turn back on
     #_(producer/refresh-code-lens lsp-producer))
-  (publish-workspace-edit [_this edit]
+  (publish-workspace-edit [_this _edit]
     ;; TODO: lsp2clj turn back on
     #_(some-> (producer/publish-workspace-edit lsp-producer edit)
               deref))
-  (show-document-request [_this document-request]
+  (show-document-request [_this _document-request]
     ;; TODO: lsp2clj turn back on
     #_(producer/show-document-request lsp-producer document-request))
   (publish-progress [_this percentage message progress-token]
@@ -94,14 +94,14 @@
            ;; (coercer/conform-or-log ::coercer/notify-progress)
          (lsp.endpoint/send-notification server "$/progress"))
     #_(producer/publish-progress lsp-producer percentage message progress-token))
-  (show-message-request [_this message type actions]
+  (show-message-request [_this _message _type _actions]
     ;; TODO: lsp2clj turn back on
     #_(producer/show-message-request lsp-producer message type actions))
-  (show-message [_this message type extra]
+  (show-message [_this _message _type _extra]
     ;; TODO: lsp2clj turn back on
     #_(producer/show-message lsp-producer message type extra))
   ;; TODO: lsp2clj this is now unused; remove from protocol
-  (register-capability [_this capability]
+  (register-capability [_this _capability]
     ;; TODO: lsp2clj turn back on
     #_(producer/register-capability lsp-producer capability))
 
@@ -124,9 +124,9 @@
 (defmethod lsp.server/handle-request "clojure/dependencyContents" [_ components uri]
   ;; ::coercer/uri
   (handler/dependency-contents uri components))
-(defmethod lsp.server/handle-request "clojure/serverInfo/raw" [_ _components _params]
+(defmethod lsp.server/handle-request "clojure/serverInfo/raw" [_ components _params]
   ;; ::clojure-coercer/server-info-raw
-  (handler/server-info-raw))
+  (handler/server-info-raw components))
 (defmethod lsp.server/handle-notification "clojure/serverInfo/log" [_ components _params]
   (future
     (try
@@ -134,9 +134,9 @@
       (catch Throwable e
         (logger/error e)
         (throw e)))))
-(defmethod lsp.server/handle-request "clojure/cursorInfo/raw" [_ _components params]
+(defmethod lsp.server/handle-request "clojure/cursorInfo/raw" [_ components params]
   ;;  ::clojure-coercer/cursor-info-raw
-  (handler/cursor-info-raw params))
+  (handler/cursor-info-raw params components))
 (defmethod lsp.server/handle-notification "clojure/cursorInfo/log" [_ components params]
   (future
     (try
@@ -155,75 +155,75 @@
 (defmethod lsp.server/handle-notification "textDocument/didOpen" [_ components params]
   (handler/did-open params components))
 
-(defmethod lsp.server/handle-notification "textDocument/didChange" [_ _components params]
-  (handler/did-change params))
+(defmethod lsp.server/handle-notification "textDocument/didChange" [_ components params]
+  (handler/did-change params components))
 
-(defmethod lsp.server/handle-notification "textDocument/didSave" [_ _components params]
+(defmethod lsp.server/handle-notification "textDocument/didSave" [_ components params]
   (future
     (try
-      (handler/did-save params)
+      (handler/did-save params components)
       (catch Throwable e
         (logger/error e)
         (throw e)))))
 
-(defmethod lsp.server/handle-notification "textDocument/didClose" [_ _components params]
-  (handler/did-close params))
+(defmethod lsp.server/handle-notification "textDocument/didClose" [_ components params]
+  (handler/did-close params components))
 
 (defmethod lsp.server/handle-request "textDocument/references" [_ components params]
   ;; ::coercer/locations
   (handler/references params components))
 
-(defmethod lsp.server/handle-request "textDocument/completion" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/completion" [_ components params]
   ;; ::coercer/completion-items
-  (handler/completion params))
+  (handler/completion params components))
 
 (defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
   ;; ::coercer/completion-item
   (handler/completion-resolve-item item components))
 
-(defmethod lsp.server/handle-request "textDocument/prepareRename" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/prepareRename" [_ components params]
   ;; ::coercer/prepare-rename-or-error
-  (handler/prepare-rename params))
+  (handler/prepare-rename params components))
 
-(defmethod lsp.server/handle-request "textDocument/rename" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/rename" [_ components params]
   ;; ::coercer/workspace-edit-or-error
-  (handler/rename params))
+  (handler/rename params components))
 
 (defmethod lsp.server/handle-request "textDocument/hover" [_ components params]
   ;; ::coercer/hover
   (handler/hover params components))
 
-(defmethod lsp.server/handle-request "textDocument/signatureHelp" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/signatureHelp" [_ components params]
   ;; ::coercer/signature-help
-  (handler/signature-help params))
+  (handler/signature-help params components))
 
-(defmethod lsp.server/handle-request "textDocument/formatting" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/formatting" [_ components params]
   ;; ::coercer/edits
-  (handler/formatting params))
+  (handler/formatting params components))
 
 (def ^:private formatting (atom false))
 
-(defmethod lsp.server/handle-request "textDocument/rangeFormatting" [_this _components params]
+(defmethod lsp.server/handle-request "textDocument/rangeFormatting" [_this components params]
   ;; ::coercer/edits
   (when (compare-and-set! formatting false true)
     (try
-      (handler/range-formatting params)
+      (handler/range-formatting params components)
       (catch Exception e
         (logger/error e))
       (finally
         (reset! formatting false)))))
 
-(defmethod lsp.server/handle-request "textDocument/codeAction" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/codeAction" [_ components params]
   ;; ::coercer/code-actions
-  (handler/code-actions params))
+  (handler/code-actions params components))
 
-(defmethod lsp.server/handle-request "textDocument/codeLens" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/codeLens" [_ components params]
   ;; ::coercer/code-lenses
-  (handler/code-lens params))
+  (handler/code-lens params components))
 
-(defmethod lsp.server/handle-request "codeLens/resolve" [_ _components params]
+(defmethod lsp.server/handle-request "codeLens/resolve" [_ components params]
   ;; ::coercer/code-lens
-  (handler/code-lens-resolve params))
+  (handler/code-lens-resolve params components))
 
 (defmethod lsp.server/handle-request "textDocument/definition" [_ components params]
   ;; ::coercer/location
@@ -237,37 +237,37 @@
   ;; ::coercer/locations
   (handler/implementation params components))
 
-(defmethod lsp.server/handle-request "textDocument/documentSymbol" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/documentSymbol" [_ components params]
   ;; ::coercer/document-symbols
-  (handler/document-symbol params))
+  (handler/document-symbol params components))
 
-(defmethod lsp.server/handle-request "textDocument/documentHighlight" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/documentHighlight" [_ components params]
   ;; ::coercer/document-highlights
-  (handler/document-highlight params))
+  (handler/document-highlight params components))
 
-(defmethod lsp.server/handle-request "textDocument/semanticTokens/full" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/semanticTokens/full" [_ components params]
   ;; ::coercer/semantic-tokens
-  (handler/semantic-tokens-full params))
+  (handler/semantic-tokens-full params components))
 
-(defmethod lsp.server/handle-request "textDocument/semanticTokens/range" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/semanticTokens/range" [_ components params]
   ;; ::coercer/semantic-tokens
-  (handler/semantic-tokens-range params))
+  (handler/semantic-tokens-range params components))
 
-(defmethod lsp.server/handle-request "textDocument/prepareCallHierarchy" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/prepareCallHierarchy" [_ components params]
   ;; ::coercer/call-hierarchy-items
-  (handler/prepare-call-hierarchy params))
+  (handler/prepare-call-hierarchy params components))
 
-(defmethod lsp.server/handle-request "callHierarchy/incomingCalls" [_ _components params]
+(defmethod lsp.server/handle-request "callHierarchy/incomingCalls" [_ components params]
   ;; ::coercer/call-hierarchy-incoming-calls
-  (handler/call-hierarchy-incoming params))
+  (handler/call-hierarchy-incoming params components))
 
-(defmethod lsp.server/handle-request "callHierarchy/outgoingCalls" [_ _components params]
+(defmethod lsp.server/handle-request "callHierarchy/outgoingCalls" [_ components params]
   ;; ::coercer/call-hierarchy-outgoing-calls
-  (handler/call-hierarchy-outgoing params))
+  (handler/call-hierarchy-outgoing params components))
 
-(defmethod lsp.server/handle-request "textDocument/linkedEditingRange" [_ _components params]
+(defmethod lsp.server/handle-request "textDocument/linkedEditingRange" [_ components params]
   ;; ::coercer/linked-editing-ranges-or-error
-  (handler/linked-editing-ranges params))
+  (handler/linked-editing-ranges params components))
 
 ;;;; Workspace features
 
@@ -284,12 +284,12 @@
 (defmethod lsp.server/handle-notification "workspace/didChangeConfiguration" [_ _components params]
   (logger/warn params))
 
-(defmethod lsp.server/handle-notification "workspace/didChangeWatchedFiles" [_ _components params]
-  (handler/did-change-watched-files params))
+(defmethod lsp.server/handle-notification "workspace/didChangeWatchedFiles" [_ components params]
+  (handler/did-change-watched-files params components))
 
-(defmethod lsp.server/handle-request "workspace/symbol" [_ _components params]
+(defmethod lsp.server/handle-request "workspace/symbol" [_ components params]
   ;; ::coercer/workspace-symbols
-  (handler/workspace-symbols params))
+  (handler/workspace-symbols params components))
 
 (defmethod lsp.server/handle-request "workspace/willRenameFiles" [_ components params]
   ;; ::coercer/workspace-edit
@@ -382,6 +382,8 @@
 
 (defmethod lsp.server/handle-notification "exit" [_ _components _params]
   (exit))
+
+(defmethod lsp.server/handle-notification "$/cancelRequest" [_ _ _])
 
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/go-loop []

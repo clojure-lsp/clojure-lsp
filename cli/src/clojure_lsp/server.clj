@@ -174,8 +174,9 @@
   (handler/references params components))
 
 (defmethod lsp.server/handle-request "textDocument/completion" [_ components params]
-  ;; ::coercer/completion-items
-  (handler/completion params components))
+  (coercer-v1/conform-or-log
+   ::coercer-v1/completion-items
+   (handler/completion params components)))
 
 (defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
   ;; ::coercer/completion-item
@@ -273,7 +274,7 @@
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
 
-(defmethod lsp.server/handle-notification "workspace/executeCommand" [_ components params]
+(defmethod lsp.server/handle-request "workspace/executeCommand" [_ components params]
   (future
     (try
       (handler/execute-command params components)

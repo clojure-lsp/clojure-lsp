@@ -146,32 +146,31 @@
 ;;                       (s/conformer #(Range. (:start %1) (:end %1)))))
 ;; (s/def ::selection-range ::range)
 ;;
-;; (def completion-kind-enum
-;;   {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
-;;    :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
-;;    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
-;;
-;; (s/def :completion-item/kind (s/and keyword?
-;;                                     completion-kind-enum
-;;                                     (s/conformer (fn [v] (CompletionItemKind/forValue (get completion-kind-enum v))))))
-;;
-;; (def insert-text-format-enum
-;;   {:plaintext 1
-;;    :snippet 2})
-;;
-;; (s/def :completion-item/insert-text-format
-;;   (s/and keyword?
-;;          insert-text-format-enum
-;;          (s/conformer (fn [v] (InsertTextFormat/forValue (get insert-text-format-enum v))))))
-;;
-;; (s/def ::new-text string?)
-;; (s/def ::text-edit (s/and (s/keys :req-un [::new-text ::range])
-;;                           (s/conformer #(TextEdit. (:range %1) (:new-text %1)))))
-;; (s/def ::additional-text-edits (s/coll-of ::text-edit))
-;; (s/def ::documentation (s/and (s/or :string string?
-;;                                     :markup-content ::markup-content)
-;;                               (s/conformer second)))
-;;
+(def completion-kind-enum
+  {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
+   :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
+   :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
+
+(s/def :completion-item.v1/kind (s/and keyword?
+                                    completion-kind-enum
+                                    (s/conformer completion-kind-enum)))
+
+(def insert-text-format-enum
+  {:plaintext 1
+   :snippet 2})
+
+(s/def :completion-item.v1/insert-text-format
+  (s/and keyword?
+         insert-text-format-enum
+         (s/conformer insert-text-format-enum)))
+
+(s/def ::new-text string?)
+(s/def ::text-edit (s/keys :req-un [::new-text ::range]))
+(s/def ::additional-text-edits (s/coll-of ::text-edit))
+(s/def ::documentation (s/and (s/or :string string?
+                                    :markup-content ::markup-content)
+                              (s/conformer second)))
+
 ;; (s/def :prepare-rename/placeholder string?)
 ;; (s/def ::prepare-rename (s/and (s/keys :req-un [:prepare-rename/placeholder ::range])
 ;;                                (s/conformer #(PrepareRenameResult. (:range %) (:placeholder %)))))
@@ -182,30 +181,32 @@
 ;;                :start ::range)
 ;;          (s/conformer second)))
 ;;
-;; (s/def ::completion-item (s/and (s/keys :req-un [::label]
-;;                                         :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
-;;                                                  :completion-item/kind ::documentation ::data
-;;                                                  ::insert-text :completion-item/insert-text-format])
-;;                                 (s/conformer (fn [{:keys [label additional-text-edits filter-text
-;;                                                           detail text-edit kind documentation data
-;;                                                           insert-text insert-text-format]}]
-;;                                                (let [item (CompletionItem. label)
-;;                                                      with-typed-docs (fn [^CompletionItem item]
-;;                                                                        (if (instance? MarkupContent documentation)
-;;                                                                          (.setDocumentation item ^MarkupContent documentation)
-;;                                                                          (.setDocumentation item ^String documentation)))]
-;;                                                  (cond-> item
-;;                                                    filter-text (doto (.setFilterText filter-text))
-;;                                                    kind (doto (.setKind kind))
-;;                                                    text-edit (doto (.setTextEdit (Either/forLeft text-edit)))
-;;                                                    additional-text-edits (doto (.setAdditionalTextEdits additional-text-edits))
-;;                                                    insert-text (doto (.setInsertText insert-text))
-;;                                                    insert-text-format (doto (.setInsertTextFormat insert-text-format))
-;;                                                    detail (doto (.setDetail detail))
-;;                                                    documentation (doto with-typed-docs)
-;;                                                    data (doto (.setData data))))))))
-;;
-;; (s/def ::completion-items (s/coll-of ::completion-item))
+(s/def ::completion-item (s/and (s/keys :req-un [::label]
+                                        :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
+                                                 :completion-item.v1/kind ::documentation ::data
+                                                 ::insert-text :completion-item.v1/insert-text-format])
+                                (s/conformer (fn [{:keys [label
+                                                          additional-text-edits
+                                                          filter-text
+                                                          detail
+                                                          text-edit
+                                                          kind
+                                                          documentation
+                                                          data
+                                                          insert-text
+                                                          insert-text-format]}]
+                                               (medley/assoc-some {:label label}
+                                                                  :filter-text filter-text
+                                                                  :kind kind
+                                                                  :text-edit text-edit
+                                                                  :additional-text-edits additional-text-edits
+                                                                  :insert-text insert-text
+                                                                  :insert-text-format insert-text-format
+                                                                  :detail detail
+                                                                  :documentation documentation
+                                                                  :data data)))))
+
+(s/def ::completion-items (s/coll-of ::completion-item))
 ;; (s/def ::version (s/and integer? (s/conformer int)))
 ;; (s/def ::uri string?)
 ;; (s/def ::edits (s/coll-of ::text-edit))
@@ -355,13 +356,10 @@
 ;;                                                :string (Either/forLeft (second v))
 ;;                                                :marked-string (Either/forRight (second v)))))))
 ;;
-;; (s/def :markup/kind #{"plaintext" "markdown"})
-;; (s/def :markup/value string?)
-;; (s/def ::markup-content (s/and (s/keys :req-un [:markup/kind :markup/value])
-;;                                (s/conformer #(doto (MarkupContent.)
-;;                                                (.setKind (:kind %1))
-;;                                                (.setValue (:value %1))))))
-;;
+(s/def :markup.v1/kind #{"plaintext" "markdown"})
+(s/def :markup.v1/value string?)
+(s/def ::markup-content (s/keys :req-un [:markup.v1/kind :markup.v1/value]))
+
 ;; (s/def ::contents (s/and (s/or :marked-strings (s/coll-of ::marked-string)
 ;;                                :markup-content ::markup-content)
 ;;                          (s/conformer second)))

@@ -391,8 +391,7 @@
   (->> items
        (medley/distinct-by (juxt :label :kind :detail))
        (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail))
-       (map #(dissoc % :priority))
-       not-empty))
+       (mapv #(dissoc % :priority))))
 
 (defn completion [uri row col db]
   (let [root-zloc (parser/safe-zloc-of-file db uri)

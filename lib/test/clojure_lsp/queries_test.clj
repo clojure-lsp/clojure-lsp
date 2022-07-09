@@ -659,15 +659,27 @@
   (assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs))
 
 (deftest find-definition-from-cursor-when-declared
-  (let [[[bar-r bar-c]] (h/load-code-and-locs
-                          (h/code "(ns foo)"
-                                  "(declare bar)"
-                                  "(|bar)"
-                                  "(defn bar [] 1)") (h/file-uri "file:///a.clj"))
-        db @db/db*]
-    (h/assert-submap
-      {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row 4}
-      (q/find-definition-from-cursor db (h/file-path "/a.clj") bar-r bar-c))))
+  (testing "declared, then defined"
+    (let [[[usage-r usage-c]
+           [defn-r _]] (h/load-code-and-locs
+                         (h/code "(ns foo)"
+                                 "(declare bar)"
+                                 "(|bar)"
+                                 "(defn |bar [] 1)") (h/file-uri "file:///a.clj"))
+          db @db/db*]
+      (h/assert-submap
+        {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row defn-r}
+        (q/find-definition-from-cursor db (h/file-path "/a.clj") usage-r usage-c))))
+  (testing "only declared"
+    (let [[[decl-r _]
+           [usage-r usage-c]] (h/load-code-and-locs
+                                (h/code "(ns foo)"
+                                        "(declare |bar)"
+                                        "(|bar)") (h/file-uri "file:///a.clj"))
+          db @db/db*]
+      (h/assert-submap
+        {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/declare :row decl-r}
+        (q/find-definition-from-cursor db (h/file-path "/a.clj") usage-r usage-c)))))
 
 (deftest find-definition-from-namespace-alias
   (h/load-code-and-locs (h/code "(ns foo.bar) (def a 1)") (h/file-uri "file:///a.clj"))

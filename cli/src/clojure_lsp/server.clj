@@ -281,7 +281,8 @@
       (handler/execute-command params components)
       (catch Throwable e
         (logger/error e)
-        (throw e)))))
+        (throw e))))
+  nil)
 
 (defmethod lsp.server/handle-notification "workspace/didChangeConfiguration" [_ _components params]
   (logger/warn params))

@@ -1,5 +1,6 @@
 (ns clojure-lsp.server
   (:require
+   [clojure-lsp.clojure-coercer :as clojure-coercer]
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.coercer-v1 :as coercer-v1]
    [clojure-lsp.db :as db]
@@ -63,7 +64,9 @@
   (-debug [_this fmeta arg1 arg2 arg3] (log! :debug [arg1 arg2 arg3] fmeta)))
 
 (defn publish-diagnostic [server diagnostic]
-  (lsp.endpoint/send-notification server "textDocument/publishDiagnostics" diagnostic))
+  (->> diagnostic
+       (coercer-v1/conform-or-log ::coercer-v1/publish-diagnostics-params)
+       (lsp.endpoint/send-notification server "textDocument/publishDiagnostics")))
 
 (defn apply-edit [server edit]
   (->> edit
@@ -80,7 +83,6 @@
   producer/ILSPProducer
 
   (publish-diagnostic [_this diagnostic]
-    ;; ::coercer/publish-diagnostics-params
     (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
     (shared/logging-task
       :publish-diagnostics
@@ -140,18 +142,19 @@
             (doseq [uri uris]
               (when-let [test-tree (f.test-tree/tree uri db)]
                 (->> test-tree
-                     ;; TODO: lsp2clj restore?
-                     ;; (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
+                     (coercer-v1/conform-or-log ::clojure-coercer/publish-test-tree-params)
                      (lsp.endpoint/send-notification server "clojure/textDocument/testTree"))))))))))
 
 ;;;; clojure experimental features
 
 (defmethod lsp.server/handle-request "clojure/dependencyContents" [_ components uri]
-  ;; ::coercer/uri
-  (handler/dependency-contents uri components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/uri
+    (handler/dependency-contents uri components)))
 (defmethod lsp.server/handle-request "clojure/serverInfo/raw" [_ components _params]
-  ;; ::clojure-coercer/server-info-raw
-  (handler/server-info-raw components))
+  (coercer-v1/conform-or-log
+    ::clojure-coercer/server-info-raw
+    (handler/server-info-raw components)))
 (defmethod lsp.server/handle-notification "clojure/serverInfo/log" [_ components _params]
   (future
     (try
@@ -160,8 +163,9 @@
         (logger/error e)
         (throw e)))))
 (defmethod lsp.server/handle-request "clojure/cursorInfo/raw" [_ components params]
-  ;;  ::clojure-coercer/cursor-info-raw
-  (handler/cursor-info-raw params components))
+  (coercer-v1/conform-or-log
+    ::clojure-coercer/cursor-info-raw
+    (handler/cursor-info-raw params components)))
 (defmethod lsp.server/handle-notification "clojure/cursorInfo/log" [_ components params]
   (future
     (try
@@ -170,8 +174,9 @@
         (logger/error e)
         (throw e)))))
 (defmethod lsp.server/handle-request "clojure/clojuredocs/raw" [_ components params]
-  ;;  ::clojure-coercer/clojuredocs-raw
-  (handler/clojuredocs-raw params components))
+  (coercer-v1/conform-or-log
+    ::clojure-coercer/clojuredocs-raw
+    (handler/clojuredocs-raw params components)))
 
 ;;;; Document sync features
 
@@ -195,8 +200,9 @@
   (handler/did-close params components))
 
 (defmethod lsp.server/handle-request "textDocument/references" [_ components params]
-  ;; ::coercer/locations
-  (handler/references params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/locations
+    (handler/references params components)))
 
 (defmethod lsp.server/handle-request "textDocument/completion" [_ components params]
   (coercer-v1/conform-or-log
@@ -204,28 +210,34 @@
     (handler/completion params components)))
 
 (defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
-  ;; ::coercer/completion-item
-  (handler/completion-resolve-item item components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/completion-item
+    (handler/completion-resolve-item item components)))
 
 (defmethod lsp.server/handle-request "textDocument/prepareRename" [_ components params]
-  ;; ::coercer/prepare-rename-or-error
-  (handler/prepare-rename params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/prepare-rename-or-error
+    (handler/prepare-rename params components)))
 
 (defmethod lsp.server/handle-request "textDocument/rename" [_ components params]
-  ;; ::coercer/workspace-edit-or-error
-  (handler/rename params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/workspace-edit-or-error
+    (handler/rename params components)))
 
 (defmethod lsp.server/handle-request "textDocument/hover" [_ components params]
-  ;; ::coercer/hover
-  (handler/hover params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/hover
+    (handler/hover params components)))
 
 (defmethod lsp.server/handle-request "textDocument/signatureHelp" [_ components params]
-  ;; ::coercer/signature-help
-  (handler/signature-help params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/signature-help
+    (handler/signature-help params components)))
 
 (defmethod lsp.server/handle-request "textDocument/formatting" [_ components params]
-  ;; ::coercer/edits
-  (handler/formatting params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/edits
+    (handler/formatting params components)))
 
 (def ^:private formatting (atom false))
 
@@ -246,24 +258,29 @@
     (handler/code-actions params components)))
 
 (defmethod lsp.server/handle-request "textDocument/codeLens" [_ components params]
-  ;; ::coercer/code-lenses
-  (handler/code-lens params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/code-lenses
+    (handler/code-lens params components)))
 
 (defmethod lsp.server/handle-request "codeLens/resolve" [_ components params]
-  ;; ::coercer/code-lens
-  (handler/code-lens-resolve params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/code-lens
+    (handler/code-lens-resolve params components)))
 
 (defmethod lsp.server/handle-request "textDocument/definition" [_ components params]
-  ;; ::coercer/location
-  (handler/definition params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/location
+    (handler/definition params components)))
 
 (defmethod lsp.server/handle-request "textDocument/declaration" [_ components params]
-  ;; ::coercer/location
-  (handler/declaration params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/location
+    (handler/declaration params components)))
 
 (defmethod lsp.server/handle-request "textDocument/implementation" [_ components params]
-  ;; ::coercer/locations
-  (handler/implementation params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/locations
+    (handler/implementation params components)))
 
 (defmethod lsp.server/handle-request "textDocument/documentSymbol" [_ components params]
   (coercer-v1/conform-or-log
@@ -271,32 +288,39 @@
     (handler/document-symbol params components)))
 
 (defmethod lsp.server/handle-request "textDocument/documentHighlight" [_ components params]
-  ;; ::coercer/document-highlights
-  (handler/document-highlight params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/document-highlights
+    (handler/document-highlight params components)))
 
 (defmethod lsp.server/handle-request "textDocument/semanticTokens/full" [_ components params]
-  ;; ::coercer/semantic-tokens
-  (handler/semantic-tokens-full params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/semantic-tokens
+    (handler/semantic-tokens-full params components)))
 
 (defmethod lsp.server/handle-request "textDocument/semanticTokens/range" [_ components params]
-  ;; ::coercer/semantic-tokens
-  (handler/semantic-tokens-range params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/semantic-tokens
+    (handler/semantic-tokens-range params components)))
 
 (defmethod lsp.server/handle-request "textDocument/prepareCallHierarchy" [_ components params]
-  ;; ::coercer/call-hierarchy-items
-  (handler/prepare-call-hierarchy params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/call-hierarchy-items
+    (handler/prepare-call-hierarchy params components)))
 
 (defmethod lsp.server/handle-request "callHierarchy/incomingCalls" [_ components params]
-  ;; ::coercer/call-hierarchy-incoming-calls
-  (handler/call-hierarchy-incoming params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/call-hierarchy-incoming-calls
+    (handler/call-hierarchy-incoming params components)))
 
 (defmethod lsp.server/handle-request "callHierarchy/outgoingCalls" [_ components params]
-  ;; ::coercer/call-hierarchy-outgoing-calls
-  (handler/call-hierarchy-outgoing params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/call-hierarchy-outgoing-calls
+    (handler/call-hierarchy-outgoing params components)))
 
 (defmethod lsp.server/handle-request "textDocument/linkedEditingRange" [_ components params]
-  ;; ::coercer/linked-editing-ranges-or-error
-  (handler/linked-editing-ranges params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/linked-editing-ranges-or-error
+    (handler/linked-editing-ranges params components)))
 
 ;;;; Workspace features
 
@@ -318,12 +342,14 @@
   (handler/did-change-watched-files (coercer-v1/conform-or-log ::coercer-v1/did-change-watched-files-params params) components))
 
 (defmethod lsp.server/handle-request "workspace/symbol" [_ components params]
-  ;; ::coercer/workspace-symbols
-  (handler/workspace-symbols params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/workspace-symbols
+    (handler/workspace-symbols params components)))
 
 (defmethod lsp.server/handle-request "workspace/willRenameFiles" [_ components params]
-  ;; ::coercer/workspace-edit
-  (handler/will-rename-files params components))
+  (coercer-v1/conform-or-log
+    ::coercer-v1/workspace-edit
+    (handler/will-rename-files params components)))
 
 (defn capabilities [settings]
   (coercer-v1/conform-or-log
@@ -450,7 +476,7 @@
         log-path (logger/setup timbre-logger)
         db (assoc db/initial-db :log-path log-path)
         db* (atom db)
-        server (lsp.server/stdio-server {:trace? true
+        server (lsp.server/stdio-server {:trace? false
                                          :in System/in
                                          :out System/out})
         producer (ClojureLspProducer. server db*)

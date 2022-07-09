@@ -3,69 +3,17 @@
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [lsp4clj.json-rpc.messages :as lsp.messages]
-   [lsp4clj.protocols.logger :as logger])
-  (:import
-   (org.eclipse.lsp4j.jsonrpc
-     ResponseErrorException)))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
-;; (defn ^{:deprecated "use java->clj instead"} debeaner [inst]
-;;   (when inst
-;;     (->> (dissoc (bean inst) :class)
-;;          (into {})
-;;          (medley/remove-vals nil?)
-;;          (medley/map-keys #(as-> % map-key
-;;                              (name map-key)
-;;                              (string/split map-key #"(?=[A-Z])")
-;;                              (string/join "-" map-key)
-;;                              (string/lower-case map-key)
-;;                              (keyword map-key))))))
-;;
 (def file-change-type-enum {1 :created 2 :changed 3 :deleted})
-(s/def :file-event/type (s/and int?
-                               file-change-type-enum
-                               (s/conformer file-change-type-enum)))
-(s/def ::file-event (s/keys :req-un [::uri :file-event/type]))
-(s/def :did-change-watched-files/changes (s/coll-of ::file-event))
-(s/def ::did-change-watched-files-params (s/keys :req-un [:did-change-watched-files/changes]))
-;;
-;; (defn document->uri [^TextDocumentIdentifier document]
-;;   (.getUri document))
-;;
-;; (defmethod j/from-java DiagnosticSeverity [^DiagnosticSeverity instance]
-;;   (-> instance .name .toLowerCase keyword))
-;;
-;; (defmethod j/from-java FileChangeType [^FileChangeType instance]
-;;   (get watched-files-type-enum (.getValue instance)))
-;;
-;; (defmethod j/from-java MessageType [^MessageType instance]
-;;   (-> instance .name .toLowerCase keyword))
-;;
-;; (defmethod j/from-java CompletionItemKind [^CompletionItemKind instance]
-;;   (-> instance .name .toLowerCase keyword))
-;;
-;; (defmethod j/from-java InsertTextFormat [^InsertTextFormat instance]
-;;   (-> instance .name .toLowerCase keyword))
-;;
-;; (defmethod j/from-java SymbolKind [^SymbolKind instance]
-;;   (-> instance .name .toLowerCase keyword))
-;;
-;; (defmethod j/from-java Either [^Either instance]
-;;   (j/from-java (.get instance)))
-;;
-;; (defmethod j/from-java TextDocumentIdentifier [^TextDocumentIdentifier instance]
-;;   (document->uri instance))
-;;
-;; (defmethod j/from-java VersionedTextDocumentIdentifier [^VersionedTextDocumentIdentifier instance]
-;;   {:version (.getVersion instance)
-;;    :uri (document->uri instance)})
-;;
-;; (defmethod j/from-java JsonElement [^JsonElement instance]
-;;   (-> instance
-;;       .toString
-;;       json/read-str
-;;       walk/keywordize-keys))
+(s/def :file-event.v1/type (s/and int?
+                                  file-change-type-enum
+                                  (s/conformer file-change-type-enum)))
+(s/def ::file-event (s/keys :req-un [::uri :file-event.v1/type]))
+(s/def :did-change-watched-files.v1/changes (s/coll-of ::file-event))
+(s/def ::did-change-watched-files-params (s/keys :req-un [:did-change-watched-files.v1/changes]))
 
 (s/def :error.v1/code (s/and (s/or :kw keyword? :int int?)
                              (s/conformer second)))
@@ -85,8 +33,8 @@
 (s/def ::start ::position)
 (s/def ::end ::position)
 (s/def ::range (s/keys :req-un [::start ::end]))
-;; (s/def ::selection-range ::range)
-;;
+(s/def ::selection-range ::range)
+
 (def completion-kind-enum
   {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
    :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
@@ -112,16 +60,15 @@
                                     :markup-content ::markup-content)
                               (s/conformer second)))
 
-;; (s/def :prepare-rename/placeholder string?)
-;; (s/def ::prepare-rename (s/and (s/keys :req-un [:prepare-rename/placeholder ::range])
-;;                                (s/conformer #(PrepareRenameResult. (:range %) (:placeholder %)))))
-;;
-;; (s/def ::prepare-rename-or-error
-;;   (s/and (s/or :error ::response-error
-;;                :range ::prepare-rename
-;;                :start ::range)
-;;          (s/conformer second)))
-;;
+(s/def :prepare-rename.v1/placeholder string?)
+(s/def ::prepare-rename (s/keys :req-un [:prepare-rename.v1/placeholder ::range]))
+
+(s/def ::prepare-rename-or-error
+  (s/and (s/or :error ::response-error
+               :range ::prepare-rename
+               :start ::range)
+         (s/conformer second)))
+
 (s/def ::completion-item (s/keys :req-un [::label]
                                  :opt-un [::additional-text-edits ::filter-text ::detail ::text-edit
                                           :completion-item.v1/kind ::documentation ::data
@@ -165,47 +112,27 @@
                :document-changes ::workspace-edit)
          (s/conformer second)))
 
-;; (s/def ::location (s/and (s/keys :req-un [::uri ::range])
-;;                          (s/conformer #(Location. (:uri %1) (:range %1)))))
-;; (s/def ::locations (s/coll-of ::location))
-;;
-;; (s/def :signature-help/documentation ::documentation)
-;;
-;; (s/def :signature-help/parameter (s/and (s/keys :req-un [::label]
-;;                                                 :opt-un [:signature-help/documentation])
-;;                                         (s/conformer (fn [{:keys [label documentation]}]
-;;                                                        (let [parameter (ParameterInformation. label)
-;;                                                              with-typed-docs (fn [^ParameterInformation parameter]
-;;                                                                                (if (instance? MarkupContent documentation)
-;;                                                                                  (.setDocumentation parameter ^MarkupContent documentation)
-;;                                                                                  (.setDocumentation parameter ^String documentation)))]
-;;                                                          (cond-> parameter
-;;                                                            documentation (doto with-typed-docs)))))))
-;;
-;; (s/def :signature-help/parameters (s/coll-of :signature-help/parameter))
-;;
-;; (s/def :signature-help/signature-information (s/and (s/keys :req-un [::label]
-;;                                                             :opt-un [:signature-help/documentation :signature-help/parameters :signature-help/active-parameter])
-;;                                                     (s/conformer (fn [{:keys [label documentation parameters active-parameter]}]
-;;                                                                    (let [info (SignatureInformation. label)
-;;                                                                          with-typed-docs (fn [^SignatureInformation info]
-;;                                                                                            (if (instance? MarkupContent documentation)
-;;                                                                                              (.setDocumentation info ^MarkupContent documentation)
-;;                                                                                              (.setDocumentation info ^String documentation)))]
-;;                                                                      (cond-> info
-;;                                                                        :always (doto (.setParameters parameters)
-;;                                                                                  (.setActiveParameter active-parameter))
-;;                                                                        documentation (doto with-typed-docs)))))))
-;;
-;; (s/def :signature-help/signatures (s/coll-of :signature-help/signature-information))
-;;
-;; (s/def ::signature-help (s/and (s/keys :req-un [:signature-help/signatures]
-;;                                        :opt-un [:signature-help/active-signature :signature-help/active-parameter])
-;;                                (s/conformer #(doto (SignatureHelp.)
-;;                                                (.setSignatures (:signatures %))
-;;                                                (.setActiveSignature (some-> % :active-signature int))
-;;                                                (.setActiveParameter (some-> % :active-parameter int))))))
-;;
+(s/def ::location (s/keys :req-un [::uri ::range]))
+(s/def ::locations (s/coll-of ::location))
+
+(s/def :signature-help.v1/documentation ::documentation)
+
+(s/def :signature-help.v1/parameter (s/keys :req-un [::label]
+                                            :opt-un [:signature-help.v1/documentation]))
+
+(s/def :signature-help.v1/parameters (s/coll-of :signature-help.v1/parameter))
+
+(s/def :signature-help.v1/signature-information (s/keys :req-un [::label]
+                                                        :opt-un [:signature-help.v1/documentation
+                                                                 :signature-help.v1/parameters
+                                                                 :signature-help.v1/active-parameter]))
+
+(s/def :signature-help.v1/signatures (s/coll-of :signature-help.v1/signature-information))
+
+(s/def ::signature-help (s/keys :req-un [:signature-help.v1/signatures]
+                                :opt-un [:signature-help.v1/active-signature
+                                         :signature-help.v1/active-parameter]))
+
 (def symbol-kind-enum
   {:file 1 :module 2 :namespace 3 :package 4 :class 5 :method 6 :property 7 :field 8 :constructor 9
    :enum 10 :interface 11 :function 12 :variable 13 :constant 14 :string 15 :number 16 :boolean 17
@@ -227,17 +154,13 @@
 
 (s/def ::document-symbols (s/coll-of ::document-symbol))
 
-;; (s/def ::document-highlight (s/and (s/keys :req-un [::range])
-;;                                    (s/conformer (fn [m]
-;;                                                   (DocumentHighlight. (:range m))))))
-;;
-;; (s/def ::document-highlights (s/coll-of ::document-highlight))
-;;
-;; (s/def ::symbol-information (s/and (s/keys :req-un [::name :symbol/kind ::location])
-;;                                    (s/conformer (fn [m]
-;;                                                   (SymbolInformation. (:name m) (:kind m) (:location m))))))
-;;
-;; (s/def ::workspace-symbols (s/coll-of ::symbol-information))
+(s/def ::document-highlight (s/keys :req-un [::range]))
+
+(s/def ::document-highlights (s/coll-of ::document-highlight))
+
+(s/def ::symbol-information (s/keys :req-un [::name :symbol.v1/kind ::location]))
+
+(s/def ::workspace-symbols (s/coll-of ::symbol-information))
 
 (s/def ::severity integer?)
 
@@ -246,43 +169,29 @@
 (s/def ::diagnostic (s/keys :req-un [::range ::message]
                             :opt-un [::severity ::code ::tag ::source ::message]))
 (s/def ::diagnostics (s/coll-of ::diagnostic))
-;; (s/def ::publish-diagnostics-params (s/and (s/keys :req-un [::uri ::diagnostics])
-;;                                            (s/conformer #(PublishDiagnosticsParams. (:uri %1) (:diagnostics %1)))))
-;;
-;; (s/def ::marked-string (s/and (s/or :string string?
-;;                                     :marked-string (s/and (s/keys :req-un [::language ::value])
-;;                                                           (s/conformer #(MarkedString. (:language %1) (:value %1)))))
-;;                               (s/conformer (fn [v]
-;;                                              (case (first v)
-;;                                                :string (Either/forLeft (second v))
-;;                                                :marked-string (Either/forRight (second v)))))))
-;;
+(s/def ::publish-diagnostics-params (s/keys :req-un [::uri ::diagnostics]))
+
+(s/def ::marked-string (s/and (s/or :string string?
+                                    :marked-string (s/keys :req-un [::language ::value]))
+                              (s/conformer second)))
+
 (s/def :markup.v1/kind #{"plaintext" "markdown"})
 (s/def :markup.v1/value string?)
 (s/def ::markup-content (s/keys :req-un [:markup.v1/kind :markup.v1/value]))
 
-;; (s/def ::contents (s/and (s/or :marked-strings (s/coll-of ::marked-string)
-;;                                :markup-content ::markup-content)
-;;                          (s/conformer second)))
-;;
-;; (s/def ::hover (s/and (s/keys :req-un [::contents]
-;;                               :opt-un [::range])
-;;                       (s/conformer (fn [hover]
-;;                                      (let [contents (:contents hover)
-;;                                            range ^Range (:range hover)]
-;;                                        (if (instance? MarkupContent contents)
-;;                                          (Hover. ^MarkupContent contents
-;;                                                  range)
-;;                                          (Hover. ^java.util.List contents
-;;                                                  range)))))))
-;;
+(s/def ::contents (s/and (s/or :marked-strings (s/coll-of ::marked-string)
+                               :markup-content ::markup-content)
+                         (s/conformer second)))
+
+(s/def ::hover (s/keys :req-un [::contents]
+                       :opt-un [::range]))
+
 (s/def :command.v1/title string?)
 (s/def :command.v1/command string?)
 (s/def :command.v1/arguments (s/coll-of any?))
 
 (s/def ::command (s/keys :req-un [:command.v1/title :command.v1/command]
                          :opt-un [:command.v1/arguments]))
-
 
 (def show-message-type-enum
   {:error 1
@@ -291,8 +200,8 @@
    :log 4})
 
 (s/def :show-message.v1/type (s/and keyword?
-                                 show-message-type-enum
-                                 (s/conformer show-message-type-enum)))
+                                    show-message-type-enum
+                                    (s/conformer show-message-type-enum)))
 
 (s/def :show-message.v1/message string?)
 
@@ -377,188 +286,45 @@
                                       ::data]))
 
 (s/def ::code-actions (s/coll-of ::code-action))
-;;
-;; (s/def ::code-lens (s/and (s/keys :req-un [::range]
-;;                                   :opt-un [::command ::data])
-;;                           (s/conformer #(doto (CodeLens.)
-;;                                           (.setRange (:range %1))
-;;                                           (.setCommand (:command %1))
-;;                                           (.setData (:data %1))))))
-;;
-;; (s/def ::code-lenses (s/coll-of ::code-lens))
-;;
-;; (s/def ::semantic-tokens (s/and (s/keys :req-un [::data]
-;;                                         :opt-un [::result-id])
-;;                                 (s/conformer #(doto (SemanticTokens. (:result-id %1)
-;;                                                                      (java.util.ArrayList. ^clojure.lang.PersistentVector (:data %1)))))))
-;;
-;; (s/def ::call-hierarchy-item (s/and (s/keys :req-un [::name :symbol/kind ::uri ::range ::selection-range]
-;;                                             :opt-un [::tags ::detail ::data])
-;;                                     (s/conformer #(doto (CallHierarchyItem.)
-;;                                                     (.setName (:name %1))
-;;                                                     (.setKind (:kind %1))
-;;                                                     (.setUri (:uri %1))
-;;                                                     (.setRange (:range %1))
-;;                                                     (.setSelectionRange (:selection-range %1))
-;;                                                     (.setTags (:tags %1))
-;;                                                     (.setDetail (:detail %1))
-;;                                                     (.setData (:data %1))))))
-;;
-;; (s/def ::call-hierarchy-items (s/coll-of ::call-hierarchy-item))
-;;
-;; (s/def :call-hierarchy/from-ranges (s/coll-of ::range))
-;; (s/def :call-hierarchy/from ::call-hierarchy-item)
-;; (s/def :call-hierarchy/to ::call-hierarchy-item)
-;;
-;; (s/def ::call-hierarchy-incoming-call (s/and (s/keys :req-un [:call-hierarchy/from :call-hierarchy/from-ranges])
-;;                                              (s/conformer #(doto (CallHierarchyIncomingCall.)
-;;                                                              (.setFrom (:from %1))
-;;                                                              (.setFromRanges (:from-ranges %1))))))
-;;
-;; (s/def ::call-hierarchy-outgoing-call (s/and (s/keys :req-un [:call-hierarchy/to :call-hierarchy/from-ranges])
-;;                                              (s/conformer #(doto (CallHierarchyOutgoingCall.)
-;;                                                              (.setTo (:to %1))
-;;                                                              (.setFromRanges (:from-ranges %1))))))
-;;
-;; (s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
-;; (s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
-;;
-;; (s/def :linked-editing-range/ranges (s/coll-of ::range))
-;;
-;; (s/def ::linked-editing-ranges
-;;   (s/and (s/keys :req-un [:linked-editing-range/ranges]
-;;                  :opt-un [::word-pattern])
-;;          (s/conformer #(doto (LinkedEditingRanges.)
-;;                          (.setRanges (:ranges %1))
-;;                          (.setWordPattern (:word-pattern %1))))))
-;;
-;; (s/def ::linked-editing-ranges-or-error
-;;   (s/and (s/or :error ::response-error
-;;                :ranges ::linked-editing-ranges)
-;;          (s/conformer second)))
-;;
-;; (defn stringify-keys-and-vals
-;;   "Recursively transforms all map keys and values from keywords to strings."
-;;   [m]
-;;   (let [kf (fn [[k v]] (if (keyword? k) [(name k) v] [k v]))
-;;         vf (fn [[k v]] (if (keyword? v) [k (name v)] [k v]))]
-;;     ;; only apply to maps
-;;     (clojure.walk/postwalk
-;;       (fn [x]
-;;         (cond
-;;           (symbol? x)
-;;           (str x)
-;;
-;;           (keyword? x)
-;;           (name x)
-;;
-;;           (map? x)
-;;           (into {} (map #(-> % kf vf) x))
-;;
-;;           :else
-;;           x)) m)))
-;;
-;; (defn clj->java [clj-map]
-;;   (->> clj-map
-;;        stringify-keys-and-vals
-;;        (j/to-java java.util.Map)))
-;;
-;; (defn java->clj [inst]
-;;   (let [converted (j/from-java inst)]
-;;     (if (map? converted)
-;;       (->> converted
-;;            (remove #(nil? (val %)))
-;;            (into {}))
-;;       converted)))
-;;
-;; #_{:clj-kondo/ignore [:deprecated-var]}
-;; (s/def ::legacy-debean (s/conformer debeaner))
-;; (s/def ::debean (s/conformer java->clj))
-;;
-;; #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-;; (s/def ::bean (s/conformer clj->java))
-;;
-;; (s/def :client-capabilities/code-action ::legacy-debean)
-;; (s/def :client-capabilities/code-lens ::legacy-debean)
-;; (s/def :client-capabilities/color-provider ::legacy-debean)
-;; (s/def :client-capabilities/definition ::legacy-debean)
-;; (s/def :client-capabilities/document-highlight ::legacy-debean)
-;; (s/def :client-capabilities/document-link ::legacy-debean)
-;; (s/def :client-capabilities/formatting ::legacy-debean)
-;; (s/def :client-capabilities/implementation ::legacy-debean)
-;; (s/def :client-capabilities/on-type-formatting ::legacy-debean)
-;; (s/def :client-capabilities/publish-diagnostics ::legacy-debean)
-;; (s/def :client-capabilities/range-formatting ::legacy-debean)
-;; (s/def :client-capabilities/references ::legacy-debean)
-;; (s/def :client-capabilities/rename ::legacy-debean)
-;; (s/def :client-capabilities/signature-information ::debean)
-;; (s/def :client-capabilities/synchronization ::legacy-debean)
-;; (s/def :client-capabilities/type-definition ::legacy-debean)
-;;
-;; (s/def :client-capabilities/symbol-kind-value-set
-;;   (s/conformer (fn [value-set]
-;;                  (set (map (fn [^SymbolKind kind]
-;;                              (.getValue kind)) value-set)))))
-;;
-;; (s/def :client-capabilities/symbol-kind (s/and ::legacy-debean
-;;                                                (s/keys :opt-un [:client-capabilities/symbol-kind-value-set])))
-;; (s/def :client-capabilities/document-symbol (s/and ::legacy-debean
-;;                                                    (s/keys :opt-un [:client-capabilities/symbol-kind])))
-;; (s/def :client-capabilities/signature-help (s/and ::debean
-;;                                                   (s/keys :opt-un [:client-capabilities/signature-information])))
-;;
-;; (s/def :client-capabilities/resolve-support ::debean)
-;;
-;; (s/def :client-capabilities/completion-item (s/and ::legacy-debean
-;;                                                    (s/keys :opt-un [:client-capabilities/resolve-support])))
-;;
-;; (s/def :client-capabilities/completion-item-kind-value-set
-;;   (s/conformer (fn [value-set]
-;;                  (set (map (fn [^CompletionItemKind kind]
-;;                              (.getValue kind)) value-set)))))
-;;
-;; (s/def :client-capabilities/completion-item-kind (s/and ::legacy-debean
-;;                                                         (s/keys :opt-un [:client-capabilities/completion-item-kind-value-set])))
-;; (s/def :client-capabilities/completion (s/and ::legacy-debean
-;;                                               (s/keys :opt-un [:client-capabilities/completion-item
-;;                                                                :client-capabilities/completion-item-kind])))
-;; (s/def :client-capabilities/hover (s/and ::legacy-debean
-;;                                          (s/keys :opt-un [:client-capabilities/content-format])))
-;; (s/def :client-capabilities/text-document (s/and ::legacy-debean
-;;                                                  (s/keys :opt-un [:client-capabilities/hover
-;;                                                                   :client-capabilities/completion
-;;                                                                   :client-capabilities/definition
-;;                                                                   :client-capabilities/formatting
-;;                                                                   :client-capabilities/publish-diagnostics
-;;                                                                   :client-capabilities/code-action
-;;                                                                   :client-capabilities/document-symbol
-;;                                                                   :client-capabilities/code-lens
-;;                                                                   :client-capabilities/document-highlight
-;;                                                                   :client-capabilities/color-provider
-;;                                                                   :client-capabilities/type-definition
-;;                                                                   :client-capabilities/rename
-;;                                                                   :client-capabilities/references
-;;                                                                   :client-capabilities/document-link
-;;                                                                   :client-capabilities/synchronization
-;;                                                                   :client-capabilities/range-formatting
-;;                                                                   :client-capabilities/on-type-formatting
-;;                                                                   :client-capabilities/signature-help
-;;                                                                   :client-capabilities/implementation])))
-;;
-;; (s/def :client-capabilities/workspace-edit ::legacy-debean)
-;; (s/def :client-capabilities/did-change-configuration ::legacy-debean)
-;; (s/def :client-capabilities/did-change-watched-files ::legacy-debean)
-;; (s/def :client-capabilities/execute-command ::legacy-debean)
-;; (s/def :client-capabilities/symbol (s/and ::legacy-debean
-;;                                           (s/keys :opt-un [:client-capabilities/symbol-kind])))
-;; (s/def :client-capabilities/workspace (s/and ::legacy-debean
-;;                                                     (s/keys :opt-un [:client-capabilities/workspace-edit
-;;                                                                      :client-capabilities/did-change-configuration
-;;                                                                      :client-capabilities/did-change-watched-files
-;;                                                                      :client-capabilities/execute-command
-;;                                                                      :client-capabilities/symbol])))
-;; (s/def ::client-capabilities (s/and ::legacy-debean
-;;                                     (s/keys :opt-un [:client-capabilities/workspace :client-capabilities/text-document])))
+
+(s/def ::code-lens (s/keys :req-un [::range]
+                           :opt-un [::command ::data]))
+
+(s/def ::code-lenses (s/coll-of ::code-lens))
+
+(s/def ::semantic-tokens (s/keys :req-un [::data]
+                                 :opt-un [::result-id]))
+
+(s/def ::call-hierarchy-item (s/keys :req-un [::name
+                                              :symbol.v1/kind
+                                              ::uri
+                                              ::range
+                                              ::selection-range]
+                                     :opt-un [::tags ::detail ::data]))
+
+(s/def ::call-hierarchy-items (s/coll-of ::call-hierarchy-item))
+
+(s/def :call-hierarchy.v1/from-ranges (s/coll-of ::range))
+(s/def :call-hierarchy.v1/from ::call-hierarchy-item)
+(s/def :call-hierarchy.v1/to ::call-hierarchy-item)
+
+(s/def ::call-hierarchy-incoming-call (s/keys :req-un [:call-hierarchy.v1/from :call-hierarchy.v1/from-ranges]))
+
+(s/def ::call-hierarchy-outgoing-call (s/keys :req-un [:call-hierarchy.v1/to :call-hierarchy.v1/from-ranges]))
+
+(s/def ::call-hierarchy-incoming-calls (s/coll-of ::call-hierarchy-incoming-call))
+(s/def ::call-hierarchy-outgoing-calls (s/coll-of ::call-hierarchy-outgoing-call))
+
+(s/def :linked-editing-range.v1/ranges (s/coll-of ::range))
+
+(s/def ::linked-editing-ranges
+  (s/keys :req-un [:linked-editing-range.v1/ranges]
+          :opt-un [::word-pattern]))
+
+(s/def ::linked-editing-ranges-or-error
+  (s/and (s/or :error ::response-error
+               :ranges ::linked-editing-ranges)
+         (s/conformer second)))
 
 (s/def :server-capabilities.v1/signature-help-provider
   (s/conformer #(cond (vector? %) {:trigger-characters %}
@@ -607,6 +373,4 @@
           (logger/error (s/explain-data spec value))
           result))
       (catch Exception ex
-        (if (instance? ResponseErrorException ex)
-          (throw ex)
-          (logger/error ex spec value))))))
+        (logger/error ex spec value)))))

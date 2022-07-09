@@ -395,13 +395,11 @@
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
   {:capabilities (capabilities (settings/all (deref (:db* components))))})
 
-(defmethod lsp.server/handle-notification "initialized" [_ components _params]
-  (lsp.endpoint/send-request
-    (:server components)
-    "client/registerCapability"
-    {:registrations [{:id "id"
-                      :method "workspace/didChangeWatchedFiles"
-                      :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}))
+(defmethod lsp.server/handle-notification "initialized" [_ {:keys [server]} _params]
+  (->> {:registrations [{:id "id"
+                         :method "workspace/didChangeWatchedFiles"
+                         :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
+       (lsp.endpoint/send-request server "client/registerCapability")))
 
 (defmethod lsp.server/handle-request "shutdown" [_ components _params]
   (logger/info "clojure-lsp Shutting down")

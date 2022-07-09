@@ -300,10 +300,10 @@
 
 (defn will-rename-files [files db]
   (->> files
-       (keep (fn [{:keys [oldUri newUri]}]
-               (let [old-filename (shared/uri->filename oldUri)
-                     new-ns (shared/uri->namespace newUri db)
+       (keep (fn [{:keys [old-uri new-uri]}]
+               (let [old-filename (shared/uri->filename old-uri)
+                     new-ns (shared/uri->namespace new-uri db)
                      ns-definition (q/find-namespace-definition-by-filename db old-filename)]
-                 (when ns-definition
-                   (f.rename/rename-element oldUri new-ns db ns-definition :rename-file)))))
+                 (when (and new-ns ns-definition)
+                   (f.rename/rename-element old-uri new-ns db ns-definition :rename-file)))))
        (reduce #(shared/deep-merge %1 %2) {:document-changes []})))

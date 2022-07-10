@@ -185,14 +185,20 @@
     (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
-    (let [element (#'q/find-last-order-by-project-analysis :namespace-definitions #(= 'foo.bar (:name %)) @db/db*)]
+    (let [element (#'q/find-last-order-by-project-analysis
+                   (comp q/xf-analysis->namespace-definitions
+                         (q/xf-same-name 'foo.bar))
+                   @db/db*)]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
     (h/clean-db!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
-    (let [element (#'q/find-last-order-by-project-analysis :namespace-definitions #(= 'foo.bar (:name %)) @db/db*)]
+    (let [element (#'q/find-last-order-by-project-analysis
+                   (comp q/xf-analysis->namespace-definitions
+                         (q/xf-same-name 'foo.bar))
+                   @db/db*)]
       (is (= (h/file-path "/b.clj") (:filename element))))))
 
 (deftest find-element-under-cursor

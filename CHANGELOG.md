@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump `cljfmt` from 0.8.0 -> 0.8.2
+
 - Editor
   - Restore #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
   - Improve call hierarchy performance by parsing less frequently. #1092

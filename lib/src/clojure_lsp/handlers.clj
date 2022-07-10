@@ -547,20 +547,20 @@
   ;;   (did-delete-files doc))
   clojure-feature/IClojureLSPFeature
   (cursor-info-log [_ doc]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (cursor-info-log doc @components*)))
   (cursor-info-raw [_ doc]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (cursor-info-raw doc)))
   (server-info-raw [_]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (server-info-raw)))
   (clojuredocs-raw [_ doc]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (clojuredocs-raw doc @components*)))
   (server-info-log [_]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (server-info-log @components*)))
   (dependency-contents [_ doc-id]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (dependency-contents doc-id @components*))))

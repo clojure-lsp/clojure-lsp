@@ -436,7 +436,7 @@
         ([^bytes b])
         ([^bytes b, off, len])))))
 
-(defmacro capturing-stdout
+(defmacro discarding-stdout
   "Evaluates body in a context in which writes to *out* are discarded."
   [& body]
   `(binding [*out* null-output-stream-writer]

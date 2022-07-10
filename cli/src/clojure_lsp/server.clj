@@ -79,7 +79,7 @@
             db*]
   producer/ILSPProducer
   (publish-diagnostic [_this diagnostic]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
       (shared/logging-task
         :publish-diagnostics
@@ -87,7 +87,7 @@
   (refresh-code-lens [_this]
     (producer/refresh-code-lens lsp-producer))
   (publish-workspace-edit [_this edit]
-    (shared/capturing-stdout
+    (shared/discarding-stdout
       (some-> (producer/publish-workspace-edit lsp-producer edit)
               deref)))
   (show-document-request [_this document-request]
@@ -104,7 +104,7 @@
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this uris]
     (go
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (let [db @db*]
           (when (some-> db :client-capabilities :experimental j/from-java :testTree)
             (shared/logging-task
@@ -133,18 +133,18 @@
     (.getWorkspaceService lsp-server))
   (^CompletableFuture dependencyContents [_ ^TextDocumentIdentifier uri]
     (CompletableFuture/completedFuture
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (lsp/handle-request uri clojure-feature/dependency-contents feature-handler ::coercer/uri))))
 
   (^CompletableFuture serverInfoRaw [_]
     (CompletableFuture/completedFuture
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (->> (clojure-feature/server-info-raw feature-handler)
              (coercer/conform-or-log ::clojure-coercer/server-info-raw)))))
 
   (^void serverInfoLog [_]
     (future
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (try
           (clojure-feature/server-info-log feature-handler)
           (catch Throwable e
@@ -154,12 +154,12 @@
 
   (^CompletableFuture cursorInfoRaw [_ ^CursorInfoParams params]
     (CompletableFuture/completedFuture
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (lsp/handle-request params clojure-feature/cursor-info-raw feature-handler ::clojure-coercer/cursor-info-raw))))
 
   (^void cursorInfoLog [_ ^CursorInfoParams params]
     (future
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (try
           (lsp/handle-notification params clojure-feature/cursor-info-log feature-handler)
           (catch Throwable e
@@ -168,7 +168,7 @@
 
   (^CompletableFuture clojuredocsRaw [_ ^ClojuredocsParams params]
     (CompletableFuture/completedFuture
-      (shared/capturing-stdout
+      (shared/discarding-stdout
         (lsp/handle-request params clojure-feature/clojuredocs-raw feature-handler ::clojure-coercer/clojuredocs-raw)))))
 
 (defn ^:private client-settings [params]
@@ -250,7 +250,7 @@
 (defonce ^:private components* (atom {}))
 
 (defn run-server! []
-  (shared/capturing-stdout
+  (shared/discarding-stdout
     (let [producer* (atom nil)
           db* db/db*
           timbre-logger (doto (->TimbreLogger db*)

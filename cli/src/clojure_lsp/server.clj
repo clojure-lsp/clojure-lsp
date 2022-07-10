@@ -63,17 +63,6 @@
   (-debug [_this fmeta arg1 arg2] (log! :debug [arg1 arg2] fmeta))
   (-debug [_this fmeta arg1 arg2 arg3] (log! :debug [arg1 arg2 arg3] fmeta)))
 
-(defn publish-diagnostic [server diagnostic]
-  (->> diagnostic
-       (coercer-v1/conform-or-log ::coercer-v1/publish-diagnostics-params)
-       (lsp.endpoint/send-notification server "textDocument/publishDiagnostics")))
-
-(defn apply-edit [server edit]
-  (->> edit
-       (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-or-error)
-       (lsp.endpoint/send-request server "workspace/applyEdit")
-       deref))
-
 ;; TODO: lsp2clj bring the ILSPProducer protocol from lsp4clj into clojure-lsp. We
 ;; need it so that we can provide dummy implementations on CLI and tests. Other
 ;; servers can organize however they wish.
@@ -86,18 +75,26 @@
     (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
     (shared/logging-task
       :publish-diagnostics
-      (publish-diagnostic server diagnostic)))
+      (->> diagnostic
+           (coercer-v1/conform-or-log ::coercer-v1/publish-diagnostics-params)
+           (lsp.endpoint/send-notification server "textDocument/publishDiagnostics"))))
 
   (refresh-code-lens [_this]
     (when (get-in @db* [:client-capabilities :workspace :code-lens :refresh-support])
       (lsp.endpoint/send-request server "workspace/codeLens/refresh" nil)))
 
   (publish-workspace-edit [_this edit]
-    (apply-edit server edit))
+    (let [request (->> edit
+                       (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-or-error)
+                       (lsp.endpoint/send-request server "workspace/applyEdit"))
+          response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+      (if (= ::timeout response)
+        (logger/error "No reponse from client after 10 seconds.")
+        response)))
 
   (show-document-request [_this document-request]
-    (logger/info "Requesting to show on editor the document" document-request)
     (when (get-in @db* [:client-capabilities :window :show-document])
+      (logger/info "Requesting to show on editor the document" document-request)
       (->> document-request
            (coercer-v1/conform-or-log ::coercer-v1/show-document-request)
            (lsp.endpoint/send-request server "window/showDocument"))))
@@ -108,13 +105,14 @@
          (lsp.endpoint/send-notification server "$/progress")))
 
   (show-message-request [_this message type actions]
-    (->> {:type type
-          :message message
-          :actions actions}
-         (coercer-v1/conform-or-log ::coercer-v1/show-message-request)
-         (lsp.endpoint/send-request server "window/showMessageRequest")
-         deref
-         :title))
+    (let [request (->> {:type type
+                        :message message
+                        :actions actions}
+                       (coercer-v1/conform-or-log ::coercer-v1/show-message-request)
+                       (lsp.endpoint/send-request server "window/showMessageRequest"))
+          response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+      (when-not (= response ::timeout)
+        (:title response))))
 
   (show-message [_this message type extra]
     (let [message-content {:message message
@@ -394,7 +392,7 @@
       (settings/clean-client-settings)))
 
 (defn ^:private exit []
-  (logger/info "clojure-lsp Exiting...")
+  (logger/info "Exiting...")
   (shutdown-agents)
   (System/exit 0))
 
@@ -403,7 +401,7 @@
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages
 
 (defmethod lsp.server/handle-request "initialize" [_ components params]
-  (logger/info "clojure-lsp initializing...")
+  (logger/info "Initializing...")
   (handler/initialize (:root-uri params)
                               ;; TODO: lsp2clj do we need any of the client capabilities
                               ;; coercion that used to happen?
@@ -417,17 +415,19 @@
   {:capabilities (capabilities (settings/all (deref (:db* components))))})
 
 (defmethod lsp.server/handle-notification "initialized" [_ {:keys [server]} _params]
+  (logger/info "Initialized!")
   (->> {:registrations [{:id "id"
                          :method "workspace/didChangeWatchedFiles"
                          :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
        (lsp.endpoint/send-request server "client/registerCapability")))
 
 (defmethod lsp.server/handle-request "shutdown" [_ components _params]
-  (logger/info "clojure-lsp Shutting down")
+  (logger/info "Shutting down...")
   (reset! (:db* components) db/initial-db)
   nil)
 
 (defmethod lsp.server/handle-notification "exit" [_ _components _params]
+  (logger/info "Shut down")
   (exit))
 
 (defmethod lsp.server/handle-notification "$/cancelRequest" [_ _ _])
@@ -441,16 +441,16 @@
      (recur)))
 
 (defn ^:private spawn-async-tasks!
-  [{:keys [server] :as components}]
+  [{:keys [producer] :as components}]
   (let [debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     (safe-async-task
       :edits
-      (apply-edit server (async/<! db/edits-chan)))
+      (producer/publish-workspace-edit producer (async/<! db/edits-chan)))
     (safe-async-task
       :diagnostics
-      (publish-diagnostic server (async/<! debounced-diags)))
+      (producer/publish-diagnostic producer (async/<! debounced-diags)))
     (safe-async-task
       :changes
       (let [changes (async/<! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time

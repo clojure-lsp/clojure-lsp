@@ -9,6 +9,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
+   [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
@@ -939,9 +940,10 @@
         (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
 
         (< 1 (count test-source-paths))
-        (let [actions (mapv #(hash-map :title %) source-paths)
-              chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
-          (create-test-for-source-path uri function-name-loc chosen-source-path db))
+        (let [actions (mapv #(hash-map :title %) source-paths)]
+          (if-let [chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
+            (create-test-for-source-path uri function-name-loc chosen-source-path db)
+            (logger/error "No response from client on source-path.")))
 
         ;; No source paths besides current one
         :else nil))))

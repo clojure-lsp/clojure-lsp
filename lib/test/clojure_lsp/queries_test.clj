@@ -694,7 +694,7 @@
   (let [[[bar-r bar-c]] (h/load-code-and-locs
                           (h/code "(ns foo.api"
                                   "  (:require [potemkin :refer [import-vars]]"
-                                  "            [foo.impl]))"
+                                  "            [foo.impl :as impl]))"
                                   "(import-vars |impl/bar)") (h/file-uri "file:///a.clj"))
         db @db/db*]
     (h/assert-submap

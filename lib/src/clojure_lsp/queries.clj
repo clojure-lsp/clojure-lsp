@@ -375,20 +375,11 @@
       element))
 
 (defmethod find-definition :var-definitions
-  [db element]
-  (if (= 'potemkin/import-vars (:defined-by element))
-    ;; FIXME: this is buggy... it goes to **any** definition with the same name,
-    ;; not specifically the one from the imported ns. See
-    ;; https://github.com/clojure-lsp/clojure-lsp/issues/1020
-    ;; To fix, use :imported-ns and :imported-var, and treat this like a
-    ;; var-usage Don't forget to switch from db to (db-with-ns-analysis db
-    ;; (:imported-ns element))
-    (find-last-order-by-project-analysis
-      :var-definitions
-      #(and (= (:name %) (:name element))
-            (not= 'potemkin/import-vars (:defined-by %))
-            (match-file-lang % element))
-      db)
+  [db {:keys [defined-by imported-ns] :as element}]
+  (if (safe-equal? 'potemkin/import-vars defined-by)
+    (find-definition db (assoc element
+                               :bucket :var-usages
+                               :to imported-ns))
     element))
 
 (defmethod find-definition :protocol-impls

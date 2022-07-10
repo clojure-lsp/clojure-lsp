@@ -42,8 +42,8 @@
     (when (shared/file-exists? old-db-file)
       (io/delete-file old-db-file true))))
 
-(defn ^:private remove-old-datalevin-db-file! []
-  (->> (datalevin-db-files @db*)
+(defn ^:private remove-old-datalevin-db-file! [db]
+  (->> (datalevin-db-files db)
        (filter shared/file-exists?)
        (mapv #(io/delete-file % true))))
 
@@ -82,7 +82,7 @@
 
 (defn upsert-local-cache! [{:keys [project-root] :as project-cache} db]
   (remove-old-sqlite-db-file! project-root)
-  (remove-old-datalevin-db-file!)
+  (remove-old-datalevin-db-file! db)
   (upsert-cache! project-cache (transit-local-db-file db)))
 
 (defn read-local-cache [project-root db]

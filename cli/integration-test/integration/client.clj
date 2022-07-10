@@ -1,9 +1,8 @@
 (ns integration.client
   (:require
-   [cheshire.core :as json]
-   [clojure.java.io :as io]
-   [clojure.string :as string]
-   [integration.helper :as h])
+   [clojure.core.async :as async]
+   [integration.helper :as h]
+   [integration.lsp-json-rpc :as lsp-json-rpc])
   (:import
    [java.time LocalDateTime]
    [java.time.format DateTimeFormatter]))
@@ -26,9 +25,6 @@
 (defn ^:private colored [color string]
   (str (get colors color) string (:reset colors)))
 
-(defn ^:private content-length [json]
-  (+ 1 (.length json)))
-
 (def ^:private ld-formatter DateTimeFormatter/ISO_LOCAL_DATE_TIME)
 (defn ^:private local-datetime-str [] (.format ld-formatter (LocalDateTime/now)))
 
@@ -49,93 +45,54 @@
   ([{:keys [client-id]} color msg params]
    (println (local-datetime-str)
             (colored color (str "Client " client-id " " msg))
-            (colored :yellow params))))
+            (colored :yellow params))
+   (flush)))
 
-(def ^:private wire-lock (Object.))
-
-(defn wire-send [server-in params]
-  (let [content (json/generate-string params)]
-    (binding [*out* server-in]
-      (locking wire-lock
-        (println (str "Content-Length: " (content-length content)))
-        (println "")
-        (println content)
-        (flush)))))
-
-(defn ^:private lsp-rpc [{:keys [request-id]} method params]
-  {:jsonrpc "2.0"
-   :method method
-   :params params
-   :id (swap! request-id inc)})
-
-(defn read-n-chars [^java.io.Reader input content-length]
-  (let [cs (char-array content-length)]
-    (loop [total-read 0]
-      (when (< total-read content-length)
-        (let [new-read (.read input cs total-read (- content-length total-read))]
-          (when (< new-read 0)
-            (throw (ex-info "no content" {})))
-          (recur (+ total-read new-read)))))
-    (String. cs)))
-
-(defn read-content-length [input]
-  (binding [*in* input]
-    (when-let [line (read-line)] ;; returns nil when input is closed, i.e. server output has closed
-      (let [[h v] (string/split line #":")]
-        (when-not (= h "Content-Length")
-          (throw (ex-info "unexpected header" {:line line})))
-        (parse-long (string/trim v))))))
-
-(defn ^:private listen! [server-out client]
-  (try
-    (loop []
-      ;; Block, waiting for next Content-Length line, then parse the number of
-      ;; characters specified as JSON-RPC. If the server output stream is
-      ;; closed, also close the client by exiting this loop.
-      (if-let [content-length (read-content-length server-out)]
-        ;; NOTE: this doesn't attempt to handle Content-Type header
-        (let [content-length (+ 2 content-length) ;; include \r\n before message
-              content (read-n-chars server-out content-length)
-              {:keys [id method] :as json} (cheshire.core/parse-string content true)]
+(defn ^:private listen!
+  "Read JSON-RPC messages (Clojure hashmaps) off the message channel, parse them
+  as requests, responses or notifcations, and send them to the client. Returns a
+  channel which will close when the messages channel closes."
+  [messages client]
+  (async/go-loop []
+    (if-let [{:keys [id method] :as json} (async/<! messages)]
+      (do
+        (try
           (cond
             (and id method) (receive-request client json)
             id              (receive-response client json)
             :else           (receive-notification client json))
-          (recur))
-        (do
-          (log client :white "listener closed:" "server closed")
-          (flush))))
-    (catch Throwable e
-      (log client :red "listener closed:" "exception")
-      (println e)
-      (throw e))))
+          (catch Throwable e
+            (log client :red "listener closed:" "exception receiving")
+            (println e)
+            (throw e)))
+        (recur))
+      (log client :white "listener closed:" "server closed"))))
 
-(defrecord Client [client-id
-                   server-in server-out
-                   listener
-                   request-id sent-requests
-                   received-requests received-notifications
-                   mock-responses]
+(defrecord TestClient [client-id
+                       sender receiver
+                       request-id sent-requests
+                       received-requests received-notifications
+                       mock-responses]
   IClient
   (start [this]
-    (reset! listener (future (listen! server-out this))))
+    (swap! receiver listen! this))
   (shutdown [_this] ;; simulate client closing
-    (.close server-in))
-  (exit [_this] ;; wait for shutdown of server to propagate to listener
-    @@listener)
+    (async/close! sender))
+  (exit [_this] ;; wait for shutdown of server to propagate to receiver
+    (async/<!! @receiver))
   (send-request [this method body]
-    (let [req (lsp-rpc this method body)
+    (let [req (lsp-json-rpc/json-rpc-message (swap! request-id inc) method body)
           p (promise)]
       (log this :cyan "sending request:" req)
       ;; Important: record request before sending it, so it is sure to be
       ;; available during receive-response.
       (swap! sent-requests assoc (:id req) p)
-      (wire-send server-in req)
+      (async/>!! sender req)
       p))
   (send-notification [this method body]
-    (let [notif (lsp-rpc this method body)]
+    (let [notif (lsp-json-rpc/json-rpc-message method body)]
       (log this :blue "sending notification:" notif)
-      (wire-send server-in notif)))
+      (async/>!! sender notif)))
   (receive-response [this {:keys [id] :as resp}]
     (if-let [request (get @sent-requests id)]
       (do (log this :green "received reponse:" resp)
@@ -155,7 +112,7 @@
       (let [resp {:id id
                   :result mock-resp}]
         (log this :magenta "sending mock response:" resp)
-        (wire-send server-in resp))))
+        (async/>!! sender resp))))
   (receive-notification [this notif]
     (log this :blue "received notification:" notif)
     (swap! received-notifications conj notif))
@@ -165,17 +122,16 @@
 
 (defonce client-id (atom 0))
 
-(defn client [server-in server-out]
-  (map->Client
+(defn stdio-client [server-in server-out]
+  (map->TestClient
     {:client-id (swap! client-id inc)
-     :server-in server-in
-     :server-out server-out
+     :sender (lsp-json-rpc/buffered-writer->sender-chan server-in)
+     :receiver (atom (lsp-json-rpc/buffered-reader->receiver-chan server-out))
      :request-id (atom 0)
      :sent-requests (atom {})
      :received-requests (atom [])
      :received-notifications (atom [])
-     :mock-responses (atom {})
-     :listener (atom nil)}))
+     :mock-responses (atom {})}))
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 

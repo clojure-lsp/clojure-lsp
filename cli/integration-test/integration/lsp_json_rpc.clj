@@ -13,6 +13,12 @@
   (let [cs (char-array content-length)]
     (loop [total-read 0]
       (when (< total-read content-length)
+        ;; FIXME: this is buggy. It reads `content-length` chars, but
+        ;; `content-length` is specified in bytes. It works as long as the
+        ;; integration tests are all in ASCII, but would break if they weren't.
+        ;; See https://github.com/mainej/lsp4clj/blob/lsp2clj/server/src/lsp4clj/json_rpc.clj
+        ;; for a correct implementation. The best way to fix this is probably to
+        ;; wait for that to be merged and then use those helpers.
         (let [new-read (.read reader cs total-read (- content-length total-read))]
           (when (< new-read 0)
             ;; TODO: return nil instead?
@@ -34,6 +40,10 @@
 
 (defn ^:private write-message [msg]
   (let [content (json/generate-string msg)]
+    ;; FIXME: this is buggy. It sets `Content-Length` to the number of chars in
+    ;; the content, but `Content-Length` should be the number of bytes (encoded
+    ;; as UTF-8). The fix is the same as for `read-n-chars`: we should use the
+    ;; helpers provided by lsp4clj.
     (print (str "Content-Length: " (.length content) "\r\n"
                 "\r\n"
                 content))

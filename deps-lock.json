@@ -171,14 +171,16 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.06.22/clj-kondo-2022.06.22.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2022.06.23-SNAPSHOT/clj-kondo-2022.06.23-20220704.194013-4.jar",
+      "snapshot": "clj-kondo-2022.06.23-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-N+Xwtksn0DCwHGg6aVmJW+i+d87iNk2AwzEe8PeO4nM="
+      "hash": "sha256-nGOuBABqfKs2Tx9xal391Tpd7nT6gLLg//Eqid7WGHg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.06.22/clj-kondo-2022.06.22.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2022.06.23-SNAPSHOT/clj-kondo-2022.06.23-20220704.194013-4.pom",
+      "snapshot": "clj-kondo-2022.06.23-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-8Jd5Kh3HflkQSaY+l1Igx0d6YWLoYS9Jwm4gLZ3w54A="
+      "hash": "sha256-ydIOCSYzbYoHhkZGG55ZNo2yGhPiNq0t+lRklHn/660="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -191,14 +193,14 @@
       "hash": "sha256-knxhrJGUOQV9pZI1VN5z4l7kDevziXylJ+thvCzn+T4="
     },
     {
-      "mvn-path": "cljfmt/cljfmt/0.8.0/cljfmt-0.8.0.jar",
+      "mvn-path": "cljfmt/cljfmt/0.8.2/cljfmt-0.8.2.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-DeTH5FjVzcKXFmtD5k7uzUBsrRHywHT73Mn8R3F67QM="
+      "hash": "sha256-4e7ca/mhWNODA7qtqnVgQfJOPElBvvJqCO4M0LpWE+U="
     },
     {
-      "mvn-path": "cljfmt/cljfmt/0.8.0/cljfmt-0.8.0.pom",
+      "mvn-path": "cljfmt/cljfmt/0.8.2/cljfmt-0.8.2.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-DZG2RE9FOmlX33J99P9aiYeu+zCO+s7+8m6CmIdtMQg="
+      "hash": "sha256-Y9e0GK7/qbNkUE1kXsv/DRIQWRbuGSKkWUL7QmvKPPc="
     },
     {
       "mvn-path": "com/amazonaws/aws-java-sdk-bom/1.11.713/aws-java-sdk-bom-1.11.713.pom",
@@ -2194,11 +2196,6 @@
       "mvn-path": "org/clojure/tools.namespace/1.3.0/tools.namespace-1.3.0.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-e5Sl5sIS2bDFQhGM6SYm5ujcPu1SZ07kYuON1lWTuZQ="
-    },
-    {
-      "mvn-path": "org/clojure/tools.reader/1.3.5/tools.reader-1.3.5.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-1yf81wzsSwAsdD4fiEvEm+5iy53S14fUJzP3L587518="
     },
     {
       "mvn-path": "org/clojure/tools.reader/1.3.6/tools.reader-1.3.6.jar",

@@ -61,11 +61,16 @@
         (println content)
         (flush)))))
 
-(defn ^:private lsp-rpc [{:keys [request-id]} method params]
+(defn ^:private lsp-notif [method params]
   {:jsonrpc "2.0"
    :method method
-   :params params
-   :id (swap! request-id inc)})
+   :params params})
+
+(defn ^:private lsp-request [id method params]
+  {:jsonrpc "2.0"
+   :id id
+   :method method
+   :params params})
 
 (defn read-n-chars [^java.io.Reader input content-length]
   (let [cs (char-array content-length)]
@@ -102,7 +107,7 @@
             :else           (receive-notification client json))
           (recur))
         (do
-          (log client :white "listener closed:" "server closed")
+          (log client :white "listener:" "server closed")
           (flush))))
     (catch Throwable e
       (log client :red "listener closed:" "exception")
@@ -117,13 +122,16 @@
                    mock-responses]
   IClient
   (start [this]
+    (log this :white "lifecycle:" "starting")
     (reset! listener (future (listen! server-out this))))
-  (shutdown [_this] ;; simulate client closing
+  (shutdown [this] ;; simulate client closing
+    (log this :white "lifecycle:" "shutting down")
     (.close server-in))
-  (exit [_this] ;; wait for shutdown of server to propagate to listener
+  (exit [this] ;; wait for shutdown of server to propagate to listener
+    (log this :white "lifecycle:" "exiting")
     @@listener)
   (send-request [this method body]
-    (let [req (lsp-rpc this method body)
+    (let [req (lsp-request (swap! request-id inc) method body)
           p (promise)]
       (log this :cyan "sending request:" req)
       ;; Important: record request before sending it, so it is sure to be
@@ -132,7 +140,7 @@
       (wire-send server-in req)
       p))
   (send-notification [this method body]
-    (let [notif (lsp-rpc this method body)]
+    (let [notif (lsp-notif method body)]
       (log this :blue "sending notification:" notif)
       (wire-send server-in notif)))
   (receive-response [this {:keys [id] :as resp}]

@@ -10,7 +10,7 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
+   [clojure-lsp.producer :as producer]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]

@@ -1,12 +1,12 @@
 (ns clojure-lsp.feature.file-management
   (:require
    [clojure-lsp.clj-depend :as lsp.depend]
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -14,8 +14,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -233,7 +232,7 @@
               (f.diagnostic/sync-publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-db db components))
-              (clojure-producer/refresh-test-tree producer [uri]))
+              (producer/refresh-test-tree producer [uri]))
             (recur @db*)))))))
 
 (defn did-change [uri changes version db*]
@@ -254,7 +253,7 @@
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
     (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! filenames @db*)
-    (clojure-producer/refresh-test-tree producer uris)))
+    (producer/refresh-test-tree producer uris)))
 
 (defn ^:private db-without-file [state-db uri filename]
   (-> state-db

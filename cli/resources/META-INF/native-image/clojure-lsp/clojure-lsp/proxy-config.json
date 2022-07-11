@@ -1,3 +1,2 @@
 [
-  ["clojure_lsp.ClojureLanguageClient","org.eclipse.lsp4j.jsonrpc.Endpoint"]
 ]

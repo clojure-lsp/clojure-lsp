@@ -11,7 +11,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer])
+   [clojure-lsp.producer :as producer])
   (:import
    (java.net URI)))
 

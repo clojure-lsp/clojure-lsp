@@ -8,7 +8,7 @@
    [clojure.set :as set]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer])
+   [clojure-lsp.producer :as producer])
   (:import
    (java.io ByteArrayOutputStream)
    (java.security MessageDigest)))

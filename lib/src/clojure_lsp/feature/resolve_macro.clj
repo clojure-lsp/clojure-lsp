@@ -8,7 +8,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
+   [clojure-lsp.producer :as producer]
    [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)

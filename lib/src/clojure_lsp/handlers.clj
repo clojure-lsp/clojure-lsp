@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -23,13 +22,13 @@
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]))
+   [lsp4clj.protocols.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 
@@ -72,7 +71,7 @@
                result#)))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db* producer]}]
-  (clojure-producer/refresh-test-tree producer (dep-graph/internal-uris @db*)))
+  (producer/refresh-test-tree producer (dep-graph/internal-uris @db*)))
 
 (defn initialize
   [project-root-uri
@@ -119,7 +118,7 @@
     (let [uri (:uri text-document)
           text (:text text-document)]
       (f.file-management/did-open uri text db* true)
-      (clojure-producer/refresh-test-tree producer [uri])))
+      (producer/refresh-test-tree producer [uri])))
   nil)
 
 (defn did-save [{:keys [text-document]} {:keys [db*]}]

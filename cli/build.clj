@@ -7,22 +7,12 @@
 (def lib 'com.github.clojure-lsp/clojure-lsp)
 (def clojars-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
 (def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
-(def lsp-class-dir "target/lsp-classes")
 (def class-dir "target/classes")
 (def basis {:project "deps.edn"})
 (def uber-file (format "target/%s-standalone.jar" (name lib)))
 
 (defn clean [_]
   (b/delete {:path "target"}))
-
-(defn javac [opts]
-  (clean opts)
-  (println "Compiling java classes...")
-  (b/javac {:src-dirs ["src-java"]
-            :class-dir lsp-class-dir
-            :basis (b/create-basis basis)})
-  (b/copy-dir {:src-dirs [lsp-class-dir]
-               :target-dir class-dir}))
 
 (defn pom [opts]
   (b/write-pom {:target ""
@@ -35,7 +25,6 @@
 
 (defn ^:private uber [opts]
   (clean opts)
-  (javac opts)
   (pom opts)
   (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
                :target-dir class-dir})
@@ -46,7 +35,6 @@
 
 (defn ^:private uber-aot [opts]
   (clean opts)
-  (javac opts)
   (println "Building uberjar...")
   (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
         src-dirs (into ["src" "resources"] (:extra-dirs opts))]

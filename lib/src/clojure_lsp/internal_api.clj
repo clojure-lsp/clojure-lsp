@@ -52,13 +52,13 @@
   (-debug [_ _fmeta arg1 arg2] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2))
   (-debug [_ _fmeta arg1 arg2 arg3] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2 arg3)))
 
-(defn ^:private show-message-cli [options {:keys [message extra type]}]
+(defn ^:private show-message-cli [db* options {:keys [message extra type]}]
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
   (when (and (= :error type)
-             (settings/get @db/db* [:api :exit-on-errors?] true))
+             (settings/get @db* [:api :exit-on-errors?] true))
     (throw (ex-info message {:result-code 1 :message extra}))))
 
-(defrecord APIProducer [options]
+(defrecord APIProducer [db* options]
   producer/ILSPProducer
 
   (refresh-code-lens [_this])
@@ -78,18 +78,19 @@
     (let [message-content {:message message
                            :type type
                            :extra extra}]
-      (show-message-cli options message-content)))
+      (show-message-cli db* options message-content)))
   (register-capability [_this _capability])
 
   clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
 (defn ^:private build-components [options]
-  (components/->components
-    db/db*
-    (doto (->CLILogger options)
-      (logger/setup))
-    (->APIProducer options)))
+  (let [db* (atom db/initial-db)]
+    (components/->components
+      db*
+      (doto (->CLILogger options)
+        (logger/setup))
+      (->APIProducer db* options))))
 
 (defn ^:private edit->summary
   ([db uri edit]

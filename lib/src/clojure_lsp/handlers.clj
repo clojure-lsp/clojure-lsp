@@ -235,9 +235,10 @@
                                  {:name (-> e :name name)
                                   :kind (f.document-symbol/element->symbol-kind e)
                                   :range (shared/->scope-range e)
-                                  :selection-range (shared/->range e)
-                                  :tags (cond-> []
-                                          (:deprecated e) (conj 1))}
+                                  :selection-range (shared/->range e)}
+                                 :tags (not-empty
+                                         (cond-> []
+                                           (:deprecated e) (conj 1)))
                                  :detail (when (:private e)
                                            "private")))))}])))
 
@@ -389,10 +390,10 @@
                       :end-col (inc (:character end))}]
       (f.format/range-formatting (:uri text-document) format-pos db))))
 
-(defn dependency-contents [doc-id {:keys [db*]}]
+(defn dependency-contents [{:keys [uri]} {:keys [db*]}]
   (shared/logging-task
     :dependency-contents
-    (f.java-interop/read-content! doc-id @db*)))
+    (f.java-interop/read-content! uri @db*)))
 
 (defn code-actions
   [{:keys [range context text-document]} {:keys [db*]}]

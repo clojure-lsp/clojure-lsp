@@ -797,7 +797,7 @@
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
-                 :options {:overwrite? false, :ignore-if-exists? true}}]
+                 :options {:overwrite false, :ignore-if-exists true}}]
                resource-changes))
         (is (= {(h/file-uri "file:///project/src/foo.clj")
                 [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
@@ -827,7 +827,7 @@
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
-                 :options {:overwrite? false, :ignore-if-exists? true}}]
+                 :options {:overwrite false, :ignore-if-exists true}}]
                resource-changes))
         (is (= {(h/file-uri "file:///project/src/foo.clj")
                 [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
@@ -880,7 +880,7 @@
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
-                 :options {:overwrite? false :ignore-if-exists? true}}]
+                 :options {:overwrite false :ignore-if-exists true}}]
                resource-changes))
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.clj")
@@ -904,7 +904,7 @@
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
-                 :options {:overwrite? false :ignore-if-exists? true}}]
+                 :options {:overwrite false :ignore-if-exists true}}]
                resource-changes))
         (h/assert-submap
           {(h/file-uri "file:///project/test/some/ns_test.cljs")

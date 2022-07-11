@@ -84,8 +84,8 @@
       (lsp.endpoint/send-request server "workspace/codeLens/refresh" nil)))
 
   (publish-workspace-edit [_this edit]
-    (let [request (->> edit
-                       (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-or-error)
+    (let [request (->> {:edit edit}
+                       (coercer-v1/conform-or-log ::coercer-v1/workspace-edit-params)
                        (lsp.endpoint/send-request server "workspace/applyEdit"))
           response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
       (if (= ::timeout response)
@@ -145,14 +145,12 @@
 
 ;;;; clojure experimental features
 
-(defmethod lsp.server/handle-request "clojure/dependencyContents" [_ components uri]
+(defmethod lsp.server/handle-request "clojure/dependencyContents" [_ components params]
   (coercer-v1/conform-or-log
     ::coercer-v1/uri
-    (handler/dependency-contents uri components)))
+    (handler/dependency-contents params components)))
 (defmethod lsp.server/handle-request "clojure/serverInfo/raw" [_ components _params]
-  (coercer-v1/conform-or-log
-    ::clojure-coercer/server-info-raw
-    (handler/server-info-raw components)))
+  (handler/server-info-raw components))
 (defmethod lsp.server/handle-notification "clojure/serverInfo/log" [_ components _params]
   (future
     (try
@@ -161,9 +159,7 @@
         (logger/error e)
         (throw e)))))
 (defmethod lsp.server/handle-request "clojure/cursorInfo/raw" [_ components params]
-  (coercer-v1/conform-or-log
-    ::clojure-coercer/cursor-info-raw
-    (handler/cursor-info-raw params components)))
+  (handler/cursor-info-raw params components))
 (defmethod lsp.server/handle-notification "clojure/cursorInfo/log" [_ components params]
   (future
     (try
@@ -172,9 +168,7 @@
         (logger/error e)
         (throw e)))))
 (defmethod lsp.server/handle-request "clojure/clojuredocs/raw" [_ components params]
-  (coercer-v1/conform-or-log
-    ::clojure-coercer/clojuredocs-raw
-    (handler/clojuredocs-raw params components)))
+  (handler/clojuredocs-raw params components))
 
 ;;;; Document sync features
 

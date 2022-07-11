@@ -84,7 +84,7 @@
 (s/def ::text-document-edit (s/keys :req-un [::text-document ::edits]))
 (s/def ::changes (s/coll-of (s/tuple string? ::edits) :kind map?))
 
-(s/def :create-file.v1/options (s/keys :opt-un [::overwrite? ::ignore-if-exists?]))
+(s/def :create-file.v1/options (s/keys :opt-un [::overwrite ::ignore-if-exists]))
 
 (s/def :create-file.v1/kind (s/and string?
                                    #(= % "create")))
@@ -104,14 +104,18 @@
                                  (s/conformer #(map second %))))
 
 (s/def ::workspace-edit
-  (s/and (s/keys :opt-un [::document-changes ::changes])
-         (s/conformer (fn [edit] {:edit edit}))))
+  (s/keys :opt-un [::document-changes ::changes]))
 
 (s/def ::workspace-edit-or-error
   (s/and (s/or :error ::response-error
                :changes ::workspace-edit
                :document-changes ::workspace-edit)
          (s/conformer second)))
+
+(s/def :workspace-edit-params.v1/edit ::workspace-edit-or-error)
+
+(s/def ::workspace-edit-params
+  (s/keys :req-un [:workspace-edit-params.v1/edit]))
 
 (s/def ::location (s/keys :req-un [::uri ::range]))
 (s/def ::locations (s/coll-of ::location))
@@ -148,7 +152,10 @@
 
 (s/def :document-symbol.v1/detail string?)
 
-(s/def ::document-symbol (s/keys :req-un [::name :symbol.v1/kind ::range :document-symbol.v1/selection-range]
+(s/def ::document-symbol (s/keys :req-un [::name
+                                          :symbol.v1/kind
+                                          ::range
+                                          :document-symbol.v1/selection-range]
                                  :opt-un [:document-symbol.v1/detail :document-symbol.v1/children]))
 
 (s/def :document-symbol.v1/children (s/coll-of ::document-symbol))
@@ -253,7 +260,7 @@
 ;;
 (s/def ::show-document-request
   (s/and (s/keys :req-un [::uri ::range]
-                 :opt-un [::take-focus?])
+                 :opt-un [::take-focus])
          (s/conformer (fn [element]
                         (set/rename-keys element {:range :selection})))))
 
@@ -270,7 +277,7 @@
    :source "source"
    :source-organize-imports "source.organizeImports"})
 
-(s/def :code-action.v1/preferred? boolean?)
+(s/def :code-action.v1/preferred boolean?)
 
 (s/def :code-action.v1/kind (s/and (s/or :keyword (s/and keyword?
                                                          code-action-kind
@@ -283,7 +290,7 @@
                                       ::diagnostics
                                       :code-action.v1/edit
                                       ::command
-                                      :code-action.v1/preferred?
+                                      :code-action.v1/preferred
                                       ::data]))
 
 (s/def ::code-actions (s/coll-of ::code-action))

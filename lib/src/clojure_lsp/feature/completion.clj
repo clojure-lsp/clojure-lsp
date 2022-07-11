@@ -362,7 +362,7 @@
 
 (defn ^:private merging-snippets [items cursor-loc next-loc function-call? matches-fn settings]
   (let [snippet-items (map (fn [snippet]
-                             (if (:function-call? snippet)
+                             (if (:function-call snippet)
                                (update snippet :insert-text remove-first-and-last-char)
                                snippet))
                            (f.completion-snippet/known-snippets function-call? settings))

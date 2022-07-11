@@ -359,7 +359,7 @@
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))
                    (pmap (comp (fn [{:keys [uri]}]
-                                 (some->> (handlers/formatting {:textDocument uri})
+                                 (some->> (handlers/formatting {:text-document {:uri uri}} components)
                                           (map #(edit->summary @db* uri %))))))
                    (apply concat)
                    (remove nil?))]

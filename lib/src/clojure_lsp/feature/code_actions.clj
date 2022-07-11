@@ -72,26 +72,26 @@
 (defn ^:private require-suggestion-actions
   [uri alias-suggestions]
   (map (fn [{:keys [ns alias refer position count]}]
-         {:title      (format "Add require '[%s%s%s]'%s"
-                              ns
-                              (if alias (str " :as " alias) "")
-                              (if refer (str " :refer [" refer "]") "")
-                              (if count (str " × " count) ""))
-          :kind       :quick-fix
-          :preferred? true
-          :command    {:title     "Add require suggestion"
-                       :command   "add-require-suggestion"
-                       :arguments [uri (:line position) (:character position) ns alias refer]}})
+         {:title     (format "Add require '[%s%s%s]'%s"
+                             ns
+                             (if alias (str " :as " alias) "")
+                             (if refer (str " :refer [" refer "]") "")
+                             (if count (str " × " count) ""))
+          :kind      :quick-fix
+          :preferred true
+          :command   {:title     "Add require suggestion"
+                      :command   "add-require-suggestion"
+                      :arguments [uri (:line position) (:character position) ns alias refer]}})
        alias-suggestions))
 
 (defn ^:private missing-import-actions [uri missing-imports]
   (map (fn [{:keys [missing-import position]}]
-         {:title      (str "Add import '" missing-import "'")
-          :kind       :quick-fix
-          :preferred? true
-          :command    {:title     "Add missing import"
-                       :command   "add-missing-import"
-                       :arguments [uri (:line position) (:character position)]}})
+         {:title     (str "Add import '" missing-import "'")
+          :kind      :quick-fix
+          :preferred true
+          :command   {:title     "Add missing import"
+                      :command   "add-missing-import"
+                      :arguments [uri (:line position) (:character position)]}})
        missing-imports))
 
 (defn ^:private change-colls-actions [uri line character other-colls]

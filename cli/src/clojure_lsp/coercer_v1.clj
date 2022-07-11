@@ -36,14 +36,17 @@
 (s/def ::range (s/keys :req-un [::start ::end]))
 (s/def ::selection-range ::range)
 
-(def completion-kind-enum
+(def completion-item-kind->enum-val
   {:text 1 :method 2 :function 3 :constructor 4 :field 5 :variable 6 :class 7 :interface 8 :module 9
    :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
+(def enum-val->completion-item-kind
+  (set/map-invert completion-item-kind->enum-val))
+
 (s/def :completion-item.v1/kind (s/and keyword?
-                                       completion-kind-enum
-                                       (s/conformer completion-kind-enum)))
+                                       completion-item-kind->enum-val
+                                       (s/conformer completion-item-kind->enum-val)))
 
 (def insert-text-format-enum
   {:plaintext 1
@@ -76,6 +79,15 @@
                                           ::insert-text :completion-item.v1/insert-text-format]))
 
 (s/def ::completion-items (s/coll-of ::completion-item))
+
+(s/def :input.completion-item.v1/kind
+  (s/and integer?
+         enum-val->completion-item-kind
+         (s/conformer enum-val->completion-item-kind)))
+
+(s/def ::input.completion-item
+  (s/keys :opt-un [:input.completion-item.v1/kind]))
+
 (s/def ::version (s/and integer? (s/conformer int)))
 (s/def ::uri string?)
 

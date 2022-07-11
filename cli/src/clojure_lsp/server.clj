@@ -202,9 +202,10 @@
     (handler/completion params components)))
 
 (defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
-  (coercer-v1/conform-or-log
-    ::coercer-v1/completion-item
-    (handler/completion-resolve-item item components)))
+  (let [item (coercer-v1/conform-or-log item ::coercer-v1/input.completion-item)]
+    (coercer-v1/conform-or-log
+      ::coercer-v1/completion-item
+      (handler/completion-resolve-item item components))))
 
 (defmethod lsp.server/handle-request "textDocument/prepareRename" [_ components params]
   (coercer-v1/conform-or-log

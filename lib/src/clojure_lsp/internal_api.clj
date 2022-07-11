@@ -14,7 +14,6 @@
    [clojure.core.async :refer [<! go-loop]]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [lsp4clj.components :as components]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer])
   (:import
@@ -85,12 +84,11 @@
   (refresh-test-tree [_this _uris]))
 
 (defn ^:private build-components [options]
-  (let [db* (atom db/initial-db)]
-    (components/->components
-      db*
-      (doto (->CLILogger options)
-        (logger/setup))
-      (->APIProducer db* options))))
+  (let [db* db/db*]
+    {:db* db*
+     :logger (doto (->CLILogger options)
+               (logger/setup))
+     :producer (->APIProducer db* options)}))
 
 (defn ^:private edit->summary
   ([db uri edit]
@@ -156,10 +154,7 @@
       (shared/filename->uri db)))
 
 (defn ^:private setup-api! [{:keys [producer db*]}]
-  ;; TODO do not add components to db after all usages relies on components from outside db.
-  (swap! db* assoc
-         :api? true
-         :producer producer)
+  (swap! db* assoc :api? true)
   (go-loop []
     (producer/publish-diagnostic producer (<! db/diagnostics-chan))
     (recur)))

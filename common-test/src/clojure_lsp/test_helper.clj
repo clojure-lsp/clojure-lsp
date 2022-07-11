@@ -9,7 +9,6 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [lsp4clj.components :as components]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.protocols.producer :as producer]
    [rewrite-clj.zip :as z]))
@@ -63,10 +62,9 @@
   (-debug [_this _fmeta _arg1 _arg2 _arg3]))
 
 (def components
-  (components/->components
-    db/db*
-    (->TestLogger)
-    (->TestProducer)))
+  {:db* db/db*
+   :logger (->TestLogger)
+   :producer (->TestProducer)})
 
 (defn clean-db!
   ([]
@@ -74,7 +72,6 @@
   ([env]
    (reset! db/db* (assoc db/initial-db
                          :env env
-                         :producer (:producer components)
                          #_#_:settings {:experimental {:dep-graph-queries true}}))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
@@ -179,7 +176,7 @@
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
         uri (or uri default-uri)]
-    (handlers/did-open {:textDocument {:uri uri :text code}} components)
+    (handlers/did-open {:text-document {:uri uri :text code}} components)
     positions))
 
 (defn ->position [[row col]]

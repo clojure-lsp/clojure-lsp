@@ -73,32 +73,34 @@
                  :children [{:name "bar"
                              :kind :variable
                              :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
-                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
-                             :tags []}
+                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
                             {:name "baz"
                              :kind :variable
                              :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
-                             :tags []}]}]]
+                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}}]}]]
     (testing "clj files"
       (h/load-code-and-locs code)
       (h/assert-submaps result
-                        (handlers/document-symbol {:textDocument (h/file-uri "file:///a.clj")})))
+                        (handlers/document-symbol {:text-document {:uri (h/file-uri "file:///a.clj")}}
+                                                  h/components)))
     (testing "cljs files"
       (h/load-code-and-locs code (h/file-uri "file:///b.cljs"))
       (h/assert-submaps result
-                        (handlers/document-symbol {:textDocument (h/file-uri "file:///b.cljs")})))
+                        (handlers/document-symbol {:text-document {:uri (h/file-uri "file:///b.cljs")}}
+                                                  h/components)))
     (testing "cljc files"
       (h/load-code-and-locs code (h/file-uri "file:///c.cljc"))
       (h/assert-submaps result
-                        (handlers/document-symbol {:textDocument (h/file-uri "file:///c.cljc")})))))
+                        (handlers/document-symbol {:text-document {:uri (h/file-uri "file:///c.cljc")}}
+                                                  h/components)))))
 
 (deftest document-highlight
   (let [[bar-start] (h/load-code-and-locs "(ns a) (def |bar ::bar) (def ^:m baz 1)")]
     (h/assert-submaps
       [{:range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}]
-      (handlers/document-highlight {:textDocument (h/file-uri "file:///a.clj")
-                                    :position (h/->position bar-start)}))))
+      (handlers/document-highlight {:text-document {:uri (h/file-uri "file:///a.clj")}
+                                    :position (h/->position bar-start)}
+                                   h/components))))
 
 (deftest references
   (testing "simple single reference"
@@ -107,7 +109,7 @@
       (h/assert-submaps
         [{:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
-        (handlers/references {:textDocument (h/file-uri "file:///a.clj")
+        (handlers/references {:text-document {:uri (h/file-uri "file:///a.clj")}
                               :position (h/->position bar-def-pos)}
                              h/components))))
   (testing "when including declaration"
@@ -118,9 +120,9 @@
           :range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
          {:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
-        (handlers/references {:textDocument (h/file-uri "file:///a.clj")
+        (handlers/references {:text-document {:uri (h/file-uri "file:///a.clj")}
                               :position (h/->position bar-def-pos)
-                              :context {:includeDeclaration true}}
+                              :context {:include-declaration true}}
                              h/components)))))
 
 (deftest test-rename
@@ -151,62 +153,70 @@
         [uname-kw-start uname-kw-end] (h/load-code-and-locs (h/code "(ns user)"
                                                                     "(def name |::name|)") (h/file-uri "file:///user.cljc"))]
     (testing "on symbol without namespace"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///a.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position abar-start)
-                                                :newName "foo"}))]
+                                                :new-name "foo"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///a.clj") [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
                 (h/file-uri "file:///b.clj") [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on symbol with metadata namespace"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///a.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position abaz-start)
-                                                :newName "qux"}))]
+                                                :new-name "qux"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///a.clj") [{:new-text "qux" :range (h/->range abaz-start abaz-stop)}]
                 (h/file-uri "file:///c.clj") [{:new-text "qux" :range (h/->range cbaz-start cbaz-stop)}]}
                changes))))
     (testing "on symbol with namespace adds existing namespace"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///b.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position [(first bbar-start) (dec (second bbar-start))])
-                                                :newName "foo"}))]
+                                                :new-name "foo"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///a.clj") [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
                 (h/file-uri "file:///b.clj") [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on symbol with namespace removes passed-in namespace"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///b.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position bbar-start)
-                                                :newName "aa/foo"}))]
+                                                :new-name "aa/foo"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///a.clj") [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
                 (h/file-uri "file:///b.clj") [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on ::keyword"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///a.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position akwbar-start)
-                                                :newName "::foo"}))]
+                                                :new-name "::foo"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///a.clj") [{:new-text "::foo" :range (h/->range akw-start akwbar-stop)}]
                 (h/file-uri "file:///b.clj") [{:new-text "::aa/foo" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on single-name-namespace'd keyword"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///main.cljc")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///main.cljc")}
                                                 :position (h/->position main-uname-kw-start)
-                                                :newName "::full-name"}))]
+                                                :new-name "::full-name"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///main.cljc") [{:new-text "::u/full-name" :range (h/->range main-uname-kw-start main-uname-kw-end)}]
                 (h/file-uri "file:///user.cljc") [{:new-text "::full-name" :range (h/->range uname-kw-start uname-kw-end)}]}
                changes))))
     (testing "on qualified keyword without alias"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///d.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///d.clj")}
                                                 :position (h/->position d-name-kw-start)
-                                                :newName "::other-name"}))]
+                                                :new-name "::other-name"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///d.clj") [{:new-text "::other-name" :range (h/->range d-name-kw-start d-name-kw-stop)}]
                 (h/file-uri "file:///e.clj") [{:new-text "::dd/other-name" :range (h/->range kw-aliased-start kw-aliased-stop)}
                                               {:new-text ":d.dd/other-name" :range (h/->range kw-unaliased-start kw-unaliased-stop)}]}
                changes))))
     (testing "on alias changes namespaces inside file"
-      (let [changes (:changes (handlers/rename {:textDocument (h/file-uri "file:///b.clj")
+      (let [changes (:changes (handlers/rename {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position balias-start)
-                                                :newName "xx"}))]
+                                                :new-name "xx"}
+                                               h/components))]
         (is (= {(h/file-uri "file:///b.clj")
                 [{:range (h/->range balias-start balias-stop) :new-text "xx"}
                  {:range (h/->range ba2-kw-start ba2-kw-stop) :new-text "::xx/bar"}
@@ -232,21 +242,24 @@
   (testing "when it has unresolved-namespace and can find namespace"
     (is (some #(= (:title %) "Add require '[some-ns :as sns]' × 1")
               (handlers/code-actions
-                {:textDocument (h/file-uri "file:///c.clj")
+                {:text-document {:uri (h/file-uri "file:///c.clj")}
                  :context {:diagnostics [{:code "unresolved-namespace"
                                           :range {:start {:line 2 :character 10}}}]}
-                 :range {:start {:line 2 :character 10}}}))))
+                 :range {:start {:line 2 :character 10}}}
+                h/components))))
   (testing "without workspace edit client capability"
     (swap! db/db* merge {:client-capabilities {:workspace {:workspace-edit false}}})
     (is (not-any? #(= (:title %) "Clean namespace")
                   (handlers/code-actions
-                    {:textDocument (h/file-uri "file:///b.clj")
+                    {:text-document {:uri (h/file-uri "file:///b.clj")}
                      :context {:diagnostics []}
-                     :range {:start {:line 1 :character 1}}}))))
+                     :range {:start {:line 1 :character 1}}}
+                    h/components))))
   (testing "with workspace edit client capability"
     (swap! db/db* merge {:client-capabilities {:workspace {:workspace-edit true}}})
     (is (some #(= (:title %) "Clean namespace")
               (handlers/code-actions
-                {:textDocument (h/file-uri "file:///b.clj")
+                {:text-document {:uri (h/file-uri "file:///b.clj")}
                  :context {:diagnostics []}
-                 :range {:start {:line 1 :character 1}}})))))
+                 :range {:start {:line 1 :character 1}}}
+                h/components)))))

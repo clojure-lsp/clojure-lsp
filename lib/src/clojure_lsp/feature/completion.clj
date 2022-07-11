@@ -391,7 +391,8 @@
   (->> items
        (medley/distinct-by (juxt :label :kind :detail))
        (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail))
-       (mapv #(dissoc % :priority))))
+       (mapv #(dissoc % :priority))
+       not-empty))
 
 (defn completion [uri row col db]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
@@ -509,14 +510,11 @@
     (cond-> item
       definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
 
-(defn resolve-item [{{:keys [ns]} :data :as item} db*]
-  (let [item (shared/assoc-some item
-                                :insert-text-format (:insertTextFormat item)
-                                :text-edit (:textEdit item)
-                                :filter-text (:filterText item)
-                                :insert-text (:insertText item))]
-    (if (:data item)
-      (if ns
+(defn resolve-item [{:keys [data] :as item} db*]
+  (if data
+    (dissoc
+      (if (:ns data)
         (resolve-item-by-ns item db*)
         (resolve-item-by-definition item db*))
-      item)))
+      :data)
+    item))

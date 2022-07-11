@@ -11,7 +11,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "document_highlight/a.clj"))
+  (lsp/client-awaits-open-diagnostics "document_highlight/a.clj")
 
   (testing "function usages/definition highlight"
     (h/assert-submaps

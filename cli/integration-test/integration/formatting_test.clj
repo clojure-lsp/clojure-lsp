@@ -11,7 +11,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "formatting.clj"))
+  (lsp/client-awaits-open-diagnostics "formatting.clj")
 
   (testing "we should format the whole buffer"
     (h/assert-submaps

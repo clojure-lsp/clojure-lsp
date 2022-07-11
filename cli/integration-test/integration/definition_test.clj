@@ -11,8 +11,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "definition/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "definition/b.clj"))
+  (lsp/client-awaits-open-diagnostics "definition/a.clj")
+  (lsp/client-awaits-open-diagnostics "definition/b.clj")
 
   (testing "common vars"
     (testing "find definition on same ns"

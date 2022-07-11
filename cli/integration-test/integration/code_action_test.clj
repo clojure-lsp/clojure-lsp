@@ -16,7 +16,7 @@
                    :capabilities          {:window    {:showDocument {:support true}}
                                            :workspace {:workspaceEdit {:documentChanges true}}}}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification sample-file-name))
+  (lsp/client-awaits-open-diagnostics sample-file-name)
 
   (testing "When a code action is available"
     (h/assert-submaps

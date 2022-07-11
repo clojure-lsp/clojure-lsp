@@ -11,10 +11,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming from the function defintion"
     (h/assert-submap
@@ -39,10 +39,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming from the function usage on other ns"
     (h/assert-submap
@@ -67,10 +67,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming local keywords"
     (h/assert-submap
@@ -86,10 +86,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming namespaced keywords"
     (h/assert-submap
@@ -111,10 +111,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming single-name-namespace'd keywords"
     (h/assert-submap
@@ -136,10 +136,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming require alias"
     (h/assert-submap
@@ -155,10 +155,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (testing "Renaming require refer"
     (h/assert-submap
@@ -183,10 +183,10 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "rename/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/b.cljc"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_a.clj"))
-  (lsp/notify! (fixture/did-open-notification "rename/single_b.clj"))
+  (lsp/client-awaits-open-diagnostics "rename/a.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/b.cljc")
+  (lsp/client-awaits-open-diagnostics "rename/single_a.clj")
+  (lsp/client-awaits-open-diagnostics "rename/single_b.clj")
 
   (h/assert-submap
     {:error {:code -32602, :message "Can't rename, no element found."}}

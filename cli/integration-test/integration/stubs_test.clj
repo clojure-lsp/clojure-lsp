@@ -16,7 +16,6 @@
                                                  :stubs {:generation {:namespaces #{"datomic.api"}}})}))
   (lsp/notify! (fixture/initialized-notification))
   (Thread/sleep 5000) ;; Wait for async stubs generation
-  (lsp/notify! (fixture/did-open-notification "stubs/a.clj"))
 
   (testing "After stub generation we find datomic.api analysis and diagnostics."
     (h/assert-submaps
@@ -26,6 +25,6 @@
         :source "clj-kondo"
         :message "datomic.api/create-database is called with 0 args but expects 1"
         :tags []}]
-      (lsp/client-awaits-server-diagnostics "stubs/a.clj"))
+      (lsp/client-awaits-open-diagnostics "stubs/a.clj"))
 
     (h/delete-project-file "../../.lsp/.cache/stubs")))

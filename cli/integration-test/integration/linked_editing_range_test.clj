@@ -11,8 +11,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "linked_editing_range/a.cljc"))
-  (lsp/notify! (fixture/did-open-notification "linked_editing_range/b.cljc"))
+  (lsp/client-awaits-open-diagnostics "linked_editing_range/a.cljc")
+  (lsp/client-awaits-open-diagnostics "linked_editing_range/b.cljc")
 
   (testing "Renaming locals"
     (h/assert-submap

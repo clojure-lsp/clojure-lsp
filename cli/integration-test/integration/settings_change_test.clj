@@ -26,7 +26,6 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
 
   (testing "When a public var is unused"
     (h/assert-submaps
@@ -44,16 +43,16 @@
         :source "clojure-lsp"
         :message "Unused public var 'sample-test.diagnostics.unused-public-var/bar'"
         :tags [1]}]
-      (lsp/client-awaits-server-diagnostics "diagnostics/unused_public_var.clj")))
+      (lsp/client-awaits-open-diagnostics "diagnostics/unused_public_var.clj")))
 
   (with-revised-lsp-config-content
     new-lsp-config-content
     (fn []
       (Thread/sleep 1100)
 
-      (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
+
 
       (testing "Config has changed"
         (h/assert-submaps
           []
-          (lsp/client-awaits-server-diagnostics "diagnostics/unused_public_var.clj"))))))
+          (lsp/client-awaits-open-diagnostics "diagnostics/unused_public_var.clj"))))))

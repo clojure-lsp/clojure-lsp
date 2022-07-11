@@ -11,8 +11,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "implementation/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "implementation/b.clj"))
+  (lsp/client-awaits-open-diagnostics "implementation/a.clj")
+  (lsp/client-awaits-open-diagnostics "implementation/b.clj")
 
   (testing "defprotocol implementations"
     (h/assert-submaps

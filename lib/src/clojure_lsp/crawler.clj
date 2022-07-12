@@ -52,9 +52,7 @@
                                     (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
           normalization-config {:external? true
                                 :filter-analysis (fn [analysis]
-                                                   (-> analysis
-                                                       (dissoc :namespace-usages)
-                                                       (update :var-definitions #(remove :private %))))}
+                                                   (update analysis :var-definitions #(remove :private %)))}
           kondo-result (shared/logging-time
                          "External classpath paths analyzed, took %s"
                          (lsp.kondo/run-kondo-on-paths-batch! paths-not-on-checksum normalization-config batch-update-callback db*))]
@@ -100,7 +98,8 @@
                      (-> state-db
                          (merge (select-keys db-cache [:classpath :analysis-checksums :project-hash
                                                        :kondo-config-hash :stubs-generation-namespaces]))
-                         (lsp.kondo/db-with-analysis (:analysis db-cache)))))))))
+                         (lsp.kondo/db-with-analysis {:analysis (:analysis db-cache)
+                                                      :external? true}))))))))
 
 (defn ^:private build-db-cache [db]
   (-> db

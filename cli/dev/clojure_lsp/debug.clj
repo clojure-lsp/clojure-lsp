@@ -41,7 +41,7 @@
   run for about 10 seconds. This should get a reasonable number of samples. See
   http://clojure-goes-fast.com/blog/clj-async-profiler-tips/#make-sure-you-have-enough-samples
 
-  If opts includes `:open? true`, will [open][open-fg] the generated flamegraph."
+  If opts includes `:open? true`, will [open][open-file] the generated flamegraph."
   [opts body]
   `(let [opts# ~opts
          n# (int (/ 10e3 (:est-runtime-in-ms opts#)))

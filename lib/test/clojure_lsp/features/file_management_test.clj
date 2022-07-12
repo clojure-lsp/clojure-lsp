@@ -32,6 +32,8 @@
         (f.file-management/did-close "file:///user/project/src/clj/foo.clj" db/db*))
       (is (get-in @db/db* [:analysis "/user/project/src/clj/foo.clj"]))
       (is (get-in @db/db* [:findings "/user/project/src/clj/foo.clj"]))
+      (is (get-in @db/db* [:file-meta "/user/project/src/clj/foo.clj"]))
+      (is (seq (get-in @db/db* [:dep-graph 'foo :uris])))
       (is (get-in @db/db* [:documents "file:///user/project/src/clj/foo.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
@@ -41,6 +43,8 @@
         (f.file-management/did-close "file:///user/project/src/clj/bar.clj" db/db*))
       (is (nil? (get-in @db/db* [:analysis "/user/project/src/clj/bar.clj"])))
       (is (nil? (get-in @db/db* [:findings "/user/project/src/clj/bar.clj"])))
+      (is (nil? (get-in @db/db* [:file-meta "/user/project/src/clj/bar.clj"])))
+      (is (not (seq (get-in @db/db* [:dep-graph 'bar :uris]))))
       (is (nil? (get-in @db/db* [:documents "file:///user/project/src/clj/bar.clj"])))
       (is (= {:uri "file:///user/project/src/clj/bar.clj"
               :diagnostics []}
@@ -52,6 +56,8 @@
         (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" db/db*))
       (is (get-in @db/db* [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in @db/db* [:findings "/some/path/to/jar.jar:/some/file.clj"]))
+      (is (get-in @db/db* [:file-meta "/some/path/to/jar.jar:/some/file.clj"]))
+      (is (seq (get-in @db/db* [:dep-graph 'some-jar :uris])))
       (is (get-in @db/db* [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500))))
 
@@ -68,6 +74,9 @@
         (h/load-code-and-locs "" uri)
         (is (get-in @db/db* [:analysis filename]))
         (is (get-in @db/db* [:findings filename]))
+        (is (get-in @db/db* [:file-meta filename]))
+        ;; The ns won't be in the dep graph until after the edit adding it is applied.
+        (is (not (contains? (get @db/db* :dep-graph) 'aaa.bbb)))
         (is (get-in @db/db* [:documents uri]))
         (testing "should publish empty diagnostics"
           (is (= {:uri uri, :diagnostics []}
@@ -110,7 +119,7 @@
         db/db*)
       (is (= h/default-uri (h/take-or-timeout mock-created-chan 500))))))
 
-(deftest outgoing-reference-filenames
+(deftest var-dependency-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
@@ -164,7 +173,63 @@
                   "a/a"
                   "x"))))
 
-(deftest incoming-reference-filenames
+(deftest kw-dependency-reference-filenames
+  (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+                                   :project-root-uri (h/file-uri "file:///")})
+  (h/load-code-and-locs (h/code "(ns aaa (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :aaa/command identity)"
+                                "(r/reg-event-db ::event identity)")
+                        (h/file-uri "file:///src/aaa.clj"))
+  (h/load-code-and-locs (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :bbb/command identity)"
+                                ":aaa/command"
+                                ":aaa/command")
+                        (h/file-uri "file:///src/bbb.clj"))
+  (let [db-before @db/db*]
+    (are [expected new-code]
+         (do
+           (h/load-code-and-locs new-code (h/file-uri "file:///src/bbb.clj"))
+           (let [db-after @db/db*]
+             (is (= expected
+                    (f.file-management/reference-filenames "/src/bbb.clj" db-before db-after)))))
+      ;; increasing
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command"
+                  ":aaa/command")
+      ;; decreasing
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command")
+      ;; removing
+      #{"/src/aaa.clj"} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :bbb/command identity)")
+      ;; adding
+      #{"/src/aaa.clj"} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                "(r/reg-event-db :bbb/command identity)"
+                                ":aaa/command"
+                                ":aaa/command"
+                                ":aaa/event")
+      ;; same
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command")
+      ;; unregistered kw
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command"
+                  ":unregistered")
+      ;; same ns
+      #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                  "(r/reg-event-db :bbb/command identity)"
+                  ":aaa/command"
+                  ":aaa/command"
+                  ":bbb/command"))))
+
+(deftest var-dependent-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"

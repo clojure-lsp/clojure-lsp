@@ -36,7 +36,7 @@
     kondo-config))
 
 (defn ^:private unused-public-var->finding [element kondo-config]
-  (let [keyword-def? (boolean (:reg element))
+  (let [keyword-def? (identical? :keyword-definitions (:bucket element))
         kondo-config (if (:ns element)
                        (kondo-config-for-ns kondo-config (:ns element))
                        kondo-config)]
@@ -174,32 +174,30 @@
                 {:uri uri
                  :diagnostics []}))))
 
-(defn ^:private lint-defs!
-  [var-defs kw-defs project-db {:keys [config reg-finding!]}]
-  (let [var-definitions (remove (partial exclude-public-diagnostic-definition? config) var-defs)
+(defn ^:private unused-public-vars [var-defs kw-defs project-db kondo-config]
+  (let [var-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) var-defs)
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
         var-usages (into #{}
                          (comp
                            (q/xf-all-var-usages-to-namespaces var-nses)
                            (map q/var-usage-signature))
-                         (:analysis project-db))
+                         (q/nses-and-dependents-analysis project-db var-nses))
         var-used? (fn [var-def]
                     (some var-usages (q/var-definition-signatures var-def)))
-        kw-definitions (remove (partial exclude-public-diagnostic-definition? config) kw-defs)
-        kw-usages (into #{}
-                        (comp
-                          q/xf-all-keyword-usages
-                          (map q/kw-signature))
-                        (:analysis project-db))
+        kw-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) kw-defs)
+        kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
+                    (into #{}
+                          (comp
+                            q/xf-all-keyword-usages
+                            (map q/kw-signature))
+                          (:analysis project-db))
+                    #{})
         kw-used? (fn [kw-def]
-                   (contains? kw-usages (q/kw-signature kw-def)))
-        findings (->> (concat (remove var-used? var-definitions)
-                              (remove kw-used? kw-definitions))
-                      (map (fn [unused-var]
-                             (unused-public-var->finding unused-var config))))]
-    (doseq [finding findings] ;; side-effect to register findings
-      (reg-finding! finding))
-    (group-by :filename findings)))
+                   (contains? kw-usages (q/kw-signature kw-def)))]
+    (->> (concat (remove var-used? var-definitions)
+                 (remove kw-used? kw-definitions))
+         (map (fn [unused-var]
+                (unused-public-var->finding unused-var kondo-config))))))
 
 (defn ^:private file-var-definitions [project-db filename]
   (q/find-var-definitions project-db filename false))
@@ -207,24 +205,43 @@
 (def ^:private all-var-definitions q/find-all-var-definitions)
 (def ^:private all-kw-definitions q/find-all-keyword-definitions)
 
+(defn project-findings
+  [db kondo-config]
+  (let [project-db (q/db-with-internal-analysis db)]
+    (unused-public-vars (all-var-definitions project-db)
+                        (all-kw-definitions project-db)
+                        project-db kondo-config)))
+
+(defn files-findings
+  [filenames db kondo-config]
+  (let [project-db (q/db-with-internal-analysis db)
+        files-db (update project-db :analysis select-keys filenames)]
+    (unused-public-vars (all-var-definitions files-db)
+                        (all-kw-definitions files-db)
+                        project-db kondo-config)))
+
+(defn file-findings
+  [filename db kondo-config]
+  (let [project-db (q/db-with-internal-analysis db)]
+    (unused-public-vars (file-var-definitions project-db filename)
+                        (file-kw-definitions project-db filename)
+                        project-db kondo-config)))
+
+(defn ^:private finalize-findings! [findings reg-finding!]
+  (run! reg-finding! findings)
+  (group-by :filename findings))
+
 (defn custom-lint-project!
-  [db kondo-ctx]
-  (let [project-db (q/db-with-project-analysis db)]
-    (lint-defs! (all-var-definitions project-db)
-                (all-kw-definitions project-db)
-                project-db kondo-ctx)))
+  [db {:keys [reg-finding! config]}]
+  (-> (project-findings db config)
+      (finalize-findings! reg-finding!)))
 
 (defn custom-lint-files!
-  [filenames db kondo-ctx]
-  (let [project-db (q/db-with-project-analysis db)
-        files-db (update project-db :analysis select-keys filenames)]
-    (lint-defs! (all-var-definitions files-db)
-                (all-kw-definitions files-db)
-                project-db kondo-ctx)))
+  [filenames db {:keys [reg-finding! config]}]
+  (-> (files-findings filenames db config)
+      (finalize-findings! reg-finding!)))
 
 (defn custom-lint-file!
-  [filename db kondo-ctx]
-  (let [project-db (q/db-with-project-analysis db)]
-    (lint-defs! (file-var-definitions project-db filename)
-                (file-kw-definitions project-db filename)
-                project-db kondo-ctx)))
+  [filename db {:keys [reg-finding! config]}]
+  (-> (file-findings filename db config)
+      (finalize-findings! reg-finding!)))

@@ -45,6 +45,7 @@
  :api {:exit-on-errors? true}
  :show-docs-arity-on-same-line? false ; deprecated, will be removed soon, use :hover :arity-on-same-line?
  :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
+ :experimental {:dep-graph-queries false}
  :copy-kondo-configs? true
  :cache-path ".lsp/.cache"
  :log-path "/tmp/clojure-lsp.*.out"}

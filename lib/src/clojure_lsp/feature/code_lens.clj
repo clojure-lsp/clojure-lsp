@@ -20,12 +20,12 @@
 (defn ^:private test-references->string [references]
   (references->string references " test"))
 
-(defn ^:private var-definitions-lens [filename db]
+(defn ^:private var-definitions-lens [db filename]
   (->> (q/find-var-definitions db filename true)
        (remove (partial q/exclude-public-definition? (:kondo-config db)))))
 
 (defn ^:private keyword-definitions-lens
-  [filename db]
+  [db filename]
   (->> (q/find-keyword-definitions db filename)
        (remove (partial q/exclude-public-definition? (:kondo-config db)))))
 
@@ -36,8 +36,8 @@
                  {:range (shared/->range element)
                   :data  [uri (:name-row element) (:name-col element)]}))
           (concat (q/find-namespace-definitions db filename)
-                  (var-definitions-lens filename db)
-                  (keyword-definitions-lens filename db)))))
+                  (var-definitions-lens db filename)
+                  (keyword-definitions-lens db filename)))))
 
 (defn test-reference? [source-path {:keys [filename]}]
   (and source-path

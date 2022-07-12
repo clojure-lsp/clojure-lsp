@@ -777,9 +777,7 @@
       (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
       (let [{:keys [changes-by-uri]} (create-function "(ns foo (:require [bar :as b])) (|b/something)")
             result (update-map changes-by-uri h/with-strings)]
-        (is (= {(h/file-uri "file:///a.clj")
-                []
-                (h/file-uri "file:///bar.clj")
+        (is (= {(h/file-uri "file:///bar.clj")
                 [{:loc (h/code "(defn something []"
                                "  )")
                   :range {:row 999999 :col 1

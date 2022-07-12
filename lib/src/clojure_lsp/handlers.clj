@@ -4,6 +4,7 @@
    [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.code-actions :as f.code-actions]
@@ -74,15 +75,7 @@
                result#)))))))
 
 (defn ^:private analyze-test-paths! [{:keys [db* producer]}]
-  (let [db @db*
-        project-files (into #{}
-                            (comp
-                              q/filter-project-analysis-xf
-                              (map key))
-                            (:analysis db))]
-    (->> project-files
-         (map #(shared/filename->uri % db))
-         (clojure-producer/refresh-test-tree producer))))
+  (clojure-producer/refresh-test-tree producer (dep-graph/internal-uris @db*)))
 
 (defn initialize
   [project-root-uri

@@ -116,7 +116,7 @@
   (some-> loc to-top z/next var-name-loc-from-op))
 
 (defn find-function-usage-name-loc [zloc]
-  (some-> zloc (z/find-tag z/up :list) z/down))
+  (some-> zloc (z/find z/up #(contains? #{:list :fn} (z/tag %))) z/down))
 
 (defn single-child?
   [zloc]
@@ -210,14 +210,6 @@
       (z/leftmost)
       (z/find-value z/next 'ns) ; go to ns
       (z/up))) ; ns form
-
-(defn find-namespace-name [zloc]
-  (some-> zloc
-          find-namespace
-          z/down
-          z/next
-          z/sexpr
-          str))
 
 (defn node-marked? [node marker]
   (contains? (get node ::markers) marker))

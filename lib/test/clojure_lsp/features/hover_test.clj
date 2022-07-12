@@ -106,7 +106,6 @@
                                   ""
                                   doc])}
                    (:contents (f.hover/hover (h/file-uri "file:///a.clj") foo-row foo-col db/db*))))))))
-
     (testing "without docs"
       (let [sym "a/bar"
             sig "[y]"
@@ -143,4 +142,32 @@
                     :value (join [start-code (str sym " " sig) end-code
                                   line-break
                                   (str "*[" filename "](file:///a.clj)*")])}
-                   (:contents (f.hover/hover (h/file-uri "file:///a.clj") bar-row bar-col db/db*))))))))))
+                   (:contents (f.hover/hover (h/file-uri "file:///a.clj") bar-row bar-col db/db*))))))))
+    (testing "On function usage corner cases"
+      (swap! db/db* shared/deep-merge {:settings {:show-docs-arity-on-same-line? true} :client-capabilities nil})
+      (let [code (h/code "(ns a)"
+                         "(defn foo \"Some cool docs :foo\" [x y] x)"
+                         "(defn bar \"Other cool docs :bar\" [x y] x)"
+                         "(foo"
+                         "  1"
+                         "  |2)"
+                         "(->> :foo foo |bar)"
+                         "(map #(foo %1 |%2) [1 2 3])")
+            [[foo-row foo-col]
+             [bar-row bar-col]
+             [anon-row anon-col]] (h/load-code-and-locs code)]
+        (is (= [{:language "clojure"
+                 :value "a/foo [x y]"}
+                "Some cool docs :foo"
+                "/a.clj"]
+               (:contents (f.hover/hover (h/file-uri "file:///a.clj") foo-row foo-col db/db*))))
+        (is (= [{:language "clojure"
+                 :value "a/bar [x y]"}
+                "Other cool docs :bar"
+                "/a.clj"]
+               (:contents (f.hover/hover (h/file-uri "file:///a.clj") bar-row bar-col db/db*))))
+        (is (= [{:language "clojure"
+                 :value "a/foo [x y]"}
+                "Some cool docs :foo"
+                "/a.clj"]
+               (:contents (f.hover/hover (h/file-uri "file:///a.clj") anon-row anon-col db/db*))))))))

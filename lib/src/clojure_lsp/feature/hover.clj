@@ -115,19 +115,27 @@
 (defn hover [uri line column db*]
   (let [db @db*
         filename (shared/uri->filename uri)
+        cursor-element (q/find-element-under-cursor db filename line column)
         func-position (some-> (f.file-management/force-get-document-text uri db*)
                               (parser/safe-zloc-of-string)
                               (parser/to-pos line column)
                               edit/find-function-usage-name-loc
                               z/node
                               meta)
-        element (if func-position
+        element (cond
+                  (identical? :var-usages (:bucket cursor-element))
+                  cursor-element
+
+                  func-position
                   (q/find-element-under-cursor db filename (:row func-position) (:col func-position))
+
+                  :else
                   (loop [try-column column]
                     (if-let [usage (q/find-element-under-cursor db filename line try-column)]
                       usage
                       (when (pos? try-column)
                         (recur (dec try-column))))))
+
         definition (when element (q/find-definition db element))]
     (cond
       definition

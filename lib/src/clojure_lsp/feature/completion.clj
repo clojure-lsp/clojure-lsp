@@ -72,7 +72,7 @@
     (#{:namespace-alias} bucket)
     :property
 
-    (#{:keywords} bucket)
+    (#{:keyword-usages :keyword-definitions} bucket)
     :keyword
 
     (and (#{:var-definitions} bucket)
@@ -90,7 +90,7 @@
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
   (cond
-    (= :keywords bucket)
+    (#{:keyword-usages :keyword-definitions} bucket)
     (keyword-element->str element cursor-alias priority)
 
     (#{:namespace-alias :namespace-usages} bucket)
@@ -102,58 +102,11 @@
     :else
     (-> element :name name)))
 
-(defn ^:private valid-element-completion-item?
-  [matches-fn
-   cursor-uri
-   {cursor-from :from cursor-bucket :bucket :as cursor-element}
-   row
-   col
-   {:keys [bucket to ns filename lang name alias] :as element}]
-  (let [supported-file-types (shared/uri->available-langs cursor-uri)]
-    (cond
-      (#{:var-usages :local-usages :namespace-usages} bucket)
-      false
-
-      (and (identical? :locals bucket)
-           (or (not= filename (shared/uri->filename cursor-uri))
-               (not (shared/inside? (or cursor-element
-                                        {:name-row row
-                                         :name-col col})
-                                    element))))
-      false
-
-      (and (identical? :var-definitions bucket)
-           (identical? :var-usages cursor-bucket)
-           (not= ns cursor-from))
-      false
-
-      (identical? :clj-kondo/unknown-namespace to)
-      false
-
-      (and lang
-           (not (supported-file-types lang)))
-      false
-
-      (and (identical? :keywords bucket)
-           (= filename (:filename cursor-element))
-           (parser/same-range? cursor-element element)) ;; is the same keyword
-      false
-
-      (and (identical? :keywords bucket)
-           (or (matches-fn (keyword-element->str element nil nil))
-               (and ns (matches-fn (str ns)))
-               (and alias (matches-fn (str alias)))))
-      true
-
-      (or (and name (matches-fn name))
-          (and alias (matches-fn alias)))
-      true)))
-
 (defn ^:private generic-priority->specific-priority
   [element priority]
   (cond
     (and (identical? :simple-cursor priority)
-         (identical? :keywords (:bucket element)))
+         (contains? #{:keyword-usages :keyword-definitions} (:bucket element)))
     :keyword
 
     :else
@@ -184,10 +137,59 @@
       kind (assoc :kind kind)
       detail (assoc :detail detail))))
 
-(defn ^:private with-element-items [matches-fn cursor-uri cursor-element elements row col]
-  (->> elements
-       (filter (partial valid-element-completion-item? matches-fn cursor-uri cursor-element row col))
-       (map #(element->completion-item % nil :simple-cursor))))
+(defn ^:private name-matches-xf [matches-fn]
+  (filter (fn [{:keys [name]}]
+            (and name (matches-fn name)))))
+
+(defmulti ^:private bucket-elems-xf
+  (fn [bucket _matches-fn _cursor-element]
+    (if (contains? #{:keyword-usages :keyword-definitions} bucket)
+      :keywords
+      bucket)))
+
+;; TODO: this completes to the namespace the cursor is already in. Why would you
+;; want that?
+(defmethod bucket-elems-xf :namespace-definitions
+  [_bucket matches-fn _cursor-element]
+  (name-matches-xf matches-fn))
+
+(defmethod bucket-elems-xf :var-definitions
+  [_bucket matches-fn {cursor-from :from cursor-bucket :bucket}]
+  (let [on-var-usage? (identical? :var-usages cursor-bucket)]
+    (comp
+      (remove #(and on-var-usage? (not= (:ns %) cursor-from)))
+      (name-matches-xf matches-fn))))
+
+(defmethod bucket-elems-xf :keywords
+  [_bucket matches-fn cursor-element]
+  (comp
+    (remove #(parser/same-range? cursor-element %)) ;; is the same keyword
+    (filter (fn [{:keys [ns alias name] :as element}]
+              (or (matches-fn (keyword-element->str element nil nil))
+                  (and ns (matches-fn (str ns)))
+                  (and alias (matches-fn (str alias)))
+                  (and name (matches-fn name)))))))
+
+(defmethod bucket-elems-xf :locals
+  [_bucket matches-fn cursor-element]
+  (comp
+    ;; only locals whose scope includes the cursor
+    (filter #(shared/inside? cursor-element %))
+    (name-matches-xf matches-fn)))
+
+(defn ^:private with-local-items [matches-fn cursor-uri cursor-element local-buckets row col]
+  (let [cursor-langs (shared/uri->available-langs cursor-uri)
+        cursor-element (or cursor-element {:name-row row, :name-col col})]
+    (into []
+          (comp
+            (mapcat (fn [bucket]
+                      (into []
+                            (comp (bucket-elems-xf bucket matches-fn cursor-element)
+                                  (filter #(or (not (:lang %))
+                                               (contains? cursor-langs (:lang %)))))
+                            (get local-buckets bucket))))
+            (map #(element->completion-item % nil :simple-cursor)))
+          [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals])))
 
 (defn ^:private with-definition-kws-args-element-items
   [matches-fn {:keys [arglist-kws name-row name-col filename]}]
@@ -197,121 +199,120 @@
                :name-row name-row
                :name-col name-col
                :filename filename
-               :bucket :keywords}))
+               :bucket :keyword-usages}))
        (filter #(matches-fn (keyword-element->str % nil nil)))
        (mapv #(element->completion-item % nil :kw-arg))))
 
-(defn ^:private with-ns-definition-elements [matches-fn other-ns-elements]
-  (->> other-ns-elements
-       (filter #(and (= :namespace-definitions (:bucket %))
-                     (matches-fn (:name %))))
-       (map #(element->completion-item % nil :ns-definition))))
+(defn ^:private with-ns-definition-elements [matches-fn non-local-db]
+  (into []
+        (comp
+          q/xf-analysis->namespace-definitions
+          (filter #(matches-fn (:name %)))
+          (map #(element->completion-item % nil :ns-definition)))
+        (:analysis non-local-db)))
 
-(defn ^:private with-refer-elements [matches-fn cursor-loc other-ns-elements]
+(defn ^:private with-refer-elements [matches-fn cursor-loc non-local-db]
   (let [refer-ns (z/sexpr (edit/find-refer-ns cursor-loc))]
     (into []
           (comp
-            (filter #(and (identical? :var-definitions (:bucket %))
-                          (= refer-ns (:ns %))
+            q/xf-analysis->var-definitions
+            (filter #(and (= refer-ns (:ns %))
                           (matches-fn (:name %))))
             (map #(element->completion-item % nil :refer)))
-          other-ns-elements)))
+          (q/ns-analysis non-local-db refer-ns))))
 
-(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value current-ns-elements matches-fn db]
-  (let [current-ns-alias (->> current-ns-elements
-                              (filter #(and (identical? :namespace-alias (:bucket %))
-                                            (= (-> % :alias str) cursor-alias)))
-                              seq)]
-    (when-let [aliases (or current-ns-alias
-                           (seq (into []
-                                      (comp
-                                        q/filter-project-analysis-xf
-                                        (mapcat val)
-                                        (filter #(identical? :namespace-alias (:bucket %))))
-                                      (:analysis db))))]
-      (let [alias-namespaces (->> aliases
-                                  (filter #(= (-> % :alias str) cursor-alias))
-                                  (map :to)
-                                  seq
-                                  set)]
-        (concat
-          (when (simple-ident? cursor-value)
-            (into []
-                  (comp
-                    (filter (fn [element]
-                              (or
-                                (matches-fn (:alias element))
-                                (matches-fn (:to element)))))
-                    (map (fn [element]
-                           [(some-> element :alias name)
-                            (some-> element :to name)]))
-                    (distinct)
-                    (map (fn [[element-alias element-to]]
-                           (let [match-alias? (matches-fn element-alias)
-                                 label (if match-alias?
-                                         element-alias
-                                         element-to)
-                                 detail (if match-alias?
-                                          (str "alias to: " element-to)
-                                          (str ":as " element-alias))
-                                 require-edit (some-> cursor-loc
-                                                      (f.add-missing-libspec/add-known-alias (symbol (str element-alias))
-                                                                                             (symbol (str element-to))
-                                                                                             db)
-                                                      r.transform/result)]
-                             (cond-> {:label label
-                                      :priority :required-alias
-                                      :kind :property
-                                      :detail detail}
-                               (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
-                  aliases))
-          (into []
-                (comp
-                  (mapcat val)
-                  (keep
-                    #(when (and (identical? :var-definitions (:bucket %))
-                                (not (:private %))
-                                (contains? alias-namespaces (:ns %))
-                                (or (simple-ident? cursor-value) (matches-fn (:name %))))
-                       [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
-                  (distinct)
-                  (map
-                    (fn [[element-ns completion-item]]
-                      (let [require-edit (some-> cursor-loc
-                                                 (f.add-missing-libspec/add-known-alias (symbol cursor-alias) element-ns db)
-                                                 r.transform/result)]
-                        (cond-> completion-item
-                          (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))
-                (:analysis db)))))))
+(defn ^:private with-elements-from-alias [cursor-loc cursor-alias cursor-value local-buckets matches-fn db]
+  (when-let [aliases (or (->> local-buckets
+                              :namespace-alias
+                              (filter #(= (-> % :alias str) cursor-alias))
+                              seq)
+                         (->> (q/ns-aliases db)
+                              seq))]
+    (->> (concat
+           (when (simple-ident? cursor-value)
+             ;; When the cursor exactly matches an alias in the current namespace,
+             ;; suggest that. Otherwise, suggest other namespaces, matching either on
+             ;; their name or how they're aliased elsewhere.
+             (into []
+                   (comp
+                     (filter (fn [element]
+                               (or
+                                 (matches-fn (:alias element))
+                                 (matches-fn (:to element)))))
+                     (map (fn [element]
+                            [(some-> element :alias name)
+                             (some-> element :to name)]))
+                     (distinct)
+                     (map (fn [[element-alias element-to]]
+                            (let [match-alias? (matches-fn element-alias)]
+                              {:item         {:label    (if match-alias?
+                                                          element-alias
+                                                          element-to)
+                                              :priority :required-alias
+                                              :kind     :property
+                                              :detail   (if match-alias?
+                                                          (str "alias to: " element-to)
+                                                          (str ":as " element-alias))}
+                               :alias-to-add (symbol (str element-alias))
+                               :ns-to-add    (symbol (str element-to))}))))
+                   aliases))
+           ;; When the cursor exactly equals (or when the namespace part of the
+           ;; cursor equals) one or more aliases, suggest var definitions from those
+           ;; aliases' namespaces.
+           (let [alias-namespaces (->> aliases
+                                       (filter #(= (-> % :alias str) cursor-alias))
+                                       (map :to)
+                                       seq
+                                       set)]
+             (into []
+                   (comp
+                     q/xf-analysis->var-definitions
+                     (keep
+                       #(when (and (not (:private %))
+                                   (contains? alias-namespaces (:ns %))
+                                   (or (simple-ident? cursor-value) (matches-fn (:name %))))
+                          [(:ns %) (element->completion-item % cursor-alias :unrequired-alias)]))
+                     (distinct)
+                     (map
+                       (fn [[element-ns completion-item]]
+                         {:item         completion-item
+                          :alias-to-add (symbol cursor-alias)
+                          :ns-to-add    element-ns})))
+                   (q/nses-analysis db alias-namespaces))))
+         (map (fn [{:keys [item alias-to-add ns-to-add]}]
+                (let [require-edit (some-> cursor-loc
+                                           (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
+                                           r.transform/result)]
+                  (cond-> item
+                    (seq require-edit) (assoc :additional-text-edits (mapv #(update % :range shared/->range) require-edit)))))))))
 
 (defn ^:private with-elements-from-full-ns [db full-ns]
   (into []
         (comp
-          (mapcat val)
-          (filter #(and (identical? :var-definitions (:bucket %))
-                        (= (:ns %) (symbol full-ns))
+          q/xf-analysis->var-definitions
+          (filter #(and (= (:ns %) (symbol full-ns))
                         (not (:private %))))
           (map #(element->completion-item % full-ns :ns-definition)))
-        (:analysis db)))
+        (q/ns-analysis db (symbol full-ns))))
 
 (defn ^:private with-elements-from-aliased-keyword
-  [cursor-loc cursor-element current-ns-elements elements]
+  [cursor-loc cursor-element local-buckets non-local-db]
   (let [alias (or (:alias cursor-element)
                   (-> cursor-loc z/sexpr namespace (subs 1)))
         ns (or (:ns cursor-element)
-               (->> current-ns-elements
-                    (filter #(and (identical? :namespace-usages (:bucket %))
-                                  (= alias (str (:alias %)))))
+               (->> (:namespace-usages local-buckets)
+                    (filter #(= alias (str (:alias %))))
                     first
                     :name))
         name (-> cursor-loc z/sexpr name)]
-    (->> elements
-         (filter #(and (identical? :keywords (:bucket %))
-                       (:reg %)
-                       (= ns (:ns %))
-                       (or (not cursor-loc)
-                           (string/starts-with? (:name %) name))))
-         (mapv #(element->completion-item % alias :alias-keyword)))))
+    (into []
+          (comp
+            q/xf-analysis->keyword-definitions
+            (filter #(and (= ns (:ns %))
+                          (or (not cursor-loc)
+                              (string/starts-with? (:name %) name))))
+            (map #(element->completion-item % alias :alias-keyword)))
+          (:analysis non-local-db))))
 
 (defn ^:private with-core-items [matches-fn {:keys [filename ns-name symbols priority]}]
   (keep (fn [{:keys [name kind]}]
@@ -411,9 +412,9 @@
       []
       (let [filename (shared/uri->filename uri)
             settings (settings/all db)
-            current-ns-elements (get-in db [:analysis filename])
+            non-local-db (update db :analysis dissoc filename)
+            local-buckets (get-in db [:analysis filename])
             support-snippets? (get-in db [:client-capabilities :text-document :completion :completion-item :snippet-support] false)
-            all-other-ns-elements (mapcat val (dissoc (:analysis db) filename))
             cursor-element (q/find-element-under-cursor db filename row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
@@ -443,20 +444,19 @@
                                    (name cursor-value)
                                    (str cursor-value)))
             cursor-full-ns? (when cursor-value-or-ns
-                              (contains? (q/find-all-ns-definition-names db)
-                                         (symbol cursor-value-or-ns)))
+                              (contains? (q/ns-names db) (symbol cursor-value-or-ns)))
             items (cond
                     inside-refer?
-                    (with-refer-elements matches-fn cursor-loc all-other-ns-elements)
+                    (with-refer-elements matches-fn cursor-loc non-local-db)
 
                     inside-require?
-                    (cond-> (with-ns-definition-elements matches-fn all-other-ns-elements)
+                    (cond-> (with-ns-definition-elements matches-fn non-local-db)
                       (and support-snippets?
                            simple-cursor?)
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings))
 
                     aliased-keyword-value?
-                    (with-elements-from-aliased-keyword cursor-loc cursor-element current-ns-elements all-other-ns-elements)
+                    (with-elements-from-aliased-keyword cursor-loc cursor-element local-buckets non-local-db)
 
                     :else
                     (cond-> []
@@ -465,11 +465,11 @@
 
                       (and cursor-value-or-ns
                            (not keyword-value?))
-                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value current-ns-elements matches-fn db))
+                      (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value local-buckets matches-fn db))
 
                       (or simple-cursor?
                           keyword-value?)
-                      (-> (into (with-element-items matches-fn uri cursor-element current-ns-elements row col))
+                      (-> (into (with-local-items matches-fn uri cursor-element local-buckets row col))
                           (into (with-clojure-core-items matches-fn)))
 
                       (:arglist-kws caller-var-definition)
@@ -503,7 +503,7 @@
   (let [db @db*
         element (q/find-element-under-cursor db filename name-row name-col)
         definition (when (and (identical? :var-definitions (:bucket element))
-                              (= name (str (:name element))))
+                              (= (symbol name) (:name element)))
                      element)]
     (cond-> item
       definition (assoc :documentation (f.hover/hover-documentation definition db*)))))

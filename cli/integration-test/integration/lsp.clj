@@ -17,7 +17,7 @@
 
 (defn start-process! []
   (let [server (start-server (first *command-line-args*))
-        client (client/client (io/writer (:in server)) (io/reader (:out server)))]
+        client (client/stdio-client (io/writer (:in server)) (io/reader (:out server)))]
     (client/start client)
     (alter-var-root #'*clojure-lsp-process* (constantly server))
     (alter-var-root #'*mock-client* (constantly client))))

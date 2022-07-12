@@ -2,10 +2,22 @@
 
 ## Unreleased
 
+- General
+  - Bump `cljfmt` from 0.8.0 -> 0.8.2
+
 - Editor
-  - Restored #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
   - Add clojure.core/fn to resolve-macro-as options. [#1094](https://github.com/clojure-lsp/clojure-lsp/issues/1094)
-  - Improved call hierarchy performance by parsing less frequently. #1092
+  - Restore #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
+  - Improve call hierarchy performance by parsing less frequently. #1092
+  - Improve system wide performance by keeping a graph of dependencies between namespaces. #990 #1053
+    Enable setting `:experimental {:dep-graph-queries true}` to beta test this feature.
+  - Improve performance by adding second level of analysis indexing.
+  - Improve performance of things that need keyword definitions, like completion and custom lint.
+  - Fix hover showing previous function elements on some cases. #1098
+  - Fix: find definition will find registration of unnamespaced keyword.
+  - Fix to update unused-public-var lint on registered keywords as usages change in other files. #1018
+  - Fix to navigate to var defined by declare, when there aren't any later defs. #1107
+  - Fix to always go to the definition of the correct var imported by potemkin. #1020
 
 ## 2022.06.29-19.32.13
 

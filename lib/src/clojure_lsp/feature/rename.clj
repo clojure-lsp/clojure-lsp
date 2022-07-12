@@ -94,7 +94,7 @@
    reference]
   (let [ref-doc-id (shared/filename->uri (:filename reference) db)
         version (get-in db [:documents ref-doc-id :v] 0)
-        text (if (identical? :keywords (:bucket reference))
+        text (if (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))
                (str ":" replacement "/" (:name reference))
                replacement)]
     {:range (shared/->range reference)
@@ -103,7 +103,7 @@
 
 (defn ^:private rename-alias [replacement db reference]
   (let [alias? (= :namespace-alias (:bucket reference))
-        keyword? (= :keywords (:bucket reference))
+        keyword? (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))
         ref-doc-uri (shared/filename->uri (:filename reference) db)
         [u-prefix _ u-name] (when-not alias?
                               (ident-split (:name reference)))
@@ -143,12 +143,12 @@
   [element definition references replacement replacement-raw db]
   (if (identical? :namespace-alias (:bucket element))
     (mapv (partial rename-alias replacement db) references)
-    (condp identical? (:bucket definition)
+    (case (:bucket definition)
 
       :namespace-definitions
       (mapv (partial rename-ns-definition replacement db) references)
 
-      :keywords
+      (:keyword-definitions :keyword-usages)
       (mapv (partial rename-keyword replacement replacement-raw db) references)
 
       :locals
@@ -176,7 +176,7 @@
     {:error {:code :invalid-params
              :message "Can't rename namespace, client does not support file renames."}}
 
-    (and (= :keywords (:bucket definition))
+    (and (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
          (not (:ns definition)))
     {:error {:code :invalid-params
              :message "Can't rename, only namespaced keywords can be renamed."}}

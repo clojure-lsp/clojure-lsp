@@ -2,6 +2,7 @@
   (:require
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -54,20 +55,45 @@
 
 (defn db-with-analysis
   "Update `db` with normalized kondo analysis."
-  [db analysis]
-  (update db :analysis merge analysis))
+  [db {:keys [analysis external?]}]
+  (-> db
+      (update :analysis merge analysis)
+      ;; Whenever the analysis is updated, we refresh the dep graph. This is the
+      ;; only place this is done, so to keep the dep graph in sync with the
+      ;; analysis, everything that puts analysis in the db must either call this
+      ;; function or db-with-results, which calls this function.
+      (dep-graph/refresh-analysis (select-keys (:analysis db) (keys analysis))
+                                  analysis
+                                  (not external?))))
 
 (defn db-with-results
   "Update `db` with normalized kondo result."
-  [db {:keys [analysis findings config]}]
+  [db {:keys [findings config] :as results}]
   (-> db
-      (db-with-analysis analysis)
+      (db-with-analysis results)
       (update :findings merge findings)
       (assoc :kondo-config config)))
 
-(defn entry->normalized-entries [{:keys [bucket arglist-strs] :as element}]
-  (cond
-    (identical? :var-definitions bucket)
+(defn ^:private element-with-fallback-name-position [element]
+  (assoc element
+         :name-row (or (:name-row element) (:row element))
+         :name-col (or (:name-col element) (:col element))
+         :name-end-row (or (:name-end-row element) (:end-row element))
+         :name-end-col (or (:name-end-col element) (:end-col element))))
+
+;;;; Normalization
+
+;; The analysis we get back from clj-kondo is indexed by bucket
+;; {(bucket [element+])*}
+;; We re-index by filename then bucket
+;; {(filename {(bucket [element+])+})*}
+;; We also normalize elements somewhat, changing their keys, and even spliting
+;; some into two elements. As such, the buckets we get from clj-kondo aren't
+;; exactly the same as the buckets we have in our db.
+
+(defn ^:private element->normalized-elements [{:keys [bucket arglist-strs] :as element}]
+  (case bucket
+    :var-definitions
     [(-> element
          (shared/assoc-some :arglist-kws (->> arglist-strs
                                               (keep (fn [arglist-str]
@@ -76,23 +102,26 @@
                                                         (catch Exception _ nil))))
                                               seq)))]
 
-    ;; We create two entries here (and maybe more for refer)
-    (identical? :namespace-usages bucket)
+    ;; We create two elements here (and maybe more for refer)
+    :namespace-usages
     (cond-> [(set/rename-keys element {:to :name})]
       (:alias element)
-      (conj (set/rename-keys (assoc element :bucket :namespace-alias) {:alias-row :name-row
-                                                                       :alias-col :name-col
-                                                                       :alias-end-row :name-end-row
-                                                                       :alias-end-col :name-end-col})))
+      (conj (-> element
+                (assoc :bucket :namespace-alias)
+                (set/rename-keys {:alias-row     :name-row
+                                  :alias-col     :name-col
+                                  :alias-end-row :name-end-row
+                                  :alias-end-col :name-end-col}))))
 
-    (contains? #{:locals :local-usages :keywords} bucket)
+    (:locals :local-usages)
+    [(element-with-fallback-name-position element)]
+
+    :keywords
     [(-> element
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
+         element-with-fallback-name-position
+         (assoc :bucket (if (:reg element) :keyword-definitions :keyword-usages)))]
 
-    (identical? :java-class-definitions bucket)
+    :java-class-definitions
     [(-> element
          (dissoc :uri)
          (assoc :name-row 0
@@ -100,15 +129,11 @@
                 :name-end-row 0
                 :name-end-col 0))]
 
-    (identical? :java-class-usages bucket)
+    :java-class-usages
     [(-> element
          (dissoc :uri)
-         (assoc :name-row (or (:name-row element) (:row element))
-                :name-col (or (:name-col element) (:col element))
-                :name-end-row (or (:name-end-row element) (:end-row element))
-                :name-end-col (or (:name-end-col element) (:end-col element))))]
+         (element-with-fallback-name-position))]
 
-    :else
     [element]))
 
 (defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
@@ -118,11 +143,22 @@
        name-end-col))
 
 (defn ^:private normalize-analysis [external? analysis]
-  (for [[bucket vs] analysis
-        v vs
-        element (entry->normalized-entries (assoc v :bucket bucket :external? external?))
-        :when (valid-element? element)]
-    element))
+  (reduce-kv
+    (fn [result kondo-bucket kondo-elements]
+      (transduce
+        (comp
+          (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?)))
+          (filter valid-element?))
+        (completing
+          (fn [result {:keys [filename bucket] :as element}]
+            ;; intentionally use element bucket, since it may have been
+            ;; normalized to something besides kondo-bucket
+            (update-in result [filename bucket] (fnil conj []) element)))
+        result
+        kondo-elements))
+    ;; TODO: Can result be a transient?
+    {}
+    analysis))
 
 (defn ^:private normalize
   "Put kondo result in a standard format, with `analysis` normalized and
@@ -131,16 +167,16 @@
    {:keys [external? ensure-filenames filter-analysis] :or {filter-analysis identity}}]
   (let [analysis (->> analysis
                       filter-analysis
-                      (normalize-analysis external?)
-                      (group-by :filename))
+                      (normalize-analysis external?))
         analysis (reduce (fn [analysis filename]
-                           (update analysis filename #(or % [])))
+                           (update analysis filename #(or % {})))
                          analysis
                          ensure-filenames)
         filenames (keys analysis)
         empty-findings (zipmap filenames (repeat []))
         findings (merge empty-findings (group-by :filename findings))]
     (assoc kondo-results
+           :external? external?
            :analysis analysis
            :findings findings)))
 
@@ -164,25 +200,36 @@
   (not= :off (get-in config [:linters :clojure-lsp/unused-public-var :level])))
 
 (defn ^:private custom-lint-project!
-  [db {:keys [config analysis] :as kondo-ctx}]
+  [db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-time
       "Linting whole project for unused-public-var took %s"
-      (f.diagnostic/custom-lint-project! (db-with-analysis db analysis) kondo-ctx))))
+      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config))]
+        (f.diagnostic/custom-lint-project! db kondo-ctx)))))
 
 (defn ^:private custom-lint-files!
-  [files db {:keys [config analysis] :as kondo-ctx}]
+  [files db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-task
       :reference-files/lint
-      (f.diagnostic/custom-lint-files! files (db-with-analysis db analysis) kondo-ctx))))
+      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config))]
+        (f.diagnostic/custom-lint-files! files db kondo-ctx)))))
 
 (defn ^:private custom-lint-file!
-  [filename db {:keys [analysis config] :as kondo-ctx}]
+  [filename db {:keys [config] :as kondo-ctx}]
   (when (run-custom-lint? config)
-    (f.diagnostic/custom-lint-file! filename (db-with-analysis db analysis) kondo-ctx)))
+    (let [db (db-with-analysis db (normalize-for-filename kondo-ctx db filename))]
+      (f.diagnostic/custom-lint-file! filename db kondo-ctx))))
 
-(def ^:private config-for-internal-analysis
+(def ^:private config-for-shallow-analysis
+  {:arglists true
+   :keywords true
+   :protocol-impls true
+   :java-class-definitions true
+   :var-usages false
+   :var-definitions {:shallow true}})
+
+(def ^:private config-for-full-analysis
   {:arglists true
    :locals true
    :keywords true
@@ -205,18 +252,12 @@
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :custom-lint-fn custom-lint-fn)
-      (assoc-in [:config :analysis] config-for-internal-analysis)))
+      (assoc-in [:config :analysis] config-for-full-analysis)))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :skip-lint true)
-      (assoc-in [:config :analysis]
-                {:arglists true
-                 :keywords true
-                 :protocol-impls true
-                 :java-class-definitions true
-                 :var-usages false
-                 :var-definitions {:shallow true}})))
+      (assoc-in [:config :analysis] config-for-shallow-analysis)))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true
@@ -234,8 +275,7 @@
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        custom-lint-fn #(let [db @db*]
-                          (custom-lint-file! filename db (normalize-for-filename % db filename)))]
+        custom-lint-fn #(custom-lint-file! filename @db* %)]
     (-> {:cache true
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)
@@ -244,7 +284,7 @@
          :config-dir (project-config-dir (:project-root-uri db))
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
-                  :analysis config-for-internal-analysis}}
+                  :analysis config-for-full-analysis}}
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint db]
@@ -269,7 +309,7 @@
         config (if external?
                  (config-for-external-paths paths db file-analyzed-fn)
                  (config-for-internal-paths paths db
-                                            #(custom-lint-project! @db* (normalize % normalization-config))
+                                            #(custom-lint-project! @db* % normalization-config)
                                             file-analyzed-fn))]
     (-> config
         (run-kondo! (str "paths " (string/join ", " paths)) db)
@@ -296,7 +336,7 @@
       1 (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn 1 1))
       (->> batches
            (map (fn [{:keys [index paths]}]
-                  (logger/info "Analyzing" (str index "/" batch-count) "batch paths with clj-kondo...")
+                  (logger/info "Analyzing batch" (str index "/" batch-count))
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
            (reduce shared/deep-merge)))))
 
@@ -304,7 +344,7 @@
   (let [db @db*
         normalization-config {:external? false
                               :ensure-filenames filenames}
-        custom-lint-fn #(custom-lint-files! filenames @db* (normalize % normalization-config))]
+        custom-lint-fn #(custom-lint-files! filenames @db* % normalization-config)]
     (-> (config-for-internal-paths filenames db custom-lint-fn nil)
         (run-kondo! (str "files " (string/join ", " filenames)) db)
         (normalize normalization-config))))

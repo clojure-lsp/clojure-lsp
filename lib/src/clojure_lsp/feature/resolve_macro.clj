@@ -60,6 +60,7 @@
   ["clojure.core/def"
    "clojure.core/defn"
    "clojure.core/let"
+   "clojure.core/fn"
    "clojure.core/for"
    "clojure.core/->"
    "clojure.core/->>"

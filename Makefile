@@ -19,9 +19,6 @@ clean:
            docs/README.md \
            docs/CHANGELOG.md
 
-classes:
-	cd cli && clojure -T:build javac
-
 lib-pom:
 	cd lib && clojure -T:build pom
 cli-pom:
@@ -47,13 +44,13 @@ native-cli:
 	cd cli && clojure -T:build native-cli
 	mv cli/clojure-lsp .
 
-test: classes
+test:
 	cd lib && clojure -M:test
 	cd lib && CLOJURE_LSP_USE_DEP_GRAPH="true" clojure -M:test
 	cd cli && clojure -M:test
 	cd cli && CLOJURE_LSP_USE_DEP_GRAPH="true" clojure -M:test
 
-pod-test: classes
+pod-test:
 	cd cli && clojure -M:pod-test
 
 integration-test:
@@ -85,4 +82,4 @@ local-webpage:
 	docker login docker.pkg.github.com
 	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image
 
-.PHONY: all classes debug-cli cli-jar lib-jar cli-jar-for-native prod-cli native-cli test pod-test integration-test local-webpage clean lint-clean lint-format lint-diagnostics lint-fix release
+.PHONY: all debug-cli cli-jar lib-jar cli-jar-for-native prod-cli native-cli test pod-test integration-test local-webpage clean lint-clean lint-format lint-diagnostics lint-fix release

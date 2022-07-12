@@ -15,7 +15,6 @@
    [lsp4clj.coercer :as coercer]
    [lsp4clj.json-rpc.messages :as lsp.messages]
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
-   [lsp4clj.protocols.endpoint :as lsp.endpoint]
    [lsp4clj.protocols.logger :as logger]
    [lsp4clj.server :as lsp.server]
    [taoensso.timbre :as timbre]))
@@ -70,16 +69,16 @@
       :publish-diagnostics
       (->> diagnostic
            (coercer/conform-or-log ::coercer/publish-diagnostics-params)
-           (lsp.endpoint/send-notification server "textDocument/publishDiagnostics"))))
+           (lsp.server/send-notification server "textDocument/publishDiagnostics"))))
 
   (refresh-code-lens [_this]
     (when (get-in @db* [:client-capabilities :workspace :code-lens :refresh-support])
-      (lsp.endpoint/send-request server "workspace/codeLens/refresh" nil)))
+      (lsp.server/send-request server "workspace/codeLens/refresh" nil)))
 
   (publish-workspace-edit [_this edit]
     (let [request (->> {:edit edit}
                        (coercer/conform-or-log ::coercer/workspace-edit-params)
-                       (lsp.endpoint/send-request server "workspace/applyEdit"))
+                       (lsp.server/send-request server "workspace/applyEdit"))
           response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
       (if (= ::timeout response)
         (logger/error "No reponse from client after 10 seconds.")
@@ -90,19 +89,19 @@
       (logger/info "Requesting to show on editor the document" document-request)
       (->> document-request
            (coercer/conform-or-log ::coercer/show-document-request)
-           (lsp.endpoint/send-request server "window/showDocument"))))
+           (lsp.server/send-request server "window/showDocument"))))
 
   (publish-progress [_this percentage message progress-token]
     ;; ::coercer/notify-progress
     (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
-         (lsp.endpoint/send-notification server "$/progress")))
+         (lsp.server/send-notification server "$/progress")))
 
   (show-message-request [_this message type actions]
     (let [request (->> {:type    type
                         :message message
                         :actions actions}
                        (coercer/conform-or-log ::coercer/show-message-request)
-                       (lsp.endpoint/send-request server "window/showMessageRequest"))
+                       (lsp.server/send-request server "window/showMessageRequest"))
           response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
       (when-not (= response ::timeout)
         (:title response))))
@@ -114,7 +113,7 @@
       (logger/info message-content)
       (->> message-content
            (coercer/conform-or-log ::coercer/show-message)
-           (lsp.endpoint/send-notification server "window/showMessage"))))
+           (lsp.server/send-notification server "window/showMessage"))))
 
   (refresh-test-tree [_this uris]
     (async/go
@@ -125,46 +124,46 @@
             (doseq [uri uris]
               (some->> (f.test-tree/tree uri db)
                        (coercer/conform-or-log ::clojure-coercer/publish-test-tree-params)
-                       (lsp.endpoint/send-notification server "clojure/textDocument/testTree")))))))))
+                       (lsp.server/send-notification server "clojure/textDocument/testTree")))))))))
 
 ;;;; clojure experimental features
 
-(defmethod lsp.server/handle-request "clojure/dependencyContents" [_ components params]
+(defmethod lsp.server/receive-request "clojure/dependencyContents" [_ components params]
   (->> params
        (handler/dependency-contents components)
        (coercer/conform-or-log ::coercer/uri)))
-(defmethod lsp.server/handle-request "clojure/serverInfo/raw" [_ components _params]
+(defmethod lsp.server/receive-request "clojure/serverInfo/raw" [_ components _params]
   (handler/server-info-raw components))
-(defmethod lsp.server/handle-notification "clojure/serverInfo/log" [_ components _params]
+(defmethod lsp.server/receive-notification "clojure/serverInfo/log" [_ components _params]
   (future
     (try
       (handler/server-info-log components)
       (catch Throwable e
         (logger/error e)
         (throw e)))))
-(defmethod lsp.server/handle-request "clojure/cursorInfo/raw" [_ components params]
+(defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
   (handler/cursor-info-raw components params))
-(defmethod lsp.server/handle-notification "clojure/cursorInfo/log" [_ components params]
+(defmethod lsp.server/receive-notification "clojure/cursorInfo/log" [_ components params]
   (future
     (try
       (handler/cursor-info-log components params)
       (catch Throwable e
         (logger/error e)
         (throw e)))))
-(defmethod lsp.server/handle-request "clojure/clojuredocs/raw" [_ components params]
+(defmethod lsp.server/receive-request "clojure/clojuredocs/raw" [_ components params]
   (handler/clojuredocs-raw components params))
 
 ;;;; Document sync features
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization
 
-(defmethod lsp.server/handle-notification "textDocument/didOpen" [_ components params]
+(defmethod lsp.server/receive-notification "textDocument/didOpen" [_ components params]
   (handler/did-open components params))
 
-(defmethod lsp.server/handle-notification "textDocument/didChange" [_ components params]
+(defmethod lsp.server/receive-notification "textDocument/didChange" [_ components params]
   (handler/did-change components params))
 
-(defmethod lsp.server/handle-notification "textDocument/didSave" [_ components params]
+(defmethod lsp.server/receive-notification "textDocument/didSave" [_ components params]
   (future
     (try
       (handler/did-save components params)
@@ -172,53 +171,53 @@
         (logger/error e)
         (throw e)))))
 
-(defmethod lsp.server/handle-notification "textDocument/didClose" [_ components params]
+(defmethod lsp.server/receive-notification "textDocument/didClose" [_ components params]
   (handler/did-close components params))
 
-(defmethod lsp.server/handle-request "textDocument/references" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/references" [_ components params]
   (->> params
        (handler/references components)
        (coercer/conform-or-log ::coercer/locations)))
 
-(defmethod lsp.server/handle-request "textDocument/completion" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/completion" [_ components params]
   (->> params
        (handler/completion components)
        (coercer/conform-or-log ::coercer/completion-items)))
 
-(defmethod lsp.server/handle-request "completionItem/resolve" [_ components item]
+(defmethod lsp.server/receive-request "completionItem/resolve" [_ components item]
   (->> item
        (coercer/conform-or-log ::coercer/input.completion-item)
        (handler/completion-resolve-item components)
        (coercer/conform-or-log ::coercer/completion-item)))
 
-(defmethod lsp.server/handle-request "textDocument/prepareRename" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
        (handler/prepare-rename components)
        (coercer/conform-or-log ::coercer/prepare-rename-or-error)))
 
-(defmethod lsp.server/handle-request "textDocument/rename" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
        (handler/rename components)
        (coercer/conform-or-log ::coercer/workspace-edit-or-error)))
 
-(defmethod lsp.server/handle-request "textDocument/hover" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/hover" [_ components params]
   (->> params
        (handler/hover components)
        (coercer/conform-or-log ::coercer/hover)))
 
-(defmethod lsp.server/handle-request "textDocument/signatureHelp" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/signatureHelp" [_ components params]
   (->> params
        (handler/signature-help components)
        (coercer/conform-or-log ::coercer/signature-help)))
 
-(defmethod lsp.server/handle-request "textDocument/formatting" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
        (handler/formatting components)
        (coercer/conform-or-log ::coercer/edits)))
 
 (def ^:private formatting (atom false))
 
-(defmethod lsp.server/handle-request "textDocument/rangeFormatting" [_this components params]
+(defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_this components params]
   (when (compare-and-set! formatting false true)
     (try
       (->> params
@@ -229,72 +228,72 @@
       (finally
         (reset! formatting false)))))
 
-(defmethod lsp.server/handle-request "textDocument/codeAction" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
        (handler/code-actions components)
        (coercer/conform-or-log ::coercer/code-actions)))
 
-(defmethod lsp.server/handle-request "textDocument/codeLens" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
        (handler/code-lens components)
        (coercer/conform-or-log ::coercer/code-lenses)))
 
-(defmethod lsp.server/handle-request "codeLens/resolve" [_ components params]
+(defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
   (->> params
        (handler/code-lens-resolve components)
        (coercer/conform-or-log ::coercer/code-lens)))
 
-(defmethod lsp.server/handle-request "textDocument/definition" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/definition" [_ components params]
   (->> params
        (handler/definition components)
        (coercer/conform-or-log ::coercer/location)))
 
-(defmethod lsp.server/handle-request "textDocument/declaration" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/declaration" [_ components params]
   (->> params
        (handler/declaration components)
        (coercer/conform-or-log ::coercer/location)))
 
-(defmethod lsp.server/handle-request "textDocument/implementation" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/implementation" [_ components params]
   (->> params
        (handler/implementation components)
        (coercer/conform-or-log ::coercer/locations)))
 
-(defmethod lsp.server/handle-request "textDocument/documentSymbol" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
        (handler/document-symbol components)
        (coercer/conform-or-log ::coercer/document-symbols)))
 
-(defmethod lsp.server/handle-request "textDocument/documentHighlight" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
        (handler/document-highlight components)
        (coercer/conform-or-log ::coercer/document-highlights)))
 
-(defmethod lsp.server/handle-request "textDocument/semanticTokens/full" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
        (handler/semantic-tokens-full components)
        (coercer/conform-or-log ::coercer/semantic-tokens)))
 
-(defmethod lsp.server/handle-request "textDocument/semanticTokens/range" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
        (handler/semantic-tokens-range components)
        (coercer/conform-or-log ::coercer/semantic-tokens)))
 
-(defmethod lsp.server/handle-request "textDocument/prepareCallHierarchy" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
        (handler/prepare-call-hierarchy components)
        (coercer/conform-or-log ::coercer/call-hierarchy-items)))
 
-(defmethod lsp.server/handle-request "callHierarchy/incomingCalls" [_ components params]
+(defmethod lsp.server/receive-request "callHierarchy/incomingCalls" [_ components params]
   (->> params
        (handler/call-hierarchy-incoming components)
        (coercer/conform-or-log ::coercer/call-hierarchy-incoming-calls)))
 
-(defmethod lsp.server/handle-request "callHierarchy/outgoingCalls" [_ components params]
+(defmethod lsp.server/receive-request "callHierarchy/outgoingCalls" [_ components params]
   (->> params
        (handler/call-hierarchy-outgoing components)
        (coercer/conform-or-log ::coercer/call-hierarchy-outgoing-calls)))
 
-(defmethod lsp.server/handle-request "textDocument/linkedEditingRange" [_ components params]
+(defmethod lsp.server/receive-request "textDocument/linkedEditingRange" [_ components params]
   (->> params
        (handler/linked-editing-ranges components)
        (coercer/conform-or-log ::coercer/linked-editing-ranges-or-error)))
@@ -303,7 +302,7 @@
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
 
-(defmethod lsp.server/handle-request "workspace/executeCommand" [_ components params]
+(defmethod lsp.server/receive-request "workspace/executeCommand" [_ components params]
   (future
     (try
       (handler/execute-command components params)
@@ -312,20 +311,20 @@
         (throw e))))
   nil)
 
-(defmethod lsp.server/handle-notification "workspace/didChangeConfiguration" [_ _components params]
+(defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [_ _components params]
   (logger/warn params))
 
-(defmethod lsp.server/handle-notification "workspace/didChangeWatchedFiles" [_ components params]
+(defmethod lsp.server/receive-notification "workspace/didChangeWatchedFiles" [_ components params]
   (->> params
        (coercer/conform-or-log ::coercer/did-change-watched-files-params)
        (handler/did-change-watched-files components)))
 
-(defmethod lsp.server/handle-request "workspace/symbol" [_ components params]
+(defmethod lsp.server/receive-request "workspace/symbol" [_ components params]
   (->> params
        (handler/workspace-symbols components)
        (coercer/conform-or-log ::coercer/workspace-symbols)))
 
-(defmethod lsp.server/handle-request "workspace/willRenameFiles" [_ components params]
+(defmethod lsp.server/receive-request "workspace/willRenameFiles" [_ components params]
   (->> params
        (handler/will-rename-files components)
        (coercer/conform-or-log ::coercer/workspace-edit)))
@@ -374,7 +373,7 @@
 
 (defn ^:private exit [server]
   (logger/info "Exiting...")
-  (lsp.endpoint/exit server) ;; blocks, waiting for previously received messages to be processed
+  (lsp.server/exit server) ;; blocks, waiting for previously received messages to be processed
   (logger/info "Exited")
   (shutdown-agents)
   (System/exit 0))
@@ -383,7 +382,7 @@
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages
 
-(defmethod lsp.server/handle-request "initialize" [_ {:keys [db* server] :as components} params]
+(defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
   (logger/info "Initializing...")
   (handler/initialize components
                       (:root-uri params)
@@ -397,23 +396,23 @@
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
   {:capabilities (capabilities (settings/all @db*))})
 
-(defmethod lsp.server/handle-notification "initialized" [_ {:keys [server]} _params]
+(defmethod lsp.server/receive-notification "initialized" [_ {:keys [server]} _params]
   (logger/info "Initialized!")
   (->> {:registrations [{:id "id"
                          :method "workspace/didChangeWatchedFiles"
                          :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
-       (lsp.endpoint/send-request server "client/registerCapability")))
+       (lsp.server/send-request server "client/registerCapability")))
 
-(defmethod lsp.server/handle-request "shutdown" [_ {:keys [db* server]} _params]
+(defmethod lsp.server/receive-request "shutdown" [_ {:keys [db* server]} _params]
   (logger/info "Shutting down...")
   (reset! db* db/initial-db)
-  (lsp.endpoint/shutdown server) ;; no-op, not really necessary
+  (lsp.server/shutdown server) ;; no-op, not really necessary
   nil)
 
-(defmethod lsp.server/handle-notification "exit" [_ {:keys [server]} _params]
+(defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
   (exit server))
 
-(defmethod lsp.server/handle-notification "$/cancelRequest" [_ _ _])
+(defmethod lsp.server/receive-notification "$/cancelRequest" [_ _ _])
 
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/go-loop []
@@ -463,4 +462,4 @@
     (logger/info "[SERVER]" "Starting server...")
     (nrepl/setup-nrepl db*)
     (spawn-async-tasks! components)
-    (lsp.endpoint/start server components)))
+    (lsp.server/start server components)))

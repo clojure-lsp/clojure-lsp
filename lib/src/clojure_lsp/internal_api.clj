@@ -279,9 +279,9 @@
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))
                    (pmap (comp :document-changes
-                               #(handlers/execute-command {:command "clean-ns"
-                                                           :arguments [(:uri %) 0 0]}
-                                                          components)))
+                               #(handlers/execute-command components
+                                                          {:command "clean-ns"
+                                                           :arguments [(:uri %) 0 0]})))
                    (apply concat)
                    (pmap #(document-change->edit-summary % db))
                    (remove nil?))]
@@ -352,7 +352,7 @@
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))
                    (pmap (comp (fn [{:keys [uri]}]
-                                 (some->> (handlers/formatting {:text-document {:uri uri}} components)
+                                 (some->> (handlers/formatting components {:text-document {:uri uri}})
                                           (map #(edit->summary @db* uri %))))))
                    (apply concat)
                    (remove nil?))]

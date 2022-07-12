@@ -173,7 +173,7 @@
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)
         uri (or uri default-uri)]
-    (handlers/did-open {:text-document {:uri uri :text code}} components)
+    (handlers/did-open components {:text-document {:uri uri :text code}})
     positions))
 
 (defn ->position [[row col]]

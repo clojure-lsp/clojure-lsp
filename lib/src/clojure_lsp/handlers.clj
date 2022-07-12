@@ -74,11 +74,11 @@
   (producer/refresh-test-tree producer (dep-graph/internal-uris @db*)))
 
 (defn initialize
-  [project-root-uri
+  [{:keys [db* producer] :as components}
+   project-root-uri
    client-capabilities
    client-settings
-   work-done-token
-   {:keys [db* producer] :as components}]
+   work-done-token]
   (shared/logging-task
     :initialize
     (swap! db* assoc :project-analysis-type :project-and-deps)
@@ -112,7 +112,7 @@
               (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
-(defn did-open [{:keys [text-document]} {:keys [producer db*]}]
+(defn did-open [{:keys [producer db*]} {:keys [text-document]}]
   (shared/logging-task
     :did-open
     (let [uri (:uri text-document)
@@ -121,28 +121,28 @@
       (producer/refresh-test-tree producer [uri])))
   nil)
 
-(defn did-save [{:keys [text-document]} {:keys [db*]}]
+(defn did-save [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
     :did-save
     (f.file-management/did-save (:uri text-document) db*)))
 
 ;; TODO implement it, do we need to do anything?
-#_(defn did-delete-files [{:keys [text-document]} {:keys [db*]}]
+#_(defn did-delete-files [{:keys [db*]} {:keys [text-document]}]
     (when (get-in @db [:documents (:uri text-document) :saved-on-disk])
       (swap! db #(update % :documents dissoc (:uri text-document)))))
 
-(defn did-change [{:keys [text-document content-changes]} {:keys [db*]}]
+(defn did-change [{:keys [db*]} {:keys [text-document content-changes]}]
   (f.file-management/did-change (:uri text-document) content-changes (:version text-document) db*))
 
-(defn did-close [{:keys [text-document]} {:keys [db*]}]
+(defn did-close [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
     :did-close
     (f.file-management/did-close (:uri text-document) db*)))
 
-(defn did-change-watched-files [{:keys [changes]} {:keys [db*]}]
+(defn did-change-watched-files [{:keys [db*]} {:keys [changes]}]
   (f.file-management/did-change-watched-files changes db*))
 
-(defn completion [{:keys [text-document position]} {:keys [db*]}]
+(defn completion [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-results
     (str :completion " %s - total items: %s")
     count
@@ -151,7 +151,7 @@
           col (-> position :character inc)]
       (f.completion/completion (:uri text-document) row col db))))
 
-(defn references [{:keys [text-document position context]} {:keys [db*]}]
+(defn references [{:keys [db*]} {:keys [text-document position context]}]
   (shared/logging-task
     :references
     (let [db @db*
@@ -164,24 +164,24 @@
                :range (shared/->range reference)})
             (q/find-references-from-cursor db (shared/uri->filename (:uri text-document)) row col (:include-declaration context))))))
 
-(defn completion-resolve-item [item {:keys [db*]}]
+(defn completion-resolve-item [{:keys [db*]} item]
   (shared/logging-task
     :resolve-completion-item
     (f.completion/resolve-item item db*)))
 
-(defn prepare-rename [{:keys [text-document position]} {:keys [db*]}]
+(defn prepare-rename [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :prepare-rename
     (let [[row col] (shared/position->line-column position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 
-(defn rename [{:keys [text-document position new-name]} {:keys [db*]}]
+(defn rename [{:keys [db*]} {:keys [text-document position new-name]}]
   (shared/logging-task
     :rename
     (let [[row col] (shared/position->line-column position)]
       (f.rename/rename-from-position (:uri text-document) new-name row col @db*))))
 
-(defn definition [{:keys [text-document position]} {:keys [db*]}]
+(defn definition [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :definition
     (let [db @db*
@@ -192,7 +192,7 @@
                   (f.java-interop/uri->translated-uri db))
          :range (shared/->range definition)}))))
 
-(defn declaration [{:keys [text-document position]} {:keys [db*]}]
+(defn declaration [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :declaration
     (let [db @db*
@@ -203,7 +203,7 @@
                   (f.java-interop/uri->translated-uri db))
          :range (shared/->range declaration)}))))
 
-(defn implementation [{:keys [text-document position]} {:keys [db*]}]
+(defn implementation [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :implementation
     (let [db @db*
@@ -215,7 +215,7 @@
                :range (shared/->range implementation)})
             (q/find-implementations-from-cursor db (shared/uri->filename (:uri text-document)) row col)))))
 
-(defn document-symbol [{:keys [text-document]} {:keys [db*]}]
+(defn document-symbol [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
     :document-symbol
     (let [db @db*
@@ -241,7 +241,7 @@
                                  :detail (when (:private e)
                                            "private")))))}])))
 
-(defn document-highlight [{:keys [text-document position]} {:keys [db*]}]
+(defn document-highlight [{:keys [db*]} {:keys [text-document position]}]
   (process-after-changes
     :document-highlight (:uri text-document) db*
     (let [db @db*
@@ -254,7 +254,7 @@
               {:range (shared/->range reference)})
             references))))
 
-(defn workspace-symbols [{:keys [query]} {:keys [db*]}]
+(defn workspace-symbols [{:keys [db*]} {:keys [query]}]
   (shared/logging-task
     :workspace-symbol
     (f.workspace-symbols/workspace-symbols query @db*)))
@@ -286,7 +286,7 @@
 
 (def server-info-raw #'server-info)
 
-(defn ^:private cursor-info [[doc-id line character] {:keys [db*]}]
+(defn ^:private cursor-info [{:keys [db*]} [doc-id line character]]
   (let [db @db*
         elements (q/find-all-elements-under-cursor db (shared/uri->filename doc-id) (inc line) (inc character))]
     (shared/assoc-some {}
@@ -297,28 +297,28 @@
                                            :semantic-tokens (f.semantic-tokens/element->token-type e)))
                                        elements))))
 
-(defn cursor-info-log [{:keys [text-document position]} {:keys [producer] :as components}]
+(defn cursor-info-log [{:keys [producer] :as components} {:keys [text-document position]}]
   (shared/logging-task
     :cursor-info-log
     (producer/show-message
       producer
-      (with-out-str (pprint/pprint (cursor-info [(:uri text-document) (:line position) (:character position)]
-                                                components)))
+      (with-out-str (pprint/pprint (cursor-info components
+                                                [(:uri text-document) (:line position) (:character position)])))
       :info
       nil)))
 
-(defn cursor-info-raw [{:keys [text-document position]} components]
+(defn cursor-info-raw [components {:keys [text-document position]}]
   (shared/logging-task
     :cursor-info-raw
-    (cursor-info [(:uri text-document) (:line position) (:character position)]
-                 components)))
+    (cursor-info components
+                 [(:uri text-document) (:line position) (:character position)])))
 
-(defn clojuredocs-raw [{:keys [sym-name sym-ns]} {:keys [db*]}]
+(defn clojuredocs-raw [{:keys [db*]} {:keys [sym-name sym-ns]}]
   (shared/logging-task
     :clojuredocs-raw
     (f.clojuredocs/find-docs-for sym-name sym-ns db*)))
 
-(defn ^:private refactor [refactoring [doc-id line character & args] {:keys [db*] :as components}]
+(defn ^:private refactor [{:keys [db*] :as components} refactoring [doc-id line character & args]]
   (let [db @db*
         row (inc (int line))
         col (inc (int character))
@@ -336,22 +336,22 @@
                                :version     v}
                               components)))
 
-(defn execute-command [{:keys [command arguments]} {:keys [producer] :as components}]
+(defn execute-command [{:keys [producer] :as components} {:keys [command arguments]}]
   (cond
     (= command "server-info")
     (server-info-log components)
 
     (= command "cursor-info")
-    (cursor-info-log {:text-document (nth arguments 0)
+    (cursor-info-log components
+                     {:text-document (nth arguments 0)
                       :position {:line (nth arguments 1)
-                                 :character (nth arguments 2)}}
-                     components)
+                                 :character (nth arguments 2)}})
 
     (some #(= % command) f.refactor/available-refactors)
     (shared/logging-task
       :execute-command
       ;; TODO move components upper to a common place
-      (when-let [{:keys [edit show-document-after-edit]} (refactor command arguments components)]
+      (when-let [{:keys [edit show-document-after-edit]} (refactor components command arguments)]
         ;; waits for client to apply edit before showing doc/moving cursor
         (producer/publish-workspace-edit producer edit)
         (when show-document-after-edit
@@ -360,24 +360,24 @@
                (producer/show-document-request producer)))
         edit))))
 
-(defn hover [{:keys [text-document position]} {:keys [db*]}]
+(defn hover [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :hover
     (let [[line column] (shared/position->line-column position)]
       (f.hover/hover (:uri text-document) line column db*))))
 
-(defn signature-help [{:keys [text-document position _context]} {:keys [db*]}]
+(defn signature-help [{:keys [db*]} {:keys [text-document position _context]}]
   (shared/logging-task
     :signature-help
     (let [[line column] (shared/position->line-column position)]
       (f.signature-help/signature-help (:uri text-document) line column db*))))
 
-(defn formatting [{:keys [text-document]} {:keys [db*]}]
+(defn formatting [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
     :formatting
     (f.format/formatting (:uri text-document) db*)))
 
-(defn range-formatting [{:keys [text-document range]} {:keys [db*]}]
+(defn range-formatting [{:keys [db*]} {:keys [text-document range]}]
   (process-after-changes
     :range-formatting (:uri text-document) db*
     (let [db @db*
@@ -389,13 +389,13 @@
                       :end-col (inc (:character end))}]
       (f.format/range-formatting (:uri text-document) format-pos db))))
 
-(defn dependency-contents [{:keys [uri]} {:keys [db*]}]
+(defn dependency-contents [{:keys [db*]} {:keys [uri]}]
   (shared/logging-task
     :dependency-contents
     (f.java-interop/read-content! uri @db*)))
 
 (defn code-actions
-  [{:keys [range context text-document]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [range context text-document]}]
   (process-after-changes
     :code-actions (:uri text-document) db*
     (let [db @db*
@@ -409,26 +409,26 @@
       (f.code-actions/all root-zloc (:uri text-document) row col diagnostics client-capabilities db))))
 
 (defn code-lens
-  [{:keys [text-document]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [text-document]}]
   (process-after-changes
     :code-lens (:uri text-document) db*
     (f.code-lens/reference-code-lens (:uri text-document) @db*)))
 
 (defn code-lens-resolve
-  [{[text-document row col] :data range :range} {:keys [db*]}]
+  [{:keys [db*]} {[text-document row col] :data range :range}]
   (shared/logging-task
     :resolve-code-lens
     (f.code-lens/resolve-code-lens (:uri text-document) row col range @db*)))
 
 (defn semantic-tokens-full
-  [{:keys [text-document]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [text-document]}]
   (process-after-changes
     :semantic-tokens-full (:uri text-document) db*
     (let [data (f.semantic-tokens/full-tokens (:uri text-document) @db*)]
       {:data data})))
 
 (defn semantic-tokens-range
-  [{:keys [text-document] {:keys [start end]} :range} {:keys [db*]}]
+  [{:keys [db*]} {:keys [text-document] {:keys [start end]} :range}]
   (process-after-changes
     :semantic-tokens-range (:uri text-document) db*
     (let [db @db*
@@ -440,7 +440,7 @@
       {:data data})))
 
 (defn prepare-call-hierarchy
-  [{:keys [text-document position]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :prepare-call-hierarchy
     (f.call-hierarchy/prepare (:uri text-document)
@@ -448,7 +448,7 @@
                               (inc (:character position)) db*)))
 
 (defn call-hierarchy-incoming
-  [{:keys [item]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [item]}]
   (shared/logging-task
     :call-hierarchy-incoming-calls
     (let [uri (:uri item)
@@ -457,7 +457,7 @@
       (f.call-hierarchy/incoming uri row col db*))))
 
 (defn call-hierarchy-outgoing
-  [{:keys [item]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [item]}]
   (shared/logging-task
     :call-hierarchy-outgoing-calls
     (let [uri (:uri item)
@@ -466,7 +466,7 @@
       (f.call-hierarchy/outgoing uri row col db*))))
 
 (defn linked-editing-ranges
-  [{:keys [text-document position]} {:keys [db*]}]
+  [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :linked-editing-range
     (let [db @db*
@@ -474,7 +474,7 @@
           col (-> position :character inc)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
 
-(defn will-rename-files [{:keys [files]} {:keys [db*]}]
+(defn will-rename-files [{:keys [db*]} {:keys [files]}]
   (shared/logging-task
     :will-rename-files
     (f.file-management/will-rename-files files @db*)))

@@ -17,8 +17,8 @@
   (try
     (when-let [port (repl-port)]
       (logger/info "====== LSP nrepl server started on port" port)
-      ;; components/components* only available in dev. Don't use it otherwise.
-      (reset! db/db* db*)
+      ;; db/db* only available in dev. Don't use it otherwise.
+      (alter-var-root #'db/db* (constantly db*))
       (swap! db/db* assoc :port port))
     (catch Throwable _
       (logger/debug "nrepl not found, skipping nrepl server start..."))))

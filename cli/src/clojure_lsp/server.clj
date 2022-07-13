@@ -371,10 +371,8 @@
       (or {})
       (settings/clean-client-settings)))
 
-(defn ^:private exit [server]
+(defn ^:private exit []
   (logger/info "Exiting...")
-  (lsp.server/exit server) ;; blocks, waiting for previously received messages to be processed
-  (logger/info "Exited")
   (shutdown-agents)
   (System/exit 0))
 
@@ -382,7 +380,7 @@
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages
 
-(defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
+(defmethod lsp.server/receive-request "initialize" [_ {:keys [db*] :as components} params]
   (logger/info "Initializing...")
   (handler/initialize components
                       (:root-uri params)
@@ -392,7 +390,7 @@
                       (client-settings params)
                       (some-> params :work-done-token str))
   (when-let [parent-process-id (:process-id params)]
-    (lsp.liveness-probe/start! parent-process-id #(exit server)))
+    (lsp.liveness-probe/start! parent-process-id exit))
   ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
   {:capabilities (capabilities (settings/all @db*))})
 
@@ -405,12 +403,12 @@
 
 (defmethod lsp.server/receive-request "shutdown" [_ {:keys [db* server]} _params]
   (logger/info "Shutting down...")
-  (reset! db* db/initial-db)
-  (lsp.server/shutdown server) ;; no-op, not really necessary
+  (lsp.server/shutdown server)  ;; blocks, waiting for previously received messages to be processed
+  (reset! db* db/initial-db) ;; resets db for dev
   nil)
 
-(defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
-  (exit server))
+(defmethod lsp.server/receive-notification "exit" [_ _components _params]
+  (exit))
 
 (defmethod lsp.server/receive-notification "$/cancelRequest" [_ _ _])
 

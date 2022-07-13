@@ -459,6 +459,11 @@
                     :producer producer
                     :server server}]
     (logger/info "[SERVER]" "Starting server...")
+    ;; TODO: send traces to a log file?
+    (when-let [trace-ch (:trace-ch server)]
+      (async/go-loop []
+        (logger/debug (async/<! trace-ch))
+        (recur)))
     (nrepl/setup-nrepl db*)
     (spawn-async-tasks! components)
     (lsp.server/start server components)))

@@ -70,9 +70,6 @@
                   (meta &form))
                result#)))))))
 
-(defn ^:private analyze-test-paths! [{:keys [db* producer]}]
-  (producer/refresh-test-tree producer (dep-graph/internal-uris @db*)))
-
 (defn initialize
   [{:keys [db* producer] :as components}
    project-root-uri
@@ -93,7 +90,7 @@
           components)
         (let [db @db*]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (async/go
+            (async/thread
               ;; TODO: this starts publishing diagnostics before we've responded
               ;; to "initialize", which is invalid according to the spec
               ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
@@ -104,9 +101,10 @@
             (let [settings (:settings db)]
               (when (stubs/check-stubs? settings)
                 (stubs/generate-and-analyze-stubs! settings db*))))
-          (async/go
+          ;; producer/refresh-test-tree is inherintly async
+          (let [uris (dep-graph/internal-uris db)]
             (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-            (analyze-test-paths! components))
+            (producer/refresh-test-tree producer uris))
           (when (settings/get db [:java] true)
             (async/go
               (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))

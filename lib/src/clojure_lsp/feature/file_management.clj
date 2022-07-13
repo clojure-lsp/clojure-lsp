@@ -132,7 +132,7 @@
     (swap! db* lsp.kondo/db-with-results result)))
 
 (defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
-  (async/go
+  (async/thread
     (shared/logging-task
       :notify-references
       (let [filenames (shared/logging-task

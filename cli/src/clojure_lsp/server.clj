@@ -445,19 +445,21 @@
         debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
     (safe-async-task
       :edits
-      (producer/publish-workspace-edit producer (async/<!! db/edits-chan)))
+      (when-let [edit (async/<!! db/edits-chan)]
+        (producer/publish-workspace-edit producer edit)))
     (safe-async-task
       :diagnostics
-      (producer/publish-diagnostic producer (async/<!! debounced-diags)))
+      (when-let [diagnostic (async/<!! debounced-diags)]
+        (producer/publish-diagnostic producer diagnostic)))
     (safe-async-task
       :changes
-      (let [changes (async/<!! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
+      (when-let [changes (async/<!! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
         (shared/logging-task
           :analyze-file
           (f.file-management/analyze-changes changes components))))
     (safe-async-task
       :watched-files
-      (let [created-watched-files (async/<!! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+      (when-let [created-watched-files (async/<!! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
         (shared/logging-task
           :analyze-created-files-in-watched-dir
           (f.file-management/analyze-watched-created-files! created-watched-files components))))))
@@ -465,12 +467,14 @@
 (defn ^:private monitor-server-logs [{:keys [trace-ch log-ch]}]
   (when trace-ch
     (async/go-loop []
-      ;; TODO: send traces to a log file?
-      (logger/debug (async/<! trace-ch))
-      (recur)))
+      (when-let [trace (async/<! trace-ch)]
+        ;; TODO: send traces to a log file?
+        (logger/debug trace)
+        (recur))))
   (async/go-loop []
-    (apply log-wrapper-fn (async/<! log-ch))
-    (recur)))
+    (when-let [log-args (async/<! log-ch)]
+      (apply log-wrapper-fn log-args)
+      (recur))))
 
 (defn run-server! []
   (let [timbre-logger (->TimbreLogger)

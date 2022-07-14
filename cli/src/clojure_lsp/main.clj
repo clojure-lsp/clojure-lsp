@@ -136,9 +136,9 @@
 (defn ^:private handle-action!
   [action options]
   (if (= "listen" action)
-    (do
-      (with-out-str @(server/run-server!))
-      {:result-code 0})
+    (with-out-str
+      (let [finished @(server/run-server!)]
+        {:result-code (if (= :done finished) 0 1)}))
     (try
       (case action
         "pod" (pod/run-pod)

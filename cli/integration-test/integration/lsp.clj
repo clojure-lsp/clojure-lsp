@@ -1,6 +1,7 @@
 (ns integration.lsp
   (:require
    [babashka.process :as p]
+   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
    [integration.client :as client]
@@ -18,8 +19,12 @@
 
 (defn start-process! []
   (let [server (start-server (first *command-line-args*))
-        client (client/client (io/writer (:in server)) (io/reader (:out server)))]
-    (client/start client)
+        client (client/client (:in server) (:out server))]
+    (client/start client nil)
+    (async/go-loop []
+      (when-let [log (async/<! (:log-ch client))]
+        (println log)
+        (recur)))
     (alter-var-root #'*clojure-lsp-process* (constantly server))
     (alter-var-root #'*mock-client* (constantly client))))
 

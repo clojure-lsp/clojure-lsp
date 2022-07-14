@@ -1,8 +1,12 @@
 (ns integration.client
   (:require
-   [cheshire.core :as json]
+   [clojure.core.async :as async]
    [clojure.string :as string]
-   [integration.helper :as h])
+   [integration.helper :as h]
+   [lsp4clj.coercer :as coercer]
+   [lsp4clj.json-rpc :as json-rpc]
+   [lsp4clj.json-rpc.messages :as json-rpc.messages]
+   [lsp4clj.protocols.endpoint :as protocols.endpoint])
   (:import
    [java.time LocalDateTime]
    [java.time.format DateTimeFormatter]))
@@ -25,146 +29,108 @@
 (defn ^:private colored [color string]
   (str (get colors color) string (:reset colors)))
 
-(defn ^:private content-length [json]
-  (+ 1 (.length json)))
-
 (def ^:private ld-formatter DateTimeFormatter/ISO_LOCAL_DATE_TIME)
 (defn ^:private local-datetime-str [] (.format ld-formatter (LocalDateTime/now)))
-
-(defprotocol IClient
-  (start [this])
-  (shutdown [this])
-  (exit [this])
-  (send-request [this method body])
-  (send-notification [this method body])
-  (receive-response [this resp])
-  (receive-request [this req])
-  (receive-notification [this notif]))
 
 (defprotocol IMockClient
   (mock-response [this method body]))
 
-(defn ^:private log
-  ([{:keys [client-id]} color msg params]
-   (println (local-datetime-str)
-            (colored color (str "Client " client-id " " msg))
-            (colored :yellow params))))
+(defn ^:private format-log
+  [{:keys [client-id]} color msg params]
+  (string/join " "
+               [(local-datetime-str)
+                (colored color (str "Client " client-id " " msg))
+                (colored :yellow params)]))
 
-(def ^:private wire-lock (Object.))
-
-(defn wire-send [server-in params]
-  (let [content (json/generate-string params)]
-    (binding [*out* server-in]
-      (locking wire-lock
-        (println (str "Content-Length: " (content-length content)))
-        (println "")
-        (println content)
-        (flush)))))
-
-(defn ^:private lsp-notif [method params]
-  {:jsonrpc "2.0"
-   :method method
-   :params params})
-
-(defn ^:private lsp-request [id method params]
-  {:jsonrpc "2.0"
-   :id id
-   :method method
-   :params params})
-
-(defn read-n-chars [^java.io.Reader input content-length]
-  (let [cs (char-array content-length)]
-    (loop [total-read 0]
-      (when (< total-read content-length)
-        (let [new-read (.read input cs total-read (- content-length total-read))]
-          (when (< new-read 0)
-            (throw (ex-info "no content" {})))
-          (recur (+ total-read new-read)))))
-    (String. cs)))
-
-(defn read-content-length [input]
-  (binding [*in* input]
-    (when-let [line (read-line)] ;; returns nil when input is closed, i.e. server output has closed
-      (let [[h v] (string/split line #":")]
-        (when-not (= h "Content-Length")
-          (throw (ex-info "unexpected header" {:line line})))
-        (parse-long (string/trim v))))))
-
-(defn ^:private listen! [server-out client]
-  (try
-    (loop []
-      ;; Block, waiting for next Content-Length line, then parse the number of
-      ;; characters specified as JSON-RPC. If the server output stream is
-      ;; closed, also close the client by exiting this loop.
-      (if-let [content-length (read-content-length server-out)]
-        ;; NOTE: this doesn't attempt to handle Content-Type header
-        (let [content-length (+ 2 content-length) ;; include \r\n before message
-              content (read-n-chars server-out content-length)
-              {:keys [id method] :as json} (cheshire.core/parse-string content true)]
-          (cond
-            (and id method) (receive-request client json)
-            id              (receive-response client json)
-            :else           (receive-notification client json))
-          (recur))
-        (do
-          (log client :white "listener:" "server closed")
-          (flush))))
-    (catch Throwable e
-      (log client :red "listener closed:" "exception")
-      (println e)
-      (throw e))))
+(defn ^:private receive-message
+  [client context message]
+  (let [message-type (coercer/input-message-type message)]
+    (try
+      (let [response
+            (case message-type
+              (:parse-error :invalid-request)
+              (protocols.endpoint/log client :red "Error reading message" message-type)
+              :request
+              (protocols.endpoint/receive-request client context message)
+              (:response.result :response.error)
+              (protocols.endpoint/receive-response client message)
+              :notification
+              (protocols.endpoint/receive-notification client context message))]
+        ;; Ensure client only responds to requests
+        (when (identical? :request message-type)
+          response))
+      (catch Throwable e
+        (protocols.endpoint/log client :red "Error receiving:" e)
+        (throw e)))))
 
 (defrecord Client [client-id
-                   server-in server-out
-                   listener
+                   input output
+                   log-ch
+                   join
                    request-id sent-requests
                    received-requests received-notifications
                    mock-responses]
-  IClient
-  (start [this]
-    (log this :white "lifecycle:" "starting")
-    (reset! listener (future (listen! server-out this))))
-  (shutdown [this] ;; simulate client closing
-    (log this :white "lifecycle:" "shutting down")
-    (.close server-in))
-  (exit [this] ;; wait for shutdown of server to propagate to listener
-    (log this :white "lifecycle:" "exiting")
-    @@listener)
+  protocols.endpoint/IEndpoint
+  (start [this context]
+    (protocols.endpoint/log this :white "lifecycle:" "starting")
+    (let [pipeline (async/pipeline-blocking
+                     4
+                     output
+                     ;; TODO: return error until initialize request is received? https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
+                     ;; `keep` means we do not reply to responses and notifications
+                     (keep #(receive-message this context %))
+                     input)]
+      (async/go
+        ;; wait for pipeline to close, indicating input closed
+        (async/<! pipeline)
+        (deliver join :done)))
+    ;; invokers can deref the return of `start` to stay alive until server is
+    ;; shut down
+    join)
+  (shutdown [this]
+    (protocols.endpoint/log this :white "lifecycle:" "shutting down")
+    ;; closing input will drain pipeline, then close output, then close
+    ;; pipeline
+    (async/close! input)
+    (if (= :done (deref join 10e3 :timeout))
+      (protocols.endpoint/log this :white "lifecycle:" "shutdown")
+      (protocols.endpoint/log this :red "lifecycle:" "shutdown timed out"))
+    (async/close! log-ch))
+  (exit [_this])
+  (log [this msg params]
+    (protocols.endpoint/log this :white msg params))
+  (log [this color msg params]
+    (async/put! log-ch (format-log this color msg params)))
   (send-request [this method body]
-    (let [req (lsp-request (swap! request-id inc) method body)
+    (let [req (json-rpc.messages/request (swap! request-id inc) method body)
           p (promise)]
-      (log this :cyan "sending request:" req)
+      (protocols.endpoint/log this :cyan "sending request:" req)
       ;; Important: record request before sending it, so it is sure to be
       ;; available during receive-response.
       (swap! sent-requests assoc (:id req) p)
-      (wire-send server-in req)
+      (async/>!! output req)
       p))
   (send-notification [this method body]
-    (let [notif (lsp-notif method body)]
-      (log this :blue "sending notification:" notif)
-      (wire-send server-in notif)))
+    (let [notif (json-rpc.messages/request method body)]
+      (protocols.endpoint/log this :blue "sending notification:" notif)
+      (async/>!! output notif)))
   (receive-response [this {:keys [id] :as resp}]
     (if-let [request (get @sent-requests id)]
-      (do (log this :green "received reponse:" resp)
+      (do (protocols.endpoint/log this :green "received reponse:" resp)
           (swap! sent-requests dissoc id)
           (deliver request (if (:error resp)
                              resp
                              (:result resp))))
-      ;; TODO: if we don't have a request, this will return nil, which will get
-      ;; derefed, which will throw an error. Better to use promesa, and return a
-      ;; rejected promise? Promesa has the benefit of using CompletableFuture,
-      ;; making it more like what a lsp4j server expects.
-      (log this :red "received response for unmatched request:" resp)))
-  (receive-request [this {:keys [id method] :as req}]
-    (log this :magenta "received request:" req)
+      (protocols.endpoint/log this :red "received response for unmatched request:" resp)))
+  (receive-request [this _ {:keys [id method] :as req}]
+    (protocols.endpoint/log this :magenta "received request:" req)
     (swap! received-requests conj req)
     (when-let [mock-resp (get @mock-responses (keyword method))]
-      (let [resp {:id id
-                  :result mock-resp}]
-        (log this :magenta "sending mock response:" resp)
-        (wire-send server-in resp))))
-  (receive-notification [this notif]
-    (log this :blue "received notification:" notif)
+      (let [resp (json-rpc.messages/response id mock-resp)]
+        (protocols.endpoint/log this :magenta "sending mock response:" resp)
+        resp)))
+  (receive-notification [this _ notif]
+    (protocols.endpoint/log this :blue "received notification:" notif)
     (swap! received-notifications conj notif))
   IMockClient
   (mock-response [_this method body]
@@ -175,14 +141,20 @@
 (defn client [server-in server-out]
   (map->Client
     {:client-id (swap! client-id inc)
-     :server-in server-in
-     :server-out server-out
+     :input (json-rpc/input-stream->input-chan server-out {:keyword-function keyword})
+     :output (json-rpc/output-stream->output-chan server-in)
+     :log-ch (async/chan (async/sliding-buffer 20))
+     :join (promise)
      :request-id (atom 0)
      :sent-requests (atom {})
      :received-requests (atom [])
      :received-notifications (atom [])
-     :mock-responses (atom {})
-     :listener (atom nil)}))
+     :mock-responses (atom {})}))
+
+(def start protocols.endpoint/start)
+(def shutdown protocols.endpoint/shutdown)
+(def exit protocols.endpoint/exit)
+(def send-notification protocols.endpoint/send-notification)
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
@@ -198,7 +170,7 @@
             (Thread/sleep 500)
             (recur (inc tries))))
         (do
-          (log client :red "timeout waiting:" coll-type)
+          (protocols.endpoint/log client :red "timeout waiting:" coll-type)
           (throw (ex-info "timeout waiting for client to receive req/notif" {:coll-type coll-type})))))))
 
 (defn await-server-diagnostics [client path]
@@ -226,11 +198,11 @@
     (:params msg)))
 
 (defn request-and-await-server-response! [client method body]
-  (let [resp (deref (send-request client method body)
+  (let [resp (deref (protocols.endpoint/send-request client method body)
                     30000
                     ::timeout)]
     (if (= ::timeout resp)
       (do
-        (log client :red "timeout waiting for server response to client request:" method)
+        (protocols.endpoint/log client :red "timeout waiting for server response to client request:" method)
         (throw (ex-info "timeout waiting for server response to client request" {:method method :body body})))
       resp)))

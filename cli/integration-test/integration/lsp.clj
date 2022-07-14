@@ -37,7 +37,6 @@
   (flush)
   (some-> *mock-client* client/shutdown)
   (some-> *clojure-lsp-process* deref) ;; wait for shutdown of client to shutdown server
-  (some-> *mock-client* client/exit)
   (alter-var-root #'*clojure-lsp-process* (constantly nil))
   (alter-var-root #'*mock-client* (constantly nil)))
 

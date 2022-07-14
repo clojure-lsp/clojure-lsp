@@ -96,7 +96,6 @@
       (protocols.endpoint/log this :white "lifecycle:" "shutdown")
       (protocols.endpoint/log this :red "lifecycle:" "shutdown timed out"))
     (async/close! log-ch))
-  (exit [_this])
   (log [this msg params]
     (protocols.endpoint/log this :white msg params))
   (log [this color msg params]
@@ -153,7 +152,6 @@
 
 (def start protocols.endpoint/start)
 (def shutdown protocols.endpoint/shutdown)
-(def exit protocols.endpoint/exit)
 (def send-notification protocols.endpoint/send-notification)
 
 (defn ^:private keyname [key] (str (namespace key) "/" (name key)))

@@ -81,67 +81,75 @@
   producer/IProducer
 
   (publish-diagnostic [_this diagnostic]
-    (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
-    (shared/logging-task
-      :publish-diagnostics
-      (->> diagnostic
-           (conform-or-log ::coercer/publish-diagnostics-params)
-           (lsp.server/send-notification server "textDocument/publishDiagnostics"))))
+    (lsp.server/discarding-stdout
+      (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
+      (shared/logging-task
+        :publish-diagnostics
+        (->> diagnostic
+             (conform-or-log ::coercer/publish-diagnostics-params)
+             (lsp.server/send-notification server "textDocument/publishDiagnostics")))))
 
   (refresh-code-lens [_this]
-    (when (get-in @db* [:client-capabilities :workspace :code-lens :refresh-support])
-      (lsp.server/send-request server "workspace/codeLens/refresh" nil)))
+    (lsp.server/discarding-stdout
+      (when (get-in @db* [:client-capabilities :workspace :code-lens :refresh-support])
+        (lsp.server/send-request server "workspace/codeLens/refresh" nil))))
 
   (publish-workspace-edit [_this edit]
-    (let [request (->> {:edit edit}
-                       (conform-or-log ::coercer/workspace-edit-params)
-                       (lsp.server/send-request server "workspace/applyEdit"))
-          response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
-      (if (= ::timeout response)
-        (logger/error "No reponse from client after 10 seconds.")
-        response)))
+    (lsp.server/discarding-stdout
+      (let [request (->> {:edit edit}
+                         (conform-or-log ::coercer/workspace-edit-params)
+                         (lsp.server/send-request server "workspace/applyEdit"))
+            response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+        (if (= ::timeout response)
+          (logger/error "No reponse from client after 10 seconds.")
+          response))))
 
   (show-document-request [_this document-request]
-    (when (get-in @db* [:client-capabilities :window :show-document])
-      (logger/info "Requesting to show on editor the document" document-request)
-      (->> document-request
-           (conform-or-log ::coercer/show-document-request)
-           (lsp.server/send-request server "window/showDocument"))))
+    (lsp.server/discarding-stdout
+      (when (get-in @db* [:client-capabilities :window :show-document])
+        (logger/info "Requesting to show on editor the document" document-request)
+        (->> document-request
+             (conform-or-log ::coercer/show-document-request)
+             (lsp.server/send-request server "window/showDocument")))))
 
   (publish-progress [_this percentage message progress-token]
+    (lsp.server/discarding-stdout
     ;; ::coercer/notify-progress
-    (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
-         (lsp.server/send-notification server "$/progress")))
+      (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
+           (lsp.server/send-notification server "$/progress"))))
 
   (show-message-request [_this message type actions]
-    (let [request (->> {:type    type
-                        :message message
-                        :actions actions}
-                       (conform-or-log ::coercer/show-message-request)
-                       (lsp.server/send-request server "window/showMessageRequest"))
-          response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
-      (when-not (= response ::timeout)
-        (:title response))))
+    (lsp.server/discarding-stdout
+      (let [request (->> {:type    type
+                          :message message
+                          :actions actions}
+                         (conform-or-log ::coercer/show-message-request)
+                         (lsp.server/send-request server "window/showMessageRequest"))
+            response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+        (when-not (= response ::timeout)
+          (:title response)))))
 
   (show-message [_this message type extra]
-    (let [message-content {:message message
-                           :type type
-                           :extra extra}]
-      (logger/info message-content)
-      (->> message-content
-           (conform-or-log ::coercer/show-message)
-           (lsp.server/send-notification server "window/showMessage"))))
+    (lsp.server/discarding-stdout
+      (let [message-content {:message message
+                             :type type
+                             :extra extra}]
+        (logger/info message-content)
+        (->> message-content
+             (conform-or-log ::coercer/show-message)
+             (lsp.server/send-notification server "window/showMessage")))))
 
   (refresh-test-tree [_this uris]
     (async/thread
-      (let [db @db*]
-        (when (some-> db :client-capabilities :experimental :test-tree)
-          (shared/logging-task
-            :refreshing-test-tree
-            (doseq [uri uris]
-              (some->> (f.test-tree/tree uri db)
-                       (conform-or-log ::clojure-coercer/publish-test-tree-params)
-                       (lsp.server/send-notification server "clojure/textDocument/testTree")))))))))
+      (lsp.server/discarding-stdout
+        (let [db @db*]
+          (when (some-> db :client-capabilities :experimental :test-tree)
+            (shared/logging-task
+              :refreshing-test-tree
+              (doseq [uri uris]
+                (some->> (f.test-tree/tree uri db)
+                         (conform-or-log ::clojure-coercer/publish-test-tree-params)
+                         (lsp.server/send-notification server "clojure/textDocument/testTree"))))))))))
 
 ;;;; clojure experimental features
 

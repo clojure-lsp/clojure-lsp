@@ -38,6 +38,7 @@
   (timbre/log! level :p args))
 
 (defmacro conform-or-log
+  "Provides log function for conformation, while preserving line numbers."
   [spec value]
   (let [fmeta (assoc (meta &form)
                      :file *file*

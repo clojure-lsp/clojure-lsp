@@ -390,7 +390,7 @@
 
 (defn ^:private exit [server]
   (logger/info "Exiting...")
-  (lsp.server/shutdown server)  ;; blocks, waiting for previously received messages to be processed
+  (lsp.server/shutdown server) ;; blocks, waiting up to 10s for previously received messages to be processed
   (shutdown-agents)
   (System/exit 0))
 
@@ -402,14 +402,11 @@
   (logger/info "Initializing...")
   (handler/initialize components
                       (:root-uri params)
-                      ;; TODO: lsp2clj do we need any of the client capabilities
-                      ;; coercion that used to happen?
                       (:capabilities params)
                       (client-settings params)
                       (some-> params :work-done-token str))
   (when-let [parent-process-id (:process-id params)]
     (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
-  ;; TODO: lsp2clj do we need any of the server capabilities coercion that used to happen?
   {:capabilities (capabilities (settings/all @db*))})
 
 (defmethod lsp.server/receive-notification "initialized" [_ {:keys [server]} _params]

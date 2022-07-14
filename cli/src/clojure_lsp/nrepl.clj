@@ -2,7 +2,7 @@
   (:require
    [borkdude.dynaload :refer [dynaload]]
    [clojure-lsp.db :as db]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure-lsp.logger :as logger]))
 
 (set! *warn-on-reflection* true)
 

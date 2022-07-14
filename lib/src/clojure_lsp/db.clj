@@ -1,11 +1,11 @@
 (ns clojure-lsp.db
   (:require
    [clojure-lsp.config :as config]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [cognitect.transit :as transit]
-   [lsp4clj.protocols.logger :as logger]))
+   [cognitect.transit :as transit]))
 
 (set! *warn-on-reflection* true)
 

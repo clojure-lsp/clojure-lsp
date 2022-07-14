@@ -1,10 +1,10 @@
 (ns clojure-lsp.config
   (:require
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.string :as string])
   (:import
    (java.util.jar JarFile JarFile$JarFileEntry)))
 

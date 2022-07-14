@@ -5,13 +5,13 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
-   [clojure-lsp.producer :as producer])
+   [clojure.string :as string])
   (:import
    (java.net URI)))
 

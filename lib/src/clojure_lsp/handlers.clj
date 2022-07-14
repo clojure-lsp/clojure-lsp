@@ -21,14 +21,14 @@
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.pprint :as pprint]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure.pprint :as pprint]))
 
 (set! *warn-on-reflection* true)
 

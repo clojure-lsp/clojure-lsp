@@ -4,13 +4,13 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 

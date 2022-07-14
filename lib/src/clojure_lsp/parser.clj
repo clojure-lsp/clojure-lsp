@@ -1,8 +1,8 @@
 (ns clojure-lsp.parser
   (:require
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.edit :as edit]
    [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 

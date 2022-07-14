@@ -2,11 +2,11 @@
   (:refer-clojure :exclude [ns-aliases])
   (:require
    [clojure-lsp.dep-graph :as dep-graph]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
    [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)

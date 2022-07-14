@@ -7,6 +7,7 @@
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handler]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.nrepl :as nrepl]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
@@ -15,7 +16,6 @@
    [lsp4clj.coercer :as coercer]
    [lsp4clj.json-rpc.messages :as lsp.messages]
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
-   [lsp4clj.protocols.logger :as logger]
    [lsp4clj.server :as lsp.server]
    [taoensso.timbre :as timbre]))
 
@@ -50,7 +50,7 @@
        ~value)))
 
 (defrecord TimbreLogger []
-  logger/ILSPLogger
+  logger/ILogger
   (setup [this]
     (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
       (timbre/merge-config! {:middleware [#(assoc % :hostname_ "")]

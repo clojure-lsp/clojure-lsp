@@ -1,10 +1,10 @@
 (ns clojure-lsp.shared
   (:require
+   [clojure-lsp.logger :as logger]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.string :as string])
   (:import
    [java.net
     JarURLConnection

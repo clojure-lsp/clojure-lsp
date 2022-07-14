@@ -2,11 +2,11 @@
   "clojuredocs integration inspired on orchard implementation."
   (:require
    [clojure-lsp.http :as http]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.edn :as edn]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure.edn :as edn]))
 
 (set! *warn-on-reflection* true)
 

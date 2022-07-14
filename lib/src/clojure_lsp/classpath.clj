@@ -1,14 +1,14 @@
 (ns clojure-lsp.classpath
   (:require
+   [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
-   [clojure-lsp.producer :as producer])
+   [clojure.string :as string])
   (:import
    (java.io ByteArrayOutputStream)
    (java.security MessageDigest)))

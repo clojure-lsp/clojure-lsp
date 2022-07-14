@@ -7,14 +7,14 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop]]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.string :as string])
   (:import
    [java.io File]))
 
@@ -33,7 +33,7 @@
     (apply cli-println options type messages)))
 
 (defrecord ^:private CLILogger [options]
-  logger/ILSPLogger
+  logger/ILogger
   (setup [this]
     (logger/set-logger! this))
   (set-log-path [_ _])

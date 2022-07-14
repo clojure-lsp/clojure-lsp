@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -9,7 +10,6 @@
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [lsp4clj.protocols.logger :as logger]
    [rewrite-clj.zip :as z]))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
@@ -40,7 +40,7 @@
   (refresh-test-tree [_this _uris]))
 
 (defrecord TestLogger []
-  logger/ILSPLogger
+  logger/ILogger
   (setup [_])
 
   (set-log-path [_this _log-path])

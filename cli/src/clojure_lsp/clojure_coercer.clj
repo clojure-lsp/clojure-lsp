@@ -1,7 +1,7 @@
 (ns clojure-lsp.clojure-coercer
   (:require
-   [lsp4clj.coercer :as coercer]
-   [clojure.spec.alpha :as s]))
+   [clojure.spec.alpha :as s]
+   [lsp4clj.coercer :as coercer]))
 
 (set! *warn-on-reflection* true)
 

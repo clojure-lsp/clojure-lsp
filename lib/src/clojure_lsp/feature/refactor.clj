@@ -6,9 +6,9 @@
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
-   [lsp4clj.protocols.logger :as logger]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 

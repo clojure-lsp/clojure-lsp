@@ -6,6 +6,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
@@ -13,8 +14,7 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 

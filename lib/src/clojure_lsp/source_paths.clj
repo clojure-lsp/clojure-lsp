@@ -1,9 +1,9 @@
 (ns clojure-lsp.source-paths
   (:require
    [clojure-lsp.config :as config]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
-   [clojure.java.io :as io]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.java.io :as io])
   (:import
    [java.io File]))
 

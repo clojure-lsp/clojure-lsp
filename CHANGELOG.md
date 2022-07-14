@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Remove dependency on lsp4j. https://github.com/clojure-lsp/lsp4clj/issues/8
+
 - Editor
   - Restore #995 Improve element selected on `textDocument/hover` (previously reverted) with a fix that keeps it working for Calva even after a syntax error is introduced.
   - Improve call hierarchy performance by parsing less frequently. #1092

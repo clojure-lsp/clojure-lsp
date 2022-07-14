@@ -31,7 +31,6 @@
   (timbre/log! level :p args {:?line (:line fmeta)
                               :?file (:file fmeta)
                               :?ns-str (:ns-str fmeta)}))
-
 (defn log-wrapper-fn
   [level & args]
   ;; NOTE: this does not do compile-time elision because the level isn't a constant.
@@ -487,6 +486,10 @@
                     :producer producer
                     :server server}]
     (logger/info "[SERVER]" "Starting server...")
+    ;; TODO: if this were moved to `initialize`, after timbre has been
+    ;; configured, the server's startup logs and traces would appear in the
+    ;; regular log file instead of the temp log file. The downside would be that
+    ;; if anything bad happens before `initialize`, we wouldn't get any logs.
     (monitor-server-logs server)
     (nrepl/setup-nrepl db*)
     (spawn-async-tasks! components)

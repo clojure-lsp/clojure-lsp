@@ -482,24 +482,25 @@
       (recur))))
 
 (defn run-server! []
-  (let [timbre-logger (->TimbreLogger)
-        log-path (logger/setup timbre-logger)
-        db (assoc db/initial-db :log-path log-path)
-        db* (atom db)
-        server (lsp.server/stdio-server {:trace? false
-                                         :in System/in
-                                         :out System/out})
-        producer (ClojureLspProducer. server db*)
-        components {:db* db*
-                    :logger timbre-logger
-                    :producer producer
-                    :server server}]
-    (logger/info "[SERVER]" "Starting server...")
-    ;; TODO: if this were moved to `initialize`, after timbre has been
-    ;; configured, the server's startup logs and traces would appear in the
-    ;; regular log file instead of the temp log file. The downside would be that
-    ;; if anything bad happens before `initialize`, we wouldn't get any logs.
-    (monitor-server-logs server)
-    (nrepl/setup-nrepl db*)
-    (spawn-async-tasks! components)
-    (lsp.server/start server components)))
+  (lsp.server/discarding-stdout
+    (let [timbre-logger (->TimbreLogger)
+          log-path (logger/setup timbre-logger)
+          db (assoc db/initial-db :log-path log-path)
+          db* (atom db)
+          server (lsp.server/stdio-server {:trace? false
+                                           :in System/in
+                                           :out System/out})
+          producer (ClojureLspProducer. server db*)
+          components {:db* db*
+                      :logger timbre-logger
+                      :producer producer
+                      :server server}]
+      (logger/info "[SERVER]" "Starting server...")
+      ;; TODO: if this were moved to `initialize`, after timbre has been
+      ;; configured, the server's startup logs and traces would appear in the
+      ;; regular log file instead of the temp log file. The downside would be that
+      ;; if anything bad happens before `initialize`, we wouldn't get any logs.
+      (monitor-server-logs server)
+      (nrepl/setup-nrepl db*)
+      (spawn-async-tasks! components)
+      (lsp.server/start server components))))

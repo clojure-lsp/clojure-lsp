@@ -14,7 +14,7 @@
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions (dissoc fixture/default-init-options :java)}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/client-awaits-open-diagnostics "java_interop/a.clj")
+  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 
   (testing "We find java source class"
     (h/assert-submap
@@ -31,7 +31,7 @@
                                               (dissoc :java)
                                               (assoc :dependency-scheme "jar"))})) ;; TODO fix when add support for decompile with zipfile
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/client-awaits-open-diagnostics "java_interop/a.clj")
+  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 
   (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
     (testing "We find java compiled class first"

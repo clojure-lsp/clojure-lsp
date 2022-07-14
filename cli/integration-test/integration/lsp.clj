@@ -4,8 +4,7 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.test :refer [use-fixtures]]
-   [integration.client :as client]
-   [integration.fixture :as fixture]))
+   [integration.client :as client]))
 
 (def ^:dynamic *clojure-lsp-process* nil)
 (def ^:dynamic *mock-client* nil)
@@ -58,10 +57,6 @@
 
 (defn client-awaits-server-request [method]
   (client/await-server-request *mock-client* method))
-
-(defn client-awaits-open-diagnostics [path]
-  (notify! (fixture/did-open-notification path))
-  (client-awaits-server-diagnostics path))
 
 (defn mock-response [method resp]
   (client/mock-response *mock-client* method resp))

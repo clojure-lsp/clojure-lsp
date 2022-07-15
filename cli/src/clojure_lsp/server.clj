@@ -432,8 +432,6 @@
 (defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
   (exit server))
 
-(defmethod lsp.server/receive-notification "$/cancelRequest" [_ _ _])
-
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/thread
      (loop []

@@ -36,9 +36,6 @@ jobs:
       - name: Install Babashka
         run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Compile java classes
-        run: make classes
-
       - name: Check if namespaces are clean
         run: make lint-clean
 

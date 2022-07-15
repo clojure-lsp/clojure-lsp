@@ -91,9 +91,6 @@
         (let [db @db*]
           (when (settings/get db [:lint-project-files-after-startup?] true)
             (async/thread
-              ;; TODO: this starts publishing diagnostics before we've responded
-              ;; to "initialize", which is invalid according to the spec
-              ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
               (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db)))
           (async/go
             (f.clojuredocs/refresh-cache! db*))

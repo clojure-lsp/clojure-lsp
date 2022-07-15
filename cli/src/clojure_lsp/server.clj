@@ -114,7 +114,7 @@
 
   (publish-progress [_this percentage message progress-token]
     (lsp.server/discarding-stdout
-    ;; ::coercer/notify-progress
+      ;; ::coercer/notify-progress
       (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
            (lsp.server/send-notification server "$/progress"))))
 
@@ -390,6 +390,10 @@
                     :server-info true
                     :clojuredocs true}}))
 
+;;;; Lifecycle messages
+
+;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages
+
 (defn client-settings [params]
   (-> params
       :initialization-options
@@ -402,12 +406,17 @@
   (shutdown-agents)
   (System/exit 0))
 
-;;;; Lifecycle messages
-
-;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages
-
 (defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
   (logger/info "Initializing...")
+  ;; TODO: According to the spec, we shouldn't process any other requests or
+  ;; notifications until we've received this request. Furthermore, we shouldn't
+  ;; send any requests or notifications (except for $/progress and a few others)
+  ;; until after responding to this request. However, we start sending
+  ;; diagnostics notifications during `handler/initialize`. This particular case
+  ;; might be fixed by delaying `spawn-async-tasks!` until the end of this
+  ;; method, or to `initialized`, but the more general case of being selective
+  ;; about which messages are sent when probably needs to be handled in lsp4clj.
+  ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
   (handler/initialize components
                       (:root-uri params)
                       (:capabilities params)

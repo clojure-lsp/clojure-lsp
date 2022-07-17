@@ -5,9 +5,9 @@
    [clojure-lsp.refactor.transform :as transform]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.string :as string]
    [clojure.test :refer [are deftest is testing]]
-   [rewrite-clj.zip :as z]
-   [clojure.string :as string]))
+   [rewrite-clj.zip :as z]))
 
 (h/reset-db-after-test)
 

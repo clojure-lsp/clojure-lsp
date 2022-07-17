@@ -18,7 +18,6 @@
   - Fix to update unused-public-var lint on registered keywords as usages change in other files. #1018
   - Fix to navigate to var defined by declare, when there aren't any later defs. #1107
   - Fix to always go to the definition of the correct var imported by potemkin. #1020
-  - Fix namespace renaming causing wrong renames introduced on previous release.
 
 ## 2022.06.29-19.32.13
 

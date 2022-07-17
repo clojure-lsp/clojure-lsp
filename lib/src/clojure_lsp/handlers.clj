@@ -180,7 +180,7 @@
   (shared/logging-task
     :rename
     (let [[row col] (shared/position->line-column position)]
-      (f.rename/rename-from-position textDocument newName row col db/db*))))
+      (f.rename/rename-from-position textDocument newName row col @db/db*))))
 
 (defn definition [{:keys [textDocument position]} {:keys [db*]}]
   (shared/logging-task
@@ -475,7 +475,7 @@
 (defn will-rename-files [{:keys [files]} {:keys [db*]}]
   (shared/logging-task
     :will-rename-files
-    (f.file-management/will-rename-files files db*)))
+    (f.file-management/will-rename-files files @db*)))
 
 (defrecord ClojureLSPFeatureHandler [components*]
   feature-handler/ILSPFeatureHandler

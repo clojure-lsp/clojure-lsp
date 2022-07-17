@@ -263,6 +263,10 @@
       (shared/dissoc-in [:analysis filename])
       (shared/dissoc-in [:findings filename])))
 
+(defn ^:private file-deleted [db* uri filename]
+  (swap! db* db-without-file uri filename)
+  (f.diagnostic/publish-empty-diagnostics! uri @db*))
+
 (defn did-change-watched-files [changes db*]
   (doseq [{:keys [uri type]} changes]
     (case type
@@ -276,16 +280,14 @@
                                db*)))
       :deleted (shared/logging-task
                  :delete-watched-file
-                 (let [filename (shared/uri->filename uri)]
-                   (swap! db* db-without-file uri filename))))))
+                 (file-deleted db* uri (shared/uri->filename uri))))))
 
 (defn did-close [uri db*]
   (let [filename (shared/uri->filename uri)
         source-paths (settings/get @db* [:source-paths])]
     (when (and (not (shared/external-filename? filename source-paths))
                (not (shared/file-exists? (io/file filename))))
-      (swap! db* db-without-file uri filename)
-      (f.diagnostic/publish-empty-diagnostics! uri @db*))))
+      (file-deleted db* uri filename))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -298,13 +300,14 @@
 (defn did-save [uri db*]
   (swap! db* #(assoc-in % [:documents uri :saved-on-disk] true)))
 
-(defn will-rename-files [files db*]
-  (let [db @db*]
-    (->> files
-         (keep (fn [{:keys [oldUri newUri]}]
-                 (let [old-filename (shared/uri->filename oldUri)
-                       new-ns (shared/uri->namespace newUri db)
-                       ns-definition (q/find-namespace-definition-by-filename db old-filename)]
-                   (when ns-definition
-                     (f.rename/rename-element oldUri new-ns db* old-filename ns-definition :rename-file)))))
-         (reduce #(shared/deep-merge %1 %2) {:document-changes []}))))
+(defn will-rename-files [files db]
+  (->> files
+       (keep (fn [{:keys [oldUri newUri]}]
+               (let [old-filename (shared/uri->filename oldUri)
+                     new-ns (shared/uri->namespace newUri db)
+                     old-ns-definition (q/find-namespace-definition-by-filename db old-filename)]
+                 (when (and new-ns
+                            old-ns-definition
+                            (not= new-ns (name (:name old-ns-definition))))
+                   (f.rename/rename-element oldUri new-ns db old-ns-definition :rename-file)))))
+       (reduce #(shared/deep-merge %1 %2) {:document-changes []})))
